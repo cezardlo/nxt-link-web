@@ -3,6 +3,8 @@
 // Used by the signal engine to match news headlines to known vendors,
 // detect contract awards, and correlate market signals.
 
+import { NXT_ENTITIES_ELPASO } from './nxt-entities-elpaso';
+
 export type EntityCategory =
   | 'Defense Tech'
   | 'Border Tech'
@@ -1952,6 +1954,10 @@ export const SECTOR_KEYWORDS: SectorKeywords[] = [
     ],
   },
 ];
+
+// ─── Merge extended El Paso entities ─────────────────────────────────────────
+// NXT_ENTITIES_ELPASO adds 50+ EP-specific vendors (defense, cyber, health, etc.)
+NXT_ENTITIES.push(...NXT_ENTITIES_ELPASO);
 
 // ─── Lookups ──────────────────────────────────────────────────────────────────
 

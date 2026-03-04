@@ -9,6 +9,7 @@ import { IconLayer, PathLayer, ScatterplotLayer, TextLayer } from '@deck.gl/laye
 import type { PortWaitTime } from '@/app/api/live/border-wait/route';
 import { CONFERENCES } from '@/lib/data/conference-intel';
 import type { ConferenceRecord } from '@/lib/data/conference-intel';
+import { EL_PASO_VENDORS } from '@/lib/data/el-paso-vendors';
 import MapGL from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -128,57 +129,25 @@ const LANDMARKS: Landmark[] = [
   { id: 'east',    lat: 31.696, lon: -106.174, label: 'HORIZON CITY' },
 ];
 
-// Curated El Paso vendor intelligence — real companies at accurate coordinates
-const EL_PASO_STUBS: MapPoint[] = [
-  // ── Fort Bliss Defense Cluster ──────────────────────────────────────────────
-  { id: 'ep-l3harris',   lat: 31.8082, lon: -106.4175, label: 'L3Harris Technologies', category: 'Defense',       layer: 'vendors',  weight: 0.92, confidence: 0.95, entity_id: 'ep-l3harris'  },
-  { id: 'ep-raytheon',   lat: 31.8125, lon: -106.4092, label: 'Raytheon (RTX)',        category: 'Defense',       layer: 'vendors',  weight: 0.90, confidence: 0.94, entity_id: 'ep-raytheon'  },
-  { id: 'ep-saic',       lat: 31.8095, lon: -106.4135, label: 'SAIC',                 category: 'Defense IT',    layer: 'vendors',  weight: 0.88, confidence: 0.91, entity_id: 'ep-saic'      },
-  { id: 'ep-leidos',     lat: 31.8065, lon: -106.4155, label: 'Leidos',               category: 'Defense IT',    layer: 'vendors',  weight: 0.85, confidence: 0.90, entity_id: 'ep-leidos'    },
-  { id: 'ep-boozallen',  lat: 31.8088, lon: -106.4120, label: 'Booz Allen Hamilton',  category: 'Consulting',    layer: 'vendors',  weight: 0.87, confidence: 0.89, entity_id: 'ep-boozallen' },
-  { id: 'ep-boeing',     lat: 31.8135, lon: -106.4052, label: 'Boeing Defense',       category: 'Defense',       layer: 'vendors',  weight: 0.91, confidence: 0.93, entity_id: 'ep-boeing'    },
-  { id: 'ep-mantech',    lat: 31.8072, lon: -106.4195, label: 'ManTech International',category: 'Defense IT',    layer: 'momentum', weight: 0.80, confidence: 0.85, entity_id: 'ep-mantech'   },
-  { id: 'ep-gdit',       lat: 31.8108, lon: -106.4065, label: 'General Dynamics IT',  category: 'Defense IT',    layer: 'vendors',  weight: 0.83, confidence: 0.87, entity_id: 'ep-gdit'      },
-  // ── Logistics / Airport Industrial Zone ─────────────────────────────────────
-  { id: 'ep-fedex',      lat: 31.7965, lon: -106.3780, label: 'FedEx Ground Hub',     category: 'Logistics',     layer: 'vendors',  weight: 0.78, confidence: 0.92, entity_id: 'ep-fedex'     },
-  { id: 'ep-cardinal',   lat: 31.7930, lon: -106.3825, label: 'Cardinal Health EP',   category: 'Logistics',     layer: 'vendors',  weight: 0.76, confidence: 0.88, entity_id: 'ep-cardinal'  },
-  { id: 'ep-xpo',        lat: 31.7900, lon: -106.3860, label: 'XPO Logistics EP',     category: 'Logistics',     layer: 'vendors',  weight: 0.74, confidence: 0.85, entity_id: 'ep-xpo'       },
-  { id: 'ep-ryder',      lat: 31.7878, lon: -106.3895, label: 'Ryder Supply Chain',   category: 'Logistics',     layer: 'vendors',  weight: 0.72, confidence: 0.84, entity_id: 'ep-ryder'     },
-  { id: 'ep-amazon',     lat: 31.6952, lon: -106.1740, label: 'Amazon FC ELP1',       category: 'Logistics',     layer: 'vendors',  weight: 0.80, confidence: 0.90, entity_id: 'ep-amazon'    },
-  // ── Border Technology / Port of Entry ───────────────────────────────────────
-  { id: 'ep-crossingiq', lat: 31.7508, lon: -106.4845, label: 'CrossingIQ',           category: 'Border Tech',   layer: 'vendors',  weight: 0.72, confidence: 0.82, entity_id: 'ep-crossingiq'},
-  { id: 'ep-bordertech', lat: 31.7525, lon: -106.4882, label: 'BorderTech Solutions', category: 'Border Tech',   layer: 'vendors',  weight: 0.68, confidence: 0.78, entity_id: 'ep-bordertech'},
-  { id: 'ep-portlogic',  lat: 31.7490, lon: -106.4752, label: 'PortLogic Systems',    category: 'Logistics',     layer: 'momentum', weight: 0.65, confidence: 0.75, entity_id: 'ep-portlogic' },
-  { id: 'ep-tradesync',  lat: 31.7515, lon: -106.4792, label: 'TradeSync Border',     category: 'Border Tech',   layer: 'momentum', weight: 0.70, confidence: 0.80, entity_id: 'ep-tradesync' },
-  { id: 'ep-cbpass',     lat: 31.7535, lon: -106.4822, label: 'CBPASS Systems',       category: 'Border Tech',   layer: 'funding',  weight: 0.60, confidence: 0.72, entity_id: 'ep-cbpass'    },
-  // ── UTEP Research ───────────────────────────────────────────────────────────
-  { id: 'ep-utep-ai',    lat: 31.7712, lon: -106.5062, label: 'UTEP AI Research Lab', category: 'AI / ML',       layer: 'vendors',  weight: 0.65, confidence: 0.78, entity_id: 'ep-utep-ai'   },
-  { id: 'ep-utep-cyber', lat: 31.7695, lon: -106.5025, label: 'UTEP CyberSec Center', category: 'Cybersecurity', layer: 'vendors',  weight: 0.62, confidence: 0.75, entity_id: 'ep-utep-cyber'},
-  { id: 'ep-utep-mfg',   lat: 31.7675, lon: -106.5082, label: 'UTEP Advanced Mfg',   category: 'Manufacturing', layer: 'vendors',  weight: 0.60, confidence: 0.73, entity_id: 'ep-utep-mfg'  },
-  // ── Healthcare / Medical Center ─────────────────────────────────────────────
-  { id: 'ep-umc',        lat: 31.7632, lon: -106.4992, label: 'UMC Health System',    category: 'Health Tech',   layer: 'vendors',  weight: 0.75, confidence: 0.88, entity_id: 'ep-umc'       },
-  { id: 'ep-tenet',      lat: 31.7678, lon: -106.4922, label: 'Tenet / Sierra Prov.', category: 'Health Tech',   layer: 'vendors',  weight: 0.70, confidence: 0.85, entity_id: 'ep-tenet'     },
-  { id: 'ep-ttuhsc',     lat: 31.7655, lon: -106.5045, label: 'TTUHSC Informatics',   category: 'Health Tech',   layer: 'vendors',  weight: 0.68, confidence: 0.82, entity_id: 'ep-ttuhsc'    },
-  // ── Water Technology ────────────────────────────────────────────────────────
-  { id: 'ep-epwater',    lat: 31.7730, lon: -106.4912, label: 'El Paso Water',        category: 'Water Tech',    layer: 'vendors',  weight: 0.82, confidence: 0.90, entity_id: 'ep-epwater'   },
-  { id: 'ep-desal',      lat: 31.7582, lon: -106.4542, label: 'Kay Bailey Desal Plant',category: 'Water Tech',   layer: 'vendors',  weight: 0.75, confidence: 0.85, entity_id: 'ep-desal'     },
-  { id: 'ep-aridtech',   lat: 31.7612, lon: -106.4875, label: 'AridTech Water',       category: 'Water Tech',    layer: 'funding',  weight: 0.58, confidence: 0.70, entity_id: 'ep-aridtech'  },
-  // ── Energy ──────────────────────────────────────────────────────────────────
-  { id: 'ep-epe',        lat: 31.7602, lon: -106.4622, label: 'El Paso Electric (EPE)',category: 'Energy',       layer: 'vendors',  weight: 0.80, confidence: 0.90, entity_id: 'ep-epe'       },
-  { id: 'ep-nextera',    lat: 31.7215, lon: -106.2485, label: 'NextEra Energy EP',    category: 'Energy',        layer: 'vendors',  weight: 0.85, confidence: 0.88, entity_id: 'ep-nextera'   },
-  { id: 'ep-sunpower',   lat: 31.7178, lon: -106.2542, label: 'SunPower West TX',     category: 'Energy',        layer: 'momentum', weight: 0.70, confidence: 0.82, entity_id: 'ep-sunpower'  },
-  // ── Manufacturing / Maquiladora Zone ────────────────────────────────────────
-  { id: 'ep-benchmark',  lat: 31.7402, lon: -106.5122, label: 'Benchmark Electronics',category: 'Manufacturing', layer: 'vendors',  weight: 0.72, confidence: 0.82, entity_id: 'ep-benchmark' },
-  { id: 'ep-aptiv',      lat: 31.7355, lon: -106.5165, label: 'Aptiv (Delphi) EP',   category: 'Manufacturing', layer: 'vendors',  weight: 0.68, confidence: 0.78, entity_id: 'ep-aptiv'     },
-  { id: 'ep-honeywell',  lat: 31.7425, lon: -106.5082, label: 'Honeywell EP Plant',   category: 'Manufacturing', layer: 'vendors',  weight: 0.74, confidence: 0.83, entity_id: 'ep-honeywell' },
-  { id: 'ep-foxconn',    lat: 31.7382, lon: -106.5142, label: 'Foxconn EP Office',    category: 'Manufacturing', layer: 'vendors',  weight: 0.69, confidence: 0.76, entity_id: 'ep-foxconn'   },
-  // ── Downtown / Tech Ecosystem ────────────────────────────────────────────────
-  { id: 'ep-mesaai',     lat: 31.7582, lon: -106.4852, label: 'MesaAI',              category: 'AI / ML',       layer: 'vendors',  weight: 0.58, confidence: 0.72, entity_id: 'ep-mesaai'    },
-  { id: 'ep-rioiot',     lat: 31.7622, lon: -106.4792, label: 'Rio IoT',             category: 'IoT',           layer: 'vendors',  weight: 0.55, confidence: 0.68, entity_id: 'ep-rioiot'    },
-  { id: 'ep-sunpath',    lat: 31.7562, lon: -106.4912, label: 'SunPath Analytics',   category: 'Analytics',     layer: 'momentum', weight: 0.62, confidence: 0.74, entity_id: 'ep-sunpath'   },
-  { id: 'ep-alorica',    lat: 31.7548, lon: -106.4822, label: 'Alorica Tech Svcs',   category: 'Enterprise IT', layer: 'vendors',  weight: 0.65, confidence: 0.76, entity_id: 'ep-alorica'   },
-  { id: 'ep-weststar',   lat: 31.7558, lon: -106.4782, label: 'WestStar Bank',       category: 'FinTech',       layer: 'funding',  weight: 0.65, confidence: 0.78, entity_id: 'ep-weststar'  },
-  { id: 'ep-hunt',       lat: 31.7578, lon: -106.4832, label: 'Hunt Companies',      category: 'PropTech',      layer: 'funding',  weight: 0.70, confidence: 0.80, entity_id: 'ep-hunt'      },
+// Auto-generated vendor stubs from the authoritative EL_PASO_VENDORS database.
+// Only includes EP-metro vendors (lat 31.5–32.1), excludes national `ind-*` entries.
+// Curated multi-layer stubs (products, hiring, news, patents, etc.) are kept below.
+const AUTO_VENDOR_STUBS: MapPoint[] = Object.values(EL_PASO_VENDORS)
+  .filter(v => v.id.startsWith('ep-') && v.lat >= 31.5 && v.lat <= 32.1)
+  .map(v => ({
+    id: v.id,
+    lat: v.lat,
+    lon: v.lon,
+    label: v.name,
+    category: v.category,
+    layer: v.layer,
+    weight: v.weight,
+    confidence: v.confidence,
+    entity_id: v.id,
+  }));
+
+// Curated multi-layer stubs — editorial intelligence (products, hiring, news, patents, etc.)
+const CURATED_STUBS: MapPoint[] = [
   // ── Products Layer — key product lines / offerings in El Paso ─────────────
   { id: 'ep-prod-patriot',    lat: 31.8130, lon: -106.4080, label: 'Patriot PAC-3 MSE',     category: 'Missile Systems',   layer: 'products', weight: 0.92, confidence: 0.95, entity_id: 'ep-raytheon'    },
   { id: 'ep-prod-c4isr',      lat: 31.8078, lon: -106.4180, label: 'C4ISR Platforms',        category: 'ISR Systems',       layer: 'products', weight: 0.88, confidence: 0.93, entity_id: 'ep-l3harris'    },
@@ -270,6 +239,9 @@ const EL_PASO_STUBS: MapPoint[] = [
   { id: 'ep-risk-cbpass',      lat: 31.7535, lon: -106.4820, label: 'CBPASS — Integration Delays',     category: 'Border Tech',     layer: 'risk',     weight: 0.57, confidence: 0.71, entity_id: 'ep-cbpass'    },
   { id: 'ep-risk-sunpower',    lat: 31.7178, lon: -106.2540, label: 'SunPower — Margin Compression',   category: 'Energy',          layer: 'risk',     weight: 0.65, confidence: 0.75, entity_id: 'ep-sunpower'  },
 ];
+
+// Combined stubs — auto-generated vendors + curated multi-layer intel
+const EL_PASO_STUBS: MapPoint[] = [...AUTO_VENDOR_STUBS, ...CURATED_STUBS];
 
 export type FlyToTarget = { longitude: number; latitude: number; zoom: number };
 

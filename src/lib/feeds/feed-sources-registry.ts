@@ -765,6 +765,28 @@ const ELPASO_GN: CompactGN[] = [
   ['ep-warehouse', 'GN: EP Warehouse', 'El Paso warehouse distribution logistics center', ['warehouse','distribution','logistics'], 3, 'el-paso'],
   ['ep-data-center', 'GN: EP Data Center', 'El Paso data center colocation cloud', ['data center','colocation','cloud'], 3, 'el-paso'],
   ['ep-solar-ep', 'GN: EP Solar', 'El Paso solar energy installation renewable', ['solar','energy','el paso'], 3, 'el-paso'],
+  // Government procurement & contracts
+  ['ep-sam-awards', 'GN: SAM Awards EP', 'SAM.gov contract award El Paso Texas defense', ['sam.gov','contract','award'], 3, 'el-paso'],
+  ['ep-usaspend', 'GN: USASpending EP', 'USASpending federal contract El Paso Fort Bliss', ['usaspending','federal','contract'], 3, 'el-paso'],
+  ['ep-dod-contracts', 'GN: DoD Contracts EP', 'Department of Defense contract award Texas El Paso', ['dod','contract','texas'], 2, 'el-paso'],
+  ['ep-dhs-procurement', 'GN: DHS Procurement', 'DHS CBP procurement technology border security', ['dhs','cbp','procurement'], 3, 'el-paso'],
+  ['ep-army-contract', 'GN: Army Contracting', 'Army contracting command MICC Fort Bliss award', ['army','contracting','fort bliss'], 3, 'el-paso'],
+  // Transport & freight
+  ['ep-bnsf-news', 'GN: BNSF EP', 'BNSF Railway El Paso intermodal freight rail', ['bnsf','railway','intermodal'], 3, 'el-paso'],
+  ['ep-freight-ep', 'GN: EP Freight', 'El Paso freight trucking cross-border logistics', ['freight','trucking','cross-border'], 3, 'el-paso'],
+  ['ep-customs-trade', 'GN: EP Customs Trade', 'El Paso customs brokerage trade compliance USMCA', ['customs','brokerage','usmca'], 3, 'el-paso'],
+  // Professional services & Big 4
+  ['ep-big4-border', 'GN: Big 4 Border', 'PwC EY Deloitte KPMG maquiladora border advisory', ['pwc','ey','maquiladora'], 3, 'el-paso'],
+  // Helen of Troy (EP HQ)
+  ['ep-hot-news', 'GN: Helen of Troy', 'Helen of Troy Limited housewares OXO Hydro Flask', ['helen of troy','oxo','hydro flask'], 3, 'el-paso'],
+  // White Sands & missile testing
+  ['ep-wsmr-test', 'GN: WSMR Testing', 'White Sands Missile Range test hypersonic directed energy', ['wsmr','hypersonic','directed energy'], 3, 'el-paso'],
+  // DEA EPIC intelligence
+  ['ep-dea-intel', 'GN: DEA EPIC', 'DEA El Paso Intelligence Center drug trafficking', ['dea','epic','intelligence'], 3, 'el-paso'],
+  // Quantum & advanced tech
+  ['ep-quantum-army', 'GN: Quantum Army', 'quantum computing Army research laboratory defense', ['quantum','army','defense'], 3, 'national'],
+  // Delek refinery
+  ['ep-delek-news', 'GN: Delek US', 'Delek US Holdings refinery petroleum El Paso', ['delek','refinery','petroleum'], 3, 'el-paso'],
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════

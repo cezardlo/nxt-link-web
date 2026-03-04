@@ -858,6 +858,378 @@ export const EL_PASO_VENDORS: Record<string, VendorRecord> = {
     lat: 31.7595, lon: -106.4878, layer: 'funding', weight: 0.55, confidence: 0.68,
   },
 
+  // ── Construction / Infrastructure ─────────────────────────────────────────
+
+  'ep-fluor': {
+    id: 'ep-fluor',
+    name: 'Fluor Corporation — Fort Bliss',
+    description: 'Global engineering and construction firm with a long-standing presence at Fort Bliss supporting LOGCAP IV and V program execution. Manages large-scale barracks construction, base camp infrastructure, and facility sustainment for the Army Installation Management Command.',
+    website: 'https://fluor.com',
+    tags: ['Construction', 'LOGCAP', 'Military Construction', 'Facilities Management', 'Fort Bliss'],
+    evidence: ['LOGCAP IV Fort Bliss task order execution ($380M ceiling)', 'Fort Bliss consolidated barracks construction program (2022–2024)', 'Army Corps of Engineers preferred contractor for Southwest region'],
+    category: 'Construction',
+    ikerScore: 82,
+    lat: 31.8105, lon: -106.4295, layer: 'vendors', weight: 0.82, confidence: 0.88,
+  },
+
+  'ep-aecom': {
+    id: 'ep-aecom',
+    name: 'AECOM — Fort Bliss / WSMR',
+    description: 'Global infrastructure firm providing environmental engineering, NEPA compliance, facility design, and construction management at Fort Bliss and White Sands Missile Range. Manages remediation of legacy contamination sites and supports range expansion environmental studies.',
+    website: 'https://aecom.com',
+    tags: ['Engineering', 'Environmental', 'NEPA', 'Construction Management', 'Fort Bliss', 'WSMR'],
+    evidence: ['Fort Bliss NEPA environmental studies support contract (ongoing)', 'WSMR range expansion environmental impact assessment 2024', 'Army Corps of Engineers AFCEC task order ($65M IDIQ)'],
+    category: 'Construction',
+    ikerScore: 80,
+    lat: 31.8012, lon: -106.4215, layer: 'vendors', weight: 0.80, confidence: 0.86,
+  },
+
+  'ep-kiewit': {
+    id: 'ep-kiewit',
+    name: 'Kiewit Corporation — El Paso',
+    description: 'Major infrastructure and construction firm executing heavy civil, transportation, and border infrastructure projects in the El Paso-Las Cruces corridor. Active on TxDOT I-10 interchange improvements and the Tornillo-Guadalupe port of entry expansion program.',
+    website: 'https://kiewit.com',
+    tags: ['Construction', 'Infrastructure', 'Border Infrastructure', 'Transportation', 'TxDOT'],
+    evidence: ['Tornillo-Guadalupe POE expansion construction contract ($210M, 2023)', 'TxDOT I-10/I-25 El Paso interchange reconstruction program', 'GSA border crossing modernization preferred contractor list'],
+    category: 'Construction',
+    ikerScore: 78,
+    lat: 31.7498, lon: -106.4512, layer: 'vendors', weight: 0.78, confidence: 0.85,
+  },
+
+  'ep-hensel-phelps': {
+    id: 'ep-hensel-phelps',
+    name: 'Hensel Phelps — Fort Bliss MILCON',
+    description: 'Employee-owned construction firm specializing in military construction (MILCON) and federal building projects. Consistently awarded Army MILCON contracts at Fort Bliss for barracks, training facilities, and readiness center construction under the USACE Albuquerque District.',
+    website: 'https://henselphelps.com',
+    tags: ['MILCON', 'Military Construction', 'Federal Construction', 'Fort Bliss', 'USACE'],
+    evidence: ['Fort Bliss MILCON barracks replacement P-1234 contract ($145M, 2024)', 'Army Reserve Center El Paso construction award ($38M)', 'USACE Albuquerque District preferred MILCON contractor (10-year history)'],
+    category: 'Construction',
+    ikerScore: 76,
+    lat: 31.8202, lon: -106.3985, layer: 'vendors', weight: 0.76, confidence: 0.84,
+  },
+
+  'ep-sundt': {
+    id: 'ep-sundt',
+    name: 'Sundt Construction — El Paso',
+    description: 'Employee-owned construction firm with an active Southwest region presence executing federal, healthcare, and transportation projects in El Paso. Completed UTEP campus expansion projects and holds Texas DOT prequalification for highway construction.',
+    website: 'https://sundt.com',
+    tags: ['Construction', 'Healthcare Construction', 'Federal Buildings', 'Higher Education', 'TxDOT'],
+    evidence: ['UTEP STEM Instructional Facility construction ($62M, 2023)', 'El Paso County courthouse renovation contract', 'TxDOT Loop 375 Border Highway West lane expansion'],
+    category: 'Construction',
+    ikerScore: 72,
+    lat: 31.7612, lon: -106.4895, layer: 'vendors', weight: 0.72, confidence: 0.82,
+  },
+
+  // ── Professional Services ──────────────────────────────────────────────────
+
+  'ep-pwc': {
+    id: 'ep-pwc',
+    name: 'PricewaterhouseCoopers — El Paso',
+    description: 'Big Four advisory firm with an El Paso practice focused on cross-border tax structuring, USMCA transfer pricing, and maquiladora IMMEX program compliance for Fortune 500 manufacturers operating in the Juárez-El Paso corridor.',
+    website: 'https://pwc.com',
+    tags: ['Consulting', 'Tax Advisory', 'USMCA', 'Transfer Pricing', 'Maquiladora', 'Cross-Border'],
+    evidence: ['50+ maquiladora USMCA rules-of-origin advisory engagements (2024)', 'Cross-border transfer pricing audit support for 3 NASDAQ-listed manufacturers', 'El Paso practice expansion: IMMEX restructuring group added Q1 2024'],
+    category: 'Consulting',
+    ikerScore: 75,
+    lat: 31.7602, lon: -106.4912, layer: 'vendors', weight: 0.75, confidence: 0.82,
+  },
+
+  'ep-ey': {
+    id: 'ep-ey',
+    name: 'Ernst & Young — El Paso',
+    description: 'Global professional services firm with an El Paso advisory team specializing in USMCA origin certification, Mexico maquiladora restructuring, and cross-border M&A due diligence for nearshoring transactions in the Juárez industrial park ecosystem.',
+    website: 'https://ey.com',
+    tags: ['Consulting', 'USMCA', 'M&A Advisory', 'Nearshoring', 'Tax', 'Maquiladora'],
+    evidence: ['Led USMCA compliance review for Aptiv Juárez operations (2024)', 'Nearshoring transaction advisory for 4 Asian OEMs entering EP corridor (2023)', 'EY Reporting: El Paso-Juárez ranked top 3 US-Mexico nearshoring corridor'],
+    category: 'Consulting',
+    ikerScore: 74,
+    lat: 31.7598, lon: -106.4805, layer: 'vendors', weight: 0.74, confidence: 0.81,
+  },
+
+  'ep-icf': {
+    id: 'ep-icf',
+    name: 'ICF International — DHS/Border',
+    description: 'Management and technology consulting firm with federal contracts supporting DHS, CBP, and FEMA programs in the El Paso sector. Provides policy analysis, program evaluation, and technology implementation advisory for border security and emergency management clients.',
+    website: 'https://icf.com',
+    tags: ['Consulting', 'DHS', 'CBP', 'Border Security', 'Program Management', 'Policy Analysis'],
+    evidence: ['DHS CBP technology modernization advisory task order ($28M IDIQ)', 'FEMA Region 6 emergency management program evaluation (El Paso county)', 'CBP tactical communications program assessment 2024'],
+    category: 'Consulting',
+    ikerScore: 70,
+    lat: 31.7715, lon: -106.4445, layer: 'vendors', weight: 0.70, confidence: 0.80,
+  },
+
+  'ep-maxar': {
+    id: 'ep-maxar',
+    name: 'Maxar Technologies — Geospatial Intel',
+    description: 'Commercial geospatial intelligence and satellite imagery provider supporting Fort Bliss training range mapping, NGA contracts, and CBP border surveillance programs. Provides high-resolution WorldView imagery and 3D terrain models for Army mission rehearsal exercises.',
+    website: 'https://maxar.com',
+    tags: ['Geospatial', 'Satellite Imagery', 'NGA', 'ISR', 'Fort Bliss', 'CBP', 'GEOINT'],
+    evidence: ['NGA commercial GEOINT services contract (EnhancedView Follow-On, $300M ceiling)', 'Fort Bliss training range 3D terrain model delivery 2024', 'CBP border surveillance imagery subscription active'],
+    category: 'Defense IT',
+    ikerScore: 82,
+    lat: 31.8108, lon: -106.4115, layer: 'vendors', weight: 0.82, confidence: 0.86,
+  },
+
+  'ep-peraton': {
+    id: 'ep-peraton',
+    name: 'Peraton (formerly Perspecta)',
+    description: 'Defense and national security IT services firm formed from the merger of Perspecta and DXC. Holds active Fort Bliss IT infrastructure and cyber defense task orders. Provides enterprise IT operations, classified network management, and Army cyber readiness services.',
+    website: 'https://peraton.com',
+    tags: ['Defense IT', 'Cybersecurity', 'Enterprise IT', 'Army Networks', 'Fort Bliss', 'Classified'],
+    evidence: ['Fort Bliss classified IT infrastructure task order ($92M, 2023)', 'Army ITES-3S enterprise services contract award', 'Peraton cyber SOC supporting ARCYBER-aligned missions'],
+    category: 'Defense IT',
+    ikerScore: 81,
+    lat: 31.8118, lon: -106.4192, layer: 'vendors', weight: 0.81, confidence: 0.85,
+  },
+
+  // ── Transport / Freight ────────────────────────────────────────────────────
+
+  'ep-bnsf': {
+    id: 'ep-bnsf',
+    name: 'BNSF Railway — El Paso Intermodal',
+    description: 'BNSF operates a major intermodal facility in East El Paso connecting Class I rail to truck for US-Mexico cross-border freight. El Paso is one of four primary BNSF border crossing hubs, handling automotive parts, consumer goods, and raw materials from Mexico.',
+    website: 'https://bnsf.com',
+    tags: ['Rail', 'Intermodal', 'Cross-Border Freight', 'Logistics', 'US-Mexico Trade'],
+    evidence: ['El Paso Intermodal Terminal handles 180k+ lifts/year (2024)', 'Announced $45M facility expansion for increased Mexico trade volume (2024)', 'Primary rail carrier for Juárez maquiladora finished goods northbound'],
+    category: 'Logistics',
+    ikerScore: 80,
+    lat: 31.7812, lon: -106.3985, layer: 'vendors', weight: 0.80, confidence: 0.88,
+  },
+
+  'ep-ups': {
+    id: 'ep-ups',
+    name: 'UPS — El Paso Hub',
+    description: 'UPS operates a major regional air and ground hub at El Paso International Airport, processing cross-border e-commerce shipments and commercial freight between the US and Mexico. Hub serves as a gateway for UPS Brokerage express customs clearance for US-Mexico parcels.',
+    website: 'https://ups.com',
+    tags: ['Logistics', 'Air Freight', 'Parcel', 'Cross-Border', 'Express Customs'],
+    evidence: ['ELP air hub processes 35,000+ packages/day (2024)', 'UPS Brokerage Mexico Express Customs clearance program active', 'Amazon logistics partner with dedicated El Paso sort facility'],
+    category: 'Logistics',
+    ikerScore: 79,
+    lat: 31.8012, lon: -106.3815, layer: 'vendors', weight: 0.79, confidence: 0.88,
+  },
+
+  'ep-werner': {
+    id: 'ep-werner',
+    name: 'Werner Enterprises — El Paso Cross-Border',
+    description: 'Top-10 US truckload carrier with a dedicated El Paso cross-border division managing US-Mexico drayage, transloading, and intermodal services. Werner\'s Mexico subsidiary holds full operating authority in both countries and specializes in maquiladora supply chain management.',
+    website: 'https://werner.com',
+    tags: ['Truckload', 'Cross-Border', 'Drayage', 'Maquiladora Logistics', 'Intermodal'],
+    evidence: ['El Paso terminal 250+ tractors dedicated to Mexico corridors', 'C-TPAT Tier III certified carrier (highest designation)', 'Werner Mexico cross-border volume +18% YoY (2024)'],
+    category: 'Logistics',
+    ikerScore: 76,
+    lat: 31.7918, lon: -106.3908, layer: 'vendors', weight: 0.76, confidence: 0.86,
+  },
+
+  'ep-jbhunt': {
+    id: 'ep-jbhunt',
+    name: 'J.B. Hunt Transport — El Paso Intermodal',
+    description: 'One of the largest US surface transportation firms, operating an El Paso intermodal terminal connecting BNSF and Union Pacific rail to drayage carriers crossing into Mexico. J.B. Hunt 360 digital freight platform integrates with CBP ACE for pre-clearance.',
+    website: 'https://jbhunt.com',
+    tags: ['Intermodal', 'Truckload', 'Digital Freight', 'CBP ACE', 'Cross-Border'],
+    evidence: ['El Paso intermodal container dray volume 90k+ moves/year (2024)', 'J.B. Hunt 360 platform CBP ACE pre-clearance integration active', 'BNSF preferred intermodal marketing company (IMC) in El Paso'],
+    category: 'Logistics',
+    ikerScore: 77,
+    lat: 31.7798, lon: -106.4092, layer: 'vendors', weight: 0.77, confidence: 0.87,
+  },
+
+  'ep-odfl': {
+    id: 'ep-odfl',
+    name: 'Old Dominion Freight Line — El Paso',
+    description: 'National LTL carrier ranked #1 in on-time delivery with a major El Paso service center handling regional and transcontinental freight. Key carrier for maquiladora components inbound to Juárez plants and finished goods returning to US distribution.',
+    website: 'https://odfl.com',
+    tags: ['LTL', 'Freight', 'Regional Distribution', 'Maquiladora', 'Supply Chain'],
+    evidence: ['El Paso service center ranked top-10 ODFL terminals by volume (2024)', 'On-time delivery rate 99.1% Southwest region (Q4 2024)', 'Inbound maquiladora component delivery program serving 80+ Juárez plants'],
+    category: 'Logistics',
+    ikerScore: 74,
+    lat: 31.7905, lon: -106.3715, layer: 'vendors', weight: 0.74, confidence: 0.85,
+  },
+
+  // ── Government / Military Entities ────────────────────────────────────────
+
+  'ep-micc': {
+    id: 'ep-micc',
+    name: 'Fort Bliss MICC',
+    description: 'Mission & Installation Contracting Command — Fort Bliss. The primary Army contracting authority for Fort Bliss installation, managing over $600M in annual contract actions covering base operations, construction, IT services, and professional services. Primary entry point for vendor engagement with Fort Bliss.',
+    website: 'https://micc.army.mil/fortbliss',
+    tags: ['Government', 'Military Contracting', 'Fort Bliss', 'Army Procurement', 'MILCON'],
+    evidence: ['$600M+ annual contract award volume (FY2024)', 'Primary contracting office for 1st Armored Division and IMCOM-Fort Bliss', 'SAM.gov listings: 200+ open solicitations FY2024'],
+    category: 'Government',
+    ikerScore: 88,
+    lat: 31.8205, lon: -106.4112, layer: 'vendors', weight: 0.88, confidence: 0.95,
+  },
+
+  'ep-dea-epic': {
+    id: 'ep-dea-epic',
+    name: 'DEA — El Paso Intelligence Center (EPIC)',
+    description: 'El Paso Intelligence Center is a multi-agency intelligence center led by the DEA, co-located with DHS, CBP, ICE, and DoD analysts. EPIC serves as the primary intelligence fusion center for US-Mexico drug trafficking, human smuggling, and transnational criminal organization targeting.',
+    website: 'https://dea.gov/el-paso-intelligence-center',
+    tags: ['Intelligence', 'DEA', 'Border Security', 'Drug Enforcement', 'Fusion Center', 'Multi-Agency'],
+    evidence: ['Multi-agency intel fusion center: 20+ federal agencies co-located', 'Processes 500+ intelligence reports per month on TCO activity (2024)', 'Primary intelligence node for Southwest Border Campaign operations'],
+    category: 'Government',
+    ikerScore: 85,
+    lat: 31.7712, lon: -106.4985, layer: 'vendors', weight: 0.85, confidence: 0.92,
+  },
+
+  'ep-cbp-sector': {
+    id: 'ep-cbp-sector',
+    name: 'CBP — El Paso Sector HQ',
+    description: 'U.S. Customs and Border Protection El Paso Sector headquarters, responsible for border security operations across 125 miles of the US-Mexico border from the Texas-New Mexico state line. The El Paso Sector manages six ports of entry and is one of the largest CBP procurement consumers in the Southwest.',
+    website: 'https://cbp.gov/border-security/along-us-borders/border-patrol-sectors/el-paso-sector',
+    tags: ['Government', 'CBP', 'Border Security', 'Ports of Entry', 'Procurement'],
+    evidence: ['Manages 6 POEs: Paso del Norte, Bridge of Americas, Ysleta, and 3 others', 'Annual technology procurement budget $85M+ (FY2024 estimate)', 'CBP El Paso USBP Sector: 3,200+ agents and officers'],
+    category: 'Government',
+    ikerScore: 87,
+    lat: 31.7498, lon: -106.4912, layer: 'vendors', weight: 0.87, confidence: 0.93,
+  },
+
+  'ep-usace': {
+    id: 'ep-usace',
+    name: 'US Army Corps of Engineers — Albuquerque District',
+    description: 'US Army Corps of Engineers Albuquerque District manages military construction, civil works, and environmental programs across New Mexico, West Texas, and southern Colorado. Primary contracting authority for MILCON projects at Fort Bliss, WSMR, and Holloman AFB.',
+    website: 'https://www.spa.usace.army.mil',
+    tags: ['Government', 'MILCON', 'Civil Engineering', 'Construction Management', 'Environmental', 'Army Corps'],
+    evidence: ['FY2024 MILCON program: $420M in Fort Bliss and WSMR project awards', 'Border infrastructure civil works projects under INA authority', 'Environmental remediation oversight at 14 Fort Bliss FUDS sites'],
+    category: 'Government',
+    ikerScore: 86,
+    lat: 31.8095, lon: -106.4315, layer: 'vendors', weight: 0.86, confidence: 0.93,
+  },
+
+  'ep-wsmr': {
+    id: 'ep-wsmr',
+    name: 'White Sands Missile Range',
+    description: 'Largest military installation in the US by area (3,200 sq miles), serving as the primary DoD test and evaluation range for missiles, directed energy weapons, hypersonic systems, and electronic warfare. Operates the High Energy Laser System Test Facility (HELSTF) and multiple radar tracking networks.',
+    website: 'https://wsmr.army.mil',
+    tags: ['Defense', 'Test & Evaluation', 'Missiles', 'Hypersonics', 'Directed Energy', 'WSMR'],
+    evidence: ['FY2024 test program: 1,200+ individual tests across all services', 'Hypersonic weapon systems test range expansion $320M (2023–2026)', 'HELSTF directed energy testing facility upgrade contract awarded 2024'],
+    category: 'Government',
+    ikerScore: 89,
+    lat: 31.8508, lon: -106.2985, layer: 'vendors', weight: 0.89, confidence: 0.94,
+  },
+
+  // ── Local Tech / Startups ──────────────────────────────────────────────────
+
+  'ep-strangeworks': {
+    id: 'ep-strangeworks',
+    name: 'Strangeworks — Quantum Computing',
+    description: 'Austin-based quantum computing software company with a Texas Army partnership and growing presence in the El Paso defense tech corridor. Provides quantum algorithm development tools and hybrid classical-quantum computing access via the Strangeworks QC platform for DoD research programs.',
+    website: 'https://strangeworks.com',
+    tags: ['Quantum Computing', 'Defense Tech', 'AI/ML', 'Army Research', 'HPC'],
+    evidence: ['US Army DEVCOM Army Research Laboratory partnership MOU (2023)', 'Strangeworks QC platform: 30+ quantum hardware providers integrated', 'Raised $24M Series A (2023, Lightspeed Venture Partners)'],
+    category: 'AI / ML',
+    ikerScore: 65,
+    lat: 31.7602, lon: -106.4782, layer: 'momentum', weight: 0.65, confidence: 0.76,
+  },
+
+  'ep-evolv': {
+    id: 'ep-evolv',
+    name: 'Evolv Technology — Border Screening',
+    description: 'AI-powered security screening system provider deploying touchless weapons detection at high-throughput locations. Evolv Express units are being evaluated at El Paso ports of entry for pedestrian lane screening to replace traditional magnetometer infrastructure.',
+    website: 'https://evolvtechnology.com',
+    tags: ['Security Tech', 'AI Screening', 'Weapons Detection', 'Border Tech', 'CBP', 'Ports of Entry'],
+    evidence: ['CBP pedestrian lane security screening pilot evaluation (Paso del Norte POE, 2024)', 'Evolv Express deployed at 1,000+ venues globally including NFL stadiums', 'DHS S&T accelerator participant for non-intrusive inspection technology'],
+    category: 'Border Tech',
+    ikerScore: 68,
+    lat: 31.7502, lon: -106.4742, layer: 'momentum', weight: 0.68, confidence: 0.78,
+  },
+
+  'ep-blackhorse': {
+    id: 'ep-blackhorse',
+    name: 'Black Horse Group',
+    description: 'El Paso-based defense consulting and program management firm founded by veterans of the 11th Armored Cavalry Regiment (Black Horse). Provides acquisition strategy, proposal support, and technology transition advisory to small defense businesses seeking Fort Bliss and WSMR contracts.',
+    website: 'https://blackhorsegroup.com',
+    tags: ['Defense Consulting', 'Acquisition Strategy', 'Program Management', 'Veteran-Owned', 'SBIR Support'],
+    evidence: ['20+ Fort Bliss vendor clients assisted with MICC contract awards (2023–2024)', 'SDVOSB certified small business consulting firm', 'Co-located with Entrada El Paso innovation hub'],
+    category: 'Consulting',
+    ikerScore: 55,
+    lat: 31.7602, lon: -106.4895, layer: 'momentum', weight: 0.55, confidence: 0.72,
+  },
+
+  'ep-smartrosetta': {
+    id: 'ep-smartrosetta',
+    name: 'Smart Rosetta',
+    description: 'El Paso AI startup developing bilingual English-Spanish NLP models for legal document processing, immigration paperwork automation, and cross-border trade document digitization. Targets law firms, customs brokers, and immigration attorneys serving the El Paso-Juárez bi-national community.',
+    website: 'https://smartrosetta.com',
+    tags: ['AI/ML', 'NLP', 'Bilingual AI', 'Legal Tech', 'Immigration Tech', 'Cross-Border'],
+    evidence: ['Pre-Seed $850k raised (2024, UTEP tech transfer spinout)', 'Pilot with 3 El Paso immigration law firms for document automation', 'Texas SBIR Phase I award for bilingual legal NLP ($150k, 2024)'],
+    category: 'AI / ML',
+    ikerScore: 52,
+    lat: 31.7612, lon: -106.4802, layer: 'funding', weight: 0.52, confidence: 0.70,
+  },
+
+  'ep-teksynap': {
+    id: 'ep-teksynap',
+    name: 'TekSynap Corporation',
+    description: 'Defense IT managed services company providing network operations, cybersecurity, and end-user computing support to Army installations including Fort Bliss. TekSynap holds Army ITES-3H and SETI contract vehicles for IT services delivery across the Southwest region.',
+    website: 'https://teksynap.com',
+    tags: ['Defense IT', 'Managed Services', 'Network Operations', 'Cybersecurity', 'ITES-3H', 'Army'],
+    evidence: ['Fort Bliss ITES-3H network operations task order ($47M, 2024)', 'Army Cyber Command SETI contract award active', 'El Paso cleared workforce: 180+ personnel on post (2024)'],
+    category: 'Defense IT',
+    ikerScore: 70,
+    lat: 31.8115, lon: -106.4195, layer: 'vendors', weight: 0.70, confidence: 0.80,
+  },
+
+  // ── Business / Institutions ────────────────────────────────────────────────
+
+  'ep-helenoftroy': {
+    id: 'ep-helenoftroy',
+    name: 'Helen of Troy Limited',
+    description: 'Global consumer products company headquartered in Hamilton, Bermuda with its principal executive offices in El Paso, Texas. Owns brands including OXO, Hydro Flask, Honeywell Home, Vicks, Braun, and Osprey. El Paso office manages global product development strategy and North American supply chain.',
+    website: 'https://helenoftroy.com',
+    tags: ['Consumer Goods', 'CPG', 'Brand Management', 'Global Supply Chain', 'El Paso HQ'],
+    evidence: ['$2.1B annual revenue (FY2024)', 'El Paso executive HQ: 400+ employees', 'Hydro Flask and OXO brand acquisition strategy drives portfolio growth'],
+    category: 'Manufacturing',
+    ikerScore: 78,
+    lat: 31.7712, lon: -106.4205, layer: 'vendors', weight: 0.78, confidence: 0.88,
+  },
+
+  'ep-delek': {
+    id: 'ep-delek',
+    name: 'Delek US — El Paso Refinery',
+    description: 'Delek US Holdings operates the former Western Refining El Paso refinery, one of the largest crude oil refineries in the Southwest. Processes West Texas Intermediate crude into gasoline, diesel, jet fuel, and asphalt for the El Paso-Fort Bliss regional market.',
+    website: 'https://delekus.com',
+    tags: ['Energy', 'Refinery', 'Petroleum', 'Fuel Supply', 'Defense Logistics', 'Fort Bliss'],
+    evidence: ['El Paso refinery 25,000 BPD processing capacity', 'DLA Energy fuel supply contract for Fort Bliss (JP-8 jet fuel)', 'Western Refining acquisition completed; El Paso operations fully integrated'],
+    category: 'Energy',
+    ikerScore: 72,
+    lat: 31.7305, lon: -106.3195, layer: 'vendors', weight: 0.72, confidence: 0.82,
+  },
+
+  'ep-borderplex': {
+    id: 'ep-borderplex',
+    name: 'Borderplex Alliance',
+    description: 'El Paso\'s primary economic development and trade organization representing the Borderplex region (El Paso-Las Cruces-Ciudad Juárez). Acts as the official interface between site selectors, government agencies, and businesses considering investment in the region. Manages the borderplexdata.com regional economic intelligence platform.',
+    website: 'https://borderplexalliance.org',
+    tags: ['Economic Development', 'Site Selection', 'FDI', 'Nearshoring', 'Borderplex', 'USMCA'],
+    evidence: ['Facilitated $1.4B in announced investment into the Borderplex region (2023)', 'Borderplexdata.com: regional economic data platform launched 2022', 'Primary liaison for 15+ Fortune 500 nearshoring site selection inquiries (2024)'],
+    category: 'Economic Development',
+    ikerScore: 68,
+    lat: 31.7612, lon: -106.4895, layer: 'momentum', weight: 0.68, confidence: 0.80,
+  },
+
+  'ep-utep-kiran': {
+    id: 'ep-utep-kiran',
+    name: 'UTEP — Kiran Analytics Research Institute',
+    description: 'UTEP research institute focused on applied data analytics, machine learning, and decision science for public health, transportation, and border management. Conducts federally-funded research in collaboration with TXDOT, NIH, and DHS on data-driven policy solutions for the Southwest US.',
+    website: 'https://utep.edu/kiran',
+    tags: ['Research', 'Data Analytics', 'Machine Learning', 'Public Health Analytics', 'Transportation', 'UTEP'],
+    evidence: ['NIH R01 grant for border community health analytics ($1.8M, 2024)', 'TxDOT data science partnership for I-10 traffic pattern analysis', 'DHS cross-border mobility analytics pilot with UTEP Kiran team'],
+    category: 'AI / ML',
+    ikerScore: 60,
+    lat: 31.7722, lon: -106.5082, layer: 'momentum', weight: 0.60, confidence: 0.75,
+  },
+
+  'ep-ttuhsc-ep': {
+    id: 'ep-ttuhsc-ep',
+    name: 'Texas Tech University Health Sciences Center EP',
+    description: 'Independent academic health science center in El Paso training physicians, nurses, and allied health professionals for the West Texas-New Mexico region. Operates the Paul L. Foster School of Medicine and is expanding clinical research into border health disparities, infectious disease, and trauma care.',
+    website: 'https://ttuhsc.edu/elpaso',
+    tags: ['Medical Education', 'Health Research', 'Border Health', 'Trauma Care', 'Academic Medicine'],
+    evidence: ['Paul L. Foster School of Medicine: 250+ enrolled MD candidates (2024)', 'NIH T32 training grant for border health research ($2.1M)', 'TTUHSC EP + UMC Level I Trauma Center academic affiliation agreement (2023)'],
+    category: 'Health Tech',
+    ikerScore: 65,
+    lat: 31.7712, lon: -106.5022, layer: 'vendors', weight: 0.65, confidence: 0.80,
+  },
+
   // ── Warehouse Automation & AMR ─────────────────────────────────────────────
 
   'ind-locus': {
