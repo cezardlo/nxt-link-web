@@ -24,6 +24,10 @@ export type TimeRange = 1 | 24 | 168 | 720 | 2160 | 4320;
 export type Mode = 'operator' | 'executive';
 
 export interface LayerState {
+  // Global intelligence layers
+  globalHubs: boolean;
+  conferences: boolean;
+  // Vendor layers
   vendors: boolean;
   samBusinesses: boolean;
   products: boolean;
@@ -46,6 +50,8 @@ export interface LayerState {
 }
 
 const DEFAULT_LAYERS: LayerState = {
+  globalHubs:    true,
+  conferences:   false,
   vendors:       true,
   samBusinesses: false,
   products:      true,

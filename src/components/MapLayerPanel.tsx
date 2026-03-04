@@ -18,6 +18,14 @@ type Group = {
 
 const GROUPS: Group[] = [
   {
+    label: 'GLOBAL',
+    accent: '#00d4ff',
+    layers: [
+      { key: 'globalHubs',  label: 'TECH HUBS',   color: '#00d4ff' },
+      { key: 'conferences', label: 'CONFERENCES', color: '#a855f7' },
+    ],
+  },
+  {
     label: 'LIVE',
     accent: '#00ff88',
     layers: [

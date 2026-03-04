@@ -5,6 +5,7 @@ import Link from 'next/link';
 
 import { IKERPanel } from '@/components/IKERPanel';
 import { SectorMomentumBoard } from '@/components/SectorMomentumBoard';
+import { SignalsFeed } from '@/components/SignalsFeed';
 import type { SectorScore } from '@/lib/intelligence/signal-engine';
 import type { FlightPoint, FlightCategory } from '@/components/MapCanvas';
 import { NXT_ENTITIES } from '@/lib/intelligence/nxt-entities';
@@ -36,7 +37,7 @@ type VendorDetail = {
   ikerScore?: number;
 };
 
-type Tab = 'briefing' | 'dossier' | 'iker' | 'feeds' | 'flights' | 'market' | 'momentum' | 'opportunities' | 'contracts';
+type Tab = 'briefing' | 'dossier' | 'iker' | 'feeds' | 'flights' | 'market' | 'momentum' | 'opportunities' | 'contracts' | 'signals';
 
 type Props = {
   selectedPoint: SelectedPoint | null;
@@ -52,6 +53,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'dossier',  label: 'DOSSR' },
   { id: 'iker',     label: 'IKER'  },
   { id: 'feeds',    label: 'FEEDS' },
+  { id: 'signals',  label: 'SGNLS' },
   { id: 'flights',  label: 'FLT'   },
   { id: 'opportunities', label: 'OPPS' },
   { id: 'contracts', label: 'CNTRCT' },
@@ -99,25 +101,29 @@ export function MapRightPanel({ selectedPoint, missionBriefing, briefingLoading,
       )}
       {/* Tab bar — Bloomberg-style compact tabs */}
       <div className="flex border-b border-white/[0.05] shrink-0 overflow-x-auto scrollbar-thin bg-black/40">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`shrink-0 flex-1 py-2 font-mono text-[8px] tracking-[0.15em] transition-all duration-150 min-w-[2.8rem] relative ${
-              activeTab === tab.id
-                ? 'text-[#00d4ff] font-bold'
-                : 'text-white/18 hover:text-white/40'
-            }`}
-          >
-            {tab.label}
-            {activeTab === tab.id && (
-              <span
-                className="absolute bottom-0 left-0 right-0 h-px"
-                style={{ background: '#00d4ff', boxShadow: '0 0 4px #00d4ffcc' }}
-              />
-            )}
-          </button>
-        ))}
+        {TABS.map((tab) => {
+          const accentColor = tab.id === 'signals' ? '#f97316' : '#00d4ff';
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`shrink-0 flex-1 py-2 font-mono text-[8px] tracking-[0.15em] transition-all duration-150 min-w-[2.8rem] relative ${
+                activeTab === tab.id
+                  ? 'font-bold'
+                  : 'text-white/18 hover:text-white/40'
+              }`}
+              style={activeTab === tab.id ? { color: accentColor } : {}}
+            >
+              {tab.label}
+              {activeTab === tab.id && (
+                <span
+                  className="absolute bottom-0 left-0 right-0 h-px"
+                  style={{ background: accentColor, boxShadow: `0 0 4px ${accentColor}cc` }}
+                />
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
@@ -131,6 +137,7 @@ export function MapRightPanel({ selectedPoint, missionBriefing, briefingLoading,
           <IKERPanel vendorId={selectedPoint?.entity_id ?? selectedPoint?.id} />
         )}
         {activeTab === 'feeds' && <FeedsTab />}
+        {activeTab === 'signals' && <SignalsFeed />}
         {activeTab === 'flights' && <FlightsDirectoryTab flights={flights} />}
         {activeTab === 'opportunities' && <OpportunitiesTab />}
         {activeTab === 'contracts' && <ContractsTab />}

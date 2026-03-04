@@ -14,12 +14,27 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 const MAP_STYLE = 'https://tiles.openfreemap.org/styles/dark';
 
 const INITIAL_VIEW = {
-  longitude: -106.485,
-  latitude:   31.7619,
-  zoom:       11,
+  longitude:  10,
+  latitude:   25,
+  zoom:       3,
   pitch:      30,
   bearing:     0,
 };
+
+// Global technology hubs — visible when zoomed out
+type GlobalHub = { id: string; lat: number; lon: number; label: string; isHQ: boolean };
+const GLOBAL_HUBS: GlobalHub[] = [
+  { id: 'silicon-valley', lat: 37.39,  lon: -122.08, label: 'SILICON VALLEY',  isHQ: false },
+  { id: 'austin',         lat: 30.27,  lon: -97.74,  label: 'AUSTIN TX',       isHQ: false },
+  { id: 'el-paso',        lat: 31.76,  lon: -106.49, label: 'NXT//LINK HQ',    isHQ: true  },
+  { id: 'boston',          lat: 42.36,  lon: -71.06,  label: 'BOSTON',           isHQ: false },
+  { id: 'seattle',        lat: 47.61,  lon: -122.33, label: 'SEATTLE',         isHQ: false },
+  { id: 'shenzhen',       lat: 22.54,  lon: 114.06,  label: 'SHENZHEN',        isHQ: false },
+  { id: 'munich',         lat: 48.14,  lon: 11.58,   label: 'MUNICH',          isHQ: false },
+  { id: 'tel-aviv',       lat: 32.07,  lon: 34.77,   label: 'TEL AVIV',        isHQ: false },
+  { id: 'bangalore',      lat: 12.97,  lon: 77.59,   label: 'BANGALORE',       isHQ: false },
+  { id: 'tokyo',          lat: 35.68,  lon: 139.69,  label: 'TOKYO',           isHQ: false },
+];
 
 // Layer color palette (RGBA arrays)
 const LAYER_COLORS: Record<string, [number, number, number]> = {
@@ -1092,6 +1107,74 @@ export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onPointCoun
           }) as unknown as Layer,
         );
       }
+    }
+
+    // ── Global Tech Hubs — visible when zoomed out ──────────────────────────
+    if (activeLayers.has('globalHubs') && viewState.zoom < 8) {
+      // Outer glow ring
+      result.push(
+        new ScatterplotLayer({
+          id: 'global-hubs-ring',
+          data: GLOBAL_HUBS,
+          getPosition: (d: GlobalHub) => [d.lon, d.lat] as [number, number],
+          getRadius: (d: GlobalHub) => d.isHQ ? 180000 : 120000,
+          getFillColor: (d: GlobalHub) =>
+            d.isHQ
+              ? [0, 212, 255, Math.round(18 * (0.5 + 0.5 * breatheAmt))] as [number, number, number, number]
+              : [0, 212, 255, 10] as [number, number, number, number],
+          getLineColor: (d: GlobalHub) =>
+            d.isHQ
+              ? [0, 212, 255, Math.round(120 * (0.5 + 0.5 * breatheAmt))] as [number, number, number, number]
+              : [0, 212, 255, 35] as [number, number, number, number],
+          lineWidthMinPixels: 1,
+          stroked: true,
+          filled: true,
+          radiusUnits: 'meters',
+          pickable: false,
+          updateTriggers: { getFillColor: breatheAmt, getLineColor: breatheAmt },
+        }) as unknown as Layer,
+      );
+      // Solid dot
+      result.push(
+        new ScatterplotLayer({
+          id: 'global-hubs-dot',
+          data: GLOBAL_HUBS,
+          getPosition: (d: GlobalHub) => [d.lon, d.lat] as [number, number],
+          getRadius: (d: GlobalHub) => d.isHQ ? 50000 : 35000,
+          getFillColor: (d: GlobalHub) =>
+            d.isHQ
+              ? [0, 212, 255, 200] as [number, number, number, number]
+              : [0, 212, 255, 65] as [number, number, number, number],
+          lineWidthMinPixels: 1,
+          stroked: true,
+          filled: true,
+          radiusUnits: 'meters',
+          pickable: false,
+        }) as unknown as Layer,
+      );
+      // Hub labels
+      result.push(
+        new TextLayer({
+          id: 'global-hubs-labels',
+          data: GLOBAL_HUBS,
+          getPosition: (d: GlobalHub) => [d.lon, d.lat] as [number, number],
+          getText: (d: GlobalHub) => d.label,
+          getSize: (d: GlobalHub) => d.isHQ ? 13 : 11,
+          getColor: (d: GlobalHub) =>
+            d.isHQ
+              ? [0, 212, 255, 230] as [number, number, number, number]
+              : [0, 212, 255, 130] as [number, number, number, number],
+          fontFamily: '"IBM Plex Mono", monospace',
+          getTextAnchor: 'middle',
+          getAlignmentBaseline: 'top',
+          getPixelOffset: [0, 10] as [number, number],
+          background: true,
+          getBackgroundColor: [0, 0, 0, 180] as [number, number, number, number],
+          backgroundPadding: [4, 2, 4, 2] as [number, number, number, number],
+          pickable: false,
+          sizeUnits: 'pixels',
+        }) as unknown as Layer,
+      );
     }
 
     // Landmark zone labels — visible from city zoom level

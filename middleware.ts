@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const requestId =
-    request.headers.get('x-request-id') || globalThis.crypto?.randomUUID?.() || `req_${Date.now()}`;
+    request.headers.get('x-request-id') || crypto.randomUUID();
   const headers = new Headers(request.headers);
   headers.set('x-request-id', requestId);
 
@@ -17,5 +17,9 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  // Only run middleware on API routes — page routes are static and must be
+  // served directly from Vercel's CDN without middleware interference.
+  // The previous catch-all matcher caused Vercel to route static pages
+  // through serverless functions, returning 404 for /map, /vendors, etc.
+  matcher: ['/api/:path*'],
 };
