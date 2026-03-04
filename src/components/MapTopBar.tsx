@@ -257,7 +257,7 @@ export function MapTopBar({
 
       <Separator />
 
-      {/* Mode toggle */}
+      {/* Mode toggle — desktop: segmented, mobile: cycle button */}
       <div className="hidden md:flex items-center rounded-sm overflow-hidden border border-white/[0.07] shrink-0">
         {(['operator', 'executive'] as Mode[]).map((m, idx) => (
           <button
@@ -273,12 +273,19 @@ export function MapTopBar({
           </button>
         ))}
       </div>
+      <button
+        onClick={() => onModeChange(mode === 'operator' ? 'executive' : 'operator')}
+        className="md:hidden shrink-0 px-1.5 py-0.5 font-mono text-[8px] rounded-sm border border-white/[0.07]
+                   text-white/40 transition-all duration-150"
+      >
+        {mode === 'operator' ? 'OPR' : 'EXC'}
+      </button>
 
       <div className="hidden md:block"><Separator /></div>
 
-      {/* Live stats */}
-      <div className="hidden md:flex items-center gap-3 shrink-0">
-        <div className="flex items-center gap-1.5 font-mono text-[8px]">
+      {/* Live stats — visible on all screens */}
+      <div className="flex items-center gap-2 md:gap-3 shrink-0">
+        <div className="flex items-center gap-1 md:gap-1.5 font-mono text-[7px] md:text-[8px]">
           <span className="text-white/15 tracking-widest">LYR</span>
           <span
             className={activeLayerCount > 0 ? 'text-[#00d4ff] font-bold tabular-nums' : 'text-white/25 tabular-nums'}
@@ -291,7 +298,7 @@ export function MapTopBar({
             {activeLayerCount}
           </span>
         </div>
-        <div className="flex items-center gap-1.5 font-mono text-[8px]">
+        <div className="flex items-center gap-1 md:gap-1.5 font-mono text-[7px] md:text-[8px]">
           <span className="text-white/15 tracking-widest">SIG</span>
           <span
             className="text-emerald-400 font-bold tabular-nums"
@@ -312,12 +319,13 @@ export function MapTopBar({
 
       <Separator />
 
-      {/* Share */}
+      {/* Share — desktop: text, mobile: icon */}
       <button
         onClick={handleShare}
-        className="hidden md:inline shrink-0 font-mono text-[8px] text-white/15 hover:text-white/40 transition-colors tracking-widest"
+        className="shrink-0 font-mono text-[8px] text-white/15 hover:text-white/40 transition-colors tracking-widest"
       >
-        {copied ? 'COPIED ✓' : 'SHARE'}
+        {copied ? '✓' : <span className="hidden md:inline">SHARE</span>}
+        {!copied && <span className="md:hidden">↗</span>}
       </button>
 
       {/* Mobile: right panel toggle */}

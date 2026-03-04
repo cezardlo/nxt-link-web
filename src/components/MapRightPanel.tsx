@@ -87,17 +87,22 @@ export function MapRightPanel({ selectedPoint, missionBriefing, briefingLoading,
 
   return (
     <div className="w-full md:w-72 flex flex-col bg-black/96 md:bg-black/80 border-l border-white/[0.05] backdrop-blur-md h-full pt-11 md:pt-0">
-      {/* Mobile close button row */}
+      {/* Mobile drag handle + close */}
       {onMobileClose && (
-        <div className="md:hidden flex items-center justify-between px-3 py-1.5 border-b border-white/[0.05] shrink-0">
-          <span className="font-mono text-[8px] tracking-[0.3em] text-white/20 uppercase">Intel Panel</span>
-          <button
-            onClick={onMobileClose}
-            className="font-mono text-[10px] text-white/25 hover:text-white/60 transition-colors px-1"
-          >
-            ✕
-          </button>
-        </div>
+        <>
+          <div className="md:hidden shrink-0 flex justify-center pt-2 pb-1">
+            <div className="w-8 h-0.5 rounded-full bg-white/15" />
+          </div>
+          <div className="md:hidden flex items-center justify-between px-3 py-1 border-b border-white/[0.05] shrink-0">
+            <span className="font-mono text-[8px] tracking-[0.3em] text-white/20 uppercase">Intel Panel</span>
+            <button
+              onClick={onMobileClose}
+              className="font-mono text-[10px] text-white/25 hover:text-white/60 transition-colors px-2 py-1"
+            >
+              ✕
+            </button>
+          </div>
+        </>
       )}
       {/* Tab bar — Bloomberg-style compact tabs */}
       <div className="flex border-b border-white/[0.05] shrink-0 overflow-x-auto scrollbar-thin bg-black/40">

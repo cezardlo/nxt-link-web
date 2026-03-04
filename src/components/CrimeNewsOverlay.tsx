@@ -158,7 +158,7 @@ export function CrimeNewsOverlay({ articles }: Props) {
   if (articles.length === 0) {
     return (
       <div
-        className="absolute top-2 left-2 z-20 bg-black/92 border border-white/8 rounded-sm backdrop-blur-md px-3 py-2"
+        className="absolute top-14 md:top-2 left-2 right-2 md:right-auto z-20 bg-black/92 border border-white/8 rounded-sm backdrop-blur-md px-3 py-2"
         style={{ boxShadow: '0 0 0 1px rgba(249,115,22,0.10)' }}
       >
         <div className="flex items-center gap-2">
@@ -175,7 +175,7 @@ export function CrimeNewsOverlay({ articles }: Props) {
 
   return (
     <div
-      className="absolute top-2 left-2 z-20 w-72 bg-black/92 border border-white/8 rounded-sm backdrop-blur-md shadow-2xl"
+      className="absolute top-14 md:top-2 left-2 right-2 md:right-auto z-20 md:w-72 bg-black/92 border border-white/8 rounded-sm backdrop-blur-md shadow-2xl max-h-[70vh] overflow-y-auto scrollbar-thin"
       style={{ boxShadow: '0 0 0 1px rgba(249,115,22,0.15), 0 20px 60px rgba(0,0,0,0.8)' }}
     >
       {/* Header */}

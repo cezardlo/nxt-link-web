@@ -112,6 +112,11 @@ export function MapLayerPanel({ layers, onToggleLayer, dataFreshness }: Props) {
   return (
     <div className="flex flex-col w-40 shrink-0 bg-black/95 border-r border-white/[0.05] overflow-y-auto scrollbar-thin h-full pt-11 md:pt-0 backdrop-blur-md md:backdrop-blur-none">
 
+      {/* Mobile drag handle */}
+      <div className="md:hidden shrink-0 flex justify-center pt-2 pb-1">
+        <div className="w-8 h-0.5 rounded-full bg-white/15" />
+      </div>
+
       {/* Panel header */}
       <div className="shrink-0 px-3 py-2 border-b border-white/[0.05] flex items-center gap-2">
         <span className="font-mono text-[8px] tracking-[0.3em] text-white/20 uppercase flex-1">LAYERS</span>

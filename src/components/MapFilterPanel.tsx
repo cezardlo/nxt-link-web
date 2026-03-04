@@ -39,7 +39,7 @@ export function MapFilterPanel({ mode, onChange }: Props) {
 
   return (
     <div
-      className="absolute bottom-9 left-44 z-20 flex items-center gap-1 select-none px-2 py-1.5 rounded-sm"
+      className="absolute bottom-9 left-2 md:left-44 z-20 flex items-center gap-1 select-none px-2 py-1.5 rounded-sm"
       style={{ background: 'rgba(0,0,0,0.75)', border: '1px solid rgba(255,255,255,0.08)' }}
     >
       {/* Section label */}
@@ -53,7 +53,7 @@ export function MapFilterPanel({ mode, onChange }: Props) {
             key={m.id}
             onClick={() => onChange(m.id)}
             title={`${m.description}  [${m.key}]`}
-            className="flex items-center gap-0.5 px-2 py-0.5 font-mono text-[9px] tracking-wider rounded-sm transition-all duration-150"
+            className="flex items-center gap-0.5 px-2.5 py-1 md:px-2 md:py-0.5 font-mono text-[9px] tracking-wider rounded-sm transition-all duration-150"
             style={{
               color:      active ? '#000'   : 'rgba(255,255,255,0.55)',
               background: active ? m.color  : 'transparent',

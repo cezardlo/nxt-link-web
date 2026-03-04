@@ -117,12 +117,12 @@ export function FeedBar({ timeRange }: Props) {
   const animDuration = Math.max(60, displayItems.length * 3);
 
   return (
-    <div className="shrink-0 h-7 bg-black border-t border-white/[0.05] flex items-center overflow-hidden">
+    <div className="shrink-0 h-9 md:h-7 bg-black border-t border-white/[0.05] flex items-center overflow-hidden">
 
       {/* LIVE badge */}
       <div className="shrink-0 flex items-center gap-1.5 px-2.5 border-r border-white/[0.05] h-full bg-[#00ff88]/[0.03]">
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 live-pulse shrink-0" style={{ boxShadow: '0 0 4px #00ff88cc' }} />
-        <span className="font-mono text-[8px] font-bold tracking-[0.25em] text-emerald-400/80 hidden sm:inline">LIVE</span>
+        <span className="font-mono text-[7px] sm:text-[8px] font-bold tracking-[0.25em] text-emerald-400/80">LIVE</span>
       </div>
 
       {/* Scrolling feed */}

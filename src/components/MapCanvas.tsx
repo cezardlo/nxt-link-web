@@ -7,6 +7,8 @@ import type { Layer, PickingInfo } from '@deck.gl/core';
 import { IconLayer, PathLayer, ScatterplotLayer, TextLayer } from '@deck.gl/layers';
 
 import type { PortWaitTime } from '@/app/api/live/border-wait/route';
+import { CONFERENCES } from '@/lib/data/conference-intel';
+import type { ConferenceRecord } from '@/lib/data/conference-intel';
 import MapGL from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -1171,6 +1173,65 @@ export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onPointCoun
           background: true,
           getBackgroundColor: [0, 0, 0, 180] as [number, number, number, number],
           backgroundPadding: [4, 2, 4, 2] as [number, number, number, number],
+          pickable: false,
+          sizeUnits: 'pixels',
+        }) as unknown as Layer,
+      );
+    }
+
+    // ── Conferences — global markers, visible when zoomed out ──────────────
+    if (activeLayers.has('conferences') && viewState.zoom < 10) {
+      const CONF_CATEGORY_COLORS: Record<string, [number, number, number]> = {
+        'Defense':       [255, 100, 0],
+        'Cybersecurity': [168, 85, 247],
+        'Manufacturing': [0, 212, 255],
+        'Logistics':     [255, 184, 0],
+        'Robotics':      [0, 255, 136],
+        'AI/ML':         [96, 165, 250],
+        'Energy':        [255, 215, 0],
+        'Border/Gov':    [249, 115, 22],
+      };
+      // Diamond-shaped markers (smaller ScatterplotLayer)
+      result.push(
+        new ScatterplotLayer({
+          id: 'conferences-dot',
+          data: CONFERENCES,
+          getPosition: (d: ConferenceRecord) => [d.lon, d.lat] as [number, number],
+          getRadius: (d: ConferenceRecord) => 30000 + d.relevanceScore * 600,
+          getFillColor: (d: ConferenceRecord) => {
+            const c = CONF_CATEGORY_COLORS[d.category] ?? [168, 85, 247];
+            return [c[0], c[1], c[2], 120] as [number, number, number, number];
+          },
+          getLineColor: (d: ConferenceRecord) => {
+            const c = CONF_CATEGORY_COLORS[d.category] ?? [168, 85, 247];
+            return [c[0], c[1], c[2], 180] as [number, number, number, number];
+          },
+          lineWidthMinPixels: 1,
+          stroked: true,
+          filled: true,
+          radiusUnits: 'meters',
+          pickable: true,
+        }) as unknown as Layer,
+      );
+      // Conference name labels
+      result.push(
+        new TextLayer({
+          id: 'conferences-labels',
+          data: CONFERENCES.filter((c) => c.relevanceScore >= 75 || viewState.zoom >= 5),
+          getPosition: (d: ConferenceRecord) => [d.lon, d.lat] as [number, number],
+          getText: (d: ConferenceRecord) => `${d.name.slice(0, 24).toUpperCase()}`,
+          getSize: 10,
+          getColor: (d: ConferenceRecord) => {
+            const c = CONF_CATEGORY_COLORS[d.category] ?? [168, 85, 247];
+            return [c[0], c[1], c[2], 170] as [number, number, number, number];
+          },
+          fontFamily: '"IBM Plex Mono", monospace',
+          getTextAnchor: 'middle',
+          getAlignmentBaseline: 'top',
+          getPixelOffset: [0, 8] as [number, number],
+          background: true,
+          getBackgroundColor: [0, 0, 0, 190] as [number, number, number, number],
+          backgroundPadding: [3, 1, 3, 1] as [number, number, number, number],
           pickable: false,
           sizeUnits: 'pixels',
         }) as unknown as Layer,
