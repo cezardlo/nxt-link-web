@@ -129,6 +129,21 @@ export default function Home() {
           transition: 'opacity 0.6s ease, transform 0.6s ease',
         }}
       >
+        {/* Prototype badge */}
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <span
+            className="font-mono text-[9px] tracking-[0.3em] font-bold uppercase px-3 py-1 rounded-sm"
+            style={{
+              color: '#ffb800',
+              background: 'rgba(255,184,0,0.08)',
+              border: '1px solid rgba(255,184,0,0.25)',
+              textShadow: '0 0 10px rgba(255,184,0,0.3)',
+            }}
+          >
+            PROTOTYPE — PROOF OF CONCEPT
+          </span>
+        </div>
+
         {/* System status strip */}
         <div className="flex items-center justify-center gap-3 sm:gap-5 flex-wrap mb-5">
           <div className="flex items-center gap-1.5">
