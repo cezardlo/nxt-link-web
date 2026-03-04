@@ -57,6 +57,10 @@ class BaseAgent(ABC):
                 result.entities_found,
                 result.signals_found,
             )
+
+            # ── Swarm integration: write to shared memory + broadcast ──
+            await self._swarm_publish(result)
+
             return result
         except Exception as exc:
             elapsed = time.monotonic() - start
@@ -64,3 +68,34 @@ class BaseAgent(ABC):
             return AgentResult(
                 success=False, errors=[str(exc)], duration_seconds=elapsed
             )
+
+    async def _swarm_publish(self, result: AgentResult) -> None:
+        """Best-effort publish to swarm memory + bus after successful run."""
+        try:
+            from . import swarm_memory, swarm_bus  # noqa: E402
+
+            await swarm_memory.write(
+                agent_name=self.name,
+                entry_type="finding",
+                topic=self.name,
+                content={
+                    "entities_found": result.entities_found,
+                    "signals_found": result.signals_found,
+                    "duration_seconds": result.duration_seconds,
+                    **(result.data if isinstance(result.data, dict) else {}),
+                },
+                confidence=0.7,
+                tags=[self.name, self.group, "auto"],
+            )
+            await swarm_bus.broadcast(
+                event_type="finding_new",
+                source_agent=self.name,
+                payload={
+                    "entities_found": result.entities_found,
+                    "signals_found": result.signals_found,
+                },
+                tags=[self.name, self.group],
+            )
+        except Exception as exc:
+            # Swarm integration is best-effort — never block agent execution
+            self.logger.debug("[%s] Swarm publish skipped: %s", self.name, exc)

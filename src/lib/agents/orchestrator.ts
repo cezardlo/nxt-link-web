@@ -93,7 +93,7 @@ export async function runOrchestrator(
 
 class OrchestratorAgent extends BaseAgent {
   name = 'Orchestrator';
-  description = 'Wires lightning agents and executes the event pipeline.';
+  description = 'Wires lightning agents and executes the swarm-coordinated event pipeline.';
 
   private feed = new FeedAgent();
   private entity = new EntityAgent();
@@ -106,16 +106,9 @@ class OrchestratorAgent extends BaseAgent {
     const trigger = typeof payload.trigger === 'string' ? payload.trigger : 'manual';
 
     if (trigger === 'feed' || trigger === 'manual' || trigger === 'hourly') {
-      const feedResult = await this.feed.run();
-
-      if (feedResult.itemsOut > 0) {
-        await this.entity.run({ signalCount: feedResult.itemsOut });
-      }
-
-      await this.iker.run({ signalCount: feedResult.itemsOut });
-      await this.trend.run({});
-      await this.narrative.run({});
-      await this.alert.run({ signalCount: feedResult.itemsOut });
+      // Run pipeline through swarm coordinator for dynamic routing + event broadcasting
+      const { swarmCoordinator } = await import('@/lib/agents/swarm/coordinator');
+      await swarmCoordinator.runPlatformPipeline(trigger);
     }
 
     return {
@@ -124,33 +117,16 @@ class OrchestratorAgent extends BaseAgent {
       metadata: {
         trigger,
         timestamp: new Date().toISOString(),
+        swarm: true,
       },
     };
   }
 
-  startListening() {
-    this.entity.subscribeToEvents('agent_complete', async (payload) => {
-      if (payload.agent !== 'FeedAgent') return;
-      console.log('[Orchestrator] Feed done -> Entity + IKER');
-      await Promise.all([
-        this.entity.run({ signalCount: payload.result ? (payload.result as { itemsOut?: number }).itemsOut : 0 }),
-        this.iker.run({ signalCount: payload.result ? (payload.result as { itemsOut?: number }).itemsOut : 0 }),
-      ]);
-    });
-
-    this.trend.subscribeToEvents('agent_complete', async (payload) => {
-      if (payload.agent !== 'EntityAgent' && payload.agent !== 'IKERAgent') return;
-      console.log('[Orchestrator] Entity/IKER done -> Trend');
-      await this.trend.run({});
-    });
-
-    this.narrative.subscribeToEvents('agent_complete', async (payload) => {
-      if (payload.agent !== 'TrendAgent') return;
-      console.log('[Orchestrator] Trend done -> Narrative + Alerts');
-      await Promise.all([this.narrative.run({}), this.alert.run({})]);
-    });
-
-    console.log('[Orchestrator] Listening for events...');
+  async startListening() {
+    // Delegate to SwarmCoordinator for dynamic event-driven routing
+    const { swarmCoordinator } = await import('@/lib/agents/swarm/coordinator');
+    swarmCoordinator.startSwarm();
+    console.log('[Orchestrator] Swarm coordinator active — dynamic routing enabled.');
   }
 }
 

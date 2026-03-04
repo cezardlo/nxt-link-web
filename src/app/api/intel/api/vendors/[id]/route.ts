@@ -3,6 +3,9 @@ import { NextResponse } from 'next/server';
 import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
 import { EL_PASO_VENDORS } from '@/lib/data/el-paso-vendors';
+import { computeIndustrialScores } from '@/lib/intelligence/industrial-scoring';
+import { getCachedProductScan } from '@/lib/agents/agents/product-scanner-agent';
+import type { ProductInfo } from '@/lib/agents/agents/product-scanner-agent';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +31,22 @@ export async function GET(request: Request, context: RouteContext): Promise<Next
       { status: 200 }, // 200 so DossierTab can still render the fallback
     );
   }
+
+  // Product scan — non-blocking: use cache if available, else empty
+  let products: ProductInfo[] = [];
+  let topCapability = '';
+  const productScan = getCachedProductScan();
+  if (productScan) {
+    const vendorProducts = productScan.vendors.find(v => v.vendorId === id);
+    if (vendorProducts) {
+      products = vendorProducts.products;
+      topCapability = vendorProducts.topCapability;
+    }
+  }
+
+  // Compute industrial intelligence scores for this vendor
+  const scores = computeIndustrialScores({ [vendor.id]: vendor });
+  const ind = scores[0];
 
   // Transform ikerScore (0-100) into the shape IKERPanel expects
   const finalScore = vendor.ikerScore / 100; // 0-1
@@ -60,6 +79,17 @@ export async function GET(request: Request, context: RouteContext): Promise<Next
       state: momentumState,
       signals: { funding: fundingSignals, patents: patentSignals, hiring: hiringSignals },
       briefing: `${vendor.name} scores ${vendor.ikerScore}/100 on the IKER index. ${vendor.description.split('.')[0]}.`,
+      // Industrial scoring fields
+      growthScore: ind?.growthScore ?? 0,
+      automationScore: ind?.automationScore ?? 0,
+      opportunityScore: ind?.opportunityScore ?? 0,
+      riskScore: ind?.riskScore ?? 0,
+      compositeScore: ind?.compositeScore ?? 0,
+      grade: ind?.grade ?? 'C',
+      industrialSignals: ind?.signals ?? [],
+      // Product intelligence fields
+      products,
+      topCapability,
     },
     { headers: { 'Cache-Control': 'no-store' } },
   );

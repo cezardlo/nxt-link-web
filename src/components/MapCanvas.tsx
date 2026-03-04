@@ -358,6 +358,7 @@ type Props = {
   activeLayers: Set<string>;
   timeRange: number;
   onVendorSelect: (point: MapPoint | null) => void;
+  onConferenceSelect?: (c: ConferenceRecord | null) => void;
   onPointCountChange?: (count: number) => void;
   flyTo?: FlyToTarget;
   initialViewState?: { longitude: number; latitude: number; zoom: number };
@@ -374,7 +375,7 @@ type Props = {
 
 type ViewState = typeof INITIAL_VIEW;
 
-export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onPointCountChange, flyTo, initialViewState, onViewStateChange, flights = [], seismicEvents = [], activeVendorIds = [], borderCrossings = [], borderWaitTimes = [], crimeHotspots = [], contracts = [], samBusinesses = [] }: Props) {
+export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onConferenceSelect, onPointCountChange, flyTo, initialViewState, onViewStateChange, flights = [], seismicEvents = [], activeVendorIds = [], borderCrossings = [], borderWaitTimes = [], crimeHotspots = [], contracts = [], samBusinesses = [] }: Props) {
   const [points, setPoints] = useState<MapPoint[]>(EL_PASO_STUBS);
   const [loading, setLoading] = useState(false);
   const [viewState, setViewState] = useState<ViewState>(() => ({
@@ -1151,8 +1152,8 @@ export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onPointCoun
       );
     }
 
-    // ── Conferences — global markers, visible when zoomed out ──────────────
-    if (activeLayers.has('conferences') && viewState.zoom < 10) {
+    // ── Conferences — global markers, always visible when layer is active ──
+    if (activeLayers.has('conferences')) {
       const CONF_CATEGORY_COLORS: Record<string, [number, number, number]> = {
         'Defense':       [255, 100, 0],
         'Cybersecurity': [168, 85, 247],
@@ -1162,6 +1163,9 @@ export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onPointCoun
         'AI/ML':         [96, 165, 250],
         'Energy':        [255, 215, 0],
         'Border/Gov':    [249, 115, 22],
+        'Construction':  [217, 119, 6],
+        'Healthcare':    [6, 182, 212],
+        'Workforce':     [139, 92, 246],
       };
       // Diamond-shaped markers (smaller ScatterplotLayer)
       result.push(
@@ -1580,10 +1584,15 @@ export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onPointCoun
 
   const handleClick = useCallback(
     (info: PickingInfo) => {
-      onVendorSelect((info.object as MapPoint | undefined) ?? null);
+      const obj = info.object as Record<string, unknown> | undefined;
+      if (obj && 'estimatedExhibitors' in obj) {
+        onConferenceSelect?.(obj as unknown as ConferenceRecord);
+      } else {
+        onVendorSelect((obj as MapPoint | undefined) ?? null);
+      }
       setTooltip(null);
     },
-    [onVendorSelect],
+    [onVendorSelect, onConferenceSelect],
   );
 
   const handleHover = useCallback((info: PickingInfo) => {

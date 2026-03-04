@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SignalFinding, SectorScore } from '@/lib/intelligence/signal-engine';
+import type { ConferenceRecord } from '@/lib/data/conference-intel';
 
 import { FeedBar } from '@/components/FeedBar';
 import { MapCanvas } from '@/components/MapCanvas';
@@ -47,11 +48,12 @@ export interface LayerState {
   crimeNews:    boolean;
   samContracts: boolean;
   liveTV:       boolean;
+  swarm:        boolean;
 }
 
 const DEFAULT_LAYERS: LayerState = {
   globalHubs:    true,
-  conferences:   false,
+  conferences:   true,
   vendors:       true,
   samBusinesses: false,
   products:      true,
@@ -70,6 +72,7 @@ const DEFAULT_LAYERS: LayerState = {
   crimeNews:    false,
   samContracts: false,
   liveTV:       false,
+  swarm:        false,
 };
 
 // CSS filter class + overlay per visual mode
@@ -126,6 +129,7 @@ export default function MapPage() {
   const [mobileLayerOpen, setMobileLayerOpen] = useState(false);
   const [mobileRightOpen, setMobileRightOpen] = useState(false);
   const [selectedPoint, setSelectedPoint] = useState<SelectedPoint | null>(null);
+  const [selectedConference, setSelectedConference] = useState<ConferenceRecord | null>(null);
   const [missionBriefing, setMissionBriefing] = useState<Record<string, unknown> | null>(null);
   const [briefingLoading, setBriefingLoading] = useState(false);
   const [pointCount, setPointCount] = useState(0);
@@ -571,6 +575,7 @@ export default function MapPage() {
             activeLayers={activeLayers}
             timeRange={timeRange}
             onVendorSelect={(point) => { handleVendorSelect(point); setMobileRightOpen(true); }}
+            onConferenceSelect={(conf) => { setSelectedConference(conf); setMobileRightOpen(true); }}
             onPointCountChange={setPointCount}
             flyTo={flyTo}
             initialViewState={initialViewState}
@@ -616,6 +621,8 @@ export default function MapPage() {
             briefingLoading={briefingLoading}
             sectorScores={sectorScores}
             flights={flights}
+            selectedConference={selectedConference}
+            onConferenceSelect={setSelectedConference}
             onMobileClose={() => setMobileRightOpen(false)}
           />
         </div>

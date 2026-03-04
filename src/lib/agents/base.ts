@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { swarmMemoryWrite } from '@/lib/agents/swarm/memory';
+import { swarmBroadcast } from '@/lib/agents/swarm/bus';
 
 export type AgentStatus = 'idle' | 'running' | 'done' | 'failed';
 
@@ -37,6 +39,27 @@ export abstract class BaseAgent {
         result,
         payload,
       });
+
+      // ── Swarm integration: write to shared memory + broadcast ──
+      try {
+        await swarmMemoryWrite({
+          agent_name: this.name,
+          entry_type: 'finding',
+          topic: this.name,
+          content: result.metadata,
+          confidence: 0.7,
+          tags: [this.name, 'auto'],
+        });
+        await swarmBroadcast({
+          event_type: 'finding_new',
+          source_agent: this.name,
+          payload: { agent: this.name, itemsOut: result.itemsOut, ...result.metadata },
+          tags: [this.name],
+          priority: 5,
+        });
+      } catch {
+        // Swarm integration is best-effort — never block agent execution
+      }
 
       return result;
     } catch (error) {

@@ -6,9 +6,12 @@ import Link from 'next/link';
 import { IKERPanel } from '@/components/IKERPanel';
 import { SectorMomentumBoard } from '@/components/SectorMomentumBoard';
 import { SignalsFeed } from '@/components/SignalsFeed';
+import { SwarmStatusPanel } from '@/components/SwarmStatusPanel';
 import type { SectorScore } from '@/lib/intelligence/signal-engine';
 import type { FlightPoint, FlightCategory } from '@/components/MapCanvas';
 import { NXT_ENTITIES } from '@/lib/intelligence/nxt-entities';
+import type { ConferenceRecord } from '@/lib/data/conference-intel';
+import { EL_PASO_VENDORS } from '@/lib/data/el-paso-vendors';
 
 export type SelectedPoint = {
   id: string;
@@ -35,9 +38,16 @@ type VendorDetail = {
   evidence?: string[];
   category?: string;
   ikerScore?: number;
+  growthScore?: number;
+  automationScore?: number;
+  opportunityScore?: number;
+  riskScore?: number;
+  compositeScore?: number;
+  grade?: 'A' | 'B' | 'C' | 'D' | 'F';
+  industrialSignals?: string[];
 };
 
-type Tab = 'briefing' | 'dossier' | 'iker' | 'feeds' | 'flights' | 'market' | 'momentum' | 'opportunities' | 'contracts' | 'signals';
+type Tab = 'briefing' | 'dossier' | 'iker' | 'feeds' | 'flights' | 'market' | 'momentum' | 'opportunities' | 'contracts' | 'signals' | 'conference' | 'swarm';
 
 type Props = {
   selectedPoint: SelectedPoint | null;
@@ -45,26 +55,35 @@ type Props = {
   briefingLoading: boolean;
   sectorScores?: SectorScore[];
   flights?: FlightPoint[];
+  selectedConference?: ConferenceRecord | null;
+  onConferenceSelect?: (c: ConferenceRecord | null) => void;
   onMobileClose?: () => void;
 };
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'briefing', label: 'BRIEF' },
-  { id: 'dossier',  label: 'DOSSR' },
-  { id: 'iker',     label: 'IKER'  },
-  { id: 'feeds',    label: 'FEEDS' },
-  { id: 'signals',  label: 'SGNLS' },
-  { id: 'flights',  label: 'FLT'   },
-  { id: 'opportunities', label: 'OPPS' },
-  { id: 'contracts', label: 'CNTRCT' },
-  { id: 'market',   label: 'MKT'   },
-  { id: 'momentum', label: 'MTM'   },
+  { id: 'briefing',      label: 'BRIEF'  },
+  { id: 'dossier',       label: 'DOSSR'  },
+  { id: 'iker',          label: 'IKER'   },
+  { id: 'feeds',         label: 'FEEDS'  },
+  { id: 'signals',       label: 'SGNLS'  },
+  { id: 'flights',       label: 'FLT'    },
+  { id: 'opportunities', label: 'OPPS'   },
+  { id: 'contracts',     label: 'CNTRCT' },
+  { id: 'market',        label: 'MKT'    },
+  { id: 'momentum',      label: 'MTM'    },
+  { id: 'conference',    label: 'CONF'   },
+  { id: 'swarm',         label: 'SWARM'  },
 ];
 
-export function MapRightPanel({ selectedPoint, missionBriefing, briefingLoading, sectorScores, flights = [], onMobileClose }: Props) {
+export function MapRightPanel({ selectedPoint, missionBriefing, briefingLoading, sectorScores, flights = [], selectedConference, onConferenceSelect, onMobileClose }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('briefing');
   const [vendorDetail, setVendorDetail] = useState<VendorDetail | null>(null);
   const [vendorLoading, setVendorLoading] = useState(false);
+
+  useEffect(() => {
+    if (!selectedConference) return;
+    setActiveTab('conference');
+  }, [selectedConference]);
 
   useEffect(() => {
     if (!selectedPoint) return;
@@ -106,8 +125,8 @@ export function MapRightPanel({ selectedPoint, missionBriefing, briefingLoading,
       )}
       {/* Tab bar — Bloomberg-style compact tabs */}
       <div className="flex border-b border-white/[0.05] shrink-0 overflow-x-auto scrollbar-thin bg-black/40">
-        {TABS.map((tab) => {
-          const accentColor = tab.id === 'signals' ? '#f97316' : '#00d4ff';
+        {TABS.filter((tab) => tab.id !== 'conference' || !!selectedConference).map((tab) => {
+          const accentColor = tab.id === 'signals' ? '#f97316' : tab.id === 'conference' ? '#ff8c00' : tab.id === 'swarm' ? '#00ff88' : '#00d4ff';
           return (
             <button
               key={tab.id}
@@ -147,7 +166,11 @@ export function MapRightPanel({ selectedPoint, missionBriefing, briefingLoading,
         {activeTab === 'opportunities' && <OpportunitiesTab />}
         {activeTab === 'contracts' && <ContractsTab />}
         {activeTab === 'market' && <MarketTab />}
-        {activeTab === 'momentum' && <SectorMomentumBoard scores={sectorScores ?? []} />}
+        {activeTab === 'momentum' && <SectorMomentumBoard scores={sectorScores ?? []} vendors={Object.values(EL_PASO_VENDORS)} />}
+        {activeTab === 'conference' && selectedConference && (
+          <ConferenceDossierTab conf={selectedConference} onClose={() => onConferenceSelect?.(null)} />
+        )}
+        {activeTab === 'swarm' && <SwarmStatusPanel />}
       </div>
     </div>
   );
@@ -331,6 +354,103 @@ function BulletSection({ label, bullets, color }: { label: string; bullets: stri
   );
 }
 
+// ─── Conference Dossier Tab ───────────────────────────────────────────────────
+
+const CONF_CATEGORY_COLORS: Record<string, string> = {
+  Defense:        '#ff6400',
+  Cybersecurity:  '#a855f7',
+  Manufacturing:  '#f59e0b',
+  Logistics:      '#3b82f6',
+  Robotics:       '#ec4899',
+  'AI/ML':        '#00d4ff',
+  Energy:         '#22c55e',
+  'Border/Gov':   '#f97316',
+  Construction:   '#d97706',
+  Healthcare:     '#06b6d4',
+  Workforce:      '#8b5cf6',
+};
+
+function ConferenceDossierTab({ conf, onClose }: { conf: ConferenceRecord; onClose: () => void }) {
+  const catColor = CONF_CATEGORY_COLORS[conf.category] ?? '#888';
+  return (
+    <div className="flex flex-col gap-3 px-3 py-2">
+      {/* Header: name + close */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1">
+          <h3 className="font-mono text-[11px] font-bold text-white/90 leading-tight">{conf.name}</h3>
+          <div className="flex items-center gap-2 mt-1">
+            <span
+              className="font-mono text-[7px] tracking-wider px-1.5 py-0.5 rounded-sm"
+              style={{ background: `${catColor}20`, color: catColor, border: `1px solid ${catColor}30` }}
+            >
+              {conf.category.toUpperCase()}
+            </span>
+            <span className="font-mono text-[8px] text-white/30">{conf.month}</span>
+          </div>
+        </div>
+        <button onClick={onClose} className="font-mono text-[9px] text-white/20 hover:text-white/50 transition-colors">
+          ✕
+        </button>
+      </div>
+
+      {/* Location */}
+      <div className="font-mono text-[8px] text-white/40 flex items-center gap-1">
+        <span style={{ color: catColor }}>◆</span> {conf.location}
+      </div>
+
+      {/* Stats row */}
+      <div className="flex gap-3">
+        <div className="flex-1 bg-white/[0.03] border border-white/[0.06] rounded-sm px-2 py-1.5">
+          <div className="font-mono text-[7px] text-white/25 tracking-wider">EXHIBITORS</div>
+          <div className="font-mono text-[14px] font-bold" style={{ color: catColor }}>
+            {conf.estimatedExhibitors.toLocaleString()}
+          </div>
+        </div>
+        <div className="flex-1 bg-white/[0.03] border border-white/[0.06] rounded-sm px-2 py-1.5">
+          <div className="font-mono text-[7px] text-white/25 tracking-wider">RELEVANCE</div>
+          <div className="font-mono text-[14px] font-bold" style={{ color: '#00d4ff' }}>
+            {conf.relevanceScore}<span className="text-[9px] text-white/30">/100</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Relevance bar */}
+      <div>
+        <div className="font-mono text-[7px] text-white/25 tracking-wider mb-1">EP RELEVANCE INDEX</div>
+        <div className="h-1 w-full rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+          <div
+            className="h-full rounded-full"
+            style={{
+              width: `${conf.relevanceScore}%`,
+              background: `linear-gradient(90deg, ${catColor}88, ${catColor})`,
+              boxShadow: `0 0 6px ${catColor}66`,
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Description */}
+      <div>
+        <div className="font-mono text-[7px] text-white/25 tracking-wider mb-1">INTELLIGENCE BRIEF</div>
+        <p className="font-mono text-[9px] text-white/50 leading-relaxed">{conf.description}</p>
+      </div>
+
+      {/* Website */}
+      {conf.website && (
+        <a
+          href={conf.website}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-mono text-[8px] tracking-wider px-2 py-1.5 rounded-sm border text-center transition-colors"
+          style={{ borderColor: `${catColor}30`, color: catColor, background: `${catColor}08` }}
+        >
+          OPEN WEBSITE →
+        </a>
+      )}
+    </div>
+  );
+}
+
 // ─── Contract types & helpers (shared by DossierTab + ContractsTab) ──────────
 
 type ContractAward = {
@@ -374,6 +494,22 @@ function formatContractAmount(amount: number | null): string {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+
+function ScoreBar({ label, value, color, invert }: { label: string; value: number; color: string; invert?: boolean }) {
+  const pct = invert ? 100 - value : value;
+  const barColor = invert
+    ? (value <= 30 ? '#00ff88' : value <= 60 ? '#ffb800' : '#ff3b30')
+    : color;
+  return (
+    <div className="flex items-center gap-2">
+      <span className="font-mono text-[7px] text-white/20 tracking-widest w-[52px] shrink-0 uppercase">{label}</span>
+      <div className="flex-1 h-[2px] bg-white/[0.06] rounded-full overflow-hidden" style={{ minWidth: 40 }}>
+        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: barColor, boxShadow: `0 0 4px ${barColor}88` }} />
+      </div>
+      <span className="font-mono text-[8px] tabular-nums font-bold w-6 text-right shrink-0" style={{ color: barColor }}>{value}</span>
+    </div>
+  );
+}
 
 function DossierTab({
   point,
@@ -496,6 +632,18 @@ function DossierTab({
                     {detail.ikerScore}
                   </span>
                   <span className="font-mono text-[8px] text-white/20">/100</span>
+                  {detail?.grade && (
+                    <span
+                      className="font-mono text-[9px] font-black px-1.5 py-px rounded-sm ml-2"
+                      style={{
+                        color: ({ A: '#00ff88', B: '#00d4ff', C: '#ffb800', D: '#f97316', F: '#ff3b30' } as Record<string, string>)[detail.grade] ?? '#6b7280',
+                        background: ({ A: '#00ff8818', B: '#00d4ff18', C: '#ffb80018', D: '#f9731618', F: '#ff3b3018' } as Record<string, string>)[detail.grade] ?? '#6b728018',
+                        border: `1px solid ${({ A: '#00ff8830', B: '#00d4ff30', C: '#ffb80030', D: '#f9731630', F: '#ff3b3030' } as Record<string, string>)[detail.grade] ?? '#6b728030'}`,
+                      }}
+                    >
+                      GRADE {detail.grade}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
@@ -555,6 +703,31 @@ function DossierTab({
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {detail?.compositeScore !== undefined && (
+        <div className="border border-white/[0.04] rounded-sm overflow-hidden">
+          <div className="px-2.5 py-1.5 border-b border-white/[0.04] bg-white/[0.01] flex items-center justify-between">
+            <span className="font-mono text-[8px] tracking-[0.25em] text-white/18 uppercase">Industrial Intel</span>
+            <span className="font-mono text-[8px] text-white/20 tabular-nums">COMP {detail.compositeScore}</span>
+          </div>
+          <div className="px-2.5 py-2 flex flex-col gap-1.5">
+            <ScoreBar label="Growth" value={detail.growthScore ?? 0} color="#00ff88" />
+            <ScoreBar label="Automt" value={detail.automationScore ?? 0} color="#00d4ff" />
+            <ScoreBar label="OpprTy" value={detail.opportunityScore ?? 0} color="#ffb800" />
+            <ScoreBar label="Risk" value={detail.riskScore ?? 0} color="#ff3b30" invert />
+          </div>
+          {(detail.industrialSignals?.length ?? 0) > 0 && (
+            <div className="border-t border-white/[0.04]">
+              {detail.industrialSignals!.slice(0, 3).map((sig, i) => (
+                <div key={i} className="flex gap-1.5 px-2.5 py-1 border-b border-white/[0.03] last:border-0">
+                  <span className="text-[#00d4ff]/30 text-[8px] shrink-0 mt-px">›</span>
+                  <span className="font-mono text-[8px] text-white/22 leading-snug">{sig}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

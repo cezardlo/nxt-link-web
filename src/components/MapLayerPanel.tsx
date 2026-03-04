@@ -59,10 +59,11 @@ const GROUPS: Group[] = [
     label: 'INTEL',
     accent: '#ffb800',
     layers: [
-      { key: 'funding', label: 'FUNDING', color: '#ffb800' },
-      { key: 'patents', label: 'PATENTS', color: '#a855f7' },
-      { key: 'hiring',  label: 'HIRING',  color: '#ff6400' },
-      { key: 'news',    label: 'NEWS',    color: '#60a5fa' },
+      { key: 'funding', label: 'FUNDING',     color: '#ffb800' },
+      { key: 'patents', label: 'PATENTS',     color: '#a855f7' },
+      { key: 'hiring',  label: 'HIRING',      color: '#ff6400' },
+      { key: 'news',    label: 'NEWS',        color: '#60a5fa' },
+      { key: 'swarm',   label: 'AGENT SWARM', color: '#00ff88' },
     ],
   },
   {

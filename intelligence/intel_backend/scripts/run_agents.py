@@ -35,6 +35,12 @@ from app.agents.enrichment.crunchbase_agent import CrunchbaseAgent  # noqa: E402
 # Analysis agents
 from app.agents.analysis.trend_agent import TrendAgent  # noqa: E402
 from app.agents.analysis.risk_agent import RiskAgent  # noqa: E402
+from app.agents.analysis.industrial_scoring_agent import IndustrialScoringAgent  # noqa: E402
+from app.agents.analysis.product_scanner_agent import ProductScannerAgent  # noqa: E402
+
+# New discovery agents
+from app.agents.discovery.supplier_agent import SupplierDiscoveryAgent  # noqa: E402
+from app.agents.discovery.website_change_agent import WebsiteChangeAgent  # noqa: E402
 
 
 def setup_logging() -> None:
@@ -60,9 +66,15 @@ def register_all() -> None:
     registry.register(SECEdgarAgent())
     registry.register(CrunchbaseAgent())
 
-    # Analysis (2)
+    # Analysis (4)
     registry.register(TrendAgent())
     registry.register(RiskAgent())
+    registry.register(IndustrialScoringAgent())
+    registry.register(ProductScannerAgent())
+
+    # New discovery (2)
+    registry.register(SupplierDiscoveryAgent())
+    registry.register(WebsiteChangeAgent())
 
 
 async def main() -> None:
