@@ -2,26 +2,204 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── NXT LINK Design System ─────────────────────────────────── */
+/* Inspired by Bloomberg Terminal + Palantir AIP + WorldMonitor   */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg:        #000000;
+  --surface:   #0a0a0a;
+  --border:    #1a1a1a;
+  --text:      #ffffff;
+  --muted:     #6b7280;
+  --cyan:      #00d4ff;    /* Palantir interactive */
+  --gold:      #ffd700;    /* IKER scores, premium data */
+  --orange:    #ff8c00;    /* Bloomberg critical / alerts */
+  --green:     #00ff88;    /* Positive signals */
+  --red:       #ff3b30;    /* Risk / danger */
+  --amber:     #ffb800;    /* Warnings */
+  --emerald:   #10b981;    /* Live / online */
+  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+* { box-sizing: border-box; }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+/* Bloomberg-style tabular numbers */
+.data-value {
+  font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Courier New', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Confidence bar (Palantir style) */
+.confidence-bar { height: 2px; background: var(--border); }
+.confidence-fill { height: 100%; background: var(--cyan); transition: width 0.5s ease; }
+
+/* Live pulse */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.live-pulse { animation: pulse-dot 2s infinite; }
+
+/* Feed bar scroll */
+@keyframes scroll-left {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.feed-scroll {
+  display: inline-flex;
+  animation: scroll-left 40s linear infinite;
+}
+.feed-scroll:hover { animation-play-state: paused; }
+
+/* MapLibre controls hidden */
+.maplibregl-ctrl-bottom-left,
+.maplibregl-ctrl-bottom-right {
+  display: none;
+}
+.maplibregl-canvas:focus { outline: none; }
+
+/* Thin scrollbar for panels */
+.scrollbar-thin { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
+.scrollbar-thin::-webkit-scrollbar { width: 4px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+/* Mobile touch-scroll for overflow panels */
+.scrollbar-thin, [class*="overflow-y-auto"] {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hide scrollbar utility */
+.scrollbar-none { scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
+/* ─── Dot-grid background ─────────────────────────────────── */
+.dot-grid {
+  background-image: radial-gradient(circle, rgba(255,255,255,0.055) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ─── Radar ring expansion ──────────────────────────────────── */
+@keyframes radar-ring {
+  0%   { transform: scale(0.3); opacity: 0.5; }
+  100% { transform: scale(2.8); opacity: 0; }
+}
+.radar-ring {
+  animation: radar-ring 3.6s ease-out infinite;
+}
+
+/* ─── Horizontal scan line ──────────────────────────────────── */
+@keyframes scan-line {
+  0%   { top: -2px; }
+  100% { top: 100%; }
+}
+.scan-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(0,212,255,0.25) 40%, rgba(0,212,255,0.4) 50%, rgba(0,212,255,0.25) 60%, transparent 100%);
+  animation: scan-line 5s linear infinite;
+  pointer-events: none;
+}
+
+/* ─── Text glow utilities ───────────────────────────────────── */
+.glow-cyan  { text-shadow: 0 0 12px rgba(0,212,255,0.7), 0 0 24px rgba(0,212,255,0.35); }
+.glow-gold  { text-shadow: 0 0 12px rgba(255,215,0,0.7),  0 0 24px rgba(255,215,0,0.35);  }
+.glow-green { text-shadow: 0 0 12px rgba(0,255,136,0.7),  0 0 24px rgba(0,255,136,0.35);  }
+
+/* ─── Box glow utilities ────────────────────────────────────── */
+.box-glow-cyan  { box-shadow: 0 0 0 1px rgba(0,212,255,0.3), 0 0 16px rgba(0,212,255,0.15); }
+.box-glow-gold  { box-shadow: 0 0 0 1px rgba(255,215,0,0.3),  0 0 16px rgba(255,215,0,0.15);  }
+.box-glow-green { box-shadow: 0 0 0 1px rgba(0,255,136,0.3),  0 0 16px rgba(0,255,136,0.15);  }
+
+/* ─── Shimmer skeleton ──────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position:  600px 0; }
+}
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.02) 0%,
+    rgba(255,255,255,0.07) 40%,
+    rgba(255,255,255,0.02) 80%
+  );
+  background-size: 1200px 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+/* ─── Glass surface ─────────────────────────────────────────── */
+.glass {
+  background: rgba(10,10,10,0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* ─── Loading spinner (3 dots) ──────────────────────────────── */
+@keyframes dot-blink {
+  0%, 80%, 100% { opacity: 0.15; transform: scale(0.85); }
+  40%            { opacity: 1;    transform: scale(1); }
+}
+.loading-dots span {
+  display: inline-block;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: dot-blink 1.4s infinite ease-in-out;
+}
+.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+/* ─── Map panel hover utility (3% white bg) ────────────────────── */
+.hover\:bg-white\/3:hover { background: rgba(255,255,255,0.03); }
+
+/* ─── Subtle entry animation ─────────────────────────────────── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+.fade-up { animation: fade-up 0.4s var(--motion-ease) both; }
+
+/* ─── Critical item left-border pulse ───────────────────────── */
+@keyframes border-pulse {
+  0%, 100% { border-left-color: rgba(255,59,48,0.35); }
+  50%       { border-left-color: rgba(255,59,48,0.7);  }
+}
+.critical-pulse { animation: border-pulse 2s ease-in-out infinite; }
+
+/* ─── Visual filter modes (WorldMonitor spy-thriller aesthetic) ─ */
+
+/* CRT phosphor — green terminal */
+.filter-crt { filter: saturate(1.8) hue-rotate(82deg) contrast(1.15) brightness(0.85); }
+/* CRT scanlines overlay */
+.scanlines {
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0)    0px,
+    rgba(0,0,0,0)    2px,
+    rgba(0,0,0,0.18) 2px,
+    rgba(0,0,0,0.18) 3px
+  );
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+
+/* NVG — night-vision goggles */
+.filter-nvg { filter: saturate(5) hue-rotate(88deg) contrast(1.9) brightness(0.5); }
+.nvg-vignette {
+  background: radial-gradient(ellipse at 50% 50%, rgba(0,60,0,0) 35%, rgba(0,30,0,0.7) 100%);
+  pointer-events: none;
+}
+
+/* FLIR — thermal / infrared */
+.filter-flir { filter: sepia(1) saturate(6) hue-rotate(315deg) contrast(1.45) brightness(0.7); }
+.flir-vignette {
+  background: radial-gradient(ellipse at 50% 50%, rgba(80,20,0,0) 35%, rgba(30,0,0,0.65) 100%);
+  pointer-events: none;
 }

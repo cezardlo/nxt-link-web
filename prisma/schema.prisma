@@ -1,0 +1,204 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum ChallengeStatus {
+  OPEN
+  REVIEWING
+  TESTING
+  CLOSED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum FundingStatus {
+  FUNDED
+  PARTIAL
+  SEEKING
+  EXPLORATION
+}
+
+enum MatchStatus {
+  SUBMITTED
+  SCREENING
+  NDA
+  SHORTLISTED
+  SELECTED
+  PILOT_ACTIVE
+  COMPLETED
+  REJECTED
+}
+
+enum PilotDecision {
+  SCALE
+  EXTEND
+  STOP
+  UNDECIDED
+}
+
+enum PilotStatus {
+  ACTIVE
+  COMPLETED
+}
+
+enum DocumentType {
+  NDA
+  PILOT_AGREEMENT
+  OTHER
+}
+
+enum DocumentStatus {
+  PENDING
+  SIGNED
+}
+
+model Challenge {
+  id             String          @id @default(cuid())
+  title          String
+  description    String
+  category       String
+  city           String          @default("El Paso")
+  kpiName        String
+  desiredOutcome String
+  baselineValue  Float?
+  targetValue    Float?
+  timelineDays   Int             @default(45)
+  budgetMin      Float?
+  budgetMax      Float?
+  fundingStatus  FundingStatus   @default(EXPLORATION)
+  status         ChallengeStatus @default(REVIEWING)
+  priority       Priority        @default(MEDIUM)
+  riskLevel      RiskLevel       @default(MEDIUM)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  matches        Match[]
+  pilot          Pilot?
+  result         Result?
+
+  @@index([status])
+  @@index([city, status])
+}
+
+model Vendor {
+  id             String     @id @default(cuid())
+  name           String
+  tags           String
+  website        String?
+  contactName    String?
+  email          String
+  phone          String?
+  typicalMinCost Float?
+  typicalMaxCost Float?
+  notes          String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  matches        Match[]
+  documents      Document[]
+
+  @@index([email])
+}
+
+model Match {
+  id             String     @id @default(cuid())
+  challengeId    String
+  vendorId       String
+  solutionSummary String
+  pilotPlan      String
+  expectedImpact String
+  proposedCost   Float?
+  measurementPlan String
+  status         MatchStatus @default(SUBMITTED)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  challenge      Challenge   @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  vendor         Vendor      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  pilot          Pilot?
+
+  @@index([challengeId, status])
+  @@index([vendorId, status])
+}
+
+model Pilot {
+  id          String        @id @default(cuid())
+  challengeId String        @unique
+  matchId     String        @unique
+  startDate   DateTime
+  endDate     DateTime
+  kpiBaseline Float
+  kpiTarget   Float
+  kpiCurrent  Float
+  weeklyUpdates String
+  decision    PilotDecision @default(UNDECIDED)
+  status      PilotStatus   @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  challenge   Challenge     @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  match       Match         @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  documents   Document[]
+  budgetCalc  BudgetCalc?
+  result      Result?
+
+  @@index([status])
+}
+
+model Document {
+  id        String         @id @default(cuid())
+  pilotId   String?
+  vendorId  String?
+  type      DocumentType
+  status    DocumentStatus @default(PENDING)
+  fileUrl   String?
+  notes     String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  pilot     Pilot?         @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+  vendor    Vendor?        @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@index([pilotId, status])
+  @@index([vendorId, status])
+}
+
+model BudgetCalc {
+  id            String   @id @default(cuid())
+  pilotId       String   @unique
+  pilotCost     Float
+  monthlyBenefit Float
+  roiPercent    Float
+  paybackMonths Float
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  pilot         Pilot    @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+}
+
+model Result {
+  id               String    @id @default(cuid())
+  pilotId          String    @unique
+  challengeId      String    @unique
+  summary          String
+  beforeAfter      String
+  improvementPercent Float
+  lessonsLearned   String
+  published        Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  pilot            Pilot     @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+  challenge        Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@index([published])
+}
+
