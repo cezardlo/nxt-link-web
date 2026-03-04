@@ -42,6 +42,36 @@ type SbirRawAward = {
 
 const SBIR_BASE = 'https://api.sbir.gov/public/api/awards';
 const FETCH_TIMEOUT_MS = 8_000;
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 min — serve cached data for up to 30 min
+
+// ---------------------------------------------------------------------------
+// In-memory cache — survives across requests in the same serverless instance.
+// When SBIR.gov is under maintenance, the app serves the last good response.
+// ---------------------------------------------------------------------------
+
+type CacheEntry = { awards: SbirAward[]; fetchedAt: number };
+const cache = new Map<string, CacheEntry>();
+
+function cacheKey(kind: string, value: string): string {
+  return `${kind}::${value.toLowerCase().trim()}`;
+}
+
+function getCached(kind: string, value: string): SbirAward[] | null {
+  const entry = cache.get(cacheKey(kind, value));
+  if (!entry) return null;
+  if (Date.now() - entry.fetchedAt > CACHE_TTL_MS) return null;
+  return entry.awards;
+}
+
+function setCache(kind: string, value: string, awards: SbirAward[]): void {
+  cache.set(cacheKey(kind, value), { awards, fetchedAt: Date.now() });
+}
+
+/** Get cached data regardless of TTL — last resort when upstream is down */
+function getStaleCached(kind: string, value: string): SbirAward[] | null {
+  const entry = cache.get(cacheKey(kind, value));
+  return entry?.awards ?? null;
+}
 
 // Default values used when the caller does not supply ?q=
 const DEFAULTS: Record<SearchKind, string> = {
@@ -94,28 +124,43 @@ async function fetchSbir(
   value: string,
   limit: number,
 ): Promise<SbirAward[]> {
-  const paramName = SBIR_PARAM[kind];
-  const url = new URL(SBIR_BASE);
-  url.searchParams.set('rows', String(limit));
-  url.searchParams.set(paramName, value);
+  // 1. Check fresh cache first
+  const cached = getCached(kind, value);
+  if (cached) return cached.slice(0, limit);
 
-  const response = await fetch(url.toString(), {
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    headers: { Accept: 'application/json' },
-  });
+  // 2. Try live API
+  try {
+    const paramName = SBIR_PARAM[kind];
+    const url = new URL(SBIR_BASE);
+    url.searchParams.set('rows', String(limit));
+    url.searchParams.set(paramName, value);
 
-  if (!response.ok) {
-    throw new Error(`SBIR API returned ${response.status} for kind="${kind}" value="${value}"`);
+    const response = await fetch(url.toString(), {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      headers: { Accept: 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`SBIR API returned ${response.status} for kind="${kind}" value="${value}"`);
+    }
+
+    const json: unknown = await response.json();
+
+    if (!Array.isArray(json)) {
+      return [];
+    }
+
+    const awards = (json as SbirRawAward[]).map(normaliseAward);
+    // Save to cache on success
+    setCache(kind, value, awards);
+    return awards;
+  } catch (err) {
+    // 3. API failed — fall back to stale cache if available
+    const stale = getStaleCached(kind, value);
+    if (stale) return stale.slice(0, limit);
+    // No cache at all — rethrow
+    throw err;
   }
-
-  const json: unknown = await response.json();
-
-  // The SBIR API returns a flat array of award objects
-  if (!Array.isArray(json)) {
-    return [];
-  }
-
-  return (json as SbirRawAward[]).map(normaliseAward);
 }
 
 function deduplicateAwards(awards: SbirAward[]): SbirAward[] {
@@ -219,11 +264,28 @@ export async function GET(request: Request): Promise<NextResponse> {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to fetch SBIR awards.';
 
-    // Surface upstream errors as 502 (bad gateway) — our service is healthy
-    // but the external dependency returned an unexpected result.
+    // Last resort: check stale cache for any search kind
+    const fallbackKind = searchKind === 'all' ? 'city' : searchKind;
+    const fallbackValue = searchKind === 'all' ? 'El Paso' : (rawQ || DEFAULTS[searchKind]);
+    const stale = getStaleCached(fallbackKind, fallbackValue);
+    if (stale) {
+      return NextResponse.json(
+        {
+          ok: true,
+          query: { type: searchKind, value: fallbackValue },
+          awards: stale,
+          total: stale.length,
+          _cached: true,
+          _note: 'SBIR.gov may be under maintenance. Showing cached data.',
+        },
+        { headers: { 'Cache-Control': 'public, max-age=300' } },
+      );
+    }
+
+    // No cache at all — surface upstream error
     const isUpstreamError = message.includes('SBIR API') || message.includes('fetch');
     return NextResponse.json(
-      { ok: false, message },
+      { ok: false, message: `SBIR.gov may be under maintenance. ${message}` },
       { status: isUpstreamError ? 502 : 500 },
     );
   }
