@@ -6,62 +6,6 @@ export const CORE_CONFERENCES: ConferenceRecord[] = [
   // ── Defense ──────────────────────────────────────────────────────────────────
 
   {
-    id: 'conf-ausa-annual',
-    name: 'AUSA Annual Meeting & Exposition',
-    category: 'Defense',
-    location: 'Washington, DC',
-    month: 'October',
-    description: 'Association of the United States Army\'s flagship event. Largest land warfare exposition in the world, drawing 700+ exhibitors and 30,000+ Army acquisition professionals, program managers, and senior officials. Fort Bliss commands send delegations annually.',
-    estimatedExhibitors: 730,
-    relevanceScore: 98,
-    website: 'https://www.ausa.org/annual',
-    lat: 38.8894,
-    lon: -77.0352,
-  },
-
-  {
-    id: 'conf-ausa-winter',
-    name: 'AUSA Winter Symposium',
-    category: 'Defense',
-    location: 'Huntsville, AL',
-    month: 'February',
-    description: 'Army aviation and missile defense focused symposium co-located with aviation industry. Strong Patriot and LTAMDS system content directly relevant to Fort Bliss Air Defense Artillery. Raytheon and L3Harris maintain major presence.',
-    estimatedExhibitors: 210,
-    relevanceScore: 91,
-    website: 'https://www.ausa.org/events/ausa-winter-symposium',
-    lat: 34.7304,
-    lon: -86.5861,
-  },
-
-  {
-    id: 'conf-disa-technet-augusta',
-    name: 'TechNet Augusta',
-    category: 'Defense',
-    location: 'Augusta, GA',
-    month: 'August',
-    description: 'AFCEA and DISA joint event focused on Army cyber, signals, and intelligence technology. Primary venue for Army Cyber Command procurement discussions. Signals intelligence, SATCOM, and EW vendors exhibit heavily.',
-    estimatedExhibitors: 320,
-    relevanceScore: 88,
-    website: 'https://technetaugusta.org',
-    lat: 33.4735,
-    lon: -82.0105,
-  },
-
-  {
-    id: 'conf-afcea-west',
-    name: 'AFCEA West',
-    category: 'Defense',
-    location: 'San Diego, CA',
-    month: 'February',
-    description: 'West Coast defense C4ISR and intelligence conference. Navy, Marine Corps, and Indo-Pacific Command focus with growing Army presence. Covers tactical networks, satellite communications, and unmanned systems relevant to Fort Bliss modernization.',
-    estimatedExhibitors: 280,
-    relevanceScore: 82,
-    website: 'https://west.afcea.org',
-    lat: 32.7157,
-    lon: -117.1611,
-  },
-
-  {
     id: 'conf-sea-air-space',
     name: 'Sea Air Space',
     category: 'Defense',
@@ -87,20 +31,6 @@ export const CORE_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.sofic.org',
     lat: 27.9506,
     lon: -82.4572,
-  },
-
-  {
-    id: 'conf-modern-day-marine',
-    name: 'Modern Day Marine',
-    category: 'Defense',
-    location: 'Quantico, VA',
-    month: 'September',
-    description: 'Marine Corps warfighting modernization expo. Covers expeditionary logistics, ground combat systems, and aviation. Increasing convergence with Army ground vehicle and robotic systems programs creates cross-service procurement opportunities.',
-    estimatedExhibitors: 260,
-    relevanceScore: 74,
-    website: 'https://www.moderndaymarine.net',
-    lat: 38.5234,
-    lon: -77.3691,
   },
 
   {
@@ -176,48 +106,6 @@ export const CORE_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-defcon',
-    name: 'DEF CON',
-    category: 'Cybersecurity',
-    location: 'Las Vegas, NV',
-    month: 'August',
-    description: 'World\'s largest hacker convention, co-located with Black Hat. ICS Village, Aviation Village, and Federal Village CTF competitions surface novel vulnerabilities relevant to border technology systems and military networks. Government agencies recruit talent directly.',
-    estimatedExhibitors: 80,
-    relevanceScore: 78,
-    website: 'https://defcon.org',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
-  {
-    id: 'conf-cybersat',
-    name: 'CyberSat Summit',
-    category: 'Cybersecurity',
-    location: 'Reston, VA',
-    month: 'November',
-    description: 'Space and satellite cybersecurity focused conference. Covers GPS spoofing resilience, SATCOM link security, and space-based ISR data integrity — increasingly relevant as Army Space and Missile Defense Command operates out of Redstone and Fort Bliss.',
-    estimatedExhibitors: 95,
-    relevanceScore: 77,
-    website: 'https://events.cybersat.com',
-    lat: 38.9687,
-    lon: -77.3411,
-  },
-
-  {
-    id: 'conf-cisa-summit',
-    name: 'CISA Cybersecurity Summit',
-    category: 'Cybersecurity',
-    location: 'Arlington, VA',
-    month: 'September',
-    description: 'Cybersecurity and Infrastructure Security Agency annual summit. Critical infrastructure protection, election security, and cross-sector information sharing. CBP and DHS components attend for border technology security alignment.',
-    estimatedExhibitors: 120,
-    relevanceScore: 83,
-    website: 'https://www.cisa.gov/events',
-    lat: 38.8816,
-    lon: -77.1050,
-  },
-
-  {
     id: 'conf-ms-isac-summit',
     name: 'MS-ISAC Annual Cybersecurity Summit',
     category: 'Cybersecurity',
@@ -262,20 +150,6 @@ export const CORE_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-fabtech',
-    name: 'FABTECH',
-    category: 'Manufacturing',
-    location: 'Chicago, IL',
-    month: 'November',
-    description: 'North America\'s largest metal forming, fabricating, welding, and finishing event. Attended by defense prime manufacturers for production line modernization and by Juárez automotive parts producers. 1,800+ exhibitors including laser cutting, press brakes, and welding automation.',
-    estimatedExhibitors: 1800,
-    relevanceScore: 82,
-    website: 'https://www.fabtechexpo.com',
-    lat: 41.8858,
-    lon: -87.6181,
-  },
-
-  {
     id: 'conf-hannover-messe',
     name: 'Hannover Messe',
     category: 'Manufacturing',
@@ -287,20 +161,6 @@ export const CORE_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.hannovermesse.de',
     lat: 52.3246,
     lon: 9.8042,
-  },
-
-  {
-    id: 'conf-sps',
-    name: 'SPS — Smart Production Solutions',
-    category: 'Manufacturing',
-    location: 'Nuremberg, Germany',
-    month: 'November',
-    description: 'Europe\'s premier automation and digitalization trade show. Siemens, Beckhoff, Phoenix Contact, and Pilz unveil next-generation PLCs, HMIs, and drive systems. Key sourcing event for Juárez maquiladora automation engineers and El Paso-based industrial distributors.',
-    estimatedExhibitors: 1200,
-    relevanceScore: 71,
-    website: 'https://www.sps-messe.de',
-    lat: 49.4521,
-    lon: 11.0767,
   },
 
   {
@@ -373,34 +233,6 @@ export const CORE_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.manifestvegas.com',
     lat: 36.1699,
     lon: -115.1398,
-  },
-
-  {
-    id: 'conf-freightwaves-live',
-    name: 'FreightWaves LIVE',
-    category: 'Logistics',
-    location: 'Chattanooga, TN',
-    month: 'April',
-    description: 'Data-driven freight and supply chain conference from FreightWaves media platform. Spot market analytics, carrier benchmarking, and cross-border trade data. SONAR platform data on El Paso-Juárez lane volumes frequently cited.',
-    estimatedExhibitors: 180,
-    relevanceScore: 78,
-    website: 'https://www.freightwaves.com/news/events',
-    lat: 35.0456,
-    lon: -85.3097,
-  },
-
-  {
-    id: 'conf-cscmp-edge',
-    name: 'CSCMP EDGE Supply Chain Conference',
-    category: 'Logistics',
-    location: 'Nashville, TN',
-    month: 'September',
-    description: 'Council of Supply Chain Management Professionals annual conference. Academic research, practitioner case studies, and C-suite supply chain strategy. USMCA nearshoring and US-Mexico cross-border supply chain reliability are recurring session themes.',
-    estimatedExhibitors: 420,
-    relevanceScore: 80,
-    website: 'https://cscmpedge.org',
-    lat: 36.1627,
-    lon: -86.7816,
   },
 
   {
@@ -620,34 +452,6 @@ export const CORE_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-cea-summit',
-    name: 'CEA Summit — Clean Energy Alliance',
-    category: 'Energy',
-    location: 'Austin, TX',
-    month: 'April',
-    description: 'Texas-focused clean energy policy and market conference. ERCOT grid planning, West Texas wind/solar interconnection, and energy storage financing. El Paso Electric\'s $1.8B capex plan sources technology partners at this regional event.',
-    estimatedExhibitors: 220,
-    relevanceScore: 86,
-    website: 'https://www.texascleanenergy.org',
-    lat: 30.2672,
-    lon: -97.7431,
-  },
-
-  {
-    id: 'conf-ees-north-america',
-    name: 'EES North America — Electrical Energy Storage',
-    category: 'Energy',
-    location: 'Munich, Germany',
-    month: 'June',
-    description: 'Co-located with Intersolar, EES covers lithium-ion, flow battery, and solid-state storage technology. NextEra West Texas storage projects source battery system specifications and suppliers from this event. Increasingly relevant as El Paso cross-border microgrids expand.',
-    estimatedExhibitors: 300,
-    relevanceScore: 75,
-    website: 'https://www.ees-north-america.com',
-    lat: 48.1351,
-    lon: 11.5820,
-  },
-
-  {
     id: 'conf-powergen',
     name: 'POWERGEN International',
     category: 'Energy',
@@ -747,35 +551,7 @@ export const CORE_CONFERENCES: ConferenceRecord[] = [
     lon: -106.4850,
   },
 
-  {
-    id: 'conf-govtech-summit',
-    name: 'GovTech Summit',
-    category: 'Border/Gov',
-    location: 'Washington, DC',
-    month: 'October',
-    description: 'Government technology modernization and digital transformation summit. IT modernization, AI adoption in federal agencies, and FedRAMP-authorized cloud platforms. CBP Automated Targeting System and ACE portal modernization teams participate.',
-    estimatedExhibitors: 160,
-    relevanceScore: 79,
-    website: 'https://www.govtechsummit.com',
-    lat: 38.8894,
-    lon: -77.0352,
-  },
-
   // ── Defense (additional) ─────────────────────────────────────────────────────
-
-  {
-    id: 'conf-ausa-global-force',
-    name: 'AUSA Global Force Symposium',
-    category: 'Defense',
-    location: 'Huntsville, AL',
-    month: 'March',
-    description: 'AUSA\'s premier symposium focused on Army modernization priorities and global force projection. Covers next-generation combat vehicles, network-enabled warfare, and future vertical lift — all tied to Fort Bliss modernization roadmaps. Program Executive Offices send acquisition leads annually.',
-    estimatedExhibitors: 350,
-    relevanceScore: 90,
-    website: 'https://www.ausa.org/events/global-force-symposium',
-    lat: 34.7304,
-    lon: -86.5861,
-  },
 
   {
     id: 'conf-space-missile-defense',
@@ -791,35 +567,7 @@ export const CORE_CONFERENCES: ConferenceRecord[] = [
     lon: -86.5861,
   },
 
-  {
-    id: 'conf-army-futures-summit',
-    name: 'Army Futures Command Summit',
-    category: 'Defense',
-    location: 'Austin, TX',
-    month: 'July',
-    description: 'Army Futures Command annual summit bridging academia, industry, and the Army\'s six Cross-Functional Teams. Covers robotic combat vehicles, next-generation squad weapons, and network modernization. El Paso corridor vendors benefit from Texas proximity and Fort Bliss Cross-Functional Team alignment.',
-    estimatedExhibitors: 150,
-    relevanceScore: 86,
-    website: 'https://www.army.mil/futures',
-    lat: 30.2672,
-    lon: -97.7431,
-  },
-
   // ── Cybersecurity (additional) ───────────────────────────────────────────────
-
-  {
-    id: 'conf-sans-cyber-defense',
-    name: 'SANS Cyber Defense Summit',
-    category: 'Cybersecurity',
-    location: 'Washington, DC',
-    month: 'November',
-    description: 'SANS Institute practitioner-focused summit on blue team techniques, threat hunting, and CMMC compliance for defense contractors. El Paso defense IT vendors operating under DFARS/CMMC obligations attend for certification roadmap guidance and vendor partner identification.',
-    estimatedExhibitors: 120,
-    relevanceScore: 81,
-    website: 'https://www.sans.org/cyber-defense-summit',
-    lat: 38.8894,
-    lon: -77.0352,
-  },
 
   {
     id: 'conf-gartner-security-summit',
@@ -849,20 +597,6 @@ export const CORE_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.eastecshow.com',
     lat: 42.1015,
     lon: -72.6023,
-  },
-
-  {
-    id: 'conf-south-tec',
-    name: 'South-Tec',
-    category: 'Manufacturing',
-    location: 'Greenville, SC',
-    month: 'October',
-    description: 'Southeast precision manufacturing technology show covering CNC machining, fabrication, and quality inspection. Growing presence of aerospace and defense suppliers in the Carolinas creates cross-region supply chain partnership opportunities for El Paso-area advanced manufacturing firms.',
-    estimatedExhibitors: 400,
-    relevanceScore: 74,
-    website: 'https://www.southtecshow.com',
-    lat: 34.8526,
-    lon: -82.3940,
   },
 
   // ── Logistics (additional) ───────────────────────────────────────────────────
@@ -925,20 +659,6 @@ export const CORE_CONFERENCES: ConferenceRecord[] = [
     lon: -71.0589,
   },
 
-  {
-    id: 'conf-av-robotics-expo',
-    name: 'Autonomous Vehicles & Robotics Expo',
-    category: 'Robotics',
-    location: 'Santa Clara, CA',
-    month: 'March',
-    description: 'Silicon Valley autonomous systems conference covering self-driving technology, drone logistics, and ground robotics for defense and commercial applications. Fort Bliss Robotic Combat Vehicle program and UTEP autonomous systems research groups track vendor pipelines debuted here.',
-    estimatedExhibitors: 200,
-    relevanceScore: 79,
-    website: 'https://www.autonomousvehicleexpo.com',
-    lat: 37.3541,
-    lon: -121.9552,
-  },
-
   // ── AI/ML (additional) ───────────────────────────────────────────────────────
 
   {
@@ -972,34 +692,6 @@ export const CORE_CONFERENCES: ConferenceRecord[] = [
   // ── Energy (additional) ──────────────────────────────────────────────────────
 
   {
-    id: 'conf-awea-cleanpower',
-    name: 'AWEA Cleanpower',
-    category: 'Energy',
-    location: 'Various',
-    month: 'May',
-    description: 'American Clean Power Association\'s flagship annual conference covering wind, solar, energy storage, and transmission. West Texas and New Mexico wind energy development is among the most active in the nation, with El Paso Electric and NextEra sourcing turbine technology and grid interconnection solutions annually.',
-    estimatedExhibitors: 800,
-    relevanceScore: 85,
-    website: 'https://cleanpower.org/events/cleanpower',
-    lat: 39.9526,
-    lon: -75.1652,
-  },
-
-  {
-    id: 'conf-solar-storage-texas',
-    name: 'Solar + Storage Texas',
-    category: 'Energy',
-    location: 'Austin, TX',
-    month: 'March',
-    description: 'Texas-focused solar and battery storage conference covering ERCOT market dynamics, large-scale project development, and grid interconnection. El Paso Electric\'s planned solar portfolio expansion and NextEra\'s West Texas solar farms make this the most directly relevant energy event for El Paso technology vendors.',
-    estimatedExhibitors: 350,
-    relevanceScore: 88,
-    website: 'https://www.solarstoragetexas.com',
-    lat: 30.2672,
-    lon: -97.7431,
-  },
-
-  {
     id: 'conf-epri-electrification',
     name: 'EPRI Electrification Conference',
     category: 'Energy',
@@ -1027,20 +719,6 @@ export const CORE_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.same.org/small-business-conference',
     lat: 33.7490,
     lon: -84.3880,
-  },
-
-  {
-    id: 'conf-govcon-summit',
-    name: 'GovCon Summit',
-    category: 'Border/Gov',
-    location: 'Reston, VA',
-    month: 'June',
-    description: 'Government contracting strategy and business development conference targeting federal IT and professional services vendors. CMMC readiness, GSA Schedule optimization, and DoD Other Transaction Authority (OTA) contracting are primary session tracks. El Paso defense IT firms growing federal book-of-business attend for partnership and teaming intelligence.',
-    estimatedExhibitors: 300,
-    relevanceScore: 82,
-    website: 'https://www.govconexec.com/govcon-summit',
-    lat: 38.9687,
-    lon: -77.3411,
   },
 
   {
@@ -1087,20 +765,6 @@ export const CORE_CONFERENCES: ConferenceRecord[] = [
     lon: -115.1398,
   },
 
-  {
-    id: 'conf-texas-construction-expo',
-    name: 'Texas Construction Expo',
-    category: 'Construction',
-    location: 'San Antonio, TX',
-    month: 'October',
-    description: 'Texas-focused construction industry exposition covering commercial, residential, and infrastructure construction technology. El Paso and West Texas general contractors attend for subcontractor networking and equipment vendor sourcing. High relevance given Fort Bliss MILCON pipeline and El Paso Water Utilities infrastructure programs.',
-    estimatedExhibitors: 250,
-    relevanceScore: 82,
-    website: 'https://www.texasconstructionexpo.com',
-    lat: 29.4241,
-    lon: -98.4936,
-  },
-
   // ── Healthcare ───────────────────────────────────────────────────────────────
 
   {
@@ -1115,20 +779,6 @@ export const CORE_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.himssconference.org',
     lat: 28.5383,
     lon: -81.3792,
-  },
-
-  {
-    id: 'conf-tha-annual',
-    name: 'Texas Hospital Association Annual Conference',
-    category: 'Healthcare',
-    location: 'Austin, TX',
-    month: 'January',
-    description: 'Texas Hospital Association flagship conference for hospital administrators, clinical leaders, and health IT vendors. Covers hospital workforce challenges, Medicaid policy, and Texas-specific regulatory environment. El Paso hospital systems including UMC, Tenet, and Las Palmas actively participate in state-level policy and technology alignment.',
-    estimatedExhibitors: 300,
-    relevanceScore: 75,
-    website: 'https://www.tha.org/annual-conference',
-    lat: 30.2672,
-    lon: -97.7431,
   },
 
   // ── Workforce ────────────────────────────────────────────────────────────────

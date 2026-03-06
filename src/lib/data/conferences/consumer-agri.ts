@@ -90,20 +90,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-rbte',
-    name: 'RBTE (Retail Business Technology Expo)',
-    category: 'Retail',
-    location: 'London, UK',
-    month: 'May',
-    description: 'Europe\'s largest retail technology event covering POS systems, inventory management, contactless payments, and loss prevention. International benchmark for US retailers modernizing border-crossing payment infrastructure.',
-    estimatedExhibitors: 350,
-    relevanceScore: 32,
-    website: 'https://rbtexpo.com',
-    lat: 51.5074,
-    lon: -0.1278,
-  },
-
-  {
     id: 'conf-ca-euroshop',
     name: 'EuroShop',
     category: 'Retail',
@@ -129,34 +115,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.rila.org/events',
     lat: 32.7767,
     lon: -96.797,
-  },
-
-  {
-    id: 'conf-ca-txrla-annual',
-    name: 'Texas Retailers Association Annual Conference',
-    category: 'Retail',
-    location: 'Austin, TX',
-    month: 'September',
-    description: 'Statewide retail policy and operations conference addressing Texas-specific sales tax, labor regulation, and consumer behavior trends. Direct relevance to El Paso retailers navigating Texas commerce law and cross-border trade policy.',
-    estimatedExhibitors: 80,
-    relevanceScore: 85,
-    website: 'https://www.txrla.com',
-    lat: 30.2672,
-    lon: -97.7431,
-  },
-
-  {
-    id: 'conf-ca-loss-prevention',
-    name: 'NRF PROTECT (Loss Prevention Conference)',
-    category: 'Retail',
-    location: 'Nashville, TN',
-    month: 'June',
-    description: 'The retail industry\'s premier loss prevention and asset protection conference covering organized retail crime, AI-based surveillance, and border security technology. Particularly relevant to El Paso retailers managing cross-border shrinkage and cargo theft.',
-    estimatedExhibitors: 250,
-    relevanceScore: 73,
-    website: 'https://protect.nrf.com',
-    lat: 36.1627,
-    lon: -86.7816,
   },
 
   {
@@ -188,20 +146,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-rms-nexus',
-    name: 'NEXUS by Retail Merchants Association',
-    category: 'Retail',
-    location: 'Richmond, VA',
-    month: 'March',
-    description: 'Regional retail technology and operations summit for independent and mid-market retailers covering payment processing, inventory tech, and customer engagement platforms. Applicable to El Paso independent retailers seeking cost-effective technology modernization.',
-    estimatedExhibitors: 60,
-    relevanceScore: 40,
-    website: 'https://www.retailmerchants.com',
-    lat: 37.5407,
-    lon: -77.436,
-  },
-
-  {
     id: 'conf-ca-fmi-midwinter',
     name: 'FMI Midwinter Executive Conference',
     category: 'Retail',
@@ -227,34 +171,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.outdoorretailer.com',
     lat: 39.7392,
     lon: -104.9903,
-  },
-
-  {
-    id: 'conf-ca-magic-las-vegas',
-    name: 'MAGIC Las Vegas (Fashion & Apparel)',
-    category: 'Retail',
-    location: 'Las Vegas, NV',
-    month: 'February',
-    description: 'North America\'s largest fashion and apparel trade show covering wholesale buying, brand launches, and retail technology for clothing, footwear, and accessories. El Paso\'s proximity to Juarez maquiladora apparel production makes this a critical sourcing event.',
-    estimatedExhibitors: 1500,
-    relevanceScore: 68,
-    website: 'https://www.magicfashionshows.com',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
-  {
-    id: 'conf-ca-ispa-expo',
-    name: 'ISPA Expo (International Sleep Products Association)',
-    category: 'Retail',
-    location: 'Las Vegas, NV',
-    month: 'May',
-    description: 'Premier sleep products trade show covering mattress manufacturing, bedding retail, and supply chain innovation for the $17B US sleep industry. Connects manufacturers from US border regions with major retail buyers.',
-    estimatedExhibitors: 300,
-    relevanceScore: 35,
-    website: 'https://www.sleepproducts.org/expo',
-    lat: 36.1699,
-    lon: -115.1398,
   },
 
   {
@@ -356,20 +272,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-luxury-retail-summit',
-    name: 'Luxury Retail Summit',
-    category: 'Retail',
-    location: 'New York, NY',
-    month: 'May',
-    description: 'Invitation-only executive gathering for luxury brand directors and retail operators covering experiential retail, clienteling technology, and high-net-worth consumer trends. Covers the growing luxury resale and duty-free market at US-Mexico border crossings.',
-    estimatedExhibitors: 60,
-    relevanceScore: 38,
-    website: 'https://www.luxuryretailsummit.com',
-    lat: 40.7128,
-    lon: -74.006,
-  },
-
-  {
     id: 'conf-ca-vmsd-irdc',
     name: 'IRDC (International Retail Design Conference)',
     category: 'Retail',
@@ -398,62 +300,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-irs-independent-retailer',
-    name: 'Independent Retailer Conference',
-    category: 'Retail',
-    location: 'Las Vegas, NV',
-    month: 'August',
-    description: 'Conference and trade show for independent retailers and online sellers covering wholesale sourcing, private label development, and multi-channel selling. Important for El Paso\'s large segment of family-owned and independent retail operators.',
-    estimatedExhibitors: 300,
-    relevanceScore: 55,
-    website: 'https://www.independentretailerconference.com',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
-  {
-    id: 'conf-ca-specialty-food-association-fancy',
-    name: 'Fancy Food Show (Summer)',
-    category: 'Retail',
-    location: 'New York, NY',
-    month: 'June',
-    description: 'Specialty Food Association\'s annual showcase of 2,000+ specialty food, beverage, and gourmet product exhibitors. Relevant to El Paso specialty food retailers and importers bringing artisan Mexican food products to US grocery channels.',
-    estimatedExhibitors: 2000,
-    relevanceScore: 60,
-    website: 'https://www.specialtyfood.com/fancy-food-show',
-    lat: 40.7128,
-    lon: -74.006,
-  },
-
-  {
-    id: 'conf-ca-retail-innovation-summit-tx',
-    name: 'Retail Innovation Summit Texas',
-    category: 'Retail',
-    location: 'Houston, TX',
-    month: 'October',
-    description: 'Texas-focused retail technology summit covering omnichannel operations, payments, and AI-driven merchandising for mid-market retailers. Draws El Paso and border-region retail operators seeking state-specific regulatory and operational guidance.',
-    estimatedExhibitors: 90,
-    relevanceScore: 78,
-    website: 'https://retailinnovationtx.com',
-    lat: 29.7604,
-    lon: -95.3698,
-  },
-
-  {
-    id: 'conf-ca-toy-fair-ny',
-    name: 'Toy Fair New York',
-    category: 'Retail',
-    location: 'New York, NY',
-    month: 'February',
-    description: 'North America\'s largest toy, game, and youth entertainment trade show with 1,000+ exhibitors. Relevant to El Paso toy retailers importing products through Juarez maquiladora toy and games manufacturing facilities.',
-    estimatedExhibitors: 1000,
-    relevanceScore: 45,
-    website: 'https://www.toyfairny.com',
-    lat: 40.7128,
-    lon: -74.006,
-  },
-
-  {
     id: 'conf-ca-hfpa-expo',
     name: 'Home Furnishings Industry Association Expo',
     category: 'Retail',
@@ -467,49 +313,7 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     lon: -79.9857,
   },
 
-  {
-    id: 'conf-ca-grocers-summit-sw',
-    name: 'Southwest Grocers Summit',
-    category: 'Retail',
-    location: 'Phoenix, AZ',
-    month: 'August',
-    description: 'Regional grocery retail summit for Southwest US operators covering local sourcing, Hispanic consumer marketing, and store format optimization. El Paso grocers attend to address the region\'s bilingual consumer base and cross-border purchasing behavior.',
-    estimatedExhibitors: 80,
-    relevanceScore: 82,
-    website: 'https://www.swgrocers.org',
-    lat: 33.4484,
-    lon: -112.074,
-  },
-
-  {
-    id: 'conf-ca-vend-retail-summit',
-    name: 'National Automatic Merchandising Association Expo (NAMA)',
-    category: 'Retail',
-    location: 'Las Vegas, NV',
-    month: 'April',
-    description: 'Vending, micro-market, and office coffee service industry expo with 350+ exhibitors covering automated retail technology. Relevant to El Paso\'s large government and military facility vending operations at Fort Bliss installations.',
-    estimatedExhibitors: 350,
-    relevanceScore: 60,
-    website: 'https://www.namaexpo.com',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
   // ── Food & Beverage ───────────────────────────────────────────────────────
-
-  {
-    id: 'conf-ca-ift-annual',
-    name: 'IFT FIRST (Food Ingredient and Technology)',
-    category: 'Food & Beverage',
-    location: 'Chicago, IL',
-    month: 'July',
-    description: 'Institute of Food Technologists annual meeting and food expo with 1,500+ exhibitors covering food ingredients, processing technology, and packaging innovation. Key event for El Paso food manufacturers and maquiladora food processing facilities in Juarez.',
-    estimatedExhibitors: 1500,
-    relevanceScore: 65,
-    website: 'https://www.ift.org/ift-first',
-    lat: 41.8781,
-    lon: -87.6298,
-  },
 
   {
     id: 'conf-ca-iddba',
@@ -526,20 +330,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-southwest-foodservice-expo',
-    name: 'Southwest Foodservice Expo',
-    category: 'Food & Beverage',
-    location: 'Dallas, TX',
-    month: 'September',
-    description: 'Texas Restaurant Association\'s annual foodservice trade show covering restaurant technology, food distribution, and kitchen equipment for Southwest US operators. Primary industry gathering for El Paso restaurant operators, food distributors, and hospitality buyers.',
-    estimatedExhibitors: 400,
-    relevanceScore: 88,
-    website: 'https://www.txrestaurant.org/swfe',
-    lat: 32.7767,
-    lon: -96.797,
-  },
-
-  {
     id: 'conf-ca-nra-show',
     name: 'NRA Show (National Restaurant Association)',
     category: 'Food & Beverage',
@@ -551,20 +341,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.nationalrestaurantshow.com',
     lat: 41.8781,
     lon: -87.6298,
-  },
-
-  {
-    id: 'conf-ca-fancy-food-winter',
-    name: 'Winter Fancy Food Show',
-    category: 'Food & Beverage',
-    location: 'Las Vegas, NV',
-    month: 'January',
-    description: 'West Coast specialty food industry showcase with 1,400+ exhibitors presenting artisan and gourmet food products. Significant presence of Mexican and Latin American specialty food brands targeting US grocery and specialty food channels through El Paso border crossings.',
-    estimatedExhibitors: 1400,
-    relevanceScore: 65,
-    website: 'https://www.specialtyfood.com/winter-fancy-food-show',
-    lat: 36.1699,
-    lon: -115.1398,
   },
 
   {
@@ -652,34 +428,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-usfoods-food-show',
-    name: 'US Foods Food Show',
-    category: 'Food & Beverage',
-    location: 'Multiple US Cities',
-    month: 'Various',
-    description: 'Regional foodservice distributor showcase connecting restaurant and foodservice operators with food, beverage, and equipment suppliers. Texas editions serve as primary procurement events for El Paso restaurant and institutional food buyers.',
-    estimatedExhibitors: 400,
-    relevanceScore: 75,
-    website: 'https://www.usfoods.com/food-show',
-    lat: 29.7604,
-    lon: -95.3698,
-  },
-
-  {
-    id: 'conf-ca-wswa-annual',
-    name: 'WSWA Annual Convention & Exposition',
-    category: 'Food & Beverage',
-    location: 'Las Vegas, NV',
-    month: 'April',
-    description: 'Wine and Spirits Wholesalers of America annual event covering spirits distribution, compliance, and brand management for the $85B US wholesale beverage alcohol industry. Important to El Paso liquor distributors managing cross-border Mexican spirits trade.',
-    estimatedExhibitors: 400,
-    relevanceScore: 60,
-    website: 'https://www.wswa.org/convention',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
-  {
     id: 'conf-ca-siab-bakery',
     name: 'IBIE (International Baking Industry Exposition)',
     category: 'Food & Beverage',
@@ -764,20 +512,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-fmi-connect',
-    name: 'FMI FutureConnect',
-    category: 'Food & Beverage',
-    location: 'Dallas, TX',
-    month: 'October',
-    description: 'Food Marketing Institute\'s executive summit for grocery retail and food industry leaders covering digital transformation, category management, and supply chain innovation. Texas location draws significant El Paso grocery and food distribution participation.',
-    estimatedExhibitors: 200,
-    relevanceScore: 78,
-    website: 'https://www.fmi.org/futureconnect',
-    lat: 32.7767,
-    lon: -96.797,
-  },
-
-  {
     id: 'conf-ca-vinexpo-america',
     name: 'Vinexpo America',
     category: 'Food & Beverage',
@@ -803,48 +537,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.tortilla-info.com/events',
     lat: 36.1699,
     lon: -115.1398,
-  },
-
-  {
-    id: 'conf-ca-tex-mex-food-summit',
-    name: 'TexMex Food & Beverage Business Summit',
-    category: 'Food & Beverage',
-    location: 'San Antonio, TX',
-    month: 'November',
-    description: 'Dedicated conference for Tex-Mex food manufacturers, restaurants, and distributors covering consumer trends, ingredient sourcing, and retail expansion. El Paso food businesses are core participants given the region\'s deep cultural connection to authentic border cuisine.',
-    estimatedExhibitors: 120,
-    relevanceScore: 92,
-    website: 'https://texmexsummit.com',
-    lat: 29.4241,
-    lon: -98.4936,
-  },
-
-  {
-    id: 'conf-ca-produce-marketing-assoc',
-    name: 'PMA Fresh Summit',
-    category: 'Food & Beverage',
-    location: 'Multiple US Cities',
-    month: 'October',
-    description: 'Produce Marketing Association\'s annual fresh produce and floral industry trade show with 1,200+ exhibitors. Critical to El Paso produce importers handling billions in Mexican fresh produce crossing annually through Otero and Dona Ana County ports of entry.',
-    estimatedExhibitors: 1200,
-    relevanceScore: 85,
-    website: 'https://www.pma.com/freshsummit',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
-    id: 'conf-ca-western-foodservice-expo',
-    name: 'Western Foodservice & Hospitality Expo',
-    category: 'Food & Beverage',
-    location: 'Los Angeles, CA',
-    month: 'August',
-    description: 'West Coast foodservice industry event covering restaurant operations, food trends, and hospitality technology for California and Southwest US markets. El Paso restaurateurs and food distributors track West Coast consumer trends that flow eastward into border markets.',
-    estimatedExhibitors: 400,
-    relevanceScore: 60,
-    website: 'https://www.westernfoodserviceexpo.com',
-    lat: 34.0522,
-    lon: -118.2437,
   },
 
   {
@@ -906,76 +598,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-southwest-farm-show',
-    name: 'Southwest Farm Show',
-    category: 'Agriculture',
-    location: 'Lubbock, TX',
-    month: 'January',
-    description: 'Regional agricultural trade show for West Texas and Eastern New Mexico producers covering cotton, peanut, and grain sorghum production technology. Directly serves El Paso area agricultural operations in the Mesilla and Hueco Valleys.',
-    estimatedExhibitors: 200,
-    relevanceScore: 90,
-    website: 'https://www.southwestfarmshow.com',
-    lat: 33.5779,
-    lon: -101.8552,
-  },
-
-  {
-    id: 'conf-ca-agri-usa',
-    name: 'Agricultural Retailers Association Conference',
-    category: 'Agriculture',
-    location: 'San Antonio, TX',
-    month: 'December',
-    description: 'Annual convention for agricultural retailers and distributors covering crop nutrition, crop protection, and precision application technology. Texas location serves El Paso area agri-dealers supplying West Texas cotton and pecan orchards with inputs.',
-    estimatedExhibitors: 250,
-    relevanceScore: 80,
-    website: 'https://www.aradc.org/events',
-    lat: 29.4241,
-    lon: -98.4936,
-  },
-
-  {
-    id: 'conf-ca-pecan-growers-tx',
-    name: 'Texas Pecan Growers Association Annual Conference',
-    category: 'Agriculture',
-    location: 'Corpus Christi, TX',
-    month: 'July',
-    description: 'Annual gathering of Texas pecan producers covering orchard management, pest control, harvesting technology, and marketing for the US\'s largest pecan-producing state. El Paso and Dona Ana County are at the heart of the US pecan belt making this a critical industry event.',
-    estimatedExhibitors: 100,
-    relevanceScore: 95,
-    website: 'https://www.txpga.org',
-    lat: 27.8006,
-    lon: -97.3964,
-  },
-
-  {
-    id: 'conf-ca-pecan-growers-natl',
-    name: 'National Pecan Growers Council Annual Meeting',
-    category: 'Agriculture',
-    location: 'Scottsdale, AZ',
-    month: 'November',
-    description: 'National pecan industry gathering covering domestic and export market development, crop statistics, and production best practices. New Mexico and Texas producers — including those in the El Paso-area Mesilla Valley pecan belt — are key constituents.',
-    estimatedExhibitors: 60,
-    relevanceScore: 95,
-    website: 'https://www.uspecans.org',
-    lat: 33.4942,
-    lon: -111.9261,
-  },
-
-  {
-    id: 'conf-ca-cotton-gin-oil-mill',
-    name: 'Cotton Gin and Oil Mill Conference',
-    category: 'Agriculture',
-    location: 'San Antonio, TX',
-    month: 'February',
-    description: 'Technical conference for cotton ginners covering equipment maintenance, energy efficiency, and fiber quality standards for processing operations across Texas and New Mexico. West Texas cotton gins serving El Paso area farms are primary attendees.',
-    estimatedExhibitors: 150,
-    relevanceScore: 85,
-    website: 'https://www.cottonginners.org',
-    lat: 29.4241,
-    lon: -98.4936,
-  },
-
-  {
     id: 'conf-ca-cotton-conference-tx',
     name: 'Beltwide Cotton Conferences',
     category: 'Agriculture',
@@ -1001,34 +623,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.agtechsummit.com',
     lat: 36.6777,
     lon: -121.6555,
-  },
-
-  {
-    id: 'conf-ca-precision-ag-conference',
-    name: 'Precision Agriculture Conference',
-    category: 'Agriculture',
-    location: 'Indianapolis, IN',
-    month: 'January',
-    description: 'Annual gathering of precision agriculture practitioners covering GPS guidance, variable rate application, drone mapping, and digital farm management. West Texas and New Mexico producers in El Paso\'s agricultural region are increasingly adopting precision technologies.',
-    estimatedExhibitors: 180,
-    relevanceScore: 65,
-    website: 'https://www.precisionagconference.com',
-    lat: 39.7684,
-    lon: -86.1581,
-  },
-
-  {
-    id: 'conf-ca-irrigation-show',
-    name: 'Irrigation Show & Education Conference',
-    category: 'Agriculture',
-    location: 'Las Vegas, NV',
-    month: 'November',
-    description: 'Irrigation Association\'s premier event covering drip irrigation, pivot systems, water management technology, and efficiency standards. Critical to El Paso area agriculture given the region\'s water scarcity challenges and reliance on Rio Grande and groundwater systems.',
-    estimatedExhibitors: 500,
-    relevanceScore: 90,
-    website: 'https://www.irrigationshow.org',
-    lat: 36.1699,
-    lon: -115.1398,
   },
 
   {
@@ -1102,34 +696,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-cattle-industry-convention',
-    name: 'Cattle Industry Convention & NCBA Trade Show',
-    category: 'Agriculture',
-    location: 'New Orleans, LA',
-    month: 'February',
-    description: 'National Cattlemen\'s Beef Association\'s flagship event with 300+ exhibitors covering beef cattle genetics, veterinary health, and beef marketing. West Texas and New Mexico beef cattle ranchers in the El Paso borderlands are significant participants.',
-    estimatedExhibitors: 300,
-    relevanceScore: 72,
-    website: 'https://www.ncba.org/convention',
-    lat: 29.9511,
-    lon: -90.0715,
-  },
-
-  {
-    id: 'conf-ca-el-paso-stock-show',
-    name: 'El Paso Livestock Show & Rodeo',
-    category: 'Agriculture',
-    location: 'El Paso, TX',
-    month: 'February',
-    description: 'Annual El Paso regional livestock show covering cattle, swine, sheep, and goat competitions alongside agricultural education and agribusiness exhibits. Direct local agricultural showcase connecting El Paso and Chihuahua ranching communities at the US-Mexico border.',
-    estimatedExhibitors: 100,
-    relevanceScore: 98,
-    website: 'https://www.elpasostockshow.com',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
     id: 'conf-ca-wine-grapes-sw',
     name: 'Southwest Wine Summit',
     category: 'Agriculture',
@@ -1155,34 +721,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.indoor.ag/indoor-ag-con',
     lat: 36.1699,
     lon: -115.1398,
-  },
-
-  {
-    id: 'conf-ca-agri-marketing-conference',
-    name: 'Agri-Marketing Conference',
-    category: 'Agriculture',
-    location: 'Kansas City, MO',
-    month: 'April',
-    description: 'National Agri-Marketing Association annual event for agricultural advertising, PR, and marketing professionals. Relevant to El Paso agribusinesses marketing Texas and New Mexico agricultural products to domestic and Mexican export markets.',
-    estimatedExhibitors: 120,
-    relevanceScore: 55,
-    website: 'https://www.nama.org/agri-marketing',
-    lat: 39.0997,
-    lon: -94.5786,
-  },
-
-  {
-    id: 'conf-ca-green-industry-expo',
-    name: 'GIE+EXPO (Green Industry & Equipment Expo)',
-    category: 'Agriculture',
-    location: 'Louisville, KY',
-    month: 'October',
-    description: 'Outdoor power equipment and landscape industry trade show with 700+ exhibitors covering lawn care, tree care, and landscape contracting. Relevant to El Paso landscape contractors managing desert landscaping and water-wise irrigation for commercial and residential properties.',
-    estimatedExhibitors: 700,
-    relevanceScore: 55,
-    website: 'https://www.gie-expo.com',
-    lat: 38.2527,
-    lon: -85.7585,
   },
 
   {
@@ -1258,48 +796,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-nabe-conference',
-    name: 'NABE (National Association for Bilingual Education) Conference',
-    category: 'Education',
-    location: 'Dallas, TX',
-    month: 'February',
-    description: 'National bilingual and dual-language education conference covering curriculum design, teacher preparation, and federal language policy. El Paso ISD operates one of the nation\'s largest bilingual education programs making this a critical professional development event.',
-    estimatedExhibitors: 120,
-    relevanceScore: 92,
-    website: 'https://www.nabe.org',
-    lat: 32.7767,
-    lon: -96.797,
-  },
-
-  {
-    id: 'conf-ca-ascd-conference',
-    name: 'ASCD Annual Conference (Education Leadership)',
-    category: 'Education',
-    location: 'Multiple US Cities',
-    month: 'March',
-    description: 'Association for Supervision and Curriculum Development conference covering instructional leadership, curriculum design, and school improvement. El Paso ISD and Ysleta ISD curriculum directors attend for professional development aligned with Texas TEKS standards.',
-    estimatedExhibitors: 200,
-    relevanceScore: 72,
-    website: 'https://www.ascd.org/conference',
-    lat: 32.7767,
-    lon: -96.797,
-  },
-
-  {
-    id: 'conf-ca-tcea-convention',
-    name: 'TCEA Convention & Exposition (Texas Ed Tech)',
-    category: 'Education',
-    location: 'Austin, TX',
-    month: 'February',
-    description: 'Texas Computer Education Association\'s annual ed-tech convention with 400+ exhibitors and 12,000+ attendees. Premier ed-tech event for Texas educators including all El Paso area school districts implementing technology-enhanced learning across bilingual classrooms.',
-    estimatedExhibitors: 400,
-    relevanceScore: 90,
-    website: 'https://www.tcea.org/convention',
-    lat: 30.2672,
-    lon: -97.7431,
-  },
-
-  {
     id: 'conf-ca-tasb-convention',
     name: 'TASB/TASA Convention (Texas School Boards)',
     category: 'Education',
@@ -1311,20 +807,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.tasb.org/convention',
     lat: 29.7604,
     lon: -95.3698,
-  },
-
-  {
-    id: 'conf-ca-nacac-college-fairs',
-    name: 'NACAC National College Fairs',
-    category: 'Education',
-    location: 'Multiple US Cities',
-    month: 'Various',
-    description: 'National Association for College Admission Counseling college fairs connecting students with 900+ colleges and universities. El Paso regional fairs are significant given UTEP\'s status as the nation\'s largest majority-Hispanic research university.',
-    estimatedExhibitors: 400,
-    relevanceScore: 82,
-    website: 'https://www.nacacnet.org/college-fairs',
-    lat: 31.7619,
-    lon: -106.485,
   },
 
   {
@@ -1356,20 +838,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-aacrao-annual',
-    name: 'AACRAO Annual Meeting (Student Records)',
-    category: 'Education',
-    location: 'Multiple US Cities',
-    month: 'March',
-    description: 'American Association of Collegiate Registrars and Admissions Officers conference covering enrollment management, transcript evaluation, and credential verification. Critical for El Paso higher education institutions processing significant Mexican transcript evaluations.',
-    estimatedExhibitors: 150,
-    relevanceScore: 72,
-    website: 'https://www.aacrao.org/meetings',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
     id: 'conf-ca-nctm-annual',
     name: 'NCTM Annual Meeting (Mathematics Education)',
     category: 'Education',
@@ -1398,34 +866,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-nacubo-annual',
-    name: 'NACUBO Annual Meeting (Higher Ed Finance)',
-    category: 'Education',
-    location: 'Multiple US Cities',
-    month: 'July',
-    description: 'National Association of College and University Business Officers annual meeting covering higher education finance, facilities, and administrative technology. UTEP and EPCC finance leadership attend to benchmark financial operations for large Hispanic-serving institutions.',
-    estimatedExhibitors: 300,
-    relevanceScore: 65,
-    website: 'https://www.nacubo.org/annual-meeting',
-    lat: 30.2672,
-    lon: -97.7431,
-  },
-
-  {
-    id: 'conf-ca-hacu-annual',
-    name: 'HACU Annual Conference (Hispanic-Serving Institutions)',
-    category: 'Education',
-    location: 'Various',
-    month: 'October',
-    description: 'Hispanic Association of Colleges and Universities annual conference covering federal funding, student success, and research partnerships for HSIs. UTEP — the nation\'s flagship HSI — is a lead participant shaping federal education policy for 500+ Hispanic-serving institutions.',
-    estimatedExhibitors: 150,
-    relevanceScore: 95,
-    website: 'https://www.hacu.net/hacu/HACU_Annual_Conference.asp',
-    lat: 29.4241,
-    lon: -98.4936,
-  },
-
-  {
     id: 'conf-ca-nsf-epscor',
     name: 'NSF EPSCoR National Conference',
     category: 'Education',
@@ -1435,34 +875,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     estimatedExhibitors: 80,
     relevanceScore: 85,
     website: 'https://www.nsf.gov/od/iia/programs/epscor',
-    lat: 30.2672,
-    lon: -97.7431,
-  },
-
-  {
-    id: 'conf-ca-acte-conference',
-    name: 'ACTE CareerTech VISION (Career & Technical Education)',
-    category: 'Education',
-    location: 'Multiple US Cities',
-    month: 'November',
-    description: 'Association for Career and Technical Education annual conference covering CTE curriculum, industry credentials, and work-based learning. El Paso area schools operating strong CTE programs in welding, automotive, and healthcare attend to align programs with employer demand.',
-    estimatedExhibitors: 250,
-    relevanceScore: 80,
-    website: 'https://www.acteonline.org/vision',
-    lat: 30.2672,
-    lon: -97.7431,
-  },
-
-  {
-    id: 'conf-ca-aera-annual',
-    name: 'AERA Annual Meeting (Education Research)',
-    category: 'Education',
-    location: 'Multiple US Cities',
-    month: 'April',
-    description: 'American Educational Research Association annual conference covering empirical education research across equity, policy, curriculum, and measurement. UTEP College of Education faculty present border region education research on bilingual learning and Hispanic student achievement.',
-    estimatedExhibitors: 100,
-    relevanceScore: 72,
-    website: 'https://www.aera.net/Annual-Meeting',
     lat: 30.2672,
     lon: -97.7431,
   },
@@ -1479,20 +891,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://onlinelearningconsortium.org/olc-accelerate',
     lat: 28.5383,
     lon: -81.3792,
-  },
-
-  {
-    id: 'conf-ca-title-i-conference',
-    name: 'National Title I Conference',
-    category: 'Education',
-    location: 'Nashville, TN',
-    month: 'February',
-    description: 'National Title I Association annual conference covering federal compensatory education funding, academic intervention programs, and family engagement for high-poverty schools. El Paso ISD — serving a high proportion of economically disadvantaged students — relies on this event for federal compliance guidance.',
-    estimatedExhibitors: 200,
-    relevanceScore: 85,
-    website: 'https://www.titlei.org/conference',
-    lat: 36.1627,
-    lon: -86.7816,
   },
 
   // ── Hospitality ───────────────────────────────────────────────────────────
@@ -1526,20 +924,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-hot-conference',
-    name: 'Hospitality Operations & Technology Conference',
-    category: 'Hospitality',
-    location: 'Dallas, TX',
-    month: 'November',
-    description: 'Southwest US hospitality industry operations and technology summit covering labor management, energy efficiency, and guest satisfaction metrics. Texas location draws significant El Paso hotel and resort operator participation given shared regulatory environment.',
-    estimatedExhibitors: 120,
-    relevanceScore: 78,
-    website: 'https://hotconference.com',
-    lat: 32.7767,
-    lon: -96.797,
-  },
-
-  {
     id: 'conf-ca-alis-hotel-summit',
     name: 'ALIS (Americas Lodging Investment Summit)',
     category: 'Hospitality',
@@ -1551,20 +935,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.alisconference.com',
     lat: 34.0522,
     lon: -118.2437,
-  },
-
-  {
-    id: 'conf-ca-national-lodging-conference',
-    name: 'NYU Hospitality Investment Conference',
-    category: 'Hospitality',
-    location: 'New York, NY',
-    month: 'June',
-    description: 'New York University\'s Tisch Center annual hotel investment conference covering lodging industry performance, brand strategy, and real estate capital markets. El Paso hotel investors track national cap rate trends affecting cross-border tourism hospitality assets.',
-    estimatedExhibitors: 100,
-    relevanceScore: 45,
-    website: 'https://www.scps.nyu.edu/hospitality-conference',
-    lat: 40.7128,
-    lon: -74.006,
   },
 
   {
@@ -1593,34 +963,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.alhi.com',
     lat: 36.1699,
     lon: -115.1398,
-  },
-
-  {
-    id: 'conf-ca-naasc-annual',
-    name: 'NAASC Annual Conference (Airport Concessions)',
-    category: 'Hospitality',
-    location: 'Various',
-    month: 'May',
-    description: 'National Association of Airport Services Companies conference on airport foodservice, retail concessions, and passenger services. El Paso International Airport operators participate to benchmark concessions programming for the region\'s growing air passenger volume.',
-    estimatedExhibitors: 100,
-    relevanceScore: 75,
-    website: 'https://www.naasc.net',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
-    id: 'conf-ca-ihrsa-annual',
-    name: 'IHRSA Annual Convention (Health & Fitness)',
-    category: 'Hospitality',
-    location: 'Los Angeles, CA',
-    month: 'March',
-    description: 'International Health, Racquet & Sportsclub Association trade show covering fitness equipment, club management software, and member wellness programming. El Paso hotel gyms and commercial fitness operators serving the military community attend to track equipment innovations.',
-    estimatedExhibitors: 400,
-    relevanceScore: 52,
-    website: 'https://www.ihrsa.org/annual',
-    lat: 34.0522,
-    lon: -118.2437,
   },
 
   {
@@ -1906,20 +1248,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-mes-media-summit',
-    name: 'Hispanic Media Summit',
-    category: 'Media',
-    location: 'New York, NY',
-    month: 'March',
-    description: 'Industry summit for Spanish-language and Hispanic-targeted media covering advertising, content creation, and audience research. Directly relevant to El Paso\'s bilingual media ecosystem including Telemundo, Univision, and digital media targeting the region\'s 80% Hispanic population.',
-    estimatedExhibitors: 100,
-    relevanceScore: 90,
-    website: 'https://www.hispanicmediasummit.com',
-    lat: 40.7128,
-    lon: -74.006,
-  },
-
-  {
     id: 'conf-ca-out-of-home-summit',
     name: 'OAAA/Geopath OOH Media Conference',
     category: 'Media',
@@ -1931,20 +1259,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.oaaa.org/events',
     lat: 33.7225,
     lon: -116.3736,
-  },
-
-  {
-    id: 'conf-ca-radioink-convergence',
-    name: 'Radio Ink Convergence',
-    category: 'Media',
-    location: 'Miami, FL',
-    month: 'July',
-    description: 'Radio broadcasting industry conference covering digital audio, podcast strategy, and AM/FM broadcasting business models. El Paso Spanish-language radio stations — a dominant local media format — attend to navigate digital audio competition.',
-    estimatedExhibitors: 80,
-    relevanceScore: 65,
-    website: 'https://www.radioink.com/convergence',
-    lat: 25.7617,
-    lon: -80.1918,
   },
 
   {
@@ -1962,34 +1276,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-irjx-border-journalism',
-    name: 'Border Journalism Network Symposium',
-    category: 'Media',
-    location: 'El Paso, TX',
-    month: 'November',
-    description: 'Annual gathering of journalists, editors, and media organizations covering the US-Mexico border beat including immigration, trade policy, and binational culture. UTEP journalism faculty, El Paso Times, and Borderzine.com are core participants.',
-    estimatedExhibitors: 30,
-    relevanceScore: 96,
-    website: 'https://www.utep.edu/journalism',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
-    id: 'conf-ca-snap-creators-summit',
-    name: 'Snap Partner Summit',
-    category: 'Media',
-    location: 'Los Angeles, CA',
-    month: 'April',
-    description: 'Snapchat\'s developer and creator conference covering AR filters, content monetization, and platform advertising tools. El Paso digital creators and marketing agencies targeting Gen Z Hispanic consumers attend for platform-first advertising strategies.',
-    estimatedExhibitors: 100,
-    relevanceScore: 48,
-    website: 'https://snap.com/en-US/partner-summit',
-    lat: 34.0522,
-    lon: -118.2437,
-  },
-
-  {
     id: 'conf-ca-vidcon',
     name: 'VidCon',
     category: 'Media',
@@ -2001,20 +1287,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.vidcon.com',
     lat: 33.8366,
     lon: -117.9143,
-  },
-
-  {
-    id: 'conf-ca-newfront-digital',
-    name: 'IAB NewFronts',
-    category: 'Media',
-    location: 'New York, NY',
-    month: 'May',
-    description: 'Interactive Advertising Bureau\'s annual digital content marketplace where streaming platforms pitch advertising packages to media buyers. El Paso regional media buyers and advertising agencies evaluate digital video inventory for border-market campaigns.',
-    estimatedExhibitors: 100,
-    relevanceScore: 45,
-    website: 'https://www.iab.com/events/iab-newfronts',
-    lat: 40.7128,
-    lon: -74.006,
   },
 
   {
@@ -2062,20 +1334,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-sxsw-sports',
-    name: 'SXSW Sports',
-    category: 'Sports',
-    location: 'Austin, TX',
-    month: 'March',
-    description: 'Sports innovation track at South by Southwest covering athlete analytics, sports betting technology, and fan experience innovation. Texas location draws El Paso sports operators and UTEP athletics staff tracking digital sports and esports technology.',
-    estimatedExhibitors: 150,
-    relevanceScore: 70,
-    website: 'https://www.sxsw.com/conference/sport',
-    lat: 30.2672,
-    lon: -97.7431,
-  },
-
-  {
     id: 'conf-ca-sport-el-paso',
     name: 'El Paso Sports Commission Annual Forum',
     category: 'Sports',
@@ -2101,34 +1359,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.sloansportsconference.com',
     lat: 42.3601,
     lon: -71.0589,
-  },
-
-  {
-    id: 'conf-ca-nfl-scouting-combine',
-    name: 'NFL Scouting Combine',
-    category: 'Sports',
-    location: 'Indianapolis, IN',
-    month: 'February',
-    description: 'NFL\'s annual pre-draft evaluation event and sports business gathering where front offices, agents, and media cover player performance testing. UTEP football program uses this event to promote NFL prospects from El Paso to national scouts and media.',
-    estimatedExhibitors: 100,
-    relevanceScore: 52,
-    website: 'https://www.nfl.com/draft/combine',
-    lat: 39.7684,
-    lon: -86.1581,
-  },
-
-  {
-    id: 'conf-ca-nacda-convention',
-    name: 'NACDA Convention (Collegiate Athletic Directors)',
-    category: 'Sports',
-    location: 'Orlando, FL',
-    month: 'June',
-    description: 'National Association of Collegiate Directors of Athletics annual convention covering athletic administration, compliance, NIL policy, and revenue generation. UTEP and EPCC athletic directors attend for NCAA compliance updates and fundraising strategy.',
-    estimatedExhibitors: 200,
-    relevanceScore: 65,
-    website: 'https://www.nacda.com/convention',
-    lat: 28.5383,
-    lon: -81.3792,
   },
 
   {
@@ -2174,48 +1404,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-outdoor-retailer-summer-sports',
-    name: 'Outdoor Sports Summit',
-    category: 'Sports',
-    location: 'Denver, CO',
-    month: 'September',
-    description: 'Outdoor and adventure sports industry business conference covering outdoor recreation economy, gear distribution, and trail/facility management. El Paso\'s Franklin Mountains State Park and proximity to Guadalupe Mountains position the region as a growing outdoor recreation destination.',
-    estimatedExhibitors: 150,
-    relevanceScore: 62,
-    website: 'https://outdoorsportssummit.org',
-    lat: 39.7392,
-    lon: -104.9903,
-  },
-
-  {
-    id: 'conf-ca-esports-summit',
-    name: 'Esports Business Summit',
-    category: 'Sports',
-    location: 'Las Vegas, NV',
-    month: 'October',
-    description: 'Business of esports conference covering team ownership, sponsorship, broadcast rights, and collegiate esports program development. UTEP\'s active esports program and El Paso\'s young demographics make this a relevant growth sector for the region\'s entertainment economy.',
-    estimatedExhibitors: 150,
-    relevanceScore: 60,
-    website: 'https://www.esportsbusinesssummit.com',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
-  {
-    id: 'conf-ca-mls-all-star',
-    name: 'International Soccer Business Forum',
-    category: 'Sports',
-    location: 'Various',
-    month: 'September',
-    description: 'Global football business forum covering league expansion, player transfers, and commercial rights for soccer federations and clubs. Relevant to El Paso as a soccer-passionate binational city tracking Liga MX-MLS collaboration and potential expansion franchises.',
-    estimatedExhibitors: 100,
-    relevanceScore: 65,
-    website: 'https://www.soccerbusiness.com',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
     id: 'conf-ca-tx-high-school-sports',
     name: 'THSCA Coaching School & Convention (Texas HS Sports)',
     category: 'Sports',
@@ -2227,20 +1415,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.thsca.com',
     lat: 29.4241,
     lon: -98.4936,
-  },
-
-  {
-    id: 'conf-ca-nsca-strength-conference',
-    name: 'NSCA National Conference (Strength & Conditioning)',
-    category: 'Sports',
-    location: 'Las Vegas, NV',
-    month: 'July',
-    description: 'National Strength and Conditioning Association annual conference covering sports performance science, athlete nutrition, and training technology. UTEP athletic performance staff and El Paso personal training businesses attend for continuing education and equipment sourcing.',
-    estimatedExhibitors: 300,
-    relevanceScore: 60,
-    website: 'https://www.nsca.com/national-conference',
-    lat: 36.1699,
-    lon: -115.1398,
   },
 
   // ── Safety ────────────────────────────────────────────────────────────────
@@ -2344,20 +1518,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-chem-safety-summit',
-    name: 'Chemical Safety & Hazmat Summit',
-    category: 'Safety',
-    location: 'Houston, TX',
-    month: 'September',
-    description: 'Chemical industry safety conference covering process safety management, hazardous materials transportation, and emergency response planning. El Paso\'s position as a border chemicals and industrial gas transit hub makes PSM compliance critical for local operators.',
-    estimatedExhibitors: 200,
-    relevanceScore: 78,
-    website: 'https://www.chemicalsafetysummit.com',
-    lat: 29.7604,
-    lon: -95.3698,
-  },
-
-  {
     id: 'conf-ca-ishn-safety-leadership',
     name: 'Safety Leadership Conference (ISHN)',
     category: 'Safety',
@@ -2381,20 +1541,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     estimatedExhibitors: 300,
     relevanceScore: 72,
     website: 'https://www.nfpa.org/conference',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
-    id: 'conf-ca-border-emergency-mgmt',
-    name: 'Border Region Emergency Management Symposium',
-    category: 'Safety',
-    location: 'El Paso, TX',
-    month: 'September',
-    description: 'Binational symposium covering cross-border emergency response coordination, mass casualty planning, and disaster recovery for US-Mexico border communities. Fort Bliss Garrison Emergency Management, El Paso OEM, and Chihuahua Proteccion Civil co-present at this unique event.',
-    estimatedExhibitors: 50,
-    relevanceScore: 98,
-    website: 'https://www.epcounty.com/oem',
     lat: 31.7619,
     lon: -106.485,
   },
@@ -2470,20 +1616,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-construction-safety',
-    name: 'Construction Safety Conference',
-    category: 'Safety',
-    location: 'Chicago, IL',
-    month: 'January',
-    description: 'National construction industry safety conference covering fall protection, scaffold standards, excavation safety, and contractor safety management. El Paso construction companies managing the region\'s $2B+ annual construction activity in residential and commercial sectors attend.',
-    estimatedExhibitors: 200,
-    relevanceScore: 75,
-    website: 'https://www.constructionsafetyconference.org',
-    lat: 41.8781,
-    lon: -87.6298,
-  },
-
-  {
     id: 'conf-ca-campus-safety-conference',
     name: 'Campus Safety Conference',
     category: 'Safety',
@@ -2497,49 +1629,7 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     lon: -106.485,
   },
 
-  {
-    id: 'conf-ca-wildfire-summit',
-    name: 'National Wildfire Summit',
-    category: 'Safety',
-    location: 'Phoenix, AZ',
-    month: 'May',
-    description: 'Wildfire preparedness and response summit covering firefighting aircraft, prescribed burn policy, and community firewise programs for fire-prone western states. El Paso\'s location at the Chihuahuan Desert urban fringe creates significant wildland-urban interface fire risk requiring preparedness investment.',
-    estimatedExhibitors: 150,
-    relevanceScore: 82,
-    website: 'https://www.nationalwildfiresummit.org',
-    lat: 33.4484,
-    lon: -112.074,
-  },
-
-  {
-    id: 'conf-ca-occupational-hygiene-aiha',
-    name: 'AIHce EXP (Industrial Hygiene)',
-    category: 'Safety',
-    location: 'Various',
-    month: 'May',
-    description: 'American Industrial Hygiene Association annual conference covering occupational exposure assessment, ventilation engineering, and industrial hygiene for manufacturing and chemical industries. El Paso industrial hygienists serving border manufacturing, smelter operations, and logistics facilities attend.',
-    estimatedExhibitors: 300,
-    relevanceScore: 70,
-    website: 'https://www.aiha.org/education-events/aihce-exp',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
   // ── Food & Beverage (additional) ──────────────────────────────────────────
-
-  {
-    id: 'conf-ca-wfse-texas',
-    name: 'Texas Restaurant Association Annual Convention',
-    category: 'Food & Beverage',
-    location: 'Austin, TX',
-    month: 'May',
-    description: 'Statewide Texas restaurant industry convention covering labor law, food safety compliance, and technology adoption for foodservice operators. El Paso restaurant owners engage on Texas Comptroller sales tax rules and minimum wage policy directly affecting border-market restaurant economics.',
-    estimatedExhibitors: 200,
-    relevanceScore: 90,
-    website: 'https://www.txrestaurant.org',
-    lat: 30.2672,
-    lon: -97.7431,
-  },
 
   {
     id: 'conf-ca-spins-natural-food',
@@ -2556,34 +1646,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-chihuahua-food-summit',
-    name: 'Binational Food & Agribusiness Summit',
-    category: 'Food & Beverage',
-    location: 'El Paso, TX',
-    month: 'May',
-    description: 'Bilateral food industry gathering connecting El Paso and Chihuahua food manufacturers, distributors, and regulators to address cross-border food safety, USMCA rules of origin, and joint marketing for regional food products. A unique border commerce event.',
-    estimatedExhibitors: 80,
-    relevanceScore: 98,
-    website: 'https://www.ep-foodsummit.org',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
-    id: 'conf-ca-foodtech-summit',
-    name: 'FoodTech Summit & Expo',
-    category: 'Food & Beverage',
-    location: 'Mexico City, Mexico',
-    month: 'September',
-    description: 'Latin America\'s leading food and beverage technology conference covering food science, processing innovation, and packaging for Mexican and Latin American food manufacturers. El Paso food importers and Juarez food processors attend to track innovation in Mexican food production.',
-    estimatedExhibitors: 600,
-    relevanceScore: 82,
-    website: 'https://www.foodtechsummit.mx',
-    lat: 19.4326,
-    lon: -99.1332,
-  },
-
-  {
     id: 'conf-ca-chefconnect',
     name: 'ACF ChefConnect',
     category: 'Food & Beverage',
@@ -2595,20 +1657,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.acfchefs.org/chefconnect',
     lat: 31.7619,
     lon: -106.485,
-  },
-
-  {
-    id: 'conf-ca-meat-conference',
-    name: 'Annual Meat Conference',
-    category: 'Food & Beverage',
-    location: 'Nashville, TN',
-    month: 'February',
-    description: 'National Meat Association and American Meat Institute annual conference covering fresh and processed meat retail, slaughter technology, and food safety. West Texas and New Mexico beef and pork processors serving the El Paso retail and food service market attend.',
-    estimatedExhibitors: 300,
-    relevanceScore: 68,
-    website: 'https://www.annualmeatconference.com',
-    lat: 36.1627,
-    lon: -86.7816,
   },
 
   {
@@ -2639,35 +1687,7 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     lon: -106.6504,
   },
 
-  {
-    id: 'conf-ca-coffee-quality-intl',
-    name: 'Specialty Coffee Association Expo',
-    category: 'Food & Beverage',
-    location: 'Houston, TX',
-    month: 'April',
-    description: 'Specialty Coffee Association\'s annual trade show and conference covering single-origin coffee sourcing, brewing innovation, and barista education. El Paso\'s growing specialty coffee scene importing from Chiapas and Veracruz through Mexico tracks sourcing trends at this event.',
-    estimatedExhibitors: 400,
-    relevanceScore: 68,
-    website: 'https://www.scanorthamerica.com/expo',
-    lat: 29.7604,
-    lon: -95.3698,
-  },
-
   // ── Agriculture (additional) ──────────────────────────────────────────────
-
-  {
-    id: 'conf-ca-agri-usa-south',
-    name: 'Southern States Agricultural Conference',
-    category: 'Agriculture',
-    location: 'New Orleans, LA',
-    month: 'March',
-    description: 'Regional agricultural summit covering Southern US crop production, federal farm policy, and rural development. Texas and New Mexico producers in the El Paso agricultural region engage on Rio Grande Compact water allocation and federal conservation program funding.',
-    estimatedExhibitors: 150,
-    relevanceScore: 70,
-    website: 'https://www.southernstatesag.org',
-    lat: 29.9511,
-    lon: -90.0715,
-  },
 
   {
     id: 'conf-ca-water-smart-irrigation',
@@ -2698,34 +1718,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-farm-bureau-tx',
-    name: 'Texas Farm Bureau Annual Meeting',
-    category: 'Agriculture',
-    location: 'Waco, TX',
-    month: 'December',
-    description: 'Texas Farm Bureau annual governance meeting covering state agricultural policy, crop insurance, and member services for Texas producers. El Paso County Farm Bureau delegates participate in statewide policy positions on water law and property tax affecting border agriculture.',
-    estimatedExhibitors: 100,
-    relevanceScore: 85,
-    website: 'https://www.txfb.org/annual-meeting',
-    lat: 31.5493,
-    lon: -97.1467,
-  },
-
-  {
-    id: 'conf-ca-alfalfa-symposium',
-    name: 'Western Alfalfa & Forage Symposium',
-    category: 'Agriculture',
-    location: 'Reno, NV',
-    month: 'November',
-    description: 'Technical symposium for alfalfa and forage crop producers covering stand establishment, cutting management, and export market development. El Paso and Dona Ana County alfalfa growers — key suppliers to regional dairies — attend for agronomic research updates.',
-    estimatedExhibitors: 100,
-    relevanceScore: 88,
-    website: 'https://ucanr.edu/sites/Alfalfa',
-    lat: 39.5296,
-    lon: -119.8138,
-  },
-
-  {
     id: 'conf-ca-onion-symposium',
     name: 'National Onion Association Annual Meeting',
     category: 'Agriculture',
@@ -2737,20 +1729,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.onions-usa.org',
     lat: 33.8303,
     lon: -116.5453,
-  },
-
-  {
-    id: 'conf-ca-usmca-ag-trade',
-    name: 'US-Mexico-Canada Agriculture Trade Forum',
-    category: 'Agriculture',
-    location: 'San Diego, CA',
-    month: 'June',
-    description: 'Bilateral agricultural trade forum covering USMCA agricultural chapter implementation, tariff-rate quotas, and sanitary/phytosanitary inspection procedures. El Paso produce importers and agricultural exporters engage directly with USDA and SAGARPA officials.',
-    estimatedExhibitors: 80,
-    relevanceScore: 95,
-    website: 'https://www.usmcatrade.org',
-    lat: 32.7157,
-    lon: -117.1611,
   },
 
   {
@@ -2779,20 +1757,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.tacc.org',
     lat: 29.4241,
     lon: -98.4936,
-  },
-
-  {
-    id: 'conf-ca-agritech-west',
-    name: 'Agri-Tech West Summit',
-    category: 'Agriculture',
-    location: 'Fresno, CA',
-    month: 'April',
-    description: 'Western US agricultural technology conference covering drone application, sensor networks, and water management AI for specialty crop producers. El Paso area alfalfa and pecan producers tracking drone-assisted field monitoring and precision fertigation technologies attend.',
-    estimatedExhibitors: 150,
-    relevanceScore: 65,
-    website: 'https://www.agritechwest.com',
-    lat: 36.7378,
-    lon: -119.7871,
   },
 
   {
@@ -2854,20 +1818,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-stem-teachers-conference',
-    name: 'NSTA National Conference (Science Teachers)',
-    category: 'Education',
-    location: 'Multiple US Cities',
-    month: 'March',
-    description: 'National Science Teaching Association annual conference covering K-12 science curriculum, lab safety, and STEM integration. El Paso STEM teachers participate given the region\'s science pipeline goals connecting K-12 to UTEP engineering and health science programs.',
-    estimatedExhibitors: 400,
-    relevanceScore: 72,
-    website: 'https://www.nsta.org/national',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
     id: 'conf-ca-aacte-annual',
     name: 'AACTE Annual Meeting (Teacher Education)',
     category: 'Education',
@@ -2896,20 +1846,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-cue-conference',
-    name: 'CUE Annual Conference (Computer Using Educators)',
-    category: 'Education',
-    location: 'Palm Springs, CA',
-    month: 'March',
-    description: 'California-based ed-tech conference drawing national attendance for classroom technology, coding education, and digital citizenship training. El Paso and Southwest US educators attend for professional development on Google Workspace, Chromebook, and classroom AI tools.',
-    estimatedExhibitors: 250,
-    relevanceScore: 60,
-    website: 'https://www.cue.org/conference',
-    lat: 33.8303,
-    lon: -116.5453,
-  },
-
-  {
     id: 'conf-ca-special-education-council',
     name: 'CEC Convention (Council for Exceptional Children)',
     category: 'Education',
@@ -2935,20 +1871,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.collegeboard.org/forum',
     lat: 31.7619,
     lon: -106.485,
-  },
-
-  {
-    id: 'conf-ca-workplace-learning-atd',
-    name: 'ATD International Conference & Exposition',
-    category: 'Education',
-    location: 'New Orleans, LA',
-    month: 'May',
-    description: 'Association for Talent Development annual conference covering corporate learning, leadership development, and instructional design. El Paso corporate training professionals serving Fort Bliss civilian workforce and large logistics and healthcare employers attend.',
-    estimatedExhibitors: 400,
-    relevanceScore: 65,
-    website: 'https://www.td.org/atd-2025',
-    lat: 29.9511,
-    lon: -90.0715,
   },
 
   // ── Hospitality (additional) ──────────────────────────────────────────────
@@ -2982,90 +1904,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-ice-t-tech-summit',
-    name: 'Meetings Industry Technology Summit',
-    category: 'Hospitality',
-    location: 'Washington, DC',
-    month: 'September',
-    description: 'Meetings and events technology conference covering event management software, virtual event platforms, and AI-powered registration systems. El Paso Convention & Performing Arts Center events staff track technology for improving large military and government conference execution.',
-    estimatedExhibitors: 100,
-    relevanceScore: 68,
-    website: 'https://www.meetingstechsummit.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-ca-hima-mountain',
-    name: 'Mountain West Lodging Summit',
-    category: 'Hospitality',
-    location: 'Salt Lake City, UT',
-    month: 'March',
-    description: 'Regional hotel industry summit for Mountain West and Southwest US lodging operators covering room rate strategy, workforce retention, and OTA channel management. El Paso hotel operators participate in the regional peer benchmarking sessions.',
-    estimatedExhibitors: 80,
-    relevanceScore: 72,
-    website: 'https://www.mwlodging.com',
-    lat: 40.7608,
-    lon: -111.891,
-  },
-
-  {
-    id: 'conf-ca-food-tourism-summit',
-    name: 'World Food Travel Summit',
-    category: 'Hospitality',
-    location: 'Various International',
-    month: 'April',
-    description: 'International culinary tourism conference covering food as a destination marketing tool, agritourism, and gastronomic experience design. El Paso tourism officials leverage the city\'s unique border cuisine — green chile, carne asada, Mexican street food — as a culinary destination differentiator.',
-    estimatedExhibitors: 100,
-    relevanceScore: 75,
-    website: 'https://www.worldfoodtravel.org/summit',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
-    id: 'conf-ca-holiday-inn-franchise-conf',
-    name: 'IHG Owners Association Conference',
-    category: 'Hospitality',
-    location: 'Atlanta, GA',
-    month: 'October',
-    description: 'IHG Hotels & Resorts franchise owners conference covering brand standards, renovation requirements, and loyalty program updates. El Paso IHG franchisees operating Holiday Inn, Staybridge, and Candlewood properties near Fort Bliss attend for brand compliance and renovation planning.',
-    estimatedExhibitors: 200,
-    relevanceScore: 65,
-    website: 'https://www.ihgownersassociation.com',
-    lat: 33.749,
-    lon: -84.388,
-  },
-
-  {
-    id: 'conf-ca-cotelac-meeting',
-    name: 'COTELAC Border Region Hospitality Forum',
-    category: 'Hospitality',
-    location: 'Ciudad Juarez, Mexico',
-    month: 'July',
-    description: 'Binational Chihuahua-Texas hospitality industry forum covering cross-border visitor trends, shared infrastructure, and binational tourism marketing for the El Paso-Juarez metropolitan area. Directly addresses the hospitality economy of the largest binational urban area on the US-Mexico border.',
-    estimatedExhibitors: 60,
-    relevanceScore: 98,
-    website: 'https://www.cotelac.mx',
-    lat: 31.6904,
-    lon: -106.4245,
-  },
-
-  {
-    id: 'conf-ca-hotel-management-conference',
-    name: 'Lodging Conference',
-    category: 'Hospitality',
-    location: 'Phoenix, AZ',
-    month: 'October',
-    description: 'Hotel industry executive conference with 2,000+ owners, operators, and C-suite lodging executives covering capital markets, brand strategy, and workforce. Southwest location draws El Paso hotel developers evaluating expansion financing in the region\'s tight hotel supply market.',
-    estimatedExhibitors: 150,
-    relevanceScore: 70,
-    website: 'https://www.thelodgingconference.com',
-    lat: 33.4484,
-    lon: -112.074,
-  },
-
-  {
     id: 'conf-ca-meetings-incentives-summit',
     name: 'Incentive Travel Industry Index Summit',
     category: 'Hospitality',
@@ -3077,34 +1915,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.siteglobal.com/events',
     lat: 41.8781,
     lon: -87.6298,
-  },
-
-  {
-    id: 'conf-ca-campus-rec-nirsa',
-    name: 'NIRSA Annual Conference (Campus Recreation)',
-    category: 'Hospitality',
-    location: 'Various',
-    month: 'April',
-    description: 'National Intramural-Recreational Sports Association conference covering campus recreation facility design, programming, and student wellness. UTEP recreation center and Fort Bliss MWR recreation staff attend to benchmark fitness programming for diverse military and student populations.',
-    estimatedExhibitors: 200,
-    relevanceScore: 65,
-    website: 'https://www.nirsa.org/nirsa-annual-conference',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
-    id: 'conf-ca-resort-convention-southwest',
-    name: 'Southwest Hospitality Leadership Summit',
-    category: 'Hospitality',
-    location: 'Scottsdale, AZ',
-    month: 'February',
-    description: 'Boutique regional hotel and resort operators\' summit covering sustainable hospitality, indigenous culture tourism, and desert resort operations. El Paso boutique hotel operators track desert hospitality design and cultural tourism programming for the Borderland market.',
-    estimatedExhibitors: 60,
-    relevanceScore: 78,
-    website: 'https://www.swhospitality.org',
-    lat: 33.4942,
-    lon: -111.9261,
   },
 
   // ── Media (additional) ────────────────────────────────────────────────────
@@ -3124,34 +1934,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-rtdna-conference',
-    name: 'RTDNA Futures Conference (Broadcast Journalists)',
-    category: 'Media',
-    location: 'Various',
-    month: 'April',
-    description: 'Radio Television Digital News Association annual conference covering broadcast journalism standards, social media verification, and newsroom safety. El Paso broadcast journalists — often covering cartel violence and border security — engage on safety protocols for reporting in high-risk environments.',
-    estimatedExhibitors: 100,
-    relevanceScore: 78,
-    website: 'https://www.rtdna.org/futures',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
-    id: 'conf-ca-creators-economy-summit',
-    name: 'Creator Economy Summit',
-    category: 'Media',
-    location: 'Austin, TX',
-    month: 'October',
-    description: 'Business of content creation conference covering sponsorship models, platform algorithms, and creator-brand partnerships. El Paso\'s growing cohort of bilingual border culture content creators track monetization strategies for Spanish-English dual-audience channels.',
-    estimatedExhibitors: 150,
-    relevanceScore: 68,
-    website: 'https://creatoreconomy.com/summit',
-    lat: 30.2672,
-    lon: -97.7431,
-  },
-
-  {
     id: 'conf-ca-pr-summit',
     name: 'PRSA International Conference',
     category: 'Media',
@@ -3163,62 +1945,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.prsa.org/icon',
     lat: 31.7619,
     lon: -106.485,
-  },
-
-  {
-    id: 'conf-ca-advertising-border',
-    name: 'US-Mexico Border Advertising & Marketing Summit',
-    category: 'Media',
-    location: 'El Paso, TX',
-    month: 'June',
-    description: 'Specialized gathering of advertisers, media buyers, and marketing agencies targeting the US-Mexico border consumer market. El Paso, Laredo, and San Diego market participants develop bilingual media planning strategies for the unique border consumer economy.',
-    estimatedExhibitors: 50,
-    relevanceScore: 98,
-    website: 'https://www.bordermarketing.org',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
-    id: 'conf-ca-techcrunch-disrupt',
-    name: 'TechCrunch Disrupt',
-    category: 'Media',
-    location: 'San Francisco, CA',
-    month: 'October',
-    description: 'Premier technology startup media event covering venture investment, startup demos, and emerging technology journalism. El Paso tech entrepreneurs and UTEP spinout founders attend to pitch media-tech and border-tech innovations to national venture and press audiences.',
-    estimatedExhibitors: 300,
-    relevanceScore: 55,
-    website: 'https://techcrunch.com/events/tc-disrupt',
-    lat: 37.7749,
-    lon: -122.4194,
-  },
-
-  {
-    id: 'conf-ca-multicultural-media',
-    name: 'National Association of Hispanic Journalists Conference',
-    category: 'Media',
-    location: 'Various',
-    month: 'September',
-    description: 'NAHJ annual conference covering Hispanic journalist career development, immigration reporting, and Spanish-language media industry. El Paso journalists — covering one of the nation\'s most consequential border stories — are leading voices at this national convening.',
-    estimatedExhibitors: 100,
-    relevanceScore: 90,
-    website: 'https://www.nahj.org/convention',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
-    id: 'conf-ca-mediatel-summit',
-    name: 'NextTV Summit',
-    category: 'Media',
-    location: 'New York, NY',
-    month: 'June',
-    description: 'Television technology and business summit covering pay TV disruption, FAST channel growth, and addressable advertising for US broadcast and cable operators. El Paso local television stations tracking ATSC 3.0 NextGen TV rollout attend for spectrum strategy guidance.',
-    estimatedExhibitors: 100,
-    relevanceScore: 58,
-    website: 'https://www.nexttvsummit.com',
-    lat: 40.7128,
-    lon: -74.006,
   },
 
   {
@@ -3249,49 +1975,7 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     lon: -97.7431,
   },
 
-  {
-    id: 'conf-ca-digital-signage-expo',
-    name: 'Digital Signage Expo',
-    category: 'Media',
-    location: 'Las Vegas, NV',
-    month: 'April',
-    description: 'Digital out-of-home and digital signage industry conference with 200+ exhibitors covering LED displays, content management software, and programmatic DOOH. El Paso airport, stadium, and retail digital signage operators source technology at this annual expo.',
-    estimatedExhibitors: 200,
-    relevanceScore: 60,
-    website: 'https://www.digitalsignageexpo.net',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
   // ── Sports (additional) ───────────────────────────────────────────────────
-
-  {
-    id: 'conf-ca-sports-event-industry',
-    name: 'Sports ETA Annual Conference',
-    category: 'Sports',
-    location: 'Various',
-    month: 'March',
-    description: 'Sports Events and Tourism Association conference for sports tourism destination marketers and event rights holders covering bid strategy and economic impact calculation. El Paso Sports Commission develops hosting bids for national amateur events at this primary industry marketplace.',
-    estimatedExhibitors: 150,
-    relevanceScore: 75,
-    website: 'https://www.sportseta.org/conference',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
-    id: 'conf-ca-nfhs-coaches-summit',
-    name: 'NFHS Annual Meeting (High School Sports)',
-    category: 'Sports',
-    location: 'Indianapolis, IN',
-    month: 'June',
-    description: 'National Federation of State High School Associations annual meeting covering UIL/NFHS rule changes, student athlete eligibility, and sports officiating. Texas representatives from El Paso UIL districts participate in national rule-making for football, soccer, and basketball.',
-    estimatedExhibitors: 100,
-    relevanceScore: 72,
-    website: 'https://www.nfhs.org/articles/nfhs-annual-meeting',
-    lat: 39.7684,
-    lon: -86.1581,
-  },
 
   {
     id: 'conf-ca-aquatics-intl',
@@ -3363,48 +2047,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     lon: -106.485,
   },
 
-  {
-    id: 'conf-ca-sports-medicine-amssm',
-    name: 'AMSSM Annual Meeting (Sports Medicine)',
-    category: 'Sports',
-    location: 'Various',
-    month: 'April',
-    description: 'American Medical Society for Sports Medicine annual meeting covering athlete injury prevention, concussion protocols, and sports medicine research. UTEP team physicians and El Paso orthopedic surgeons serving high school and college athletes attend for continuing medical education.',
-    estimatedExhibitors: 200,
-    relevanceScore: 68,
-    website: 'https://www.amssm.org/annualmeeting.php',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
-    id: 'conf-ca-marathon-major-expo',
-    name: 'Running USA Annual Conference',
-    category: 'Sports',
-    location: 'Various',
-    month: 'February',
-    description: 'US running event industry conference covering race management, runner experience, and sponsorship for marathon and endurance event operators. El Paso Marathon and Rock the Desert race organizers attend for event management technology and sponsorship sales strategies.',
-    estimatedExhibitors: 100,
-    relevanceScore: 65,
-    website: 'https://www.runningusa.org/annual-conference',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
-    id: 'conf-ca-golf-industry-show',
-    name: 'Golf Industry Show',
-    category: 'Sports',
-    location: 'Las Vegas, NV',
-    month: 'February',
-    description: 'NGCOA and GCSAA co-located golf course management and technology show with 500+ exhibitors. El Paso\'s year-round golf climate supporting 25+ golf courses — including Fort Bliss Underwood Golf Complex — drives local operator attendance for turf management and golf tech.',
-    estimatedExhibitors: 500,
-    relevanceScore: 65,
-    website: 'https://www.golfindustryshow.com',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
   // ── Safety (additional) ───────────────────────────────────────────────────
 
   {
@@ -3422,34 +2064,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ca-dive-rescue-conference',
-    name: 'Dive Rescue International Conference',
-    category: 'Safety',
-    location: 'Fort Collins, CO',
-    month: 'March',
-    description: 'Specialized water rescue and dive safety conference for public safety agencies covering swift water rescue, submerged vehicle recovery, and dive team certification. El Paso Fire and El Paso County Sheriff water rescue teams covering the Rio Grande and Franklin Mountains terrain attend.',
-    estimatedExhibitors: 80,
-    relevanceScore: 78,
-    website: 'https://www.diverescueinternational.com',
-    lat: 40.5853,
-    lon: -105.0844,
-  },
-
-  {
-    id: 'conf-ca-food-defense-summit',
-    name: 'Food Defense and Biosecurity Summit',
-    category: 'Safety',
-    location: 'Washington, DC',
-    month: 'February',
-    description: 'USDA and FDA co-sponsored summit covering intentional food adulteration, FSMA food defense rule compliance, and supply chain vulnerability for US food manufacturers. El Paso food importers managing FDA FSVP requirements at the nation\'s busiest land port attend.',
-    estimatedExhibitors: 100,
-    relevanceScore: 82,
-    website: 'https://www.fooddefensesummit.org',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
     id: 'conf-ca-public-safety-summit-tx',
     name: 'Texas Association of Chiefs of Police Conference',
     category: 'Safety',
@@ -3461,90 +2075,6 @@ export const CONSUMER_AGRI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.tacp.org',
     lat: 30.2672,
     lon: -97.7431,
-  },
-
-  {
-    id: 'conf-ca-military-safety-conference',
-    name: 'Department of Defense Safety Symposium',
-    category: 'Safety',
-    location: 'Scottsdale, AZ',
-    month: 'August',
-    description: 'DoD safety and occupational health symposium covering Army safety programs, mishap prevention, and contractor safety management at military installations. Fort Bliss Safety Office and Army Safety Center representatives attend for installation safety program benchmarking.',
-    estimatedExhibitors: 150,
-    relevanceScore: 90,
-    website: 'https://www.safety.army.mil',
-    lat: 33.4942,
-    lon: -111.9261,
-  },
-
-  {
-    id: 'conf-ca-child-safety-summit',
-    name: 'National Child Safety Summit',
-    category: 'Safety',
-    location: 'Dallas, TX',
-    month: 'April',
-    description: 'Child safety conference covering car seat safety, drowning prevention, pedestrian safety, and child restraint legislation. Texas child safety advocacy organizations from El Paso engage on community-level safety education for the region\'s large young family population.',
-    estimatedExhibitors: 100,
-    relevanceScore: 80,
-    website: 'https://www.childsafetysummit.org',
-    lat: 32.7767,
-    lon: -96.797,
-  },
-
-  {
-    id: 'conf-ca-emergency-management-summit',
-    name: 'Emergency Management Summit (IAEM)',
-    category: 'Safety',
-    location: 'Various',
-    month: 'November',
-    description: 'International Association of Emergency Managers annual conference covering disaster preparedness, continuity of operations planning, and FEMA grant management. El Paso OEM and El Paso County Emergency Management offices attend for NIMS compliance and mitigation planning.',
-    estimatedExhibitors: 200,
-    relevanceScore: 85,
-    website: 'https://www.iaem.org/summit',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
-    id: 'conf-ca-freight-safety-conference',
-    name: 'CVSA Annual Conference (Commercial Vehicle Safety)',
-    category: 'Safety',
-    location: 'Various',
-    month: 'August',
-    description: 'Commercial Vehicle Safety Alliance conference for truck safety inspectors, enforcement officers, and fleet safety managers covering FMCSA regulations and roadside inspection standards. El Paso International Bridge of Americas commercial inspection lanes process 2M+ truck crossings annually.',
-    estimatedExhibitors: 200,
-    relevanceScore: 88,
-    website: 'https://www.cvsa.org/events/annual-conference',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
-    id: 'conf-ca-product-safety-summit',
-    name: 'Product Safety & Liability Conference',
-    category: 'Safety',
-    location: 'Washington, DC',
-    month: 'March',
-    description: 'CPSC and industry product safety legal and compliance conference covering consumer product recalls, import safety, and child product regulations. El Paso customs brokers and importers managing product safety compliance for goods crossing from Juarez maquiladoras attend.',
-    estimatedExhibitors: 100,
-    relevanceScore: 78,
-    website: 'https://www.productsafetyconference.org',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-ca-port-security-forum',
-    name: 'International Port Security Forum',
-    category: 'Safety',
-    location: 'Miami, FL',
-    month: 'May',
-    description: 'Land and sea port security conference covering CBP CTPAT, cargo screening technology, and cross-border contraband detection. El Paso port directors and border security technology vendors are core participants given the Paso del Norte POE\'s status as the nation\'s busiest commercial land crossing.',
-    estimatedExhibitors: 200,
-    relevanceScore: 95,
-    website: 'https://www.portsecurityforum.org',
-    lat: 25.7617,
-    lon: -80.1918,
   },
 
 ];

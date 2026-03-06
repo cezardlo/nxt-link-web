@@ -12,7 +12,7 @@
   --muted:     #6b7280;
   --cyan:      #00d4ff;    /* Palantir interactive */
   --gold:      #ffd700;    /* IKER scores, premium data */
-  --orange:    #ff8c00;    /* Bloomberg critical / alerts */
+  --orange:    #f97316;    /* Bloomberg critical / alerts */
   --green:     #00ff88;    /* Positive signals */
   --red:       #ff3b30;    /* Risk / danger */
   --amber:     #ffb800;    /* Warnings */
@@ -81,6 +81,14 @@ body {
 .dot-grid {
   background-image: radial-gradient(circle, rgba(255,255,255,0.055) 1px, transparent 1px);
   background-size: 24px 24px;
+}
+
+/* ─── Subtle grid pattern (cyan-tinted, more visible than dot-grid) ─ */
+.grid-pattern {
+  background-image:
+    linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
 
 /* ─── Radar ring expansion ──────────────────────────────────── */
@@ -159,7 +167,7 @@ body {
 /* ─── Map panel hover utility (3% white bg) ────────────────────── */
 .hover\:bg-white\/3:hover { background: rgba(255,255,255,0.03); }
 
-/* ─── Subtle entry animation ─────────────────────────────────── */
+/* ─── Subtle fade-up entry animation ─────────────────────────── */
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0);   }
@@ -172,6 +180,87 @@ body {
   50%       { border-left-color: rgba(255,59,48,0.7);  }
 }
 .critical-pulse { animation: border-pulse 2s ease-in-out infinite; }
+
+/* ─── Slide-up entrance animation ───────────────────────────── */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.slide-up             { animation: slide-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.slide-up-delay-1     { animation-delay: 0.1s; }
+.slide-up-delay-2     { animation-delay: 0.2s; }
+.slide-up-delay-3     { animation-delay: 0.3s; }
+.slide-up-delay-4     { animation-delay: 0.4s; }
+.slide-up-delay-5     { animation-delay: 0.5s; }
+
+/* ─── Horizontal divider glow ────────────────────────────────── */
+.divider-glow {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(0,212,255,0.15) 30%, rgba(0,212,255,0.25) 50%, rgba(0,212,255,0.15) 70%, transparent 100%);
+}
+
+/* ─── Glow line (horizontal accent, brighter) ───────────────── */
+.glow-line {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,212,255,0.5), transparent);
+}
+
+/* ─── Gradient text ─────────────────────────────────────────── */
+.gradient-text-cyan {
+  background: linear-gradient(135deg, #00d4ff, #00ff88);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Animated gradient border ──────────────────────────────── */
+@keyframes gradient-rotate {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.animated-border {
+  background: linear-gradient(270deg, #00d4ff, #00ff88, #ffd700, #00d4ff);
+  background-size: 600% 600%;
+  animation: gradient-rotate 8s ease infinite;
+}
+
+/* ─── Float particle keyframe ───────────────────────────────── */
+@keyframes float-particle {
+  0%, 100% { transform: translateY(0) translateX(0); opacity: 0; }
+  10%       { opacity: 0.4; }
+  90%       { opacity: 0.4; }
+  50%       { transform: translateY(-20px) translateX(10px); }
+}
+
+/* ─── Gradient border glow on hover ────────────────────────── */
+.card-hover {
+  position: relative;
+  transition: all 0.3s ease;
+}
+.card-hover::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(0,212,255,0), rgba(0,212,255,0));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  transition: background 0.4s ease;
+  pointer-events: none;
+}
+.card-hover:hover::before {
+  background: linear-gradient(135deg, rgba(0,212,255,0.3), rgba(0,255,136,0.1));
+}
+.card-hover:hover {
+  background: rgba(0,212,255,0.03);
+  transform: translateY(-1px);
+}
+
+/* ─── Status badge glow ──────────────────────────────────────── */
+.badge-glow { box-shadow: 0 0 8px currentColor; }
 
 /* ─── Visual filter modes (WorldMonitor spy-thriller aesthetic) ─ */
 

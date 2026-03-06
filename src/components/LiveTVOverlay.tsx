@@ -149,7 +149,7 @@ export function LiveTVOverlay() {
       className="absolute bottom-12 md:bottom-10 left-2 md:left-40 z-20 w-[calc(100vw-1rem)] max-w-[288px] bg-black/92 border border-white/8 rounded-sm backdrop-blur-md shadow-xl"
     >
       {/* ── Header ── */}
-      <div className="px-3 py-1.5 border-b border-white/6 flex items-center gap-2">
+      <div className="px-3 py-1.5 border-b border-white/8 flex items-center gap-2">
         <span
           className={`w-1.5 h-1.5 rounded-full shrink-0 ${paused ? 'bg-white/30' : 'bg-red-500 animate-pulse'}`}
         />
@@ -187,7 +187,7 @@ export function LiveTVOverlay() {
       </div>
 
       {/* ── Channel switcher ── */}
-      <div className="flex border-b border-white/6">
+      <div className="flex border-b border-white/8">
         {CHANNEL_LIST.map((ch, i) => (
           <button
             key={ch.id}

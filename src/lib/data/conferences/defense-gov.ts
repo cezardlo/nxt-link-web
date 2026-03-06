@@ -6,34 +6,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   // ── Defense ───────────────────────────────────────────────────────────────
 
   {
-    id: 'conf-dg-ausa-annual',
-    name: 'AUSA Annual Meeting & Exposition',
-    category: 'Defense',
-    location: 'Washington, DC',
-    month: 'October',
-    description: 'The largest land warfare exposition in the world, hosted by the Association of the United States Army. Over 30,000 attendees from military, government, and industry examine ground combat modernization, soldier systems, and Army transformation priorities including Fort Bliss Next Generation Combat Vehicle programs.',
-    estimatedExhibitors: 700,
-    relevanceScore: 97,
-    website: 'https://www.ausa.org/events/annual',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-ausa-winter',
-    name: 'AUSA Winter Symposium',
-    category: 'Defense',
-    location: 'Fort Lauderdale, FL',
-    month: 'February',
-    description: 'Annual AUSA winter gathering focused on Army aviation, network integration, and personnel policy. Smaller and more intimate than the Annual Meeting, the Symposium drives informal procurement conversations between Army PMs and defense industry leaders.',
-    estimatedExhibitors: 200,
-    relevanceScore: 82,
-    website: 'https://www.ausa.org/events/winter-symposium',
-    lat: 26.1224,
-    lon: -80.1373,
-  },
-
-  {
     id: 'conf-dg-ndia-annual',
     name: 'NDIA Annual Conference',
     category: 'Defense',
@@ -45,20 +17,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.ndia.org',
     lat: 38.9072,
     lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-sofic',
-    name: 'SOFIC — Special Operations Forces Industry Conference',
-    category: 'Defense',
-    location: 'Tampa, FL',
-    month: 'May',
-    description: 'The premier industry conference for U.S. Special Operations Command, where SOCOM program managers meet with over 2,000 defense vendors. Covers direct-action systems, ISR, unmanned systems, PSYOPS tools, and special reconnaissance equipment critical to Fort Bliss-aligned units.',
-    estimatedExhibitors: 350,
-    relevanceScore: 84,
-    website: 'https://www.specialoperations.org/sofic',
-    lat: 27.9506,
-    lon: -82.4572,
   },
 
   {
@@ -90,20 +48,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-modern-day-marine',
-    name: 'Modern Day Marine',
-    category: 'Defense',
-    location: 'Quantico, VA',
-    month: 'September',
-    description: 'Annual Marine Corps exposition co-located at Marine Corps Base Quantico, showcasing ground vehicles, infantry gear, ISR systems, and logistics technology for USMC warfighting. Attracts 5,000+ attendees from Marine acquisition commands and industry partners.',
-    estimatedExhibitors: 300,
-    relevanceScore: 78,
-    website: 'https://www.moderndaymarine.net',
-    lat: 38.5238,
-    lon: -77.3766,
-  },
-
-  {
     id: 'conf-dg-sea-air-space',
     name: 'Sea-Air-Space Exposition',
     category: 'Defense',
@@ -113,20 +57,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     estimatedExhibitors: 400,
     relevanceScore: 72,
     website: 'https://www.seaairspace.org',
-    lat: 38.7837,
-    lon: -77.017,
-  },
-
-  {
-    id: 'conf-dg-afa-air-space-cyber',
-    name: 'AFA Air, Space & Cyber Conference',
-    category: 'Defense',
-    location: 'National Harbor, MD',
-    month: 'September',
-    description: 'The Air Force Association\'s annual flagship conference, convening USAF and Space Force leadership with industry on air superiority, space domain awareness, and cyber operations. CSAF and SECAF deliver keynote speeches outlining Air Force modernization investment priorities.',
-    estimatedExhibitors: 350,
-    relevanceScore: 80,
-    website: 'https://www.afa.org/events/air-space-and-cyber',
     lat: 38.7837,
     lon: -77.017,
   },
@@ -143,20 +73,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.iitsec.org',
     lat: 28.5383,
     lon: -81.3792,
-  },
-
-  {
-    id: 'conf-dg-milcom',
-    name: 'MILCOM — Military Communications Conference',
-    category: 'Defense',
-    location: 'Washington, DC',
-    month: 'November',
-    description: 'IEEE/AFCEA joint technical conference on military communications, covering waveforms, SATCOM, tactical networks, spectrum management, and cyber-resilient communications. Government and industry engineers present classified and unclassified research on C4ISR modernization.',
-    estimatedExhibitors: 180,
-    relevanceScore: 86,
-    website: 'https://www.milcom-conf.org',
-    lat: 38.9072,
-    lon: -77.0369,
   },
 
   {
@@ -188,20 +104,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-smc-summit',
-    name: 'SMC Defense Summit',
-    category: 'Defense',
-    location: 'El Paso, TX',
-    month: 'March',
-    description: 'Regional defense acquisition summit co-hosted by the Southwest Manufacturing Council and Fort Bliss contracting command. Connects Texas-based defense manufacturers with Army program managers for LPTA and best-value contract opportunities across the Ft Bliss vendor ecosystem.',
-    estimatedExhibitors: 80,
-    relevanceScore: 99,
-    website: 'https://www.smc.org',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
     id: 'conf-dg-shot-show',
     name: 'SHOT Show — Shooting, Hunting & Outdoor Trade',
     category: 'Defense',
@@ -213,20 +115,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.shotshow.org',
     lat: 36.1699,
     lon: -115.1398,
-  },
-
-  {
-    id: 'conf-dg-tdsi-symposium',
-    name: 'TDSI Border Security Symposium',
-    category: 'Defense',
-    location: 'San Antonio, TX',
-    month: 'April',
-    description: 'Texas Defense & Security Industries symposium focusing on border security technology, counter-UAS systems, and CBP procurement cycles. Draws Texas National Guard leadership, CBP sector chiefs, and defense tech SMEs with high direct relevance to El Paso border operations.',
-    estimatedExhibitors: 110,
-    relevanceScore: 98,
-    website: 'https://www.tdisd.org',
-    lat: 29.4241,
-    lon: -98.4936,
   },
 
   {
@@ -258,20 +146,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-aaaa-summit',
-    name: 'AAAA Army Aviation Summit',
-    category: 'Defense',
-    location: 'Nashville, TN',
-    month: 'April',
-    description: 'The Army Aviation Association of America\'s flagship annual summit, bringing together Army aviation pilots, program managers, and industry on helicopter modernization, Future Vertical Lift, and UAS integration for air assault and reconnaissance missions.',
-    estimatedExhibitors: 200,
-    relevanceScore: 80,
-    website: 'https://www.quad-a.org',
-    lat: 36.1627,
-    lon: -86.7816,
-  },
-
-  {
     id: 'conf-dg-pentagon-tour-contractors',
     name: 'NDIA Emerging Technologies for Defense',
     category: 'Defense',
@@ -281,62 +155,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     estimatedExhibitors: 120,
     relevanceScore: 84,
     website: 'https://www.ndia.org',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-nsia-summit',
-    name: 'NSIA Annual Defense Industry Summit',
-    category: 'Defense',
-    location: 'San Diego, CA',
-    month: 'October',
-    description: 'The National Security Industrial Association\'s annual summit for defense prime contractors and subcontractors, covering supply chain integrity, CMMC compliance, and DoD Manufacturing Technology program priorities across naval, ground, and aerospace sectors.',
-    estimatedExhibitors: 180,
-    relevanceScore: 74,
-    website: 'https://www.nsia.us',
-    lat: 32.7157,
-    lon: -117.1611,
-  },
-
-  {
-    id: 'conf-dg-west-conf',
-    name: 'WEST Conference & Exposition',
-    category: 'Defense',
-    location: 'San Diego, CA',
-    month: 'February',
-    description: 'AFCEA and the U.S. Naval Institute\'s annual naval warfare and technology conference, focusing on Pacific Fleet readiness, distributed maritime operations, and C5ISR for Indo-Pacific competition. 5,000+ naval and defense technology professionals attend.',
-    estimatedExhibitors: 250,
-    relevanceScore: 71,
-    website: 'https://www.afcea.org/west',
-    lat: 32.7157,
-    lon: -117.1611,
-  },
-
-  {
-    id: 'conf-dg-laad',
-    name: 'LAAD Defence & Security',
-    category: 'Defense',
-    location: 'Rio de Janeiro, Brazil',
-    month: 'April',
-    description: 'Latin America\'s largest defense and security trade show, held biennially with 35,000+ visitors and 330+ exhibitors. High strategic relevance for El Paso border security vendors seeking access to Latin American military and law enforcement procurement officers.',
-    estimatedExhibitors: 330,
-    relevanceScore: 65,
-    website: 'https://www.laadexpo.com.br',
-    lat: -22.9068,
-    lon: -43.1729,
-  },
-
-  {
-    id: 'conf-dg-dod-maintenance',
-    name: 'DoD Maintenance Symposium',
-    category: 'Defense',
-    location: 'Various US Cities',
-    month: 'November',
-    description: 'Annual Department of Defense maintenance and sustainment symposium covering depot-level maintenance, predictive maintenance AI, and supply chain logistics for military equipment sustainment. Relevant to Fort Bliss logistics and maintenance battalion vendors.',
-    estimatedExhibitors: 150,
-    relevanceScore: 87,
-    website: 'https://www.dodmaintenancesymposium.com',
     lat: 38.9072,
     lon: -77.0369,
   },
@@ -365,20 +183,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     estimatedExhibitors: 180,
     relevanceScore: 86,
     website: 'https://www.afcea.org',
-    lat: 33.4735,
-    lon: -82.0105,
-  },
-
-  {
-    id: 'conf-dg-technet-augusta',
-    name: 'AFCEA TechNet Augusta',
-    category: 'Defense',
-    location: 'Augusta, GA',
-    month: 'August',
-    description: 'AFCEA Augusta chapter\'s cyber and network-centric warfare symposium, drawing Army Cyber Command leadership and industry on offensive cyber, zero-trust architecture, and AI-enabled electronic warfare systems for multi-domain operations.',
-    estimatedExhibitors: 150,
-    relevanceScore: 84,
-    website: 'https://www.afcea.org/site/events/technet-augusta',
     lat: 33.4735,
     lon: -82.0105,
   },
@@ -440,20 +244,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-biloxi-defense',
-    name: 'Gulf Coast Defense Forum',
-    category: 'Defense',
-    location: 'Biloxi, MS',
-    month: 'July',
-    description: 'Regional defense industry forum serving Air Force and Navy programs in the Gulf Coast corridor, including Keesler AFB, Eglin AFB, and NAS Pensacola. Covers combat training systems, electronic warfare, and cyber operations with a focus on small and mid-tier defense contractors.',
-    estimatedExhibitors: 90,
-    relevanceScore: 70,
-    website: 'https://www.gulfcoastdefenseforum.com',
-    lat: 30.3960,
-    lon: -88.8853,
-  },
-
-  {
     id: 'conf-dg-special-ops-symposium',
     name: 'SOF Week',
     category: 'Defense',
@@ -465,20 +255,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.sofweek.com',
     lat: 27.9506,
     lon: -82.4572,
-  },
-
-  {
-    id: 'conf-dg-cbrn-defense',
-    name: 'CBRN Defense Conference & Exhibition',
-    category: 'Defense',
-    location: 'Baltimore, MD',
-    month: 'April',
-    description: 'National conference on chemical, biological, radiological, and nuclear defense technologies, including detection systems, protective equipment, decontamination, and medical countermeasures. Army Chemical Corps and DTRA leadership present acquisition priorities.',
-    estimatedExhibitors: 130,
-    relevanceScore: 77,
-    website: 'https://www.cbrndefense.com',
-    lat: 39.2904,
-    lon: -76.6122,
   },
 
   {
@@ -510,20 +286,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-afceawest',
-    name: 'AFCEA West',
-    category: 'Defense',
-    location: 'San Diego, CA',
-    month: 'February',
-    description: 'AFCEA International\'s West Coast flagship conference, covering Navy, Marine Corps, and Coast Guard C5ISR requirements alongside Pacific Fleet operational priorities. Strong emphasis on contested logistics, distributed maritime operations, and resilient networking.',
-    estimatedExhibitors: 250,
-    relevanceScore: 72,
-    website: 'https://www.afcea.org/west',
-    lat: 32.7157,
-    lon: -117.1611,
-  },
-
-  {
     id: 'conf-dg-ndia-soa',
     name: 'NDIA Science of War Fighting Symposium',
     category: 'Defense',
@@ -535,48 +297,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.ndia.org',
     lat: 38.9072,
     lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-texas-defense-summit',
-    name: 'Texas Defense Summit',
-    category: 'Defense',
-    location: 'San Antonio, TX',
-    month: 'September',
-    description: 'Annual summit convening Texas military installations, defense contractors, and economic development agencies to align industrial base capacity with DoD procurement needs. Fort Bliss, Fort Hood, Dyess AFB, and Lackland AFB acquisition teams participate directly.',
-    estimatedExhibitors: 120,
-    relevanceScore: 97,
-    website: 'https://www.texasdefense.org',
-    lat: 29.4241,
-    lon: -98.4936,
-  },
-
-  {
-    id: 'conf-dg-swd-corrosion',
-    name: 'DoD Corrosion Conference',
-    category: 'Defense',
-    location: 'Various US Cities',
-    month: 'July',
-    description: 'Department of Defense corrosion prevention and control conference covering protective coatings, corrosion monitoring systems, and maintenance procedures for military vehicles, aircraft, and infrastructure. Fort Bliss desert environment makes corrosion management a standing requirement.',
-    estimatedExhibitors: 80,
-    relevanceScore: 80,
-    website: 'https://www.dodcorrosion.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-rotary-wing',
-    name: 'Army Aviation Mission Solutions Summit',
-    category: 'Defense',
-    location: 'Nashville, TN',
-    month: 'April',
-    description: 'Program Executive Office Aviation\'s annual industry engagement summit for Army aviation acquisition, covering UH-60 Black Hawk sustainment, CH-47 Chinook Block II, Future Attack Reconnaissance Aircraft (FARA), and Future Long-Range Assault Aircraft (FLRAA) programs.',
-    estimatedExhibitors: 180,
-    relevanceScore: 79,
-    website: 'https://www.quad-a.org',
-    lat: 36.1627,
-    lon: -86.7816,
   },
 
   {
@@ -594,20 +314,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-mast-europe',
-    name: 'MAST — Maritime and Aerospace Technology Conference',
-    category: 'Defense',
-    location: 'Amsterdam, Netherlands',
-    month: 'October',
-    description: 'Leading European conference on naval and maritime defense technology, covering autonomous surface vessels, undersea surveillance, mine countermeasures, and maritime patrol aircraft. Primarily relevant for El Paso vendors with US Navy or NATO maritime system ambitions.',
-    estimatedExhibitors: 200,
-    relevanceScore: 45,
-    website: 'https://www.mastconf.com',
-    lat: 52.3676,
-    lon: 4.9041,
-  },
-
-  {
     id: 'conf-dg-dsei-japan',
     name: 'DSEI Japan',
     category: 'Defense',
@@ -619,34 +325,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.dsei-japan.com',
     lat: 35.6762,
     lon: 140.0731,
-  },
-
-  {
-    id: 'conf-dg-counter-uas',
-    name: 'Counter-UAS Summit USA',
-    category: 'Defense',
-    location: 'Washington, DC',
-    month: 'June',
-    description: 'Specialized summit on counter-unmanned aircraft system technology and policy, covering DoD Joint C-UAS Office programs, RF detection, kinetic defeat systems, and directed energy solutions. Fort Bliss Counter-UAS initiatives and border security applications drive maximum relevance.',
-    estimatedExhibitors: 90,
-    relevanceScore: 97,
-    website: 'https://www.counteruas-summit.com',
-    lat: 38.9072,
-    lon: -77.0369,
-    },
-
-  {
-    id: 'conf-dg-defence-india',
-    name: 'DefExpo India',
-    category: 'Defense',
-    location: 'Gandhinagar, India',
-    month: 'October',
-    description: 'India\'s premier land, naval, and homeland security systems biennial exhibition attracting 1,000+ exhibitors. Relevant for US defense firms participating in India\'s Defence Production Policy and seeking co-production offsets under DTTI bilateral framework.',
-    estimatedExhibitors: 1000,
-    relevanceScore: 40,
-    website: 'https://www.defexpoindia.in',
-    lat: 23.2156,
-    lon: 72.6369,
   },
 
   {
@@ -703,20 +381,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.ngaus.org',
     lat: 38.9072,
     lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-sof-symposium-europe',
-    name: 'Special Operations Forces Symposium Europe',
-    category: 'Defense',
-    location: 'Stuttgart, Germany',
-    month: 'March',
-    description: 'EUCOM and SOCEUR-aligned special operations industry engagement, covering unconventional warfare technologies, cross-border ISR, and partner nation capacity building. Relevant for vendors with classified SOF programs and potential European theater expansion.',
-    estimatedExhibitors: 120,
-    relevanceScore: 52,
-    website: 'https://www.sofse.eu',
-    lat: 48.7758,
-    lon: 9.1829,
   },
 
   // ── Aerospace ─────────────────────────────────────────────────────────────
@@ -848,20 +512,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-helitech',
-    name: 'Helitech International',
-    category: 'Aerospace',
-    location: 'Amsterdam, Netherlands',
-    month: 'October',
-    description: 'International helicopter industry conference covering civil, commercial, and military rotorcraft operations, MRO, emergency medical services, and offshore oil & gas helicopter logistics. Relevant for Army aviation sustainment vendors serving Fort Bliss aviation brigade.',
-    estimatedExhibitors: 180,
-    relevanceScore: 58,
-    website: 'https://www.helitech-expo.com',
-    lat: 52.3676,
-    lon: 4.9041,
-  },
-
-  {
     id: 'conf-dg-atis-satcom',
     name: 'SATELLITE Conference & Exhibition',
     category: 'Aerospace',
@@ -932,34 +582,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-eurocontrol-atm',
-    name: 'World ATM Congress',
-    category: 'Aerospace',
-    location: 'Madrid, Spain',
-    month: 'March',
-    description: 'Global air traffic management conference covering NextGen/SESAR digitization, remote tower technology, UAS integration into controlled airspace, and UTM architecture for drone corridors. Relevant for El Paso International Airport NextGen implementation and drone delivery approvals.',
-    estimatedExhibitors: 300,
-    relevanceScore: 72,
-    website: 'https://www.worldatmcongress.org',
-    lat: 40.4168,
-    lon: -3.7038,
-  },
-
-  {
-    id: 'conf-dg-spacefest',
-    name: 'NewSpace Conference',
-    category: 'Aerospace',
-    location: 'Seattle, WA',
-    month: 'July',
-    description: 'Space Frontier Foundation\'s annual new space industry conference focused on commercial launch vehicles, in-space manufacturing, space tourism, and lunar economy development. Covers venture investment and NASA Commercial Crew/Cargo program contractor updates.',
-    estimatedExhibitors: 80,
-    relevanceScore: 58,
-    website: 'https://www.newspaceconference.org',
-    lat: 47.6062,
-    lon: -122.3321,
-  },
-
-  {
     id: 'conf-dg-aero-india',
     name: 'Aero India',
     category: 'Aerospace',
@@ -971,20 +593,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.aeroindia.in',
     lat: 13.0827,
     lon: 80.2707,
-  },
-
-  {
-    id: 'conf-dg-aerospace-tech-week',
-    name: 'Aerospace Tech Week',
-    category: 'Aerospace',
-    location: 'Atlanta, GA',
-    month: 'November',
-    description: 'Technical conference and exhibition covering avionics, aircraft connectivity, health monitoring systems, and MRO digitization. Draws aerospace OEM engineers and Tier 1/2 suppliers from across the US manufacturing base including Texas aerospace suppliers.',
-    estimatedExhibitors: 150,
-    relevanceScore: 68,
-    website: 'https://www.aerospacetechweek.com',
-    lat: 33.749,
-    lon: -84.388,
   },
 
   {
@@ -1002,20 +610,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-msfc-propulsion',
-    name: 'AIAA Propulsion & Energy Forum',
-    category: 'Aerospace',
-    location: 'Hartford, CT',
-    month: 'August',
-    description: 'AIAA\'s annual propulsion conference covering liquid and solid rocket motors, hypersonic propulsion, electric propulsion, and sustainable aviation fuels. White Sands Missile Range rocket propulsion testing and Spaceport America launch operations provide Texas regional context.',
-    estimatedExhibitors: 150,
-    relevanceScore: 67,
-    website: 'https://www.aiaa.org/propulsion-and-energy',
-    lat: 41.7637,
-    lon: -72.6851,
-  },
-
-  {
     id: 'conf-dg-uab-space-summit',
     name: 'Rio Grande Space Corridor Summit',
     category: 'Aerospace',
@@ -1027,20 +621,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.spaceportamerica.com',
     lat: 32.3199,
     lon: -106.7637,
-  },
-
-  {
-    id: 'conf-dg-mro-military',
-    name: 'Military MRO Summit',
-    category: 'Aerospace',
-    location: 'Dallas, TX',
-    month: 'June',
-    description: 'Specialized military aircraft maintenance, repair, and overhaul summit covering depot-level maintenance contracts, corrosion prevention, parts supply chain, and technology insertion for aging fixed-wing and rotary-wing fleets. Strong Texas aerospace industry participation from Lockheed, Bell Textron, and L3Harris.',
-    estimatedExhibitors: 120,
-    relevanceScore: 82,
-    website: 'https://www.militarymrosummit.com',
-    lat: 32.7767,
-    lon: -96.797,
   },
 
   {
@@ -1088,20 +668,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-fose',
-    name: 'FOSE Government IT Expo',
-    category: 'Government IT',
-    location: 'Washington, DC',
-    month: 'April',
-    description: 'The premier federal IT exposition co-located with other DLT Solutions government technology events, covering cloud computing, data management, cybersecurity, and IT modernization for civilian and defense agencies. Strong presence of GSA IT Schedule vendors.',
-    estimatedExhibitors: 300,
-    relevanceScore: 83,
-    website: 'https://www.fose.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
     id: 'conf-dg-gartner-gov',
     name: 'Gartner IT Symposium/Xpo for Government',
     category: 'Government IT',
@@ -1130,34 +696,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-govware',
-    name: 'GovWare Conference & Exhibition',
-    category: 'Government IT',
-    location: 'Singapore',
-    month: 'October',
-    description: 'Singapore\'s premier government cybersecurity conference covering critical information infrastructure protection, government cloud adoption, and ASEAN regional cyber cooperation. Relevant for vendors with international government IT ambitions in the Asia-Pacific region.',
-    estimatedExhibitors: 200,
-    relevanceScore: 38,
-    website: 'https://www.govware.com.sg',
-    lat: 1.3521,
-    lon: 103.8198,
-  },
-
-  {
-    id: 'conf-dg-govsec',
-    name: 'GovSec Conference',
-    category: 'Government IT',
-    location: 'Washington, DC',
-    month: 'June',
-    description: 'Government security technology conference covering physical security, cybersecurity, emergency management, and first responder technologies for federal, state, and local government agencies. Addresses FEMA, DHS, and DoD security technology procurement across all government levels.',
-    estimatedExhibitors: 180,
-    relevanceScore: 84,
-    website: 'https://www.govsec-conference.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
     id: 'conf-dg-acus-summit',
     name: 'ACT-IAC Imagine Nation ELC',
     category: 'Government IT',
@@ -1172,20 +710,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-tmo-summit',
-    name: 'TMO — Technology Modernization Summit',
-    category: 'Government IT',
-    location: 'Washington, DC',
-    month: 'September',
-    description: 'Federal technology modernization conference aligned to the Technology Modernization Fund (TMF) and OMB M-23-22 IT reform directives, covering legacy system migrations, citizen-facing digital services, and shared services platforms across federal civilian agencies.',
-    estimatedExhibitors: 90,
-    relevanceScore: 80,
-    website: 'https://www.modernizationsummit.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
     id: 'conf-dg-aws-govcloud',
     name: 'AWS re:Inforce (Government Track)',
     category: 'Government IT',
@@ -1197,34 +721,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://reinforce.awsevents.com',
     lat: 42.3601,
     lon: -71.0589,
-  },
-
-  {
-    id: 'conf-dg-apcert-congress',
-    name: 'Digital Government Congress',
-    category: 'Government IT',
-    location: 'Washington, DC',
-    month: 'November',
-    description: 'Comprehensive digital government conference covering digital identity, electronic services delivery, open data standards, and interoperability frameworks for federal, state, and municipal government IT programs including Texas state agency modernization.',
-    estimatedExhibitors: 100,
-    relevanceScore: 79,
-    website: 'https://www.digitalgovcongress.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-technet-cyber',
-    name: 'AFCEA TechNet Cyber',
-    category: 'Government IT',
-    location: 'Baltimore, MD',
-    month: 'May',
-    description: 'AFCEA\'s dedicated cyber conference co-located with Cyber Command at Fort Meade, covering offensive and defensive cyber operations, cyber workforce development, and DoD zero-trust implementation. Key venue for government cybersecurity vendors targeting national security customers.',
-    estimatedExhibitors: 200,
-    relevanceScore: 84,
-    website: 'https://www.afcea.org/technet-cyber',
-    lat: 39.2904,
-    lon: -76.6122,
   },
 
   {
@@ -1256,20 +752,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-data-summit-gov',
-    name: 'Federal Data Summit',
-    category: 'Government IT',
-    location: 'Washington, DC',
-    month: 'April',
-    description: 'Annual summit on federal data strategy implementation, covering CDO Council priorities, data.gov modernization, AI-ready data infrastructure, and inter-agency data sharing frameworks mandated by the Federal Data Strategy 2.0 Action Plan.',
-    estimatedExhibitors: 80,
-    relevanceScore: 78,
-    website: 'https://www.federaldatasummit.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
     id: 'conf-dg-it-modernization-summit',
     name: 'IT Modernization Summit',
     category: 'Government IT',
@@ -1293,48 +775,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     estimatedExhibitors: 40,
     relevanceScore: 78,
     website: 'https://www.cio.gov',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-cloudevents-gov',
-    name: 'Federal Cloud Computing Summit',
-    category: 'Government IT',
-    location: 'Washington, DC',
-    month: 'August',
-    description: 'AWS, Microsoft Azure, and Google Cloud government division summit on multi-cloud strategy, cloud migration acceleration, DoD Enterprise Cloud contracts (JWCC), and FedRAMP streamlining. Directly relevant to El Paso-area defense IT contractors with cloud service offerings.',
-    estimatedExhibitors: 100,
-    relevanceScore: 82,
-    website: 'https://www.federalcloud.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-defensetechsummit',
-    name: 'Defense Tech Summit',
-    category: 'Government IT',
-    location: 'Washington, DC',
-    month: 'October',
-    description: 'Focused summit on commercial technology adoption in defense, covering DIU Dual Use Technology programs, OTA contract vehicles, SBIR commercialization, and non-traditional defense contractor pathways into DoD acquisition for Silicon Valley and startup communities.',
-    estimatedExhibitors: 80,
-    relevanceScore: 86,
-    website: 'https://www.defensetechsummit.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-connected-gov-summit',
-    name: 'Connected Government Summit',
-    category: 'Government IT',
-    location: 'Washington, DC',
-    month: 'September',
-    description: 'Smart government technology conference covering IoT sensors for smart cities, broadband connectivity for rural government services, 5G for public safety, and connected infrastructure for border crossings and ports of entry — directly relevant to El Paso DHS tech.',
-    estimatedExhibitors: 100,
-    relevanceScore: 88,
-    website: 'https://www.connectedgovsummit.com',
     lat: 38.9072,
     lon: -77.0369,
   },
@@ -1608,20 +1048,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-ferpa-privacy',
-    name: 'Counter Terrorism Summit USA',
-    category: 'Homeland Security',
-    location: 'Washington, DC',
-    month: 'May',
-    description: 'Annual counter-terrorism technology and policy conference covering radicalization early warning systems, financial intelligence, dark web monitoring, and cross-border threat fusion. FBI, DHS, and CBP intelligence components present operational technology requirements.',
-    estimatedExhibitors: 80,
-    relevanceScore: 86,
-    website: 'https://www.ctsusa.gov',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
     id: 'conf-dg-ise-europe',
     name: 'Milipol — World Exhibition of Homeland Security',
     category: 'Homeland Security',
@@ -1647,20 +1073,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.thebta.org',
     lat: 31.7619,
     lon: -106.485,
-  },
-
-  {
-    id: 'conf-dg-biometric-tech',
-    name: 'Biometric Technology Today Conference',
-    category: 'Homeland Security',
-    location: 'Washington, DC',
-    month: 'June',
-    description: 'Specialized biometric technology conference covering facial recognition, iris scanning, fingerprint systems, and gait analysis for CBP, TSA, and DoD identity management applications. OBIM system vendors and DHS biometric fusion center program managers participate.',
-    estimatedExhibitors: 80,
-    relevanceScore: 94,
-    website: 'https://www.biometrictechtoday.com',
-    lat: 38.9072,
-    lon: -77.0369,
   },
 
   {
@@ -1706,20 +1118,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-vbss-maritime',
-    name: 'US Ports & Border Security Summit',
-    category: 'Homeland Security',
-    location: 'Washington, DC',
-    month: 'March',
-    description: 'Annual summit on CBP seaport and land port infrastructure modernization, covering Non-Intrusive Inspection (NII) technology deployments, radiation detection portals, license plate readers, and biometric lane technology for the 300+ official US ports of entry.',
-    estimatedExhibitors: 90,
-    relevanceScore: 97,
-    website: 'https://www.portsecuritysummit.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
     id: 'conf-dg-homeland-defense-indopac',
     name: 'Homeland Security Summit',
     category: 'Homeland Security',
@@ -1747,63 +1145,7 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     lon: -77.0369,
   },
 
-  {
-    id: 'conf-dg-iscebs-conference',
-    name: 'Customs and Trade Symposium',
-    category: 'Homeland Security',
-    location: 'Washington, DC',
-    month: 'July',
-    description: 'Annual symposium on customs technology, trade compliance automation, and global supply chain security, covering WCO SAFE Framework implementation, advance electronic cargo data requirements, and trusted trader program expansion for US and Mexican trade partners.',
-    estimatedExhibitors: 80,
-    relevanceScore: 91,
-    website: 'https://www.customssymposium.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-poe-forum',
-    name: 'Land Ports of Entry Modernization Forum',
-    category: 'Homeland Security',
-    location: 'El Paso, TX',
-    month: 'May',
-    description: 'GSA Office of Federal Buildings and CBP joint forum on land port of entry construction and technology modernization projects, covering the $3.5B LPOE modernization program. El Paso POE projects, including Paso del Norte renovation, are key discussion topics.',
-    estimatedExhibitors: 80,
-    relevanceScore: 100,
-    website: 'https://www.gsa.gov/poe',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
-    id: 'conf-dg-nclc-conference',
-    name: 'NCLC Border Security Technology Symposium',
-    category: 'Homeland Security',
-    location: 'Tucson, AZ',
-    month: 'February',
-    description: 'National Coalition for Law and Order symposium on border security technology, covering Arizona and Texas Border Patrol sector operational technology, UAS surveillance programs, mobile surveillance trailers, and biometric screening for unaccompanied minors processing.',
-    estimatedExhibitors: 70,
-    relevanceScore: 96,
-    website: 'https://www.nclo.org',
-    lat: 32.2226,
-    lon: -110.9747,
-  },
-
   // ── Intelligence ───────────────────────────────────────────────────────────
-
-  {
-    id: 'conf-dg-dodiiis',
-    name: 'DoDIIS Worldwide Conference',
-    category: 'Intelligence',
-    location: 'Various US Cities',
-    month: 'August',
-    description: 'The Defense Intelligence Agency\'s premier annual IT conference for the defense intelligence enterprise, drawing 3,000+ professionals from DIA, NSA, NGA, and DoD components. Covers IC enterprise architecture, analytics platforms, and data fabric for multi-domain intelligence production.',
-    estimatedExhibitors: 300,
-    relevanceScore: 88,
-    website: 'https://www.dodiis.mil',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
 
   {
     id: 'conf-dg-ic4isr',
@@ -1815,20 +1157,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     estimatedExhibitors: 150,
     relevanceScore: 89,
     website: 'https://www.c4isrnet.com/events',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-osint-summit',
-    name: 'OSINT Summit',
-    category: 'Intelligence',
-    location: 'Washington, DC',
-    month: 'March',
-    description: 'Annual open source intelligence professional summit covering social media monitoring, dark web intelligence, geospatial OSINT, and AI-enabled threat detection. Draws intelligence analysts from DoD, DHS, CBP, and law enforcement with direct application to border intelligence fusion.',
-    estimatedExhibitors: 80,
-    relevanceScore: 90,
-    website: 'https://www.osintsummit.com',
     lat: 38.9072,
     lon: -77.0369,
   },
@@ -1876,20 +1204,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-spi-summit',
-    name: 'Strategic Intelligence Summit',
-    category: 'Intelligence',
-    location: 'Washington, DC',
-    month: 'June',
-    description: 'Annual all-source intelligence summit covering national intelligence priority framework, IC collection strategy, and emerging technology threats from China, Russia, Iran, and North Korea. Features senior intelligence community officials in cleared environments.',
-    estimatedExhibitors: 60,
-    relevanceScore: 80,
-    website: 'https://www.intelligencesummit.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
     id: 'conf-dg-border-intel-forum',
     name: 'Border Intelligence Forum',
     category: 'Intelligence',
@@ -1932,20 +1246,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-tia-forum',
-    name: 'Threat Intelligence Automation Forum',
-    category: 'Intelligence',
-    location: 'Arlington, VA',
-    month: 'April',
-    description: 'Specialized forum on cyber and physical threat intelligence automation, covering STIX/TAXII information sharing, machine-readable threat intelligence, and automated indicator sharing across DoD, IC, and critical infrastructure sectors. CBP Targeting Center technology vendors participate.',
-    estimatedExhibitors: 70,
-    relevanceScore: 84,
-    website: 'https://www.tia-forum.com',
-    lat: 38.8816,
-    lon: -77.091,
-  },
-
-  {
     id: 'conf-dg-sof-intel',
     name: 'SOF Intelligence & ISR Summit',
     category: 'Intelligence',
@@ -1974,20 +1274,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-ew-conference',
-    name: 'Electronic Warfare Summit',
-    category: 'Intelligence',
-    location: 'Washington, DC',
-    month: 'February',
-    description: 'Specialized electronic warfare and signals intelligence conference covering Army ICAS EW modernization, spectrum management in contested environments, and SIGINT collection systems for multi-domain operations. Strong Fort Bliss 1st Armored Division EW platoon relevance.',
-    estimatedExhibitors: 90,
-    relevanceScore: 88,
-    website: 'https://www.ewsummit.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
     id: 'conf-dg-humint-conference',
     name: 'All-Source Intelligence Conference',
     category: 'Intelligence',
@@ -1999,20 +1285,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.allsourceintel.com',
     lat: 38.9072,
     lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-crime-intelligence-summit',
-    name: 'Southwest Border Intelligence Summit',
-    category: 'Intelligence',
-    location: 'Albuquerque, NM',
-    month: 'August',
-    description: 'Regional law enforcement and intelligence summit covering Southwest Border transnational criminal organization mapping, fentanyl supply chain intelligence, migrant smuggling network analysis, and fusion center technology integration across New Mexico, Texas, Arizona, and California sectors.',
-    estimatedExhibitors: 60,
-    relevanceScore: 99,
-    website: 'https://www.swbintel.com',
-    lat: 35.0844,
-    lon: -106.6504,
   },
 
   // ── Defense (additional) ──────────────────────────────────────────────────
@@ -2060,20 +1332,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-ausa-expo-west',
-    name: 'AUSA LANPAC Symposium',
-    category: 'Defense',
-    location: 'Honolulu, HI',
-    month: 'May',
-    description: 'AUSA\'s Land Power in the Pacific symposium examining Indo-Pacific land warfare strategy, multi-domain operations, Army partner nation relationships, and Pacific theater prepositioning. Relevant for Fort Bliss units deploying to USINDOPACOM area of responsibility.',
-    estimatedExhibitors: 180,
-    relevanceScore: 74,
-    website: 'https://www.ausa.org/events/lanpac',
-    lat: 21.3069,
-    lon: -157.8583,
-  },
-
-  {
     id: 'conf-dg-technet-stripes',
     name: 'AFCEA TechNet Stripes',
     category: 'Defense',
@@ -2088,34 +1346,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-ntc-warfighter',
-    name: 'Warfighter Technology Forum',
-    category: 'Defense',
-    location: 'Fort Irwin, CA',
-    month: 'September',
-    description: 'National Training Center technology forum co-located with NTC Mojave Desert, connecting Army acquisition officers with combat-proven technology vendors. Direct feedback from units rotating through NTC combat exercises informs procurement priorities relevant to Fort Bliss\'s 1AD ABCT readiness.',
-    estimatedExhibitors: 80,
-    relevanceScore: 90,
-    website: 'https://www.irwin.army.mil',
-    lat: 35.2630,
-    lon: -116.6841,
-  },
-
-  {
-    id: 'conf-dg-jrtc-forum',
-    name: 'JRTC Training Technology Forum',
-    category: 'Defense',
-    location: 'Fort Polk, LA',
-    month: 'November',
-    description: 'Joint Readiness Training Center technology forum for live training systems, instrumentation, and opposing force (OPFOR) equipment. Vendors supporting combat collective training at JRTC present instrumented battlefield, after-action review systems, and simulation integration technologies.',
-    estimatedExhibitors: 70,
-    relevanceScore: 86,
-    website: 'https://www.jrtc-polk.army.mil',
-    lat: 31.0453,
-    lon: -93.2002,
-  },
-
-  {
     id: 'conf-dg-ndia-sci',
     name: 'NDIA Science & Engineering Technology Conference',
     category: 'Defense',
@@ -2127,34 +1357,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.ndia.org',
     lat: 34.7304,
     lon: -86.5861,
-  },
-
-  {
-    id: 'conf-dg-huntsville-defense',
-    name: 'Huntsville Defense & Technology Conference',
-    category: 'Defense',
-    location: 'Huntsville, AL',
-    month: 'October',
-    description: 'Annual conference in the nation\'s second-largest defense contracting hub, serving Redstone Arsenal\'s concentration of Army aviation, missile, and space commands. Covers THAAD, Patriot, Stinger, and Army missile program opportunities across prime and subcontractor tiers.',
-    estimatedExhibitors: 200,
-    relevanceScore: 91,
-    website: 'https://www.huntsvilledefense.com',
-    lat: 34.7304,
-    lon: -86.5861,
-  },
-
-  {
-    id: 'conf-dg-tda-summit',
-    name: 'Texas Defense Alliance Summit',
-    category: 'Defense',
-    location: 'Austin, TX',
-    month: 'February',
-    description: 'Texas Defense Alliance annual summit uniting Texas military installations, defense contractors, and state legislators to advance Texas defense industrial base growth. Fort Bliss, Fort Hood, and NAS Joint Reserve Base Fort Worth contribute briefings on regional acquisition opportunities.',
-    estimatedExhibitors: 90,
-    relevanceScore: 98,
-    website: 'https://www.texasdefensealliance.org',
-    lat: 30.2672,
-    lon: -97.7431,
   },
 
   {
@@ -2186,20 +1388,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-gvsets',
-    name: 'GVSETS — Ground Vehicle Systems Engineering & Technology Symposium',
-    category: 'Defense',
-    location: 'Novi, MI',
-    month: 'August',
-    description: 'Government-hosted ground vehicle technical symposium co-sponsored by TARDEC and the SAE Government-Industry Meeting, covering autonomous ground vehicle navigation, active protection systems, power-dense hybrid-electric drives, and thermal management for Bradley and Abrams successors.',
-    estimatedExhibitors: 130,
-    relevanceScore: 84,
-    website: 'https://www.gvsets.com',
-    lat: 42.4801,
-    lon: -83.4755,
-  },
-
-  {
     id: 'conf-dg-ausa-korea',
     name: 'AUSA Quad-A Army Aviation Summit (Korea)',
     category: 'Defense',
@@ -2211,34 +1399,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.ausa.org',
     lat: 37.5665,
     lon: 126.978,
-  },
-
-  {
-    id: 'conf-dg-disruptive-tech-defense',
-    name: 'Disruptive Technology for Defense Innovation',
-    category: 'Defense',
-    location: 'Austin, TX',
-    month: 'October',
-    description: 'Austin-based annual conference on non-traditional defense technology, covering DIU Other Transaction Agreements, Air Force AFWERX, Army Futures Command Austin Innovation Hub priorities, and dual-use technology transition pathways for Texas startups into DoD procurement.',
-    estimatedExhibitors: 80,
-    relevanceScore: 92,
-    website: 'https://www.dtdi.us',
-    lat: 30.2672,
-    lon: -97.7431,
-  },
-
-  {
-    id: 'conf-dg-army-futures',
-    name: 'Army Futures Command Industry Forum',
-    category: 'Defense',
-    location: 'Austin, TX',
-    month: 'August',
-    description: 'Army Futures Command\'s annual industry day for all eight Cross-Functional Teams, covering Long Range Precision Fires, Next Generation Combat Vehicle, Future Vertical Lift, Army network, air and missile defense, Soldier lethality, and synthetic training environment programs.',
-    estimatedExhibitors: 150,
-    relevanceScore: 96,
-    website: 'https://www.army.mil/futures',
-    lat: 30.2672,
-    lon: -97.7431,
   },
 
   {
@@ -2270,20 +1430,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-comdef',
-    name: 'COMDEF — Combined Defense',
-    category: 'Defense',
-    location: 'Jerusalem, Israel',
-    month: 'October',
-    description: 'Israeli Ministry of Defense joint procurement conference for allied nation defense ministers, covering Iron Dome, Trophy APS, Barak-8, and UAS technology co-production opportunities. Key venue for US-Israel defense industrial cooperation particularly relevant to counter-UAS and EW sectors.',
-    estimatedExhibitors: 150,
-    relevanceScore: 52,
-    website: 'https://www.comdef.co.il',
-    lat: 31.7683,
-    lon: 35.2137,
-  },
-
-  {
     id: 'conf-dg-ausa-power-energy',
     name: 'AUSA Power & Energy Symposium',
     category: 'Defense',
@@ -2295,20 +1441,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.ausa.org',
     lat: 38.8816,
     lon: -77.091,
-  },
-
-  {
-    id: 'conf-dg-airborne-conf',
-    name: 'Airborne & Special Operations Forces Conference',
-    category: 'Defense',
-    location: 'Fayetteville, NC',
-    month: 'March',
-    description: 'Annual conference at Fort Liberty (Bragg) serving XVIII Airborne Corps, 82nd Airborne Division, and USSOCOM, covering airborne insertion systems, Joint Precision Airdrop, heavy equipment parachute systems, and joint forcible entry capabilities.',
-    estimatedExhibitors: 130,
-    relevanceScore: 79,
-    website: 'https://www.aoconference.org',
-    lat: 35.0527,
-    lon: -78.8784,
   },
 
   {
@@ -2340,20 +1472,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-soto-summit',
-    name: 'STOC Symposium on Technology Operations',
-    category: 'Defense',
-    location: 'Aberdeen, MD',
-    month: 'June',
-    description: 'Aberdeen Proving Ground-hosted technology operations symposium covering PEO Combat Support & Combat Service Support programs, heavy brigade equipment digitization, and logistics automation for Army Combined Arms Support Command units.',
-    estimatedExhibitors: 100,
-    relevanceScore: 86,
-    website: 'https://www.apg.army.mil',
-    lat: 39.4651,
-    lon: -76.1693,
-  },
-
-  {
     id: 'conf-dg-sa-ammo',
     name: 'NDIA Armaments Systems Forum',
     category: 'Defense',
@@ -2365,34 +1483,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.ndia.org',
     lat: 41.5095,
     lon: -90.5784,
-  },
-
-  {
-    id: 'conf-dg-aisa-conf',
-    name: 'Army Intelligence & Security Conference',
-    category: 'Defense',
-    location: 'Fort Huachuca, AZ',
-    month: 'July',
-    description: 'Army Intelligence Center of Excellence annual conference at Fort Huachuca covering military intelligence collection systems, DCGS-A intelligence fusion, all-source analysis tools, and biometric intelligence. High relevance for El Paso region with Fort Huachuca 90 miles from El Paso.',
-    estimatedExhibitors: 110,
-    relevanceScore: 96,
-    website: 'https://www.ikn.army.mil',
-    lat: 31.5498,
-    lon: -110.3471,
-  },
-
-  {
-    id: 'conf-dg-exl-military',
-    name: 'Military Satellite Communications Summit',
-    category: 'Defense',
-    location: 'McLean, VA',
-    month: 'March',
-    description: 'Specialized summit on military satellite communications covering WGS, AEHF, and MUOS legacy systems alongside Protected Anti-Jam Tactical SATCOM (PATS) and commercial SATCOM augmentation for DoD. Relevant for Fort Bliss satellite communications battalion modernization.',
-    estimatedExhibitors: 80,
-    relevanceScore: 84,
-    website: 'https://www.milsatcomsummit.com',
-    lat: 38.9339,
-    lon: -77.1773,
   },
 
   {
@@ -2410,20 +1500,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   // ── Aerospace (additional) ─────────────────────────────────────────────────
-
-  {
-    id: 'conf-dg-atca',
-    name: 'ATCA Annual Conference',
-    category: 'Aerospace',
-    location: 'Washington, DC',
-    month: 'October',
-    description: 'Air Traffic Control Association\'s annual conference covering FAA NextGen program implementation, DataComm text communications, Performance-Based Navigation approaches, and unmanned aircraft system traffic management (UTM) for NAS integration. Relevant to El Paso TRACON modernization.',
-    estimatedExhibitors: 150,
-    relevanceScore: 73,
-    website: 'https://www.atca.org',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
 
   {
     id: 'conf-dg-spie-remote-sensing',
@@ -2454,20 +1530,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-defence-helicopter',
-    name: 'Defence Helicopter World',
-    category: 'Aerospace',
-    location: 'London, United Kingdom',
-    month: 'May',
-    description: 'International military helicopter conference covering AW101 Merlin, NH90, UH-60 upgrades, and autonomous rotorcraft for armed reconnaissance, medevac, and heavy lift missions. Relevant for US Army Aviation vendors targeting allied NATO procurement.',
-    estimatedExhibitors: 120,
-    relevanceScore: 55,
-    website: 'https://www.defencehelicopterworld.com',
-    lat: 51.5074,
-    lon: -0.1278,
-  },
-
-  {
     id: 'conf-dg-space-ops',
     name: 'SpaceOps International Conference',
     category: 'Aerospace',
@@ -2479,104 +1541,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.spaceops.org',
     lat: 38.9072,
     lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-milipol-asia',
-    name: 'Milipol Asia-Pacific',
-    category: 'Aerospace',
-    location: 'Singapore',
-    month: 'May',
-    description: 'Asia-Pacific edition of the Milipol homeland security series, covering civil aviation security, drone detection at airports, airside perimeter protection, and counter-terrorism technology for government aviation security authorities across ASEAN nations.',
-    estimatedExhibitors: 200,
-    relevanceScore: 40,
-    website: 'https://www.milipol.com/asia-pacific',
-    lat: 1.3521,
-    lon: 103.8198,
-  },
-
-  {
-    id: 'conf-dg-satellite-tech',
-    name: 'Satellite Technology for Government Summit',
-    category: 'Aerospace',
-    location: 'Washington, DC',
-    month: 'April',
-    description: 'Government satellite communications summit covering LEO broadband for tactical military users, SATCOM-on-the-move terminals, DoD commercial satellite integration under the Commercial Satellite Communications Office (CSCO), and rural government broadband.',
-    estimatedExhibitors: 100,
-    relevanceScore: 78,
-    website: 'https://www.satgovcon.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-sus-aviation',
-    name: 'Sustainable Aviation Forum',
-    category: 'Aerospace',
-    location: 'Houston, TX',
-    month: 'April',
-    description: 'Annual forum on sustainable aviation fuels, electric aircraft propulsion, and airline decarbonization strategies. Texas refinery industry participation in SAF feedstock production drives high regional relevance, with El Paso International Airport exploring SAF infrastructure investment.',
-    estimatedExhibitors: 120,
-    relevanceScore: 72,
-    website: 'https://www.sustainableaviationforum.org',
-    lat: 29.7604,
-    lon: -95.3698,
-  },
-
-  {
-    id: 'conf-dg-uave',
-    name: 'Unmanned Aircraft Systems Summit USA',
-    category: 'Aerospace',
-    location: 'Las Vegas, NV',
-    month: 'June',
-    description: 'Comprehensive UAS technology summit covering drone delivery infrastructure, BVLOS waivers, UTM service providers, and commercial drone operations for last-mile logistics and infrastructure inspection. FAA UAS Integration Pilot Program results inform regulatory discussions.',
-    estimatedExhibitors: 200,
-    relevanceScore: 82,
-    website: 'https://www.uasummit.com',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
-  {
-    id: 'conf-dg-texas-aero',
-    name: 'Texas Aviation Summit',
-    category: 'Aerospace',
-    location: 'Dallas, TX',
-    month: 'July',
-    description: 'Annual statewide aviation industry conference convening Texas airport directors, aerospace manufacturers, FBO operators, and state aviation division officials. Covers El Paso International Airport capital improvement plans, West Texas private landing strip registry, and UAS corridor development.',
-    estimatedExhibitors: 100,
-    relevanceScore: 85,
-    website: 'https://www.texasavsummit.com',
-    lat: 32.7767,
-    lon: -96.797,
-  },
-
-  {
-    id: 'conf-dg-raf-low-slow',
-    name: 'Counter-UAS & Airspace Defense Summit',
-    category: 'Aerospace',
-    location: 'Colorado Springs, CO',
-    month: 'August',
-    description: 'SPACECOM-adjacent counter-UAS summit focused on airspace deconfliction, UAS detection radar, RF jamming systems, and kinetic defeat options for critical infrastructure and military base airspace defense. Fort Bliss Air Defense Artillery contributions are a centerpiece.',
-    estimatedExhibitors: 90,
-    relevanceScore: 96,
-    website: 'https://www.counteruasairspace.com',
-    lat: 38.8339,
-    lon: -104.8214,
-  },
-
-  {
-    id: 'conf-dg-ascend-aiaa',
-    name: 'AIAA ASCEND: Shaping the Future of Space',
-    category: 'Aerospace',
-    location: 'Las Vegas, NV',
-    month: 'October',
-    description: 'AIAA\'s annual space commerce and exploration conference covering cislunar economy, in-space servicing and assembly, deep space navigation, and commercial space station development. Spaceport America and White Sands launch operations drive New Mexico-Texas relevance.',
-    estimatedExhibitors: 120,
-    relevanceScore: 70,
-    website: 'https://www.aiaa.org/ascend',
-    lat: 36.1699,
-    lon: -115.1398,
   },
 
   {
@@ -2594,34 +1558,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-aeromex',
-    name: 'Aeromexica Aviation Forum',
-    category: 'Aerospace',
-    location: 'Mexico City, Mexico',
-    month: 'May',
-    description: 'Mexico\'s primary aviation industry forum covering Aeromexico fleet expansion, regional airline market, MRO industry development, and Secretaria de Infraestructura, Comunicaciones y Transportes aviation investment priorities. Cross-border aviation logistics from El Paso drives direct relevance.',
-    estimatedExhibitors: 150,
-    relevanceScore: 77,
-    website: 'https://www.aeromexica.com.mx',
-    lat: 19.4326,
-    lon: -99.1332,
-  },
-
-  {
-    id: 'conf-dg-hyperstar',
-    name: 'Hypersonics International Forum',
-    category: 'Aerospace',
-    location: 'Colorado Springs, CO',
-    month: 'July',
-    description: 'Hypersonic research and systems forum covering Army Long Range Hypersonic Weapon, DARPA HAWC, and Air-Launched Rapid Response Weapon (ARRW) development. White Sands Missile Range hypersonic test corridor makes this directly relevant to New Mexico-West Texas defense ecosystem.',
-    estimatedExhibitors: 80,
-    relevanceScore: 88,
-    website: 'https://www.hypersonicsforum.com',
-    lat: 38.8339,
-    lon: -104.8214,
-  },
-
-  {
     id: 'conf-dg-precision-strike',
     name: 'Precision Strike Association Annual Symposium',
     category: 'Aerospace',
@@ -2636,48 +1572,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   // ── Government IT (additional) ────────────────────────────────────────────
-
-  {
-    id: 'conf-dg-public-sector-ai',
-    name: 'AI in Government Summit',
-    category: 'Government IT',
-    location: 'Washington, DC',
-    month: 'June',
-    description: 'Annual federal AI adoption conference covering Executive Order 14110 AI governance requirements, agency AI use case portfolios, responsible AI procurement standards, and NIST AI Risk Management Framework implementation across DoD and civilian agencies.',
-    estimatedExhibitors: 100,
-    relevanceScore: 84,
-    website: 'https://www.aiingovsummit.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-dod-cloud-summit',
-    name: 'DoD Cloud & Digital Transformation Summit',
-    category: 'Government IT',
-    location: 'Washington, DC',
-    month: 'April',
-    description: 'Annual summit on DoD cloud adoption under the Joint Warfighter Cloud Capability (JWCC) contract, covering DISA cloud broker services, Army Enterprise Cloud Management Agency, and cloud-native application development for defense operations.',
-    estimatedExhibitors: 90,
-    relevanceScore: 85,
-    website: 'https://www.dodcloudsummit.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-cis-summit',
-    name: 'Critical Infrastructure Security Summit',
-    category: 'Government IT',
-    location: 'Washington, DC',
-    month: 'October',
-    description: 'CISA-aligned conference on critical infrastructure cybersecurity covering 16 NIPP sectors, ICS/SCADA security, ransomware resilience, and sector risk management agency collaboration. Energy grid, water system, and border crossing infrastructure protection are primary themes.',
-    estimatedExhibitors: 120,
-    relevanceScore: 87,
-    website: 'https://www.cisa.gov/events',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
 
   {
     id: 'conf-dg-enterprise-data',
@@ -2719,48 +1613,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.smartcitiesconnect.org',
     lat: 30.2672,
     lon: -97.7431,
-  },
-
-  {
-    id: 'conf-dg-mgmt-modern-gov',
-    name: 'Management of Change Government Forum',
-    category: 'Government IT',
-    location: 'Washington, DC',
-    month: 'January',
-    description: 'Organizational change management conference for federal program executives navigating large-scale IT transformation, covering ERP upgrade change management, agency consolidation IT strategy, and workforce reskilling for cloud and AI-enabled government operations.',
-    estimatedExhibitors: 60,
-    relevanceScore: 74,
-    website: 'https://www.mocgov.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-cmmc-forum',
-    name: 'CMMC & Defense Supply Chain Security Forum',
-    category: 'Government IT',
-    location: 'Washington, DC',
-    month: 'March',
-    description: 'Dedicated forum on Cybersecurity Maturity Model Certification implementation for defense industrial base contractors, covering CMMC 2.0 requirements, third-party assessment organization (C3PAO) readiness, and NIST SP 800-171 compliance for DoD contract eligibility.',
-    estimatedExhibitors: 90,
-    relevanceScore: 91,
-    website: 'https://www.cmmcforum.org',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-zero-trust-gov',
-    name: 'Zero Trust Government Summit',
-    category: 'Government IT',
-    location: 'Washington, DC',
-    month: 'September',
-    description: 'DoD and NSA-aligned zero trust implementation conference covering M-22-09 federal zero trust strategy, DISA Zero Trust Reference Architecture, and agency implementation scorecards. Critical for defense IT vendors supporting fort-level network security upgrades.',
-    estimatedExhibitors: 80,
-    relevanceScore: 86,
-    website: 'https://www.zerotrustgov.com',
-    lat: 38.9072,
-    lon: -77.0369,
   },
 
   {
@@ -2850,20 +1702,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-police-tech-expo',
-    name: 'Police Technology Expo',
-    category: 'Homeland Security',
-    location: 'Various US Cities',
-    month: 'October',
-    description: 'Annual law enforcement technology exhibition covering body-worn cameras, license plate recognition, gunshot detection, predictive policing platforms, and real-time crime center technology. El Paso Police Department procurement officers attend to evaluate vendor offerings.',
-    estimatedExhibitors: 200,
-    relevanceScore: 88,
-    website: 'https://www.policetechexpo.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
     id: 'conf-dg-niem-summit',
     name: 'NIEM Information Exchange Summit',
     category: 'Homeland Security',
@@ -2875,20 +1713,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.niem.gov',
     lat: 38.9072,
     lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-interpol-ilea',
-    name: 'ILEA Border Security Training Symposium',
-    category: 'Homeland Security',
-    location: 'Artesia, NM',
-    month: 'June',
-    description: 'International Law Enforcement Academy symposium at the Federal Law Enforcement Training Centers Artesia campus, covering international border security cooperation, cross-border criminal organization interdiction, and shared intelligence tools with Latin American law enforcement partners.',
-    estimatedExhibitors: 40,
-    relevanceScore: 97,
-    website: 'https://www.fletc.gov/artesia',
-    lat: 32.8423,
-    lon: -104.4032,
   },
 
   {
@@ -2906,20 +1730,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-seaport-security',
-    name: 'Port Security Expo',
-    category: 'Homeland Security',
-    location: 'Charleston, SC',
-    month: 'May',
-    description: 'Annual port security technology exposition covering TWIC card readers, vessel traffic management, cargo screening technology, and maritime cyber security for US Coast Guard and TSA port security programs. Land port of entry vendors also participate.',
-    estimatedExhibitors: 120,
-    relevanceScore: 72,
-    website: 'https://www.portsecurityexpo.com',
-    lat: 32.7765,
-    lon: -79.9311,
-  },
-
-  {
     id: 'conf-dg-crisis-management',
     name: 'National Homeland Security Conference',
     category: 'Homeland Security',
@@ -2934,34 +1744,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-immigration-tech',
-    name: 'Immigration & Border Technology Summit',
-    category: 'Homeland Security',
-    location: 'Washington, DC',
-    month: 'April',
-    description: 'Policy and technology summit on immigration processing systems, USCIS digital service modernization, biometric enrollment expansion, asylum case management technology, and CBP One mobile app development for lawful border crossing facilitation.',
-    estimatedExhibitors: 80,
-    relevanceScore: 96,
-    website: 'https://www.immigrationtechsummit.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-border-future',
-    name: 'Smart Border & Port Technology Conference',
-    category: 'Homeland Security',
-    location: 'Laredo, TX',
-    month: 'September',
-    description: 'Annual smart border technology conference in Laredo, the largest US-Mexico land border crossing by trade volume, covering electronic cargo pre-clearance, non-intrusive inspection automation, commercial vehicle screening, and AI-assisted trade anomaly detection.',
-    estimatedExhibitors: 70,
-    relevanceScore: 98,
-    website: 'https://www.smartborderconf.com',
-    lat: 27.5064,
-    lon: -99.5075,
-  },
-
-  {
     id: 'conf-dg-dhs-priv',
     name: 'DHS Privacy, Ethics & Data Summit',
     category: 'Homeland Security',
@@ -2971,20 +1753,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     estimatedExhibitors: 50,
     relevanceScore: 82,
     website: 'https://www.dhs.gov/privacy',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-ij-summit',
-    name: 'Integrated Justice Summit',
-    category: 'Homeland Security',
-    location: 'Washington, DC',
-    month: 'August',
-    description: 'Bureau of Justice Assistance integrated justice conference on criminal justice information sharing, NIBRS modernization, AFIS biometric system upgrades, and cross-jurisdiction case management for law enforcement agencies including El Paso Sheriff and EPPD.',
-    estimatedExhibitors: 60,
-    relevanceScore: 88,
-    website: 'https://www.ijs.gov',
     lat: 38.9072,
     lon: -77.0369,
   },
@@ -3034,48 +1802,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-ew-battlespace',
-    name: 'Battlespace Communications & EW Summit',
-    category: 'Intelligence',
-    location: 'Arlington, VA',
-    month: 'July',
-    description: 'Specialized conference on electronic warfare and battlespace communications covering Army Electronic Warfare Planning & Management Tool (EWPMT), multi-spectral sensing, and GPS-denied navigation for contested electromagnetic environments. Fort Bliss EW units attend.',
-    estimatedExhibitors: 70,
-    relevanceScore: 90,
-    website: 'https://www.battlespacecomm.com',
-    lat: 38.8816,
-    lon: -77.091,
-  },
-
-  {
-    id: 'conf-dg-techint-expo',
-    name: 'TECHINT & Exploitation Conference',
-    category: 'Intelligence',
-    location: 'Aberdeen, MD',
-    month: 'October',
-    description: 'Technical intelligence and captured materiel exploitation conference at Aberdeen Proving Ground, covering foreign materiel exploitation, sensitive site exploitation, and TECHINT fusion for Army G2 and NGIC customers. Classified technology demonstrations are centerpiece.',
-    estimatedExhibitors: 50,
-    relevanceScore: 77,
-    website: 'https://www.apg.army.mil',
-    lat: 39.4651,
-    lon: -76.1693,
-  },
-
-  {
-    id: 'conf-dg-isr-summit',
-    name: 'ISR Summit',
-    category: 'Intelligence',
-    location: 'Washington, DC',
-    month: 'November',
-    description: 'Annual intelligence, surveillance, and reconnaissance summit covering theater ISR architecture, sensor-to-shooter timelines, DCGS-A persistent surveillance, and multi-intelligence fusion for joint force commanders. Strong Fort Bliss MI brigade and INSCOM alignment.',
-    estimatedExhibitors: 100,
-    relevanceScore: 91,
-    website: 'https://www.isrsummit.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
     id: 'conf-dg-nro-industry',
     name: 'NRO Industry Day',
     category: 'Intelligence',
@@ -3103,34 +1829,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     lon: -77.0369,
   },
 
-  {
-    id: 'conf-dg-cyberint',
-    name: 'Cyber Intelligence Initiative',
-    category: 'Intelligence',
-    location: 'Bethesda, MD',
-    month: 'June',
-    description: 'Intelligence-community focused cyber threat intelligence conference covering APT attribution methodology, dark web intelligence collection, IC cyber threat assessment production, and government-private sector cyberthreat information sharing mechanisms under EO 14028.',
-    estimatedExhibitors: 60,
-    relevanceScore: 82,
-    website: 'https://www.cyberint-conf.com',
-    lat: 38.9848,
-    lon: -77.0947,
-  },
-
-  {
-    id: 'conf-dg-dcgs-conference',
-    name: 'DCGS-A Intelligence Systems Conference',
-    category: 'Intelligence',
-    location: 'Fort Huachuca, AZ',
-    month: 'November',
-    description: 'Distributed Common Ground System-Army program user conference at Fort Huachuca home of Army intelligence, covering DCGS-A increment 1 modernization, data fabric integration, and Palantir/Analytical Framework for Intelligence updates for MI brigade operators.',
-    estimatedExhibitors: 70,
-    relevanceScore: 97,
-    website: 'https://www.army.mil/dcgs-a',
-    lat: 31.5498,
-    lon: -110.3471,
-  },
-
   // ── Defense (final additions) ──────────────────────────────────────────────
 
   {
@@ -3148,20 +1846,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-expeditionary-logistics',
-    name: 'Expeditionary Logistics Forum',
-    category: 'Defense',
-    location: 'Camp Pendleton, CA',
-    month: 'June',
-    description: 'Marine Corps and Army joint expeditionary logistics conference covering autonomous resupply, cold-chain medical logistics, forward arming and refueling point automation, and LOGPAC drone delivery technology. Relevant for Fort Bliss logistics vendors targeting expeditionary programs.',
-    estimatedExhibitors: 90,
-    relevanceScore: 84,
-    website: 'https://www.pendelton.marines.mil',
-    lat: 33.3772,
-    lon: -117.4267,
-  },
-
-  {
     id: 'conf-dg-ndia-test-eval',
     name: 'NDIA Test & Evaluation Conference',
     category: 'Defense',
@@ -3176,20 +1860,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-toc-summit',
-    name: 'Tactical Operations Center Technology Forum',
-    category: 'Defense',
-    location: 'Fort Hood, TX',
-    month: 'April',
-    description: 'Army combined arms center forum on tactical operations center digitization, Command Post Computing Environment (CPCE), situational awareness displays, and network management tools for brigade and division-level command posts. Fort Bliss 1st Armored Division S6 officers attend.',
-    estimatedExhibitors: 80,
-    relevanceScore: 93,
-    website: 'https://www.hood.army.mil',
-    lat: 31.1350,
-    lon: -97.7733,
-  },
-
-  {
     id: 'conf-dg-defense-it-mgt',
     name: 'Armed Forces Communication & Electronics Symposium',
     category: 'Defense',
@@ -3201,20 +1871,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.afcea.org',
     lat: 32.7157,
     lon: -117.1611,
-  },
-
-  {
-    id: 'conf-dg-nato-industry-forum',
-    name: 'NATO Industry Forum',
-    category: 'Defense',
-    location: 'Various NATO Cities',
-    month: 'November',
-    description: 'NATO\'s annual defense industry engagement forum connecting allied procurement agencies with multinational defense vendors on NATO Capability Targets, Alliance Future Surveillance and Control, and NATO AI interoperability standards. US primes bring El Paso-built components as subcontractor showcases.',
-    estimatedExhibitors: 300,
-    relevanceScore: 62,
-    website: 'https://www.nato.int/industry',
-    lat: 50.8503,
-    lon: 4.3517,
   },
 
   // ── Aerospace (final additions) ────────────────────────────────────────────
@@ -3277,63 +1933,7 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     lon: -77.0369,
   },
 
-  {
-    id: 'conf-dg-fpic-summit',
-    name: 'Federal Privacy & Identity Conference',
-    category: 'Government IT',
-    location: 'Washington, DC',
-    month: 'September',
-    description: 'Annual conference on federal privacy compliance under Privacy Act, FISMA privacy overlays, digital identity federation under FICAM, and Login.gov expansion across agencies. CBP and USCIS biometric system vendors participate in compliance-focused sessions.',
-    estimatedExhibitors: 70,
-    relevanceScore: 80,
-    website: 'https://www.fpic.us',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-sam-gov-vendor',
-    name: 'Government Contract Awards & Procurement Forum',
-    category: 'Government IT',
-    location: 'Washington, DC',
-    month: 'February',
-    description: 'Annual forum for defense and civilian IT vendors on government contract vehicle strategy, GWAC/MAC task order competition, SAM.gov registration best practices, and SBA 8(a)/HUBZone/SDVOSB set-aside eligibility optimization for the El Paso defense contractor community.',
-    estimatedExhibitors: 80,
-    relevanceScore: 91,
-    website: 'https://www.govcontractforum.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
   // ── Homeland Security (final additions) ───────────────────────────────────
-
-  {
-    id: 'conf-dg-cuas-homeland',
-    name: 'DHS Counter-UAS Technology Forum',
-    category: 'Homeland Security',
-    location: 'Washington, DC',
-    month: 'July',
-    description: 'DHS Science & Technology Directorate\'s counter-UAS technology forum reviewing detection, tracking, and neutralization systems evaluated under the DHS C-UAS Authority expansion. Covers airport drone incursion response and border corridor drone interdiction relevant to El Paso CBP Air & Marine.',
-    estimatedExhibitors: 80,
-    relevanceScore: 99,
-    website: 'https://www.dhs.gov/science-and-technology/counter-uas',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-intl-border-congress',
-    name: 'International Border Congress',
-    category: 'Homeland Security',
-    location: 'Tijuana, Mexico',
-    month: 'October',
-    description: 'Binational border management congress bringing together US and Mexican federal, state, and municipal border officials with technology vendors to address infrastructure, security, and trade facilitation. El Paso-Ciudad Juarez metro corridor projects are frequently highlighted case studies.',
-    estimatedExhibitors: 90,
-    relevanceScore: 100,
-    website: 'https://www.internationalbordercongress.com',
-    lat: 32.5149,
-    lon: -117.0382,
-  },
 
   {
     id: 'conf-dg-fema-icc',
@@ -3363,20 +1963,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.iqt.org',
     lat: 38.8816,
     lon: -77.091,
-  },
-
-  {
-    id: 'conf-dg-sig-int',
-    name: 'SIGINT Summit',
-    category: 'Intelligence',
-    location: 'Washington, DC',
-    month: 'April',
-    description: 'Signals intelligence industry conference covering software-defined radio for SIGINT collection, spectrum monitoring, direction-finding systems, and communications intelligence processing for NSA and DoD military intelligence customers. Fort Bliss MI brigade SIGINT platoon requirements drive relevance.',
-    estimatedExhibitors: 70,
-    relevanceScore: 88,
-    website: 'https://www.sigintsummit.com',
-    lat: 38.9072,
-    lon: -77.0369,
   },
 
   {
@@ -3424,62 +2010,6 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-dg-mav-show',
-    name: 'Micro Aerial Vehicle Technology Conference',
-    category: 'Aerospace',
-    location: 'Denver, CO',
-    month: 'July',
-    description: 'Specialized micro and nano aerial vehicle conference covering sub-250g drone platforms, indoor autonomous navigation, swarming algorithms, and miniaturized sensor payloads for ISR missions. DARPA and Army Research Lab sponsor technology demonstrations.',
-    estimatedExhibitors: 60,
-    relevanceScore: 80,
-    website: 'https://www.mavtechconf.com',
-    lat: 39.7392,
-    lon: -104.9903,
-  },
-
-  {
-    id: 'conf-dg-uasnet',
-    name: 'UAS Network & Connectivity Summit',
-    category: 'Aerospace',
-    location: 'Phoenix, AZ',
-    month: 'September',
-    description: 'Annual summit on UAS command-and-control link technology, spectrum allocation for BVLOS operations, 5G C2 link certification, and satellite command links for long-endurance UAVs operating along the US-Mexico border surveillance corridor.',
-    estimatedExhibitors: 80,
-    relevanceScore: 93,
-    website: 'https://www.uasnetworkingsummit.com',
-    lat: 33.4484,
-    lon: -112.074,
-  },
-
-  {
-    id: 'conf-dg-biometric-summit-gov',
-    name: 'Government Biometrics Summit',
-    category: 'Government IT',
-    location: 'Washington, DC',
-    month: 'October',
-    description: 'Federal biometrics adoption conference covering DHS OBIM modernization, DoD ABIS system upgrades, Next Generation Identification (NGI) enhancements, and privacy-preserving biometric authentication standards for government employee credentialing and border processing.',
-    estimatedExhibitors: 80,
-    relevanceScore: 93,
-    website: 'https://www.govbiometricssummit.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-rpa-gov',
-    name: 'Federal RPA & Intelligent Automation Summit',
-    category: 'Government IT',
-    location: 'Washington, DC',
-    month: 'July',
-    description: 'Robotic process automation conference for federal agencies covering OMB RPA playbook implementation, AI-assisted forms processing, natural language processing for claims adjudication, and automation governance frameworks across DoD, DHS, and VA.',
-    estimatedExhibitors: 70,
-    relevanceScore: 80,
-    website: 'https://www.federalrpa.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
     id: 'conf-dg-cbp-one-industry',
     name: 'CBP Technology Industry Forum',
     category: 'Homeland Security',
@@ -3507,34 +2037,5 @@ export const DEFENSE_GOV_CONFERENCES: ConferenceRecord[] = [
     lon: -77.0369,
   },
 
-  {
-    id: 'conf-dg-human-terrain',
-    name: 'Socio-Cultural & Human Domain Analytics Forum',
-    category: 'Intelligence',
-    location: 'Washington, DC',
-    month: 'March',
-    description: 'Forum on socio-cultural intelligence, human terrain analysis, and civil affairs assessment tools for Army stability operations and irregular warfare. Covers linguist AI translation, cultural pattern-of-life analysis, and social network mapping for operational environments.',
-    estimatedExhibitors: 50,
-    relevanceScore: 80,
-    website: 'https://www.humanterrainforum.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-dg-tacit-int',
-    name: 'Tactical Intelligence & Fusion Conference',
-    category: 'Intelligence',
-    location: 'Fort Huachuca, AZ',
-    month: 'April',
-    description: 'Army tactical intelligence conference at Fort Huachuca examining intelligence preparation of the battlefield tools, tactical HUMINT technology, mobile reporting, and brigade combat team S2 intelligence fusion for multi-domain operations in the Southwest regional context.',
-    estimatedExhibitors: 60,
-    relevanceScore: 95,
-    website: 'https://www.ikn.army.mil',
-    lat: 31.5498,
-    lon: -110.3471,
-  },
-
 ];
-
 

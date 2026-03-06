@@ -1,5 +1,5 @@
 // src/lib/agents/feed-agent.ts
-// Fetches 2000+ RSS/Atom sources via FEED_REGISTRY, classifies with keyword
+// Fetches 70,000+ RSS/Atom sources via FEED_REGISTRY, classifies with keyword
 // agent first (free), falls back to Gemini for low-confidence articles,
 // caches in-memory (5-min TTL), optionally persists to Supabase.
 
@@ -79,12 +79,13 @@ const CRIME_SOURCE_IDS = new Set([
 const SOURCE_ID_BY_NAME = new Map(FEED_SOURCES.map((s) => [s.name, s.id]));
 
 // ─── Source rotation ────────────────────────────────────────────────────────────
-// With 2000+ sources we can't fetch all every cycle. Strategy:
+// With 70,000+ sources we can't fetch all every cycle. Strategy:
 // - Tier 1-2: always fetch (high authority, ~200 sources)
 // - Tier 3-4: rotate through batches, different set each cycle
-// - Each cycle fetches ~350 sources total (200 core + 150 rotated)
+// - Each cycle fetches ~800 sources total (200 core + 600 rotated)
+// - Full rotation through all sources happens over ~120 cycles (~10 hours)
 
-const MAX_SOURCES_PER_CYCLE = 400;
+const MAX_SOURCES_PER_CYCLE = 800;
 let rotationOffset = 0;
 
 function selectSourcesForCycle(): FeedSourceEntry[] {
@@ -130,7 +131,7 @@ function setStoredFeedItems(store: FeedStore): void {
 
 // ─── RSS fetching (with concurrency control & rotation) ─────────────────────
 
-const MAX_CONCURRENT_FETCHES = 50; // fetch 50 feeds at a time to avoid rate limits
+const MAX_CONCURRENT_FETCHES = 80; // fetch 80 feeds at a time (balanced concurrency for 800/cycle)
 
 async function fetchSourceBatch(sources: FeedSourceEntry[]): Promise<PromiseSettledResult<ParsedItem[]>[]> {
   return Promise.allSettled(

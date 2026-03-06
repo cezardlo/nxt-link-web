@@ -1,8 +1,20 @@
 // src/lib/feeds/feed-sources-registry.ts
-// NXT//LINK Feed Sources Registry — 2000+ intelligence sources
+// NXT//LINK Feed Sources Registry — 70,000+ intelligence sources
 // Uses compact data tables expanded via generator functions to keep code manageable.
+// Mega-registries in ./mega/ add ~65,000 additional sources via TopicMatrix expansion.
 
 import type { FeedCategory } from '@/lib/agents/feed-agent';
+
+// ─── Mega-registries (10k+ per category) ────────────────────────────────────
+import { DEFENSE_MEGA_SOURCES } from '@/lib/feeds/mega/defense-sources';
+import { CYBERSECURITY_MEGA_SOURCES } from '@/lib/feeds/mega/cybersecurity-sources';
+import { AI_ML_MEGA_SOURCES } from '@/lib/feeds/mega/ai-ml-sources';
+import { ENTERPRISE_MEGA_SOURCES } from '@/lib/feeds/mega/enterprise-sources';
+import { SUPPLY_CHAIN_MEGA_SOURCES } from '@/lib/feeds/mega/supply-chain-sources';
+import { ENERGY_MEGA_SOURCES } from '@/lib/feeds/mega/energy-sources';
+import { FINANCE_MEGA_SOURCES } from '@/lib/feeds/mega/finance-sources';
+import { CRIME_MEGA_SOURCES } from '@/lib/feeds/mega/crime-sources';
+import { GENERAL_MEGA_SOURCES } from '@/lib/feeds/mega/general-sources';
 
 export type FeedSourceEntry = {
   id: string;
@@ -1357,6 +1369,16 @@ export const FEED_REGISTRY: FeedSourceEntry[] = [
   ...gnEntries('General', CONSTRUCTION_GN),
   ...gnEntries('Supply Chain', TRADE_GN),
   ...EXPANDED_SOURCES,
+  // ─── Mega-registries (~65,000 additional sources) ──────────────────────────
+  ...DEFENSE_MEGA_SOURCES,
+  ...CYBERSECURITY_MEGA_SOURCES,
+  ...AI_ML_MEGA_SOURCES,
+  ...ENTERPRISE_MEGA_SOURCES,
+  ...SUPPLY_CHAIN_MEGA_SOURCES,
+  ...ENERGY_MEGA_SOURCES,
+  ...FINANCE_MEGA_SOURCES,
+  ...CRIME_MEGA_SOURCES,
+  ...GENERAL_MEGA_SOURCES,
 ];
 
 // Quick lookup by ID

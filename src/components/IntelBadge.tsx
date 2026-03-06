@@ -18,7 +18,7 @@ type Props = {
 
 const PRIORITY_COLOR: Record<string, string> = {
   critical: '#ff3b30',
-  high:     '#ff6400',
+  high:     '#f97316',
   elevated: '#ffb800',
   normal:   '#00ff88',
 };
@@ -84,7 +84,7 @@ export function IntelBadge({ onSignalsLoaded }: Props) {
 
   const criticalCount = signals.filter((s) => s.priority === 'critical').length;
   const highCount     = signals.filter((s) => s.priority === 'high').length;
-  const badgeColor    = criticalCount > 0 ? '#ff3b30' : highCount > 0 ? '#ff6400' : signals.length > 0 ? '#ffb800' : '#ffffff22';
+  const badgeColor    = criticalCount > 0 ? '#ff3b30' : highCount > 0 ? '#f97316' : signals.length > 0 ? '#ffb800' : '#ffffff22';
 
   const timeAgo = detectedAt
     ? Math.round((Date.now() - new Date(detectedAt).getTime()) / 60_000)

@@ -16,7 +16,7 @@ const MODES: ModeDef[] = [
   { id: 'STANDARD', label: 'STD',  key: '1', color: '#ffffff', description: 'Standard'       },
   { id: 'CRT',      label: 'CRT',  key: '2', color: '#00ff88', description: 'CRT Phosphor'   },
   { id: 'NVG',      label: 'NVG',  key: '3', color: '#00d4ff', description: 'Night Vision'   },
-  { id: 'FLIR',     label: 'FLIR', key: '4', color: '#ff8c00', description: 'Thermal / FLIR' },
+  { id: 'FLIR',     label: 'FLIR', key: '4', color: '#f97316', description: 'Thermal / FLIR' },
 ];
 
 type Props = {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { timeAgo } from '@/lib/utils/format';
 
 // CrimeFeedItem mirrors EnrichedFeedItem fields that arrive from /api/feeds.
 // All extra fields are optional so the type is backward-compatible.
@@ -129,15 +130,6 @@ function computeVelocity(items: CrimeFeedItem[]): 'spike' | 'rising' | 'normal' 
   return 'normal';
 }
 
-function timeAgo(iso: string): string {
-  try {
-    const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000);
-    if (m < 1)  return 'now';
-    if (m < 60) return `${m}m`;
-    const h = Math.floor(m / 60);
-    return h < 24 ? `${h}h` : `${Math.floor(h / 24)}d`;
-  } catch { return ''; }
-}
 
 const VEL_CONFIG = {
   spike:  { label: '▲ SPIKE',  bg: '#ff3b3015', color: '#ff3b30', border: '#ff3b3030' },
@@ -259,7 +251,7 @@ export function CrimeNewsOverlay({ articles }: Props) {
 
                 {/* Source name */}
                 <span className="font-mono text-[7px] font-bold truncate max-w-[80px]" style={{ color: `${tierColor}aa` }}>
-                  {cluster.primary.source.toUpperCase()}
+                  {(cluster.primary.source ?? '').toUpperCase()}
                 </span>
 
                 {/* Convergence badge */}

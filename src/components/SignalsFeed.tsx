@@ -22,11 +22,11 @@ type FilterChip = 'ALL' | 'PATENTS' | 'FUNDING' | 'CONTRACTS' | 'RISK';
 // ─── Design constants ─────────────────────────────────────────────────────────
 
 const TYPE_COLOR: Record<SignalItemType, string> = {
-  patent_filing:  '#a855f7',
+  patent_filing:  '#ffb800',
   funding:        '#ffb800',
   contract_award: '#00ff88',
   partnership:    '#00d4ff',
-  expansion:      '#60a5fa',
+  expansion:      '#00d4ff',
   risk:           '#ff3b30',
 };
 
@@ -342,13 +342,18 @@ export function SignalsFeed() {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-white/[0.05] shrink-0">
-        <div className="flex items-center gap-1.5">
-          <span
-            className="w-1 h-1 rounded-full"
-            style={{ backgroundColor: '#f97316', boxShadow: '0 0 4px #f97316cc' }}
-          />
-          <span className="font-mono text-[8px] tracking-[0.25em] text-white/25 uppercase">
-            Intel Signals
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1.5">
+            <span
+              className="w-1 h-1 rounded-full"
+              style={{ backgroundColor: '#f97316', boxShadow: '0 0 4px #f97316cc' }}
+            />
+            <span className="font-mono text-[8px] tracking-[0.25em] text-white/25 uppercase">
+              Intel Signals
+            </span>
+          </div>
+          <span className="font-mono text-[7px] text-white/20 tracking-[0.05em] pl-2.5">
+            SIMULATED FROM VENDOR REGISTRY
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -357,9 +362,9 @@ export function SignalsFeed() {
           </span>
           <span
             className="font-mono text-[7px] px-1.5 py-px rounded-sm tracking-wider"
-            style={{ color: '#00ff88bb', background: '#00ff8815', border: '1px solid #00ff8825' }}
+            style={{ color: '#ffb800bb', background: '#ffb80015', border: '1px solid #ffb80025' }}
           >
-            LIVE
+            SIM
           </span>
         </div>
       </div>

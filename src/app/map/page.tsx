@@ -3,15 +3,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SignalFinding, SectorScore } from '@/lib/intelligence/signal-engine';
 import type { ConferenceRecord } from '@/lib/data/conference-intel';
+import type { ConferenceCluster } from '@/lib/utils/conference-clusters';
 
 import { FeedBar } from '@/components/FeedBar';
 import { MapCanvas } from '@/components/MapCanvas';
-import type { FlyToTarget, FlightPoint, MapPoint, SeismicPoint, BorderCrossingPoint, CrimeHotspot, ContractPoint, SamBusinessPoint } from '@/components/MapCanvas';
+import type { FlyToTarget, FlightPoint, MapPoint, SeismicPoint, BorderCrossingPoint, CrimeHotspot, ContractPoint, SamBusinessPoint, DisruptionMapPoint } from '@/components/MapCanvas';
+import { ALL_DISRUPTIONS } from '@/lib/data/innovation-dashboard-data';
 import type { FilterMode } from '@/components/MapFilterPanel';
 import { MapFilterPanel } from '@/components/MapFilterPanel';
 import { MapLayerPanel } from '@/components/MapLayerPanel';
-import { MapRightPanel } from '@/components/MapRightPanel';
-import type { SelectedPoint } from '@/components/MapRightPanel';
+import { RightPanel } from '@/components/right-panel/RightPanel';
+import type { SelectedPoint } from '@/components/right-panel/RightPanel';
 import { MapTopBar } from '@/components/MapTopBar';
 import { CmdK } from '@/components/CmdK';
 import { BorderCameraOverlay } from '@/components/BorderCameraOverlay';
@@ -46,14 +48,14 @@ export interface LayerState {
   seismic:     boolean;
   borderTrade: boolean;
   crimeNews:    boolean;
+  disruptions:  boolean;
   samContracts: boolean;
   liveTV:       boolean;
-  swarm:        boolean;
 }
 
 const DEFAULT_LAYERS: LayerState = {
   globalHubs:    true,
-  conferences:   true,
+  conferences:   false,
   vendors:       true,
   samBusinesses: false,
   products:      true,
@@ -70,9 +72,9 @@ const DEFAULT_LAYERS: LayerState = {
   seismic:     false,
   borderTrade: false,
   crimeNews:    false,
+  disruptions:  false,
   samContracts: false,
   liveTV:       false,
-  swarm:        false,
 };
 
 // CSS filter class + overlay per visual mode
@@ -130,6 +132,7 @@ export default function MapPage() {
   const [mobileRightOpen, setMobileRightOpen] = useState(false);
   const [selectedPoint, setSelectedPoint] = useState<SelectedPoint | null>(null);
   const [selectedConference, setSelectedConference] = useState<ConferenceRecord | null>(null);
+  const [selectedCluster, setSelectedCluster] = useState<ConferenceCluster | null>(null);
   const [missionBriefing, setMissionBriefing] = useState<Record<string, unknown> | null>(null);
   const [briefingLoading, setBriefingLoading] = useState(false);
   const [pointCount, setPointCount] = useState(0);
@@ -148,12 +151,55 @@ export default function MapPage() {
     { longitude: number; latitude: number; zoom: number } | undefined
   >(undefined);
   const [dataFreshness, setDataFreshness] = useState<Record<string, number>>({});
+  // Per-source error flags — set true when a fetch fails, cleared on next success
+  const [fetchErrors, setFetchErrors] = useState<Record<string, boolean>>({});
   const [, setIntelSignals] = useState<SignalFinding[]>([]);
   const [sectorScores, setSectorScores] = useState<SectorScore[]>([]);
   const [activeVendorIds, setActiveVendorIds] = useState<string[]>([]);
 
+  // ── Disruption points (static, from innovation data) ──────────────────
+  const DISRUPTION_COORDS: Record<string, [number, number]> = {
+    'mit': [42.3601, -71.0942], 'stanford': [37.4275, -122.1697], 'berkeley': [37.8716, -122.2727],
+    'darpa': [38.8816, -77.1064], 'dhs': [38.8951, -77.0364], 'congress': [38.8899, -77.0091],
+    'openai': [37.7749, -122.4194], 'anthropic': [37.7849, -122.4094], 'meta': [37.4848, -122.1484],
+    'google': [37.4220, -122.0841], 'microsoft': [47.6401, -122.1268], 'aws': [47.6062, -122.3321],
+    'palantir': [39.7392, -104.9903], 'anduril': [33.6634, -117.9034],
+    'fort bliss': [31.8100, -106.4150], 'cbp': [31.7508, -106.4850], 'utep': [31.7710, -106.5060],
+    'el paso': [31.7587, -106.4869], 'lockheed': [38.9072, -77.0369], 'raytheon': [38.8816, -77.1064],
+    'l3harris': [28.2417, -80.7322], 'boeing': [38.8048, -77.0469], 'northrop': [38.9531, -77.1488],
+    'crowdstrike': [37.3861, -122.0839], 'palo alto': [37.3861, -122.0839],
+    'default': [37.0902, -95.7129],
+  };
+
+  const disruptionPoints = useMemo<DisruptionMapPoint[]>(() => {
+    return ALL_DISRUPTIONS.map((d) => {
+      const lower = (d.companies[0] ?? d.title).toLowerCase();
+      let coords = DISRUPTION_COORDS['default'];
+      for (const [key, c] of Object.entries(DISRUPTION_COORDS)) {
+        if (key !== 'default' && lower.includes(key)) { coords = c; break; }
+      }
+      // Jitter slightly to avoid exact overlap
+      const jitter = () => (Math.random() - 0.5) * 0.08;
+      return {
+        id: d.id,
+        title: d.title,
+        lat: coords[0] + jitter(),
+        lon: coords[1] + jitter(),
+        category: d.category,
+        impact: d.impact,
+        date: d.date,
+        companies: d.companies,
+      };
+    });
+  }, []);
+
   const markFresh = useCallback((key: string) => {
     setDataFreshness((prev) => ({ ...prev, [key]: Date.now() }));
+    setFetchErrors((prev) => ({ ...prev, [key]: false }));
+  }, []);
+
+  const markError = useCallback((key: string) => {
+    setFetchErrors((prev) => ({ ...prev, [key]: true }));
   }, []);
 
   // — URL state: read on mount —
@@ -214,12 +260,12 @@ export default function MapPage() {
       fetch('/api/live/flights')
         .then((r) => r.json())
         .then((data: FlightApiResponse) => { if (data.aircraft) { setFlights(data.aircraft); markFresh('flights'); } })
-        .catch(() => {});
+        .catch((err: unknown) => { console.error('[flights]', err); markError('flights'); });
     };
     fetchFlights();
     const id = setInterval(fetchFlights, 30_000);
     return () => clearInterval(id);
-  }, [layers.flights, layers.military]);
+  }, [layers.flights, layers.military, markFresh, markError]);
 
   // — Seismic: fetch once when layer toggled on —
   useEffect(() => {
@@ -227,8 +273,8 @@ export default function MapPage() {
     fetch('/api/live/seismic')
       .then((r) => r.json())
       .then((data: SeismicApiResponse) => { if (data.events) { setSeismicEvents(data.events); markFresh('seismic'); } })
-      .catch(() => {});
-  }, [layers.seismic]);
+      .catch((err: unknown) => { console.error('[seismic]', err); markError('seismic'); });
+  }, [layers.seismic, markFresh, markError]);
 
   // — Border Trade + Wait Times: fetch both when layer toggled on —
   useEffect(() => {
@@ -240,12 +286,12 @@ export default function MapPage() {
     fetch('/api/live/border-trade')
       .then((r) => r.json())
       .then((data: BorderTradeApiResponse) => { if (data.crossings) { setBorderCrossings(data.crossings); markFresh('borderTrade'); } })
-      .catch(() => {});
+      .catch((err: unknown) => { console.error('[border-trade]', err); markError('borderTrade'); });
     fetch('/api/live/border-wait')
       .then((r) => r.json())
-      .then((data: BorderWaitApiResponse) => { if (data.ports) setBorderWaitTimes(data.ports); })
-      .catch(() => {});
-  }, [layers.borderTrade]);
+      .then((data: BorderWaitApiResponse) => { if (data.ports) { setBorderWaitTimes(data.ports); markFresh('borderWait'); } })
+      .catch((err: unknown) => { console.error('[border-wait]', err); markError('borderWait'); });
+  }, [layers.borderTrade, markFresh, markError]);
 
   // — Crime news: fetch feed, filter Crime articles, compute hotspot activity —
   useEffect(() => {
@@ -267,8 +313,8 @@ export default function MapPage() {
         setCrimeHotspots(hotspots);
         markFresh('crimeNews');
       })
-      .catch(() => {});
-  }, [layers.crimeNews, markFresh]);
+      .catch((err: unknown) => { console.error('[crime-news]', err); markError('crimeNews'); });
+  }, [layers.crimeNews, markFresh, markError]);
 
   // — SAM Contracts: fetch when samContracts layer toggled on —
   useEffect(() => {
@@ -314,8 +360,8 @@ export default function MapPage() {
         setContracts(pts);
         markFresh('samContracts');
       })
-      .catch(() => {});
-  }, [layers.samContracts, markFresh]);
+      .catch((err: unknown) => { console.error('[sam-contracts]', err); markError('samContracts'); });
+  }, [layers.samContracts, markFresh, markError]);
 
   // — SAM Businesses: fetch + cross-ref contracts, auto-refresh every 10 min —
   useEffect(() => {
@@ -401,13 +447,13 @@ export default function MapPage() {
           setSamBusinesses(pts);
           markFresh('samBusinesses');
         })
-        .catch(() => {});
+        .catch((err: unknown) => { console.error('[sam-businesses]', err); markError('samBusinesses'); });
     };
 
     fetchSamBiz();
     const id = setInterval(fetchSamBiz, 600_000); // 10-min auto-refresh
     return () => clearInterval(id);
-  }, [layers.samBusinesses, markFresh]);
+  }, [layers.samBusinesses, markFresh, markError]);
 
   const handleViewStateChange = useCallback((vs: { longitude: number; latitude: number; zoom: number }) => {
     const params = new URLSearchParams(window.location.search);
@@ -525,6 +571,15 @@ export default function MapPage() {
 
   const { mapClass, overlayClass } = FILTER_CONFIG[filterMode];
 
+  // Derive data status for the freshness indicator
+  // Critical sources: flights, borderTrade — amber if any non-critical source fails
+  const criticalKeys = ['flights', 'borderTrade', 'borderWait'];
+  const criticalFailed = criticalKeys.some((k) => fetchErrors[k]);
+  const anyFailed = Object.values(fetchErrors).some(Boolean);
+  const dataStatusColor = criticalFailed ? '#ff3b30' : anyFailed ? '#ffb800' : '#00ff88';
+  const dataStatusLabel = criticalFailed ? 'DATA: ERR' : anyFailed ? 'DATA: PARTIAL' : 'DATA: OK';
+  const hasAnyFreshness = Object.keys(dataFreshness).length > 0;
+
   return (
     <div className="fixed inset-0 bg-black flex flex-col overflow-hidden">
       {/* TOP BAR */}
@@ -576,6 +631,7 @@ export default function MapPage() {
             timeRange={timeRange}
             onVendorSelect={(point) => { handleVendorSelect(point); setMobileRightOpen(true); }}
             onConferenceSelect={(conf) => { setSelectedConference(conf); setMobileRightOpen(true); }}
+            onClusterSelect={(cluster) => { setSelectedCluster(cluster); setMobileRightOpen(true); }}
             onPointCountChange={setPointCount}
             flyTo={flyTo}
             initialViewState={initialViewState}
@@ -586,6 +642,7 @@ export default function MapPage() {
             borderCrossings={borderCrossings}
             borderWaitTimes={borderWaitTimes}
             crimeHotspots={crimeHotspots}
+            disruptionPoints={disruptionPoints}
             contracts={contracts}
             samBusinesses={samBusinesses}
           />
@@ -604,8 +661,60 @@ export default function MapPage() {
           {/* Crime news overlay */}
           {layers.crimeNews && <CrimeNewsOverlay articles={crimeArticles} />}
 
+          {/* Disruptions overlay */}
+          {layers.disruptions && disruptionPoints.length > 0 && (
+            <div className="absolute top-12 left-1 z-20 w-[280px] max-h-[400px] bg-black/92 border border-white/[0.08] backdrop-blur-md rounded-sm overflow-hidden flex flex-col">
+              <div className="px-3 py-2 border-b border-white/[0.06] flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#a855f7]" style={{ boxShadow: '0 0 6px #a855f7cc' }} />
+                  <span className="font-mono text-[8px] tracking-[0.2em] text-[#a855f7]">DISRUPTIONS</span>
+                </div>
+                <span className="font-mono text-[7px] tabular-nums text-white/20">{disruptionPoints.length}</span>
+              </div>
+              <div className="overflow-y-auto scrollbar-thin flex-1">
+                {ALL_DISRUPTIONS.map((d) => {
+                  const catColors: Record<string, string> = { breakthrough: '#a855f7', funding: '#f97316', policy: '#ffb800', acquisition: '#00d4ff', deployment: '#00ff88' };
+                  const impColors: Record<string, string> = { high: '#ff3b30', medium: '#f97316', low: '#6b7280' };
+                  const cc = catColors[d.category] ?? '#a855f7';
+                  const ic = impColors[d.impact] ?? '#6b7280';
+                  return (
+                    <div key={d.id} className="px-3 py-1.5 border-b border-white/[0.03] last:border-0">
+                      <div className="flex items-start gap-1.5">
+                        <span className="w-1 h-1 rounded-full mt-1 shrink-0" style={{ backgroundColor: ic, boxShadow: `0 0 4px ${ic}88` }} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[7px] text-white/45 leading-snug line-clamp-1">{d.title}</div>
+                          <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                            <span className="text-[5px] tracking-[0.12em] uppercase px-1 py-0.5 rounded-sm border" style={{ color: cc, borderColor: `${cc}30`, backgroundColor: `${cc}08` }}>{d.category}</span>
+                            <span className="text-[5px] tracking-[0.12em] uppercase px-1 py-0.5 rounded-sm border" style={{ color: ic, borderColor: `${ic}30`, backgroundColor: `${ic}08` }}>{d.impact}</span>
+                            <span className="text-[5px] text-white/15 tabular-nums">{d.date.slice(0, 10)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Live TV overlay */}
           {layers.liveTV && <LiveTVOverlay />}
+
+          {/* Data freshness indicator — bottom-right corner, non-intrusive */}
+          {hasAnyFreshness && (
+            <div className="absolute bottom-2 right-2 z-20 flex items-center gap-1.5 px-2 py-1 bg-black/80 border border-white/8 rounded-sm backdrop-blur-sm pointer-events-none">
+              <span
+                className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
+                style={{ backgroundColor: dataStatusColor, boxShadow: `0 0 4px ${dataStatusColor}` }}
+              />
+              <span
+                className="font-mono tracking-widest"
+                style={{ fontSize: '7px', color: dataStatusColor }}
+              >
+                {dataStatusLabel}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* RIGHT — INTELLIGENCE PANEL: normal column on md+, slide-out drawer on mobile */}
@@ -615,14 +724,16 @@ export default function MapPage() {
           transition-transform duration-200
           ${mobileRightOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
         `}>
-          <MapRightPanel
+          <RightPanel
             selectedPoint={selectedPoint}
-            missionBriefing={missionBriefing as Parameters<typeof MapRightPanel>[0]['missionBriefing']}
+            missionBriefing={missionBriefing as Parameters<typeof RightPanel>[0]['missionBriefing']}
             briefingLoading={briefingLoading}
             sectorScores={sectorScores}
             flights={flights}
             selectedConference={selectedConference}
             onConferenceSelect={setSelectedConference}
+            selectedCluster={selectedCluster}
+            onClusterSelect={setSelectedCluster}
             onMobileClose={() => setMobileRightOpen(false)}
           />
         </div>
@@ -642,6 +753,7 @@ export default function MapPage() {
 
       {/* ⌘K VENDOR SEARCH MODAL */}
       <CmdK
+        context="map"
         open={cmdkOpen}
         onClose={() => setCmdkOpen(false)}
         timeRange={timeRange}

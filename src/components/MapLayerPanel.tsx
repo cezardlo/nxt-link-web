@@ -22,7 +22,7 @@ const GROUPS: Group[] = [
     accent: '#00d4ff',
     layers: [
       { key: 'globalHubs',  label: 'TECH HUBS',   color: '#00d4ff' },
-      { key: 'conferences', label: 'CONFERENCES', color: '#a855f7' },
+      { key: 'conferences', label: 'CONFERENCES', color: '#ffb800' },
     ],
   },
   {
@@ -30,7 +30,7 @@ const GROUPS: Group[] = [
     accent: '#00ff88',
     layers: [
       { key: 'flights',      label: 'FLIGHTS',     color: '#ffb800' },
-      { key: 'military',     label: 'MILITARY',    color: '#ff6400' },
+      { key: 'military',     label: 'MILITARY',    color: '#f97316' },
       { key: 'seismic',      label: 'SEISMIC',     color: '#ff3b30' },
       { key: 'borderTrade',  label: 'BORDER',      color: '#00d4ff' },
       { key: 'crimeNews',    label: 'CRIME NEWS',  color: '#f97316' },
@@ -44,7 +44,7 @@ const GROUPS: Group[] = [
     layers: [
       { key: 'vendors',       label: 'VENDORS',      color: '#00d4ff' },
       { key: 'products',      label: 'PRODUCTS',     color: '#00a8cc' },
-      { key: 'samBusinesses', label: 'SAM ENTITIES', color: '#64b5f6' },
+      { key: 'samBusinesses', label: 'SAM ENTITIES', color: '#00d4ff' },
     ],
   },
   {
@@ -60,10 +60,10 @@ const GROUPS: Group[] = [
     accent: '#ffb800',
     layers: [
       { key: 'funding', label: 'FUNDING',     color: '#ffb800' },
-      { key: 'patents', label: 'PATENTS',     color: '#a855f7' },
-      { key: 'hiring',  label: 'HIRING',      color: '#ff6400' },
-      { key: 'news',    label: 'NEWS',        color: '#60a5fa' },
-      { key: 'swarm',   label: 'AGENT SWARM', color: '#00ff88' },
+      { key: 'patents', label: 'PATENTS',     color: '#ffb800' },
+      { key: 'hiring',      label: 'HIRING',      color: '#f97316' },
+      { key: 'news',        label: 'NEWS',        color: '#00d4ff' },
+      { key: 'disruptions', label: 'DISRUPTIONS', color: '#a855f7' },
     ],
   },
   {
@@ -111,7 +111,7 @@ export function MapLayerPanel({ layers, onToggleLayer, dataFreshness }: Props) {
   const totalActive = GROUPS.reduce((sum, g) => sum + g.layers.filter((l) => layers[l.key]).length, 0);
 
   return (
-    <div className="flex flex-col w-40 shrink-0 bg-black/95 border-r border-white/[0.05] overflow-y-auto scrollbar-thin h-full pt-11 md:pt-0 backdrop-blur-md md:backdrop-blur-none">
+    <div className="flex flex-col w-40 shrink-0 bg-black/92 border-r border-white/[0.05] overflow-y-auto scrollbar-thin h-full pt-11 md:pt-0 backdrop-blur-md md:backdrop-blur-none">
 
       {/* Mobile drag handle */}
       <div className="md:hidden shrink-0 flex justify-center pt-2 pb-1">
@@ -149,7 +149,7 @@ export function MapLayerPanel({ layers, onToggleLayer, dataFreshness }: Props) {
                   style={{
                     backgroundColor: isGroupActive ? '#00ff88' : 'transparent',
                     border: isGroupActive ? 'none' : '1px solid rgba(255,255,255,0.15)',
-                    boxShadow: isGroupActive ? '0 0 4px #00ff88cc' : 'none',
+                    boxShadow: isGroupActive ? '0 0 6px #00ff88cc' : 'none',
                   }}
                 />
               )}

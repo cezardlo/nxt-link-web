@@ -601,6 +601,45 @@ export function getTechByMaturity(maturity: TechMaturity): Technology[] {
   return TECHNOLOGY_CATALOG.filter((t) => t.maturityLevel === maturity);
 }
 
+// ── Industry slug ↔ category mapping ──────────────────────────────────────────
+
+export type IndustrySlug =
+  | 'ai-ml'
+  | 'cybersecurity'
+  | 'defense'
+  | 'border-tech'
+  | 'manufacturing'
+  | 'energy'
+  | 'healthcare'
+  | 'logistics';
+
+export type IndustryMeta = {
+  slug: IndustrySlug;
+  label: string;
+  category: TechCategory;
+  color: string;
+  description: string;
+};
+
+export const INDUSTRIES: IndustryMeta[] = [
+  { slug: 'ai-ml',          label: 'AI / ML',          category: 'AI/ML',          color: '#60a5fa', description: 'Artificial intelligence, machine learning, generative AI, and edge inference systems.' },
+  { slug: 'cybersecurity',  label: 'Cybersecurity',    category: 'Cybersecurity',  color: '#00d4ff', description: 'Zero trust, endpoint detection, threat intelligence, and OT/ICS security.' },
+  { slug: 'defense',        label: 'Defense',          category: 'Defense',        color: '#ff6400', description: 'ISR, electronic warfare, autonomous systems, C4ISR, hypersonics, and directed energy.' },
+  { slug: 'border-tech',    label: 'Border Tech',      category: 'Border Tech',    color: '#f97316', description: 'Biometrics, RFID tracking, cargo scanning, surveillance, and trade compliance.' },
+  { slug: 'manufacturing',  label: 'Manufacturing',    category: 'Manufacturing',  color: '#00d4ff', description: 'Industry 4.0, additive manufacturing, digital twins, predictive maintenance, cobots.' },
+  { slug: 'energy',         label: 'Energy',           category: 'Energy',         color: '#ffd700', description: 'Smart grid, utility solar, battery storage, microgrids, and AI grid operations.' },
+  { slug: 'healthcare',     label: 'Healthcare',       category: 'Healthcare',     color: '#00ff88', description: 'Telemedicine, EHR systems, medical imaging AI, remote patient monitoring.' },
+  { slug: 'logistics',      label: 'Logistics',        category: 'Logistics',      color: '#ffb800', description: 'Route optimization, warehouse automation, fleet management, supply chain visibility.' },
+];
+
+export function getIndustryBySlug(slug: string): IndustryMeta | undefined {
+  return INDUSTRIES.find((i) => i.slug === slug);
+}
+
+export function getIndustryByCategory(category: TechCategory): IndustryMeta | undefined {
+  return INDUSTRIES.find((i) => i.category === category);
+}
+
 // Summary stats for the catalog
 export const CATALOG_SUMMARY = {
   total: TECHNOLOGY_CATALOG.length,

@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: false,
   async redirects() {
     return [
       // Legacy route alias — /command was the original command monitor URL

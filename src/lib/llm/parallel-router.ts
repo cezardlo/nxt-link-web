@@ -1,6 +1,6 @@
 import { fetchWithRetry } from '@/lib/http/fetch-with-retry';
 
-export type LlmProviderName = 'gemini' | 'openrouter' | 'groq' | 'ollama' | 'openai' | 'together';
+export type LlmProviderName = 'gemini' | 'openrouter' | 'groq' | 'ollama' | 'openai' | 'together' | 'anthropic';
 
 export type ChatMessage = {
   role: 'system' | 'user' | 'assistant';
@@ -51,8 +51,8 @@ type ParsedCandidate<T> = {
   raw: string;
 };
 
-const providerPriority: LlmProviderName[] = ['gemini', 'openrouter', 'groq', 'ollama', 'together', 'openai'];
-const lowCostProviderPriority: LlmProviderName[] = ['gemini', 'ollama', 'openrouter', 'groq', 'together', 'openai'];
+const providerPriority: LlmProviderName[] = ['anthropic', 'gemini', 'openrouter', 'groq', 'ollama', 'together', 'openai'];
+const lowCostProviderPriority: LlmProviderName[] = ['gemini', 'ollama', 'openrouter', 'groq', 'together', 'openai', 'anthropic'];
 
 type UsageCounter = {
   day: string;
@@ -93,6 +93,15 @@ function parseGeminiContent(payload: unknown): string | null {
   return typeof text === 'string' && text.trim() ? text : null;
 }
 
+function parseAnthropicContent(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const value = payload as {
+    content?: Array<{ type?: string; text?: string }>;
+  };
+  const textBlock = value.content?.find((b) => b.type === 'text');
+  return typeof textBlock?.text === 'string' && textBlock.text.trim() ? textBlock.text : null;
+}
+
 function ensureJsonModeMessage(messages: ChatMessage[]): ChatMessage[] {
   return [
     ...messages,
@@ -107,7 +116,7 @@ function parseProviderLock(
   value: string | undefined,
 ): LlmProviderName[] {
   if (!value) return [];
-  const supported: LlmProviderName[] = ['gemini', 'openrouter', 'groq', 'ollama', 'together', 'openai'];
+  const supported: LlmProviderName[] = ['gemini', 'openrouter', 'groq', 'ollama', 'together', 'openai', 'anthropic'];
   const allowed = new Set(supported);
   return value
     .split(',')
@@ -168,6 +177,15 @@ export function getConfiguredProviders(env: NodeJS.ProcessEnv = process.env): Pr
       model: env.TOGETHER_MODEL || 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo',
       endpoint: 'https://api.together.xyz/v1/chat/completions',
       apiKey: env.TOGETHER_API_KEY,
+    });
+  }
+
+  if (env.ANTHROPIC_API_KEY) {
+    providers.push({
+      provider: 'anthropic',
+      model: env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',
+      endpoint: 'https://api.anthropic.com/v1/messages',
+      apiKey: env.ANTHROPIC_API_KEY,
     });
   }
 
@@ -389,6 +407,11 @@ async function callProvider(
   if (config.apiKey && config.provider !== 'gemini') {
     headers.Authorization = `Bearer ${config.apiKey}`;
   }
+  if (config.provider === 'anthropic') {
+    headers['x-api-key'] = config.apiKey || '';
+    headers['anthropic-version'] = '2023-06-01';
+    delete headers.Authorization;
+  }
   if (config.provider === 'openrouter') {
     headers['HTTP-Referer'] = process.env.NEXT_PUBLIC_APP_URL || 'https://nxtlinktech.com';
     headers['X-Title'] = 'NXT LINK Command Monitor';
@@ -399,7 +422,9 @@ async function callProvider(
       ? `${config.endpoint}/${encodeURIComponent(config.model)}:generateContent?key=${encodeURIComponent(
           config.apiKey || '',
         )}`
-      : config.endpoint;
+      : config.provider === 'anthropic'
+        ? config.endpoint
+        : config.endpoint;
 
   const body =
     config.provider === 'ollama'
@@ -435,12 +460,21 @@ async function callProvider(
               responseMimeType: 'application/json',
             },
           }
-        : {
-            model: config.model,
-            temperature,
-            response_format: { type: 'json_object' },
-            messages: jsonModeMessages,
-          };
+        : config.provider === 'anthropic'
+          ? {
+              model: config.model,
+              max_tokens: 2048,
+              messages: jsonModeMessages
+                .filter((message) => message.role !== 'system')
+                .map((message) => ({ role: message.role === 'assistant' ? 'assistant' : 'user', content: message.content })),
+              system: messages.find((message) => message.role === 'system')?.content || '',
+            }
+          : {
+              model: config.model,
+              temperature,
+              response_format: { type: 'json_object' },
+              messages: jsonModeMessages,
+            };
 
   const response = await fetchWithRetry(
     requestTarget,
@@ -473,7 +507,9 @@ async function callProvider(
       ? parseOllamaContent(payload)
       : config.provider === 'gemini'
         ? parseGeminiContent(payload)
-        : parseOpenAiStyleContent(payload);
+        : config.provider === 'anthropic'
+          ? parseAnthropicContent(payload)
+          : parseOpenAiStyleContent(payload);
 
   if (!content) {
     throw new Error(`Provider ${config.provider} returned empty content.`);
@@ -505,7 +541,7 @@ export async function runParallelJsonEnsemble<T>(input: {
   const configuredProviders = getConfiguredProviders();
   if (configuredProviders.length === 0) {
     throw new Error(
-      'No AI provider configured. Set at least one: GEMINI_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, OLLAMA_BASE_URL/OLLAMA_MODEL, TOGETHER_API_KEY, OPENAI_API_KEY.',
+      'No AI provider configured. Set at least one: ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, OLLAMA_BASE_URL/OLLAMA_MODEL, TOGETHER_API_KEY, OPENAI_API_KEY.',
     );
   }
 

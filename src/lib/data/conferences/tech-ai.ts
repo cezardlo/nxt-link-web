@@ -220,20 +220,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ta-acl',
-    name: 'ACL (Association for Computational Linguistics)',
-    category: 'AI/ML',
-    location: 'Bangkok, Thailand',
-    month: 'August',
-    description: 'Premier NLP and computational linguistics research conference. Covers large language model evaluation, multilingual AI, machine translation, and conversational AI. Research published here underlies the LLM foundation models now being evaluated for government information extraction tasks.',
-    estimatedExhibitors: 100,
-    relevanceScore: 55,
-    website: 'https://www.aclweb.org/portal/acl',
-    lat: 13.7563,
-    lon: 100.5018,
-  },
-
-  {
     id: 'conf-ta-ai-texas',
     name: 'AI Texas',
     category: 'AI/ML',
@@ -273,20 +259,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.predictiveanalyticsworld.com/gov',
     lat: 38.8951,
     lon: -77.0364,
-  },
-
-  {
-    id: 'conf-ta-applied-ml-summit',
-    name: 'Applied Machine Learning Summit',
-    category: 'AI/ML',
-    location: 'Austin, TX',
-    month: 'March',
-    description: 'Practitioner-focused summit on production machine learning covering MLOps, model deployment at scale, and AI system reliability. Texas location attracts regional enterprise teams. Strong energy sector AI content relevant to El Paso Electric grid optimization initiatives.',
-    estimatedExhibitors: 70,
-    relevanceScore: 77,
-    website: 'https://www.appliedmlsummit.com',
-    lat: 30.2672,
-    lon: -97.7431,
   },
 
   {
@@ -388,20 +360,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ta-ai4',
-    name: 'AI4 Conference',
-    category: 'AI/ML',
-    location: 'Las Vegas, NV',
-    month: 'August',
-    description: 'Multidisciplinary AI conference focused on AI applications in defense, government, healthcare, and finance. Strong federal agency attendance including DoD and DHS representatives. Covers AI-enabled border security and predictive law enforcement — directly relevant to El Paso CBP operations.',
-    estimatedExhibitors: 180,
-    relevanceScore: 83,
-    website: 'https://ai4.io',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
-  {
     id: 'conf-ta-interspeech',
     name: 'INTERSPEECH',
     category: 'AI/ML',
@@ -427,34 +385,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://mlconf.com',
     lat: 37.7749,
     lon: -122.4194,
-  },
-
-  {
-    id: 'conf-ta-accenture-federal-ai',
-    name: 'Federal AI Forum',
-    category: 'AI/ML',
-    location: 'Washington, DC',
-    month: 'May',
-    description: 'Government-focused AI adoption forum covering DoD AI strategy, FedRAMP AI authorization, and agency use case showcases. 1,200+ federal technology leaders and contractors attend. Key briefings on Army AI adoption roadmap directly relevant to Fort Bliss acquisition.',
-    estimatedExhibitors: 90,
-    relevanceScore: 86,
-    website: 'https://federalaiconference.com',
-    lat: 38.8951,
-    lon: -77.0364,
-  },
-
-  {
-    id: 'conf-ta-sxsw-ai',
-    name: 'SXSW AI Track',
-    category: 'AI/ML',
-    location: 'Austin, TX',
-    month: 'March',
-    description: 'South by Southwest\'s dedicated AI programming within the broader SXSW festival, covering AI creativity, enterprise transformation, and policy debates. 80,000+ overall attendees with concentrated AI sessions. Texas proximity makes this key for identifying El Paso-region AI talent and startup activity.',
-    estimatedExhibitors: 400,
-    relevanceScore: 78,
-    website: 'https://www.sxsw.com/conference/artificial-intelligence',
-    lat: 30.2672,
-    lon: -97.7431,
   },
 
   {
@@ -497,20 +427,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.salesforce.com/dreamforce',
     lat: 37.7749,
     lon: -122.4194,
-  },
-
-  {
-    id: 'conf-ta-oreilly-superstream-ai',
-    name: 'O\'Reilly AI SuperStream',
-    category: 'AI/ML',
-    location: 'Online',
-    month: 'April',
-    description: 'Focused virtual event on AI engineering practices covering prompt engineering, RAG pipelines, AI agent architectures, and evaluation frameworks. 5,000+ registrants. Virtual format increases accessibility for El Paso-region technologists seeking AI upskilling.',
-    estimatedExhibitors: 20,
-    relevanceScore: 55,
-    website: 'https://www.oreilly.com/online-learning/conferences.html',
-    lat: 0.0,
-    lon: 0.0,
   },
 
   {
@@ -600,20 +516,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ta-defcon',
-    name: 'DEF CON',
-    category: 'Cybersecurity',
-    location: 'Las Vegas, NV',
-    month: 'August',
-    description: 'The world\'s largest underground hacker conference with 30,000+ attendees. Runs concurrent with Black Hat and features CTF competitions, village tracks (ICS, aviation, bio), and government hacking disclosures. DoD participates via DC3 and Hack the Pentagon programs.',
-    estimatedExhibitors: 100,
-    relevanceScore: 82,
-    website: 'https://defcon.org',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
-  {
     id: 'conf-ta-gartner-security',
     name: 'Gartner Security & Risk Management Summit',
     category: 'Cybersecurity',
@@ -625,20 +527,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.gartner.com/en/conferences/na/security-risk-management-us',
     lat: 38.7849,
     lon: -77.0155,
-  },
-
-  {
-    id: 'conf-ta-sans-cyber-summit',
-    name: 'SANS Cyber Defense Summit',
-    category: 'Cybersecurity',
-    location: 'Nashville, TN',
-    month: 'October',
-    description: 'SANS Institute\'s practitioner-focused defense summit covering threat hunting, SOC operations, and incident response. Heavily attended by government and military cybersecurity operators. SANS training is used by Army Cyber Command and is a core certification path for Fort Bliss IT personnel.',
-    estimatedExhibitors: 80,
-    relevanceScore: 86,
-    website: 'https://www.sans.org/cyber-defense-summit',
-    lat: 36.1627,
-    lon: -86.7816,
   },
 
   {
@@ -667,20 +555,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://cyberweek.tau.ac.il',
     lat: 32.0853,
     lon: 34.7818,
-  },
-
-  {
-    id: 'conf-ta-zero-trust-summit',
-    name: 'Zero Trust Summit',
-    category: 'Cybersecurity',
-    location: 'Washington, DC',
-    month: 'April',
-    description: 'Government-focused zero-trust architecture implementation conference following DoD Zero Trust Strategy mandates. Federal agency CISOs and cybersecurity contractors attend. DoD requires zero-trust compliance by FY2027 — vendors exhibiting here are in the active procurement pipeline.',
-    estimatedExhibitors: 90,
-    relevanceScore: 90,
-    website: 'https://www.zerotrustconference.com',
-    lat: 38.8951,
-    lon: -77.0364,
   },
 
   {
@@ -754,34 +628,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ta-hack-the-capitol',
-    name: 'Hack the Capitol',
-    category: 'Cybersecurity',
-    location: 'Washington, DC',
-    month: 'April',
-    description: 'Policy-focused cybersecurity event bringing security researchers together with Congressional staff and federal regulators. Covers critical infrastructure policy, election security, and national cybersecurity strategy. Outputs shape CISA and DoD cybersecurity requirements.',
-    estimatedExhibitors: 30,
-    relevanceScore: 80,
-    website: 'https://www.hackthecapitol.com',
-    lat: 38.8951,
-    lon: -77.0364,
-  },
-
-  {
-    id: 'conf-ta-security-bsides',
-    name: 'BSides El Paso',
-    category: 'Cybersecurity',
-    location: 'El Paso, TX',
-    month: 'March',
-    description: 'Community-driven cybersecurity conference serving the El Paso-Juarez border region. Local security researchers, military cybersecurity personnel, and university students present on border-relevant topics including ICS security, biometric system vulnerabilities, and OSINT. Key local talent visibility event.',
-    estimatedExhibitors: 20,
-    relevanceScore: 95,
-    website: 'https://www.bsideselpaso.org',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
     id: 'conf-ta-mitre-attack-con',
     name: 'ATT&CKcon',
     category: 'Cybersecurity',
@@ -810,20 +656,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ta-border-cyber-summit',
-    name: 'Border Cybersecurity Summit',
-    category: 'Cybersecurity',
-    location: 'El Paso, TX',
-    month: 'September',
-    description: 'Regional cybersecurity summit focused on border infrastructure protection, CBP system security, and cross-border cyber threats. Draws DHS Cybersecurity Division, CBP IT personnel, and border region enterprise security teams. Highest direct relevance to NXT//LINK El Paso intelligence mission.',
-    estimatedExhibitors: 40,
-    relevanceScore: 98,
-    website: 'https://www.bordercybersummit.com',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
     id: 'conf-ta-cloudsec',
     name: 'Cloud Security Summit (CSA)',
     category: 'Cybersecurity',
@@ -835,20 +667,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://cloudsecurityalliance.org/events',
     lat: 37.7749,
     lon: -122.4194,
-  },
-
-  {
-    id: 'conf-ta-cisa-cybersummit',
-    name: 'CISA Cybersecurity Summit',
-    category: 'Cybersecurity',
-    location: 'Washington, DC',
-    month: 'September',
-    description: 'Cybersecurity and Infrastructure Security Agency\'s flagship summit covering critical infrastructure protection, federal cyber hygiene, and sector-specific threat sharing. Draws 3,000+ federal and sector security professionals. CISA is the lead civilian cyber agency — summit outputs become compliance requirements.',
-    estimatedExhibitors: 150,
-    relevanceScore: 92,
-    website: 'https://www.cisa.gov/events',
-    lat: 38.8951,
-    lon: -77.0364,
   },
 
   {
@@ -880,20 +698,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ta-iot-security-summit',
-    name: 'IoT Security Summit',
-    category: 'Cybersecurity',
-    location: 'San Jose, CA',
-    month: 'March',
-    description: 'Focused conference on securing IoT device ecosystems covering embedded system security, firmware analysis, protocol vulnerabilities, and IoT platform hardening. Relevant for Fort Bliss smart base infrastructure security and border sensor network protection.',
-    estimatedExhibitors: 55,
-    relevanceScore: 79,
-    website: 'https://iotsecuritysummit.com',
-    lat: 37.3382,
-    lon: -121.8863,
-  },
-
-  {
     id: 'conf-ta-cyberwarcon',
     name: 'CyberWarCon',
     category: 'Cybersecurity',
@@ -922,20 +726,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ta-legaltech-cyber',
-    name: 'Legaltech + Cybersecurity Summit',
-    category: 'Cybersecurity',
-    location: 'New York, NY',
-    month: 'January',
-    description: 'Intersection of legal compliance, data privacy law, and enterprise cybersecurity. Covers CCPA, GDPR, DoD CMMC legal requirements, and breach notification law. Relevant for El Paso law firms supporting defense contractors and cross-border commercial entities requiring CMMC compliance.',
-    estimatedExhibitors: 60,
-    relevanceScore: 62,
-    website: 'https://www.legaltechshow.com',
-    lat: 40.7128,
-    lon: -74.006,
-  },
-
-  {
     id: 'conf-ta-nist-cyber',
     name: 'NIST Cybersecurity Framework Conference',
     category: 'Cybersecurity',
@@ -950,20 +740,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ta-owasp-global',
-    name: 'OWASP Global AppSec',
-    category: 'Cybersecurity',
-    location: 'San Francisco, CA',
-    month: 'September',
-    description: 'OWASP Foundation\'s global application security conference covering secure software development, DevSecOps, API security, and the OWASP Top 10. 3,000+ software developers and security engineers attend. DevSecOps practices adopted here become requirements in Army software acquisition.',
-    estimatedExhibitors: 80,
-    relevanceScore: 76,
-    website: 'https://owasp.org/www-conference-appsec',
-    lat: 37.7749,
-    lon: -122.4194,
-  },
-
-  {
     id: 'conf-ta-cyberscoop-federal-forum',
     name: 'FedScoop Federal IT Summit',
     category: 'Cybersecurity',
@@ -975,34 +751,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://fedscoop.com/events',
     lat: 38.8951,
     lon: -77.0364,
-  },
-
-  {
-    id: 'conf-ta-isaca-csx',
-    name: 'ISACA CSX Cybersecurity Conference',
-    category: 'Cybersecurity',
-    location: 'Las Vegas, NV',
-    month: 'October',
-    description: 'ISACA\'s cybersecurity conference focused on CISA and CISM certification tracks, audit and risk governance, and enterprise security program management. Strong government and defense contractor workforce development content. 2,500+ security governance professionals attend.',
-    estimatedExhibitors: 100,
-    relevanceScore: 74,
-    website: 'https://www.isaca.org/conferences/csx-north-america',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
-  {
-    id: 'conf-ta-msp-summit',
-    name: 'MSP Summit',
-    category: 'Cybersecurity',
-    location: 'Orlando, FL',
-    month: 'July',
-    description: 'Managed security service provider conference covering MDR, SIEM-as-a-service, and SMB cybersecurity delivery models. El Paso regional MSSPs serve defense contractors, border logistics firms, and healthcare systems — this event shapes their tool and vendor choices.',
-    estimatedExhibitors: 80,
-    relevanceScore: 70,
-    website: 'https://www.mspsummit.com',
-    lat: 28.5383,
-    lon: -81.3792,
   },
 
   {
@@ -1106,20 +854,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ta-autonomous-systems-summit',
-    name: 'Autonomous Systems Summit',
-    category: 'Robotics',
-    location: 'Washington, DC',
-    month: 'March',
-    description: 'Defense and government focused autonomous systems conference covering UGVs, UAS, autonomous maritime systems, and AI-enabled autonomy levels. DoD program managers and prime defense contractors attend. Directly relevant to Army autonomous logistics and Fort Bliss depot automation programs.',
-    estimatedExhibitors: 80,
-    relevanceScore: 88,
-    website: 'https://www.autonomoussystemssummit.com',
-    lat: 38.8951,
-    lon: -77.0364,
-  },
-
-  {
     id: 'conf-ta-promat',
     name: 'ProMat (Material Handling Industry)',
     category: 'Robotics',
@@ -1162,20 +896,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ta-cobots-summit',
-    name: 'Collaborative Robots Summit',
-    category: 'Robotics',
-    location: 'Austin, TX',
-    month: 'June',
-    description: 'Focused summit on collaborative robot deployment covering force-limited safety, human-robot workspace sharing, and cobot ROI case studies. Texas location draws maquiladora managers and El Paso manufacturing firms exploring light-assembly automation.',
-    estimatedExhibitors: 60,
-    relevanceScore: 77,
-    website: 'https://www.cobotssummit.com',
-    lat: 30.2672,
-    lon: -97.7431,
-  },
-
-  {
     id: 'conf-ta-humanoids-summit',
     name: 'Humanoids Summit',
     category: 'Robotics',
@@ -1201,20 +921,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.worldrobotconference.com',
     lat: 39.9042,
     lon: 116.4074,
-  },
-
-  {
-    id: 'conf-ta-dod-robotics-summit',
-    name: 'DoD Robotics & Autonomous Systems Summit',
-    category: 'Robotics',
-    location: 'Arlington, VA',
-    month: 'February',
-    description: 'DoD-sponsored summit covering Army RAS Strategy implementation, cross-service autonomous systems interoperability, and AI-autonomy integration. Key Fort Bliss robotics acquisition programs are briefed here. Direct intelligence value for identifying active contract opportunities.',
-    estimatedExhibitors: 60,
-    relevanceScore: 93,
-    website: 'https://www.armyuavs.com/robotics-autonomous-systems',
-    lat: 38.8799,
-    lon: -77.1068,
   },
 
   {
@@ -1259,20 +965,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.iotsworldcongress.com',
     lat: 41.3851,
     lon: 2.1734,
-  },
-
-  {
-    id: 'conf-ta-iotx',
-    name: 'IoTX Expo',
-    category: 'IoT',
-    location: 'Santa Clara, CA',
-    month: 'June',
-    description: 'North American IoT enterprise expo covering IoT connectivity standards, device management platforms, and IoT security. Co-located with AI and cloud computing events. 5,000+ IoT practitioners attend. Strong representation from IoT platform vendors serving government smart infrastructure programs.',
-    estimatedExhibitors: 200,
-    relevanceScore: 65,
-    website: 'https://www.iotxexpo.com',
-    lat: 37.3541,
-    lon: -121.9552,
   },
 
   {
@@ -1329,20 +1021,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.embedded-world.de',
     lat: 49.4521,
     lon: 11.0767,
-  },
-
-  {
-    id: 'conf-ta-ieee-iot',
-    name: 'IEEE World Forum on Internet of Things',
-    category: 'IoT',
-    location: 'Singapore',
-    month: 'November',
-    description: 'IEEE\'s premier IoT research forum covering IoT standards, protocol development (Matter, Thread, LoRaWAN), and IoT security research. 500+ IEEE researchers and industry engineers attend. IEEE IoT standards adopted in DoD smart base and tactical IoT procurement specifications.',
-    estimatedExhibitors: 60,
-    relevanceScore: 58,
-    website: 'https://wfiot.ieee.org',
-    lat: 1.3521,
-    lon: 103.8198,
   },
 
   {
@@ -1427,20 +1105,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://iotna.com',
     lat: 41.8781,
     lon: -87.6298,
-  },
-
-  {
-    id: 'conf-ta-lpwan-summit',
-    name: 'LPWAN Summit',
-    category: 'IoT',
-    location: 'San Jose, CA',
-    month: 'May',
-    description: 'Low-power wide-area network connectivity conference covering LoRaWAN, NB-IoT, LTE-M, and Sigfox for IoT sensor deployment. Covers smart utility metering, agricultural IoT, and large-area sensor networks. EPWU smart water meter deployments and border sensor infrastructure use LPWAN protocols.',
-    estimatedExhibitors: 45,
-    relevanceScore: 74,
-    website: 'https://www.lpwansummit.com',
-    lat: 37.3382,
-    lon: -121.8863,
   },
 
   // ── Cloud Computing ────────────────────────────────────────────────────────
@@ -1627,20 +1291,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
     lon: -121.8863,
   },
 
-  {
-    id: 'conf-ta-dtex-gov-cloud',
-    name: 'Government Cloud Summit',
-    category: 'Cloud Computing',
-    location: 'Washington, DC',
-    month: 'March',
-    description: 'Federal government cloud adoption summit covering JWCC delivery, CMMC cloud hosting, and agency cloud migration case studies. 2,000+ federal agency cloud program managers, CIOs, and cloud service providers attend. Excellent intelligence source for active DoD cloud contract vehicles.',
-    estimatedExhibitors: 80,
-    relevanceScore: 88,
-    website: 'https://govcloudconference.com',
-    lat: 38.8951,
-    lon: -77.0364,
-  },
-
   // ── Data Centers ───────────────────────────────────────────────────────────
 
   {
@@ -1672,20 +1322,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ta-dc-dynamics',
-    name: 'DatacenterDynamics (DCD) Enterprise',
-    category: 'Data Centers',
-    location: 'New York, NY',
-    month: 'November',
-    description: 'Enterprise data center and cloud infrastructure conference covering hyperscale design, edge data centers, and critical facilities management. 3,000+ data center managers and enterprise IT infrastructure buyers attend. DoD and intelligence community data center expansion plans are discussed here.',
-    estimatedExhibitors: 180,
-    relevanceScore: 65,
-    website: 'https://www.datacenterdynamics.com/en/events',
-    lat: 40.7128,
-    lon: -74.006,
-  },
-
-  {
     id: 'conf-ta-afcom-dc',
     name: 'AFCOM Data Center World',
     category: 'Data Centers',
@@ -1697,48 +1333,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.afcom.com/events',
     lat: 36.1699,
     lon: -115.1398,
-  },
-
-  {
-    id: 'conf-ta-green-grid-forum',
-    name: 'Green Grid Forum',
-    category: 'Data Centers',
-    location: 'San Jose, CA',
-    month: 'April',
-    description: 'Data center energy efficiency and sustainability conference covering power usage effectiveness, water usage effectiveness, and renewable energy procurement for data centers. El Paso Electric data center power contracts and sustainability commitments align with Green Grid metrics tracked here.',
-    estimatedExhibitors: 60,
-    relevanceScore: 66,
-    website: 'https://www.thegreengrid.org/en/events',
-    lat: 37.3382,
-    lon: -121.8863,
-  },
-
-  {
-    id: 'conf-ta-uptime-symposium',
-    name: 'Uptime Institute Symposium',
-    category: 'Data Centers',
-    location: 'New York, NY',
-    month: 'May',
-    description: 'Uptime Institute\'s annual data center reliability and sustainability summit covering Tier certification, data center availability statistics, and energy transition benchmarks. 1,500+ data center owners, operators, and enterprise IT infrastructure leaders attend.',
-    estimatedExhibitors: 80,
-    relevanceScore: 60,
-    website: 'https://uptimeinstitute.com/symposium',
-    lat: 40.7128,
-    lon: -74.006,
-  },
-
-  {
-    id: 'conf-ta-sc-texas',
-    name: 'Texas Data Center Summit',
-    category: 'Data Centers',
-    location: 'Dallas, TX',
-    month: 'September',
-    description: 'Texas-focused data center development conference covering land acquisition, power availability, tax incentives, and data center siting in Texas metros. El Paso\'s power grid capacity and fiber connectivity make it an emerging secondary data center market discussed at this event.',
-    estimatedExhibitors: 70,
-    relevanceScore: 82,
-    website: 'https://txdatacentersummit.com',
-    lat: 32.7767,
-    lon: -96.797,
   },
 
   {
@@ -1756,20 +1350,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ta-opencompute',
-    name: 'Open Compute Project Summit',
-    category: 'Data Centers',
-    location: 'San Jose, CA',
-    month: 'October',
-    description: 'Open Compute Project\'s annual conference on open-source data center hardware design covering custom server specs, rack architectures, and AI accelerator platforms. Hyperscaler-driven hardware decisions made here influence DoD HPC and cloud data center hardware standards within 2-3 years.',
-    estimatedExhibitors: 150,
-    relevanceScore: 62,
-    website: 'https://www.opencompute.org/summit',
-    lat: 37.3382,
-    lon: -121.8863,
-  },
-
-  {
     id: 'conf-ta-ia-data-center',
     name: 'DOD Data Center Consolidation Summit',
     category: 'Data Centers',
@@ -1781,20 +1361,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.disa.mil/newsroom',
     lat: 38.8951,
     lon: -77.0364,
-  },
-
-  {
-    id: 'conf-ta-liquid-cooling-summit',
-    name: 'Liquid Cooling Summit',
-    category: 'Data Centers',
-    location: 'Austin, TX',
-    month: 'May',
-    description: 'Specialized conference on data center liquid cooling covering direct-to-chip, immersion cooling, and rear-door heat exchangers for AI GPU clusters. Texas heat and water scarcity make liquid cooling efficiency critical for El Paso-region data centers and any Fort Bliss tactical compute deployments.',
-    estimatedExhibitors: 55,
-    relevanceScore: 74,
-    website: 'https://liquidcoolingsummit.com',
-    lat: 30.2672,
-    lon: -97.7431,
   },
 
   {
@@ -1968,48 +1534,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ta-tsia-world',
-    name: 'Fabless Semiconductor Summit',
-    category: 'Semiconductors',
-    location: 'San Jose, CA',
-    month: 'April',
-    description: 'Fabless chip company business conference covering IP licensing strategy, TSMC/Samsung capacity allocation, and chip design-to-production economics. 1,000+ fabless executives attend. Fabless model dominates defense custom ASIC programs — capacity intelligence here is acquisition-critical.',
-    estimatedExhibitors: 80,
-    relevanceScore: 62,
-    website: 'https://www.fablesssemiconductors.com',
-    lat: 37.3382,
-    lon: -121.8863,
-  },
-
-  {
-    id: 'conf-ta-mems-executive-congress',
-    name: 'MEMS & Sensors Executive Congress',
-    category: 'Semiconductors',
-    location: 'Scottsdale, AZ',
-    month: 'November',
-    description: 'MEMS and sensors industry summit covering inertial sensors, environmental sensors, and RF MEMS for IoT and defense applications. 400+ MEMS executives attend. MEMS sensors are integral to CBP biometric systems, border seismic sensors, and Army precision navigation systems.',
-    estimatedExhibitors: 60,
-    relevanceScore: 70,
-    website: 'https://www.memsexecutivecongress.com',
-    lat: 33.4942,
-    lon: -111.9261,
-  },
-
-  {
-    id: 'conf-ta-power-electronics-europe',
-    name: 'PCIM Europe (Power Electronics)',
-    category: 'Semiconductors',
-    location: 'Nuremberg, Germany',
-    month: 'June',
-    description: 'Premier power electronics conference covering GaN and SiC power semiconductors, EV power converters, and grid-tied inverter design. 1,200+ power electronics engineers attend. GaN/SiC technology advances affect DoD vehicle electrification and tactical power systems at Fort Bliss.',
-    estimatedExhibitors: 450,
-    relevanceScore: 52,
-    website: 'https://www.mesago.de/en/PCIM/home.htm',
-    lat: 49.4521,
-    lon: 11.0767,
-  },
-
-  {
     id: 'conf-ta-rfic-symposium',
     name: 'IEEE RFIC Symposium',
     category: 'Semiconductors',
@@ -2096,62 +1620,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ta-texas-smart-city',
-    name: 'Texas Smart City Forum',
-    category: 'Smart Cities',
-    location: 'San Antonio, TX',
-    month: 'February',
-    description: 'Texas municipal technology leaders forum covering smart city grant programs, broadband expansion under BEAD, and Texas-specific digital infrastructure initiatives. El Paso city government sends delegations. Texas infrastructure investment patterns directly shape El Paso smart city budgets.',
-    estimatedExhibitors: 60,
-    relevanceScore: 88,
-    website: 'https://texassmartcity.org',
-    lat: 29.4241,
-    lon: -98.4936,
-  },
-
-  {
-    id: 'conf-ta-cop-iot-cities',
-    name: 'Connected Cities + Communities (CCA)',
-    category: 'Smart Cities',
-    location: 'Atlanta, GA',
-    month: 'September',
-    description: 'Municipal IoT and digital infrastructure conference covering smart lighting, sensor networks, open data platforms, and smart parking. 1,000+ city technology leaders attend. NXT//LINK tracks IoT vendors exhibited here for potential El Paso city and utility smart infrastructure contracts.',
-    estimatedExhibitors: 90,
-    relevanceScore: 75,
-    website: 'https://ccacommunities.com',
-    lat: 33.749,
-    lon: -84.388,
-  },
-
-  {
-    id: 'conf-ta-urban-mobility-summit',
-    name: 'Urban Mobility Summit',
-    category: 'Smart Cities',
-    location: 'Austin, TX',
-    month: 'March',
-    description: 'Micromobility, transit tech, and smart transportation conference covering MaaS platforms, transit signal priority, and autonomous shuttle deployments. Sun Metro El Paso and city transportation planning teams follow innovations piloted at this event for Sun City mobility strategy.',
-    estimatedExhibitors: 70,
-    relevanceScore: 78,
-    website: 'https://www.urbanmobilitysummit.com',
-    lat: 30.2672,
-    lon: -97.7431,
-  },
-
-  {
-    id: 'conf-ta-border-smart-city',
-    name: 'Border Smart City Summit',
-    category: 'Smart Cities',
-    location: 'El Paso, TX',
-    month: 'October',
-    description: 'Bi-national smart city forum connecting El Paso and Ciudad Juárez city technology officials, CBP smart infrastructure teams, and smart city vendors. Covers cross-border traffic management, shared sensor networks, and binational data governance. Highest smart city relevance for NXT//LINK mission.',
-    estimatedExhibitors: 30,
-    relevanceScore: 97,
-    website: 'https://www.bordersmart.city',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
     id: 'conf-ta-public-works-summit',
     name: 'APWA PWX (Public Works Summit)',
     category: 'Smart Cities',
@@ -2177,20 +1645,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://geospatialworldforum.org',
     lat: 51.9244,
     lon: 4.4777,
-  },
-
-  {
-    id: 'conf-ta-sga-gov-it',
-    name: 'Government IT Summit (StateScoop)',
-    category: 'Smart Cities',
-    location: 'Washington, DC',
-    month: 'November',
-    description: 'State and local government technology summit covering CIO priorities, digital services modernization, and smart city technology procurement. Texas state CIO and major city technology officers attend. El Paso IT leadership regularly participates in Texas cohort sessions.',
-    estimatedExhibitors: 80,
-    relevanceScore: 82,
-    website: 'https://statescoop.com/events',
-    lat: 38.8951,
-    lon: -77.0364,
   },
 
   {
@@ -2266,48 +1720,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ta-open-ran-summit',
-    name: 'Open RAN Summit',
-    category: 'Telecom',
-    location: 'Washington, DC',
-    month: 'March',
-    description: 'Open RAN standards and deployment summit covering O-RAN Alliance specifications, vendor disaggregation, and government Open RAN initiatives. DoD and NTIA both fund Open RAN programs — Summit briefings directly influence Army tactical communications procurement for PACE and JADC2.',
-    estimatedExhibitors: 80,
-    relevanceScore: 78,
-    website: 'https://openransummit.com',
-    lat: 38.8951,
-    lon: -77.0364,
-  },
-
-  {
-    id: 'conf-ta-milcom',
-    name: 'MILCOM (Military Communications Conference)',
-    category: 'Telecom',
-    location: 'Washington, DC',
-    month: 'October',
-    description: 'IEEE and AFCEA joint military communications conference covering tactical radios, SATCOM, contested spectrum operations, and military 5G. 2,000+ Army, Navy, Air Force communications program managers and contractors attend. Primary venue for Fort Bliss G6 signals and communications technology intelligence.',
-    estimatedExhibitors: 200,
-    relevanceScore: 93,
-    website: 'https://www.milcoms.org',
-    lat: 38.8951,
-    lon: -77.0364,
-  },
-
-  {
-    id: 'conf-ta-border-telecom',
-    name: 'Border Region Broadband Summit',
-    category: 'Telecom',
-    location: 'El Paso, TX',
-    month: 'July',
-    description: 'Regional broadband connectivity conference focused on El Paso-Juarez cross-border fiber, 5G coverage gaps in colonias, and BEAD grant implementation for West Texas. El Paso city, county, and ISPs coordinate federal broadband investment here — directly relevant to border tech infrastructure.',
-    estimatedExhibitors: 25,
-    relevanceScore: 94,
-    website: 'https://www.borderbroadband.org',
-    lat: 31.7619,
-    lon: -106.485,
-  },
-
-  {
     id: 'conf-ta-fiber-connect',
     name: 'Fiber Connect',
     category: 'Telecom',
@@ -2347,48 +1759,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.mef.net/events',
     lat: 32.7767,
     lon: -96.797,
-  },
-
-  {
-    id: 'conf-ta-tdworld-utility',
-    name: 'T&D World Expo (Utility Telecom)',
-    category: 'Telecom',
-    location: 'New Orleans, LA',
-    month: 'April',
-    description: 'Transmission and distribution infrastructure expo covering utility grid automation, SCADA communications, and private LTE for utility operations. El Paso Electric\'s grid modernization and communications network investments are aligned with technologies showcased here.',
-    estimatedExhibitors: 400,
-    relevanceScore: 72,
-    website: 'https://www.tdworld.com/tdworld-event',
-    lat: 29.9511,
-    lon: -90.0715,
-  },
-
-  {
-    id: 'conf-ta-gsma-mobile360',
-    name: 'GSMA Mobile 360 Americas',
-    category: 'Telecom',
-    location: 'Miami, FL',
-    month: 'September',
-    description: 'GSMA\'s Americas regional mobile industry summit covering Latin American 5G expansion, IoT regulations, and cross-border roaming agreements. US-Mexico 5G roaming and spectrum coordination topics are directly relevant to border region connectivity for both commercial and government users.',
-    estimatedExhibitors: 120,
-    relevanceScore: 72,
-    website: 'https://www.gsma.com/mobile360',
-    lat: 25.7617,
-    lon: -80.1918,
-  },
-
-  {
-    id: 'conf-ta-private5g-summit',
-    name: 'Private Networks & 5G Enterprise Summit',
-    category: 'Telecom',
-    location: 'San Jose, CA',
-    month: 'November',
-    description: 'Enterprise and government private 5G deployment conference covering CBRS band spectrum, private LTE/5G architecture, and mission-critical 5G use cases. Fort Bliss smart base private 5G program and CBP secure communications upgrades are precisely the use cases addressed here.',
-    estimatedExhibitors: 70,
-    relevanceScore: 85,
-    website: 'https://www.privatenetworksummit.com',
-    lat: 37.3382,
-    lon: -121.8863,
   },
 
   // ── Software ───────────────────────────────────────────────────────────────
@@ -2464,34 +1834,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ta-velocity-platform',
-    name: 'Platform Engineering Summit',
-    category: 'Software',
-    location: 'Austin, TX',
-    month: 'November',
-    description: 'Developer platform and internal developer portal conference covering backstage, golden paths, and developer experience engineering. 1,500+ platform engineers and DevOps leaders attend. DoD software factories implementing platform engineering are adopting practices showcased here.',
-    estimatedExhibitors: 55,
-    relevanceScore: 70,
-    website: 'https://www.platformengineering.org/summit',
-    lat: 30.2672,
-    lon: -97.7431,
-  },
-
-  {
-    id: 'conf-ta-servicenow-knowledge',
-    name: 'ServiceNow Knowledge Conference',
-    category: 'Software',
-    location: 'Las Vegas, NV',
-    month: 'May',
-    description: 'ServiceNow\'s annual user conference with 20,000+ attendees covering IT service management, AI Operations, government workflow automation, and enterprise platform strategy. ServiceNow is used by multiple federal agencies and DoD for IT tickets, asset management, and governance workflows.',
-    estimatedExhibitors: 500,
-    relevanceScore: 72,
-    website: 'https://knowledge.servicenow.com',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
-  {
     id: 'conf-ta-pagerduty-summit',
     name: 'PagerDuty Summit',
     category: 'Software',
@@ -2503,20 +1845,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://summit.pagerduty.com',
     lat: 37.7749,
     lon: -122.4194,
-  },
-
-  {
-    id: 'conf-ta-sxsw-tech',
-    name: 'SXSW Technology Track',
-    category: 'Software',
-    location: 'Austin, TX',
-    month: 'March',
-    description: 'South by Southwest\'s technology track covering startup launches, developer tools, and enterprise software trends. 80,000+ total festival attendees. Texas proximity and strong startup presence make this valuable for identifying emerging software vendors targeting the Southwest enterprise market.',
-    estimatedExhibitors: 500,
-    relevanceScore: 74,
-    website: 'https://www.sxsw.com/conference/technology',
-    lat: 30.2672,
-    lon: -97.7431,
   },
 
   {
@@ -2559,20 +1887,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://qconsf.com',
     lat: 37.7749,
     lon: -122.4194,
-  },
-
-  {
-    id: 'conf-ta-software-architecture-superstream',
-    name: 'O\'Reilly Software Architecture SuperStream',
-    category: 'Software',
-    location: 'Online',
-    month: 'June',
-    description: 'Virtual software architecture training and conference covering event-driven systems, domain-driven design, and cloud-native patterns. 4,000+ software architects participate globally. Virtual format increases accessibility for UTEP and EPCC computer science faculty and El Paso enterprise developers.',
-    estimatedExhibitors: 15,
-    relevanceScore: 58,
-    website: 'https://www.oreilly.com/online-learning/conferences.html',
-    lat: 0.0,
-    lon: 0.0,
   },
 
   {
@@ -2629,20 +1943,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.mongodb.com/world',
     lat: 40.7128,
     lon: -74.006,
-  },
-
-  {
-    id: 'conf-ta-cncf-kubeday',
-    name: 'KubeDay (CNCF)',
-    category: 'Software',
-    location: 'Chicago, IL',
-    month: 'December',
-    description: 'Focused one-day Kubernetes practitioner event covering production Kubernetes operations, Helm, and GitOps. 500+ Kubernetes engineers attend. DoD Platform One and Army DevSecOps teams running Kubernetes need the operational intelligence provided at KubeDay events.',
-    estimatedExhibitors: 30,
-    relevanceScore: 68,
-    website: 'https://events.linuxfoundation.org/kubeday-appdev',
-    lat: 41.8781,
-    lon: -87.6298,
   },
 
   {
@@ -2715,20 +2015,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.dhs.gov/science-and-technology',
     lat: 38.8951,
     lon: -77.0364,
-  },
-
-  {
-    id: 'conf-ta-hyperledger-global-forum',
-    name: 'Hyperledger Global Forum',
-    category: 'Blockchain',
-    location: 'San Francisco, CA',
-    month: 'September',
-    description: 'Linux Foundation\'s enterprise blockchain conference covering Hyperledger Fabric, Besu, and Firefly for permissioned blockchain deployments. 2,000+ enterprise architects attend. Hyperledger Fabric is used in government supply chain tracking including DoD component authenticity verification.',
-    estimatedExhibitors: 80,
-    relevanceScore: 62,
-    website: 'https://www.hyperledger.org/event/hyperledger-global-forum',
-    lat: 37.7749,
-    lon: -122.4194,
   },
 
   {
@@ -2846,20 +2132,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ta-qip',
-    name: 'QIP (Quantum Information Processing)',
-    category: 'Quantum Computing',
-    location: 'Rennes, France',
-    month: 'January',
-    description: 'Premier theoretical quantum information science conference covering quantum algorithms, quantum complexity theory, and quantum communication protocols. 600+ quantum information researchers attend. Foundational algorithms published here eventually underlie DoD quantum computing programs.',
-    estimatedExhibitors: 20,
-    relevanceScore: 48,
-    website: 'https://qip2025.fr',
-    lat: 48.1173,
-    lon: -1.6778,
-  },
-
-  {
     id: 'conf-ta-ibm-quantum-dev',
     name: 'IBM Quantum Developer Conference',
     category: 'Quantum Computing',
@@ -2913,20 +2185,6 @@ export const TECH_AI_CONFERENCES: ConferenceRecord[] = [
     website: 'https://pqcrypto.org',
     lat: 51.752,
     lon: -1.2577,
-  },
-
-  {
-    id: 'conf-ta-quantum-business-europe',
-    name: 'Quantum Business Europe',
-    category: 'Quantum Computing',
-    location: 'Amsterdam, Netherlands',
-    month: 'May',
-    description: 'European quantum business and investment conference covering European quantum roadmap (EuroQCI), quantum startup ecosystem, and enterprise quantum use case pilots. Tracks European quantum vendors that are potential US market entrants and NATO quantum technology partnerships.',
-    estimatedExhibitors: 80,
-    relevanceScore: 45,
-    website: 'https://www.quantumbusinesseurope.com',
-    lat: 52.3676,
-    lon: 4.9041,
   },
 
   {

@@ -330,7 +330,7 @@ export function SwarmStatusPanel() {
                     className="font-mono text-[7px] tracking-wider px-1.5 py-px rounded-sm shrink-0"
                     style={{ background: bg, color: fg, border: `1px solid ${fg}30` }}
                   >
-                    {mem.entry_type.toUpperCase()}
+                    {(mem.entry_type ?? '').toUpperCase()}
                   </span>
                 </div>
 

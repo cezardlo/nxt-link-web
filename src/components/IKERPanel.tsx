@@ -136,8 +136,8 @@ export function IKERPanel({ vendorId }: Props) {
       <div className="grid grid-cols-3 gap-1.5">
         {[
           { label: 'FUNDING', value: signals.funding ?? 0, color: '#ffb800' },
-          { label: 'PATENTS', value: signals.patents ?? 0, color: '#a855f7' },
-          { label: 'HIRING', value: signals.hiring ?? 0, color: '#ff6400' },
+          { label: 'PATENTS', value: signals.patents ?? 0, color: '#ffb800' },
+          { label: 'HIRING', value: signals.hiring ?? 0, color: '#f97316' },
         ].map(({ label, value, color }) => (
           <div key={label} className="flex flex-col items-center gap-0.5 border border-white/5 rounded-sm p-2">
             <span className="font-mono text-xl font-bold" style={{ color, textShadow: `0 0 10px ${color}60` }}>
@@ -150,8 +150,8 @@ export function IKERPanel({ vendorId }: Props) {
 
       {/* IKER says */}
       {data.briefing && (
-        <div className="border border-emerald-400/10 rounded-sm p-3 bg-emerald-400/3">
-          <p className="font-mono text-[9px] tracking-[0.2em] text-emerald-400/60 mb-1.5">IKER SAYS</p>
+        <div className="rounded-sm p-3" style={{ border: '1px solid rgba(0,255,136,0.1)', background: 'rgba(0,255,136,0.03)' }}>
+          <p className="font-mono text-[9px] tracking-[0.2em] mb-1.5" style={{ color: 'rgba(0,255,136,0.6)' }}>IKER SAYS</p>
           <p className="font-mono text-[10px] text-white/40 leading-relaxed">{data.briefing}</p>
         </div>
       )}

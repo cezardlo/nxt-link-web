@@ -237,7 +237,7 @@ export async function buildOpsDashboard(input: {
       id: `alert-${alert.id}`,
       timestamp: alert.updated_at,
       type: 'alert',
-      title: `${alert.severity.toUpperCase()} alert: ${alert.title}`,
+      title: `${(alert.severity ?? '').toUpperCase()} alert: ${alert.title}`,
       detail: alert.description,
     })),
     ...actions.slice(0, 8).map((action) => ({

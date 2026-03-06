@@ -54,9 +54,9 @@ export function BorderCameraOverlay() {
   const visibleCameras = cameras.filter((c) => !hiddenCams.has(c.id));
 
   return (
-    <div className="absolute bottom-12 left-0 md:left-40 z-20 w-full md:w-72 bg-black/80 border border-white/8 rounded-sm backdrop-blur-md">
+    <div className="absolute bottom-12 left-0 md:left-40 z-20 w-full md:w-72 bg-black/92 border border-white/8 rounded-sm backdrop-blur-md">
       {/* Header */}
-      <div className="px-3 py-2 border-b border-white/6 flex items-center justify-between">
+      <div className="px-3 py-2 border-b border-white/8 flex items-center justify-between">
         <span className="font-mono text-[8px] tracking-[0.2em] text-white/25">BORDER STATUS</span>
         <span className="font-mono text-[8px] text-white/15">LIVE</span>
       </div>
@@ -127,7 +127,7 @@ export function BorderCameraOverlay() {
       </div>
 
       {/* Camera thumbnails section */}
-      <div className="border-t border-white/6">
+      <div className="border-t border-white/8">
         <div className="px-3 pt-1.5 pb-0.5">
           <span className="font-mono text-[7px] tracking-[0.2em] text-white/15">TxDOT CAMERAS</span>
         </div>

@@ -1,5 +1,21 @@
-// All pages in this app are fullscreen — no wrapper chrome needed.
-// Layout is handled per-page with fixed/inset-0.
+'use client';
+import { usePathname } from 'next/navigation';
+import { NavRail } from './NavRail';
+import { MobileNav } from './MobileNav';
+
 export function AppShell({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  const pathname = usePathname();
+  const isLanding = pathname === '/';
+  const isMap = pathname === '/map';
+  const showNav = !isLanding && !isMap;
+
+  return (
+    <>
+      {showNav && <NavRail />}
+      <div className={showNav ? 'md:pl-16' : ''}>
+        {children}
+      </div>
+      {showNav && <MobileNav />}
+    </>
+  );
 }

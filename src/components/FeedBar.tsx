@@ -32,22 +32,22 @@ const STUB_ITEMS: FeedItem[] = [
 const CATEGORY_COLORS: Record<string, string> = {
   'AI/ML':        '#00d4ff',
   'Cybersecurity':'#ff3b30',
-  'Defense':      '#ff8c00',
+  'Defense':      '#f97316',
   'Enterprise':   '#00ff88',
-  'Supply Chain': '#a78bfa',
-  'Energy':       '#fbbf24',
-  'Finance':      '#34d399',
+  'Supply Chain': '#ffb800',
+  'Energy':       '#ffd700',
+  'Finance':      '#00d4ff',
   'Crime':        '#f97316',
   'General':      '#6b7280',
 };
 
 const SOURCE_COLORS: Record<string, string> = {
   TechCrunch: '#00d4ff',
-  Reuters:    '#ff8c00',
+  Reuters:    '#f97316',
   'MIT AI':   '#00ff88',
   Bloomberg:  '#ffd700',
-  PitchBook:  '#a855f7',
-  USPTO:      '#60a5fa',
+  PitchBook:  '#ffb800',
+  USPTO:      '#00d4ff',
   default:    '#6b7280',
 };
 
@@ -121,8 +121,8 @@ export function FeedBar({ timeRange }: Props) {
 
       {/* LIVE badge */}
       <div className="shrink-0 flex items-center gap-1.5 px-2.5 border-r border-white/[0.05] h-full bg-[#00ff88]/[0.03]">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 live-pulse shrink-0" style={{ boxShadow: '0 0 4px #00ff88cc' }} />
-        <span className="font-mono text-[7px] sm:text-[8px] font-bold tracking-[0.25em] text-emerald-400/80">LIVE</span>
+        <span className="w-1.5 h-1.5 rounded-full live-pulse shrink-0" style={{ backgroundColor: '#00ff88', boxShadow: '0 0 6px #00ff88cc' }} />
+        <span className="font-mono text-[7px] sm:text-[8px] font-bold tracking-[0.25em]" style={{ color: 'rgba(0,255,136,0.8)' }}>LIVE</span>
       </div>
 
       {/* Scrolling feed */}
@@ -172,7 +172,7 @@ export function FeedBar({ timeRange }: Props) {
                   className="font-mono text-[8px] font-bold tracking-wider shrink-0"
                   style={{ color: srcColor, opacity: 0.8 }}
                 >
-                  {item.source.toUpperCase()}
+                  {(item.source ?? '').toUpperCase()}
                 </span>
 
                 {/* Separator */}
@@ -182,7 +182,7 @@ export function FeedBar({ timeRange }: Props) {
                 <span
                   className="font-mono text-[9px]"
                   style={{
-                    color: isHigh ? '#ff8c00' : 'rgba(255,255,255,0.42)',
+                    color: isHigh ? '#f97316' : 'rgba(255,255,255,0.42)',
                     textShadow: isHigh ? '0 0 8px rgba(255,140,0,0.3)' : 'none',
                   }}
                 >

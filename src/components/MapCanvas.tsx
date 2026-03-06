@@ -2,6 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+// Suppress luma.gl ResizeObserver race condition (maxTextureDimension2D on unmounted device)
+if (typeof window !== 'undefined') {
+  const origOnError = window.onerror;
+  window.onerror = function (msg, ...args) {
+    if (typeof msg === 'string' && msg.includes('maxTextureDimension2D')) return true;
+    return origOnError ? origOnError.call(this, msg, ...args) : false;
+  };
+}
+
 import DeckGL from '@deck.gl/react';
 import type { Layer, PickingInfo } from '@deck.gl/core';
 import { IconLayer, PathLayer, ScatterplotLayer, TextLayer } from '@deck.gl/layers';
@@ -9,6 +18,8 @@ import { IconLayer, PathLayer, ScatterplotLayer, TextLayer } from '@deck.gl/laye
 import type { PortWaitTime } from '@/app/api/live/border-wait/route';
 import { CONFERENCES } from '@/lib/data/conference-intel';
 import type { ConferenceRecord } from '@/lib/data/conference-intel';
+import { buildConferenceClusters } from '@/lib/utils/conference-clusters';
+import type { ConferenceCluster } from '@/lib/utils/conference-clusters';
 import { EL_PASO_VENDORS } from '@/lib/data/el-paso-vendors';
 import MapGL from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -39,6 +50,9 @@ const GLOBAL_HUBS: GlobalHub[] = [
   { id: 'tokyo',          lat: 35.68,  lon: 139.69,  label: 'TOKYO',           isHQ: false },
 ];
 
+// Pre-computed conference clusters (static data, computed once)
+const CONFERENCE_CLUSTERS = buildConferenceClusters(CONFERENCES);
+
 // Layer color palette (RGBA arrays)
 const LAYER_COLORS: Record<string, [number, number, number]> = {
   vendors:     [0, 212, 255],
@@ -46,7 +60,7 @@ const LAYER_COLORS: Record<string, [number, number, number]> = {
   adoption:    [0, 255, 136],
   momentum:    [0, 204, 106],
   funding:     [255, 184, 0],
-  patents:     [168, 85, 247],
+  patents:     [255, 184, 0],
   hiring:      [255, 100, 0],
   conferences: [255, 150, 50],
   health:      [0, 255, 136],
@@ -61,8 +75,8 @@ const NAICS_SECTORS: Record<string, { color: [number, number, number]; label: st
   '54': { color: [0, 212, 255],   label: 'TECH / PROFESSIONAL' },
   '23': { color: [255, 184, 0],   label: 'CONSTRUCTION' },
   '22': { color: [0, 255, 136],   label: 'UTILITIES / ENERGY' },
-  '49': { color: [168, 85, 247],  label: 'LOGISTICS' },
-  '48': { color: [168, 85, 247],  label: 'LOGISTICS' },
+  '49': { color: [255, 184, 0],   label: 'LOGISTICS' },
+  '48': { color: [255, 184, 0],   label: 'LOGISTICS' },
   '62': { color: [255, 59, 48],   label: 'HEALTHCARE' },
   '61': { color: [0, 204, 255],   label: 'EDUCATION' },
   '56': { color: [120, 120, 140], label: 'ADMIN / SUPPORT' },
@@ -336,6 +350,17 @@ export type ContractPoint = {
   lon: number;
 };
 
+export type DisruptionMapPoint = {
+  id: string;
+  title: string;
+  lat: number;
+  lon: number;
+  category: string;
+  impact: string;
+  date: string;
+  companies: string[];
+};
+
 export type BusinessActivity = 'none' | 'contract' | 'research';
 
 export type SamBusinessPoint = {
@@ -359,6 +384,7 @@ type Props = {
   timeRange: number;
   onVendorSelect: (point: MapPoint | null) => void;
   onConferenceSelect?: (c: ConferenceRecord | null) => void;
+  onClusterSelect?: (cluster: ConferenceCluster) => void;
   onPointCountChange?: (count: number) => void;
   flyTo?: FlyToTarget;
   initialViewState?: { longitude: number; latitude: number; zoom: number };
@@ -369,13 +395,14 @@ type Props = {
   borderCrossings?: BorderCrossingPoint[];
   borderWaitTimes?: PortWaitTime[];
   crimeHotspots?: CrimeHotspot[];
+  disruptionPoints?: DisruptionMapPoint[];
   contracts?: ContractPoint[];
   samBusinesses?: SamBusinessPoint[];
 };
 
 type ViewState = typeof INITIAL_VIEW;
 
-export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onConferenceSelect, onPointCountChange, flyTo, initialViewState, onViewStateChange, flights = [], seismicEvents = [], activeVendorIds = [], borderCrossings = [], borderWaitTimes = [], crimeHotspots = [], contracts = [], samBusinesses = [] }: Props) {
+export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onConferenceSelect, onClusterSelect, onPointCountChange, flyTo, initialViewState, onViewStateChange, flights = [], seismicEvents = [], activeVendorIds = [], borderCrossings = [], borderWaitTimes = [], crimeHotspots = [], disruptionPoints = [], contracts = [], samBusinesses = [] }: Props) {
   const [points, setPoints] = useState<MapPoint[]>(EL_PASO_STUBS);
   const [loading, setLoading] = useState(false);
   const [viewState, setViewState] = useState<ViewState>(() => ({
@@ -393,6 +420,11 @@ export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onConferenc
   const [flightTooltip, setFlightTooltip] = useState<{ x: number; y: number; flight: FlightPoint } | null>(null);
   const [contractTooltip, setContractTooltip] = useState<{ x: number; y: number; contract: ContractPoint } | null>(null);
   const [samBizTooltip, setSamBizTooltip] = useState<{ x: number; y: number; biz: SamBusinessPoint } | null>(null);
+  const [confTooltip, setConfTooltip] = useState<{
+    x: number; y: number;
+    cluster?: ConferenceCluster;
+    conference?: ConferenceRecord;
+  } | null>(null);
 
   // Fly to preset region when flyTo prop changes reference
   useEffect(() => {
@@ -735,7 +767,7 @@ export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onConferenc
             id: 'border-labels',
             data: portList,
             getPosition: (d: BorderPortItem) => PORT_COORDS[d.portCode] as [number, number],
-            getText: (d: BorderPortItem) => `${d.port.toUpperCase()}  ${d.trucks.toLocaleString()} trucks`,
+            getText: (d: BorderPortItem) => `${(d.port ?? '').toUpperCase()}  ${d.trucks.toLocaleString()} trucks`,
             getSize: 10,
             getColor: [0, 212, 255, 200] as [number, number, number, number],
             fontFamily: '"IBM Plex Mono", monospace',
@@ -1152,66 +1184,111 @@ export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onConferenc
       );
     }
 
-    // ── Conferences — global markers, always visible when layer is active ──
+    // ── Conferences — World Monitor bubble style (sized circles + count) ──
     if (activeLayers.has('conferences')) {
-      const CONF_CATEGORY_COLORS: Record<string, [number, number, number]> = {
-        'Defense':       [255, 100, 0],
-        'Cybersecurity': [168, 85, 247],
-        'Manufacturing': [0, 212, 255],
-        'Logistics':     [255, 184, 0],
-        'Robotics':      [0, 255, 136],
-        'AI/ML':         [96, 165, 250],
-        'Energy':        [255, 215, 0],
-        'Border/Gov':    [249, 115, 22],
-        'Construction':  [217, 119, 6],
-        'Healthcare':    [6, 182, 212],
-        'Workforce':     [139, 92, 246],
+      // WM color by count: green (few) → yellow → orange → red (many)
+      const wmBubbleColor = (count: number): [number, number, number, number] => {
+        if (count >= 80) return [255, 59, 48, 200];    // red — massive
+        if (count >= 40) return [249, 115, 22, 200];   // orange — large
+        if (count >= 15) return [255, 184, 0, 190];    // gold — medium
+        if (count >= 5)  return [0, 212, 255, 180];    // cyan — moderate
+        return [0, 255, 136, 160];                      // green — small
       };
-      // Diamond-shaped markers (smaller ScatterplotLayer)
+
+      // Outer glow ring (WM: soft halo behind bubble)
       result.push(
         new ScatterplotLayer({
-          id: 'conferences-dot',
-          data: CONFERENCES,
-          getPosition: (d: ConferenceRecord) => [d.lon, d.lat] as [number, number],
-          getRadius: (d: ConferenceRecord) => 30000 + d.relevanceScore * 600,
-          getFillColor: (d: ConferenceRecord) => {
-            const c = CONF_CATEGORY_COLORS[d.category] ?? [168, 85, 247];
-            return [c[0], c[1], c[2], 120] as [number, number, number, number];
+          id: 'conf-bubble-glow',
+          data: CONFERENCE_CLUSTERS,
+          getPosition: (d: ConferenceCluster) => [d.lon, d.lat] as [number, number],
+          getRadius: (d: ConferenceCluster) => 8 + Math.min(d.count, 120) * 0.25,
+          radiusUnits: 'pixels',
+          radiusMinPixels: 8,
+          radiusMaxPixels: 45,
+          filled: true,
+          stroked: false,
+          getFillColor: (d: ConferenceCluster) => {
+            const c = wmBubbleColor(d.count);
+            return [c[0], c[1], c[2], 40] as [number, number, number, number];
           },
-          getLineColor: (d: ConferenceRecord) => {
-            const c = CONF_CATEGORY_COLORS[d.category] ?? [168, 85, 247];
-            return [c[0], c[1], c[2], 180] as [number, number, number, number];
+          pickable: false,
+        }) as unknown as Layer,
+      );
+
+      // Solid bubble (WM: filled circle, size = count)
+      result.push(
+        new ScatterplotLayer({
+          id: 'conf-bubble',
+          data: CONFERENCE_CLUSTERS,
+          getPosition: (d: ConferenceCluster) => [d.lon, d.lat] as [number, number],
+          getRadius: (d: ConferenceCluster) => 6 + Math.min(d.count, 120) * 0.18,
+          radiusUnits: 'pixels',
+          radiusMinPixels: 6,
+          radiusMaxPixels: 32,
+          filled: true,
+          stroked: true,
+          getFillColor: (d: ConferenceCluster) => {
+            const c = wmBubbleColor(d.count);
+            return [c[0], c[1], c[2], Math.round(c[3] * 0.6)] as [number, number, number, number];
+          },
+          getLineColor: (d: ConferenceCluster) => {
+            const c = wmBubbleColor(d.count);
+            return [c[0], c[1], c[2], 220] as [number, number, number, number];
           },
           lineWidthMinPixels: 1,
-          stroked: true,
-          filled: true,
-          radiusUnits: 'meters',
           pickable: true,
         }) as unknown as Layer,
       );
-      // Conference name labels
+
+      // Count number inside bubble (WM: bold white number)
       result.push(
         new TextLayer({
-          id: 'conferences-labels',
-          data: CONFERENCES.filter((c) => c.relevanceScore >= 75 || viewState.zoom >= 5),
-          getPosition: (d: ConferenceRecord) => [d.lon, d.lat] as [number, number],
-          getText: (d: ConferenceRecord) => `${d.name.slice(0, 24).toUpperCase()}`,
-          getSize: 10,
-          getColor: (d: ConferenceRecord) => {
-            const c = CONF_CATEGORY_COLORS[d.category] ?? [168, 85, 247];
-            return [c[0], c[1], c[2], 170] as [number, number, number, number];
-          },
+          id: 'conf-bubble-count',
+          data: CONFERENCE_CLUSTERS,
+          getPosition: (d: ConferenceCluster) => [d.lon, d.lat] as [number, number],
+          getText: (d: ConferenceCluster) => String(d.count),
+          getSize: (d: ConferenceCluster) => d.count >= 100 ? 10 : d.count >= 10 ? 11 : 12,
+          fontWeight: 700,
+          getColor: [255, 255, 255, 240] as [number, number, number, number],
           fontFamily: '"IBM Plex Mono", monospace',
           getTextAnchor: 'middle',
-          getAlignmentBaseline: 'top',
-          getPixelOffset: [0, 8] as [number, number],
-          background: true,
-          getBackgroundColor: [0, 0, 0, 190] as [number, number, number, number],
-          backgroundPadding: [3, 1, 3, 1] as [number, number, number, number],
+          getAlignmentBaseline: 'center',
           pickable: false,
           sizeUnits: 'pixels',
         }) as unknown as Layer,
       );
+
+      // City name label below bubble (zoom >= 4)
+      if (viewState.zoom >= 4) {
+        const labelClusters = CONFERENCE_CLUSTERS.filter(
+          (cl) => cl.count >= 3 || cl.maxRelevance >= 85,
+        );
+        result.push(
+          new TextLayer({
+            id: 'conf-city-labels',
+            data: labelClusters,
+            getPosition: (d: ConferenceCluster) => [d.lon, d.lat] as [number, number],
+            getText: (d: ConferenceCluster) => {
+              const city = (d.locationLabel ?? '').toUpperCase().split(',')[0].slice(0, 16);
+              return city;
+            },
+            getSize: 9,
+            getColor: [255, 255, 255, 120] as [number, number, number, number],
+            fontFamily: '"IBM Plex Mono", monospace',
+            getTextAnchor: 'middle',
+            getAlignmentBaseline: 'top',
+            getPixelOffset: (d: ConferenceCluster) => {
+              const r = 6 + Math.min(d.count, 120) * 0.18;
+              return [0, Math.max(8, r) + 4] as [number, number];
+            },
+            background: true,
+            getBackgroundColor: [0, 0, 0, 160] as [number, number, number, number],
+            backgroundPadding: [3, 1, 3, 1] as [number, number, number, number],
+            pickable: false,
+            sizeUnits: 'pixels',
+          }) as unknown as Layer,
+        );
+      }
     }
 
     // Landmark zone labels — visible from city zoom level
@@ -1232,6 +1309,75 @@ export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onConferenc
           sizeUnits: 'pixels',
         }) as unknown as Layer,
       );
+    }
+
+    // ── Disruptions ──────────────────────────────────────────────────────
+    if (activeLayers.has('disruptions') && disruptionPoints.length > 0) {
+      const disruptColor = (cat: string): [number, number, number] => {
+        if (cat === 'breakthrough') return [168, 85, 247];
+        if (cat === 'funding')      return [249, 115, 22];
+        if (cat === 'policy')       return [255, 184, 0];
+        if (cat === 'acquisition')  return [0, 212, 255];
+        if (cat === 'deployment')   return [0, 255, 136];
+        return [168, 85, 247];
+      };
+      const impactRadius = (imp: string) => imp === 'high' ? 900 : imp === 'medium' ? 650 : 450;
+
+      // Pulsing ring
+      result.push(
+        new ScatterplotLayer({
+          id: 'disruptions-pulse',
+          data: disruptionPoints,
+          getPosition: (d: DisruptionMapPoint) => [d.lon, d.lat] as [number, number],
+          getRadius: (d: DisruptionMapPoint) => impactRadius(d.impact) * (1 + pulsePhase * 1.2),
+          getFillColor: (d: DisruptionMapPoint) => [...disruptColor(d.category), Math.round(20 * (1 - pulsePhase))] as [number, number, number, number],
+          getLineColor: (d: DisruptionMapPoint) => [...disruptColor(d.category), Math.round(140 * (1 - pulsePhase))] as [number, number, number, number],
+          lineWidthMinPixels: 1,
+          stroked: true,
+          filled: true,
+          radiusUnits: 'meters',
+          pickable: false,
+          updateTriggers: { getRadius: pulsePhase, getFillColor: pulsePhase, getLineColor: pulsePhase },
+        }) as unknown as Layer,
+      );
+      // Solid dot
+      result.push(
+        new ScatterplotLayer({
+          id: 'disruptions-dot',
+          data: disruptionPoints,
+          getPosition: (d: DisruptionMapPoint) => [d.lon, d.lat] as [number, number],
+          getRadius: () => 250,
+          getFillColor: (d: DisruptionMapPoint) => [...disruptColor(d.category), 220] as [number, number, number, number],
+          getLineColor: [255, 255, 255, 50] as [number, number, number, number],
+          lineWidthMinPixels: 1,
+          stroked: true,
+          filled: true,
+          radiusUnits: 'meters',
+          pickable: false,
+        }) as unknown as Layer,
+      );
+      // Labels at zoom >= 5
+      if (viewState.zoom >= 5) {
+        result.push(
+          new TextLayer({
+            id: 'disruptions-labels',
+            data: disruptionPoints,
+            getPosition: (d: DisruptionMapPoint) => [d.lon, d.lat] as [number, number],
+            getText: (d: DisruptionMapPoint) => d.title.length > 25 ? d.title.slice(0, 23) + '..' : d.title,
+            getSize: 10,
+            getColor: (d: DisruptionMapPoint) => [...disruptColor(d.category), 200] as [number, number, number, number],
+            fontFamily: '"IBM Plex Mono", monospace',
+            getTextAnchor: 'middle',
+            getAlignmentBaseline: 'top',
+            getPixelOffset: [0, 10] as [number, number],
+            background: true,
+            getBackgroundColor: [0, 0, 0, 180] as [number, number, number, number],
+            backgroundPadding: [3, 1, 3, 1] as [number, number, number, number],
+            pickable: false,
+            sizeUnits: 'pixels',
+          }) as unknown as Layer,
+        );
+      }
     }
 
     // ── Crime Hotspots ────────────────────────────────────────────────────
@@ -1580,70 +1726,96 @@ export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onConferenc
     }
 
     return result;
-  }, [points, activeLayers, pulsePhase, viewState.zoom, flights, seismicEvents, activeVendorIds, borderCrossings, borderWaitTimes, crimeHotspots, contracts, samBusinesses]);
+  }, [points, activeLayers, pulsePhase, viewState.zoom, flights, seismicEvents, activeVendorIds, borderCrossings, borderWaitTimes, crimeHotspots, disruptionPoints, contracts, samBusinesses]);
 
   const handleClick = useCallback(
     (info: PickingInfo) => {
       const obj = info.object as Record<string, unknown> | undefined;
-      if (obj && 'estimatedExhibitors' in obj) {
-        onConferenceSelect?.(obj as unknown as ConferenceRecord);
-      } else {
-        onVendorSelect((obj as MapPoint | undefined) ?? null);
+      if (!obj) {
+        onVendorSelect(null);
+        setTooltip(null);
+        return;
       }
+
+      // City label click → open cluster in panel
+      if ('conferences' in obj && 'count' in obj) {
+        const cluster = obj as unknown as ConferenceCluster;
+        onClusterSelect?.(cluster);
+        setTooltip(null);
+        return;
+      }
+
+      // Individual conference click (fallback)
+      if ('estimatedExhibitors' in obj) {
+        onConferenceSelect?.(obj as unknown as ConferenceRecord);
+        setTooltip(null);
+        return;
+      }
+
+      // Default: vendor selection
+      onVendorSelect((obj as MapPoint | undefined) ?? null);
       setTooltip(null);
     },
-    [onVendorSelect, onConferenceSelect],
+    [onVendorSelect, onConferenceSelect, onClusterSelect],
   );
+
+  const clearAllTooltips = useCallback(() => {
+    setTooltip(null);
+    setBorderTooltip(null);
+    setFlightTooltip(null);
+    setContractTooltip(null);
+    setSamBizTooltip(null);
+    setConfTooltip(null);
+  }, []);
 
   const handleHover = useCallback((info: PickingInfo) => {
     if (!info.object) {
-      setTooltip(null);
-      setBorderTooltip(null);
-      setFlightTooltip(null);
-      setContractTooltip(null);
-      setSamBizTooltip(null);
+      clearAllTooltips();
       return;
     }
-    if ('callsign' in (info.object as object)) {
+    const obj = info.object as Record<string, unknown>;
+
+    // Conference cluster hover
+    if ('conferences' in obj && 'count' in obj) {
+      setConfTooltip({ x: info.x, y: info.y, cluster: info.object as unknown as ConferenceCluster });
+      setTooltip(null); setBorderTooltip(null); setFlightTooltip(null); setContractTooltip(null); setSamBizTooltip(null);
+      return;
+    }
+
+    // Individual conference hover
+    if ('estimatedExhibitors' in obj && !('agency' in obj)) {
+      setConfTooltip({ x: info.x, y: info.y, conference: info.object as unknown as ConferenceRecord });
+      setTooltip(null); setBorderTooltip(null); setFlightTooltip(null); setContractTooltip(null); setSamBizTooltip(null);
+      return;
+    }
+
+    setConfTooltip(null);
+
+    if ('callsign' in obj) {
       setFlightTooltip({ x: info.x, y: info.y, flight: info.object as FlightPoint });
-      setTooltip(null);
-      setBorderTooltip(null);
-      setContractTooltip(null);
-      setSamBizTooltip(null);
-    } else if ('trucks' in (info.object as object)) {
+      setTooltip(null); setBorderTooltip(null); setContractTooltip(null); setSamBizTooltip(null);
+    } else if ('trucks' in obj) {
       setBorderTooltip({ x: info.x, y: info.y, item: info.object as BorderPortItem });
-      setTooltip(null);
-      setFlightTooltip(null);
-      setContractTooltip(null);
-      setSamBizTooltip(null);
-    } else if ('agency' in (info.object as object) && 'vendor' in (info.object as object)) {
+      setTooltip(null); setFlightTooltip(null); setContractTooltip(null); setSamBizTooltip(null);
+    } else if ('agency' in obj && 'vendor' in obj) {
       setContractTooltip({ x: info.x, y: info.y, contract: info.object as ContractPoint });
-      setTooltip(null);
-      setBorderTooltip(null);
-      setFlightTooltip(null);
-      setSamBizTooltip(null);
-    } else if ('cageCode' in (info.object as object)) {
+      setTooltip(null); setBorderTooltip(null); setFlightTooltip(null); setSamBizTooltip(null);
+    } else if ('cageCode' in obj) {
       setSamBizTooltip({ x: info.x, y: info.y, biz: info.object as SamBusinessPoint });
-      setTooltip(null);
-      setBorderTooltip(null);
-      setFlightTooltip(null);
-      setContractTooltip(null);
+      setTooltip(null); setBorderTooltip(null); setFlightTooltip(null); setContractTooltip(null);
     } else {
       setTooltip({ x: info.x, y: info.y, point: info.object as MapPoint });
-      setBorderTooltip(null);
-      setFlightTooltip(null);
-      setContractTooltip(null);
-      setSamBizTooltip(null);
+      setBorderTooltip(null); setFlightTooltip(null); setContractTooltip(null); setSamBizTooltip(null);
     }
-  }, []);
+  }, [clearAllTooltips]);
 
   return (
     <div className="absolute inset-0">
       {/* Loading pulse overlay */}
       {loading && (
         <div className="absolute top-12 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/70 border border-white/10 backdrop-blur-sm">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-mono text-[10px] text-emerald-400 tracking-widest">FETCHING SIGNALS</span>
+          <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: '#00ff88' }} />
+          <span className="font-mono text-[10px] tracking-widest" style={{ color: '#00ff88' }}>FETCHING SIGNALS</span>
         </div>
       )}
 
@@ -1676,6 +1848,7 @@ export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onConferenc
         onClick={handleClick}
         onHover={handleHover}
         getCursor={() => (tooltip || flightTooltip || contractTooltip || samBizTooltip ? 'pointer' : 'grab')}
+        onError={(e) => { console.warn('[DeckGL] non-fatal:', e.message); return true; }}
       >
         <MapGL mapStyle={MAP_STYLE} />
       </DeckGL>
@@ -1689,7 +1862,7 @@ export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onConferenc
           <p className="font-mono text-xs text-white font-semibold">{tooltip.point.label}</p>
           <p className="font-mono text-[10px] text-white/40 mt-0.5">{tooltip.point.category}</p>
           <p className="font-mono text-[10px] mt-1" style={{ color: LAYER_COLORS[tooltip.point.layer] ? `rgb(${LAYER_COLORS[tooltip.point.layer].join(',')})` : '#888' }}>
-            {tooltip.point.layer.toUpperCase()} · {Math.round(tooltip.point.confidence * 100)}% conf
+            {(tooltip.point.layer ?? '').toUpperCase()} · {Math.round(tooltip.point.confidence * 100)}% conf
           </p>
         </div>
       )}
@@ -1710,7 +1883,7 @@ export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onConferenc
             className="absolute z-30 pointer-events-none px-3 py-2 bg-black/90 border border-white/10 rounded-sm backdrop-blur-md"
             style={{ left: borderTooltip.x + 12, top: borderTooltip.y - 10 }}
           >
-            <p className="font-mono text-xs text-white font-semibold">{item.port.toUpperCase()}</p>
+            <p className="font-mono text-xs text-white font-semibold">{(item.port ?? '').toUpperCase()}</p>
             <div className="flex items-center gap-2 mt-1">
               <span className="font-mono text-[10px]" style={{ color: sevColor }}>
                 COMMERCIAL: {item.commercialWaitMin} min
@@ -1735,7 +1908,7 @@ export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onConferenc
           grant:        '#ffb800',
         };
         const typeColor = typeColors[ct.type] ?? '#ffffff';
-        const typeLabel = ct.type.toUpperCase();
+        const typeLabel = (ct.type ?? '').toUpperCase();
         const sourceLabel =
           ct.source === 'usaspending' ? 'USASPENDING' :
           ct.source === 'sbir'        ? 'SBIR'        : 'SAM.GOV';
@@ -1861,10 +2034,82 @@ export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onConferenc
               </span>
             </div>
             {f.country && (
-              <p className="font-mono text-[8px] text-white/20 mt-1">{f.country} · ICAO {f.id.toUpperCase()}</p>
+              <p className="font-mono text-[8px] text-white/20 mt-1">{f.country} · ICAO {(f.id ?? '').toUpperCase()}</p>
             )}
           </div>
         );
+      })()}
+
+      {/* Conference / cluster hover tooltip */}
+      {confTooltip && (() => {
+        if (confTooltip.cluster) {
+          const cl = confTooltip.cluster;
+          const domColor = `rgb(${cl.dominantColor.join(',')})`;
+          const topCats = Object.entries(cl.categoryBreakdown)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 3);
+          return (
+            <div
+              className="absolute z-30 pointer-events-none px-3 py-2 bg-black/92 border border-white/10 rounded-sm backdrop-blur-md min-w-[180px]"
+              style={{ left: confTooltip.x + 12, top: confTooltip.y - 10 }}
+            >
+              <p className="font-mono text-[11px] text-white font-bold">{(cl.locationLabel ?? '').toUpperCase()}</p>
+              <p className="font-mono text-[9px] mt-0.5" style={{ color: domColor }}>
+                {cl.count} CONFERENCES
+              </p>
+              <div className="flex flex-col gap-0.5 mt-1.5">
+                {topCats.map(([cat, cnt]) => (
+                  <div key={cat} className="flex items-center justify-between gap-3">
+                    <span className="font-mono text-[8px] text-white/40">{cat.toUpperCase()}</span>
+                    <span className="font-mono text-[8px] text-white/60">{cnt}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 mt-1.5 pt-1 border-t border-white/[0.06]">
+                <span className="font-mono text-[7px] text-white/25 tracking-wider">AVG RELEVANCE</span>
+                <span className="font-mono text-[10px] font-bold" style={{ color: '#00d4ff' }}>
+                  {cl.avgRelevance}
+                </span>
+              </div>
+              <p className="font-mono text-[7px] text-white/15 mt-1 tracking-wider">CLICK TO EXPAND</p>
+            </div>
+          );
+        }
+        if (confTooltip.conference) {
+          const cf = confTooltip.conference;
+          const CONF_HEX: Record<string, string> = {
+            'Defense': '#ff6400', 'Cybersecurity': '#00d4ff', 'Manufacturing': '#00d4ff',
+            'Logistics': '#ffb800', 'Robotics': '#00ff88', 'AI/ML': '#60a5fa',
+            'Energy': '#ffd700', 'Border/Gov': '#f97316', 'Construction': '#d97706',
+            'Healthcare': '#06b6d4', 'Workforce': '#8b5cf6',
+          };
+          const catColor = CONF_HEX[cf.category] ?? '#888';
+          return (
+            <div
+              className="absolute z-30 pointer-events-none px-3 py-2 bg-black/92 border border-white/10 rounded-sm backdrop-blur-md"
+              style={{ left: confTooltip.x + 12, top: confTooltip.y - 10 }}
+            >
+              <p className="font-mono text-[11px] text-white font-semibold leading-tight">
+                {(cf.name ?? '').slice(0, 30)}
+              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="font-mono text-[8px]" style={{ color: catColor }}>
+                  {(cf.category ?? '').toUpperCase()}
+                </span>
+                <span className="font-mono text-[8px] text-white/30">{cf.month}</span>
+              </div>
+              <div className="flex items-center gap-3 mt-1">
+                <span className="font-mono text-[8px] text-white/40">
+                  REL <span style={{ color: '#00d4ff' }}>{cf.relevanceScore}</span>
+                </span>
+                <span className="font-mono text-[8px] text-white/40">
+                  {cf.estimatedExhibitors.toLocaleString()} exhibitors
+                </span>
+              </div>
+            </div>
+          );
+        }
+        return null;
       })()}
 
       {/* SAM Businesses — Sector color legend + activity blink legend */}

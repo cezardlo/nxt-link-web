@@ -128,8 +128,8 @@ export function MapTopBar({
       {/* Logo — Bloomberg-style wordmark */}
       <div className="flex items-center gap-2 shrink-0">
         <span className="relative h-1.5 w-1.5 hidden md:inline-flex shrink-0">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
-          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" style={{ boxShadow: '0 0 4px #10b981cc' }} />
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60" style={{ backgroundColor: '#00ff88' }} />
+          <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ backgroundColor: '#00ff88', boxShadow: '0 0 6px #00ff88cc' }} />
         </span>
         <a
           href="/"
@@ -138,6 +138,13 @@ export function MapTopBar({
           NXT<span className="text-[#00d4ff]">{'//'}</span>LINK
         </a>
       </div>
+
+      <a
+        href="/industries"
+        className="font-mono text-[8px] tracking-[0.2em] text-white/20 hover:text-[#00d4ff]/70 transition-colors hidden md:inline"
+      >
+        EXPLORE
+      </a>
 
       <Separator />
 
@@ -169,8 +176,8 @@ export function MapTopBar({
         {!loading && mission.trim() && (
           <button
             onClick={handleSubmit}
-            className="shrink-0 px-2 py-0.5 font-mono text-[8px] text-emerald-400 border border-emerald-400/25
-                       hover:bg-emerald-400/10 hover:border-emerald-400/50 transition-all rounded-sm tracking-widest"
+            className="shrink-0 px-2 py-0.5 font-mono text-[8px] text-[#00ff88] border border-[#00ff88]/25
+                       hover:bg-[#00ff88]/10 hover:border-[#00ff88]/50 transition-all rounded-sm tracking-widest"
           >
             RUN ▸
           </button>
@@ -301,12 +308,13 @@ export function MapTopBar({
         <div className="flex items-center gap-1 md:gap-1.5 font-mono text-[7px] md:text-[8px]">
           <span className="text-white/15 tracking-widest">SIG</span>
           <span
-            className="text-emerald-400 font-bold tabular-nums"
+            className="font-bold tabular-nums"
             style={{
+              color: '#00ff88',
               display: 'inline-block',
               transition: 'transform 0.3s cubic-bezier(0.22,1,0.36,1)',
               transform: pointFlash ? 'scale(1.4)' : 'scale(1)',
-              textShadow: pointFlash ? '0 0 8px rgba(16,185,129,0.7)' : 'none',
+              textShadow: pointFlash ? '0 0 8px #00ff88b3' : 'none',
             }}
           >
             {pointCount.toLocaleString()}
@@ -332,7 +340,7 @@ export function MapTopBar({
       <button
         onClick={onMobileRightToggle}
         className="md:hidden shrink-0 flex items-center justify-center w-7 h-7 border border-white/[0.08] rounded-sm
-                   font-mono text-[9px] text-emerald-400/50 hover:text-emerald-400 hover:border-emerald-400/25
+                   font-mono text-[9px] text-[#00ff88]/50 hover:text-[#00ff88] hover:border-[#00ff88]/25
                    transition-all duration-150"
         title="Toggle intel panel"
       >

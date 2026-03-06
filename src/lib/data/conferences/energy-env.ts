@@ -52,20 +52,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ee-gridedge',
-    name: 'Grid Edge World Forum',
-    category: 'Energy',
-    location: 'San Diego, CA',
-    month: 'June',
-    description: 'Wood Mackenzie executive forum on distributed energy, grid modernization, and energy storage. Covers utility-scale battery storage, microgrids, and demand response — directly relevant to NextEra West Texas storage projects and El Paso Electric resilience planning.',
-    estimatedExhibitors: 80,
-    relevanceScore: 76,
-    website: 'https://www.woodmac.com/events/grid-edge-world-forum',
-    lat: 32.7157,
-    lon: -117.1611,
-  },
-
-  {
     id: 'conf-ee-aesp-national',
     name: 'AESP National Conference',
     category: 'Energy',
@@ -133,20 +119,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://energythoughtsummit.com',
     lat: 30.2672,
     lon: -97.7431,
-  },
-
-  {
-    id: 'conf-ee-cleanpower',
-    name: 'Clean Power Annual Conference',
-    category: 'Energy',
-    location: 'Minneapolis, MN',
-    month: 'May',
-    description: 'American Clean Power Association annual gathering for wind, solar, storage, and transmission developers. Policy advocacy sessions directly shape federal incentives affecting West Texas renewable investment. NextEra and Ørsted executives regularly present.',
-    estimatedExhibitors: 200,
-    relevanceScore: 74,
-    website: 'https://cleanpower.org/events/clean-power-annual-conference',
-    lat: 44.9778,
-    lon: -93.2650,
   },
 
   {
@@ -220,20 +192,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ee-microgrid-knowledge',
-    name: 'Microgrid Knowledge Conference',
-    category: 'Energy',
-    location: 'San Diego, CA',
-    month: 'September',
-    description: 'Annual microgrid-focused conference covering military installation microgrids, campus energy systems, and community resilience microgrids. Fort Bliss and White Sands Missile Range microgrid projects are archetypal case studies for military microgrid vendors.',
-    estimatedExhibitors: 80,
-    relevanceScore: 77,
-    website: 'https://microgridknowledge.com/conference',
-    lat: 32.7157,
-    lon: -117.1611,
-  },
-
-  {
     id: 'conf-ee-wef-davos-energy',
     name: 'World Economic Forum — Energy Transition Dialogues',
     category: 'Energy',
@@ -273,34 +231,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.treia.org',
     lat: 30.2672,
     lon: -97.7431,
-  },
-
-  {
-    id: 'conf-ee-energy-recovery-conf',
-    name: 'Energy Recovery Conference',
-    category: 'Energy',
-    location: 'San Antonio, TX',
-    month: 'October',
-    description: 'Texas-focused waste-to-energy, landfill gas recovery, and biomass conference. Covers renewable natural gas (RNG) production and pipeline injection relevant to El Paso Natural Gas network. Texas Commission on Environmental Quality staff attend to discuss permitting.',
-    estimatedExhibitors: 45,
-    relevanceScore: 67,
-    website: 'https://www.energyrecoveryconference.com',
-    lat: 29.4241,
-    lon: -98.4936,
-  },
-
-  {
-    id: 'conf-ee-hydrogen-north-america',
-    name: 'Hydrogen North America Conference',
-    category: 'Energy',
-    location: 'Houston, TX',
-    month: 'April',
-    description: 'CWC Group event covering green hydrogen production, fuel cells, and hydrogen infrastructure development across North America. West Texas green hydrogen potential from stranded wind power is a featured investment theme; New Mexico DOE hydrogen hub adjacent to El Paso.',
-    estimatedExhibitors: 120,
-    relevanceScore: 71,
-    website: 'https://www.cwcresearch.com/hydrogen-north-america',
-    lat: 29.7604,
-    lon: -95.3698,
   },
 
   {
@@ -388,20 +318,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ee-power-africa-summit',
-    name: 'Power Africa Annual Summit',
-    category: 'Energy',
-    location: 'Washington, DC',
-    month: 'June',
-    description: 'USAID Power Africa initiative annual event covering off-grid electrification and utility-scale power development in Sub-Saharan Africa. El Paso-based energy consultants with international portfolios and UTEP development-focused researchers attend.',
-    estimatedExhibitors: 30,
-    relevanceScore: 35,
-    website: 'https://www.usaid.gov/powerafrica',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
     id: 'conf-ee-solarex-istanbul',
     name: 'SolarEX Istanbul',
     category: 'Energy',
@@ -446,34 +362,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ee-urt-permian',
-    name: 'Unconventional Resources Technology Conference (URTeC)',
-    category: 'Oil & Gas',
-    location: 'Houston, TX',
-    month: 'June',
-    description: 'SPE/AAPG/SEG joint conference exclusively focused on tight oil and shale gas development. Permian Basin — the basin adjacent to El Paso — is the dominant topic; covers hydraulic fracturing, completion optimization, and produced water management directly relevant to West Texas operators.',
-    estimatedExhibitors: 300,
-    relevanceScore: 82,
-    website: 'https://www.urteconference.com',
-    lat: 29.7604,
-    lon: -95.3698,
-  },
-
-  {
-    id: 'conf-ee-permian-basin-oil-gas',
-    name: 'Permian Basin International Oil Show',
-    category: 'Oil & Gas',
-    location: 'Odessa, TX',
-    month: 'October',
-    description: 'Biennial oilfield equipment and services exposition held in Odessa at the heart of the Permian Basin. Draws 200+ exhibitors and 15,000+ oilfield workers, engineers, and operators. The closest major oil & gas event to El Paso; critical for West Texas supply chain intelligence.',
-    estimatedExhibitors: 200,
-    relevanceScore: 92,
-    website: 'https://www.pbios.com',
-    lat: 31.8457,
-    lon: -102.3676,
-  },
-
-  {
     id: 'conf-ee-gastech',
     name: 'Gastech Conference & Exhibition',
     category: 'Oil & Gas',
@@ -485,20 +373,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.gastechevent.com',
     lat: 29.7604,
     lon: -95.3698,
-  },
-
-  {
-    id: 'conf-ee-dug-permian',
-    name: 'DUG Permian Basin Conference',
-    category: 'Oil & Gas',
-    location: 'Midland, TX',
-    month: 'April',
-    description: 'Hart Energy\'s Drilled & Uncompleted well conference specifically covering Permian Basin development economics, well inventory, and operator strategy. Senior producer executives present quarterly results and capital allocation plans. Closest major O&G event to El Paso metro.',
-    estimatedExhibitors: 80,
-    relevanceScore: 89,
-    website: 'https://www.hartenergy.com/events/dug-permian-basin',
-    lat: 31.9973,
-    lon: -102.0779,
   },
 
   {
@@ -544,34 +418,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ee-pipeline-pig',
-    name: 'Pipeline Pigging & Integrity Management Conference',
-    category: 'Oil & Gas',
-    location: 'Houston, TX',
-    month: 'February',
-    description: 'Clarion Technical Conferences event on pipeline inspection, integrity assessment, and in-line inspection technology. El Paso Natural Gas operates the largest natural gas pipeline system in the US; pipeline integrity management is a core operational focus for Kinder Morgan.',
-    estimatedExhibitors: 120,
-    relevanceScore: 76,
-    website: 'https://www.clarion.org/pigging',
-    lat: 29.7604,
-    lon: -95.3698,
-  },
-
-  {
-    id: 'conf-ee-wpc-world-petroleum',
-    name: 'World Petroleum Congress',
-    category: 'Oil & Gas',
-    location: 'Calgary, Canada',
-    month: 'September',
-    description: 'Triennial international oil and gas congress gathering heads of NOCs, IOCs, and producing nations. US upstream producers including Permian Basin supermajors (ExxonMobil, Chevron) use the venue to present strategic outlooks and engage global buyers.',
-    estimatedExhibitors: 500,
-    relevanceScore: 55,
-    website: 'https://www.world-petroleum.org/congress',
-    lat: 51.0447,
-    lon: -114.0719,
-  },
-
-  {
     id: 'conf-ee-ipa-convention',
     name: 'Independent Petroleum Association of America (IPAA) Oil & Gas Symposium',
     category: 'Oil & Gas',
@@ -583,34 +429,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.ipaa.org/events',
     lat: 33.7225,
     lon: -116.3750,
-  },
-
-  {
-    id: 'conf-ee-spe-produced-water',
-    name: 'SPE Produced Water Society Seminar',
-    category: 'Oil & Gas',
-    location: 'San Antonio, TX',
-    month: 'October',
-    description: 'Focused technical seminar on produced water management, treatment, and beneficial reuse in the oil and gas industry. Permian Basin produced water volumes are staggering — a key operational challenge for West Texas operators and a potential water supply opportunity for drought-stressed communities.',
-    estimatedExhibitors: 80,
-    relevanceScore: 84,
-    website: 'https://www.spepws.org',
-    lat: 29.4241,
-    lon: -98.4936,
-  },
-
-  {
-    id: 'conf-ee-midstream-texas',
-    name: 'Midstream Texas Conference',
-    category: 'Oil & Gas',
-    location: 'Midland, TX',
-    month: 'November',
-    description: 'Pipeline, gathering, and NGL processing conference covering West Texas midstream infrastructure build-out. Gas processing plant capacity and pipeline takeaway constraints directly impact Permian producer economics. El Paso Natural Gas system is a primary takeaway route covered.',
-    estimatedExhibitors: 60,
-    relevanceScore: 88,
-    website: 'https://www.midstreamtexas.com',
-    lat: 31.9973,
-    lon: -102.0779,
   },
 
   {
@@ -697,35 +515,7 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
     lon: -95.3698,
   },
 
-  {
-    id: 'conf-ee-west-texas-oil-gas',
-    name: 'West Texas Oil & Gas Association Annual Meeting',
-    category: 'Oil & Gas',
-    location: 'Midland, TX',
-    month: 'August',
-    description: 'WTOGA regional trade association meeting for West Texas independent producers, royalty owners, and service companies. Covers Texas Railroad Commission regulatory updates, surface use agreements, and Permian Basin development trends. Closest O&G association event to El Paso.',
-    estimatedExhibitors: 30,
-    relevanceScore: 90,
-    website: 'https://www.wtoga.com',
-    lat: 31.9973,
-    lon: -102.0779,
-  },
-
   // ── Solar ────────────────────────────────────────────────────────────────────
-
-  {
-    id: 'conf-ee-replus',
-    name: 'RE+ (formerly Solar Power International)',
-    category: 'Solar',
-    location: 'Anaheim, CA',
-    month: 'September',
-    description: 'North America\'s largest clean energy event with 40,000+ attendees and 1,200+ exhibitors spanning solar PV, energy storage, EV charging, and grid services. West Texas solar project developers, El Paso Electric procurement, and regional EPCs attend to source equipment and evaluate new vendors.',
-    estimatedExhibitors: 1200,
-    relevanceScore: 88,
-    website: 'https://www.replus.org',
-    lat: 33.8358,
-    lon: -117.9143,
-  },
 
   {
     id: 'conf-ee-solar-asset-mgmt',
@@ -812,34 +602,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ee-solarcon-india',
-    name: 'REI Expo India',
-    category: 'Solar',
-    location: 'New Delhi, India',
-    month: 'September',
-    description: 'Renewable Energy India Expo covering solar, wind, and energy storage in Asia\'s fastest-growing energy market. Indian module manufacturers competing for West Texas project supply chains exhibit. Monitoring panel supply chain diversification away from China is the primary value for US solar teams.',
-    estimatedExhibitors: 600,
-    relevanceScore: 32,
-    website: 'https://www.rei-expo.com',
-    lat: 28.7041,
-    lon: 77.1025,
-  },
-
-  {
-    id: 'conf-ee-csp-summit',
-    name: 'CSP Summit Americas',
-    category: 'Solar',
-    location: 'Scottsdale, AZ',
-    month: 'March',
-    description: 'Concentrated Solar Power industry summit covering molten salt storage, parabolic trough, and power tower technology. Southwest US — including New Mexico and West Texas — represents ideal DNI resource for CSP deployment; Abengoa and SolarReserve legacy projects discussed.',
-    estimatedExhibitors: 40,
-    relevanceScore: 76,
-    website: 'https://www.cspsummit.com',
-    lat: 33.4942,
-    lon: -111.9261,
-  },
-
-  {
     id: 'conf-ee-solar-summit-midwest',
     name: 'Midwest Solar Expo',
     category: 'Solar',
@@ -868,20 +630,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ee-solar-finance-na',
-    name: 'Solar Finance & Investment Summit North America',
-    category: 'Solar',
-    location: 'New York, NY',
-    month: 'January',
-    description: 'Bloomberg NEF conference on solar project finance, tax equity, and M&A transactions. IRA transferability and direct pay provisions affecting West Texas solar economics are core agenda topics. Investors tracking El Paso Electric and NextEra development pipelines attend.',
-    estimatedExhibitors: 40,
-    relevanceScore: 68,
-    website: 'https://www.bloombergnef.com/events',
-    lat: 40.7128,
-    lon: -74.0060,
-  },
-
-  {
     id: 'conf-ee-solar-new-mexico',
     name: 'New Mexico Solar Energy Association Symposium',
     category: 'Solar',
@@ -893,62 +641,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.nmsea.org',
     lat: 35.0844,
     lon: -106.6504,
-  },
-
-  {
-    id: 'conf-ee-esna-solar-storage',
-    name: 'Energy Storage North America',
-    category: 'Solar',
-    location: 'Dallas, TX',
-    month: 'September',
-    description: 'Co-located with Intersolar North America; dedicated energy storage event covering BESS project development, grid services, and co-located solar+storage. Texas venue amplifies relevance for El Paso Electric battery storage procurement under its 2026-2030 IRP.',
-    estimatedExhibitors: 200,
-    relevanceScore: 82,
-    website: 'https://www.esna.energy',
-    lat: 32.7767,
-    lon: -96.7970,
-  },
-
-  {
-    id: 'conf-ee-solar-installer-summit',
-    name: 'Solar Installer Summit',
-    category: 'Solar',
-    location: 'Las Vegas, NV',
-    month: 'July',
-    description: 'Solar Power World event targeting residential and commercial solar installers. Covers workforce training, panel logistics, permit streamlining, and new product demos. El Paso rooftop solar market is growing rapidly; local installers seek vendor relationships and training resources here.',
-    estimatedExhibitors: 60,
-    relevanceScore: 70,
-    website: 'https://www.solarpowerworldonline.com/events',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
-  {
-    id: 'conf-ee-smart-energy-summit',
-    name: 'Smart Energy Summit',
-    category: 'Solar',
-    location: 'Austin, TX',
-    month: 'February',
-    description: 'Wood Mackenzie solar market intelligence summit covering Texas residential solar, ERCOT net metering policy, and community solar legislation. El Paso Electric residential solar interconnection procedures and rate design are frequently discussed as a Texas IOE benchmark case.',
-    estimatedExhibitors: 30,
-    relevanceScore: 81,
-    website: 'https://www.woodmac.com/events/smart-energy-summit',
-    lat: 30.2672,
-    lon: -97.7431,
-  },
-
-  {
-    id: 'conf-ee-solar-developer-forum',
-    name: 'Utility Solar Developer Forum',
-    category: 'Solar',
-    location: 'San Diego, CA',
-    month: 'October',
-    description: 'Forum for utility-scale solar and wind project developers covering permitting, interconnection, offtake contracting, and financing. West Texas solar pipeline projects from NextEra, Invenergy, and Longroad Energy are regularly profiled; El Paso Electric RFP processes are benchmarked.',
-    estimatedExhibitors: 40,
-    relevanceScore: 77,
-    website: 'https://www.utilitysolarforum.com',
-    lat: 32.7157,
-    lon: -117.1611,
   },
 
   {
@@ -982,20 +674,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
   // ── Wind ─────────────────────────────────────────────────────────────────────
 
   {
-    id: 'conf-ee-awea-windpower',
-    name: 'ACP Windpower Conference & Exhibition',
-    category: 'Wind',
-    location: 'New Orleans, LA',
-    month: 'May',
-    description: 'American Clean Power Association\'s flagship wind event drawing 7,000+ attendees and 400+ exhibitors. West Texas wind — producing more electricity than any other US region — is the dominant operational topic. GE Vernova, Vestas, and Siemens Gamesa all exhibit and present technical sessions.',
-    estimatedExhibitors: 400,
-    relevanceScore: 86,
-    website: 'https://cleanpower.org/events/windpower',
-    lat: 29.9511,
-    lon: -90.0715,
-  },
-
-  {
     id: 'conf-ee-windpower-monthly',
     name: 'Global Wind Summit',
     category: 'Wind',
@@ -1007,90 +685,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.globalwindsummit.com',
     lat: 53.5511,
     lon: 9.9937,
-  },
-
-  {
-    id: 'conf-ee-texas-wind-power',
-    name: 'Texas Wind Energy Conference',
-    category: 'Wind',
-    location: 'Corpus Christi, TX',
-    month: 'October',
-    description: 'Texas Wind Energy Association annual event covering ERCOT wind integration, offshore Gulf Coast wind development, and Texas wind O&M practices. West Texas operators participate; covers CREZ transmission infrastructure that evacuates Permian wind generation to Dallas-Fort Worth load centers.',
-    estimatedExhibitors: 60,
-    relevanceScore: 87,
-    website: 'https://www.txwea.org',
-    lat: 27.8006,
-    lon: -97.3964,
-  },
-
-  {
-    id: 'conf-ee-windeurope-annual',
-    name: 'WindEurope Annual Event',
-    category: 'Wind',
-    location: 'Copenhagen, Denmark',
-    month: 'April',
-    description: 'WindEurope\'s policy and technology annual summit covering offshore wind auctions, floating wind, and supply chain. European supply chain bottlenecks and steel/tower pricing directly affect West Texas wind project capital costs. El Paso wind developers monitor Siemens Gamesa and Vestas production schedules.',
-    estimatedExhibitors: 800,
-    relevanceScore: 45,
-    website: 'https://windeurope.org/annual',
-    lat: 55.6761,
-    lon: 12.5683,
-  },
-
-  {
-    id: 'conf-ee-ewea-offshore',
-    name: 'WindEurope Offshore',
-    category: 'Wind',
-    location: 'Bilbao, Spain',
-    month: 'April',
-    description: 'Leading offshore wind conference covering floating wind, monopile foundations, and subsea electrical systems. Floating offshore wind technology transfers to West Texas land-based wind in turbine platform design; Vestas and Siemens Gamesa executives preview next-generation turbine roadmaps.',
-    estimatedExhibitors: 600,
-    relevanceScore: 38,
-    website: 'https://windeurope.org/offshore',
-    lat: 43.2630,
-    lon: -2.9350,
-  },
-
-  {
-    id: 'conf-ee-wind-o-and-m',
-    name: 'Wind Operations & Maintenance USA',
-    category: 'Wind',
-    location: 'Dallas, TX',
-    month: 'March',
-    description: 'Dedicated wind turbine O&M conference covering blade inspection, predictive maintenance, and operations cost reduction. West Texas wind O&M market — the largest in the US — is the primary operational reference; turbine operators and independent service providers attend from Midland and Abilene.',
-    estimatedExhibitors: 70,
-    relevanceScore: 84,
-    website: 'https://www.windpowerom.com',
-    lat: 32.7767,
-    lon: -96.7970,
-  },
-
-  {
-    id: 'conf-ee-north-american-windpower',
-    name: 'North American WindPower Expo',
-    category: 'Wind',
-    location: 'Chicago, IL',
-    month: 'June',
-    description: 'NAWP biennial expo covering wind development in Great Plains and Midwest markets. Draws Midwest and Southwest wind developers; operational insights from Panhandle/South Texas wind O&M directly applicable to West Texas fleet operations management.',
-    estimatedExhibitors: 120,
-    relevanceScore: 60,
-    website: 'https://www.nawindpower.com/events',
-    lat: 41.8781,
-    lon: -87.6298,
-  },
-
-  {
-    id: 'conf-ee-wind-energy-finance',
-    name: 'Wind Energy Finance & Investment Summit',
-    category: 'Wind',
-    location: 'New York, NY',
-    month: 'November',
-    description: 'Bloomberg NEF wind finance summit covering PTC economics, tax equity structures, and wind project M&A. West Texas wind projects are major transaction assets; investors tracking NextEra, Invenergy, and Pattern Energy portfolios monitor refinancing and divestiture announcements.',
-    estimatedExhibitors: 30,
-    relevanceScore: 68,
-    website: 'https://www.bloombergnef.com/events/wind-finance-summit',
-    lat: 40.7128,
-    lon: -74.0060,
   },
 
   {
@@ -1119,76 +713,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.emnrd.nm.gov',
     lat: 35.0844,
     lon: -106.6504,
-  },
-
-  {
-    id: 'conf-ee-wind-blade-tech',
-    name: 'Wind Turbine Blade Manufacturing Summit',
-    category: 'Wind',
-    location: 'Denver, CO',
-    month: 'February',
-    description: 'Specialized conference on wind blade manufacturing, materials, and recycling. Blade supply chain constraints and recycling regulations affect West Texas wind repowering projects; TPI Composites manufacturing at multiple US sites discussed as regional supply case study.',
-    estimatedExhibitors: 40,
-    relevanceScore: 58,
-    website: 'https://www.blademanufacturing.com',
-    lat: 39.7392,
-    lon: -104.9903,
-  },
-
-  {
-    id: 'conf-ee-wind-work',
-    name: 'Wind Workforce Summit',
-    category: 'Wind',
-    location: 'Abilene, TX',
-    month: 'August',
-    description: 'Texas wind industry workforce development summit co-hosted by Abilene and Big Country community colleges. Covers wind technician training programs, apprenticeships, and military veteran transition into wind O&M. West Texas wind workforce draws extensively from El Paso and Permian Basin community colleges.',
-    estimatedExhibitors: 20,
-    relevanceScore: 82,
-    website: 'https://www.abileneedc.com',
-    lat: 32.4487,
-    lon: -99.7331,
-  },
-
-  {
-    id: 'conf-ee-wind-canada',
-    name: 'CanWEA Wind Energy Summit',
-    category: 'Wind',
-    location: 'Toronto, Canada',
-    month: 'October',
-    description: 'Canadian Wind Energy Association annual summit covering Alberta and Saskatchewan wind market development. Technology innovations and operational best practices from Canadian wind markets provide benchmarks for US Plains and Southwest wind operators managing similar grid integration challenges.',
-    estimatedExhibitors: 150,
-    relevanceScore: 40,
-    website: 'https://www.canrea.ca',
-    lat: 43.6532,
-    lon: -79.3832,
-  },
-
-  {
-    id: 'conf-ee-wind-asset-mgmt',
-    name: 'Wind O&M Asset Management Europe',
-    category: 'Wind',
-    location: 'Amsterdam, Netherlands',
-    month: 'February',
-    description: 'European wind asset management conference covering performance monitoring, drone inspection, and reliability-centered maintenance. Software and sensor technology from European markets enters US West Texas wind operations 12–18 months post-launch; tech scouting for El Paso energy investors.',
-    estimatedExhibitors: 100,
-    relevanceScore: 38,
-    website: 'https://www.windpowerom.com/europe',
-    lat: 52.3676,
-    lon: 4.9041,
-  },
-
-  {
-    id: 'conf-ee-wind-lidar-met',
-    name: 'Wind Resource Assessment & Forecasting Conference',
-    category: 'Wind',
-    location: 'Denver, CO',
-    month: 'April',
-    description: 'Technical conference on LiDAR wind measurement, mesoscale modeling, and site assessment. West Texas wind resource at 100m hub height exceeds 8 m/s average — among the best in the US. UTEP atmospheric science research on Chihuahuan Desert wind patterns is relevant to new project siting.',
-    estimatedExhibitors: 30,
-    relevanceScore: 72,
-    website: 'https://www.windresourceconference.com',
-    lat: 39.7392,
-    lon: -104.9903,
   },
 
   {
@@ -1264,20 +788,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ee-awra-annual',
-    name: 'AWRA Annual Water Resources Conference',
-    category: 'Water',
-    location: 'Denver, CO',
-    month: 'November',
-    description: 'American Water Resources Association multi-disciplinary conference covering hydrology, water policy, and groundwater management. Rio Grande compact negotiations, Elephant Butte reservoir levels, and Texas/New Mexico water rights disputes are recurring Southwest water policy topics.',
-    estimatedExhibitors: 80,
-    relevanceScore: 86,
-    website: 'https://www.awra.org/annualconference',
-    lat: 39.7392,
-    lon: -104.9903,
-  },
-
-  {
     id: 'conf-ee-iwa-world-water',
     name: 'IWA World Water Congress & Exhibition',
     category: 'Water',
@@ -1303,20 +813,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.twca.net',
     lat: 30.2672,
     lon: -97.7431,
-  },
-
-  {
-    id: 'conf-ee-southwest-hydrology',
-    name: 'Southwest Hydrology Conference',
-    category: 'Water',
-    location: 'Tucson, AZ',
-    month: 'September',
-    description: 'Biennial conference on hydrology, water resources, and water policy in the arid Southwest US. Rio Grande and Hueco Bolson aquifer research from UTEP and NMSU is regularly presented. Groundwater depletion modeling informing El Paso Water Utilities 50-year supply plan is a core topic.',
-    estimatedExhibitors: 30,
-    relevanceScore: 92,
-    website: 'https://www.swhydrology.org',
-    lat: 32.2226,
-    lon: -110.9747,
   },
 
   {
@@ -1376,48 +872,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ee-groundwater-ngwa',
-    name: 'NGWA Groundwater Week',
-    category: 'Water',
-    location: 'Las Vegas, NV',
-    month: 'December',
-    description: 'National Ground Water Association annual event covering aquifer science, well drilling, and groundwater remediation. Hueco Bolson aquifer management — El Paso\'s primary groundwater source shared with Juárez — is a relevant case study for arid groundwater sustainability research.',
-    estimatedExhibitors: 200,
-    relevanceScore: 87,
-    website: 'https://www.ngwa.org/groundwaterweek',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
-  {
-    id: 'conf-ee-water-research-foundation',
-    name: 'Water Research Foundation Subscriber Event',
-    category: 'Water',
-    location: 'Denver, CO',
-    month: 'June',
-    description: 'WRF annual subscriber event presenting cutting-edge drinking water research to utility members. El Paso Water Utilities is a subscriber; research on PFAS treatment, direct potable reuse regulations, and drought resilience modeling is directly applicable to El Paso water supply planning.',
-    estimatedExhibitors: 40,
-    relevanceScore: 86,
-    website: 'https://www.waterrf.org/events',
-    lat: 39.7392,
-    lon: -104.9903,
-  },
-
-  {
-    id: 'conf-ee-rio-grande-water',
-    name: 'Rio Grande Water Users Association Annual Meeting',
-    category: 'Water',
-    location: 'Albuquerque, NM',
-    month: 'February',
-    description: 'Annual gathering of Rio Grande compact stakeholders including irrigation districts, municipalities, and federal water managers from Texas, New Mexico, and Colorado. El Paso Water Utilities and EBID participate; Rio Grande flow allocations and Elephant Butte storage levels determine El Paso surface water availability.',
-    estimatedExhibitors: 10,
-    relevanceScore: 95,
-    website: 'https://www.riograndewaterusers.org',
-    lat: 35.0844,
-    lon: -106.6504,
-  },
-
-  {
     id: 'conf-ee-water-ep-summit',
     name: 'El Paso Water Resources Summit',
     category: 'Water',
@@ -1429,34 +883,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.epwater.org',
     lat: 31.7619,
     lon: -106.4850,
-  },
-
-  {
-    id: 'conf-ee-swest-water-summit',
-    name: 'Southwest Water Summit',
-    category: 'Water',
-    location: 'Phoenix, AZ',
-    month: 'March',
-    description: 'Multi-state summit on Colorado River allocations, aquifer sustainability, and western water law. Colorado River shortage declarations affect Arizona and Nevada water supply models closely analogous to El Paso\'s Hueco Bolson dependency; Rio Grande management cases are regularly cross-referenced.',
-    estimatedExhibitors: 40,
-    relevanceScore: 88,
-    website: 'https://www.swwsummit.org',
-    lat: 33.4484,
-    lon: -112.0740,
-  },
-
-  {
-    id: 'conf-ee-stormwater-conf',
-    name: 'StormCon — North American Surface Water Quality Conference',
-    category: 'Water',
-    location: 'Tampa, FL',
-    month: 'August',
-    description: 'Annual stormwater management and green infrastructure conference covering MS4 permit compliance, low-impact development, and urban flood resilience. El Paso\'s flash flood management in arroyos and low-income neighborhood drainage improvements are relevant case studies.',
-    estimatedExhibitors: 80,
-    relevanceScore: 74,
-    website: 'https://www.swbiodiversity.org/stormcon',
-    lat: 27.9506,
-    lon: -82.4572,
   },
 
   // ── Environmental ────────────────────────────────────────────────────────────
@@ -1504,34 +930,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ee-brownfields-conf',
-    name: 'National Brownfields Conference',
-    category: 'Environmental',
-    location: 'Atlanta, GA',
-    month: 'April',
-    description: 'EPA-supported national conference on contaminated site remediation, brownfield redevelopment financing, and Superfund alternative cleanup approaches. El Paso has multiple historic ASARCO smelter contamination sites; EPA Region 6 brownfields program staff attend alongside city redevelopment teams.',
-    estimatedExhibitors: 150,
-    relevanceScore: 80,
-    website: 'https://www.brownfieldsce.com',
-    lat: 33.7490,
-    lon: -84.3880,
-  },
-
-  {
-    id: 'conf-ee-hazmat-conf',
-    name: 'HAZMAT Conference & Tradeshow',
-    category: 'Environmental',
-    location: 'New Orleans, LA',
-    month: 'March',
-    description: 'Annual hazardous materials response, spill control, and emergency preparedness conference. El Paso Fire Department hazmat team and TCEQ emergency response staff participate; Permian Basin pipeline and chemical transport through El Paso creates significant hazmat response responsibility.',
-    estimatedExhibitors: 100,
-    relevanceScore: 78,
-    website: 'https://www.hazmatconf.com',
-    lat: 29.9511,
-    lon: -90.0715,
-  },
-
-  {
     id: 'conf-ee-greenbuild',
     name: 'Greenbuild International Conference & Expo',
     category: 'Environmental',
@@ -1574,20 +972,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ee-southwest-env',
-    name: 'Southwest Environmental Compliance Symposium',
-    category: 'Environmental',
-    location: 'Albuquerque, NM',
-    month: 'May',
-    description: 'Regional environmental compliance symposium covering TCEQ and NMED air, water, and hazardous waste regulations. El Paso businesses operating in both Texas and New Mexico send compliance managers; Permian Basin operations in both states face dual regulatory compliance obligations.',
-    estimatedExhibitors: 30,
-    relevanceScore: 88,
-    website: 'https://www.nmenv.state.nm.us',
-    lat: 35.0844,
-    lon: -106.6504,
-  },
-
-  {
     id: 'conf-ee-climate-week',
     name: 'Climate Week NYC',
     category: 'Environmental',
@@ -1616,34 +1000,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ee-enviro-border',
-    name: 'US-Mexico Border Environmental Conference',
-    category: 'Environmental',
-    location: 'El Paso, TX',
-    month: 'June',
-    description: 'Binational conference on shared environmental challenges in the US-Mexico border region covering air quality, water contamination, hazardous waste, and climate adaptation. EPA Region 6, SEMARNAT, Texas CEQ, and NMED officials present; directly relevant to El Paso\'s unique binational environmental compliance landscape.',
-    estimatedExhibitors: 30,
-    relevanceScore: 98,
-    website: 'https://www.epa.gov/border2025',
-    lat: 31.7619,
-    lon: -106.4850,
-  },
-
-  {
-    id: 'conf-ee-nebc-biodiversity',
-    name: 'North American Biodiversity Conference',
-    category: 'Environmental',
-    location: 'Tucson, AZ',
-    month: 'March',
-    description: 'Multi-institution conference on Chihuahuan Desert biodiversity, cross-border wildlife corridors, and species conservation. Fort Bliss land management programs covering 1 million acres of Chihuahuan Desert habitat are discussed; UTEP biological sciences faculty present research annually.',
-    estimatedExhibitors: 20,
-    relevanceScore: 72,
-    website: 'https://www.nabiodiversity.org',
-    lat: 32.2226,
-    lon: -110.9747,
-  },
-
-  {
     id: 'conf-ee-env-law-southwest',
     name: 'Rocky Mountain Mineral Law Foundation Annual Institute',
     category: 'Environmental',
@@ -1655,20 +1011,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.rmmlf.org',
     lat: 39.7392,
     lon: -104.9903,
-  },
-
-  {
-    id: 'conf-ee-env-industry-summit',
-    name: 'National Environmental Industry Summit',
-    category: 'Environmental',
-    location: 'San Diego, CA',
-    month: 'February',
-    description: 'Environmental consulting and remediation industry conference covering market trends, EPA regulatory direction, and M&A in the environmental services sector. Environmental engineering firms with El Paso ASARCO remediation and border site cleanup contracts attend to benchmark project economics.',
-    estimatedExhibitors: 40,
-    relevanceScore: 68,
-    website: 'https://www.envisummit.com',
-    lat: 32.7157,
-    lon: -117.1611,
   },
 
   // ── Mining ───────────────────────────────────────────────────────────────────
@@ -1685,20 +1027,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.minexpo.com',
     lat: 36.1699,
     lon: -115.1398,
-  },
-
-  {
-    id: 'conf-ee-sme-annual',
-    name: 'SME Annual Conference & Expo',
-    category: 'Mining',
-    location: 'Denver, CO',
-    month: 'February',
-    description: 'Society for Mining, Metallurgy & Exploration annual event with 5,000+ attendees. Covers critical minerals, mine planning, processing technology, and mine reclamation. New Mexico copper (Chino, Tyrone) and potash (Intrepid) mines adjacent to El Paso are frequently profiled operational benchmarks.',
-    estimatedExhibitors: 400,
-    relevanceScore: 80,
-    website: 'https://www.smenet.org/annual-conference',
-    lat: 39.7392,
-    lon: -104.9903,
   },
 
   {
@@ -1744,34 +1072,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ee-critical-minerals',
-    name: 'Critical Minerals Summit USA',
-    category: 'Mining',
-    location: 'Washington, DC',
-    month: 'May',
-    description: 'DOE and DOD co-sponsored summit on domestic critical mineral supply chain development covering lithium, cobalt, rare earths, and copper. New Mexico and West Texas critical mineral prospecting and the El Paso logistics corridor for DOD strategic materials sourcing are active investment themes.',
-    estimatedExhibitors: 60,
-    relevanceScore: 82,
-    website: 'https://www.criticalmineralssummit.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-ee-lithium-las-vegas',
-    name: 'Lithium & Battery Supply Chain Conference',
-    category: 'Mining',
-    location: 'Las Vegas, NV',
-    month: 'June',
-    description: 'Fastmarkets conference on lithium mining, processing, and battery-grade material supply chains. New Mexico lithium brine exploration (Torchlight Energy, Standard Lithium) adjacent to El Paso generates local supply chain interest; El Paso logistics corridor is positioned for battery precursor transport.',
-    estimatedExhibitors: 80,
-    relevanceScore: 74,
-    website: 'https://www.fastmarkets.com/events/lithium-supply-chain-conference',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
-  {
     id: 'conf-ee-texas-mining',
     name: 'Texas Mining & Reclamation Association Annual Conference',
     category: 'Mining',
@@ -1783,20 +1083,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.tmra.com',
     lat: 30.2672,
     lon: -97.7431,
-  },
-
-  {
-    id: 'conf-ee-copper-conf',
-    name: 'Copper Conference & Exhibition',
-    category: 'Mining',
-    location: 'Phoenix, AZ',
-    month: 'October',
-    description: 'Annual copper industry conference covering smelting, refining, and end-use markets. ASARCO\'s El Paso copper smelter operated for over a century before closure; current copper supply chains from Freeport-McMoRan\'s New Mexico mines route through El Paso for rail and truck transport.',
-    estimatedExhibitors: 80,
-    relevanceScore: 84,
-    website: 'https://www.copperconference.com',
-    lat: 33.4484,
-    lon: -112.0740,
   },
 
   {
@@ -1825,20 +1111,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.pda.org.uk',
     lat: 51.5074,
     lon: -0.1278,
-  },
-
-  {
-    id: 'conf-ee-chihuahua-mining',
-    name: 'Expo Foro Minero Chihuahua',
-    category: 'Mining',
-    location: 'Chihuahua, Mexico',
-    month: 'October',
-    description: 'Chihuahua State mining expo covering silver, lead, zinc, and gold production from world-class mines including Grupo México Sinaloa and Penasquito. Chihuahua mining supply chains route through El Paso border crossings for US equipment imports; El Paso logistics firms serve the mining sector.',
-    estimatedExhibitors: 100,
-    relevanceScore: 86,
-    website: 'https://www.camimchi.org',
-    lat: 28.6353,
-    lon: -106.0889,
   },
 
   {
@@ -1897,35 +1169,7 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
     lon: -104.2288,
   },
 
-  {
-    id: 'conf-ee-aggregates-conf',
-    name: 'National Stone, Sand & Gravel Association Annual Convention',
-    category: 'Mining',
-    location: 'Nashville, TN',
-    month: 'March',
-    description: 'NSSGA convention covering aggregates mining, processing, and construction materials markets. El Paso construction market — driven by Fort Bliss, UT System expansion, and border wall infrastructure — relies on Trans-Pecos and New Mexico aggregate quarries; NSSGA tracks Texas construction demand.',
-    estimatedExhibitors: 150,
-    relevanceScore: 74,
-    website: 'https://www.nssga.org/annual-convention',
-    lat: 36.1627,
-    lon: -86.7816,
-  },
-
   // ── Nuclear ──────────────────────────────────────────────────────────────────
-
-  {
-    id: 'conf-ee-ans-winter',
-    name: 'ANS Winter Meeting & Technology Expo',
-    category: 'Nuclear',
-    location: 'Washington, DC',
-    month: 'November',
-    description: 'American Nuclear Society flagship winter meeting with 2,500+ nuclear engineers, scientists, and policy makers. Covers advanced reactor designs (SMRs, fast reactors), nuclear fuel cycles, and reactor safety analysis. New Mexico\'s Sandia National Laboratories and Los Alamos National Laboratory send significant delegations.',
-    estimatedExhibitors: 200,
-    relevanceScore: 78,
-    website: 'https://www.ans.org/meetings/nc2025',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
 
   {
     id: 'conf-ee-ans-annual',
@@ -1939,20 +1183,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.ans.org/meetings',
     lat: 41.8781,
     lon: -87.6298,
-  },
-
-  {
-    id: 'conf-ee-smr-summit',
-    name: 'Small Modular Reactor Summit USA',
-    category: 'Nuclear',
-    location: 'Denver, CO',
-    month: 'February',
-    description: 'CWC Group SMR summit covering NuScale, TerraPower, and Kairos advanced reactor commercialization. DOE loan program SMR funding and Texas grid need for clean firm power are primary drivers. El Paso Electric evaluates SMR as a potential long-duration clean generation source for its 2035+ IRP.',
-    estimatedExhibitors: 60,
-    relevanceScore: 75,
-    website: 'https://www.cwcresearch.com/smr-summit',
-    lat: 39.7392,
-    lon: -104.9903,
   },
 
   {
@@ -1981,20 +1211,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.icnd.com',
     lat: 40.4406,
     lon: -79.9959,
-  },
-
-  {
-    id: 'conf-ee-nuclear-security',
-    name: 'Institute of Nuclear Materials Management Annual Meeting',
-    category: 'Nuclear',
-    location: 'National Harbor, MD',
-    month: 'July',
-    description: 'INMM conference on nuclear material safeguards, physical protection, and nonproliferation. Sandia National Laboratories and Los Alamos are major contributors; nuclear material transport security through the El Paso corridor from DOE sites in New Mexico is an active program.',
-    estimatedExhibitors: 80,
-    relevanceScore: 72,
-    website: 'https://www.inmm.org/annual-meeting',
-    lat: 38.7829,
-    lon: -77.0177,
   },
 
   {
@@ -2067,34 +1283,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
     lon: 16.3738,
   },
 
-  {
-    id: 'conf-ee-nuclear-west',
-    name: 'Nuclear Waste Conference West',
-    category: 'Nuclear',
-    location: 'Salt Lake City, UT',
-    month: 'August',
-    description: 'Western US focused nuclear waste and cleanup conference covering DOE Hanford, Nevada Test Site, and WIPP operations. New Mexico nuclear waste transport corridor through El Paso is covered; TCEQ and NMED regulators participate in cross-border nuclear transport safety discussions.',
-    estimatedExhibitors: 40,
-    relevanceScore: 70,
-    website: 'https://www.nuclearwasteconference.com',
-    lat: 40.7608,
-    lon: -111.8910,
-  },
-
-  {
-    id: 'conf-ee-nuclear-new-build',
-    name: 'Nuclear New Build Conference USA',
-    category: 'Nuclear',
-    location: 'Atlanta, GA',
-    month: 'March',
-    description: 'CWC Group conference on new nuclear power plant licensing, SMR project development, and advanced nuclear financing. NuScale, TerraPower, and Kairos present project status; Texas grid operator interest in dispatchable clean nuclear generation creates planning context for El Paso Electric long-term IRP decisions.',
-    estimatedExhibitors: 50,
-    relevanceScore: 65,
-    website: 'https://www.cwcresearch.com/nuclear-new-build',
-    lat: 33.7490,
-    lon: -84.3880,
-  },
-
   // ── Waste Management ─────────────────────────────────────────────────────────
 
   {
@@ -2109,20 +1297,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.wasteexpo.com',
     lat: 36.1699,
     lon: -115.1398,
-  },
-
-  {
-    id: 'conf-ee-swana-wastecon',
-    name: 'WASTECON — Solid Waste Association of North America',
-    category: 'Waste Management',
-    location: 'Indianapolis, IN',
-    month: 'August',
-    description: 'Solid Waste Association of North America annual conference with 3,500+ municipal solid waste professionals. Covers landfill gas energy recovery, organics diversion, and zero waste programs. El Paso\'s Sullivan Road landfill and Border Steel recycling operations are representative case studies in the Southwest.',
-    estimatedExhibitors: 250,
-    relevanceScore: 82,
-    website: 'https://www.swana.org/wastecon',
-    lat: 39.7684,
-    lon: -86.1581,
   },
 
   {
@@ -2154,90 +1328,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-ee-hazwaste-conf',
-    name: 'Hazardous Waste Management Conference',
-    category: 'Waste Management',
-    location: 'Houston, TX',
-    month: 'April',
-    description: 'Regional hazardous waste management and RCRA compliance conference covering generator compliance, TSD facility operations, and hazardous waste transportation. El Paso-area industrial generators including manufacturing plants and Permian Basin oilfield waste handlers attend for compliance training.',
-    estimatedExhibitors: 70,
-    relevanceScore: 83,
-    website: 'https://www.hazwasteconf.com',
-    lat: 29.7604,
-    lon: -95.3698,
-  },
-
-  {
-    id: 'conf-ee-iswa-world-congress',
-    name: 'ISWA World Congress',
-    category: 'Waste Management',
-    location: 'Vienna, Austria',
-    month: 'October',
-    description: 'International Solid Waste Association world congress with 1,500+ delegates from 100+ countries. Covers informal recycling sectors, landfill remediation, and waste-to-energy. Cross-border waste management challenges between El Paso and Juárez — where informal waste picking is prevalent — are studied as global case studies.',
-    estimatedExhibitors: 150,
-    relevanceScore: 60,
-    website: 'https://www.iswa.org/world-congress',
-    lat: 48.2082,
-    lon: 16.3738,
-  },
-
-  {
-    id: 'conf-ee-recycle-texas',
-    name: 'Recycle Texas Annual Conference',
-    category: 'Waste Management',
-    location: 'Austin, TX',
-    month: 'September',
-    description: 'Texas Recycling Summit covering Texas EPR legislation, MRF technology, and municipal recycling program benchmarking. El Paso\'s curbside recycling program administered by Waste Connections is regularly compared with other Texas cities; border contamination and sorting challenges are discussed.',
-    estimatedExhibitors: 40,
-    relevanceScore: 85,
-    website: 'https://www.texasrecycles.org',
-    lat: 30.2672,
-    lon: -97.7431,
-  },
-
-  {
-    id: 'conf-ee-wwema-waste',
-    name: 'Waste-to-Energy Research & Technology Council Annual Conference',
-    category: 'Waste Management',
-    location: 'New York, NY',
-    month: 'October',
-    description: 'WTERT annual conference at Columbia University on waste-to-energy systems, landfill gas, and refuse-derived fuels. El Paso landfill gas recovery potential and municipal solid waste generation rate — elevated by Fort Bliss population and maquiladora packaging waste — provide relevant operational context.',
-    estimatedExhibitors: 30,
-    relevanceScore: 65,
-    website: 'https://www.seas.columbia.edu/wtert',
-    lat: 40.7128,
-    lon: -74.0060,
-  },
-
-  {
-    id: 'conf-ee-ewaste-summit',
-    name: 'E-Scrap Conference & Expo',
-    category: 'Waste Management',
-    location: 'Nashville, TN',
-    month: 'October',
-    description: 'Electronic scrap recycling industry conference covering e-waste collection, shredding, and precious metal recovery. El Paso\'s proximity to Juárez electronics manufacturing creates significant e-waste flows requiring compliant RCRA management; cross-border e-waste export regulations under Basel Convention discussed.',
-    estimatedExhibitors: 80,
-    relevanceScore: 79,
-    website: 'https://resource-recycling.com/e-scrap-conference',
-    lat: 36.1627,
-    lon: -86.7816,
-  },
-
-  {
-    id: 'conf-ee-southwest-waste',
-    name: 'Southwest Waste & Recycling Conference',
-    category: 'Waste Management',
-    location: 'Albuquerque, NM',
-    month: 'July',
-    description: 'Regional waste and recycling conference covering New Mexico, Texas, Arizona, and Colorado solid waste management. El Paso and Albuquerque waste managers co-present; covers cross-border waste flows, landfill capacity planning, and recycling market access in the arid Southwest.',
-    estimatedExhibitors: 30,
-    relevanceScore: 90,
-    website: 'https://www.swrc.org',
-    lat: 35.0844,
-    lon: -106.6504,
-  },
-
-  {
     id: 'conf-ee-biogas-conf',
     name: 'Biogas Americas Conference',
     category: 'Waste Management',
@@ -2249,20 +1339,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.americanbiogascouncil.org/events',
     lat: 33.7490,
     lon: -84.3880,
-  },
-
-  {
-    id: 'conf-ee-plastics-recycling',
-    name: 'Plastics Recycling Conference',
-    category: 'Waste Management',
-    location: 'Washington, DC',
-    month: 'February',
-    description: 'Resource Recycling conference on post-consumer plastics sorting, mechanical and chemical recycling, and brand owner commitments. Juárez-El Paso maquiladora packaging plastic waste and cross-border recycling export rules under USMCA environmental annexes are relevant supply chain topics.',
-    estimatedExhibitors: 90,
-    relevanceScore: 72,
-    website: 'https://resource-recycling.com/plastics-recycling-conference',
-    lat: 38.9072,
-    lon: -77.0369,
   },
 
   {
@@ -2291,20 +1367,6 @@ export const ENERGY_ENV_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.tireindustry.org',
     lat: 36.1699,
     lon: -115.1398,
-  },
-
-  {
-    id: 'conf-ee-waste-border',
-    name: 'US-Mexico Border Waste Management Forum',
-    category: 'Waste Management',
-    location: 'El Paso, TX',
-    month: 'September',
-    description: 'Binational forum on solid waste management coordination between El Paso and Ciudad Juárez. Covers open dump closure in Juárez, illegal dumping in arroyo corridors, and cross-border hazardous waste transport compliance. EPA Region 6, SEMARNAT, and city public works departments co-organize.',
-    estimatedExhibitors: 15,
-    relevanceScore: 98,
-    website: 'https://www.epa.gov/border2025',
-    lat: 31.7619,
-    lon: -106.4850,
   },
 
 ];

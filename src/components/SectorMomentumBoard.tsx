@@ -95,7 +95,7 @@ export function SectorMomentumBoard({ scores, vendors }: Props) {
           sector.score >= 20 ? 'NOMINAL' : 'QUIET';
 
         const levelColor =
-          sector.score >= 70 ? '#ff6400' :
+          sector.score >= 70 ? '#f97316' :
           sector.score >= 45 ? '#ffb800' :
           sector.score >= 20 ? sector.color : 'rgba(255,255,255,0.2)';
 

@@ -19,16 +19,16 @@ interface AgentRun {
 
 const AGENT_COLORS: Record<string, string> = {
   FeedAgent: '#00d4ff',
-  EntityAgent: '#a78bfa',
+  EntityAgent: '#ffb800',
   IKERAgent: '#ffd700',
   TrendAgent: '#00ff88',
-  NarrativeAgent: '#ff8c00',
+  NarrativeAgent: '#f97316',
   AlertAgent: '#ff3b30',
   Orchestrator: '#ffffff',
 };
 
 const STATUS_COLORS: Record<AgentRun['status'], string> = {
-  idle: '#374151',
+  idle: 'rgba(255,255,255,0.2)',
   running: '#00d4ff',
   done: '#00ff88',
   failed: '#ff3b30',
@@ -110,22 +110,28 @@ export default function AgentControlRoom() {
   };
 
   return (
-    <div className="rounded border border-[#1a1a1a] bg-[#0a0a0a] p-4 font-mono">
+    <div className="rounded-sm border border-white/8 bg-black p-4 font-mono">
+
+      {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="h-2 w-2 animate-pulse rounded-full bg-[#00ff88]" />
-          <span className="text-xs font-bold tracking-wider text-[#00ff88]">AGENT CONTROL ROOM</span>
+          <div
+            className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#00ff88]"
+            style={{ boxShadow: '0 0 6px #00ff88cc', animation: 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite' }}
+          />
+          <span className="text-[8px] tracking-[0.3em] text-white/30 uppercase">Agent Control Room</span>
         </div>
         <button
           onClick={triggerPipeline}
           disabled={running}
-          className="border border-[#00d4ff] px-3 py-1 text-xs text-[#00d4ff] transition-colors hover:bg-[#00d4ff] hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
+          className="font-mono text-[8px] tracking-[0.2em] border border-white/8 rounded-sm px-3 py-1.5 text-white/50 hover:bg-white/5 hover:text-white/80 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
         >
           {running ? 'RUNNING...' : 'RUN ALL AGENTS'}
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-2">
+      {/* Agent rows */}
+      <div className="grid grid-cols-1 gap-px">
         {agents.map((agentName) => {
           const run = latestByAgent[agentName];
           const color = AGENT_COLORS[agentName] ?? '#ffffff';
@@ -136,49 +142,61 @@ export default function AgentControlRoom() {
           return (
             <div
               key={agentName}
-              className="flex items-center gap-3 border border-[#1a1a1a] p-2 transition-colors hover:border-[#2a2a2a]"
+              className="flex items-center gap-3 border border-white/8 px-2.5 py-2 transition-colors hover:bg-white/[0.02]"
             >
+              {/* Status dot */}
               <div
-                className={`h-2 w-2 flex-shrink-0 rounded-full ${isRunning ? 'animate-pulse' : ''}`}
-                style={{ backgroundColor: statusColor }}
+                className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${isRunning ? 'animate-pulse' : ''}`}
+                style={{
+                  backgroundColor: statusColor,
+                  boxShadow: status !== 'idle' ? `0 0 6px ${statusColor}cc` : undefined,
+                }}
               />
 
-              <span className="w-32 flex-shrink-0 text-xs font-bold" style={{ color }}>
+              {/* Agent name */}
+              <span className="w-28 flex-shrink-0 text-[10px] tracking-wide" style={{ color }}>
                 {agentName}
               </span>
 
-              <span className="w-16 flex-shrink-0 text-xs uppercase" style={{ color: statusColor }}>
+              {/* Status label */}
+              <span className="w-14 flex-shrink-0 text-[9px] uppercase tracking-[0.15em]" style={{ color: statusColor }}>
                 {status}
               </span>
 
+              {/* Metrics / never run */}
               {run ? (
                 <>
-                  <span className="flex-1 text-xs text-gray-600">
+                  <span className="flex-1 text-[9px] text-white/30">
                     {run.items_in > 0 && `in:${run.items_in} `}
                     {run.items_out > 0 && `out:${run.items_out}`}
                   </span>
 
                   {run.finished_at && run.started_at ? (
-                    <span className="text-xs text-gray-600">
+                    <span className="text-[8px] text-white/20">
                       {Math.round((new Date(run.finished_at).getTime() - new Date(run.started_at).getTime()) / 1000)}s
                     </span>
                   ) : null}
 
                   {run.error ? (
-                    <span className="max-w-32 truncate text-xs text-[#ff3b30]" title={run.error}>
+                    <span className="max-w-32 truncate text-[8px] text-[#ff3b30]" title={run.error}>
                       WARN {run.error.slice(0, 30)}
                     </span>
                   ) : null}
                 </>
               ) : (
-                <span className="text-xs text-gray-700">never run</span>
+                <span className="text-[9px] text-white/20">never run</span>
               )}
             </div>
           );
         })}
       </div>
 
-      {lastRun ? <div className="mt-3 text-right text-xs text-gray-600">Last triggered: {lastRun}</div> : null}
+      {/* Last triggered */}
+      {lastRun ? (
+        <div className="mt-3 text-right text-[8px] tracking-[0.15em] text-white/20">
+          LAST TRIGGERED {lastRun}
+        </div>
+      ) : null}
     </div>
   );
 }

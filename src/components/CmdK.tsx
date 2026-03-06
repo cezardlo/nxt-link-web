@@ -15,11 +15,28 @@ type LayerPreset = {
 };
 
 const LAYER_PRESETS: LayerPreset[] = [
-  { id: 'defense',  label: 'DEFENSE',       description: 'Fort Bliss · C4ISR · Defense IT',    color: '#ff8c00', layers: ['vendors', 'momentum', 'ikerScores'] },
+  { id: 'defense',  label: 'DEFENSE',       description: 'Fort Bliss · C4ISR · Defense IT',    color: '#f97316', layers: ['vendors', 'momentum', 'ikerScores'] },
   { id: 'logistics',label: 'LOGISTICS',     description: 'Airport · Fulfillment · Maquiladora', color: '#00d4ff', layers: ['vendors', 'products', 'ikerScores'] },
-  { id: 'border',   label: 'BORDER TECH',   description: 'POE · Customs · Trade Compliance',    color: '#a78bfa', layers: ['vendors', 'funding', 'momentum'] },
-  { id: 'energy',   label: 'ENERGY',        description: 'Solar · Grid · Water Tech',           color: '#fbbf24', layers: ['vendors', 'momentum', 'products'] },
+  { id: 'border',   label: 'BORDER TECH',   description: 'POE · Customs · Trade Compliance',    color: '#ffb800', layers: ['vendors', 'funding', 'momentum'] },
+  { id: 'energy',   label: 'ENERGY',        description: 'Solar · Grid · Water Tech',           color: '#ffd700', layers: ['vendors', 'momentum', 'products'] },
   { id: 'funding',  label: 'FUNDING INTEL', description: 'Startups · VC · Grant Activity',     color: '#00ff88', layers: ['vendors', 'funding', 'ikerScores', 'momentum'] },
+];
+
+const PAGE_ITEMS = [
+  { label: 'INDUSTRIES', href: '/industries', description: 'Explore 8 industry sectors', color: '#00d4ff' },
+  { label: 'VENDORS',    href: '/vendors',    description: '98+ El Paso technology vendors', color: '#ffb800' },
+  { label: 'MAP',        href: '/map',        description: 'Intelligence map platform', color: '#00d4ff' },
+];
+
+const INDUSTRY_ITEMS = [
+  { label: 'AI / ML',        href: '/industry/ai-ml',          description: 'Artificial intelligence and machine learning', color: '#00d4ff' },
+  { label: 'CYBERSECURITY',  href: '/industry/cybersecurity',   description: 'Cyber defense and threat detection',           color: '#00d4ff' },
+  { label: 'DEFENSE',        href: '/industry/defense',         description: 'Defense technology and military systems',      color: '#f97316' },
+  { label: 'BORDER TECH',    href: '/industry/border-tech',     description: 'Border security and trade technology',         color: '#f97316' },
+  { label: 'MANUFACTURING',  href: '/industry/manufacturing',   description: 'Advanced manufacturing and robotics',          color: '#00d4ff' },
+  { label: 'ENERGY',         href: '/industry/energy',          description: 'Energy technology and sustainability',         color: '#ffb800' },
+  { label: 'HEALTHCARE',     href: '/industry/healthcare',      description: 'Health IT and medical technology',             color: '#00ff88' },
+  { label: 'LOGISTICS',      href: '/industry/logistics',       description: 'Supply chain and logistics technology',        color: '#ffb800' },
 ];
 
 const RECENT_KEY = 'nxtlink_cmdk_recent';
@@ -39,10 +56,12 @@ function saveRecent(label: string) {
 export type Props = {
   open: boolean;
   onClose: () => void;
-  timeRange: number;
-  onVendorSelect: (point: MapPoint) => void;
+  context?: 'map' | 'global';
+  timeRange?: number;
+  onVendorSelect?: (point: MapPoint) => void;
   onLayerPreset?: (layers: string[]) => void;
   onFlyTo?: (target: { longitude: number; latitude: number; zoom: number }) => void;
+  onNavigate?: (point: MapPoint) => void;
   contracts?: ContractPoint[];
   samBusinesses?: SamBusinessPoint[];
   crimeArticles?: CrimeFeedItem[];
@@ -54,9 +73,13 @@ type ResultItem =
   | { kind: 'preset'; preset: LayerPreset }
   | { kind: 'contract'; contract: ContractPoint }
   | { kind: 'business'; business: SamBusinessPoint }
-  | { kind: 'article'; article: CrimeFeedItem };
+  | { kind: 'article'; article: CrimeFeedItem }
+  | { kind: 'page'; label: string; href: string; description: string; color: string }
+  | { kind: 'industry'; label: string; href: string; description: string; color: string };
 
 const GROUP_LABELS: Record<string, string> = {
+  page:     'PAGES',
+  industry: 'INDUSTRIES',
   preset:   'LAYER PRESETS',
   vendor:   'VENDORS',
   contract: 'CONTRACTS',
@@ -64,13 +87,27 @@ const GROUP_LABELS: Record<string, string> = {
   article:  'FEED ARTICLES',
 };
 
-export function CmdK({ open, onClose, timeRange, onVendorSelect, onLayerPreset, onFlyTo, contracts = [], samBusinesses = [], crimeArticles = [] }: Props) {
+export function CmdK({
+  open,
+  onClose,
+  context = 'global',
+  timeRange = 30,
+  onVendorSelect,
+  onLayerPreset,
+  onFlyTo,
+  onNavigate,
+  contracts = [],
+  samBusinesses = [],
+  crimeArticles = [],
+}: Props) {
   const [query, setQuery] = useState('');
   const [points, setPoints] = useState<MapPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [recent, setRecent] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const isMap = context === 'map';
 
   useEffect(() => {
     if (open) {
@@ -104,14 +141,38 @@ export function CmdK({ open, onClose, timeRange, onVendorSelect, onLayerPreset, 
 
   const results: ResultItem[] = (() => {
     const q = query.trim().toLowerCase();
+
     if (!q) {
+      const pages: ResultItem[] = PAGE_ITEMS.map((p) => ({ kind: 'page' as const, ...p }));
+
+      if (!isMap) {
+        const industries: ResultItem[] = INDUSTRY_ITEMS.map((p) => ({ kind: 'industry' as const, ...p }));
+        return [...pages, ...industries];
+      }
+
       const presets: ResultItem[] = LAYER_PRESETS.map((preset) => ({ kind: 'preset' as const, preset }));
       const recentVendors: ResultItem[] = recent
         .map((label) => points.find((p) => p.label === label))
         .filter((p): p is MapPoint => Boolean(p))
         .map((point) => ({ kind: 'vendor' as const, point }));
-      return [...presets, ...recentVendors];
+      return [...pages, ...presets, ...recentVendors];
     }
+
+    const pageMatches: ResultItem[] = PAGE_ITEMS.filter(
+      (p) => p.label.toLowerCase().includes(q) || p.description.toLowerCase().includes(q),
+    ).map((p) => ({ kind: 'page' as const, ...p }));
+
+    if (!isMap) {
+      const industryMatches: ResultItem[] = INDUSTRY_ITEMS.filter(
+        (p) => p.label.toLowerCase().includes(q) || p.description.toLowerCase().includes(q),
+      ).map((p) => ({ kind: 'industry' as const, ...p }));
+      const vendorMatches: ResultItem[] = points
+        .filter((p) => p.label.toLowerCase().includes(q) || p.category.toLowerCase().includes(q))
+        .slice(0, 8)
+        .map((point) => ({ kind: 'vendor' as const, point }));
+      return [...pageMatches, ...industryMatches, ...vendorMatches];
+    }
+
     const presetMatches: ResultItem[] = LAYER_PRESETS.filter(
       (p) => p.label.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || p.id.includes(q),
     ).map((preset) => ({ kind: 'preset' as const, preset }));
@@ -131,16 +192,29 @@ export function CmdK({ open, onClose, timeRange, onVendorSelect, onLayerPreset, 
       .filter((a) => a.title.toLowerCase().includes(q) || a.source.toLowerCase().includes(q))
       .slice(0, 5)
       .map((article) => ({ kind: 'article' as const, article }));
-    return [...presetMatches, ...vendorMatches, ...contractMatches, ...businessMatches, ...articleMatches];
+    return [...pageMatches, ...presetMatches, ...vendorMatches, ...contractMatches, ...businessMatches, ...articleMatches];
   })();
 
   const handleSelect = (item: ResultItem) => {
-    if (item.kind === 'preset') {
+    if (item.kind === 'industry') {
+      window.location.href = item.href;
+      onClose();
+    } else if (item.kind === 'page') {
+      window.location.href = item.href;
+      onClose();
+    } else if (item.kind === 'preset') {
       onLayerPreset?.(item.preset.layers);
       onClose();
     } else if (item.kind === 'vendor') {
       saveRecent(item.point.label);
-      onVendorSelect(item.point);
+      if (onNavigate) {
+        onNavigate(item.point);
+      } else if (onVendorSelect) {
+        onVendorSelect(item.point);
+      } else {
+        window.location.href = '/vendor/' + item.point.id;
+        onClose();
+      }
     } else if (item.kind === 'contract') {
       onFlyTo?.({ longitude: item.contract.lon, latitude: item.contract.lat, zoom: 14 });
       onClose();
@@ -184,10 +258,10 @@ export function CmdK({ open, onClose, timeRange, onVendorSelect, onLayerPreset, 
             value={query}
             onChange={(e) => { setQuery(e.target.value); setActiveIndex(0); }}
             onKeyDown={handleKeyDown}
-            placeholder="search vendors, contracts, businesses, articles..."
+            placeholder={isMap ? 'search vendors, contracts, businesses, articles...' : 'search pages, industries, vendors...'}
             className="flex-1 bg-transparent font-mono text-xs text-white/70 placeholder-white/15 outline-none"
           />
-          {loading && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />}
+          {loading && <span className="w-1.5 h-1.5 rounded-full animate-pulse shrink-0" style={{ backgroundColor: '#00ff88' }} />}
         </div>
 
         <div className="max-h-72 overflow-y-auto">
@@ -203,6 +277,8 @@ export function CmdK({ open, onClose, timeRange, onVendorSelect, onLayerPreset, 
 
               return (
                 <div key={
+                  item.kind === 'page'     ? `pg-${item.href}` :
+                  item.kind === 'industry' ? `ind-${item.href}` :
                   item.kind === 'preset'   ? `p-${item.preset.id}` :
                   item.kind === 'vendor'   ? `v-${item.point.id}` :
                   item.kind === 'contract' ? `c-${item.contract.id}` :
@@ -221,6 +297,18 @@ export function CmdK({ open, onClose, timeRange, onVendorSelect, onLayerPreset, 
                     onMouseEnter={() => setActiveIndex(i)}
                     className={`w-full flex items-center justify-between px-3 py-2 transition-colors text-left ${isActive ? 'bg-white/5' : 'hover:bg-white/3'}`}
                   >
+                    {(item.kind === 'page' || item.kind === 'industry') && (
+                      <>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-1.5 h-1.5 rounded-sm shrink-0" style={{ backgroundColor: item.color, opacity: 0.8 }} />
+                          <div className="flex flex-col">
+                            <span className="font-mono text-[10px] text-white/70">{item.label}</span>
+                            <span className="font-mono text-[9px] text-white/25">{item.description}</span>
+                          </div>
+                        </div>
+                        <span className="font-mono text-[8px] text-white/20 shrink-0">GO →</span>
+                      </>
+                    )}
                     {item.kind === 'preset' && (
                       <>
                         <div className="flex items-center gap-2 min-w-0">
@@ -262,7 +350,7 @@ export function CmdK({ open, onClose, timeRange, onVendorSelect, onLayerPreset, 
                     {item.kind === 'business' && (
                       <>
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="w-1.5 h-1.5 rounded-sm shrink-0 bg-[#64b5f6]" />
+                          <span className="w-1.5 h-1.5 rounded-sm shrink-0 bg-[#00d4ff]" />
                           <div className="flex flex-col min-w-0">
                             <span className="font-mono text-[10px] text-white/70 truncate">{item.business.name}</span>
                             <span className="font-mono text-[8px] text-white/25 truncate">
@@ -270,7 +358,7 @@ export function CmdK({ open, onClose, timeRange, onVendorSelect, onLayerPreset, 
                             </span>
                           </div>
                         </div>
-                        <span className="font-mono text-[8px] text-[#64b5f6]/50 shrink-0">SAM.GOV</span>
+                        <span className="font-mono text-[8px] text-[#00d4ff]/50 shrink-0">SAM.GOV</span>
                       </>
                     )}
                     {item.kind === 'article' && (

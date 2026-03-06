@@ -26,20 +26,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-fabtech',
-    name: 'FABTECH',
-    category: 'Manufacturing',
-    location: 'Chicago, IL',
-    month: 'November',
-    description: 'North America\'s largest metal forming, fabricating, welding, and finishing event with 48,000+ attendees and 1,700+ exhibitors. Covers laser cutting, press brakes, welding automation, and surface finishing critical to Juarez auto-parts and metal fabrication operations. El Paso-area shop owners attend to source equipment for USMCA-compliant production lines.',
-    estimatedExhibitors: 1700,
-    relevanceScore: 85,
-    website: 'https://www.fabtechexpo.com',
-    lat: 41.8503,
-    lon: -87.6164,
-  },
-
-  {
     id: 'conf-mf-hannover',
     name: 'Hannover Messe',
     category: 'Manufacturing',
@@ -96,34 +82,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-southtec',
-    name: 'SOUTHTEC',
-    category: 'Manufacturing',
-    location: 'Greenville, SC',
-    month: 'October',
-    description: 'SME\'s precision manufacturing show for the Southeast US, covering advanced machining, tooling, and automation for automotive and aerospace supply chains. Growing attendance from nearshoring manufacturers relocating US production from China, with parallels to El Paso/Juarez USMCA-driven reshoring trends.',
-    estimatedExhibitors: 320,
-    relevanceScore: 60,
-    website: 'https://www.southtecshow.com',
-    lat: 34.8526,
-    lon: -82.3940,
-  },
-
-  {
-    id: 'conf-mf-assembly',
-    name: 'The Assembly Show',
-    category: 'Manufacturing',
-    location: 'Rosemont, IL',
-    month: 'October',
-    description: 'Dedicated to discrete-parts assembly technology including robotic assembly, fastening, adhesive dispensing, and lean automation. 300+ exhibitors serving electronics, medical device, and automotive assembly operations. Critical for Juarez Tier-2 assembly maquiladoras seeking automation to meet OEM quality gates.',
-    estimatedExhibitors: 300,
-    relevanceScore: 76,
-    website: 'https://www.theassemblyshow.com',
-    lat: 41.9839,
-    lon: -87.8683,
-  },
-
-  {
     id: 'conf-mf-mdm-west',
     name: 'MD&M West (Medical Design & Manufacturing)',
     category: 'Manufacturing',
@@ -166,20 +124,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-industry40',
-    name: 'Industry 4.0 Conference & Expo',
-    category: 'Manufacturing',
-    location: 'Nashville, TN',
-    month: 'June',
-    description: 'Focused on IIoT, digital twins, smart factory platforms, and connected manufacturing operations. Features case studies from automotive, aerospace, and electronics manufacturers implementing MES, SCADA, and edge-AI systems. Directly applicable to Juarez smart-factory transformation projects by Lear, Foxconn, and Delphi maquiladora operations.',
-    estimatedExhibitors: 180,
-    relevanceScore: 79,
-    website: 'https://industry4conf.com',
-    lat: 36.1627,
-    lon: -86.7816,
-  },
-
-  {
     id: 'conf-mf-lean-summit',
     name: 'Lean Summit North America',
     category: 'Manufacturing',
@@ -208,34 +152,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-sme-lean',
-    name: 'SME Smart Manufacturing Experience',
-    category: 'Manufacturing',
-    location: 'Pittsburgh, PA',
-    month: 'May',
-    description: 'SME\'s conference on additive manufacturing, robotics, digital thread, and smart factory integration. Covers OPC-UA connectivity, AI-driven quality inspection, and digital twin deployment across mixed manufacturing environments. Applicable to Juarez maquiladoras digitizing operations under Tier-1 supplier digital-thread mandates.',
-    estimatedExhibitors: 250,
-    relevanceScore: 72,
-    website: 'https://www.sme.org/training/conferences',
-    lat: 40.4406,
-    lon: -79.9959,
-  },
-
-  {
-    id: 'conf-mf-nam-summit',
-    name: 'NAM Manufacturing Leadership Summit',
-    category: 'Manufacturing',
-    location: 'Various US cities',
-    month: 'June',
-    description: 'National Association of Manufacturers\' premier leadership conference covering trade policy, workforce development, and technology adoption. NAM actively lobbies for USMCA optimization and border crossing efficiency directly impacting El Paso/Juarez cross-border manufacturing flow and tariff classification disputes.',
-    estimatedExhibitors: 100,
-    relevanceScore: 76,
-    website: 'https://www.nam.org/manufacturing-leadership-summit',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
     id: 'conf-mf-mhi-annual',
     name: 'MHI Annual Conference',
     category: 'Manufacturing',
@@ -247,20 +163,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.mhi.org/events/annual',
     lat: 33.7225,
     lon: -116.3745,
-  },
-
-  {
-    id: 'conf-mf-texoma-mfg',
-    name: 'Texas Manufacturing Summit',
-    category: 'Manufacturing',
-    location: 'Austin, TX',
-    month: 'September',
-    description: 'Texas-focused manufacturing policy, workforce, and technology conference organized by the Texas Association of Manufacturers. Covers state incentive programs, workforce training (TWC), and supply chain resilience. El Paso manufacturers leverage Texas Enterprise Fund and Governor\'s Office economic development programs spotlighted at this event.',
-    estimatedExhibitors: 90,
-    relevanceScore: 82,
-    website: 'https://www.txmfg.org',
-    lat: 30.2672,
-    lon: -97.7431,
   },
 
   {
@@ -348,20 +250,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-ame-summit',
-    name: 'AME International Conference',
-    category: 'Manufacturing',
-    location: 'Various US cities',
-    month: 'October',
-    description: 'Association for Manufacturing Excellence annual conference on lean, continuous improvement, and operational excellence with plant tours at host-city facilities. 1,500+ manufacturing leaders share Toyota-system implementations and six-sigma case studies. Multiple El Paso/Juarez manufacturers have hosted tours demonstrating cross-border lean supply chain excellence.',
-    estimatedExhibitors: 200,
-    relevanceScore: 75,
-    website: 'https://www.ame.org/ame-international-conference',
-    lat: 41.8781,
-    lon: -87.6298,
-  },
-
-  {
     id: 'conf-mf-sensors-expo',
     name: 'Sensors Expo & Conference',
     category: 'Manufacturing',
@@ -432,20 +320,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-flex-mfg',
-    name: 'Flexible Manufacturing & Automation Summit',
-    category: 'Manufacturing',
-    location: 'Detroit, MI',
-    month: 'September',
-    description: 'Emerging conference on reconfigurable manufacturing, cobots, and AI-driven process optimization for high-mix production. Content directly relevant to Juarez EMS (electronics manufacturing services) facilities needing flexible SMT lines and rapid product changeover for consumer electronics brands.',
-    estimatedExhibitors: 110,
-    relevanceScore: 73,
-    website: 'https://flexmfgsummit.com',
-    lat: 42.3314,
-    lon: -83.0458,
-  },
-
-  {
     id: 'conf-mf-aws-professional',
     name: 'AWS Professional Program Conference',
     category: 'Manufacturing',
@@ -485,34 +359,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.aisc.org/nascc',
     lat: 41.8781,
     lon: -87.6298,
-  },
-
-  {
-    id: 'conf-mf-ems-now',
-    name: 'IPC APEX EXPO',
-    category: 'Manufacturing',
-    location: 'Anaheim, CA',
-    month: 'January',
-    description: 'Premier electronics manufacturing and PCB technology conference with 400+ exhibitors covering SMT assembly, soldering, conformal coating, and PCB design. Juarez hosts one of Mexico\'s largest EMS clusters with Foxconn, Jabil, and Celestica facilities producing boards for US consumer electronics under USMCA duty preferences.',
-    estimatedExhibitors: 400,
-    relevanceScore: 80,
-    website: 'https://www.ipc.org/apex',
-    lat: 33.8366,
-    lon: -117.9143,
-  },
-
-  {
-    id: 'conf-mf-automotive-mexico',
-    name: 'Automotive Mexico Expo',
-    category: 'Manufacturing',
-    location: 'Monterrey, Mexico',
-    month: 'March',
-    description: 'Mexico\'s automotive manufacturing trade show covering stamping, plastics, wiring harnesses, and assembly automation for Tier-1 and Tier-2 suppliers to major OEM plants. Juarez automotive maquiladoras — Delphi, Lear, Aptiv — represent El Paso\'s largest cross-border industrial employment sector.',
-    estimatedExhibitors: 350,
-    relevanceScore: 89,
-    website: 'https://www.automotivemexico.com.mx',
-    lat: 25.6866,
-    lon: -100.3161,
   },
 
   {
@@ -558,20 +404,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-sme-digi',
-    name: 'Digital Manufacturing & Design Innovation (DMDII) Forum',
-    category: 'Manufacturing',
-    location: 'Chicago, IL',
-    month: 'July',
-    description: 'UI Labs-organized forum on digital thread, model-based enterprise, and industrial IoT platform deployment across aerospace and defense manufacturing. DoD Manufacturing Technology program outputs presented here filter into El Paso-area defense supplier base through UTEP technology transfer agreements.',
-    estimatedExhibitors: 100,
-    relevanceScore: 70,
-    website: 'https://www.uilabs.org/dmdii',
-    lat: 41.8781,
-    lon: -87.6298,
-  },
-
-  {
     id: 'conf-mf-eastec',
     name: 'EASTEC',
     category: 'Manufacturing',
@@ -600,34 +432,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-gear-expo',
-    name: 'Gear Expo',
-    category: 'Manufacturing',
-    location: 'Detroit, MI',
-    month: 'October',
-    description: 'AGMA\'s biennial conference and expo dedicated to gear manufacturing, drives, and power transmission components for automotive, aerospace, and industrial machinery. Gear precision is a critical quality parameter for Juarez automotive driveline maquiladoras supplying Ford and GM transmission programs.',
-    estimatedExhibitors: 250,
-    relevanceScore: 60,
-    website: 'https://www.gearexpo.com',
-    lat: 42.3314,
-    lon: -83.0458,
-  },
-
-  {
-    id: 'conf-mf-mex-aero',
-    name: 'Aerospace & Defense Mexico (A&D Mexico)',
-    category: 'Manufacturing',
-    location: 'Queretaro, Mexico',
-    month: 'November',
-    description: 'Mexico\'s premier aerospace manufacturing exhibition covering composites, precision machining, MRO, and avionics for Mexico\'s $11B aerospace export sector. Juarez aerospace maquiladoras for Honeywell, Cessna, and Paradigm Precision represent El Paso cross-border aerospace manufacturing flows through Juarez International Airport.',
-    estimatedExhibitors: 400,
-    relevanceScore: 86,
-    website: 'https://www.aerospacedefensemexico.com',
-    lat: 20.5888,
-    lon: -100.3899,
-  },
-
-  {
     id: 'conf-mf-form-next',
     name: 'Forging Industry Association Annual Conference',
     category: 'Manufacturing',
@@ -642,48 +446,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-imca',
-    name: 'Industrial Manufacturers Conference Americas',
-    category: 'Manufacturing',
-    location: 'San Antonio, TX',
-    month: 'September',
-    description: 'Texas-Mexico cross-border manufacturing conference covering supply chain integration, shelter services, and industrial real estate development in the USMCA corridor. San Antonio-to-El Paso I-10 corridor is a key truck freight route linking interior Texas manufacturers to Juarez maquiladora assembly operations.',
-    estimatedExhibitors: 140,
-    relevanceScore: 87,
-    website: 'https://imca-conference.com',
-    lat: 29.4241,
-    lon: -98.4936,
-  },
-
-  {
-    id: 'conf-mf-ema-summit',
-    name: 'Electronics Manufacturing & Assembly Summit',
-    category: 'Manufacturing',
-    location: 'San Jose, CA',
-    month: 'April',
-    description: 'SMT assembly, PCB fabrication, and electronics packaging conference for EMS providers. Content addresses solder reliability, AOI/X-ray inspection, and supply chain risk for North American electronics manufacturing. Directly applicable to Juarez EMS facilities serving Dell, HP, and Apple supply chains through El Paso cross-border logistics.',
-    estimatedExhibitors: 220,
-    relevanceScore: 79,
-    website: 'https://emasummit.com',
-    lat: 37.3382,
-    lon: -121.8863,
-  },
-
-  {
-    id: 'conf-mf-metav',
-    name: 'METAV – International Trade Fair for Metalworking',
-    category: 'Manufacturing',
-    location: 'Düsseldorf, Germany',
-    month: 'March',
-    description: 'VDW-organized biennial metalworking trade fair covering turning, milling, grinding, and forming technology for European and global markets. Provides benchmark pricing and technology comparisons used by Juarez maquiladora capital equipment buyers evaluating German machine tools against Japanese and Korean alternatives.',
-    estimatedExhibitors: 530,
-    relevanceScore: 50,
-    website: 'https://www.metav.de/en',
-    lat: 51.2271,
-    lon: 6.7731,
-  },
-
-  {
     id: 'conf-mf-connex',
     name: 'CONNEX Marketplace (MxD)',
     category: 'Manufacturing',
@@ -695,20 +457,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.mxdusa.org',
     lat: 41.8781,
     lon: -87.6298,
-  },
-
-  {
-    id: 'conf-mf-mfg-innovation',
-    name: 'Texas Manufacturing Innovation Summit',
-    category: 'Manufacturing',
-    location: 'El Paso, TX',
-    month: 'October',
-    description: 'UTEP-organized annual summit on advanced manufacturing innovation for the El Paso/Juarez corridor, covering additive manufacturing, workforce development, and smart factory pilot programs. Convenes UTEP researchers, Juarez maquiladora operators, CISA, and DoD representatives exploring dual-use manufacturing technology for the border region.',
-    estimatedExhibitors: 50,
-    relevanceScore: 98,
-    website: 'https://engineering.utep.edu/manufacturing',
-    lat: 31.7742,
-    lon: -106.5039,
   },
 
   // ── Construction ─────────────────────────────────────────────────────────────
@@ -770,20 +518,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-agc-annual',
-    name: 'AGC Annual Conference',
-    category: 'Construction',
-    location: 'Various US cities',
-    month: 'March',
-    description: 'Associated General Contractors of America annual conference covering construction law, project delivery methods, workforce development, and industry technology. AGC of El Paso is one of the most active chapters in Texas, representing contractors on CBP border facility construction, military family housing at Fort Bliss, and TXDOT highway projects.',
-    estimatedExhibitors: 300,
-    relevanceScore: 86,
-    website: 'https://www.agc.org/annual-conference',
-    lat: 29.7604,
-    lon: -95.3698,
-  },
-
-  {
     id: 'conf-mf-construct',
     name: 'CONSTRUCT (Construction Specifications Institute)',
     category: 'Construction',
@@ -812,34 +546,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-conexpo-latam',
-    name: 'ConExpo Latin America',
-    category: 'Construction',
-    location: 'Various Latin American cities',
-    month: 'October',
-    description: 'Latin American construction equipment and technology exhibition targeting infrastructure development across Mexico, Central, and South America. Juarez and Chihuahua state infrastructure projects — highways, industrial parks, water treatment — are directly served by vendors exhibiting at this regional event.',
-    estimatedExhibitors: 600,
-    relevanceScore: 82,
-    website: 'https://www.conexpolatinamerica.com',
-    lat: 19.4326,
-    lon: -99.1332,
-  },
-
-  {
-    id: 'conf-mf-abs-annual',
-    name: 'ABC Convention (Associated Builders & Contractors)',
-    category: 'Construction',
-    location: 'Various US cities',
-    month: 'March',
-    description: 'Associated Builders and Contractors national convention covering merit-shop construction workforce development, safety, and project performance. El Paso\'s rapid commercial construction growth and Fort Bliss military construction pipeline make ABC West Texas chapter one of the most active in the Southern US.',
-    estimatedExhibitors: 250,
-    relevanceScore: 84,
-    website: 'https://www.abc.org/Events-Training/ABC-Convention',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
-  {
     id: 'conf-mf-buildex',
     name: 'Build Expo USA',
     category: 'Construction',
@@ -851,34 +557,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.buildexpousa.com',
     lat: 30.2672,
     lon: -97.7431,
-  },
-
-  {
-    id: 'conf-mf-ready-mixed',
-    name: 'National Ready Mixed Concrete Annual Conference',
-    category: 'Construction',
-    location: 'Various US cities',
-    month: 'October',
-    description: 'NRMCA\'s annual event covering concrete mix design, admixtures, sustainability, and delivery fleet operations. El Paso\'s construction boom has driven significant ready-mix capacity expansion among local producers supplying border wall construction, commercial development, and Fort Bliss infrastructure projects.',
-    estimatedExhibitors: 200,
-    relevanceScore: 82,
-    website: 'https://www.nrmca.org/events',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-mf-acec',
-    name: 'ACEC Annual Conference',
-    category: 'Construction',
-    location: 'Washington, DC',
-    month: 'May',
-    description: 'American Council of Engineering Companies annual conference covering federal infrastructure policy, QBS procurement, and engineering firm management. El Paso-area engineering firms (Jacobs, AECOM, Terracon) attend to track Army Corps of Engineers and TXDOT procurement pipelines affecting border region infrastructure.',
-    estimatedExhibitors: 200,
-    relevanceScore: 77,
-    website: 'https://www.acec.org/annual-conference',
-    lat: 38.9072,
-    lon: -77.0369,
   },
 
   {
@@ -921,20 +599,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.buildingsmart.org',
     lat: 51.5074,
     lon: -0.1278,
-  },
-
-  {
-    id: 'conf-mf-aia-conf',
-    name: 'AIA Conference on Architecture',
-    category: 'Construction',
-    location: 'Various US cities',
-    month: 'June',
-    description: 'American Institute of Architects annual conference with 10,000+ architects exploring design innovation, materials, and project delivery. El Paso AIA chapter members attend to track GSA Design Excellence standards for federal buildings and learn energy modeling techniques for desert climate high-performance design.',
-    estimatedExhibitors: 400,
-    relevanceScore: 72,
-    website: 'https://www.aia.org/events',
-    lat: 36.1699,
-    lon: -115.1398,
   },
 
   {
@@ -994,20 +658,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-hatch',
-    name: 'HATCH Prefab & Modular Conference',
-    category: 'Construction',
-    location: 'Las Vegas, NV',
-    month: 'January',
-    description: 'Emerging conference on prefabricated and modular construction covering volumetric modules, panelized systems, and mass timber. Prefab construction is gaining traction for Fort Bliss barracks, temporary housing at the border, and rapid-deployment commercial construction in El Paso\'s high-growth corridors.',
-    estimatedExhibitors: 150,
-    relevanceScore: 73,
-    website: 'https://www.hatchconf.com',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
-  {
     id: 'conf-mf-icri',
     name: 'ICRI Annual Convention (Concrete Repair)',
     category: 'Construction',
@@ -1036,20 +686,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-heavy-civil',
-    name: 'Heavy Civil Construction Forum',
-    category: 'Construction',
-    location: 'Denver, CO',
-    month: 'February',
-    description: 'Infrastructure-focused conference covering heavy civil construction project management, equipment, and underground utilities. El Paso\'s pipeline of TXDOT projects, Army Corps of Engineers border barrier construction support, and municipal water/sewer infrastructure expansion align directly with heavy civil contractor content at this forum.',
-    estimatedExhibitors: 120,
-    relevanceScore: 80,
-    website: 'https://heavycivilconstructionforum.com',
-    lat: 39.7392,
-    lon: -104.9903,
-  },
-
-  {
     id: 'conf-mf-steel-framing',
     name: 'Steel Framing Industry Association Convention',
     category: 'Construction',
@@ -1061,20 +697,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.sfia.net',
     lat: 36.1699,
     lon: -115.1398,
-  },
-
-  {
-    id: 'conf-mf-masonry-summit',
-    name: 'MCAA Annual Convention (Masonry)',
-    category: 'Construction',
-    location: 'Various US cities',
-    month: 'March',
-    description: 'Masonry Contractors Association of America annual convention covering block, brick, stone, and stucco construction. Adobe and masonry construction remain prevalent in El Paso\'s historic districts and commercial construction. The dry desert climate makes masonry the dominant exterior material for thermal mass and durability.',
-    estimatedExhibitors: 100,
-    relevanceScore: 78,
-    website: 'https://www.masonrycontractors.org',
-    lat: 38.9072,
-    lon: -77.0369,
   },
 
   {
@@ -1133,7 +755,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     lon: 11.5820,
   },
 
-
   // ── 3D Printing ──────────────────────────────────────────────────────────────
 
   {
@@ -1151,20 +772,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-formnext',
-    name: 'Formnext',
-    category: '3D Printing',
-    location: 'Frankfurt, Germany',
-    month: 'November',
-    description: 'The world\'s leading additive manufacturing trade fair with 860+ exhibitors and 34,000+ attendees from 100+ countries. Launches the most significant new AM hardware and materials annually. El Paso aerospace suppliers and UTEP researchers track Formnext to benchmark global metal powder bed fusion and binder jetting advances for defense applications.',
-    estimatedExhibitors: 860,
-    relevanceScore: 71,
-    website: 'https://www.formnext.com',
-    lat: 50.1109,
-    lon: 8.6821,
-  },
-
-  {
     id: 'conf-mf-amug',
     name: 'AMUG (Additive Manufacturing Users Group) Conference',
     category: '3D Printing',
@@ -1179,34 +786,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-additivecon',
-    name: 'AdditiveCon',
-    category: '3D Printing',
-    location: 'Austin, TX',
-    month: 'October',
-    description: 'Texas-based additive manufacturing conference covering design for additive, materials science, and production-scale AM for aerospace, oil & gas, and medical device sectors. Texas proximity and focus on oil-field tooling AM make this highly relevant to El Paso energy-sector and defense-adjacent manufacturers.',
-    estimatedExhibitors: 100,
-    relevanceScore: 74,
-    website: 'https://additive-con.com',
-    lat: 30.2672,
-    lon: -97.7431,
-  },
-
-  {
-    id: 'conf-mf-tct-asia',
-    name: 'TCT Asia',
-    category: '3D Printing',
-    location: 'Shanghai, China',
-    month: 'April',
-    description: 'Asia\'s leading 3D printing and additive manufacturing trade show covering desktop to industrial-scale systems. Chinese AM hardware (Bambu Lab, BLT, Farsoon) increasingly competes with US and European systems adopted by Juarez maquiladora prototype shops and R&D centers evaluating low-cost AM integration.',
-    estimatedExhibitors: 500,
-    relevanceScore: 58,
-    website: 'https://www.tctasiaevent.com',
-    lat: 31.2304,
-    lon: 121.4737,
-  },
-
-  {
     id: 'conf-mf-am-strategies',
     name: 'Additive Manufacturing Strategies',
     category: '3D Printing',
@@ -1216,48 +795,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     estimatedExhibitors: 80,
     relevanceScore: 65,
     website: 'https://www.additivemanufacturingstrategies.com',
-    lat: 40.7128,
-    lon: -74.0060,
-  },
-
-  {
-    id: 'conf-mf-in3dustry',
-    name: 'IN(3D)USTRY – From Needs to Solutions',
-    category: '3D Printing',
-    location: 'Barcelona, Spain',
-    month: 'October',
-    description: 'European industrial 3D printing conference focused on production AM use cases for aerospace, automotive, and medical. Airbus and automotive Tier-1s present certified AM parts programs. El Paso aerospace AM researchers track European certification frameworks (EASA) as design-of-record benchmarks for FAA-equivalent DoD qualification.',
-    estimatedExhibitors: 200,
-    relevanceScore: 52,
-    website: 'https://www.in3dustry.com',
-    lat: 41.3851,
-    lon: 2.1734,
-  },
-
-  {
-    id: 'conf-mf-tipe',
-    name: 'TIPE 3D Printing Conference',
-    category: '3D Printing',
-    location: 'Austin, TX',
-    month: 'February',
-    description: 'Technical conference specifically on thermoplastics, thermosets, and polymer AM for production applications. FDM, SLA, and SLS polymer processes used by Juarez medical device maquiladoras for prototyping and tooling are regularly featured in case studies at TIPE, co-organized with Society of Plastics Engineers.',
-    estimatedExhibitors: 60,
-    relevanceScore: 68,
-    website: 'https://www.tipeconference.com',
-    lat: 30.2672,
-    lon: -97.7431,
-  },
-
-  {
-    id: 'conf-mf-mfg-3dp-summit',
-    name: 'Inside 3D Printing Conference & Expo',
-    category: '3D Printing',
-    location: 'Various US cities',
-    month: 'September',
-    description: 'Executive-level additive manufacturing conference covering AM business models, regulatory approvals, and vertical-market case studies. Medical, aerospace, and defense AM applications presented at this event are directly applicable to UTEP Keck Center technology commercialization and El Paso defense contractor AM adoption.',
-    estimatedExhibitors: 100,
-    relevanceScore: 66,
-    website: 'https://inside3dprinting.com',
     lat: 40.7128,
     lon: -74.0060,
   },
@@ -1277,48 +814,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-direct-digital',
-    name: 'Direct Digital Manufacturing Conference',
-    category: '3D Printing',
-    location: 'Phoenix, AZ',
-    month: 'July',
-    description: 'Conference on transitioning additive manufacturing from prototyping to end-use part production, covering quality systems, supply chain integration, and AM cost modeling. Phoenix\'s proximity to El Paso and common Southwestern aerospace/defense supplier base makes this a natural networking venue for Fort Bliss-area AM adopters.',
-    estimatedExhibitors: 70,
-    relevanceScore: 67,
-    website: 'https://www.directdigitalmfg.com',
-    lat: 33.4484,
-    lon: -112.0740,
-  },
-
-  {
-    id: 'conf-mf-dod-am',
-    name: 'DoD Additive Manufacturing Users Forum',
-    category: '3D Printing',
-    location: 'Washington, DC',
-    month: 'August',
-    description: 'Department of Defense AM user community annual forum covering AM qualification, airworthiness, and fielded unit logistics. Army\'s Organic Industrial Base AM efforts at Corpus Christi Army Depot and related CECOM logistics sustainment programs connect to Fort Bliss depot-level maintenance operations exploring AM for repair parts.',
-    estimatedExhibitors: 60,
-    relevanceScore: 80,
-    website: 'https://www.dod.gov/additive-manufacturing',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-mf-am-aerospace',
-    name: 'AM Aerospace Summit',
-    category: '3D Printing',
-    location: 'Wichita, KS',
-    month: 'May',
-    description: 'Aerospace-specific additive manufacturing summit covering FAA and EASA qualification, structural metal AM, and composite AM for aviation. Cessna\'s Juarez maquiladora component supply chain and Honeywell\'s aerospace operations in El Paso adjacent to Fort Bliss make aerospace AM qualification critical for the Borderplex aerospace cluster.',
-    estimatedExhibitors: 90,
-    relevanceScore: 71,
-    website: 'https://amaerosummit.com',
-    lat: 37.6872,
-    lon: -97.3301,
-  },
-
-  {
     id: 'conf-mf-solidworks-world',
     name: '3DEXPERIENCE World (SOLIDWORKS)',
     category: '3D Printing',
@@ -1333,48 +828,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-ceramics-am',
-    name: 'International Conference on Ceramics and AM',
-    category: '3D Printing',
-    location: 'Various US/EU cities',
-    month: 'September',
-    description: 'Research-focused conference on ceramic additive manufacturing including vat photopolymerization and binder jetting of technical ceramics. Relevant to UTEP materials science research on high-temperature ceramic components for hypersonic vehicle thermal protection and armor systems developed under Army research contracts at WSMR.',
-    estimatedExhibitors: 50,
-    relevanceScore: 62,
-    website: 'https://ceramicsam.org',
-    lat: 40.7128,
-    lon: -74.0060,
-  },
-
-  {
-    id: 'conf-mf-med-am',
-    name: 'Medical Additive Manufacturing Summit',
-    category: '3D Printing',
-    location: 'Minneapolis, MN',
-    month: 'March',
-    description: 'FDA-focused conference on additive manufacturing for medical devices, covering 510(k) submissions, design controls, and material biocompatibility for 3D-printed implants and instruments. Juarez medical device maquiladoras for Medtronic and Cardinal Health are exploring AM for custom surgical instruments and patient-matched implants.',
-    estimatedExhibitors: 80,
-    relevanceScore: 72,
-    website: 'https://medicalamsummit.com',
-    lat: 44.9778,
-    lon: -93.2650,
-  },
-
-  {
-    id: 'conf-mf-open-am',
-    name: 'Open Additive Manufacturing Conference',
-    category: '3D Printing',
-    location: 'Dayton, OH',
-    month: 'June',
-    description: 'AFRL-organized conference on open-architecture AM systems, in-situ process monitoring, and machine learning for AM quality assurance. Air Force Research Laboratory AM program outputs at Wright-Patterson directly influence DoD AM adoption guidance that affects Fort Bliss sustainment operations exploring AM for HMMWV and LMTV spare parts.',
-    estimatedExhibitors: 60,
-    relevanceScore: 73,
-    website: 'https://openam.afrl.af.mil',
-    lat: 39.7589,
-    lon: -84.1916,
-  },
-
-  {
     id: 'conf-mf-spe-am',
     name: 'SPE ANTEC Additive Manufacturing Track',
     category: '3D Printing',
@@ -1386,34 +839,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.4spe.org/antec',
     lat: 41.8781,
     lon: -87.6298,
-  },
-
-  {
-    id: 'conf-mf-mex-am',
-    name: 'Fabricación Aditiva Mexico',
-    category: '3D Printing',
-    location: 'Monterrey, Mexico',
-    month: 'September',
-    description: 'Mexico\'s growing additive manufacturing conference covering industrial AM adoption in automotive, aerospace, and medical device maquiladora sectors. UTEP Keck Center collaborates with UANL Monterrey on binational AM research presented at this emerging forum, directly connecting El Paso AM innovation to Juarez manufacturing applications.',
-    estimatedExhibitors: 80,
-    relevanceScore: 84,
-    website: 'https://fabricacionaditiva.mx',
-    lat: 25.6866,
-    lon: -100.3161,
-  },
-
-  {
-    id: 'conf-mf-jmf-bioprint',
-    name: 'Bioprinting & Biofabrication Conference',
-    category: '3D Printing',
-    location: 'Various US cities',
-    month: 'October',
-    description: 'Academic and clinical conference on 3D bioprinting for tissue engineering, drug delivery, and surgical model fabrication. TTUHSC Paul Foster School of Medicine and UMC El Paso are exploring 3D-printed anatomical models for surgical planning, connecting El Paso\'s health system to emerging bioprinting supply chains.',
-    estimatedExhibitors: 60,
-    relevanceScore: 61,
-    website: 'https://bioprinting-conference.com',
-    lat: 40.7128,
-    lon: -74.0060,
   },
 
   // ── Chemical ─────────────────────────────────────────────────────────────────
@@ -1444,20 +869,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.achema.de/en',
     lat: 50.1109,
     lon: 8.6821,
-  },
-
-  {
-    id: 'conf-mf-chem-show',
-    name: 'Chem Show',
-    category: 'Chemical',
-    location: 'New York, NY',
-    month: 'October',
-    description: 'North America\'s largest chemical process industry equipment trade show with 400+ exhibitors covering pumps, valves, heat exchangers, and mixing technology. Juarez chemical manufacturing operations — including electronics cleaning chemicals and industrial coatings producers — source process equipment through US distributors featured at Chem Show.',
-    estimatedExhibitors: 400,
-    relevanceScore: 64,
-    website: 'https://www.chemshow.com',
-    lat: 40.7128,
-    lon: -74.0060,
   },
 
   {
@@ -1503,20 +914,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-npra',
-    name: 'AFPM Annual Meeting (Refining & Petrochemicals)',
-    category: 'Chemical',
-    location: 'San Antonio, TX',
-    month: 'March',
-    description: 'American Fuel & Petrochemical Manufacturers annual meeting covering refinery operations, petrochemical feedstocks, and environmental compliance. El Paso\'s position on Permian Basin crude pipeline routes and its role as a fuel distribution hub for West Texas and Northern Mexico makes AFPM content directly relevant to local energy operators.',
-    estimatedExhibitors: 300,
-    relevanceScore: 72,
-    website: 'https://www.afpm.org/conferences/annual-meeting',
-    lat: 29.4241,
-    lon: -98.4936,
-  },
-
-  {
     id: 'conf-mf-socma-annual',
     name: 'SOCMA Annual Meeting (Specialty Chemicals)',
     category: 'Chemical',
@@ -1528,34 +925,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.socma.org',
     lat: 38.9072,
     lon: -77.0369,
-  },
-
-  {
-    id: 'conf-mf-ccxpo',
-    name: 'ChemConnect Annual',
-    category: 'Chemical',
-    location: 'Houston, TX',
-    month: 'May',
-    description: 'Chemical commodity trading and procurement conference for bulk chemical buyers and sellers. El Paso\'s industrial chemical distributors serving Juarez paint, coating, and cleaning chemical consumers participate in spot-market procurement activities covered at ChemConnect, including solvents and industrial gases crossing the border.',
-    estimatedExhibitors: 100,
-    relevanceScore: 62,
-    website: 'https://chemconnect.com',
-    lat: 29.7604,
-    lon: -95.3698,
-  },
-
-  {
-    id: 'conf-mf-wlf',
-    name: 'World Lubricants Forum',
-    category: 'Chemical',
-    location: 'Various international cities',
-    month: 'October',
-    description: 'Global forum on industrial lubricants, metalworking fluids, and specialty lubricant formulation for manufacturing applications. Juarez CNC machining operations and automotive component manufacturers consume large volumes of metalworking coolants and gear lubricants, sourced through El Paso industrial chemical distributors.',
-    estimatedExhibitors: 150,
-    relevanceScore: 61,
-    website: 'https://www.worldlubricantsforum.com',
-    lat: 51.5074,
-    lon: -0.1278,
   },
 
   {
@@ -1587,62 +956,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-process-safety',
-    name: 'AIChE Global Process Safety Conference',
-    category: 'Chemical',
-    location: 'San Antonio, TX',
-    month: 'March',
-    description: 'Chemical process safety event covering HAZOP, layer-of-protection analysis, and incident investigation for process plants. Juarez industrial chemical manufacturers and El Paso petrochemical terminals along the Rio Grande conduct RAGAGEP-compliant process hazard analyses benchmarked against AIChE CCPS guidelines presented at this conference.',
-    estimatedExhibitors: 200,
-    relevanceScore: 71,
-    website: 'https://www.aiche.org/conferences/global-congress-process-safety',
-    lat: 29.4241,
-    lon: -98.4936,
-  },
-
-  {
-    id: 'conf-mf-biosolutions',
-    name: 'Bio Solutions International (Industrial Biotech)',
-    category: 'Chemical',
-    location: 'Various US cities',
-    month: 'September',
-    description: 'Conference on industrial biotechnology applications including bio-based chemicals, enzymes for manufacturing, and bioremediation. UTEP\'s biological sciences department explores bioremediation of Rio Grande contamination and bio-based material synthesis as alternatives to petroleum-derived chemicals used in cross-border manufacturing.',
-    estimatedExhibitors: 80,
-    relevanceScore: 59,
-    website: 'https://biosolutionsconf.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-mf-detergents-conf',
-    name: 'ISSA Cleaning & Hygiene Expo',
-    category: 'Chemical',
-    location: 'Las Vegas, NV',
-    month: 'November',
-    description: 'Global cleaning industry trade show covering institutional cleaning chemicals, equipment, and sustainability. Industrial cleaning chemicals for Juarez maquiladora facilities — electronics flux cleaners, degreasing agents, and metal pretreatment chemicals — are sourced through El Paso chemical distributors attending ISSA.',
-    estimatedExhibitors: 700,
-    relevanceScore: 62,
-    website: 'https://www.issa.com/cleaning-hygiene-expo',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
-  {
-    id: 'conf-mf-adhesives-conf',
-    name: 'ASC Adhesive & Sealant Council Annual Convention',
-    category: 'Chemical',
-    location: 'Various US cities',
-    month: 'March',
-    description: 'Adhesive and sealant technology conference covering structural bonding, pressure-sensitive adhesives, and sealants for automotive, construction, and electronics. Juarez automotive assembly maquiladoras consume large volumes of structural adhesives for door panel bonding and windshield installation under OEM specifications.',
-    estimatedExhibitors: 150,
-    relevanceScore: 68,
-    website: 'https://www.adhesives.org/events',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
     id: 'conf-mf-ink-expo',
     name: 'RadTech UV+EB Technology Conference',
     category: 'Chemical',
@@ -1668,20 +981,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.setac.org/events',
     lat: 40.7128,
     lon: -74.0060,
-  },
-
-  {
-    id: 'conf-mf-chtex-mex',
-    name: 'Expoquimia Mexico',
-    category: 'Chemical',
-    location: 'Mexico City, Mexico',
-    month: 'September',
-    description: 'Mexico\'s largest chemistry and chemical technology exhibition organized by ANIQ covering specialty chemicals, process equipment, and environmental solutions. Chihuahua state chemical manufacturers and Juarez industrial park chemical suppliers participate, with procurement teams crossing through El Paso to US supplier distributors.',
-    estimatedExhibitors: 400,
-    relevanceScore: 79,
-    website: 'https://www.expoquimia.com.mx',
-    lat: 19.4326,
-    lon: -99.1332,
   },
 
   {
@@ -1799,20 +1098,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-aib-packaging',
-    name: 'Sustainable Packaging Coalition Advance Conference',
-    category: 'Packaging',
-    location: 'Various US cities',
-    month: 'April',
-    description: 'GreenBlue\'s annual sustainable packaging conference covering recyclable, compostable, and reduced-material packaging design. Walmart and Amazon sustainable packaging mandates trickle down to El Paso/Juarez consumer product maquiladoras required to meet supplier packaging sustainability scorecards for US retail distribution.',
-    estimatedExhibitors: 100,
-    relevanceScore: 72,
-    website: 'https://www.greenblue.org/events/advance',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
     id: 'conf-mf-pharma-pack',
     name: 'Pharmapack North America',
     category: 'Packaging',
@@ -1824,20 +1109,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.pharmapacknorthamerica.com',
     lat: 39.9526,
     lon: -75.1652,
-  },
-
-  {
-    id: 'conf-mf-corrugated-week',
-    name: 'AICC Independent Packaging Conference',
-    category: 'Packaging',
-    location: 'Various US cities',
-    month: 'October',
-    description: 'AICC annual conference for independent corrugated box and folding carton manufacturers. El Paso\'s three major corrugated plants supply export-ready shipping boxes for Juarez maquiladora finished goods exported to US retailers under USMCA. Boxboard prices and corrugator technology advances at AICC directly impact local plant operations.',
-    estimatedExhibitors: 200,
-    relevanceScore: 80,
-    website: 'https://www.aiccbox.org/events',
-    lat: 36.1699,
-    lon: -115.1398,
   },
 
   {
@@ -1854,204 +1125,7 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     lon: -87.6298,
   },
 
-  {
-    id: 'conf-mf-expo-pack-mex',
-    name: 'Expo Pack Mexico',
-    category: 'Packaging',
-    location: 'Mexico City, Mexico',
-    month: 'June',
-    description: 'Mexico\'s largest packaging and processing trade show organized by PMMI with 1,000+ exhibitors. Covers packaging machinery, materials, and services for Mexico\'s food, pharmaceutical, and consumer goods sectors. Juarez packaging operations and El Paso cross-border distributors attend to source Spanish-language-supported packaging systems.',
-    estimatedExhibitors: 1000,
-    relevanceScore: 87,
-    website: 'https://www.expopacmexico.com',
-    lat: 19.4326,
-    lon: -99.1332,
-  },
-
-  {
-    id: 'conf-mf-co-pack',
-    name: 'CoPackaging & Cobranding Summit',
-    category: 'Packaging',
-    location: 'Chicago, IL',
-    month: 'October',
-    description: 'Contract packaging and private label manufacturing conference covering co-pack agreements, tolling arrangements, and outsourced packaging operations. El Paso co-packers serving Juarez-manufactured consumer goods finishing operations are a niche but growing segment of the Borderplex manufacturing service sector.',
-    estimatedExhibitors: 80,
-    relevanceScore: 75,
-    website: 'https://copackagingsummit.com',
-    lat: 41.8781,
-    lon: -87.6298,
-  },
-
-  {
-    id: 'conf-mf-tape-label',
-    name: 'Converting & Package Printing Expo',
-    category: 'Packaging',
-    location: 'Orlando, FL',
-    month: 'April',
-    description: 'Co-located converting, flexible packaging printing, and label show covering slitting, laminating, and digital flexo. El Paso flexible packaging converters producing pouches for Juarez food and medical maquiladoras source laminating equipment and substrate materials at this co-located TAPPI/AICC event.',
-    estimatedExhibitors: 300,
-    relevanceScore: 71,
-    website: 'https://www.convertingexpo.com',
-    lat: 28.5383,
-    lon: -81.3792,
-  },
-
-  {
-    id: 'conf-mf-glasspac',
-    name: 'Glass TEXpo (Glass Packaging)',
-    category: 'Packaging',
-    location: 'Various US cities',
-    month: 'May',
-    description: 'Glass container and packaging technology conference covering forming, inspection, and sustainability for food and beverage glass packaging. Juarez food and beverage bottling operations for export to US supermarkets under USMCA use glass containers sourced from Vitro and Owens-Illinois, both with operations near the border region.',
-    estimatedExhibitors: 100,
-    relevanceScore: 66,
-    website: 'https://www.gmic.org/glasstexpo',
-    lat: 29.4241,
-    lon: -98.4936,
-  },
-
-  {
-    id: 'conf-mf-bioplastics',
-    name: 'BioPack Summit (Biobased Packaging)',
-    category: 'Packaging',
-    location: 'San Francisco, CA',
-    month: 'March',
-    description: 'Conference on biobased and compostable packaging materials covering PLA, PHA, and starch-based films for food service and consumer products. California Extended Producer Responsibility laws are driving Juarez consumer goods maquiladoras supplying California retailers to evaluate biobased packaging alternatives.',
-    estimatedExhibitors: 80,
-    relevanceScore: 62,
-    website: 'https://biopacksummit.com',
-    lat: 37.7749,
-    lon: -122.4194,
-  },
-
-  {
-    id: 'conf-mf-cold-chain-pack',
-    name: 'Cold Chain & Temperature-Controlled Packaging Summit',
-    category: 'Packaging',
-    location: 'Philadelphia, PA',
-    month: 'November',
-    description: 'Conference on insulated packaging, phase-change materials, and cold-chain logistics packaging for pharmaceutical and perishable food distribution. El Paso\'s role as a cross-border cold-chain hub for Mexican produce entering US markets through Juarez makes temperature-controlled packaging innovations directly relevant to El Paso cold-storage operators.',
-    estimatedExhibitors: 150,
-    relevanceScore: 76,
-    website: 'https://coldchainpacksummit.com',
-    lat: 39.9526,
-    lon: -75.1652,
-  },
-
-  {
-    id: 'conf-mf-smart-pack',
-    name: 'Smart Packaging Summit',
-    category: 'Packaging',
-    location: 'Various US cities',
-    month: 'September',
-    description: 'Conference on active and intelligent packaging including freshness indicators, QR/NFC anti-counterfeiting, and connected packaging for supply chain transparency. Juarez pharmaceutical and consumer electronics maquiladoras are required by OEM brand owners to implement serialization and track-and-trace packaging for US market entry.',
-    estimatedExhibitors: 100,
-    relevanceScore: 73,
-    website: 'https://smartpackagingsummit.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-mf-aerosol',
-    name: 'ACA Aerosol & Dispensing Forum',
-    category: 'Packaging',
-    location: 'Various US cities',
-    month: 'March',
-    description: 'Consumer Specialty Products Association aerosol technology forum covering propellant formulation, valve design, and DOT aerosol transportation regulations. Aerosol products manufactured in Juarez for US consumer brands cross through El Paso under DOT hazardous materials regulations tracked by CSPSA members.',
-    estimatedExhibitors: 100,
-    relevanceScore: 65,
-    website: 'https://www.cspa.org/aerosol',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-mf-ecopack',
-    name: 'EcoPackLive',
-    category: 'Packaging',
-    location: 'Atlanta, GA',
-    month: 'April',
-    description: 'Sustainable packaging innovation conference covering recyclability assessment, EPR compliance, and packaging lightweighting. US retail brand owners\' sustainable packaging commitments directly affect El Paso and Juarez packaging maquiladora specifications, as brand owners cascade sustainability requirements to their USMCA manufacturing partners.',
-    estimatedExhibitors: 80,
-    relevanceScore: 68,
-    website: 'https://ecopacklive.com',
-    lat: 33.749,
-    lon: -84.388,
-  },
-
-  {
-    id: 'conf-mf-bulk-pack',
-    name: 'Bulk & Industrial Packaging Conference',
-    category: 'Packaging',
-    location: 'Various US cities',
-    month: 'October',
-    description: 'Conference covering IBCs, bulk bags (FIBCs), drums, and pails for industrial and chemical bulk packaging. El Paso chemical distributors and Juarez industrial material importers use bulk packaging systems for resin pellets, chemical powders, and liquid raw materials crossing the border under USMCA tariff schedules.',
-    estimatedExhibitors: 120,
-    relevanceScore: 69,
-    website: 'https://bulkpackagingconference.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-mf-healthcare-pkg',
-    name: 'Healthcare Packaging Summit',
-    category: 'Packaging',
-    location: 'Minneapolis, MN',
-    month: 'June',
-    description: 'Medical device and pharmaceutical packaging conference covering sterile barrier validation, ISO 11607 compliance, and combination product packaging regulatory strategy. Juarez medical device packaging operations for Medtronic, Covidien, and Cardinal Health all must comply with FDA medical packaging regulations managed across the El Paso/Juarez border.',
-    estimatedExhibitors: 100,
-    relevanceScore: 79,
-    website: 'https://healthcarepackagingsummit.com',
-    lat: 44.9778,
-    lon: -93.2650,
-  },
-
-
   // ── Textiles ─────────────────────────────────────────────────────────────────
-
-  {
-    id: 'conf-mf-atme-i',
-    name: 'ATME-I (American Textile Machinery Exhibition)',
-    category: 'Textiles',
-    location: 'Greenville, SC',
-    month: 'October',
-    description: 'North America\'s premier textile machinery exhibition covering spinning, weaving, knitting, dyeing, and finishing equipment for apparel and technical textile manufacturers. El Paso and Juarez have historically hosted significant denim and apparel maquiladora operations; ATME-I is the primary capital equipment sourcing venue for US-based textile manufacturers nearshoring production.',
-    estimatedExhibitors: 300,
-    relevanceScore: 72,
-    website: 'https://www.atme-i.com',
-    lat: 34.8526,
-    lon: -82.3940,
-  },
-
-  {
-    id: 'conf-mf-texworld-usa',
-    name: 'Texworld USA',
-    category: 'Textiles',
-    location: 'New York, NY',
-    month: 'July',
-    description: 'North America\'s largest fabric and textile sourcing event with 400+ global fabric suppliers exhibiting for fashion and apparel brands. Mexican and Central American fabric mills supply USMCA-qualifying fabric to El Paso/Juarez apparel maquiladoras producing jeans, workwear, and casualwear under yarn-forward rules-of-origin.',
-    estimatedExhibitors: 400,
-    relevanceScore: 74,
-    website: 'https://www.texworld-usa.us.messefrankfurt.com',
-    lat: 40.7128,
-    lon: -74.0060,
-  },
-
-  {
-    id: 'conf-mf-ifai-expo',
-    name: 'IFAI Expo (Industrial Fabrics)',
-    category: 'Textiles',
-    location: 'Various US cities',
-    month: 'October',
-    description: 'Industrial Fabrics Association International annual expo covering technical textiles, geotextiles, awnings, and protective apparel. El Paso contractors building border barriers use geotextile ground cover materials; Juarez maquiladoras produce automotive seat upholstery and headliner technical textiles for US OEM customers.',
-    estimatedExhibitors: 350,
-    relevanceScore: 70,
-    website: 'https://www.ifaiexpo.com',
-    lat: 41.8781,
-    lon: -87.6298,
-  },
 
   {
     id: 'conf-mf-aatcc',
@@ -2093,20 +1167,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.sourcingatmagic.com',
     lat: 36.1699,
     lon: -115.1398,
-  },
-
-  {
-    id: 'conf-mf-heimtextil',
-    name: 'Heimtextil',
-    category: 'Textiles',
-    location: 'Frankfurt, Germany',
-    month: 'January',
-    description: 'World\'s leading trade fair for home and contract textiles including bedding, upholstery, and curtains. 3,000+ exhibitors set global textile trends. Mexican home textiles exported through El Paso to US retailers follow Heimtextil design and quality trends adopted by Walmart Mexico buyers sourcing from Juarez producers.',
-    estimatedExhibitors: 3000,
-    relevanceScore: 55,
-    website: 'https://heimtextil.messefrankfurt.com/en',
-    lat: 50.1109,
-    lon: 8.6821,
   },
 
   {
@@ -2165,48 +1225,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     lon: -74.0060,
   },
 
-  {
-    id: 'conf-mf-protective-textiles',
-    name: 'Safety & Protective Fabrics Conference (IFAI)',
-    category: 'Textiles',
-    location: 'Knoxville, TN',
-    month: 'October',
-    description: 'IFAI conference on high-performance protective fabrics including flame-resistant, cut-resistant, and ballistic materials for military and industrial applications. Fort Bliss procures flame-resistant combat uniforms (FRACUs) and body armor carrier systems from US textile manufacturers, some of whom source materials from Juarez technical textile maquiladoras.',
-    estimatedExhibitors: 100,
-    relevanceScore: 78,
-    website: 'https://www.ifai.com/events/safety-protective',
-    lat: 35.9606,
-    lon: -83.9207,
-  },
-
-  {
-    id: 'conf-mf-yarn-expo',
-    name: 'Yarn Expo Americas',
-    category: 'Textiles',
-    location: 'New York, NY',
-    month: 'July',
-    description: 'Fiber and yarn sourcing event co-located with Texworld USA attracting spinners and yarn traders from the Americas. Mexico USMCA yarn-forward rules require apparel maquiladoras to use US or Mexican yarns to qualify for duty-free export; El Paso textile importers facilitate yarn and fiber crossings through the Paso del Norte POE.',
-    estimatedExhibitors: 200,
-    relevanceScore: 72,
-    website: 'https://www.texworld-usa.us.messefrankfurt.com/yarn-expo',
-    lat: 40.7128,
-    lon: -74.0060,
-  },
-
-  {
-    id: 'conf-mf-military-textiles',
-    name: 'Defense Textile & Apparel Forum (NTMA)',
-    category: 'Textiles',
-    location: 'Washington, DC',
-    month: 'May',
-    description: 'National Textile Manufacturers Association forum on Berry Amendment compliance, military uniform procurement, and domestic textile content requirements for DoD contracts. El Paso-area apparel manufacturers and Juarez maquiladoras must carefully navigate Berry Amendment domestic content rules when producing military uniform components for Fort Bliss.',
-    estimatedExhibitors: 80,
-    relevanceScore: 83,
-    website: 'https://www.ncto.org/events',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
   // ── HVAC ─────────────────────────────────────────────────────────────────────
 
   {
@@ -2247,20 +1265,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     estimatedExhibitors: 150,
     relevanceScore: 84,
     website: 'https://www.acca.org/conference',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
-  {
-    id: 'conf-mf-smacna',
-    name: 'SMACNA Annual Conference',
-    category: 'HVAC',
-    location: 'Various US cities',
-    month: 'October',
-    description: 'Sheet Metal and Air Conditioning Contractors\' National Association annual conference on commercial HVAC ductwork, rooftop units, and building mechanical systems. El Paso sheet metal contractors fabricate and install ductwork for Fort Bliss facilities, border crossing facilities, and large commercial projects throughout the Borderplex.',
-    estimatedExhibitors: 150,
-    relevanceScore: 83,
-    website: 'https://www.smacna.org/events/annual-conference',
     lat: 36.1699,
     lon: -115.1398,
   },
@@ -2308,20 +1312,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-iiar-annual',
-    name: 'IIAR Natural Refrigerants Conference',
-    category: 'HVAC',
-    location: 'Various US cities',
-    month: 'March',
-    description: 'International Institute of Ammonia Refrigeration annual conference on industrial refrigeration with natural refrigerants (NH3, CO2). El Paso cold-storage operators and Juarez food processing facilities with blast-freeze operations use industrial ammonia refrigeration systems maintained by certified engineers attending IIAR.',
-    estimatedExhibitors: 100,
-    relevanceScore: 72,
-    website: 'https://www.iiar.org/iiar/events',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
-  {
     id: 'conf-mf-refrigeration-service',
     name: 'RSES Annual Conference & Expo',
     category: 'HVAC',
@@ -2350,62 +1340,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-indoor-climate',
-    name: 'Indoor Air Quality Conference (IAQA)',
-    category: 'HVAC',
-    location: 'Various US cities',
-    month: 'January',
-    description: 'Indoor Air Quality Association conference on mold remediation, ventilation standards, and commercial IAQ testing. El Paso\'s desert dust storms (haboobs) and high particulate events create IAQ challenges in commercial buildings, driving demand for enhanced filtration (MERV-13+) and ventilation commissioning services by local HVAC contractors.',
-    estimatedExhibitors: 150,
-    relevanceScore: 78,
-    website: 'https://www.iaqa.org/conference',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
-  {
-    id: 'conf-mf-building-automation',
-    name: 'BuilConn Building Automation & Controls Summit',
-    category: 'HVAC',
-    location: 'Chicago, IL',
-    month: 'October',
-    description: 'Conference on BAS/BMS systems, IoT-connected HVAC controls, and demand response for smart buildings. El Paso Electric\'s demand response programs incentivize commercial building owners to install smart thermostats and BAS controls that shed cooling load during peak summer demand — a directly applicable market for BAS integrators.',
-    estimatedExhibitors: 100,
-    relevanceScore: 82,
-    website: 'https://builconn.com',
-    lat: 41.8781,
-    lon: -87.6298,
-  },
-
-  {
-    id: 'conf-mf-solar-hvac',
-    name: 'Solar HVAC & Net Zero Buildings Summit',
-    category: 'HVAC',
-    location: 'Phoenix, AZ',
-    month: 'April',
-    description: 'Emerging conference on solar-assisted HVAC, heat pump water heating, and net-zero mechanical system design for Sun Belt climates. El Paso\'s 297 annual sunshine days and El Paso Electric\'s solar rate incentives make solar-assisted cooling and heat pump systems particularly cost-effective, driving local engineering and contractor interest in this summit.',
-    estimatedExhibitors: 80,
-    relevanceScore: 85,
-    website: 'https://solarhvacsummit.com',
-    lat: 33.4484,
-    lon: -112.0740,
-  },
-
-  {
-    id: 'conf-mf-expo-climatizacion',
-    name: 'Expo Climatización y Refrigeración Mexico',
-    category: 'HVAC',
-    location: 'Mexico City, Mexico',
-    month: 'April',
-    description: 'Mexico\'s primary HVAC and refrigeration trade show organized by CANIRAC and ANCE covering residential and commercial air conditioning, refrigeration equipment, and building controls. Juarez commercial builders, maquiladora facility engineers, and El Paso HVAC distributors attend to source bilingual-supported HVAC products for the binational market.',
-    estimatedExhibitors: 300,
-    relevanceScore: 88,
-    website: 'https://expo-climatizacion.com.mx',
-    lat: 19.4326,
-    lon: -99.1332,
-  },
-
-  {
     id: 'conf-mf-refrigerants-conf',
     name: 'ATMOsphere America (Low-GWP Refrigerants)',
     category: 'HVAC',
@@ -2431,20 +1365,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.boma.org/events',
     lat: 36.1699,
     lon: -115.1398,
-  },
-
-  {
-    id: 'conf-mf-geothermal-hvac',
-    name: 'Geo-Exchange Summit (Geothermal HVAC)',
-    category: 'HVAC',
-    location: 'Various US cities',
-    month: 'February',
-    description: 'Conference on ground-source heat pump systems for commercial and institutional buildings. UTEP and Fort Bliss have explored geothermal HVAC for energy resilience and net-zero building targets; the Hueco Bolson aquifer geology in El Paso is evaluated as a potential ground-loop resource for campus-scale geothermal cooling systems.',
-    estimatedExhibitors: 80,
-    relevanceScore: 72,
-    website: 'https://geothermalhvac.org',
-    lat: 38.9072,
-    lon: -77.0369,
   },
 
   // ── Plastics ─────────────────────────────────────────────────────────────────
@@ -2492,20 +1412,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-k-fair',
-    name: 'K Trade Fair (Plastics & Rubber)',
-    category: 'Plastics',
-    location: 'Düsseldorf, Germany',
-    month: 'October',
-    description: 'The world\'s most important trade fair for plastics and rubber held triennially with 3,200+ exhibitors from 60+ countries. Launches the global plastics industry\'s most significant new injection molding machines, extruders, and material innovations. Juarez maquiladora capital equipment committees use K Fair as the benchmark for 5-year equipment investment planning.',
-    estimatedExhibitors: 3200,
-    relevanceScore: 71,
-    website: 'https://www.k-online.com/en',
-    lat: 51.2271,
-    lon: 6.7731,
-  },
-
-  {
     id: 'conf-mf-composites-one',
     name: 'CompositesWorld Carbon Fiber Conference',
     category: 'Plastics',
@@ -2520,34 +1426,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-plastics-news-exec',
-    name: 'Plastics News Executive Forum',
-    category: 'Plastics',
-    location: 'Palm Beach, FL',
-    month: 'February',
-    description: 'Executive leadership conference for plastics industry CEOs covering market trends, mergers, plastics sustainability regulation, and capital investment. Juarez maquiladora plastics plant managers and El Paso-based shelter service companies track M&A activity in the plastics industry affecting their US parent company relationships.',
-    estimatedExhibitors: 80,
-    relevanceScore: 67,
-    website: 'https://www.plasticsnews.com/execforum',
-    lat: 26.7153,
-    lon: -80.0534,
-  },
-
-  {
-    id: 'conf-mf-blow-molding',
-    name: 'SPE Blow Molding Division Conference',
-    category: 'Plastics',
-    location: 'Various US cities',
-    month: 'October',
-    description: 'Technical conference on extrusion blow molding, injection blow molding, and stretch blow molding for bottles, containers, and industrial parts. El Paso bottle manufacturers and Juarez consumer goods packaging maquiladoras producing PET bottles and HDPE containers for US retail distribution attend this SPE division event.',
-    estimatedExhibitors: 80,
-    relevanceScore: 70,
-    website: 'https://www.4spe.org/divisions/blow-molding',
-    lat: 41.8781,
-    lon: -87.6298,
-  },
-
-  {
     id: 'conf-mf-rotomolding',
     name: 'ARM Annual Meeting (Rotational Molding)',
     category: 'Plastics',
@@ -2559,62 +1437,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.rotationalmolding.org',
     lat: 41.8781,
     lon: -87.6298,
-  },
-
-  {
-    id: 'conf-mf-thermoforming',
-    name: 'SPE Thermoforming Conference',
-    category: 'Plastics',
-    location: 'Various US cities',
-    month: 'September',
-    description: 'Society of Plastics Engineers annual thermoforming conference covering thin-gauge food packaging trays, thick-gauge industrial components, and pressure forming. El Paso food processors and Juarez retail food packaging maquiladoras produce PET clamshell containers and food-service trays through thermoforming operations sourcing tooling from US mold makers.',
-    estimatedExhibitors: 100,
-    relevanceScore: 71,
-    website: 'https://www.4spe.org/divisions/thermoforming',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
-  {
-    id: 'conf-mf-recycling-plastics',
-    name: 'APR National Plastics Recycling Conference',
-    category: 'Plastics',
-    location: 'Various US cities',
-    month: 'February',
-    description: 'Association of Plastics Recyclers annual conference on plastics recyclability design, post-consumer resin supply chains, and recycled-content mandates. Texas and Mexico\'s nascent plastics recycling infrastructure is discussed at APR; El Paso\'s scrap plastic export through Juarez to Mexican recyclers is a cross-border material flow tracked by APR members.',
-    estimatedExhibitors: 100,
-    relevanceScore: 68,
-    website: 'https://www.plasticsrecycling.org/events',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-mf-foam-expo',
-    name: 'Foam Expo North America',
-    category: 'Plastics',
-    location: 'Novi, MI',
-    month: 'March',
-    description: 'Conference and expo dedicated to foam manufacturing including PU foam, EPS, and XPS for automotive, construction, and consumer products. Juarez automotive maquiladoras produce polyurethane seat cushions and door panel foam pads for Ford and GM, sourcing foam chemicals and cutting equipment through El Paso chemical distributors.',
-    estimatedExhibitors: 150,
-    relevanceScore: 72,
-    website: 'https://www.foamexpoamerica.com',
-    lat: 42.4800,
-    lon: -83.4755,
-  },
-
-  {
-    id: 'conf-mf-rubber-expo',
-    name: 'Rubber Expo & ACS Rubber Division Meeting',
-    category: 'Plastics',
-    location: 'Pittsburgh, PA',
-    month: 'October',
-    description: 'American Chemical Society Rubber Division\'s biennial technical conference and exposition on elastomer formulation, processing, and rubber products for automotive and industrial applications. Juarez automotive rubber parts maquiladoras — seals, grommets, hoses — represent a significant cross-border manufacturing segment serviced by US rubber compounders.',
-    estimatedExhibitors: 200,
-    relevanceScore: 67,
-    website: 'https://www.rubber.org/expo',
-    lat: 40.4406,
-    lon: -79.9959,
   },
 
   {
@@ -2646,20 +1468,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-mold-making',
-    name: 'Amerimold',
-    category: 'Plastics',
-    location: 'Rosemont, IL',
-    month: 'June',
-    description: 'North America\'s premier moldmaking and tooling technology event covering mold steel, hot runners, EDM, and mold repair. El Paso and Juarez mold shops serving the maquiladora plastics sector source mold components and benchmarks their tooling costs against US and Canadian mold makers at Amerimold\'s cost and technology presentations.',
-    estimatedExhibitors: 200,
-    relevanceScore: 74,
-    website: 'https://www.amerimoldshow.com',
-    lat: 41.9839,
-    lon: -87.8683,
-  },
-
-  {
     id: 'conf-mf-composites-sampe',
     name: 'SAMPE North America Conference & Exhibition',
     category: 'Plastics',
@@ -2673,35 +1481,7 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     lon: -118.4912,
   },
 
-  {
-    id: 'conf-mf-bioplastics-summit',
-    name: 'Bioplastics Business Breakfast (SPE)',
-    category: 'Plastics',
-    location: 'Various US cities',
-    month: 'March',
-    description: 'SPE event on bio-based and biodegradable polymer commercialization covering PLA, PHAs, and cellulose-based materials. Extended Producer Responsibility regulations in California and EU are driving Juarez consumer goods maquiladoras to evaluate bioplastic substitutes for single-use packaging items exported to regulated markets through El Paso.',
-    estimatedExhibitors: 60,
-    relevanceScore: 62,
-    website: 'https://www.4spe.org/events/bioplastics',
-    lat: 41.8781,
-    lon: -87.6298,
-  },
-
   // ── Fabrication ───────────────────────────────────────────────────────────────
-
-  {
-    id: 'conf-mf-fabtech-fab',
-    name: 'FABTECH Fabrication Track',
-    category: 'Fabrication',
-    location: 'Chicago, IL',
-    month: 'November',
-    description: 'FABTECH\'s dedicated metal fabrication content track covering laser cutting systems, press brake automation, punch-laser combination machines, and tube bending. El Paso and Juarez job shops serving architectural metal, HVAC ductwork, and custom fabrication markets attend FABTECH\'s fabrication sessions to evaluate lean cell configurations.',
-    estimatedExhibitors: 500,
-    relevanceScore: 86,
-    website: 'https://www.fabtechexpo.com/show-info/show-sections',
-    lat: 41.8503,
-    lon: -87.6164,
-  },
 
   {
     id: 'conf-mf-aws-weldshow',
@@ -2746,34 +1526,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-surtech',
-    name: 'SURTECH (Surface Technology)',
-    category: 'Fabrication',
-    location: 'Düsseldorf, Germany',
-    month: 'April',
-    description: 'European surface technology conference on electroplating, PVD coatings, and industrial surface treatment co-located with wire & Tube. Juarez metal parts maquiladoras must meet OEM surface roughness, corrosion resistance, and plating thickness specs sourced from German and Japanese surface treatment technology providers attending SURTECH.',
-    estimatedExhibitors: 350,
-    relevanceScore: 58,
-    website: 'https://www.surtech.de/en',
-    lat: 51.2271,
-    lon: 6.7731,
-  },
-
-  {
-    id: 'conf-mf-aerodef',
-    name: 'AeroDef Manufacturing',
-    category: 'Fabrication',
-    location: 'Various US cities',
-    month: 'March',
-    description: 'Defense and aerospace manufacturing conference covering NADCAP-compliant machining, composite fabrication, and digital manufacturing for DoD prime contractor supply chains. El Paso aerospace fabrication shops supporting Raytheon and L3Harris at Fort Bliss track AeroDef for process qualification requirements and new contract opportunities.',
-    estimatedExhibitors: 200,
-    relevanceScore: 79,
-    website: 'https://www.aerodefshow.com',
-    lat: 34.0522,
-    lon: -118.2437,
-  },
-
-  {
     id: 'conf-mf-pmts',
     name: 'PMTS – Precision Machining Technology Show',
     category: 'Fabrication',
@@ -2802,20 +1554,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-grinding-honing',
-    name: 'Grinding, Lapping, Honing & Finishing Conference (SME)',
-    category: 'Fabrication',
-    location: 'Various US cities',
-    month: 'June',
-    description: 'SME specialty conference on abrasive machining processes including cylindrical grinding, centerless grinding, and superfinishing. Precision surface finish requirements for Fort Bliss armament components and Juarez automotive transmission gears require tight Ra tolerances achievable only through optimized grinding processes covered at this conference.',
-    estimatedExhibitors: 100,
-    relevanceScore: 63,
-    website: 'https://www.sme.org/training/conferences/grinding',
-    lat: 41.8781,
-    lon: -87.6298,
-  },
-
-  {
     id: 'conf-mf-laser-world',
     name: 'Laser World of Photonics',
     category: 'Fabrication',
@@ -2827,34 +1565,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.world-of-photonics.com/en',
     lat: 48.1351,
     lon: 11.5820,
-  },
-
-  {
-    id: 'conf-mf-metal-mex',
-    name: 'Metal Mexico / Expo Metal',
-    category: 'Fabrication',
-    location: 'Monterrey, Mexico',
-    month: 'November',
-    description: 'Mexico\'s leading metal fabrication, welding, and cutting technology exhibition serving automotive, energy, and infrastructure fabricators. Juarez structural steel and custom fabrication shops attend to source CNC plasma cutters, laser cutting tables, and MIG/TIG welding equipment from Mexican and US distributors.',
-    estimatedExhibitors: 300,
-    relevanceScore: 87,
-    website: 'https://www.expometal.com.mx',
-    lat: 25.6866,
-    lon: -100.3161,
-  },
-
-  {
-    id: 'conf-mf-structural-steel',
-    name: 'AISC Steel Construction Conference',
-    category: 'Fabrication',
-    location: 'Various US cities',
-    month: 'April',
-    description: 'American Institute of Steel Construction annual gathering for structural steel fabricators, detailers, and erectors. El Paso steel fabrication shops producing structural members for commercial and military construction bid projects through the AISC Certified Fabricator program, a mandatory qualification for federally funded building projects at Fort Bliss.',
-    estimatedExhibitors: 100,
-    relevanceScore: 78,
-    website: 'https://www.aisc.org/education/aisceducation/conferences',
-    lat: 38.9072,
-    lon: -77.0369,
   },
 
   {
@@ -2886,20 +1596,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
   },
 
   {
-    id: 'conf-mf-addweld',
-    name: 'Directed Energy Deposition (DED) Manufacturing Summit',
-    category: 'Fabrication',
-    location: 'Pittsburgh, PA',
-    month: 'April',
-    description: 'Emerging conference on wire-arc and powder-fed directed energy deposition for large-scale metal part fabrication and repair. Fort Bliss depot-level maintenance is exploring DED AM for repairing large steel weapon system components, while UTEP is developing DED processes for border infrastructure steel repair under Army Corps of Engineers research contracts.',
-    estimatedExhibitors: 60,
-    relevanceScore: 72,
-    website: 'https://dedsummit.com',
-    lat: 40.4406,
-    lon: -79.9959,
-  },
-
-  {
     id: 'conf-mf-tube-pipe',
     name: 'Tube & Pipe Journal Conference (FMA)',
     category: 'Fabrication',
@@ -2911,76 +1607,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.fmanet.org/events',
     lat: 41.8781,
     lon: -87.6298,
-  },
-
-  {
-    id: 'conf-mf-fma-annual',
-    name: 'FMA Annual Forming & Fabricating Summit',
-    category: 'Fabrication',
-    location: 'Chicago, IL',
-    month: 'May',
-    description: 'Fabricators & Manufacturers Association annual event on press brake forming, laser cutting, and fabrication business management. FMA membership includes numerous El Paso and Juarez job shops producing custom steel and aluminum fabrications for construction, military, and industrial markets in the Borderplex.',
-    estimatedExhibitors: 100,
-    relevanceScore: 79,
-    website: 'https://www.fmanet.org/events/annual-summit',
-    lat: 41.8781,
-    lon: -87.6298,
-  },
-
-  {
-    id: 'conf-mf-casting-forge',
-    name: 'CastExpo (American Foundry Society)',
-    category: 'Fabrication',
-    location: 'Various US cities',
-    month: 'April',
-    description: 'AFS biennial metalcasting exhibition covering iron, steel, and aluminum casting processes, molding media, and foundry automation. Juarez automotive maquiladoras source gray iron and ductile iron castings for engine blocks and transmission cases from Mexican foundries with operations near the El Paso corridor.',
-    estimatedExhibitors: 400,
-    relevanceScore: 65,
-    website: 'https://www.castexpo.com',
-    lat: 41.8781,
-    lon: -87.6298,
-  },
-
-  {
-    id: 'conf-mf-rapid-fab',
-    name: 'Rapid Tooling & Digital Fabrication Summit',
-    category: 'Fabrication',
-    location: 'Detroit, MI',
-    month: 'September',
-    description: 'Conference on 3D-printed tooling, soft tooling, and bridge tooling for rapid product development in automotive and consumer goods. Juarez maquiladora new product introduction (NPI) teams use rapid tooling from US service bureaus to produce pre-production samples before committing to production tooling investment.',
-    estimatedExhibitors: 80,
-    relevanceScore: 70,
-    website: 'https://rapidtoolingsummit.com',
-    lat: 42.3314,
-    lon: -83.0458,
-  },
-
-  {
-    id: 'conf-mf-aerojet-fab',
-    name: 'NADCAP Industry Support Group Meeting',
-    category: 'Fabrication',
-    location: 'Pittsburgh, PA',
-    month: 'May',
-    description: 'National Aerospace and Defense Contractors Accreditation Program meeting covering audit requirements for special processes including welding, NDT, heat treating, and chemical processing. El Paso aerospace fabrication suppliers to Raytheon and L3Harris at Fort Bliss must maintain NADCAP accreditation for special processes used in weapon system components.',
-    estimatedExhibitors: 80,
-    relevanceScore: 76,
-    website: 'https://www.pri.network/nadcap',
-    lat: 40.4406,
-    lon: -79.9959,
-  },
-
-  {
-    id: 'conf-mf-waterjets',
-    name: 'WaterJet Technology Association Conference',
-    category: 'Fabrication',
-    location: 'Various US cities',
-    month: 'November',
-    description: 'WJTA conference on waterjet and abrasive waterjet cutting for stone, metal, composites, and glass. Waterjet cutting is widely used in El Paso granite and stone fabrication shops producing architectural stonework for commercial buildings and border crossing facilities, as well as in Juarez industrial cutting operations.',
-    estimatedExhibitors: 80,
-    relevanceScore: 67,
-    website: 'https://www.wjta.org/events',
-    lat: 29.4241,
-    lon: -98.4936,
   },
 
   // ── Quality/Testing ───────────────────────────────────────────────────────────
@@ -2997,62 +1623,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     website: 'https://asq.org/conferences/world-quality',
     lat: 36.1699,
     lon: -115.1398,
-  },
-
-  {
-    id: 'conf-mf-qms-summit',
-    name: 'QMS Summit (Quality Management Systems)',
-    category: 'Quality/Testing',
-    location: 'Various US cities',
-    month: 'September',
-    description: 'ISO 9001, IATF 16949, and AS9100 quality management system practitioner conference covering internal audit, corrective action, and management review. El Paso and Juarez maquiladora quality directors attend QMS Summit to maintain certification readiness for IATF 16949 (automotive) and AS9100 (aerospace) audits by OASIS registrars.',
-    estimatedExhibitors: 80,
-    relevanceScore: 84,
-    website: 'https://qmssummit.com',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-mf-astm',
-    name: 'ASTM International Committee Week',
-    category: 'Quality/Testing',
-    location: 'Various US cities',
-    month: 'May',
-    description: 'ASTM International standards development meetings covering materials, construction, environmental, and consumer safety standards. ASTM standards used by El Paso contractors (concrete, steel, geotextiles) and Juarez maquiladoras (material certifications, test methods) are set and revised at ASTM committee weeks attended by industry and laboratory representatives.',
-    estimatedExhibitors: 100,
-    relevanceScore: 78,
-    website: 'https://www.astm.org/committee-meetings',
-    lat: 39.9526,
-    lon: -75.1652,
-  },
-
-  {
-    id: 'conf-mf-nist-mep',
-    name: 'NIST MEP National Network Summit',
-    category: 'Quality/Testing',
-    location: 'Washington, DC',
-    month: 'April',
-    description: 'NIST Manufacturing Extension Partnership annual summit connecting 51 MEP centers to share best practices in lean manufacturing, quality systems, and workforce development. Texas MEP (Texas Manufacturing Assistance Center) serves El Paso manufacturers through UTEP; MEP services include ISO 9001 gap assessments and IATF 16949 implementation for maquiladora supply chains.',
-    estimatedExhibitors: 100,
-    relevanceScore: 80,
-    website: 'https://www.nist.gov/mep/mep-national-network/summit',
-    lat: 38.9072,
-    lon: -77.0369,
-  },
-
-  {
-    id: 'conf-mf-quality-expo',
-    name: 'Quality Expo',
-    category: 'Quality/Testing',
-    location: 'Rosemont, IL',
-    month: 'October',
-    description: 'Co-located with The Assembly Show, Quality Expo covers metrology, vision inspection, CMMs, and non-destructive testing equipment for manufacturing quality control. El Paso and Juarez maquiladora quality laboratories source CMMs, optical comparators, and hardness testers from US distributors exhibiting at Quality Expo.',
-    estimatedExhibitors: 150,
-    relevanceScore: 81,
-    website: 'https://www.qualityexpousa.com',
-    lat: 41.9839,
-    lon: -87.8683,
   },
 
   {
@@ -3109,34 +1679,6 @@ export const MANUFACTURING_CONFERENCES: ConferenceRecord[] = [
     website: 'https://www.asnt.org/annual',
     lat: 40.0,
     lon: -82.9988,
-  },
-
-  {
-    id: 'conf-mf-six-sigma',
-    name: 'Lean Six Sigma World Conference',
-    category: 'Quality/Testing',
-    location: 'Various US cities',
-    month: 'March',
-    description: 'Conference on Lean Six Sigma methodology, DMAIC project execution, and Black Belt case studies from manufacturing and service industries. El Paso and Juarez maquiladora quality directors use LSS Black Belt certifications from ASQ and IASSC to drive process improvement projects targeting OEE, defect reduction, and cycle time in cross-border manufacturing.',
-    estimatedExhibitors: 80,
-    relevanceScore: 79,
-    website: 'https://leansixsigmaworld.com',
-    lat: 36.1699,
-    lon: -115.1398,
-  },
-
-  {
-    id: 'conf-mf-gage-calibration',
-    name: 'Measurement Science Conference (MSC)',
-    category: 'Quality/Testing',
-    location: 'Anaheim, CA',
-    month: 'March',
-    description: 'Metrology and calibration conference covering gauge repeatability and reproducibility (GR&R), measurement system analysis (MSA), and calibration management. IATF 16949-mandated MSA studies and calibration system requirements for El Paso and Juarez automotive maquiladora gauge labs are the primary draw for quality engineers at MSC.',
-    estimatedExhibitors: 80,
-    relevanceScore: 75,
-    website: 'https://www.msconference.com',
-    lat: 33.8366,
-    lon: -117.9143,
   },
 
   {
