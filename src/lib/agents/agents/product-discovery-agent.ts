@@ -8,7 +8,6 @@ import { upsertProducts, type ProductInsert } from '@/db/queries/products';
 import {
   runProductScanAgent,
   type ProductScanReport,
-  type VendorProducts,
 } from '@/lib/agents/agents/product-scanner-agent';
 
 // ─── Product Extraction Patterns ────────────────────────────────────────────────

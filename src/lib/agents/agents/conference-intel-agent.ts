@@ -5,7 +5,6 @@
 import {
   runConferenceAgent,
   type ConferenceIntelStore,
-  type ConferenceIntelItem,
 } from '@/lib/agents/conference-agent';
 import {
   persistConferenceIntel,
