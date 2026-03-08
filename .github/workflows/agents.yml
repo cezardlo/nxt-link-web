@@ -18,7 +18,7 @@ on:
         default: 'all'
 
 env:
-  SITE_URL: https://nxtlintech.com
+  SITE_URL: https://www.nxtlinktech.com
 
 jobs:
   feed-refresh:
