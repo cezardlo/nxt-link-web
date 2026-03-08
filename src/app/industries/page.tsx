@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { INDUSTRIES, CATALOG_SUMMARY } from '@/lib/data/technology-catalog';
 import { PageTopBar } from '@/components/PageTopBar';
 import { INDUSTRY_STORIES } from '@/lib/data/industry-stories';
@@ -44,8 +45,17 @@ const SECTOR_TO_SLUG: Record<string, string> = {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function IndustriesPage() {
+  const router = useRouter();
   const [sectorScores, setSectorScores] = useState<SectorScore[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleSearch = useCallback(() => {
+    const q = searchQuery.trim();
+    if (!q) return;
+    const slug = q.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+    router.push(`/industry/${slug}`);
+  }, [searchQuery, router]);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,7 +109,7 @@ export default function IndustriesPage() {
 
       <div className="max-w-6xl mx-auto px-6">
 
-        {/* ── Section 1: Header area ───────────────────────────────────────── */}
+        {/* ── Section 1: Header + Search ──────────────────────────────────── */}
         <div className="py-6 border-b border-white/[0.05]">
           <h1 className="text-[14px] tracking-[0.3em] text-white/60 uppercase leading-none">
             Industry Monitor
@@ -109,6 +119,27 @@ export default function IndustriesPage() {
             {loading ? '—' : totalSignals} LIVE SIGNALS&nbsp;&nbsp;·&nbsp;&nbsp;
             {INDUSTRIES.length} SECTORS TRACKED
           </p>
+
+          {/* Search any industry */}
+          <div className="mt-4 flex items-center gap-2">
+            <div className="relative flex-1 max-w-md">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                placeholder="Explore any industry... (e.g. window cleaning, warehouse robotics, solar maintenance)"
+                className="w-full bg-white/[0.03] border border-white/[0.08] rounded-sm px-3 py-2 font-mono text-[10px] text-white/60 placeholder:text-white/20 focus:outline-none focus:border-[#00d4ff]/30 transition-colors"
+              />
+            </div>
+            <button
+              onClick={handleSearch}
+              disabled={!searchQuery.trim()}
+              className="font-mono text-[8px] tracking-[0.2em] border border-[#00d4ff]/30 text-[#00d4ff]/70 rounded-sm px-3 py-2 hover:bg-[#00d4ff]/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              EXPLORE →
+            </button>
+          </div>
         </div>
 
         {/* ── Section 2: Sector momentum strip ─────────────────────────────── */}

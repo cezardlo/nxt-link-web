@@ -6,6 +6,7 @@ import { getIndustryBySlug } from '@/lib/data/technology-catalog';
 import { runIndustryScan, type IndustryScanResult } from '@/lib/intelligence/industry-scan';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
 
 // ── In-memory cache (1-hour TTL, keyed by slug) ───────────────────────────────
 
@@ -22,11 +23,12 @@ const scanCache = new Map<string, CacheEntry>();
 type RouteContext = { params: Promise<{ slug: string }> };
 
 // ── GET /api/industry/[slug]/products ─────────────────────────────────────────
+// Works for both known industries (ai-ml, defense, etc.) and custom queries
+// (window-cleaning, warehouse-automation, solar-panel-maintenance, etc.)
 
 export async function GET(request: Request, context: RouteContext): Promise<NextResponse> {
   const { slug } = await context.params;
 
-  // Rate limit: 20 requests per IP per minute — scans are expensive
   const ip = getClientIp(request.headers);
   const rl = checkRateLimit({ key: `industry-products:${ip}`, maxRequests: 20, windowMs: 60_000 });
 
@@ -37,15 +39,12 @@ export async function GET(request: Request, context: RouteContext): Promise<Next
     );
   }
 
-  // Validate slug against known industries
-  const industry = getIndustryBySlug(slug);
-
-  if (!industry) {
-    return NextResponse.json(
-      { ok: false, message: `Industry slug '${slug}' not found.` },
-      { status: 404 },
-    );
-  }
+  // Check if it's a known industry or a custom query
+  const knownIndustry = getIndustryBySlug(slug);
+  const label = knownIndustry
+    ? knownIndustry.label
+    : slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  const color = knownIndustry?.color ?? '#00d4ff';
 
   // Return cached result if still fresh
   const cached = scanCache.get(slug);
@@ -53,9 +52,10 @@ export async function GET(request: Request, context: RouteContext): Promise<Next
     return NextResponse.json(
       {
         ok: true,
-        industry: { slug: industry.slug, label: industry.label, color: industry.color },
+        industry: { slug, label, color },
         scan: cached.result,
         _cache: 'hit',
+        custom: !knownIndustry,
       },
       { headers: { 'Cache-Control': 'no-store' } },
     );
@@ -64,7 +64,7 @@ export async function GET(request: Request, context: RouteContext): Promise<Next
   // Run fresh scan
   try {
     const scanResult = await runIndustryScan({
-      industry: industry.label,
+      industry: label,
       region: 'El Paso',
       maxSources: 30,
     });
@@ -74,9 +74,10 @@ export async function GET(request: Request, context: RouteContext): Promise<Next
     return NextResponse.json(
       {
         ok: true,
-        industry: { slug: industry.slug, label: industry.label, color: industry.color },
+        industry: { slug, label, color },
         scan: scanResult,
         _cache: 'miss',
+        custom: !knownIndustry,
       },
       { headers: { 'Cache-Control': 'no-store' } },
     );

@@ -60,6 +60,15 @@ type FeedItem = {
   url?: string;
 };
 
+type ScanResult = {
+  executive_summary?: string;
+  products?: IndustryProduct[];
+  funding_signals?: Array<{ company: string; stage: string; amount?: string }>;
+  industry_areas?: Array<{ area: string; score: number }>;
+  sources_discovered?: number;
+  sources_scraped?: number;
+};
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function IndustryDeepDivePage() {
@@ -68,13 +77,20 @@ export default function IndustryDeepDivePage() {
 
   const industry = INDUSTRIES.find((i) => i.slug === slug);
   const story = industry ? INDUSTRY_STORIES[industry.slug] : undefined;
+
+  // For custom industries: derive label from slug
+  const isCustom = !industry;
+  const label = industry?.label ?? slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  const color = industry?.color ?? '#00d4ff';
+
   const [products, setProducts] = useState<IndustryProduct[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
+  const [scanData, setScanData] = useState<ScanResult | null>(null);
   const [signals, setSignals] = useState<IntelSignal[]>([]);
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
 
-  // Build data
+  // Build data (only for known industries)
   const allVendors = Object.values(EL_PASO_VENDORS) as VendorRecord[];
   const vendorCats = industry ? CATEGORY_TO_VENDOR_CATS[industry.category] ?? [] : [];
   const localVendors = allVendors.filter((v) => vendorCats.includes(v.category));
@@ -96,9 +112,9 @@ export default function IndustryDeepDivePage() {
   const emergingVendors = localVendors.filter(v => v.ikerScore >= 45 && v.ikerScore < 70).sort((a, b) => b.ikerScore - a.ikerScore);
   const specializedVendors = localVendors.filter(v => v.ikerScore < 45).sort((a, b) => b.ikerScore - a.ikerScore);
 
-  // Fetch products
+  // Fetch products + scan data (works for both known and custom industries)
   useEffect(() => {
-    if (!industry) return;
+    if (!slug) return;
     let cancelled = false;
     setProductsLoading(true);
     async function loadProducts() {
@@ -106,17 +122,20 @@ export default function IndustryDeepDivePage() {
         const res = await fetch(`/api/industry/${slug}/products`);
         if (!res.ok) return;
         const data = await res.json();
-        if (!cancelled && data.ok) setProducts(data.scan?.products ?? []);
+        if (!cancelled && data.ok) {
+          setProducts(data.scan?.products ?? []);
+          setScanData(data.scan ?? null);
+        }
       } catch { /* degrade */ }
       finally { if (!cancelled) setProductsLoading(false); }
     }
     void loadProducts();
     return () => { cancelled = true; };
-  }, [slug, industry]);
+  }, [slug]);
 
   // Fetch intel signals for this industry
   useEffect(() => {
-    if (!industry) return;
+    if (!slug) return;
     let cancelled = false;
     async function loadSignals() {
       try {
@@ -130,7 +149,7 @@ export default function IndustryDeepDivePage() {
     }
     void loadSignals();
     return () => { cancelled = true; };
-  }, [slug, industry]);
+  }, [slug]);
 
   // Fetch discovery feed
   useEffect(() => {
@@ -142,11 +161,12 @@ export default function IndustryDeepDivePage() {
         const data = await res.json();
         if (!cancelled && data.ok) {
           const items = (data.all ?? [])
-            .filter((a: { category?: string }) => {
-              if (!industry) return false;
+            .filter((a: { category?: string; title?: string }) => {
               const cat = (a.category ?? '').toLowerCase();
-              return cat.includes(industry.label.toLowerCase().split('/')[0].trim()) ||
-                     cat.includes(industry.category.toLowerCase().split('/')[0].trim());
+              const title = (a.title ?? '').toLowerCase();
+              const searchTerm = label.toLowerCase().split('/')[0].trim();
+              const catKey = industry?.category?.toLowerCase().split('/')[0].trim() ?? searchTerm;
+              return cat.includes(searchTerm) || cat.includes(catKey) || title.includes(searchTerm);
             })
             .slice(0, 12)
             .map((a: { title: string; category: string; source: string; pubDate: string; link?: string }) => ({
@@ -164,20 +184,6 @@ export default function IndustryDeepDivePage() {
     void loadFeed();
     return () => { cancelled = true; };
   }, [industry]);
-
-  // 404
-  if (!industry) {
-    return (
-      <div className="bg-black min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <div className="font-mono text-[10px] text-white/30 tracking-[0.3em]">INDUSTRY NOT FOUND</div>
-          <Link href="/industries" className="font-mono text-[9px] text-[#00d4ff]/60 hover:text-[#00d4ff] transition-colors">
-            ← BACK TO INDUSTRIES
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   const totalBudget = technologies.reduce((sum, t) => sum + (t.governmentBudgetFY25M ?? 0), 0);
 
@@ -210,14 +216,14 @@ export default function IndustryDeepDivePage() {
         backLabel="EXPLORE"
         breadcrumbs={[
           { label: 'INDUSTRIES', href: '/industries' },
-          { label: industry.label }
+          { label: label }
         ]}
         showLiveDot={true}
         rightSlot={
           <Link
             href={`/industry/${slug}/solve`}
             className="font-mono text-[8px] tracking-[0.2em] border rounded-sm px-2.5 py-1 transition-colors"
-            style={{ borderColor: `${industry.color}40`, color: `${industry.color}cc` }}
+            style={{ borderColor: `${color}40`, color: `${color}cc` }}
           >
             PROBLEM SOLVER →
           </Link>
@@ -237,22 +243,27 @@ export default function IndustryDeepDivePage() {
                 className="text-[28px] font-semibold tracking-tight text-white/90 leading-tight mb-1"
                 style={{ fontFamily: 'var(--font-space-grotesk)' }}
               >
-                {industry.label}
+                {label}
               </h1>
               <div className="font-mono text-[10px] text-white/30 tracking-wide mb-5">
                 {story?.headline}
               </div>
-              {story?.summary && (
+              {(story?.summary || scanData?.executive_summary) && (
                 <p className="font-mono text-[11px] text-white/45 leading-[1.8] max-w-3xl">
-                  {story.summary}
+                  {story?.summary ?? scanData?.executive_summary}
                 </p>
+              )}
+              {isCustom && !scanData && productsLoading && (
+                <div className="font-mono text-[9px] text-white/20 tracking-wide mt-3 animate-pulse">
+                  SCANNING INTELLIGENCE SOURCES...
+                </div>
               )}
             </div>
             <div className="flex flex-col items-center gap-1 shrink-0">
               <div className="border border-white/[0.08] px-5 py-3 text-center bg-white/[0.02]">
                 <div
                   className="font-mono text-[28px] font-bold leading-none"
-                  style={{ color: industry.color, textShadow: `0 0 14px ${industry.color}60` }}
+                  style={{ color: color, textShadow: `0 0 14px ${color}60` }}
                 >
                   {sectorScore}
                 </div>
@@ -265,7 +276,7 @@ export default function IndustryDeepDivePage() {
         {/* ═══ 2. STATS BAR ═══ */}
         <div className="grid grid-cols-5 gap-[1px] bg-white/[0.03] border-b border-white/[0.06]">
           {[
-            { label: 'TECHNOLOGIES', value: String(technologies.length), color: industry.color },
+            { label: 'TECHNOLOGIES', value: String(technologies.length), color: color },
             { label: 'LOCAL VENDORS', value: String(localVendors.length), color: '#ffb800' },
             { label: 'FY25 BUDGET', value: formatBudget(totalBudget), color: '#00ff88' },
             { label: 'PRODUCTS', value: productsLoading ? '···' : String(products.length), color: '#00d4ff' },
@@ -284,14 +295,40 @@ export default function IndustryDeepDivePage() {
         </div>
 
         {/* ═══ 3. WHAT'S HAPPENING NOW ═══ */}
-        <Section title="WHAT'S HAPPENING NOW" color={industry.color}>
+        <Section title="WHAT'S HAPPENING NOW" color={color}>
           <div className="space-y-2.5">
             {story?.bullets.map((b, i) => (
               <div key={i} className="flex items-start gap-3">
-                <div className="w-1 h-1 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: industry.color, opacity: 0.6 }} />
+                <div className="w-1 h-1 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: color, opacity: 0.6 }} />
                 <span className="font-mono text-[11px] text-white/50 leading-relaxed">{b}</span>
               </div>
             ))}
+            {/* For custom industries: show industry areas from scan */}
+            {isCustom && scanData?.industry_areas && scanData.industry_areas.length > 0 && (
+              <div className="mt-3">
+                <div className="font-mono text-[7px] tracking-[0.3em] text-white/15 mb-2">DETECTED AREAS</div>
+                {scanData.industry_areas.filter(a => a.score > 0).map((area, i) => (
+                  <div key={i} className="flex items-center gap-3 mb-1.5">
+                    <div className="w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: color, opacity: 0.6 }} />
+                    <span className="font-mono text-[10px] text-white/45">{area.area}</span>
+                    <div className="flex-1 h-[1px] bg-white/[0.04]" />
+                    <span className="font-mono text-[9px] font-bold" style={{ color }}>{area.score}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* For custom industries: show funding signals */}
+            {isCustom && scanData?.funding_signals && scanData.funding_signals.length > 0 && (
+              <div className="mt-3">
+                <div className="font-mono text-[7px] tracking-[0.3em] text-white/15 mb-2">FUNDING ACTIVITY</div>
+                {scanData.funding_signals.slice(0, 5).map((f, i) => (
+                  <div key={i} className="flex items-start gap-3 mb-1">
+                    <span className="font-mono text-[8px] text-[#00ff88]/60 shrink-0">$</span>
+                    <span className="font-mono text-[10px] text-white/45">{f.company} — {f.stage}{f.amount ? ` (${f.amount})` : ''}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           {feedItems.length > 0 && (
             <div className="mt-5 pt-4 border-t border-white/[0.04]">
@@ -316,7 +353,8 @@ export default function IndustryDeepDivePage() {
         </Section>
 
         {/* ═══ 4. MAJOR PLAYERS ═══ */}
-        <Section title="MAJOR PLAYERS" subtitle={`${localVendors.length} companies active in ${industry.label.toLowerCase()}`} color="#ffb800">
+        {localVendors.length > 0 && (
+        <Section title="MAJOR PLAYERS" subtitle={`${localVendors.length} companies active in ${label.toLowerCase()}`} color="#ffb800">
           {localVendors.length === 0 ? (
             <div className="py-6 text-center">
               <span className="font-mono text-[9px] text-white/15">No local vendors mapped to this sector yet.</span>
@@ -335,6 +373,7 @@ export default function IndustryDeepDivePage() {
             </div>
           )}
         </Section>
+        )}
 
         {/* ═══ 5. PRODUCTS & EQUIPMENT ═══ */}
         <Section
@@ -342,11 +381,12 @@ export default function IndustryDeepDivePage() {
           subtitle={productsLoading ? 'Scanning sources...' : `${products.length} products discovered`}
           color="#00d4ff"
         >
-          <ProductCatalog products={products} accentColor={industry.color} loading={productsLoading} />
+          <ProductCatalog products={products} accentColor={color} loading={productsLoading} />
         </Section>
 
         {/* ═══ 6. TECHNOLOGIES ═══ */}
-        <Section title="TECHNOLOGIES" subtitle={`${technologies.length} tracked across maturity stages`} color={industry.color}>
+        {technologies.length > 0 && (
+        <Section title="TECHNOLOGIES" subtitle={`${technologies.length} tracked across maturity stages`} color={color}>
           <div className="grid grid-cols-3 gap-[1px] bg-white/[0.03]">
             {(['emerging', 'growing', 'mature'] as const).map(stage => {
               const techs = technologies.filter(t => t.maturityLevel === stage);
@@ -374,6 +414,7 @@ export default function IndustryDeepDivePage() {
             })}
           </div>
         </Section>
+        )}
 
         {/* ═══ 7. PROBLEMS BEING SOLVED ═══ */}
         {story?.problems && story.problems.length > 0 && (
@@ -390,7 +431,7 @@ export default function IndustryDeepDivePage() {
               <Link
                 href={`/industry/${slug}/solve`}
                 className="inline-block font-mono text-[8px] tracking-[0.2em] border rounded-sm px-4 py-2 transition-colors"
-                style={{ borderColor: `${industry.color}30`, color: `${industry.color}90` }}
+                style={{ borderColor: `${color}30`, color: `${color}90` }}
               >
                 SOLVE A PROBLEM →
               </Link>
@@ -440,7 +481,7 @@ export default function IndustryDeepDivePage() {
         {/* ═══ 9. WHERE THE INDUSTRY IS HEADING ═══ */}
         {story?.outlook && (
           <Section title="WHERE THE INDUSTRY IS HEADING" color="#00ff88">
-            <div className="border-l-2 pl-5 py-1" style={{ borderColor: `${industry.color}40` }}>
+            <div className="border-l-2 pl-5 py-1" style={{ borderColor: `${color}40` }}>
               <p className="font-mono text-[11px] text-white/50 leading-[1.9]">
                 {story.outlook}
               </p>
@@ -450,7 +491,7 @@ export default function IndustryDeepDivePage() {
 
         {/* ═══ 10. LATEST INTELLIGENCE FEED ═══ */}
         <Section title="LATEST INTELLIGENCE" subtitle="Live news and breakthroughs" color="#00ff88">
-          <DiscoveryFeed items={feedItems} accentColor={industry.color} loading={feedLoading} />
+          <DiscoveryFeed items={feedItems} accentColor={color} loading={feedLoading} />
         </Section>
 
         {/* ═══ FOOTER ═══ */}
@@ -458,11 +499,11 @@ export default function IndustryDeepDivePage() {
           <Link
             href={`/industry/${slug}/solve`}
             className="font-mono text-[8px] tracking-[0.2em] transition-colors hover:opacity-80"
-            style={{ color: `${industry.color}cc` }}
+            style={{ color: `${color}cc` }}
           >
             SOLVE A PROBLEM →
           </Link>
-          <span className="font-mono text-[7px] text-white/10 tracking-[0.25em]">NXT//LINK — {industry.label.toUpperCase()} INTELLIGENCE</span>
+          <span className="font-mono text-[7px] text-white/10 tracking-[0.25em]">NXT//LINK — {label.toUpperCase()} INTELLIGENCE</span>
           <Link
             href="/vendors"
             className="font-mono text-[8px] tracking-[0.2em] text-[#ffb800]/60 hover:text-[#ffb800] transition-colors"
