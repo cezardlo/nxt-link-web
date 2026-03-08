@@ -83,7 +83,8 @@ type ResultItem =
   | { kind: 'page'; label: string; href: string; description: string; color: string }
   | { kind: 'industry'; label: string; href: string; description: string; color: string }
   | { kind: 'conference'; conference: ConferenceRecord }
-  | { kind: 'technology'; technology: Technology };
+  | { kind: 'technology'; technology: Technology }
+  | { kind: 'explore'; label: string; slug: string };
 
 const GROUP_LABELS: Record<string, string> = {
   page:         'PAGES',
@@ -95,6 +96,7 @@ const GROUP_LABELS: Record<string, string> = {
   article:      'FEED ARTICLES',
   conference:   'CONFERENCES',
   technology:   'TECHNOLOGIES',
+  explore:      'EXPLORE INDUSTRY',
 };
 
 export function CmdK({
@@ -181,6 +183,10 @@ export function CmdK({
       .slice(0, 5)
       .map((technology) => ({ kind: 'technology' as const, technology }));
 
+    // Always offer "explore as industry" for any typed query
+    const exploreSlug = q.replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+    const exploreItem: ResultItem = { kind: 'explore' as const, label: query.trim(), slug: exploreSlug };
+
     if (!isMap) {
       const industryMatches: ResultItem[] = INDUSTRY_ITEMS.filter(
         (p) => p.label.toLowerCase().includes(q) || p.description.toLowerCase().includes(q),
@@ -189,7 +195,7 @@ export function CmdK({
         .filter((p) => p.label.toLowerCase().includes(q) || p.category.toLowerCase().includes(q))
         .slice(0, 8)
         .map((point) => ({ kind: 'vendor' as const, point }));
-      return [...pageMatches, ...industryMatches, ...vendorMatches, ...conferenceMatches, ...technologyMatches];
+      return [...pageMatches, ...industryMatches, ...vendorMatches, ...conferenceMatches, ...technologyMatches, exploreItem];
     }
 
     const presetMatches: ResultItem[] = LAYER_PRESETS.filter(
@@ -211,7 +217,7 @@ export function CmdK({
       .filter((a) => a.title.toLowerCase().includes(q) || a.source.toLowerCase().includes(q))
       .slice(0, 5)
       .map((article) => ({ kind: 'article' as const, article }));
-    return [...pageMatches, ...presetMatches, ...vendorMatches, ...contractMatches, ...businessMatches, ...articleMatches, ...conferenceMatches, ...technologyMatches];
+    return [...pageMatches, ...presetMatches, ...vendorMatches, ...contractMatches, ...businessMatches, ...articleMatches, ...conferenceMatches, ...technologyMatches, exploreItem];
   })();
 
   const handleSelect = (item: ResultItem) => {
@@ -248,6 +254,9 @@ export function CmdK({
       onClose();
     } else if (item.kind === 'technology') {
       window.location.href = '/industry/' + encodeURIComponent(item.technology.category.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
+      onClose();
+    } else if (item.kind === 'explore') {
+      window.location.href = `/industry/${item.slug}`;
       onClose();
     }
   };
@@ -310,6 +319,7 @@ export function CmdK({
                   item.kind === 'business'     ? `b-${item.business.id}` :
                   item.kind === 'conference'   ? `cf-${item.conference.id}` :
                   item.kind === 'technology'   ? `tech-${item.technology.id}` :
+                  item.kind === 'explore'      ? `exp-${item.slug}` :
                   `a-${item.article.link}`
                 }>
                   {showGroupLabel && (
@@ -426,6 +436,18 @@ export function CmdK({
                           </div>
                         </div>
                         <span className="font-mono text-[8px] text-[#00d4ff]/50 shrink-0">TECH →</span>
+                      </>
+                    )}
+                    {item.kind === 'explore' && (
+                      <>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-[#00ff88] animate-pulse" />
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-mono text-[10px] text-white/70">Explore &ldquo;{item.label}&rdquo; as industry</span>
+                            <span className="font-mono text-[8px] text-white/25">Scan intelligence sources for this industry</span>
+                          </div>
+                        </div>
+                        <span className="font-mono text-[8px] text-[#00ff88]/50 shrink-0">DISCOVER →</span>
                       </>
                     )}
                   </button>
