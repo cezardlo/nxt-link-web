@@ -233,23 +233,20 @@ export default function IndustryDeepDivePage() {
       <div className="max-w-5xl mx-auto px-6 py-8 flex flex-col gap-0">
 
         {/* ═══ 1. HERO — Industry name + executive summary ═══ */}
-        <div className="pb-8 border-b border-white/[0.06]">
-          <div className="flex items-start justify-between gap-6">
+        <div className="pb-10 border-b border-white/[0.06]">
+          <div className="flex items-start justify-between gap-8">
             <div className="min-w-0 flex-1">
-              <div className="font-mono text-[8px] tracking-[0.4em] text-white/20 uppercase mb-3">
-                INTELLIGENCE BRIEFING
+              <div className="font-mono text-[8px] tracking-[0.4em] text-white/25 uppercase mb-4">
+                {story?.headline ?? label.toUpperCase()}
               </div>
               <h1
-                className="text-[28px] font-semibold tracking-tight text-white/90 leading-tight mb-1"
+                className="text-[32px] font-semibold tracking-tight text-white/90 leading-tight mb-5"
                 style={{ fontFamily: 'var(--font-space-grotesk)' }}
               >
                 {label}
               </h1>
-              <div className="font-mono text-[10px] text-white/30 tracking-wide mb-5">
-                {story?.headline}
-              </div>
               {(story?.summary || scanData?.executive_summary) && (
-                <p className="font-mono text-[11px] text-white/45 leading-[1.8] max-w-3xl">
+                <p className="font-mono text-[11px] text-white/40 leading-[1.9] max-w-2xl">
                   {story?.summary ?? scanData?.executive_summary}
                 </p>
               )}
@@ -259,37 +256,45 @@ export default function IndustryDeepDivePage() {
                 </div>
               )}
             </div>
-            <div className="flex flex-col items-center gap-1 shrink-0">
-              <div className="border border-white/[0.08] px-5 py-3 text-center bg-white/[0.02]">
+            {/* Sector score — pill shape, no hard border box */}
+            <div className="flex flex-col items-center gap-2 shrink-0 pt-2">
+              <div
+                className="rounded-full px-6 py-4 text-center"
+                style={{ background: `${color}0d`, border: `1px solid ${color}22` }}
+              >
                 <div
-                  className="font-mono text-[28px] font-bold leading-none"
-                  style={{ color: color, textShadow: `0 0 14px ${color}60` }}
+                  className="font-mono text-[32px] font-bold leading-none tracking-tight"
+                  style={{ color: color, textShadow: `0 0 20px ${color}55` }}
                 >
                   {sectorScore}
                 </div>
-                <div className="font-mono text-[6px] tracking-[0.3em] text-white/20 mt-1.5">SECTOR SCORE</div>
               </div>
+              <div className="font-mono text-[6px] tracking-[0.35em] text-white/20 uppercase">SECTOR SCORE</div>
             </div>
           </div>
         </div>
 
         {/* ═══ 2. STATS BAR ═══ */}
-        <div className="grid grid-cols-5 gap-[1px] bg-white/[0.03] border-b border-white/[0.06]">
+        <div className="grid grid-cols-5 border-b border-white/[0.06]">
           {[
             { label: 'TECHNOLOGIES', value: String(technologies.length), color: color },
             { label: 'LOCAL VENDORS', value: String(localVendors.length), color: '#ffb800' },
             { label: 'FY25 BUDGET', value: formatBudget(totalBudget), color: '#00ff88' },
             { label: 'PRODUCTS', value: productsLoading ? '···' : String(products.length), color: '#00d4ff' },
             { label: 'SIGNALS', value: String(signals.length), color: '#f97316' },
-          ].map((stat) => (
-            <div key={stat.label} className="bg-black py-4 px-4 text-center">
+          ].map((stat, i, arr) => (
+            <div
+              key={stat.label}
+              className="group bg-black py-5 px-4 text-center transition-colors duration-200 hover:bg-white/[0.025] cursor-default"
+              style={{ borderRight: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}
+            >
               <div
-                className="font-mono text-[20px] font-bold leading-none"
-                style={{ color: stat.color, textShadow: `0 0 10px ${stat.color}50` }}
+                className="font-mono text-[22px] font-bold leading-none tracking-tight transition-all duration-200 group-hover:tracking-widest"
+                style={{ color: stat.color, textShadow: `0 0 12px ${stat.color}40` }}
               >
                 {stat.value}
               </div>
-              <div className="font-mono text-[7px] tracking-[0.25em] text-white/20 mt-1.5">{stat.label}</div>
+              <div className="font-mono text-[7px] tracking-[0.3em] text-white/20 mt-2 group-hover:text-white/35 transition-colors duration-200">{stat.label}</div>
             </div>
           ))}
         </div>
@@ -446,34 +451,37 @@ export default function IndustryDeepDivePage() {
               <span className="font-mono text-[9px] text-white/15">No signals collected yet. Data accumulates over time.</span>
             </div>
           ) : (
-            <div className="space-y-1">
-              {signals.slice(0, 15).map((sig) => (
-                <div key={sig.id} className="flex items-center gap-3 py-2 px-3 border-b border-white/[0.03] last:border-b-0 hover:bg-white/[0.02] transition-colors">
-                  <span
-                    className="font-mono text-[7px] tracking-[0.15em] px-1.5 py-0.5 border shrink-0"
-                    style={{
-                      color: signalTypeColor[sig.signal_type] ?? '#fff',
-                      borderColor: `${signalTypeColor[sig.signal_type] ?? '#fff'}30`,
-                      opacity: 0.7,
-                    }}
+            <div className="space-y-[2px]">
+              {signals.slice(0, 15).map((sig) => {
+                const sigColor = signalTypeColor[sig.signal_type] ?? '#ffffff';
+                return (
+                  <div
+                    key={sig.id}
+                    className="flex items-center gap-3 py-2.5 pr-3 pl-4 hover:bg-white/[0.025] transition-colors relative"
+                    style={{ borderLeft: `2px solid ${sigColor}30` }}
                   >
-                    {signalTypeLabel[sig.signal_type] ?? sig.signal_type.toUpperCase()}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    {sig.url ? (
-                      <a href={sig.url} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-white/45 hover:text-white/65 transition-colors truncate block">
-                        {sig.title}
-                      </a>
-                    ) : (
-                      <span className="font-mono text-[10px] text-white/45 truncate block">{sig.title}</span>
+                    <span
+                      className="font-mono text-[7px] tracking-[0.15em] shrink-0"
+                      style={{ color: `${sigColor}99` }}
+                    >
+                      {signalTypeLabel[sig.signal_type] ?? sig.signal_type.toUpperCase()}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      {sig.url ? (
+                        <a href={sig.url} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-white/40 hover:text-white/65 transition-colors truncate block">
+                          {sig.title}
+                        </a>
+                      ) : (
+                        <span className="font-mono text-[10px] text-white/40 truncate block">{sig.title}</span>
+                      )}
+                    </div>
+                    {sig.company && (
+                      <span className="font-mono text-[8px] text-white/20 shrink-0">{sig.company}</span>
                     )}
+                    <span className="font-mono text-[8px] text-white/12 shrink-0">{sig.source}</span>
                   </div>
-                  {sig.company && (
-                    <span className="font-mono text-[8px] text-white/20 shrink-0">{sig.company}</span>
-                  )}
-                  <span className="font-mono text-[8px] text-white/15 shrink-0">{sig.source}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </Section>
@@ -553,21 +561,23 @@ export default function IndustryDeepDivePage() {
         </Section>
 
         {/* ═══ FOOTER ═══ */}
-        <div className="flex items-center justify-between py-6 border-t border-white/[0.06] mt-8">
-          <Link
-            href={`/industry/${slug}/solve`}
-            className="font-mono text-[8px] tracking-[0.2em] transition-colors hover:opacity-80"
-            style={{ color: `${color}cc` }}
-          >
-            SOLVE A PROBLEM →
-          </Link>
-          <span className="font-mono text-[7px] text-white/10 tracking-[0.25em]">NXT//LINK — {label.toUpperCase()} INTELLIGENCE</span>
-          <Link
-            href="/vendors"
-            className="font-mono text-[8px] tracking-[0.2em] text-[#ffb800]/60 hover:text-[#ffb800] transition-colors"
-          >
-            BROWSE VENDORS →
-          </Link>
+        <div className="flex flex-col items-center gap-5 py-10 border-t border-white/[0.05] mt-8">
+          <span className="font-mono text-[8px] tracking-[0.4em] text-white/10 uppercase">NXT//LINK</span>
+          <div className="flex items-center gap-6">
+            <Link
+              href={`/industry/${slug}/solve`}
+              className="font-mono text-[8px] tracking-[0.2em] text-white/20 hover:text-white/45 transition-colors duration-200"
+            >
+              SOLVE A PROBLEM →
+            </Link>
+            <span className="text-white/8 select-none">·</span>
+            <Link
+              href="/vendors"
+              className="font-mono text-[8px] tracking-[0.2em] text-white/20 hover:text-white/45 transition-colors duration-200"
+            >
+              BROWSE VENDORS →
+            </Link>
+          </div>
         </div>
       </div>
     </div>
@@ -583,16 +593,16 @@ function Section({ title, subtitle, color, children }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="mt-10">
-      <div className="flex items-center gap-3 mb-5">
+    <div className="mt-12 group/section">
+      <div className="flex items-center gap-3 mb-5 opacity-60 hover:opacity-100 transition-opacity duration-300">
         <div
-          className="w-[3px] h-5 shrink-0"
-          style={{ backgroundColor: `${color}60`, boxShadow: `0 0 8px ${color}40` }}
+          className="w-[3px] h-4 shrink-0 rounded-full"
+          style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}60` }}
         />
         <div>
-          <h2 className="font-mono text-[10px] tracking-[0.3em] text-white/40 uppercase">{title}</h2>
+          <h2 className="font-mono text-[9px] tracking-[0.35em] text-white/50 uppercase">{title}</h2>
           {subtitle && (
-            <span className="font-mono text-[8px] tracking-wider text-white/20">{subtitle}</span>
+            <span className="font-mono text-[8px] tracking-wider text-white/20 mt-0.5 block">{subtitle}</span>
           )}
         </div>
       </div>
