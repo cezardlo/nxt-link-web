@@ -132,7 +132,6 @@ function sentimentScore(items: EnrichedFeedItem[]): number {
 function buildKeyFindings(
   sectorScores: SectorScore[],
   items: EnrichedFeedItem[],
-  _now: string,
 ): KeyFinding[] {
   const findings: KeyFinding[] = [];
 
@@ -570,7 +569,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   const { signals, sectorScores } = engineOutput;
 
   // ── 3. Build digest components ─────────────────────────────────────────────
-  const keyFindings = buildKeyFindings(sectorScores, items, iso);
+  const keyFindings = buildKeyFindings(sectorScores, items);
   const sectorBreakdown = buildSectorBreakdown(sectorScores, signals);
   const anomalies = detectAnomalies(items, sectorScores, iso);
   const upcomingEvents = getUpcomingConferences(now);
