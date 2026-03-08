@@ -113,7 +113,11 @@ export async function upsertVendors(vendors: VendorRecord[]): Promise<number> {
       .from('vendors')
       .upsert(batch, { onConflict: 'id' });
 
-    if (!error) count += batch.length;
+    if (error) {
+      console.error('[vendors] upsert error:', error.message, error.details);
+    } else {
+      count += batch.length;
+    }
   }
 
   return count;

@@ -15,6 +15,10 @@ import { ENERGY_MEGA_SOURCES } from '@/lib/feeds/mega/energy-sources';
 import { FINANCE_MEGA_SOURCES } from '@/lib/feeds/mega/finance-sources';
 import { CRIME_MEGA_SOURCES } from '@/lib/feeds/mega/crime-sources';
 import { GENERAL_MEGA_SOURCES } from '@/lib/feeds/mega/general-sources';
+import { HEALTH_BIOTECH_MEGA_SOURCES } from '@/lib/feeds/mega/health-biotech-sources';
+import { MANUFACTURING_AEROSPACE_MEGA_SOURCES } from '@/lib/feeds/mega/manufacturing-aerospace-sources';
+import { AGRICULTURE_MEGA_SOURCES } from '@/lib/feeds/mega/agriculture-sources';
+import { CONSTRUCTION_INFRA_MEGA_SOURCES } from '@/lib/feeds/mega/construction-infra-sources';
 
 export type FeedSourceEntry = {
   id: string;
@@ -1379,6 +1383,10 @@ export const FEED_REGISTRY: FeedSourceEntry[] = [
   ...FINANCE_MEGA_SOURCES,
   ...CRIME_MEGA_SOURCES,
   ...GENERAL_MEGA_SOURCES,
+  ...HEALTH_BIOTECH_MEGA_SOURCES,
+  ...MANUFACTURING_AEROSPACE_MEGA_SOURCES,
+  ...AGRICULTURE_MEGA_SOURCES,
+  ...CONSTRUCTION_INFRA_MEGA_SOURCES,
 ];
 
 // Quick lookup by ID
