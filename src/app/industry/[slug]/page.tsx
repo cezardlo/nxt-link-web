@@ -489,7 +489,65 @@ export default function IndustryDeepDivePage() {
           </Section>
         )}
 
-        {/* ═══ 10. LATEST INTELLIGENCE FEED ═══ */}
+        {/* ═══ 10. CONNECTED INDUSTRIES ═══ */}
+        {!isCustom && (() => {
+          // Find industries that share vendors or technologies with this one
+          const otherIndustries = INDUSTRIES.filter(i => i.slug !== slug);
+          const connections = otherIndustries
+            .map(other => {
+              const otherVendorCats = CATEGORY_TO_VENDOR_CATS[other.category] ?? [];
+              const sharedVendors = allVendors.filter(v =>
+                vendorCats.includes(v.category) && otherVendorCats.includes(v.category)
+              ).length;
+              const otherTechs = TECHNOLOGY_CATALOG.filter(t => t.category === other.category);
+              const sharedKeywords = technologies.filter(t =>
+                otherTechs.some(ot =>
+                  t.name.toLowerCase().split(' ').some(w =>
+                    w.length > 3 && ot.name.toLowerCase().includes(w)
+                  )
+                )
+              ).length;
+              const strength = sharedVendors * 2 + sharedKeywords;
+              return { industry: other, strength, sharedVendors, sharedKeywords };
+            })
+            .filter(c => c.strength > 0)
+            .sort((a, b) => b.strength - a.strength)
+            .slice(0, 4);
+
+          if (connections.length === 0) return null;
+
+          return (
+            <Section title="CONNECTED INDUSTRIES" subtitle="Cross-industry relationships" color="#a855f7">
+              <div className="grid grid-cols-2 gap-2">
+                {connections.map(c => (
+                  <Link
+                    key={c.industry.slug}
+                    href={`/industry/${c.industry.slug}`}
+                    className="group flex items-center gap-3 p-3 border border-white/[0.04] hover:border-white/[0.10] hover:bg-white/[0.02] transition-all"
+                  >
+                    <div
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: c.industry.color, boxShadow: `0 0 6px ${c.industry.color}60` }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="font-mono text-[10px] text-white/55 group-hover:text-white/75 transition-colors uppercase truncate">
+                        {c.industry.label}
+                      </div>
+                      <div className="font-mono text-[8px] text-white/20 mt-0.5">
+                        {c.sharedVendors > 0 && <span>{c.sharedVendors} shared vendors</span>}
+                        {c.sharedVendors > 0 && c.sharedKeywords > 0 && <span> · </span>}
+                        {c.sharedKeywords > 0 && <span>{c.sharedKeywords} tech overlap</span>}
+                      </div>
+                    </div>
+                    <span className="font-mono text-[8px] text-white/15 group-hover:text-[#a855f7]/50 transition-colors shrink-0">→</span>
+                  </Link>
+                ))}
+              </div>
+            </Section>
+          );
+        })()}
+
+        {/* ═══ 11. LATEST INTELLIGENCE FEED ═══ */}
         <Section title="LATEST INTELLIGENCE" subtitle="Live news and breakthroughs" color="#00ff88">
           <DiscoveryFeed items={feedItems} accentColor={color} loading={feedLoading} />
         </Section>
