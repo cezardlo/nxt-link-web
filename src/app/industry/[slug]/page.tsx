@@ -1,29 +1,14 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 
-const BubbleMap = dynamic(
-  () => import('@/components/BubbleMap').then(m => ({ default: m.BubbleMap })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-[280px] flex items-center justify-center bg-black border border-white/[0.08] rounded-sm">
-        <span className="font-mono text-[8px] text-white/20 tracking-[0.2em]">LOADING MAP···</span>
-      </div>
-    ),
-  }
-);
 import { PageTopBar } from '@/components/PageTopBar';
 import { INDUSTRIES, TECHNOLOGY_CATALOG } from '@/lib/data/technology-catalog';
 import { INDUSTRY_STORIES } from '@/lib/data/industry-stories';
 import { EL_PASO_VENDORS, type VendorRecord } from '@/lib/data/el-paso-vendors';
-import { IndustryTimeline } from '@/components/IndustryTimeline';
 import { ProductCatalog } from '@/components/ProductCatalog';
-import { TechRadar } from '@/components/TechRadar';
-import TechJourney from '@/components/TechJourney';
 import DiscoveryFeed from '@/components/DiscoveryFeed';
 import type { IndustryProduct } from '@/lib/intelligence/industry-scan';
 import { timeAgo } from '@/lib/utils/format';
@@ -41,24 +26,30 @@ const CATEGORY_TO_VENDOR_CATS: Record<string, string[]> = {
   'Logistics':      ['Logistics', 'Warehousing', 'Trucking', 'Supply Chain Software'],
 };
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Industry → intel signal mapping ──────────────────────────────────────────
 
-type TimelineTech = {
-  id: string;
-  name: string;
-  description: string;
-  maturityLevel: 'emerging' | 'growing' | 'mature';
-  relatedVendorCount: number;
-  elPasoRelevance: 'high' | 'medium' | 'low';
-  governmentBudgetFY25M?: number;
-  localVendorCount?: number;
+const SLUG_TO_SIGNAL_INDUSTRY: Record<string, string> = {
+  'ai-ml': 'ai_ml',
+  'cybersecurity': 'cybersecurity',
+  'defense': 'aerospace_defense',
+  'border-tech': 'construction',
+  'manufacturing': 'manufacturing',
+  'energy': 'energy',
+  'healthcare': 'health_biotech',
+  'logistics': 'supply_chain',
 };
 
-type Explanation = {
-  what: string;
-  why: string;
-  who: string[];
-  analogy: string;
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type IntelSignal = {
+  id: string;
+  signal_type: string;
+  title: string;
+  company: string | null;
+  source: string | null;
+  importance_score: number;
+  discovered_at: string;
+  url: string | null;
 };
 
 type FeedItem = {
@@ -74,14 +65,12 @@ type FeedItem = {
 export default function IndustryDeepDivePage() {
   const params = useParams();
   const slug = typeof params.slug === 'string' ? params.slug : '';
-  const router = useRouter();
 
   const industry = INDUSTRIES.find((i) => i.slug === slug);
   const story = industry ? INDUSTRY_STORIES[industry.slug] : undefined;
   const [products, setProducts] = useState<IndustryProduct[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
-  const [explanation, setExplanation] = useState<Explanation | null>(null);
-  const [explainLoading, setExplainLoading] = useState(false);
+  const [signals, setSignals] = useState<IntelSignal[]>([]);
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
 
@@ -90,7 +79,7 @@ export default function IndustryDeepDivePage() {
   const vendorCats = industry ? CATEGORY_TO_VENDOR_CATS[industry.category] ?? [] : [];
   const localVendors = allVendors.filter((v) => vendorCats.includes(v.category));
 
-  const technologies: TimelineTech[] = industry
+  const technologies = industry
     ? TECHNOLOGY_CATALOG.filter((t) => t.category === industry.category).map((t) => ({
         id: t.id,
         name: t.name,
@@ -99,13 +88,13 @@ export default function IndustryDeepDivePage() {
         relatedVendorCount: t.relatedVendorCount,
         elPasoRelevance: t.elPasoRelevance,
         governmentBudgetFY25M: t.governmentBudgetFY25M,
-        localVendorCount: localVendors.filter((v) =>
-          t.procurementSignalKeywords.some((kw) =>
-            v.tags.some((tag) => tag.toLowerCase().includes(kw.split(' ')[0].toLowerCase()))
-          ) || v.description.toLowerCase().includes(t.name.toLowerCase().split(' ')[0])
-        ).length,
       }))
     : [];
+
+  // Tier vendors
+  const establishedVendors = localVendors.filter(v => v.ikerScore >= 70).sort((a, b) => b.ikerScore - a.ikerScore);
+  const emergingVendors = localVendors.filter(v => v.ikerScore >= 45 && v.ikerScore < 70).sort((a, b) => b.ikerScore - a.ikerScore);
+  const specializedVendors = localVendors.filter(v => v.ikerScore < 45).sort((a, b) => b.ikerScore - a.ikerScore);
 
   // Fetch products
   useEffect(() => {
@@ -125,6 +114,24 @@ export default function IndustryDeepDivePage() {
     return () => { cancelled = true; };
   }, [slug, industry]);
 
+  // Fetch intel signals for this industry
+  useEffect(() => {
+    if (!industry) return;
+    let cancelled = false;
+    async function loadSignals() {
+      try {
+        const sigIndustry = SLUG_TO_SIGNAL_INDUSTRY[slug] ?? '';
+        if (!sigIndustry) return;
+        const res = await fetch(`/api/agents/intel-signals?industry=${sigIndustry}&limit=20`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data.ok) setSignals(data.signals ?? []);
+      } catch { /* degrade */ }
+    }
+    void loadSignals();
+    return () => { cancelled = true; };
+  }, [slug, industry]);
+
   // Fetch discovery feed
   useEffect(() => {
     let cancelled = false;
@@ -141,7 +148,7 @@ export default function IndustryDeepDivePage() {
               return cat.includes(industry.label.toLowerCase().split('/')[0].trim()) ||
                      cat.includes(industry.category.toLowerCase().split('/')[0].trim());
             })
-            .slice(0, 15)
+            .slice(0, 12)
             .map((a: { title: string; category: string; source: string; pubDate: string; link?: string }) => ({
               title: a.title,
               category: a.category ?? industry?.label ?? '',
@@ -157,22 +164,6 @@ export default function IndustryDeepDivePage() {
     void loadFeed();
     return () => { cancelled = true; };
   }, [industry]);
-
-  // Explain Simply
-  const handleExplain = useCallback(async () => {
-    if (!industry || explainLoading) return;
-    setExplainLoading(true);
-    try {
-      const res = await fetch('/api/industry/explain', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic: industry.label, industry: industry.label }),
-      });
-      const data = await res.json();
-      if (data.ok) setExplanation(data.explanation);
-    } catch { /* degrade */ }
-    finally { setExplainLoading(false); }
-  }, [industry, explainLoading]);
 
   // 404
   if (!industry) {
@@ -190,7 +181,6 @@ export default function IndustryDeepDivePage() {
 
   const totalBudget = technologies.reduce((sum, t) => sum + (t.governmentBudgetFY25M ?? 0), 0);
 
-  // Compute a sector activity score 0–100 from maturity + relevance of tracked technologies
   const sectorScore = technologies.length === 0 ? 0 : Math.min(100, Math.round(
     technologies.reduce((sum, t) => {
       const m = t.maturityLevel === 'mature' ? 3 : t.maturityLevel === 'growing' ? 2 : 1;
@@ -199,15 +189,22 @@ export default function IndustryDeepDivePage() {
     }, 0) / (technologies.length * 9) * 100
   ));
 
-  const stats = [
-    { label: 'TECHNOLOGIES', value: String(technologies.length), color: industry.color },
-    { label: 'LOCAL VENDORS', value: String(localVendors.length), color: '#ffb800' },
-    { label: 'FY25 GOV BUDGET', value: formatBudget(totalBudget), color: '#00ff88' },
-    { label: 'PRODUCTS FOUND', value: productsLoading ? '···' : String(products.length), color: '#00d4ff' },
-  ];
+  // Signal type labels
+  const signalTypeLabel: Record<string, string> = {
+    patent_filing: 'PATENT', research_paper: 'RESEARCH', case_study: 'CASE STUDY',
+    hiring_signal: 'HIRING', funding_round: 'FUNDING', merger_acquisition: 'M&A',
+    contract_award: 'CONTRACT', product_launch: 'LAUNCH', regulatory_action: 'REGULATORY',
+    facility_expansion: 'EXPANSION',
+  };
+  const signalTypeColor: Record<string, string> = {
+    patent_filing: '#ffb800', research_paper: '#00d4ff', funding_round: '#00ff88',
+    merger_acquisition: '#f97316', contract_award: '#ffd700', product_launch: '#00d4ff',
+    hiring_signal: '#a855f7', regulatory_action: '#ff3b30', facility_expansion: '#00ff88',
+    case_study: '#ffb800',
+  };
 
   return (
-    <div className="bg-black min-h-screen grid-pattern">
+    <div className="bg-black min-h-screen">
       <PageTopBar
         backHref="/industries"
         backLabel="EXPLORE"
@@ -217,169 +214,247 @@ export default function IndustryDeepDivePage() {
         ]}
         showLiveDot={true}
         rightSlot={
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleExplain}
-              disabled={explainLoading}
-              className="font-mono text-[8px] tracking-[0.2em] border border-white/8 rounded-sm px-2.5 py-1 text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors disabled:opacity-40"
-            >
-              {explainLoading ? 'THINKING...' : 'EXPLAIN SIMPLY'}
-            </button>
-            <Link
-              href={`/industry/${slug}/solve`}
-              className="font-mono text-[8px] tracking-[0.2em] border rounded-sm px-2.5 py-1 transition-colors"
-              style={{ borderColor: `${industry.color}40`, color: `${industry.color}cc` }}
-            >
-              PROBLEM SOLVER →
-            </Link>
-          </div>
+          <Link
+            href={`/industry/${slug}/solve`}
+            className="font-mono text-[8px] tracking-[0.2em] border rounded-sm px-2.5 py-1 transition-colors"
+            style={{ borderColor: `${industry.color}40`, color: `${industry.color}cc` }}
+          >
+            PROBLEM SOLVER →
+          </Link>
         }
       />
 
-      <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col gap-0">
+      <div className="max-w-5xl mx-auto px-6 py-8 flex flex-col gap-0">
 
-        {/* ── Hero: headline + score badge ──────────────────────────────────── */}
-        <div className="border-b border-white/[0.04] pb-6 mb-0">
+        {/* ═══ 1. HERO — Industry name + executive summary ═══ */}
+        <div className="pb-8 border-b border-white/[0.06]">
           <div className="flex items-start justify-between gap-6">
             <div className="min-w-0 flex-1">
-              <div className="font-mono text-[9px] tracking-[0.3em] text-white/25 uppercase mb-2">
-                {industry.label} SECTOR
+              <div className="font-mono text-[8px] tracking-[0.4em] text-white/20 uppercase mb-3">
+                INTELLIGENCE BRIEFING
               </div>
-              <h1 className="font-mono text-[22px] tracking-[0.05em] text-white/90 font-medium leading-snug">
-                {story?.headline ?? `${industry.label} Intelligence Dossier`}
+              <h1
+                className="text-[28px] font-semibold tracking-tight text-white/90 leading-tight mb-1"
+                style={{ fontFamily: 'var(--font-space-grotesk)' }}
+              >
+                {industry.label}
               </h1>
+              <div className="font-mono text-[10px] text-white/30 tracking-wide mb-5">
+                {story?.headline}
+              </div>
+              {story?.summary && (
+                <p className="font-mono text-[11px] text-white/45 leading-[1.8] max-w-3xl">
+                  {story.summary}
+                </p>
+              )}
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <div className="border border-white/[0.08] px-4 py-2.5 text-center">
+            <div className="flex flex-col items-center gap-1 shrink-0">
+              <div className="border border-white/[0.08] px-5 py-3 text-center bg-white/[0.02]">
                 <div
-                  className="font-mono text-[24px] font-bold leading-none"
-                  style={{ color: industry.color, textShadow: `0 0 12px ${industry.color}80` }}
+                  className="font-mono text-[28px] font-bold leading-none"
+                  style={{ color: industry.color, textShadow: `0 0 14px ${industry.color}60` }}
                 >
                   {sectorScore}
                 </div>
-                <div className="font-mono text-[6px] tracking-[0.25em] text-white/15 mt-1">ACTIVITY</div>
+                <div className="font-mono text-[6px] tracking-[0.3em] text-white/20 mt-1.5">SECTOR SCORE</div>
               </div>
             </div>
           </div>
-
-          {/* Key facts as horizontal strip */}
-          {story && story.bullets.length > 0 && (
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5 mt-5">
-              {story.bullets.slice(0, 4).map((b, i) => (
-                <span key={i} className="font-mono text-[9px] text-white/35">› {b}</span>
-              ))}
-            </div>
-          )}
         </div>
 
-        {/* ── Stats bar ─────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-4 gap-[1px] bg-white/[0.03] mb-0 border-b border-white/[0.04]">
-          {stats.map((stat) => (
-            <div key={stat.label} className="bg-black py-4 px-5 text-center">
+        {/* ═══ 2. STATS BAR ═══ */}
+        <div className="grid grid-cols-5 gap-[1px] bg-white/[0.03] border-b border-white/[0.06]">
+          {[
+            { label: 'TECHNOLOGIES', value: String(technologies.length), color: industry.color },
+            { label: 'LOCAL VENDORS', value: String(localVendors.length), color: '#ffb800' },
+            { label: 'FY25 BUDGET', value: formatBudget(totalBudget), color: '#00ff88' },
+            { label: 'PRODUCTS', value: productsLoading ? '···' : String(products.length), color: '#00d4ff' },
+            { label: 'SIGNALS', value: String(signals.length), color: '#f97316' },
+          ].map((stat) => (
+            <div key={stat.label} className="bg-black py-4 px-4 text-center">
               <div
-                className="font-mono text-[22px] font-bold leading-none"
-                style={{ color: stat.color, textShadow: `0 0 10px ${stat.color}60` }}
+                className="font-mono text-[20px] font-bold leading-none"
+                style={{ color: stat.color, textShadow: `0 0 10px ${stat.color}50` }}
               >
                 {stat.value}
               </div>
-              <div className="font-mono text-[8px] tracking-[0.25em] text-white/25 mt-1.5">{stat.label}</div>
+              <div className="font-mono text-[7px] tracking-[0.25em] text-white/20 mt-1.5">{stat.label}</div>
             </div>
           ))}
         </div>
 
-        {/* ── Explain Simply result ──────────────────────────────────────────── */}
-        {explanation && (
-          <>
-            <SectionHeader title="EXPLAINED SIMPLY" color={industry.color} />
-            <div className="border border-white/[0.06] p-5 bg-black mb-0">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div>
-                  <div className="font-mono text-[7px] tracking-[0.3em] text-white/15 mb-1.5">WHAT IS IT</div>
-                  <p className="font-mono text-[9px] text-white/40 leading-relaxed">{explanation.what}</p>
-                </div>
-                <div>
-                  <div className="font-mono text-[7px] tracking-[0.3em] text-white/15 mb-1.5">WHY IT MATTERS</div>
-                  <p className="font-mono text-[9px] text-white/40 leading-relaxed">{explanation.why}</p>
-                </div>
-                <div>
-                  <div className="font-mono text-[7px] tracking-[0.3em] text-white/15 mb-1.5">WHO USES IT</div>
-                  <div className="flex flex-wrap gap-1.5 mt-1">
-                    {explanation.who.map((w) => (
-                      <span key={w} className="font-mono text-[8px] px-2 py-0.5 border border-white/[0.06] text-white/30">{w}</span>
-                    ))}
+        {/* ═══ 3. WHAT'S HAPPENING NOW ═══ */}
+        <Section title="WHAT'S HAPPENING NOW" color={industry.color}>
+          <div className="space-y-2.5">
+            {story?.bullets.map((b, i) => (
+              <div key={i} className="flex items-start gap-3">
+                <div className="w-1 h-1 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: industry.color, opacity: 0.6 }} />
+                <span className="font-mono text-[11px] text-white/50 leading-relaxed">{b}</span>
+              </div>
+            ))}
+          </div>
+          {feedItems.length > 0 && (
+            <div className="mt-5 pt-4 border-t border-white/[0.04]">
+              <div className="font-mono text-[7px] tracking-[0.3em] text-white/15 mb-3">RECENT HEADLINES</div>
+              <div className="space-y-2">
+                {feedItems.slice(0, 5).map((item, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <span className="font-mono text-[8px] text-white/15 shrink-0 mt-0.5">{item.timeAgo}</span>
+                    {item.url ? (
+                      <a href={item.url} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-white/40 hover:text-white/60 transition-colors leading-snug truncate">
+                        {item.title}
+                      </a>
+                    ) : (
+                      <span className="font-mono text-[10px] text-white/40 leading-snug truncate">{item.title}</span>
+                    )}
+                    <span className="font-mono text-[7px] text-white/15 shrink-0">{item.source}</span>
                   </div>
-                </div>
-                <div>
-                  <div className="font-mono text-[7px] tracking-[0.3em] text-white/15 mb-1.5">THINK OF IT LIKE</div>
-                  <p className="font-mono text-[9px] text-white/40 leading-relaxed italic">{explanation.analogy}</p>
-                </div>
+                ))}
               </div>
             </div>
-          </>
-        )}
+          )}
+        </Section>
 
-        {/* ── Two-column: Radar + Tech Map ───────────────────────────────────── */}
-        <SectionHeader title="TECHNOLOGY RADAR" color={industry.color} />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-[1px] bg-white/[0.03] mb-0">
-          <div className="bg-black p-0">
-            <TechRadar technologies={technologies} accentColor={industry.color} />
-          </div>
-          <div className="bg-black p-5">
-            <div className="font-mono text-[7px] tracking-[0.3em] text-white/15 mb-4">
-              INTERACTIVE MAP — CLICK TO EXPLORE
+        {/* ═══ 4. MAJOR PLAYERS ═══ */}
+        <Section title="MAJOR PLAYERS" subtitle={`${localVendors.length} companies active in ${industry.label.toLowerCase()}`} color="#ffb800">
+          {localVendors.length === 0 ? (
+            <div className="py-6 text-center">
+              <span className="font-mono text-[9px] text-white/15">No local vendors mapped to this sector yet.</span>
             </div>
-            <BubbleMap
-              technologies={technologies}
-              accentColor={industry.color}
-              onTechClick={(techId) => router.push(`/technology/${techId}`)}
-            />
-          </div>
-        </div>
+          ) : (
+            <div className="space-y-6">
+              {establishedVendors.length > 0 && (
+                <VendorTier label="ESTABLISHED LEADERS" vendors={establishedVendors} color="#00ff88" slug={slug} />
+              )}
+              {emergingVendors.length > 0 && (
+                <VendorTier label="EMERGING VENDORS" vendors={emergingVendors} color="#00d4ff" slug={slug} />
+              )}
+              {specializedVendors.length > 0 && (
+                <VendorTier label="SPECIALIZED / NICHE" vendors={specializedVendors} color="#ffb800" slug={slug} />
+              )}
+            </div>
+          )}
+        </Section>
 
-        {/* ── Technology Journey ─────────────────────────────────────────────── */}
-        {story && story.journey.length > 0 && (
-          <>
-            <SectionHeader title="TECHNOLOGY JOURNEY" subtitle={`How ${industry.label.toLowerCase()} evolved over time`} color="#ffb800" />
-            <TechJourney entries={story.journey} accentColor={industry.color} industryLabel={industry.label} />
-          </>
+        {/* ═══ 5. PRODUCTS & EQUIPMENT ═══ */}
+        <Section
+          title="PRODUCTS & EQUIPMENT"
+          subtitle={productsLoading ? 'Scanning sources...' : `${products.length} products discovered`}
+          color="#00d4ff"
+        >
+          <ProductCatalog products={products} accentColor={industry.color} loading={productsLoading} />
+        </Section>
+
+        {/* ═══ 6. TECHNOLOGIES ═══ */}
+        <Section title="TECHNOLOGIES" subtitle={`${technologies.length} tracked across maturity stages`} color={industry.color}>
+          <div className="grid grid-cols-3 gap-[1px] bg-white/[0.03]">
+            {(['emerging', 'growing', 'mature'] as const).map(stage => {
+              const techs = technologies.filter(t => t.maturityLevel === stage);
+              const stageColor = stage === 'emerging' ? '#f97316' : stage === 'growing' ? '#00d4ff' : '#00ff88';
+              return (
+                <div key={stage} className="bg-black p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: stageColor }} />
+                    <span className="font-mono text-[8px] tracking-[0.25em] text-white/30 uppercase">{stage}</span>
+                    <span className="font-mono text-[8px] text-white/15 ml-auto">{techs.length}</span>
+                  </div>
+                  <div className="space-y-2">
+                    {techs.map(t => (
+                      <Link key={t.id} href={`/technology/${t.id}`} className="block group">
+                        <div className="font-mono text-[10px] text-white/50 group-hover:text-white/70 transition-colors">{t.name}</div>
+                        <div className="font-mono text-[8px] text-white/20 leading-snug mt-0.5">{t.description.slice(0, 80)}</div>
+                      </Link>
+                    ))}
+                    {techs.length === 0 && (
+                      <span className="font-mono text-[8px] text-white/10">None tracked</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+
+        {/* ═══ 7. PROBLEMS BEING SOLVED ═══ */}
+        {story?.problems && story.problems.length > 0 && (
+          <Section title="PROBLEMS BEING SOLVED" color="#ff3b30">
+            <div className="grid grid-cols-2 gap-3">
+              {story.problems.map((problem, i) => (
+                <div key={i} className="flex items-start gap-3 p-3 border border-white/[0.04] bg-white/[0.01]">
+                  <div className="font-mono text-[10px] text-[#ff3b30]/40 shrink-0 mt-0.5">{String(i + 1).padStart(2, '0')}</div>
+                  <span className="font-mono text-[10px] text-white/45 leading-relaxed">{problem}</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 text-center">
+              <Link
+                href={`/industry/${slug}/solve`}
+                className="inline-block font-mono text-[8px] tracking-[0.2em] border rounded-sm px-4 py-2 transition-colors"
+                style={{ borderColor: `${industry.color}30`, color: `${industry.color}90` }}
+              >
+                SOLVE A PROBLEM →
+              </Link>
+            </div>
+          </Section>
         )}
 
-        {/* ── Technology Landscape ───────────────────────────────────────────── */}
-        <SectionHeader
-          title="TRACKED TECHNOLOGIES"
-          subtitle={`${technologies.length} technologies across maturity stages`}
-          color={industry.color}
-        />
-        <IndustryTimeline technologies={technologies} accentColor={industry.color} />
+        {/* ═══ 8. SIGNALS & EVIDENCE ═══ */}
+        <Section title="SIGNALS & EVIDENCE" subtitle="Recent intelligence from patents, funding, hiring, contracts" color="#ffb800">
+          {signals.length === 0 ? (
+            <div className="py-6 text-center">
+              <span className="font-mono text-[9px] text-white/15">No signals collected yet. Data accumulates over time.</span>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {signals.slice(0, 15).map((sig) => (
+                <div key={sig.id} className="flex items-center gap-3 py-2 px-3 border-b border-white/[0.03] last:border-b-0 hover:bg-white/[0.02] transition-colors">
+                  <span
+                    className="font-mono text-[7px] tracking-[0.15em] px-1.5 py-0.5 border shrink-0"
+                    style={{
+                      color: signalTypeColor[sig.signal_type] ?? '#fff',
+                      borderColor: `${signalTypeColor[sig.signal_type] ?? '#fff'}30`,
+                      opacity: 0.7,
+                    }}
+                  >
+                    {signalTypeLabel[sig.signal_type] ?? sig.signal_type.toUpperCase()}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    {sig.url ? (
+                      <a href={sig.url} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-white/45 hover:text-white/65 transition-colors truncate block">
+                        {sig.title}
+                      </a>
+                    ) : (
+                      <span className="font-mono text-[10px] text-white/45 truncate block">{sig.title}</span>
+                    )}
+                  </div>
+                  {sig.company && (
+                    <span className="font-mono text-[8px] text-white/20 shrink-0">{sig.company}</span>
+                  )}
+                  <span className="font-mono text-[8px] text-white/15 shrink-0">{sig.source}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Section>
 
-        {/* ── Products Available ─────────────────────────────────────────────── */}
-        <SectionHeader
-          title="PRODUCTS AVAILABLE"
-          subtitle={productsLoading ? 'Scanning sources...' : `${products.length} products from web intelligence`}
-          color="#00d4ff"
-        />
-        <ProductCatalog products={products} accentColor={industry.color} loading={productsLoading} />
+        {/* ═══ 9. WHERE THE INDUSTRY IS HEADING ═══ */}
+        {story?.outlook && (
+          <Section title="WHERE THE INDUSTRY IS HEADING" color="#00ff88">
+            <div className="border-l-2 pl-5 py-1" style={{ borderColor: `${industry.color}40` }}>
+              <p className="font-mono text-[11px] text-white/50 leading-[1.9]">
+                {story.outlook}
+              </p>
+            </div>
+          </Section>
+        )}
 
-        {/* ── Who Is Using It ────────────────────────────────────────────────── */}
-        <div id="who-uses-it">
-          <SectionHeader
-            title="LOCAL VENDORS"
-            subtitle={`${localVendors.length} El Paso companies active in ${industry.label.toLowerCase()}`}
-            color="#ffb800"
-          />
-          <VendorList vendors={localVendors} accentColor={industry.color} slug={slug} technologies={technologies} />
-        </div>
+        {/* ═══ 10. LATEST INTELLIGENCE FEED ═══ */}
+        <Section title="LATEST INTELLIGENCE" subtitle="Live news and breakthroughs" color="#00ff88">
+          <DiscoveryFeed items={feedItems} accentColor={industry.color} loading={feedLoading} />
+        </Section>
 
-        {/* ── Discovery Feed ─────────────────────────────────────────────────── */}
-        <SectionHeader
-          title="LATEST INTELLIGENCE"
-          subtitle={`Recent news and breakthroughs in ${industry.label.toLowerCase()}`}
-          color="#00ff88"
-        />
-        <DiscoveryFeed items={feedItems} accentColor={industry.color} loading={feedLoading} />
-
-        {/* ── CTA strip ──────────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between py-4 border-t border-white/[0.04] mt-8">
+        {/* ═══ FOOTER ═══ */}
+        <div className="flex items-center justify-between py-6 border-t border-white/[0.06] mt-8">
           <Link
             href={`/industry/${slug}/solve`}
             className="font-mono text-[8px] tracking-[0.2em] transition-colors hover:opacity-80"
@@ -387,7 +462,7 @@ export default function IndustryDeepDivePage() {
           >
             SOLVE A PROBLEM →
           </Link>
-          <span className="font-mono text-[7px] text-white/10 tracking-widest">NXT LINK — {industry.label.toUpperCase()}</span>
+          <span className="font-mono text-[7px] text-white/10 tracking-[0.25em]">NXT//LINK — {industry.label.toUpperCase()} INTELLIGENCE</span>
           <Link
             href="/vendors"
             className="font-mono text-[8px] tracking-[0.2em] text-[#ffb800]/60 hover:text-[#ffb800] transition-colors"
@@ -395,128 +470,87 @@ export default function IndustryDeepDivePage() {
             BROWSE VENDORS →
           </Link>
         </div>
-
-        {/* Footer count strip */}
-        <div className="pb-6 flex items-center justify-center">
-          <span className="font-mono text-[7px] text-white/10">
-            {technologies.length} tech · {localVendors.length} vendors · {products.length} products
-          </span>
-        </div>
-
       </div>
     </div>
   );
 }
 
-// ─── Helper components ────────────────────────────────────────────────────────
+// ─── Reusable Section Component ──────────────────────────────────────────────
 
-function SectionHeader({ title, subtitle, color }: { title: string; subtitle?: string; color: string }) {
+function Section({ title, subtitle, color, children }: {
+  title: string;
+  subtitle?: string;
+  color: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex items-center gap-3 mb-0 mt-8 pt-5 border-t border-white/[0.04]">
-      <div
-        className="w-[3px] h-5 shrink-0"
-        style={{ backgroundColor: `${color}70`, boxShadow: `0 0 6px ${color}60` }}
-      />
-      <div className="flex flex-col gap-0.5">
-        <h2 className="font-mono text-[10px] tracking-[0.3em] text-white/40 uppercase">{title}</h2>
-        {subtitle && (
-          <span className="font-mono text-[8px] tracking-wider text-white/25">{subtitle}</span>
-        )}
+    <div className="mt-10">
+      <div className="flex items-center gap-3 mb-5">
+        <div
+          className="w-[3px] h-5 shrink-0"
+          style={{ backgroundColor: `${color}60`, boxShadow: `0 0 8px ${color}40` }}
+        />
+        <div>
+          <h2 className="font-mono text-[10px] tracking-[0.3em] text-white/40 uppercase">{title}</h2>
+          {subtitle && (
+            <span className="font-mono text-[8px] tracking-wider text-white/20">{subtitle}</span>
+          )}
+        </div>
       </div>
+      {children}
     </div>
   );
 }
 
-function VendorList({ vendors, accentColor, slug, technologies }: { vendors: VendorRecord[]; accentColor: string; slug: string; technologies: TimelineTech[] }) {
-  const sorted = [...vendors].sort((a, b) => b.ikerScore - a.ikerScore);
+// ─── Vendor Tier Component ──────────────────────────────────────────────────
 
-  if (sorted.length === 0) {
-    return (
-      <div className="py-8 text-center border border-white/[0.03]">
-        <span className="font-mono text-[9px] text-white/15">No local vendors mapped to this sector.</span>
-      </div>
-    );
-  }
-
-  const gradeColor = (score: number) => {
-    if (score >= 80) return '#00ff88';
-    if (score >= 65) return '#00d4ff';
-    if (score >= 50) return '#ffb800';
-    if (score >= 35) return '#f97316';
-    return '#ff3b30';
-  };
-
-  const techMatchCount = (v: VendorRecord): number => {
-    const tagSet = new Set(v.tags.map((t) => t.toLowerCase()));
-    return technologies.filter((tech) =>
-      tech.name.split(/\s+/).some((word) => word.length > 3 && tagSet.has(word.toLowerCase())) ||
-      v.tags.some((tag) => tech.name.toLowerCase().includes(tag.toLowerCase()))
-    ).length;
-  };
-
+function VendorTier({ label, vendors, color, slug }: {
+  label: string;
+  vendors: VendorRecord[];
+  color: string;
+  slug: string;
+}) {
   return (
     <div>
-      {/* Column headers */}
-      <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-2 border border-white/[0.04] bg-white/[0.01]">
-        <span className="font-mono text-[8px] tracking-[0.25em] text-white/25">VENDOR</span>
-        <span className="font-mono text-[8px] tracking-[0.25em] text-white/25">CATEGORY</span>
-        <span className="font-mono text-[8px] tracking-[0.25em] text-white/25 text-right">TECH MATCH</span>
-        <span className="font-mono text-[8px] tracking-[0.25em] text-white/25 text-right">IKER</span>
+      <div className="flex items-center gap-2 mb-2">
+        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
+        <span className="font-mono text-[8px] tracking-[0.25em] text-white/25">{label}</span>
+        <span className="font-mono text-[8px] text-white/15">{vendors.length}</span>
       </div>
-
-      <div className="border-x border-b border-white/[0.04]">
-        {sorted.slice(0, 12).map((v) => {
-          const matches = techMatchCount(v);
-          return (
-            <Link
-              key={v.id}
-              href={`/vendor/${v.id}`}
-              className="grid grid-cols-[1fr_auto_auto_auto] gap-4 items-center px-4 py-2.5 border-b border-white/[0.03] last:border-b-0 hover:bg-white/[0.04] transition-colors group"
-            >
-              {/* Name + dot */}
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: accentColor, opacity: 0.6 }} />
-                <div className="min-w-0">
-                  <div className="font-mono text-[11px] text-white/60 truncate group-hover:text-white/80 transition-colors">{v.name}</div>
-                  {v.tags.length > 0 && (
-                    <div className="flex gap-1 mt-0.5">
-                      {v.tags.slice(0, 2).map((tag) => (
-                        <span key={tag} className="font-mono text-[7px] tracking-wider text-white/25">{tag.toUpperCase()}</span>
-                      ))}
-                    </div>
-                  )}
+      <div className="border border-white/[0.04]">
+        {vendors.slice(0, 8).map((v) => (
+          <Link
+            key={v.id}
+            href={`/vendor/${v.id}`}
+            className="flex items-center gap-4 px-4 py-2.5 border-b border-white/[0.03] last:border-b-0 hover:bg-white/[0.03] transition-colors group"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="font-mono text-[11px] text-white/55 group-hover:text-white/75 transition-colors truncate">{v.name}</div>
+              {v.tags.length > 0 && (
+                <div className="flex gap-1.5 mt-0.5">
+                  {v.tags.slice(0, 3).map((tag) => (
+                    <span key={tag} className="font-mono text-[7px] tracking-wider text-white/20">{tag.toUpperCase()}</span>
+                  ))}
                 </div>
-              </div>
-
-              {/* Category */}
-              <span className="font-mono text-[8px] text-white/20 tracking-wider shrink-0">{v.category}</span>
-
-              {/* Tech match */}
-              <span className="font-mono text-[9px] text-right shrink-0" style={{ color: matches > 0 ? `${accentColor}80` : 'transparent' }}>
-                {matches > 0 ? `${matches}×` : '—'}
-              </span>
-
-              {/* IKER + arrow */}
-              <div className="flex items-center gap-2 justify-end shrink-0">
-                <span
-                  className="font-mono text-[9px] font-bold"
-                  style={{ color: gradeColor(v.ikerScore), textShadow: `0 0 6px ${gradeColor(v.ikerScore)}80` }}
-                >
-                  {v.ikerScore}
-                </span>
-                <span className="font-mono text-[8px] text-white/15 group-hover:text-white/30 transition-colors">→</span>
-              </div>
-            </Link>
-          );
-        })}
+              )}
+            </div>
+            <span className="font-mono text-[8px] text-white/20 shrink-0">{v.category}</span>
+            <span
+              className="font-mono text-[10px] font-bold shrink-0"
+              style={{ color, textShadow: `0 0 6px ${color}60` }}
+            >
+              {v.ikerScore}
+            </span>
+            <span className="font-mono text-[8px] text-white/15 group-hover:text-white/30 transition-colors">→</span>
+          </Link>
+        ))}
       </div>
-
-      {sorted.length > 12 && (
+      {vendors.length > 8 && (
         <Link
           href={`/vendors?industry=${slug}`}
-          className="block text-center font-mono text-[8px] tracking-wider py-3 border border-t-0 border-white/[0.04] text-white/20 hover:text-white/40 transition-colors"
+          className="block text-center font-mono text-[8px] tracking-wider py-2 text-white/15 hover:text-white/30 transition-colors"
         >
-          VIEW ALL {sorted.length} VENDORS →
+          VIEW ALL {vendors.length} →
         </Link>
       )}
     </div>

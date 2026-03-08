@@ -6,7 +6,10 @@ import type { IndustrySlug } from '@/lib/data/technology-catalog';
 export type IndustryStory = {
   slug: IndustrySlug;
   headline: string;
+  summary: string;
   bullets: string[];
+  problems: string[];
+  outlook: string;
   journey: { decade: string; title: string; description: string }[];
   techMap: { name: string; children: string[] }[];
 };
@@ -15,6 +18,9 @@ export const INDUSTRY_STORIES: Record<IndustrySlug, IndustryStory> = {
   'ai-ml': {
     slug: 'ai-ml',
     headline: 'AI is transforming every industry at once',
+    summary: 'Artificial intelligence and machine learning have moved from research labs into production systems across defense, healthcare, logistics, and manufacturing. Large language models, computer vision, and edge AI are being deployed at scale, while MLOps platforms manage model lifecycles. El Paso is positioned at the intersection of defense AI (Fort Bliss), border intelligence, and emerging enterprise applications.',
+    problems: ['Shortage of ML engineers and data scientists', 'Model bias and fairness in government applications', 'High compute costs for training and inference', 'Data quality and labeling bottlenecks', 'Regulatory uncertainty around AI in critical systems', 'Integration with legacy enterprise software'],
+    outlook: 'The market is moving toward smaller, more efficient models that run on edge devices, reducing cloud dependency. Autonomous agents capable of multi-step reasoning are emerging as the next wave. Defense and government adoption is accelerating, with Fort Bliss and border agencies actively piloting AI systems. Expect consolidation among AI startups and increasing demand for AI governance tools.',
     bullets: [
       'Large language models are being deployed across government and defense',
       'Edge AI runs directly on devices without needing the cloud',
@@ -36,6 +42,9 @@ export const INDUSTRY_STORIES: Record<IndustrySlug, IndustryStory> = {
   'cybersecurity': {
     slug: 'cybersecurity',
     headline: 'Cyber threats are evolving faster than defenses',
+    summary: 'Cybersecurity is experiencing rapid transformation as AI-powered threats outpace traditional defenses. Zero Trust architectures are replacing perimeter-based security, while operational technology (OT) security for industrial systems becomes critical. The El Paso region faces unique threats at the intersection of military networks, border infrastructure, and cross-border commerce.',
+    problems: ['Ransomware targeting critical infrastructure', 'IT/OT convergence creating new attack surfaces', 'Shortage of qualified cybersecurity professionals', 'Nation-state threats to defense and border systems', 'Supply chain compromise and third-party risk', 'Legacy systems that cannot be easily patched'],
+    outlook: 'AI-native security platforms will increasingly automate threat detection and response, reducing dependence on human analysts. Zero Trust adoption will accelerate across government agencies. The convergence of IT and OT security creates significant opportunity for vendors who can bridge both worlds. Military installations and border infrastructure will drive sustained demand in the El Paso region.',
     bullets: [
       'Zero Trust is replacing perimeter security — verify everything, trust nothing',
       'AI-powered threats require AI-powered defenses',
@@ -57,6 +66,9 @@ export const INDUSTRY_STORIES: Record<IndustrySlug, IndustryStory> = {
   'defense': {
     slug: 'defense',
     headline: 'Modern defense runs on software and sensors',
+    summary: 'The defense sector is undergoing its largest transformation since the digital revolution, driven by autonomous systems, hypersonic weapons, electronic warfare, and AI-enabled command networks. Fort Bliss in El Paso is one of the largest military installations in the US, making the region a critical hub for defense technology procurement, testing, and deployment.',
+    problems: ['Integrating autonomous systems with existing force structures', 'Countering hypersonic threats with current air defense', 'Securing military networks against sophisticated cyber attacks', 'Modernizing aging weapons platforms cost-effectively', 'Recruiting tech talent to compete with private sector', 'Managing multi-domain operations across land, air, space, and cyber'],
+    outlook: 'Defense spending remains strong with emphasis shifting toward autonomous combat vehicles, AI-powered C4ISR, and electronic warfare capabilities. Fort Bliss will continue to drive local demand for defense IT, logistics, and training systems. SBIR/STTR programs are creating entry points for smaller tech vendors. Expect growth in counter-drone systems, directed energy weapons, and military AI.',
     bullets: [
       'Autonomous systems are replacing crewed vehicles in contested areas',
       'Hypersonic weapons travel at Mach 5+ — too fast for current defenses',
@@ -78,6 +90,9 @@ export const INDUSTRY_STORIES: Record<IndustrySlug, IndustryStory> = {
   'border-tech': {
     slug: 'border-tech',
     headline: 'Borders are becoming digital checkpoints',
+    summary: 'Border technology is one of the fastest-growing segments in El Paso, driven by the need for faster trade processing, enhanced security, and seamless cross-border commerce. Biometrics, AI-powered cargo scanning, and IoT tracking are replacing manual inspections. The region processes over $100B in annual cross-border trade, making it a prime market for border technology solutions.',
+    problems: ['Long wait times at ports of entry hurting trade', 'Detecting fentanyl and contraband in commercial shipments', 'Processing high volumes of pedestrian and vehicle traffic', 'Balancing security with trade facilitation', 'Interoperability between US and Mexican systems', 'Aging border infrastructure needing modernization'],
+    outlook: 'Investment in border technology will intensify as both security concerns and trade volumes grow. AI-powered pre-clearance systems will dramatically reduce wait times for trusted shippers. Biometric entry/exit tracking will become universal. The El Paso-Juarez region will remain the primary testing ground for new border technologies, with CBP and GSA as anchor customers.',
     bullets: [
       'Biometric systems identify travelers with face, fingerprint, and iris scans',
       'AI cargo scanning detects contraband without opening containers',
@@ -99,6 +114,9 @@ export const INDUSTRY_STORIES: Record<IndustrySlug, IndustryStory> = {
   'manufacturing': {
     slug: 'manufacturing',
     headline: 'Factories are becoming intelligent and self-optimizing',
+    summary: 'Manufacturing is being reshaped by Industry 4.0 technologies — collaborative robots, digital twins, additive manufacturing, and predictive maintenance. The push to reshore production to the US is creating new opportunities in El Paso, where proximity to Mexico enables hybrid manufacturing models. Smart factories that self-optimize using AI and IoT sensors are replacing traditional production lines.',
+    problems: ['Labor shortages in skilled manufacturing roles', 'Supply chain disruptions and material cost volatility', 'High upfront cost of automation equipment', 'Integrating legacy equipment with smart factory systems', 'Quality control consistency across production lines', 'Energy costs and sustainability requirements'],
+    outlook: 'Reshoring momentum will continue to benefit border regions like El Paso, where companies can combine US engineering with Mexican manufacturing labor. Expect rapid adoption of cobots in mid-size facilities, growth in additive manufacturing for spare parts, and increasing demand for digital twin platforms. The transition to lights-out manufacturing will accelerate in high-value, low-mix production.',
     bullets: [
       'Cobots work alongside humans — no safety cages needed',
       'Digital twins simulate entire factories before making changes',
@@ -120,6 +138,9 @@ export const INDUSTRY_STORIES: Record<IndustrySlug, IndustryStory> = {
   'energy': {
     slug: 'energy',
     headline: 'The grid is getting smarter and greener',
+    summary: 'The energy sector is in the middle of a generational shift toward renewable sources, battery storage, and AI-managed grids. El Paso receives 297 sunny days per year, making it one of the best locations for solar energy in the US. Military microgrids at Fort Bliss provide energy resilience, while utility-scale solar farms are expanding across the region.',
+    problems: ['Grid reliability during peak demand and extreme weather', 'Integrating intermittent renewable sources into the grid', 'Aging grid infrastructure needing modernization', 'High cost of battery storage at utility scale', 'Permitting and land use for new solar installations', 'Workforce transition from fossil fuel to renewable jobs'],
+    outlook: 'Solar-plus-storage will dominate new energy investment in the Southwest. AI grid management will become standard as renewable penetration increases. Military microgrids will expand as energy resilience becomes a national security priority. The El Paso region will attract battery manufacturing and grid technology companies seeking proximity to solar resources and military customers.',
     bullets: [
       'El Paso gets 297 sunny days/year — ideal for solar',
       'Battery storage smooths out renewable energy dips',
@@ -141,6 +162,9 @@ export const INDUSTRY_STORIES: Record<IndustrySlug, IndustryStory> = {
   'healthcare': {
     slug: 'healthcare',
     headline: 'Healthcare is moving from hospitals to homes',
+    summary: 'Healthcare technology is undergoing rapid transformation as telemedicine, AI diagnostics, remote patient monitoring, and interoperable health records reshape how care is delivered. El Paso serves a large underserved population along the US-Mexico border, creating strong demand for accessible, technology-enabled healthcare solutions. The region is home to medical centers, military health facilities, and a growing biotech research corridor.',
+    problems: ['Healthcare access in rural and underserved border communities', 'Interoperability between disparate EHR systems', 'Physician shortages especially in specialist roles', 'Rising cost of care and hospital operations', 'Mental health services at scale', 'Medical device cybersecurity and patient data privacy'],
+    outlook: 'Telemedicine will become the default for routine care, with in-person visits reserved for complex cases. AI-powered diagnostics will detect diseases earlier and more accurately. Remote monitoring devices will shift chronic disease management to the home. The El Paso border region will see investment in bilingual telehealth platforms and cross-border health data exchange.',
     bullets: [
       'Telemedicine connects rural patients to specialists anywhere',
       'AI reads X-rays and MRIs faster than radiologists',
@@ -162,6 +186,9 @@ export const INDUSTRY_STORIES: Record<IndustrySlug, IndustryStory> = {
   'logistics': {
     slug: 'logistics',
     headline: 'Supply chains are becoming autonomous and visible',
+    summary: 'Logistics and supply chain management are being transformed by warehouse automation, AI-powered route optimization, real-time visibility platforms, and digital freight networks. El Paso is a critical logistics hub — one of the largest inland ports in the US, processing billions in cross-border trade annually. The region is home to major distribution centers, trucking fleets, and warehousing operations serving the US-Mexico trade corridor.',
+    problems: ['Driver and warehouse labor shortages', 'Cross-border shipping delays and customs complexity', 'Last-mile delivery cost in dispersed markets', 'Inventory visibility across multi-tier supply chains', 'Fuel cost volatility and sustainability mandates', 'Cargo theft and supply chain security'],
+    outlook: 'Autonomous trucking will begin displacing long-haul drivers on major corridors, while warehouse robotics adoption accelerates among mid-size operators. Digital freight platforms will consolidate the fragmented brokerage market. El Paso will benefit from nearshoring trends as companies move supply chains closer to the US, driving demand for cross-border logistics technology and warehousing capacity.',
     bullets: [
       'Warehouse robots replace manual picking — faster, fewer errors',
       'AI routes deliveries around traffic, weather, and border wait times',
