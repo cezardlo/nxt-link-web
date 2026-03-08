@@ -4,6 +4,7 @@ import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
 import { getIndustryBySlug } from '@/lib/data/technology-catalog';
 import { runIndustryScan, type IndustryScanResult } from '@/lib/intelligence/industry-scan';
+import { upsertDynamicIndustry, bumpIndustryPopularity } from '@/db/queries/dynamic-industries';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
@@ -49,6 +50,9 @@ export async function GET(request: Request, context: RouteContext): Promise<Next
   // Return cached result if still fresh
   const cached = scanCache.get(slug);
   if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
+    // Bump popularity in background (fire-and-forget)
+    bumpIndustryPopularity(slug).catch(() => {});
+
     return NextResponse.json(
       {
         ok: true,
@@ -70,6 +74,23 @@ export async function GET(request: Request, context: RouteContext): Promise<Next
     });
 
     scanCache.set(slug, { result: scanResult, cachedAt: Date.now() });
+
+    // Persist this industry to the dynamic_industries table (fire-and-forget)
+    upsertDynamicIndustry({
+      slug,
+      label,
+      color,
+      description: scanResult.executive_summary ?? null,
+      signal_count: scanResult.products?.length ?? 0,
+      product_count: scanResult.products?.length ?? 0,
+      source_count: scanResult.sources_discovered ?? 0,
+      last_scanned_at: new Date().toISOString(),
+      scan_quality: scanResult.quality_gate?.status ?? null,
+      executive_summary: scanResult.executive_summary ?? null,
+      is_core: !!knownIndustry,
+    }).catch(err => {
+      console.warn('[industry-scan] Failed to persist industry:', err);
+    });
 
     return NextResponse.json(
       {

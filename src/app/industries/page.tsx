@@ -15,6 +15,18 @@ type IntelSignalsResponse = {
   sectorScores: SectorScore[];
 };
 
+type DiscoveredIndustry = {
+  slug: string;
+  label: string;
+  color: string;
+  description: string | null;
+  product_count: number;
+  source_count: number;
+  popularity: number;
+  last_scanned_at: string | null;
+  scan_quality: string | null;
+};
+
 // ─── Vendor counts per industry (static approximations) ──────────────────────
 
 const VENDOR_COUNTS: Record<string, number> = {
@@ -49,6 +61,7 @@ export default function IndustriesPage() {
   const [sectorScores, setSectorScores] = useState<SectorScore[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [discoveredIndustries, setDiscoveredIndustries] = useState<DiscoveredIndustry[]>([]);
 
   const handleSearch = useCallback(() => {
     const q = searchQuery.trim();
@@ -69,6 +82,23 @@ export default function IndustriesPage() {
       finally { if (!cancelled) setLoading(false); }
     }
     void load();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Load discovered industries from Supabase
+  useEffect(() => {
+    let cancelled = false;
+    async function loadDiscovered() {
+      try {
+        const res = await fetch('/api/industries');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data.ok) {
+          setDiscoveredIndustries(data.discovered ?? []);
+        }
+      } catch { /* degrade */ }
+    }
+    void loadDiscovered();
     return () => { cancelled = true; };
   }, []);
 
@@ -102,7 +132,7 @@ export default function IndustriesPage() {
         showLiveDot={true}
         rightSlot={
           <span className="font-mono text-[8px] tracking-[0.2em] text-white/30">
-            {INDUSTRIES.length} SECTORS
+            {INDUSTRIES.length + discoveredIndustries.length} SECTORS
           </span>
         }
       />
@@ -117,7 +147,7 @@ export default function IndustriesPage() {
           <p className="text-[10px] text-white/30 mt-1.5 tabular-nums tracking-wide">
             {dateStr}&nbsp;&nbsp;·&nbsp;&nbsp;
             {loading ? '—' : totalSignals} LIVE SIGNALS&nbsp;&nbsp;·&nbsp;&nbsp;
-            {INDUSTRIES.length} SECTORS TRACKED
+            {INDUSTRIES.length + discoveredIndustries.length} SECTORS TRACKED
           </p>
 
           {/* Search any industry */}
@@ -293,7 +323,68 @@ export default function IndustriesPage() {
           )}
         </div>
 
-        {/* ── Section 4: Problem Solver CTA ───────────────────────────────── */}
+        {/* ── Section 4: Discovered industries ─────────────────────────────── */}
+        {discoveredIndustries.length > 0 && (
+          <div className="mb-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-[3px] h-4 bg-[#00d4ff]/40" style={{ boxShadow: '0 0 8px rgba(0,212,255,0.3)' }} />
+              <span className="text-[9px] tracking-[0.3em] text-white/30 uppercase">DISCOVERED INDUSTRIES</span>
+              <span className="text-[8px] text-white/15">{discoveredIndustries.length}</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              {discoveredIndustries.map((di) => (
+                <Link
+                  key={di.slug}
+                  href={`/industry/${di.slug}`}
+                  className="group block border border-white/[0.05] rounded-sm p-4 hover:border-white/[0.10] hover:bg-white/[0.02] transition-all duration-300"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <span
+                      className="shrink-0"
+                      style={{
+                        width: 5, height: 5, borderRadius: '50%',
+                        background: di.color || '#00d4ff', display: 'inline-block',
+                        boxShadow: `0 0 6px ${di.color || '#00d4ff'}60`,
+                      }}
+                    />
+                    <span className="text-[11px] tracking-[0.08em] text-white/65 font-medium uppercase truncate">
+                      {di.label}
+                    </span>
+                  </div>
+                  {di.description && (
+                    <p className="text-[9px] text-white/25 leading-relaxed line-clamp-2 mb-2">
+                      {di.description}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-3">
+                    <span className="text-[8px] text-white/20 tabular-nums">
+                      {di.product_count}&nbsp;<span className="text-white/10">PRODUCTS</span>
+                    </span>
+                    <span className="text-[8px] text-white/20 tabular-nums">
+                      {di.source_count}&nbsp;<span className="text-white/10">SOURCES</span>
+                    </span>
+                    {di.scan_quality && (
+                      <span className={`text-[7px] tracking-wider px-1 py-0.5 border rounded-sm ${
+                        di.scan_quality === 'pass'
+                          ? 'text-[#00ff88]/50 border-[#00ff88]/20'
+                          : di.scan_quality === 'warning'
+                          ? 'text-[#ffb800]/50 border-[#ffb800]/20'
+                          : 'text-[#ff3b30]/50 border-[#ff3b30]/20'
+                      }`}>
+                        {di.scan_quality.toUpperCase()}
+                      </span>
+                    )}
+                    <span className="ml-auto text-[8px] text-white/15 group-hover:text-[#00d4ff]/50 transition-colors">
+                      EXPLORE →
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Section 5: Problem Solver CTA ───────────────────────────────── */}
         <div className="border border-white/[0.06] rounded-sm p-4 mb-6 flex items-center justify-between hover:border-white/[0.10] transition-colors duration-300">
           <div>
             <p className="text-[10px] text-white/35 tracking-wide">Have a technology problem?</p>

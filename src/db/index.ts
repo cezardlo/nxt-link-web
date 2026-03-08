@@ -97,3 +97,15 @@ export {
   type ConferenceIntelInsert,
   type ConferenceIntelQueryOptions,
 } from './queries/conference-intel';
+
+export {
+  getTopIndustries,
+  getRecentIndustries,
+  getDynamicIndustry,
+  getChildIndustries,
+  upsertDynamicIndustry,
+  bumpIndustryPopularity,
+  searchDynamicIndustries,
+  type DynamicIndustryRow,
+  type DynamicIndustryUpsert,
+} from './queries/dynamic-industries';
