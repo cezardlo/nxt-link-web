@@ -109,3 +109,21 @@ export {
   type DynamicIndustryRow,
   type DynamicIndustryUpsert,
 } from './queries/dynamic-industries';
+
+export {
+  upsertEntity,
+  getEntityBySlug,
+  getEntitiesByType,
+  searchEntities,
+  addRelationship,
+  getRelationships,
+  getConnectedEntities,
+  getIndustryEcosystem,
+  type EntityType,
+  type RelationshipType,
+  type EntityRow,
+  type EntityRelationshipRow,
+  type EntityUpsert,
+  type ConnectedEntity,
+  type IndustryEcosystem,
+} from './queries/knowledge-graph';

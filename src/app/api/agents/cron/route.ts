@@ -4,13 +4,14 @@ import { orchestrator } from '@/lib/agents/orchestrator';
 import { runIntelDiscoveryAgent } from '@/lib/agents/agents/intel-discovery-agent';
 import { runProductDiscoveryAgent } from '@/lib/agents/agents/product-discovery-agent';
 import { runConferenceIntelAgent } from '@/lib/agents/agents/conference-intel-agent';
+import { runEntityAgent } from '@/lib/agents/agents/entity-agent';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 export async function GET() {
   // Run all agents in parallel
-  const [, intel, products, confIntel] = await Promise.all([
+  const [, intel, products, confIntel, entityResult] = await Promise.all([
     // Orchestrator: feeds, vendors, swarm pipeline
     orchestrator.run({ trigger: 'hourly' }),
 
@@ -31,6 +32,12 @@ export async function GET() {
       console.error('[cron] Conference intel failed:', err);
       return null;
     }),
+
+    // Entity extraction: populate knowledge graph from vendors + technologies
+    runEntityAgent().catch(err => {
+      console.error('[cron] Entity agent failed:', err);
+      return null;
+    }),
   ]);
 
   return NextResponse.json({
@@ -39,5 +46,7 @@ export async function GET() {
     intel_signals: intel ? intel.signals.length : 0,
     products_discovered: products ? products.total_discovered : 0,
     conference_signals: confIntel ? confIntel.signals_detected : 0,
+    graph_entities: entityResult ? entityResult.entities_created : 0,
+    graph_relationships: entityResult ? entityResult.relationships_created : 0,
   });
 }
