@@ -2,7 +2,11 @@
   "crons": [
     {
       "path": "/api/agents/cron",
-      "schedule": "0 0 * * *"
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/agents/briefing",
+      "schedule": "0 13 * * *"
     },
     {
       "path": "/api/agents/docs-sync",

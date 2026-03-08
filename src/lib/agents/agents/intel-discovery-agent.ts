@@ -9,6 +9,7 @@ import {
   QUALITY_FEEDS,
   type QualityFeedSource,
 } from '@/lib/feeds/quality-source-feeds';
+import { persistIntelSignals } from '@/db/queries/intel-signals';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -399,6 +400,14 @@ async function doRun(): Promise<IntelDiscoveryStore> {
   };
 
   setCachedIntelDiscovery(store);
+
+  // Persist to Supabase (fire-and-forget, don't block response)
+  persistIntelSignals(store.signals).then(count => {
+    if (count > 0) console.log(`[intel-discovery] Persisted ${count} signals to Supabase`);
+  }).catch(err => {
+    console.warn('[intel-discovery] Failed to persist signals:', err);
+  });
+
   return store;
 }
 
