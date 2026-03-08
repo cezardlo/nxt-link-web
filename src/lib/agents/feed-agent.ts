@@ -436,56 +436,170 @@ async function enrichAllItems(items: ParsedItem[]): Promise<{ enriched: Enriched
   return { enriched: result, usedGemini: hasGemini && lowConfidenceIndices.length > 0 };
 }
 
-// ─── Optional Supabase persistence ────────────────────────────────────────────
+// ─── Supabase persistence ──────────────────────────────────────────────────────
 
-async function tryPersistToSupabase(items: EnrichedFeedItem[]): Promise<void> {
+type FeedItemRow = {
+  title: string;
+  link: string;
+  source: string;
+  pub_date: string | null;
+  description: string;
+  vendor: string | null;
+  score: number;
+  sentiment: string;
+  category: string;
+  source_tier: number | null;
+};
+
+function mapItemToRow(item: EnrichedFeedItem): FeedItemRow {
+  return {
+    title: item.title,
+    link: item.link,
+    source: item.source,
+    pub_date: item.pubDate || null,
+    description: item.description,
+    vendor: item.vendor || null,
+    score: item.score,
+    sentiment: item.sentiment,
+    category: item.category,
+    source_tier: item.sourceTier ?? null,
+  };
+}
+
+async function persistFeedItems(items: EnrichedFeedItem[]): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+
+  const client = getSupabaseClient({ admin: true });
+  const rows = items.map(mapItemToRow);
+  const BATCH_SIZE = 100;
+  let successCount = 0;
+  let failCount = 0;
+
+  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+    const batch = rows.slice(i, i + BATCH_SIZE);
+    const { error } = await client
+      .from('feed_items')
+      .upsert(batch, { onConflict: 'link' });
+
+    if (error) {
+      failCount += batch.length;
+      console.error(`[feed-agent] Supabase upsert batch failed:`, error.message);
+    } else {
+      successCount += batch.length;
+    }
+  }
+
+  console.log(`[feed-agent] Persisted to Supabase: ${successCount} ok, ${failCount} failed`);
+}
+
+async function logAgentRun(
+  agentName: string,
+  status: string,
+  itemsProcessed: number,
+  itemsCreated: number,
+  error?: string,
+): Promise<void> {
   if (!isSupabaseConfigured()) return;
   try {
     const client = getSupabaseClient({ admin: true });
-    await client.from('feed_signals').upsert(
-      items.map((item) => ({
-        title: item.title,
-        link: item.link,
-        source: item.source,
-        pub_date: item.pubDate || null,
-        description: item.description,
-        vendor: item.vendor || null,
-        iker_score: item.score,
-        sentiment: item.sentiment,
-        created_at: new Date().toISOString(),
-      })),
-      { onConflict: 'link', ignoreDuplicates: true },
-    );
+    await client.from('agent_runs').insert({
+      agent_name: agentName,
+      status,
+      items_processed: itemsProcessed,
+      items_created: itemsCreated,
+      error: error ?? null,
+      ran_at: new Date().toISOString(),
+    });
   } catch {
-    // Persistence is always optional — swallow errors
+    // Don't break the feed agent if logging fails
+  }
+}
+
+export async function getPersistedFeedItems(
+  limit?: number,
+  category?: string,
+): Promise<EnrichedFeedItem[]> {
+  if (!isSupabaseConfigured()) return [];
+
+  try {
+    const client = getSupabaseClient({ admin: true });
+    let query = client
+      .from('feed_items')
+      .select('title, link, source, pub_date, description, vendor, score, sentiment, category, source_tier')
+      .order('pub_date', { ascending: false })
+      .limit(limit ?? 100);
+
+    if (category) {
+      query = query.eq('category', category);
+    }
+
+    const { data, error } = await query;
+    if (error || !data) return [];
+
+    return (data as Array<{
+      title: string;
+      link: string;
+      source: string;
+      pub_date: string | null;
+      description: string;
+      vendor: string | null;
+      score: number;
+      sentiment: string;
+      category: string;
+      source_tier: number | null;
+    }>).map((row) => ({
+      title: row.title,
+      link: row.link,
+      source: row.source,
+      pubDate: row.pub_date ?? '',
+      description: row.description,
+      vendor: row.vendor ?? '',
+      score: row.score,
+      sentiment: row.sentiment as 'positive' | 'negative' | 'neutral',
+      category: row.category as FeedCategory,
+      sourceTier: row.source_tier ?? undefined,
+    }));
+  } catch {
+    return [];
   }
 }
 
 // ─── Main agent entry point ────────────────────────────────────────────────────
 
 async function doRunFeedAgent(): Promise<FeedStore> {
-  const { items: rawItems, sourceCount, sourceHealth } = await fetchAllFeeds();
-  const { enriched: enrichedItems, usedGemini } = await enrichAllItems(rawItems);
+  try {
+    const { items: rawItems, sourceCount, sourceHealth } = await fetchAllFeeds();
+    const { enriched: enrichedItems, usedGemini } = await enrichAllItems(rawItems);
 
-  // Sort: high-score first, then newest; keep up to 500 for the panel
-  const sorted = enrichedItems
-    .sort((a, b) => b.score - a.score || new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime())
-    .slice(0, 500);
+    // Sort: high-score first, then newest; keep up to 500 for the panel
+    const sorted = enrichedItems
+      .sort((a, b) => b.score - a.score || new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime())
+      .slice(0, 500);
 
-  const store: FeedStore = {
-    items: sorted,
-    as_of: new Date().toISOString(),
-    enriched: usedGemini,
-    source_count: sourceCount,
-    sourceHealth,
-  };
+    const newCount = sorted.length;
 
-  setStoredFeedItems(store);
+    const store: FeedStore = {
+      items: sorted,
+      as_of: new Date().toISOString(),
+      enriched: usedGemini,
+      source_count: sourceCount,
+      sourceHealth,
+    };
 
-  // Fire-and-forget — never awaited
-  void tryPersistToSupabase(sorted);
+    setStoredFeedItems(store);
 
-  return store;
+    // Fire-and-forget Supabase persistence — never awaited
+    persistFeedItems(store.items).catch((err: unknown) => {
+      console.error('[feed-agent] persistFeedItems error:', err instanceof Error ? err.message : err);
+    });
+    logAgentRun('feed-agent', 'success', store.items.length, newCount).catch(() => {});
+
+    return store;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    logAgentRun('feed-agent', 'failed', 0, 0, message).catch(() => {});
+    throw err;
+  }
 }
 
 export async function runFeedAgent(): Promise<FeedStore> {

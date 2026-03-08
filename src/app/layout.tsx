@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { IBM_Plex_Mono, Inter, Space_Grotesk } from 'next/font/google';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './globals.css';
+import { Analytics } from '@vercel/analytics/react';
 import { AppShell } from '@/components/AppShell';
 
 const inter = Inter({
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className={`${inter.variable} ${spaceGrotesk.variable} ${ibmPlexMono.variable} font-sans antialiased bg-black text-white`}>
         <AppShell>{children}</AppShell>
+        <Analytics />
       </body>
     </html>
   );

@@ -53,6 +53,22 @@ interface SignalData {
   detectedAt?: string;
 }
 
+interface AgentRunRow {
+  id: string;
+  agent_id: string;
+  status: string;
+  started_at: string;
+  finished_at: string | null;
+  items_processed: number | null;
+  error_message: string | null;
+  metadata: Record<string, unknown> | null;
+}
+
+interface RunsData {
+  ok: boolean;
+  runs?: AgentRunRow[];
+}
+
 // FeedData interface reserved for future API integration
 
 // ─── Static fallback data ─────────────────────────────────────────────────────
@@ -331,9 +347,10 @@ export default function OpsPage() {
 
     async function fetchAll() {
       try {
-        const [swarmRes, signalRes] = await Promise.allSettled([
+        const [swarmRes, signalRes, runsRes] = await Promise.allSettled([
           fetch('/api/agents/swarm', { cache: 'no-store' }),
           fetch('/api/intel-signals', { cache: 'no-store' }),
+          fetch('/api/agents/runs', { cache: 'no-store' }),
         ]);
 
         if (!mounted) return;
@@ -395,6 +412,58 @@ export default function OpsPage() {
                 ),
               );
             }
+          }
+        }
+
+        // Process real agent_runs from Supabase
+        if (runsRes.status === 'fulfilled' && runsRes.value.ok) {
+          const runsData: RunsData = await runsRes.value.json().catch(() => ({ ok: false }));
+          if (runsData.ok && runsData.runs && runsData.runs.length > 0) {
+            // Build activity entries from real runs
+            const runsActivity: ActivityEntry[] = runsData.runs.slice(0, 12).map((run, i) => ({
+              id: `run-${run.id ?? i}`,
+              ts: run.started_at
+                ? new Date(run.started_at).toLocaleTimeString('en-US', { hour12: false })
+                : '--:--:--',
+              agent: (run.agent_id ?? 'UNKNOWN').toUpperCase().replace(/[-_]/g, ' '),
+              action: run.error_message
+                ? `Error: ${run.error_message}`
+                : `Processed ${run.items_processed ?? 0} items — ${run.status}`,
+              status: run.status === 'success' || run.status === 'SUCCESS'
+                ? 'SUCCESS'
+                : run.status === 'running' || run.status === 'RUNNING'
+                  ? 'RUNNING'
+                  : 'FAILED',
+            }));
+
+            if (runsActivity.length > 0) setActivity(runsActivity);
+
+            // Patch agent cards with latest run info per agent
+            const latestByAgent = new Map<string, AgentRunRow>();
+            for (const run of runsData.runs) {
+              if (!latestByAgent.has(run.agent_id)) {
+                latestByAgent.set(run.agent_id, run);
+              }
+            }
+
+            setAgents(prev =>
+              prev.map(a => {
+                const latest = latestByAgent.get(a.id);
+                if (!latest) return a;
+                const status: AgentStatus =
+                  latest.status === 'running' || latest.status === 'RUNNING'
+                    ? 'ACTIVE'
+                    : latest.status === 'success' || latest.status === 'SUCCESS'
+                      ? 'ACTIVE'
+                      : 'ERROR';
+                return {
+                  ...a,
+                  status,
+                  lastRun: relTime(latest.started_at),
+                  itemsProcessed: latest.items_processed ?? a.itemsProcessed,
+                };
+              }),
+            );
           }
         }
       } catch {
