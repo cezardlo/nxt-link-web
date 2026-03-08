@@ -18,9 +18,26 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   try {
-    // Use cached feed if available, otherwise trigger a fresh run
-    let store = getStoredFeedItems();
-    if (!store) store = await runFeedAgent();
+    // Use cached feed if available; if cold, return empty signals instantly
+    // and trigger feed fetch in background so next request is fast
+    const store = getStoredFeedItems();
+    if (!store) {
+      // Fire-and-forget: warm the cache for the next request
+      runFeedAgent().catch(() => {});
+      return NextResponse.json(
+        {
+          ok: true,
+          signals: [],
+          sectorScores: [],
+          activeVendorIds: [],
+          clusterCount: 0,
+          detectedAt: new Date().toISOString(),
+          feedAsOf: null,
+          warming: true,
+        },
+        { headers: { 'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30' } },
+      );
+    }
 
     const engine = runSignalEngine(store.items);
 
@@ -34,7 +51,7 @@ export async function GET(request: Request): Promise<NextResponse> {
         detectedAt: engine.detectedAt,
         feedAsOf: store.as_of,
       },
-      { headers: { 'Cache-Control': 'no-store' } },
+      { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' } },
     );
   } catch (err) {
     return NextResponse.json(
