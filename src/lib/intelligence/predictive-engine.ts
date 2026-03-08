@@ -56,18 +56,6 @@ export type PredictiveReport = {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const SECTORS: FeedCategory[] = [
-  'AI/ML',
-  'Cybersecurity',
-  'Defense',
-  'Enterprise',
-  'Supply Chain',
-  'Energy',
-  'Finance',
-  'Crime',
-  'General',
-];
-
 /** Sectors considered "normally active" — absence triggers a blind-spot warning */
 const NORMALLY_ACTIVE_SECTORS: FeedCategory[] = [
   'AI/ML',

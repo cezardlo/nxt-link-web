@@ -53,12 +53,7 @@ interface SignalData {
   detectedAt?: string;
 }
 
-interface FeedData {
-  ok?: boolean;
-  items?: unknown[];
-  total?: number;
-  as_of?: string;
-}
+// FeedData interface reserved for future API integration
 
 // ─── Static fallback data ─────────────────────────────────────────────────────
 

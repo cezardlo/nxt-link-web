@@ -132,7 +132,7 @@ function sentimentScore(items: EnrichedFeedItem[]): number {
 function buildKeyFindings(
   sectorScores: SectorScore[],
   items: EnrichedFeedItem[],
-  now: string,
+  _now: string,
 ): KeyFinding[] {
   const findings: KeyFinding[] = [];
 

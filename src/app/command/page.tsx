@@ -374,7 +374,7 @@ function NetworkPulse() {
             className="font-mono text-[9px] tracking-[0.15em] relative z-10"
             style={{ color: '#00d4ff', textShadow: '0 0 12px rgba(0,212,255,0.8)' }}
           >
-            //LINK
+            {'//LINK'}
           </span>
           <div className="mt-1 relative z-10">
             <LiveDot color="#00ff88" size={5} />
@@ -491,7 +491,8 @@ export default function CommandCenterPage() {
   const [signals, setSignals]         = useState<SignalItem[]>(FALLBACK_SIGNALS);
   const [findings]                    = useState<DigestFinding[]>(FALLBACK_FINDINGS);
   const [anomalies]                   = useState<AnomalyAlert[]>(FALLBACK_ANOMALIES);
-  const [events]                      = useState<UpcomingEvent[]>(FALLBACK_EVENTS);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_events]                      = useState<UpcomingEvent[]>(FALLBACK_EVENTS);
   const [feedCount, setFeedCount]     = useState(0);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [pulsePhase, setPulsePhase]   = useState(0);
