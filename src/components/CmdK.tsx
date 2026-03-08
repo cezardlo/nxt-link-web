@@ -4,6 +4,10 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { ContractPoint, MapPoint, SamBusinessPoint } from '@/components/MapCanvas';
 import type { CrimeFeedItem } from '@/components/CrimeNewsOverlay';
+import { CONFERENCES } from '@/lib/data/conferences/index';
+import type { ConferenceRecord } from '@/lib/data/conferences/types';
+import { TECHNOLOGY_CATALOG } from '@/lib/data/technology-catalog';
+import type { Technology } from '@/lib/data/technology-catalog';
 
 // WorldMonitor-style layer presets for El Paso intelligence contexts
 type LayerPreset = {
@@ -26,6 +30,8 @@ const PAGE_ITEMS = [
   { label: 'INDUSTRIES', href: '/industries', description: 'Explore 8 industry sectors', color: '#00d4ff' },
   { label: 'VENDORS',    href: '/vendors',    description: '98+ El Paso technology vendors', color: '#ffb800' },
   { label: 'MAP',        href: '/map',        description: 'Intelligence map platform', color: '#00d4ff' },
+  { label: 'OPS',        href: '/ops',        description: 'Operations center — procurement & alerts', color: '#f97316' },
+  { label: 'COMMAND',    href: '/command',    description: 'Command console — mission control', color: '#ff3b30' },
 ];
 
 const INDUSTRY_ITEMS = [
@@ -75,16 +81,20 @@ type ResultItem =
   | { kind: 'business'; business: SamBusinessPoint }
   | { kind: 'article'; article: CrimeFeedItem }
   | { kind: 'page'; label: string; href: string; description: string; color: string }
-  | { kind: 'industry'; label: string; href: string; description: string; color: string };
+  | { kind: 'industry'; label: string; href: string; description: string; color: string }
+  | { kind: 'conference'; conference: ConferenceRecord }
+  | { kind: 'technology'; technology: Technology };
 
 const GROUP_LABELS: Record<string, string> = {
-  page:     'PAGES',
-  industry: 'INDUSTRIES',
-  preset:   'LAYER PRESETS',
-  vendor:   'VENDORS',
-  contract: 'CONTRACTS',
-  business: 'SAM BUSINESSES',
-  article:  'FEED ARTICLES',
+  page:         'PAGES',
+  industry:     'INDUSTRIES',
+  preset:       'LAYER PRESETS',
+  vendor:       'VENDORS',
+  contract:     'CONTRACTS',
+  business:     'SAM BUSINESSES',
+  article:      'FEED ARTICLES',
+  conference:   'CONFERENCES',
+  technology:   'TECHNOLOGIES',
 };
 
 export function CmdK({
@@ -162,6 +172,15 @@ export function CmdK({
       (p) => p.label.toLowerCase().includes(q) || p.description.toLowerCase().includes(q),
     ).map((p) => ({ kind: 'page' as const, ...p }));
 
+    const conferenceMatches: ResultItem[] = (CONFERENCES as readonly ConferenceRecord[])
+      .filter((c) => c.name.toLowerCase().includes(q) || c.category.toLowerCase().includes(q) || c.location.toLowerCase().includes(q) || c.description.toLowerCase().includes(q))
+      .slice(0, 5)
+      .map((conference) => ({ kind: 'conference' as const, conference }));
+    const technologyMatches: ResultItem[] = TECHNOLOGY_CATALOG
+      .filter((t) => t.name.toLowerCase().includes(q) || t.category.toLowerCase().includes(q) || t.description.toLowerCase().includes(q))
+      .slice(0, 5)
+      .map((technology) => ({ kind: 'technology' as const, technology }));
+
     if (!isMap) {
       const industryMatches: ResultItem[] = INDUSTRY_ITEMS.filter(
         (p) => p.label.toLowerCase().includes(q) || p.description.toLowerCase().includes(q),
@@ -170,7 +189,7 @@ export function CmdK({
         .filter((p) => p.label.toLowerCase().includes(q) || p.category.toLowerCase().includes(q))
         .slice(0, 8)
         .map((point) => ({ kind: 'vendor' as const, point }));
-      return [...pageMatches, ...industryMatches, ...vendorMatches];
+      return [...pageMatches, ...industryMatches, ...vendorMatches, ...conferenceMatches, ...technologyMatches];
     }
 
     const presetMatches: ResultItem[] = LAYER_PRESETS.filter(
@@ -192,7 +211,7 @@ export function CmdK({
       .filter((a) => a.title.toLowerCase().includes(q) || a.source.toLowerCase().includes(q))
       .slice(0, 5)
       .map((article) => ({ kind: 'article' as const, article }));
-    return [...pageMatches, ...presetMatches, ...vendorMatches, ...contractMatches, ...businessMatches, ...articleMatches];
+    return [...pageMatches, ...presetMatches, ...vendorMatches, ...contractMatches, ...businessMatches, ...articleMatches, ...conferenceMatches, ...technologyMatches];
   })();
 
   const handleSelect = (item: ResultItem) => {
@@ -223,6 +242,12 @@ export function CmdK({
       onClose();
     } else if (item.kind === 'article') {
       window.open(item.article.link, '_blank', 'noopener,noreferrer');
+      onClose();
+    } else if (item.kind === 'conference') {
+      window.open(item.conference.website, '_blank', 'noopener,noreferrer');
+      onClose();
+    } else if (item.kind === 'technology') {
+      window.location.href = '/industry/' + encodeURIComponent(item.technology.category.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
       onClose();
     }
   };
@@ -258,7 +283,7 @@ export function CmdK({
             value={query}
             onChange={(e) => { setQuery(e.target.value); setActiveIndex(0); }}
             onKeyDown={handleKeyDown}
-            placeholder={isMap ? 'search vendors, contracts, businesses, articles...' : 'search pages, industries, vendors...'}
+            placeholder={isMap ? 'search vendors, contracts, businesses, articles, conferences...' : 'search pages, industries, vendors, conferences, technologies...'}
             className="flex-1 bg-transparent font-mono text-xs text-white/70 placeholder-white/15 outline-none"
           />
           {loading && <span className="w-1.5 h-1.5 rounded-full animate-pulse shrink-0" style={{ backgroundColor: '#00ff88' }} />}
@@ -277,12 +302,14 @@ export function CmdK({
 
               return (
                 <div key={
-                  item.kind === 'page'     ? `pg-${item.href}` :
-                  item.kind === 'industry' ? `ind-${item.href}` :
-                  item.kind === 'preset'   ? `p-${item.preset.id}` :
-                  item.kind === 'vendor'   ? `v-${item.point.id}` :
-                  item.kind === 'contract' ? `c-${item.contract.id}` :
-                  item.kind === 'business' ? `b-${item.business.id}` :
+                  item.kind === 'page'         ? `pg-${item.href}` :
+                  item.kind === 'industry'     ? `ind-${item.href}` :
+                  item.kind === 'preset'       ? `p-${item.preset.id}` :
+                  item.kind === 'vendor'       ? `v-${item.point.id}` :
+                  item.kind === 'contract'     ? `c-${item.contract.id}` :
+                  item.kind === 'business'     ? `b-${item.business.id}` :
+                  item.kind === 'conference'   ? `cf-${item.conference.id}` :
+                  item.kind === 'technology'   ? `tech-${item.technology.id}` :
                   `a-${item.article.link}`
                 }>
                   {showGroupLabel && (
@@ -371,6 +398,34 @@ export function CmdK({
                           </div>
                         </div>
                         <span className="font-mono text-[8px] text-[#f97316]/50 shrink-0">ARTICLE ↗</span>
+                      </>
+                    )}
+                    {item.kind === 'conference' && (
+                      <>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-1.5 h-1.5 rounded-sm shrink-0 bg-[#a855f7]" />
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-mono text-[10px] text-white/70 truncate">{item.conference.name}</span>
+                            <span className="font-mono text-[8px] text-white/25 truncate">
+                              {item.conference.location} · {item.conference.month} · {item.conference.category}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="font-mono text-[8px] text-[#a855f7]/50 shrink-0">EVENT ↗</span>
+                      </>
+                    )}
+                    {item.kind === 'technology' && (
+                      <>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-1.5 h-1.5 rounded-sm shrink-0 bg-[#00d4ff]" />
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-mono text-[10px] text-white/70 truncate">{item.technology.name}</span>
+                            <span className="font-mono text-[8px] text-white/25 truncate">
+                              {item.technology.category} · {item.technology.maturityLevel} · {item.technology.relatedVendorCount} vendors
+                            </span>
+                          </div>
+                        </div>
+                        <span className="font-mono text-[8px] text-[#00d4ff]/50 shrink-0">TECH →</span>
                       </>
                     )}
                   </button>

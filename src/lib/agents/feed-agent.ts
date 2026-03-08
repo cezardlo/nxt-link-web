@@ -588,11 +588,17 @@ async function doRunFeedAgent(): Promise<FeedStore> {
 
     setStoredFeedItems(store);
 
-    // Fire-and-forget Supabase persistence — never awaited
-    persistFeedItems(store.items).catch((err: unknown) => {
+    // Await Supabase persistence so it completes before Vercel shuts down the function
+    try {
+      await persistFeedItems(store.items);
+    } catch (err: unknown) {
       console.error('[feed-agent] persistFeedItems error:', err instanceof Error ? err.message : err);
-    });
-    logAgentRun('feed-agent', 'success', store.items.length, newCount).catch(() => {});
+    }
+    try {
+      await logAgentRun('feed-agent', 'success', store.items.length, newCount);
+    } catch {
+      // non-critical — swallow
+    }
 
     return store;
   } catch (err: unknown) {

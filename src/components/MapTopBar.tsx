@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { Mode, TimeRange } from '@/app/map/page';
+import type { Mode, TimeRange } from '@/hooks/useMapLayers';
 import type { FlyToTarget } from '@/components/MapCanvas';
 import { IntelBadge } from '@/components/IntelBadge';
 import type { SignalFinding, SectorScore } from '@/lib/intelligence/signal-engine';

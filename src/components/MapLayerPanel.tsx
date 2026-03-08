@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react';
 
-import type { LayerState } from '@/app/map/page';
+import type { LayerState } from '@/hooks/useMapLayers';
 
 type LayerDef = {
   key: keyof LayerState;
   label: string;
   color: string;
+  subtitle?: string;
 };
 
 type Group = {
@@ -59,10 +60,10 @@ const GROUPS: Group[] = [
     label: 'INTEL',
     accent: '#ffb800',
     layers: [
-      { key: 'funding', label: 'FUNDING',     color: '#ffb800' },
-      { key: 'patents', label: 'PATENTS',     color: '#ffb800' },
-      { key: 'hiring',      label: 'HIRING',      color: '#f97316' },
-      { key: 'news',        label: 'NEWS',        color: '#00d4ff' },
+      { key: 'funding', label: 'FUNDING',     color: '#ffb800', subtitle: 'investment signals' },
+      { key: 'patents', label: 'PATENTS',     color: '#ffb800', subtitle: 'USPTO filings' },
+      { key: 'hiring',      label: 'HIRING',      color: '#f97316', subtitle: 'job openings' },
+      { key: 'news',        label: 'NEWS',        color: '#00d4ff', subtitle: 'local coverage' },
       { key: 'disruptions', label: 'DISRUPTIONS', color: '#a855f7' },
     ],
   },
@@ -216,11 +217,18 @@ export function MapLayerPanel({ layers, onToggleLayer, dataFreshness }: Props) {
                   </span>
 
                   {/* Label */}
-                  <span
-                    className="font-mono text-[9px] tracking-wide leading-tight transition-colors flex-1 truncate"
-                    style={{ color: active ? layer.color : 'rgba(255,255,255,0.2)' }}
-                  >
-                    {layer.label}
+                  <span className="flex-1 min-w-0">
+                    <span
+                      className="font-mono text-[9px] tracking-wide leading-tight transition-colors block truncate"
+                      style={{ color: active ? layer.color : 'rgba(255,255,255,0.2)' }}
+                    >
+                      {layer.label}
+                    </span>
+                    {layer.subtitle && (
+                      <span className="font-mono text-[6px] tracking-wider text-white/15 block leading-none mt-px">
+                        {layer.subtitle}
+                      </span>
+                    )}
                   </span>
 
                   {/* Freshness badge — only when active and data exists */}

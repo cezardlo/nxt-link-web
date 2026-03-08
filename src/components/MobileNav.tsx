@@ -12,7 +12,7 @@ type MobileTab = {
 const MOBILE_TABS: MobileTab[] = [
   { href: '/map',         label: 'MAP',     icon: '◎', color: '#00d4ff' },
   { href: '/industries',  label: 'EXPLORE', icon: '⬡', color: '#ffd700' },
-  { href: '/solve',       label: 'SOLVE',   icon: '△', color: '#00ff88' },
+  { href: '/ops',         label: 'OPS',     icon: '⊕', color: '#f97316' },
   { href: '/vendors',     label: 'VENDORS', icon: '◆', color: '#f97316' },
   { href: '/signals',     label: 'SIGNALS', icon: '◈', color: '#ffb800' },
 ];

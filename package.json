@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
@@ -12,9 +12,7 @@
     "verify": "npm run lint && npm run typecheck && npm run test && npm run build",
     "ai:build": "tsx scripts/run-ai-builder.ts",
     "ai:autobuild": "powershell -ExecutionPolicy Bypass -File scripts/run-autobuilder.ps1",
-    "db:migrate": "prisma db execute --file prisma/migrations/20260218135000_init/migration.sql",
-    "db:seed": "prisma db seed",
-    "db:studio": "prisma studio"
+    "db:seed": "npx tsx scripts/seed-supabase.ts"
   },
   "dependencies": {
     "@deck.gl/aggregation-layers": "^9.2.9",
@@ -22,8 +20,6 @@
     "@deck.gl/extensions": "^9.2.9",
     "@deck.gl/layers": "^9.2.9",
     "@deck.gl/react": "^9.2.9",
-    "@prisma/adapter-better-sqlite3": "^7.4.0",
-    "@prisma/client": "^7.4.0",
     "@supabase/supabase-js": "^2.97.0",
     "@vercel/analytics": "^1.6.1",
     "clsx": "^2.1.1",
@@ -33,7 +29,6 @@
     "lucide-react": "^0.574.0",
     "maplibre-gl": "^5.19.0",
     "next": "14.2.28",
-    "prisma": "^7.4.0",
     "react": "^18",
     "react-cytoscapejs": "^2.0.0",
     "react-dom": "^18",

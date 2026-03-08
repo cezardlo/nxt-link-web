@@ -13,6 +13,8 @@ const NAV_ITEMS = [
   { href: '/solve',         label: 'SOLVE',    icon: '△', color: '#00ff88' },
   { href: '/innovation',    label: 'CYCLE',    icon: '⟳', color: '#a855f7' },
   { href: '/signals',       label: 'SIGNALS',  icon: '◈', color: '#ffb800' },
+  { href: '/ops',           label: 'OPS',      icon: '⊕', color: '#f97316' },
+  { href: '/command',       label: 'CMD',      icon: '⌖', color: '#ff3b30' },
   { href: '/conferences',   label: 'EVENTS',   icon: '▣', color: '#00d4ff' },
 ];
 

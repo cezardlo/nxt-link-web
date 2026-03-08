@@ -13,7 +13,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 // GET /api/intel/api/vendors/[id]
 // Native Vercel replacement for the Python Intel backend vendor detail endpoint.
-// Returns VendorDetail matching the shape MapRightPanel DossierTab expects.
+// Returns VendorDetail matching the shape RightPanel DossierTab expects.
 export async function GET(request: Request, context: RouteContext): Promise<NextResponse> {
   const ip = getClientIp(request.headers);
   const rl = checkRateLimit({ key: `intel-vendor:${ip}`, maxRequests: 60, windowMs: 60_000 });

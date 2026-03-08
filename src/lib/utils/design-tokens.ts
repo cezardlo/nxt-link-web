@@ -1,6 +1,6 @@
 /* ── Design tokens — single source of truth for all color maps ────────────── */
 
-/** Feed / article category → hex color (used in FeedBar, FeedsSection, MapRightPanel) */
+/** Feed / article category → hex color (used in FeedBar, FeedsSection, RightPanel) */
 export const FEED_CATEGORY_COLORS: Record<string, string> = {
   'AI/ML':         '#00d4ff',
   'Cybersecurity': '#ff3b30',

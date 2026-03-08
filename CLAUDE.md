@@ -7,7 +7,7 @@ Non-technical founder. Explain things simply. Build the NXT//LINK vision: impart
 ## Stack
 - Next.js 15, TypeScript strict, Tailwind CSS
 - deck.gl (ScatterplotLayer, TextLayer) + MapLibre GL via react-map-gl
-- Supabase (auth + DB), Prisma (schema), Gemini (LLM enrichment)
+- Supabase (auth + DB + all persistence), Gemini (LLM enrichment)
 - IBM Plex Mono (monospace UI), Space Grotesk (headings)
 
 ## Design System — NEVER deviate from this
@@ -22,22 +22,36 @@ Non-technical founder. Explain things simply. Build the NXT//LINK vision: impart
 - Glowing dots: `boxShadow: '0 0 6px {color}cc'`
 
 ## Key Files
-- `src/app/map/page.tsx` — main platform page, LayerState, all data fetching useEffects
+- `src/app/map/page.tsx` — main platform page, thin composition of hooks
+- `src/hooks/useMapLayers.ts` — LayerState, DEFAULT_LAYERS, toggle logic, URL state sync
+- `src/hooks/useMapData.ts` — all map data fetching (flights, seismic, border, crime, SAM)
+- `src/hooks/useMissionBriefing.ts` — Gemini briefing fetch + state
+- `src/db/` — **data access layer** (all Supabase queries go through here)
+- `src/db/queries/vendors.ts` — vendors with TS fallback
+- `src/db/queries/conferences.ts` — conferences with TS fallback
+- `src/db/queries/technologies.ts` — technologies with TS fallback
 - `src/components/MapCanvas.tsx` — deck.gl layers, pulsing animation, all map rendering
 - `src/components/MapLayerPanel.tsx` — left panel layer toggles (GROUPS array)
-- `src/components/MapRightPanel.tsx` — right panel tabs (BRIEFING/DOSSIER/IKER/FEEDS/MTM)
+- `src/components/right-panel/RightPanel.tsx` — right panel tabs (BRIEFING/INTEL/VENDOR/PROCURE/OPS)
 - `src/components/CrimeNewsOverlay.tsx` — crime intel panel, Jaccard clustering, severity badges
 - `src/components/LiveTVOverlay.tsx` — YouTube live TV, postMessage mute/pause, idle detection
 - `src/components/BorderCameraOverlay.tsx` — border wait times + camera notice
 - `src/lib/agents/feed-agent.ts` — RSS feed fetching, Gemini enrichment, 5min cache
 - `src/lib/intelligence/signal-engine.ts` — signal detection, sector scoring
 
-## LayerState (map/page.tsx)
+## LayerState (src/hooks/useMapLayers.ts)
 Adding a new layer requires changes in 4 places:
-1. `LayerState` interface — add `myLayer: boolean`
-2. `DEFAULT_LAYERS` — add `myLayer: false`
+1. `LayerState` interface in `src/hooks/useMapLayers.ts` — add `myLayer: boolean`
+2. `DEFAULT_LAYERS` in `src/hooks/useMapLayers.ts` — add `myLayer: false`
 3. `MapLayerPanel.tsx` GROUPS array — add `{ key: 'myLayer', label: 'MY LAYER', color: '#hex' }`
 4. `map/page.tsx` JSX — add `{layers.myLayer && <MyOverlay />}` or pass to MapCanvas
+
+## Data Access Layer (`src/db/`)
+All database queries go through `src/db/queries/`. Each module follows the fallback pattern:
+1. Check `isSupabaseConfigured()` — if not, return hardcoded TS data
+2. Query Supabase — if error or empty, return hardcoded TS data
+3. Transform rows to typed records
+Never call `getSupabaseClient()` directly in API routes or components.
 
 ## MapCanvas deck.gl Patterns
 - Always use `as unknown as Layer` cast on new layers

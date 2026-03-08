@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-import type { TimeRange } from '@/app/map/page';
+import type { TimeRange } from '@/hooks/useMapLayers';
 
 type FeedItem = {
   title: string;

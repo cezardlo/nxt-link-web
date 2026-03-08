@@ -1,6 +1,5 @@
 import { differenceInCalendarDays } from 'date-fns';
 
-import { prisma } from '@/lib/prisma';
 import {
   createOpsAction,
   listOpsActions,
@@ -32,6 +31,28 @@ type ScanProduct = {
 };
 type ScanResultPayload = {
   products: ScanProduct[];
+};
+
+// Shape of a pilot row (previously from Prisma). Tables not in Supabase yet,
+// so callers receive empty arrays.
+type PilotRow = {
+  id: string;
+  status: string;
+  updatedAt: Date;
+  challenge: { title: string; city: string };
+  match: { vendor: { name: string } };
+};
+
+// Shape of a challenge row (previously from Prisma).
+type ChallengeRow = {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  city: string;
+  status: string;
+  priority: string;
+  updatedAt: Date;
 };
 
 export type DashboardKpiCard = {
@@ -91,21 +112,17 @@ export async function buildOpsDashboard(input: {
 }) {
   await ensureOpsDashboardSeedData();
 
-  const [scanRuns, alerts, actions, views, workspaces, pilots, challenges] = await Promise.all([
+  // pilots and challenges previously came from Prisma (SQLite).
+  // Those tables do not exist in Supabase yet — return empty arrays gracefully.
+  const pilots: PilotRow[] = [];
+  const challenges: ChallengeRow[] = [];
+
+  const [scanRuns, alerts, actions, views, workspaces] = await Promise.all([
     listOpsScanRuns(40),
     listOpsAlerts(25),
     listOpsActions(30),
     listOpsViews(12, input.role),
     listOpsWorkspaces(12),
-    prisma.pilot.findMany({
-      include: { challenge: true, match: { include: { vendor: true } } },
-      orderBy: { updatedAt: 'desc' },
-      take: 80,
-    }),
-    prisma.challenge.findMany({
-      orderBy: { updatedAt: 'desc' },
-      take: 80,
-    }),
   ]);
 
   const products = scanRuns.flatMap((run) => {
@@ -120,23 +137,45 @@ export async function buildOpsDashboard(input: {
 
   const filteredProducts = products.filter((product) => {
     const sourceType = (product.source_type || 'other') as SourceType;
-    const matchesSource = !input.source_type || input.source_type === 'all' || sourceType === input.source_type;
-    const matchesRegion = !input.region || input.region === 'All Regions' || (Array.isArray(product.countries) && product.countries.some((country: string) => country.toLowerCase().includes(input.region!.toLowerCase())));
+    const matchesSource =
+      !input.source_type ||
+      input.source_type === 'all' ||
+      sourceType === input.source_type;
+    const matchesRegion =
+      !input.region ||
+      input.region === 'All Regions' ||
+      (Array.isArray(product.countries) &&
+        product.countries.some((country: string) =>
+          country.toLowerCase().includes((input.region as string).toLowerCase()),
+        ));
     return matchesSource && matchesRegion;
   });
 
   const activePilots = pilots.filter((pilot) => pilot.status === 'ACTIVE');
-  const stalePilots = activePilots.filter((pilot) => differenceInCalendarDays(new Date(), pilot.updatedAt) > 7);
+  const stalePilots = activePilots.filter(
+    (pilot) => differenceInCalendarDays(new Date(), pilot.updatedAt) > 7,
+  );
   const openAlerts = alerts.filter((alert) => alert.status === 'open');
 
   const avgConfidence = filteredProducts.length
-    ? Number((filteredProducts.reduce((sum, item) => sum + Number(item.confidence || 0), 0) / filteredProducts.length).toFixed(2))
+    ? Number(
+        (
+          filteredProducts.reduce(
+            (sum, item) => sum + Number(item.confidence || 0),
+            0,
+          ) / filteredProducts.length
+        ).toFixed(2),
+      )
     : 0.2;
-  const weightedConfidence = Number(Math.min(0.99, avgConfidence * roleWeight(input.role)).toFixed(2));
+  const weightedConfidence = Number(
+    Math.min(0.99, avgConfidence * roleWeight(input.role)).toFixed(2),
+  );
 
   const highRiskAlerts = openAlerts.filter((alert) => alert.risk_score >= 0.67).length;
   const workflowOpen = actions.filter((action) => action.status !== 'completed').length;
-  const solvedSignals = filteredProducts.filter((item) => Array.isArray(item.problems_solved) && item.problems_solved.length > 0).length;
+  const solvedSignals = filteredProducts.filter(
+    (item) => Array.isArray(item.problems_solved) && item.problems_solved.length > 0,
+  ).length;
 
   const topEvidence = filteredProducts
     .map((item) => {
@@ -177,7 +216,9 @@ export async function buildOpsDashboard(input: {
       label: 'Problem-Solution Hits',
       value: `${solvedSignals}`,
       confidence: Number((0.5 + Math.min(0.45, solvedSignals / 25)).toFixed(2)),
-      risk_score: Number((Math.max(0.08, 1 - (0.5 + Math.min(0.45, solvedSignals / 25)))).toFixed(2)),
+      risk_score: Number(
+        Math.max(0.08, 1 - (0.5 + Math.min(0.45, solvedSignals / 25))).toFixed(2),
+      ),
       risk_level: riskLevel(Math.max(0.08, 1 - (0.5 + Math.min(0.45, solvedSignals / 25)))),
       drilldown_url: '/admin/intelligence',
       provenance: topEvidence.slice(3, 6),
@@ -187,8 +228,15 @@ export async function buildOpsDashboard(input: {
       label: 'Open Alert Pressure',
       value: `${openAlerts.length}`,
       confidence: Number((0.82 - Math.min(0.5, openAlerts.length * 0.04)).toFixed(2)),
-      risk_score: Number(Math.min(0.98, 0.25 + highRiskAlerts * 0.2 + stalePilots.length * 0.05).toFixed(2)),
-      risk_level: riskLevel(Math.min(0.98, 0.25 + highRiskAlerts * 0.2 + stalePilots.length * 0.05)),
+      risk_score: Number(
+        Math.min(
+          0.98,
+          0.25 + highRiskAlerts * 0.2 + stalePilots.length * 0.05,
+        ).toFixed(2),
+      ),
+      risk_level: riskLevel(
+        Math.min(0.98, 0.25 + highRiskAlerts * 0.2 + stalePilots.length * 0.05),
+      ),
       drilldown_url: '/admin',
       provenance: topEvidence.slice(6, 9),
     },
@@ -196,9 +244,21 @@ export async function buildOpsDashboard(input: {
       id: 'workflow_throughput',
       label: 'Workflow Throughput',
       value: `${Math.max(0, actions.length - workflowOpen)}/${actions.length || 1}`,
-      confidence: Number((0.45 + Math.min(0.5, (actions.length - workflowOpen) / Math.max(1, actions.length))).toFixed(2)),
-      risk_score: Number((Math.min(0.95, workflowOpen / Math.max(1, actions.length))).toFixed(2)),
-      risk_level: riskLevel(Math.min(0.95, workflowOpen / Math.max(1, actions.length))),
+      confidence: Number(
+        (
+          0.45 +
+          Math.min(
+            0.5,
+            (actions.length - workflowOpen) / Math.max(1, actions.length),
+          )
+        ).toFixed(2),
+      ),
+      risk_score: Number(
+        Math.min(0.95, workflowOpen / Math.max(1, actions.length)).toFixed(2),
+      ),
+      risk_level: riskLevel(
+        Math.min(0.95, workflowOpen / Math.max(1, actions.length)),
+      ),
       drilldown_url: '/admin',
       provenance: topEvidence.slice(0, 2),
     },
@@ -268,18 +328,27 @@ export async function buildOpsDashboard(input: {
     }));
   });
 
-  const countryNodeIds = Array.from(new Set(graphEdges.map((edge) => edge.target.replace(/^country-/, ''))));
+  const countryNodeIds = Array.from(
+    new Set(graphEdges.map((edge) => edge.target.replace(/^country-/, ''))),
+  );
   const countryNodes = countryNodeIds.map((country) => ({
     id: `country-${country}`,
     label: country,
     type: 'region',
     score: 0.7,
   }));
-  const graphNodeSet = new Set([...graphNodes, ...countryNodes].map((node) => node.id));
-  const connectedEdges = graphEdges.filter((edge) => graphNodeSet.has(edge.source) && graphNodeSet.has(edge.target));
+  const graphNodeSet = new Set(
+    [...graphNodes, ...countryNodes].map((node) => node.id),
+  );
+  const connectedEdges = graphEdges.filter(
+    (edge) => graphNodeSet.has(edge.source) && graphNodeSet.has(edge.target),
+  );
 
   const challengeHighlights = challenges
-    .filter((challenge) => challenge.status === 'REVIEWING' || challenge.status === 'TESTING')
+    .filter(
+      (challenge) =>
+        challenge.status === 'REVIEWING' || challenge.status === 'TESTING',
+    )
     .slice(0, 8)
     .map((challenge) => ({
       id: challenge.id,
@@ -319,14 +388,26 @@ export function sanitizeRole(value: string | null): DashboardRole {
 }
 
 export function sanitizeSourceType(value: string | null): SourceType | 'all' {
-  if (value === 'whitepaper' || value === 'case_study' || value === 'company' || value === 'funding' || value === 'news' || value === 'other') {
+  if (
+    value === 'whitepaper' ||
+    value === 'case_study' ||
+    value === 'company' ||
+    value === 'funding' ||
+    value === 'news' ||
+    value === 'other'
+  ) {
     return value;
   }
   return 'all';
 }
 
 export function sanitizeActionStatus(value: string | null): OpsAction['status'] {
-  if (value === 'todo' || value === 'in_review' || value === 'approved' || value === 'completed') {
+  if (
+    value === 'todo' ||
+    value === 'in_review' ||
+    value === 'approved' ||
+    value === 'completed'
+  ) {
     return value;
   }
   return 'todo';

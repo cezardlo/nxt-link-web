@@ -326,6 +326,7 @@ export default function OpsPage() {
   const [uptime] = useState<string>('99.7%');
   const [loading, setLoading] = useState(true);
   const [swarmRunning, setSwarmRunning] = useState(false);
+  const [feedRunning, setFeedRunning] = useState(false);
   const [triggerMsg, setTriggerMsg] = useState<string | null>(null);
   const activityRef = useRef<HTMLDivElement>(null);
 
@@ -493,6 +494,28 @@ export default function OpsPage() {
     }
   }
 
+  // Trigger feed agent (fetches RSS + persists to Supabase)
+  async function handleRunFeeds() {
+    if (feedRunning) return;
+    setFeedRunning(true);
+    setTriggerMsg(null);
+    try {
+      const res = await fetch('/api/feeds', { method: 'POST' });
+      const data: { ok: boolean; source_count?: number; all?: unknown[]; message?: string } =
+        await res.json().catch(() => ({ ok: false }));
+      if (data.ok) {
+        const count = Array.isArray(data.all) ? data.all.length : 0;
+        setTriggerMsg(`Feed agent complete — ${count} articles from ${data.source_count ?? 0} sources. Persisted to Supabase.`);
+      } else {
+        setTriggerMsg(data.message ?? 'Feed agent failed.');
+      }
+    } catch {
+      setTriggerMsg('Network error — could not reach feed endpoint.');
+    } finally {
+      setFeedRunning(false);
+    }
+  }
+
   const activeCount = agents.filter(a => a.status === 'ACTIVE').length;
   const errorCount = agents.filter(a => a.status === 'ERROR').length;
 
@@ -534,13 +557,22 @@ export default function OpsPage() {
               Live swarm telemetry — intelligence pipeline monitoring
             </p>
           </div>
-          <button
-            onClick={handleTriggerSwarm}
-            disabled={swarmRunning}
-            className="font-mono text-[8px] tracking-[0.2em] border border-[#00d4ff]/30 text-[#00d4ff] px-3 py-1.5 rounded-sm hover:bg-[#00d4ff]/10 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {swarmRunning ? '► RUNNING...' : '► RUN SWARM CYCLE'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRunFeeds}
+              disabled={feedRunning}
+              className="font-mono text-[8px] tracking-[0.2em] border border-[#00ff88]/30 text-[#00ff88] px-3 py-1.5 rounded-sm hover:bg-[#00ff88]/10 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {feedRunning ? '► FETCHING...' : '► RUN FEEDS'}
+            </button>
+            <button
+              onClick={handleTriggerSwarm}
+              disabled={swarmRunning}
+              className="font-mono text-[8px] tracking-[0.2em] border border-[#00d4ff]/30 text-[#00d4ff] px-3 py-1.5 rounded-sm hover:bg-[#00d4ff]/10 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {swarmRunning ? '► RUNNING...' : '► RUN SWARM CYCLE'}
+            </button>
+          </div>
         </div>
 
         {/* Trigger feedback */}

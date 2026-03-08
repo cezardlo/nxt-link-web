@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { prisma } from '@/lib/prisma';
+import { getDb, isSupabaseConfigured } from '@/db';
 
 export type SourceType = 'whitepaper' | 'case_study' | 'company' | 'funding' | 'news' | 'other';
 export type SearchIntentMode = 'discover' | 'compare' | 'who-solves' | 'funding';
@@ -145,18 +145,9 @@ export type OpsShareLink = {
   view_count: number;
 };
 
-let initialized = false;
-type SqlScalar = string | number | boolean | Date | null | undefined;
-type SqlRow = Record<string, SqlScalar>;
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
-function iso(value: SqlScalar): string | null {
-  if (!value) return null;
-  const parsed =
-    value instanceof Date ? value : new Date(typeof value === 'string' ? value : String(value));
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
-}
-
-function parseJson<T>(value: string, fallback: T): T {
+function parseJsonSafe<T>(value: string, fallback: T): T {
   try {
     return JSON.parse(value) as T;
   } catch {
@@ -164,359 +155,44 @@ function parseJson<T>(value: string, fallback: T): T {
   }
 }
 
-function str(row: SqlRow, key: string, fallback = ''): string {
-  const value = row[key];
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  return fallback;
-}
-
-function nullableStr(row: SqlRow, key: string): string | null {
-  const value = row[key];
-  if (value === null || value === undefined) return null;
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  return null;
-}
-
-function num(row: SqlRow, key: string, fallback = 0): number {
-  const value = row[key];
-  if (typeof value === 'number') return value;
-  if (typeof value === 'string') {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : fallback;
-  }
-  return fallback;
-}
-
-function bool(row: SqlRow, key: string): boolean {
-  const value = row[key];
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value !== 0;
-  if (typeof value === 'string') return value === '1' || value.toLowerCase() === 'true';
-  return false;
-}
-
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function mapScanRun(row: SqlRow): OpsScanRun {
-  return {
-    id: str(row, 'id'),
-    query: str(row, 'query'),
-    industry: str(row, 'industry'),
-    region: str(row, 'region'),
-    intent_mode: (str(row, 'intentMode', 'discover') as SearchIntentMode),
-    source_types: parseJson<SourceType[]>(str(row, 'sourceTypesJson', '[]'), []),
-    avg_confidence: num(row, 'avgConfidence'),
-    risk_score: num(row, 'riskScore'),
-    result_json: str(row, 'resultJson'),
-    citations_json: str(row, 'citationsJson'),
-    created_at: iso(row['createdAt']) || new Date().toISOString(),
-  };
+function safeLimit(value: number, max = 200): number {
+  return Math.max(1, Math.min(value, max));
 }
 
-function mapJob(row: SqlRow): OpsCrawlJob {
+// ── Scan Runs ─────────────────────────────────────────────────────────────────
+
+type ScanRunDbRow = {
+  id: string;
+  query: string;
+  industry: string;
+  region: string;
+  intent_mode: string;
+  source_types_json: string;
+  avg_confidence: number;
+  risk_score: number;
+  result_json: string;
+  citations_json: string;
+  created_at: string;
+};
+
+function mapScanRun(row: ScanRunDbRow): OpsScanRun {
   return {
-    id: str(row, 'id'),
-    query: str(row, 'query'),
-    industry: str(row, 'industry'),
-    region: str(row, 'region'),
-    intent_mode: (str(row, 'intentMode', 'discover') as SearchIntentMode),
-    source_types: parseJson<SourceType[]>(str(row, 'sourceTypesJson', '[]'), []),
-    max_sources: num(row, 'maxSources'),
-    status: (str(row, 'status', 'queued') as OpsCrawlJob['status']),
-    attempt_count: num(row, 'attemptCount'),
-    max_retries: num(row, 'maxRetries', 2),
-    worker_id: nullableStr(row, 'workerId'),
-    next_run_at: iso(row['nextRunAt']),
-    started_at: iso(row['startedAt']),
-    finished_at: iso(row['finishedAt']),
-    error: nullableStr(row, 'error'),
-    created_at: iso(row['createdAt']) || new Date().toISOString(),
-    updated_at: iso(row['updatedAt']) || new Date().toISOString(),
+    id: row.id,
+    query: row.query,
+    industry: row.industry,
+    region: row.region,
+    intent_mode: (row.intent_mode || 'discover') as SearchIntentMode,
+    source_types: parseJsonSafe<SourceType[]>(row.source_types_json || '[]', []),
+    avg_confidence: Number(row.avg_confidence || 0),
+    risk_score: Number(row.risk_score || 0),
+    result_json: row.result_json || '{}',
+    citations_json: row.citations_json || '[]',
+    created_at: row.created_at || new Date().toISOString(),
   };
-}
-
-function mapSnapshot(row: SqlRow): OpsCrawlSnapshot {
-  return {
-    id: str(row, 'id'),
-    job_id: str(row, 'jobId'),
-    url: str(row, 'url'),
-    source_type: (str(row, 'sourceType', 'other') as SourceType),
-    title: str(row, 'title'),
-    status: (str(row, 'status', 'success') as OpsCrawlSnapshot['status']),
-    http_status: row['httpStatus'] === null ? null : num(row, 'httpStatus'),
-    content_hash: nullableStr(row, 'contentHash'),
-    changed: bool(row, 'changed'),
-    requires_js_render: bool(row, 'requiresJsRender'),
-    quality_score: num(row, 'qualityScore'),
-    quality_flags: parseJson<string[]>(str(row, 'qualityFlagsJson', '[]'), []),
-    provenance_snippet: str(row, 'provenanceSnippet'),
-    extracted_text: nullableStr(row, 'extractedText'),
-    created_at: iso(row['createdAt']) || new Date().toISOString(),
-  };
-}
-
-function mapAlert(row: SqlRow): OpsAlert {
-  return {
-    id: str(row, 'id'),
-    severity: (str(row, 'severity', 'medium') as OpsAlert['severity']),
-    title: str(row, 'title'),
-    description: str(row, 'description'),
-    status: (str(row, 'status', 'open') as OpsAlert['status']),
-    risk_score: num(row, 'riskScore'),
-    confidence: num(row, 'confidence'),
-    source_url: nullableStr(row, 'sourceUrl'),
-    source_title: nullableStr(row, 'sourceTitle'),
-    created_at: iso(row['createdAt']) || new Date().toISOString(),
-    updated_at: iso(row['updatedAt']) || new Date().toISOString(),
-  };
-}
-
-function mapAction(row: SqlRow): OpsAction {
-  return {
-    id: str(row, 'id'),
-    title: str(row, 'title'),
-    owner: str(row, 'owner'),
-    status: (str(row, 'status', 'todo') as OpsAction['status']),
-    due_at: iso(row['dueAt']),
-    notes: nullableStr(row, 'notes'),
-    linked_evidence_url: nullableStr(row, 'linkedEvidenceUrl'),
-    created_at: iso(row['createdAt']) || new Date().toISOString(),
-    updated_at: iso(row['updatedAt']) || new Date().toISOString(),
-  };
-}
-
-function mapView(row: SqlRow): OpsView {
-  return {
-    id: str(row, 'id'),
-    name: str(row, 'name'),
-    role: str(row, 'role'),
-    filters: parseJson<Record<string, unknown>>(str(row, 'filtersJson', '{}'), {}),
-    created_at: iso(row['createdAt']) || new Date().toISOString(),
-  };
-}
-
-function mapWorkspace(row: SqlRow): OpsWorkspace {
-  return {
-    id: str(row, 'id'),
-    name: str(row, 'name'),
-    description: nullableStr(row, 'description'),
-    focus: nullableStr(row, 'focus'),
-    shared_token: str(row, 'sharedToken'),
-    created_at: iso(row['createdAt']) || new Date().toISOString(),
-    updated_at: iso(row['updatedAt']) || new Date().toISOString(),
-  };
-}
-
-function mapSearchFeedback(row: SqlRow): OpsSearchFeedback {
-  return {
-    id: str(row, 'id'),
-    query: str(row, 'query'),
-    result_id: str(row, 'resultId'),
-    result_name: str(row, 'resultName'),
-    action: str(row, 'action', 'correct') as SearchFeedbackAction,
-    corrected_industry: nullableStr(row, 'correctedIndustry'),
-    corrected_problem_category: nullableStr(row, 'correctedProblemCategory'),
-    corrected_solution_type: nullableStr(row, 'correctedSolutionType'),
-    created_at: iso(row['createdAt']) || new Date().toISOString(),
-  };
-}
-
-function mapBuildRun(row: SqlRow): OpsBuildRun {
-  return {
-    id: str(row, 'id'),
-    mission: str(row, 'mission'),
-    source_prompt_hash: str(row, 'sourcePromptHash'),
-    selected_provider: nullableStr(row, 'selectedProvider'),
-    sections_json: str(row, 'sectionsJson'),
-    blueprint_json: str(row, 'blueprintJson'),
-    failures_json: str(row, 'failuresJson', '[]'),
-    usage_json: nullableStr(row, 'usageJson'),
-    created_at: iso(row['createdAt']) || new Date().toISOString(),
-    updated_at: iso(row['updatedAt']) || new Date().toISOString(),
-  };
-}
-
-function mapShareLink(row: SqlRow): OpsShareLink {
-  return {
-    id: str(row, 'id'),
-    token: str(row, 'token'),
-    query_string: str(row, 'queryString', ''),
-    created_at: iso(row['createdAt']) || new Date().toISOString(),
-    updated_at: iso(row['updatedAt']) || new Date().toISOString(),
-    expires_at: iso(row['expiresAt']),
-    view_count: num(row, 'viewCount'),
-  };
-}
-
-export async function ensureOpsStore() {
-  if (initialized) return;
-
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "OpsScanRun" (
-      "id" TEXT NOT NULL PRIMARY KEY,
-      "query" TEXT NOT NULL,
-      "industry" TEXT NOT NULL,
-      "region" TEXT NOT NULL,
-      "intentMode" TEXT NOT NULL,
-      "sourceTypesJson" TEXT NOT NULL,
-      "avgConfidence" REAL NOT NULL,
-      "riskScore" REAL NOT NULL,
-      "resultJson" TEXT NOT NULL,
-      "citationsJson" TEXT NOT NULL,
-      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "OpsCrawlJob" (
-      "id" TEXT NOT NULL PRIMARY KEY,
-      "query" TEXT NOT NULL,
-      "industry" TEXT NOT NULL,
-      "region" TEXT NOT NULL,
-      "intentMode" TEXT NOT NULL,
-      "sourceTypesJson" TEXT NOT NULL,
-      "maxSources" INTEGER NOT NULL,
-      "status" TEXT NOT NULL,
-      "attemptCount" INTEGER NOT NULL DEFAULT 0,
-      "maxRetries" INTEGER NOT NULL DEFAULT 2,
-      "workerId" TEXT,
-      "nextRunAt" DATETIME,
-      "startedAt" DATETIME,
-      "finishedAt" DATETIME,
-      "error" TEXT,
-      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "OpsCrawlSnapshot" (
-      "id" TEXT NOT NULL PRIMARY KEY,
-      "jobId" TEXT NOT NULL,
-      "url" TEXT NOT NULL,
-      "sourceType" TEXT NOT NULL,
-      "title" TEXT NOT NULL,
-      "status" TEXT NOT NULL,
-      "httpStatus" INTEGER,
-      "contentHash" TEXT,
-      "changed" INTEGER NOT NULL,
-      "requiresJsRender" INTEGER NOT NULL,
-      "qualityScore" REAL NOT NULL,
-      "qualityFlagsJson" TEXT NOT NULL,
-      "provenanceSnippet" TEXT NOT NULL,
-      "extractedText" TEXT,
-      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "OpsAlert" (
-      "id" TEXT NOT NULL PRIMARY KEY,
-      "severity" TEXT NOT NULL,
-      "title" TEXT NOT NULL,
-      "description" TEXT NOT NULL,
-      "status" TEXT NOT NULL,
-      "riskScore" REAL NOT NULL,
-      "confidence" REAL NOT NULL,
-      "sourceUrl" TEXT,
-      "sourceTitle" TEXT,
-      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "OpsAction" (
-      "id" TEXT NOT NULL PRIMARY KEY,
-      "title" TEXT NOT NULL,
-      "owner" TEXT NOT NULL,
-      "status" TEXT NOT NULL,
-      "dueAt" DATETIME,
-      "notes" TEXT,
-      "linkedEvidenceUrl" TEXT,
-      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "OpsView" (
-      "id" TEXT NOT NULL PRIMARY KEY,
-      "name" TEXT NOT NULL,
-      "role" TEXT NOT NULL,
-      "filtersJson" TEXT NOT NULL,
-      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "OpsWorkspace" (
-      "id" TEXT NOT NULL PRIMARY KEY,
-      "name" TEXT NOT NULL,
-      "description" TEXT,
-      "focus" TEXT,
-      "sharedToken" TEXT NOT NULL UNIQUE,
-      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "OpsSearchFeedback" (
-      "id" TEXT NOT NULL PRIMARY KEY,
-      "query" TEXT NOT NULL,
-      "resultId" TEXT NOT NULL,
-      "resultName" TEXT NOT NULL,
-      "action" TEXT NOT NULL,
-      "correctedIndustry" TEXT,
-      "correctedProblemCategory" TEXT,
-      "correctedSolutionType" TEXT,
-      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "OpsBuildRun" (
-      "id" TEXT NOT NULL PRIMARY KEY,
-      "mission" TEXT NOT NULL,
-      "sourcePromptHash" TEXT NOT NULL,
-      "selectedProvider" TEXT,
-      "sectionsJson" TEXT NOT NULL,
-      "blueprintJson" TEXT NOT NULL,
-      "failuresJson" TEXT NOT NULL DEFAULT '[]',
-      "usageJson" TEXT,
-      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "OpsShareLink" (
-      "id" TEXT NOT NULL PRIMARY KEY,
-      "token" TEXT NOT NULL UNIQUE,
-      "queryString" TEXT NOT NULL DEFAULT '',
-      "expiresAt" DATETIME,
-      "viewCount" INTEGER NOT NULL DEFAULT 0,
-      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "OpsScanRun_createdAt_idx" ON "OpsScanRun"("createdAt");`);
-  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "OpsCrawlJob_status_nextRunAt_idx" ON "OpsCrawlJob"("status", "nextRunAt");`);
-  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "OpsCrawlSnapshot_url_createdAt_idx" ON "OpsCrawlSnapshot"("url", "createdAt");`);
-  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "OpsAlert_status_createdAt_idx" ON "OpsAlert"("status", "createdAt");`);
-  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "OpsSearchFeedback_resultName_createdAt_idx" ON "OpsSearchFeedback"("resultName", "createdAt");`);
-  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "OpsSearchFeedback_action_createdAt_idx" ON "OpsSearchFeedback"("action", "createdAt");`);
-  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "OpsBuildRun_createdAt_idx" ON "OpsBuildRun"("createdAt");`);
-  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "OpsShareLink_token_idx" ON "OpsShareLink"("token");`);
-  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "OpsShareLink_expiresAt_idx" ON "OpsShareLink"("expiresAt");`);
-
-  initialized = true;
 }
 
 export async function saveOpsScanRun(input: {
@@ -530,30 +206,94 @@ export async function saveOpsScanRun(input: {
   result_json: string;
   citations_json: string;
 }): Promise<OpsScanRun> {
-  await ensureOpsStore();
   const id = randomUUID();
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO "OpsScanRun" ("id", "query", "industry", "region", "intentMode", "sourceTypesJson", "avgConfidence", "riskScore", "resultJson", "citationsJson") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+  const now = new Date().toISOString();
+
+  const stub: OpsScanRun = {
     id,
-    input.query,
-    input.industry,
-    input.region,
-    input.intent_mode,
-    JSON.stringify(input.source_types),
-    input.avg_confidence,
-    input.risk_score,
-    input.result_json,
-    input.citations_json,
-  );
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(`SELECT * FROM "OpsScanRun" WHERE "id" = ? LIMIT 1;`, id);
-  if (!rows[0]) throw new Error('Failed to save scan run.');
-  return mapScanRun(rows[0]);
+    query: input.query,
+    industry: input.industry,
+    region: input.region,
+    intent_mode: input.intent_mode,
+    source_types: input.source_types,
+    avg_confidence: input.avg_confidence,
+    risk_score: input.risk_score,
+    result_json: input.result_json,
+    citations_json: input.citations_json,
+    created_at: now,
+  };
+
+  if (!isSupabaseConfigured()) return stub;
+
+  const db = getDb({ admin: true });
+  const { data, error } = await db
+    .from('ops_scan_runs')
+    .insert({
+      id,
+      query: input.query,
+      industry: input.industry,
+      region: input.region,
+      intent_mode: input.intent_mode,
+      source_types_json: JSON.stringify(input.source_types),
+      avg_confidence: input.avg_confidence,
+      risk_score: input.risk_score,
+      result_json: input.result_json,
+      citations_json: input.citations_json,
+      created_at: now,
+    })
+    .select()
+    .maybeSingle();
+
+  if (error || !data) return stub;
+
+  return mapScanRun(data as ScanRunDbRow);
 }
 
 export async function listOpsScanRuns(limit = 20): Promise<OpsScanRun[]> {
-  await ensureOpsStore();
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(`SELECT * FROM "OpsScanRun" ORDER BY datetime("createdAt") DESC LIMIT ?;`, Math.max(1, Math.min(limit, 200)));
-  return rows.map(mapScanRun);
+  if (!isSupabaseConfigured()) return [];
+
+  const db = getDb({ admin: true });
+  const { data, error } = await db
+    .from('ops_scan_runs')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(safeLimit(limit));
+
+  if (error || !data) return [];
+
+  return (data as ScanRunDbRow[]).map(mapScanRun);
+}
+
+// ── Alerts ────────────────────────────────────────────────────────────────────
+
+type AlertDbRow = {
+  id: string;
+  severity: string;
+  title: string;
+  description: string;
+  status: string;
+  risk_score: number;
+  confidence: number;
+  source_url: string | null;
+  source_title: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+function mapAlert(row: AlertDbRow): OpsAlert {
+  return {
+    id: row.id,
+    severity: (row.severity || 'medium') as OpsAlert['severity'],
+    title: row.title,
+    description: row.description,
+    status: (row.status || 'open') as OpsAlert['status'],
+    risk_score: Number(row.risk_score || 0),
+    confidence: Number(row.confidence || 0),
+    source_url: row.source_url || null,
+    source_title: row.source_title || null,
+    created_at: row.created_at || new Date().toISOString(),
+    updated_at: row.updated_at || new Date().toISOString(),
+  };
 }
 
 export async function createOpsAlert(input: {
@@ -566,29 +306,89 @@ export async function createOpsAlert(input: {
   source_url?: string | null;
   source_title?: string | null;
 }): Promise<OpsAlert> {
-  await ensureOpsStore();
   const id = randomUUID();
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO "OpsAlert" ("id", "severity", "title", "description", "status", "riskScore", "confidence", "sourceUrl", "sourceTitle") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+  const now = new Date().toISOString();
+  const stub: OpsAlert = {
     id,
-    input.severity,
-    input.title,
-    input.description,
-    input.status || 'open',
-    input.risk_score,
-    input.confidence,
-    input.source_url || null,
-    input.source_title || null,
-  );
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(`SELECT * FROM "OpsAlert" WHERE "id" = ? LIMIT 1;`, id);
-  if (!rows[0]) throw new Error('Failed to create alert.');
-  return mapAlert(rows[0]);
+    severity: input.severity,
+    title: input.title,
+    description: input.description,
+    status: input.status || 'open',
+    risk_score: input.risk_score,
+    confidence: input.confidence,
+    source_url: input.source_url || null,
+    source_title: input.source_title || null,
+    created_at: now,
+    updated_at: now,
+  };
+
+  if (!isSupabaseConfigured()) return stub;
+
+  const db = getDb({ admin: true });
+  const { data, error } = await db
+    .from('ops_alerts')
+    .insert({
+      id,
+      severity: input.severity,
+      title: input.title,
+      description: input.description,
+      status: input.status || 'open',
+      risk_score: input.risk_score,
+      confidence: input.confidence,
+      source_url: input.source_url || null,
+      source_title: input.source_title || null,
+      created_at: now,
+      updated_at: now,
+    })
+    .select()
+    .maybeSingle();
+
+  if (error || !data) return stub;
+
+  return mapAlert(data as AlertDbRow);
 }
 
 export async function listOpsAlerts(limit = 20): Promise<OpsAlert[]> {
-  await ensureOpsStore();
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(`SELECT * FROM "OpsAlert" ORDER BY datetime("updatedAt") DESC LIMIT ?;`, Math.max(1, Math.min(limit, 200)));
-  return rows.map(mapAlert);
+  if (!isSupabaseConfigured()) return [];
+
+  const db = getDb({ admin: true });
+  const { data, error } = await db
+    .from('ops_alerts')
+    .select('*')
+    .order('updated_at', { ascending: false })
+    .limit(safeLimit(limit));
+
+  if (error || !data) return [];
+
+  return (data as AlertDbRow[]).map(mapAlert);
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+
+type ActionDbRow = {
+  id: string;
+  title: string;
+  owner: string;
+  status: string;
+  due_at: string | null;
+  notes: string | null;
+  linked_evidence_url: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+function mapAction(row: ActionDbRow): OpsAction {
+  return {
+    id: row.id,
+    title: row.title,
+    owner: row.owner,
+    status: (row.status || 'todo') as OpsAction['status'],
+    due_at: row.due_at || null,
+    notes: row.notes || null,
+    linked_evidence_url: row.linked_evidence_url || null,
+    created_at: row.created_at || new Date().toISOString(),
+    updated_at: row.updated_at || new Date().toISOString(),
+  };
 }
 
 export async function createOpsAction(input: {
@@ -599,51 +399,109 @@ export async function createOpsAction(input: {
   notes?: string | null;
   linked_evidence_url?: string | null;
 }): Promise<OpsAction> {
-  await ensureOpsStore();
   const id = randomUUID();
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO "OpsAction" ("id", "title", "owner", "status", "dueAt", "notes", "linkedEvidenceUrl") VALUES (?, ?, ?, ?, ?, ?, ?);`,
+  const now = new Date().toISOString();
+  const stub: OpsAction = {
     id,
-    input.title,
-    input.owner,
-    input.status || 'todo',
-    input.due_at || null,
-    input.notes || null,
-    input.linked_evidence_url || null,
-  );
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(`SELECT * FROM "OpsAction" WHERE "id" = ? LIMIT 1;`, id);
-  if (!rows[0]) throw new Error('Failed to create action.');
-  return mapAction(rows[0]);
+    title: input.title,
+    owner: input.owner,
+    status: input.status || 'todo',
+    due_at: input.due_at || null,
+    notes: input.notes || null,
+    linked_evidence_url: input.linked_evidence_url || null,
+    created_at: now,
+    updated_at: now,
+  };
+
+  if (!isSupabaseConfigured()) return stub;
+
+  const db = getDb({ admin: true });
+  const { data, error } = await db
+    .from('ops_actions')
+    .insert({
+      id,
+      title: input.title,
+      owner: input.owner,
+      status: input.status || 'todo',
+      due_at: input.due_at || null,
+      notes: input.notes || null,
+      linked_evidence_url: input.linked_evidence_url || null,
+      created_at: now,
+      updated_at: now,
+    })
+    .select()
+    .maybeSingle();
+
+  if (error || !data) return stub;
+
+  return mapAction(data as ActionDbRow);
 }
 
 export async function listOpsActions(limit = 30): Promise<OpsAction[]> {
-  await ensureOpsStore();
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(`SELECT * FROM "OpsAction" ORDER BY datetime("updatedAt") DESC LIMIT ?;`, Math.max(1, Math.min(limit, 200)));
-  return rows.map(mapAction);
+  if (!isSupabaseConfigured()) return [];
+
+  const db = getDb({ admin: true });
+  const { data, error } = await db
+    .from('ops_actions')
+    .select('*')
+    .order('updated_at', { ascending: false })
+    .limit(safeLimit(limit));
+
+  if (error || !data) return [];
+
+  return (data as ActionDbRow[]).map(mapAction);
 }
 
-export async function updateOpsAction(id: string, input: {
-  status?: OpsAction['status'];
-  owner?: string;
-  notes?: string | null;
-  due_at?: string | null;
-}): Promise<OpsAction | null> {
-  await ensureOpsStore();
-  const existing = await prisma.$queryRawUnsafe<SqlRow[]>(`SELECT * FROM "OpsAction" WHERE "id" = ? LIMIT 1;`, id);
-  const existingRow = existing[0];
-  if (!existingRow) return null;
+export async function updateOpsAction(
+  id: string,
+  input: {
+    status?: OpsAction['status'];
+    owner?: string;
+    notes?: string | null;
+    due_at?: string | null;
+  },
+): Promise<OpsAction | null> {
+  if (!isSupabaseConfigured()) return null;
 
-  await prisma.$executeRawUnsafe(
-    `UPDATE "OpsAction" SET "owner" = ?, "status" = ?, "notes" = ?, "dueAt" = ?, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = ?;`,
-    input.owner ?? str(existingRow, 'owner'),
-    input.status ?? (str(existingRow, 'status', 'todo') as OpsAction['status']),
-    input.notes === undefined ? nullableStr(existingRow, 'notes') : input.notes,
-    input.due_at === undefined ? nullableStr(existingRow, 'dueAt') : input.due_at,
-    id,
-  );
+  const db = getDb({ admin: true });
+  const updates: Partial<ActionDbRow> = {
+    updated_at: new Date().toISOString(),
+  };
+  if (input.status !== undefined) updates.status = input.status;
+  if (input.owner !== undefined) updates.owner = input.owner;
+  if (input.notes !== undefined) updates.notes = input.notes;
+  if (input.due_at !== undefined) updates.due_at = input.due_at;
 
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(`SELECT * FROM "OpsAction" WHERE "id" = ? LIMIT 1;`, id);
-  return rows[0] ? mapAction(rows[0]) : null;
+  const { data, error } = await db
+    .from('ops_actions')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  return mapAction(data as ActionDbRow);
+}
+
+// ── Views ─────────────────────────────────────────────────────────────────────
+
+type ViewDbRow = {
+  id: string;
+  name: string;
+  role: string;
+  filters_json: string;
+  created_at: string;
+};
+
+function mapView(row: ViewDbRow): OpsView {
+  return {
+    id: row.id,
+    name: row.name,
+    role: row.role,
+    filters: parseJsonSafe<Record<string, unknown>>(row.filters_json || '{}', {}),
+    created_at: row.created_at || new Date().toISOString(),
+  };
 }
 
 export async function createOpsView(input: {
@@ -651,27 +509,78 @@ export async function createOpsView(input: {
   role: string;
   filters: Record<string, unknown>;
 }): Promise<OpsView> {
-  await ensureOpsStore();
   const id = randomUUID();
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO "OpsView" ("id", "name", "role", "filtersJson") VALUES (?, ?, ?, ?);`,
+  const now = new Date().toISOString();
+  const stub: OpsView = {
     id,
-    input.name,
-    input.role,
-    JSON.stringify(input.filters),
-  );
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(`SELECT * FROM "OpsView" WHERE "id" = ? LIMIT 1;`, id);
-  if (!rows[0]) throw new Error('Failed to create view.');
-  return mapView(rows[0]);
+    name: input.name,
+    role: input.role,
+    filters: input.filters,
+    created_at: now,
+  };
+
+  if (!isSupabaseConfigured()) return stub;
+
+  const db = getDb({ admin: true });
+  const { data, error } = await db
+    .from('ops_views')
+    .insert({
+      id,
+      name: input.name,
+      role: input.role,
+      filters_json: JSON.stringify(input.filters),
+      created_at: now,
+    })
+    .select()
+    .maybeSingle();
+
+  if (error || !data) return stub;
+
+  return mapView(data as ViewDbRow);
 }
 
 export async function listOpsViews(limit = 20, role?: string): Promise<OpsView[]> {
-  await ensureOpsStore();
-  const safeLimit = Math.max(1, Math.min(limit, 200));
-  const rows = role
-    ? await prisma.$queryRawUnsafe<SqlRow[]>(`SELECT * FROM "OpsView" WHERE "role" = ? ORDER BY datetime("createdAt") DESC LIMIT ?;`, role, safeLimit)
-    : await prisma.$queryRawUnsafe<SqlRow[]>(`SELECT * FROM "OpsView" ORDER BY datetime("createdAt") DESC LIMIT ?;`, safeLimit);
-  return rows.map(mapView);
+  if (!isSupabaseConfigured()) return [];
+
+  const db = getDb({ admin: true });
+  let query = db
+    .from('ops_views')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(safeLimit(limit));
+
+  if (role) {
+    query = query.eq('role', role);
+  }
+
+  const { data, error } = await query;
+  if (error || !data) return [];
+
+  return (data as ViewDbRow[]).map(mapView);
+}
+
+// ── Workspaces ────────────────────────────────────────────────────────────────
+
+type WorkspaceDbRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  focus: string | null;
+  shared_token: string;
+  created_at: string;
+  updated_at: string;
+};
+
+function mapWorkspace(row: WorkspaceDbRow): OpsWorkspace {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description || null,
+    focus: row.focus || null,
+    shared_token: row.shared_token,
+    created_at: row.created_at || new Date().toISOString(),
+    updated_at: row.updated_at || new Date().toISOString(),
+  };
 }
 
 export async function createOpsWorkspace(input: {
@@ -679,26 +588,82 @@ export async function createOpsWorkspace(input: {
   description?: string | null;
   focus?: string | null;
 }): Promise<OpsWorkspace> {
-  await ensureOpsStore();
   const id = randomUUID();
   const token = randomUUID().replace(/-/g, '').slice(0, 20);
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO "OpsWorkspace" ("id", "name", "description", "focus", "sharedToken") VALUES (?, ?, ?, ?, ?);`,
+  const now = new Date().toISOString();
+  const stub: OpsWorkspace = {
     id,
-    input.name,
-    input.description || null,
-    input.focus || null,
-    token,
-  );
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(`SELECT * FROM "OpsWorkspace" WHERE "id" = ? LIMIT 1;`, id);
-  if (!rows[0]) throw new Error('Failed to create workspace.');
-  return mapWorkspace(rows[0]);
+    name: input.name,
+    description: input.description || null,
+    focus: input.focus || null,
+    shared_token: token,
+    created_at: now,
+    updated_at: now,
+  };
+
+  if (!isSupabaseConfigured()) return stub;
+
+  const db = getDb({ admin: true });
+  const { data, error } = await db
+    .from('ops_workspaces')
+    .insert({
+      id,
+      name: input.name,
+      description: input.description || null,
+      focus: input.focus || null,
+      shared_token: token,
+      created_at: now,
+      updated_at: now,
+    })
+    .select()
+    .maybeSingle();
+
+  if (error || !data) return stub;
+
+  return mapWorkspace(data as WorkspaceDbRow);
 }
 
 export async function listOpsWorkspaces(limit = 20): Promise<OpsWorkspace[]> {
-  await ensureOpsStore();
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(`SELECT * FROM "OpsWorkspace" ORDER BY datetime("updatedAt") DESC LIMIT ?;`, Math.max(1, Math.min(limit, 200)));
-  return rows.map(mapWorkspace);
+  if (!isSupabaseConfigured()) return [];
+
+  const db = getDb({ admin: true });
+  const { data, error } = await db
+    .from('ops_workspaces')
+    .select('*')
+    .order('updated_at', { ascending: false })
+    .limit(safeLimit(limit));
+
+  if (error || !data) return [];
+
+  return (data as WorkspaceDbRow[]).map(mapWorkspace);
+}
+
+// ── Search Feedback ───────────────────────────────────────────────────────────
+
+type FeedbackDbRow = {
+  id: string;
+  query: string;
+  result_id: string;
+  result_name: string;
+  action: string;
+  corrected_industry: string | null;
+  corrected_problem_category: string | null;
+  corrected_solution_type: string | null;
+  created_at: string;
+};
+
+function mapSearchFeedback(row: FeedbackDbRow): OpsSearchFeedback {
+  return {
+    id: row.id,
+    query: row.query,
+    result_id: row.result_id,
+    result_name: row.result_name,
+    action: (row.action || 'correct') as SearchFeedbackAction,
+    corrected_industry: row.corrected_industry || null,
+    corrected_problem_category: row.corrected_problem_category || null,
+    corrected_solution_type: row.corrected_solution_type || null,
+    created_at: row.created_at || new Date().toISOString(),
+  };
 }
 
 export async function createOpsSearchFeedback(input: {
@@ -710,56 +675,117 @@ export async function createOpsSearchFeedback(input: {
   corrected_problem_category?: string | null;
   corrected_solution_type?: string | null;
 }): Promise<OpsSearchFeedback> {
-  await ensureOpsStore();
   const id = randomUUID();
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO "OpsSearchFeedback" ("id", "query", "resultId", "resultName", "action", "correctedIndustry", "correctedProblemCategory", "correctedSolutionType") VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
+  const now = new Date().toISOString();
+  const stub: OpsSearchFeedback = {
     id,
-    input.query,
-    input.result_id,
-    input.result_name,
-    input.action,
-    input.corrected_industry || null,
-    input.corrected_problem_category || null,
-    input.corrected_solution_type || null,
-  );
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(
-    `SELECT * FROM "OpsSearchFeedback" WHERE "id" = ? LIMIT 1;`,
-    id,
-  );
-  if (!rows[0]) throw new Error('Failed to save search feedback.');
-  return mapSearchFeedback(rows[0]);
+    query: input.query,
+    result_id: input.result_id,
+    result_name: input.result_name,
+    action: input.action,
+    corrected_industry: input.corrected_industry || null,
+    corrected_problem_category: input.corrected_problem_category || null,
+    corrected_solution_type: input.corrected_solution_type || null,
+    created_at: now,
+  };
+
+  if (!isSupabaseConfigured()) return stub;
+
+  const db = getDb({ admin: true });
+  const { data, error } = await db
+    .from('ops_search_feedback')
+    .insert({
+      id,
+      query: input.query,
+      result_id: input.result_id,
+      result_name: input.result_name,
+      action: input.action,
+      corrected_industry: input.corrected_industry || null,
+      corrected_problem_category: input.corrected_problem_category || null,
+      corrected_solution_type: input.corrected_solution_type || null,
+      created_at: now,
+    })
+    .select()
+    .maybeSingle();
+
+  if (error || !data) return stub;
+
+  return mapSearchFeedback(data as FeedbackDbRow);
 }
 
 export async function listOpsSearchFeedbackBoosts(limit = 500): Promise<OpsSearchFeedbackBoost[]> {
-  await ensureOpsStore();
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(
-    `
-      SELECT
-        lower(trim("resultName")) AS "canonicalName",
-        SUM(CASE WHEN "action" IN ('correct', 'saved', 'pilot', 'corrected') THEN 1 ELSE 0 END) AS "positiveSignals",
-        SUM(CASE WHEN "action" = 'wrong' THEN 1 ELSE 0 END) AS "negativeSignals"
-      FROM "OpsSearchFeedback"
-      WHERE datetime("createdAt") >= datetime('now', '-90 days')
-      GROUP BY lower(trim("resultName"))
-      ORDER BY "positiveSignals" DESC
-      LIMIT ?;
-    `,
-    Math.max(1, Math.min(limit, 4000)),
-  );
+  if (!isSupabaseConfigured()) return [];
 
-  return rows.map((row) => {
-    const positive = num(row, 'positiveSignals');
-    const negative = num(row, 'negativeSignals');
-    const total = Math.max(1, positive + negative);
-    const ratio = (positive - negative) / total;
-    return {
-      canonical_name: str(row, 'canonicalName'),
-      positive_signals: positive,
-      negative_signals: negative,
-      boost: Number(clamp(ratio * 0.22, -0.22, 0.22).toFixed(3)),
-    };
-  });
+  const db = getDb({ admin: true });
+  const cutoff = new Date(Date.now() - 90 * 86_400_000).toISOString();
+
+  const { data, error } = await db
+    .from('ops_search_feedback')
+    .select('result_name,action')
+    .gte('created_at', cutoff)
+    .limit(safeLimit(limit, 4000));
+
+  if (error || !data) return [];
+
+  type FeedbackRaw = { result_name: string; action: string };
+  const rows = data as FeedbackRaw[];
+
+  const byName = new Map<string, { positive: number; negative: number }>();
+  for (const row of rows) {
+    const key = (row.result_name || '').toLowerCase().trim();
+    if (!key) continue;
+    const current = byName.get(key) ?? { positive: 0, negative: 0 };
+    const isPositive = ['correct', 'saved', 'pilot', 'corrected'].includes(row.action);
+    if (isPositive) {
+      current.positive += 1;
+    } else if (row.action === 'wrong') {
+      current.negative += 1;
+    }
+    byName.set(key, current);
+  }
+
+  return Array.from(byName.entries())
+    .map(([canonical_name, { positive, negative }]) => {
+      const total = Math.max(1, positive + negative);
+      const ratio = (positive - negative) / total;
+      return {
+        canonical_name,
+        positive_signals: positive,
+        negative_signals: negative,
+        boost: Number(clamp(ratio * 0.22, -0.22, 0.22).toFixed(3)),
+      };
+    })
+    .sort((a, b) => b.positive_signals - a.positive_signals);
+}
+
+// ── Build Runs ────────────────────────────────────────────────────────────────
+
+type BuildRunDbRow = {
+  id: string;
+  mission: string;
+  source_prompt_hash: string;
+  selected_provider: string | null;
+  sections_json: string;
+  blueprint_json: string;
+  failures_json: string;
+  usage_json: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+function mapBuildRun(row: BuildRunDbRow): OpsBuildRun {
+  return {
+    id: row.id,
+    mission: row.mission,
+    source_prompt_hash: row.source_prompt_hash,
+    selected_provider: row.selected_provider || null,
+    sections_json: row.sections_json,
+    blueprint_json: row.blueprint_json,
+    failures_json: row.failures_json || '[]',
+    usage_json: row.usage_json || null,
+    created_at: row.created_at || new Date().toISOString(),
+    updated_at: row.updated_at || new Date().toISOString(),
+  };
 }
 
 export async function createOpsBuildRun(input: {
@@ -771,42 +797,88 @@ export async function createOpsBuildRun(input: {
   failures_json?: string;
   usage_json?: string | null;
 }): Promise<OpsBuildRun> {
-  await ensureOpsStore();
   const id = randomUUID();
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO "OpsBuildRun" ("id", "mission", "sourcePromptHash", "selectedProvider", "sectionsJson", "blueprintJson", "failuresJson", "usageJson") VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
+  const now = new Date().toISOString();
+  const stub: OpsBuildRun = {
     id,
-    input.mission,
-    input.source_prompt_hash,
-    input.selected_provider || null,
-    input.sections_json,
-    input.blueprint_json,
-    input.failures_json || '[]',
-    input.usage_json || null,
-  );
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(
-    `SELECT * FROM "OpsBuildRun" WHERE "id" = ? LIMIT 1;`,
-    id,
-  );
-  if (!rows[0]) throw new Error('Failed to create build run.');
-  return mapBuildRun(rows[0]);
+    mission: input.mission,
+    source_prompt_hash: input.source_prompt_hash,
+    selected_provider: input.selected_provider || null,
+    sections_json: input.sections_json,
+    blueprint_json: input.blueprint_json,
+    failures_json: input.failures_json || '[]',
+    usage_json: input.usage_json || null,
+    created_at: now,
+    updated_at: now,
+  };
+
+  if (!isSupabaseConfigured()) return stub;
+
+  const db = getDb({ admin: true });
+  const { data, error } = await db
+    .from('ops_build_runs')
+    .insert({
+      id,
+      mission: input.mission,
+      source_prompt_hash: input.source_prompt_hash,
+      selected_provider: input.selected_provider || null,
+      sections_json: input.sections_json,
+      blueprint_json: input.blueprint_json,
+      failures_json: input.failures_json || '[]',
+      usage_json: input.usage_json || null,
+      created_at: now,
+      updated_at: now,
+    })
+    .select()
+    .maybeSingle();
+
+  if (error || !data) return stub;
+
+  return mapBuildRun(data as BuildRunDbRow);
 }
 
 export async function listOpsBuildRuns(limit = 12): Promise<OpsBuildRun[]> {
-  await ensureOpsStore();
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(
-    `SELECT * FROM "OpsBuildRun" ORDER BY datetime("createdAt") DESC LIMIT ?;`,
-    Math.max(1, Math.min(limit, 100)),
-  );
-  return rows.map(mapBuildRun);
+  if (!isSupabaseConfigured()) return [];
+
+  const db = getDb({ admin: true });
+  const { data, error } = await db
+    .from('ops_build_runs')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(safeLimit(limit, 100));
+
+  if (error || !data) return [];
+
+  return (data as BuildRunDbRow[]).map(mapBuildRun);
+}
+
+// ── Share Links ───────────────────────────────────────────────────────────────
+
+type ShareLinkDbRow = {
+  id: string;
+  token: string;
+  query_string: string;
+  created_at: string;
+  updated_at: string;
+  expires_at: string | null;
+  view_count: number;
+};
+
+function mapShareLink(row: ShareLinkDbRow): OpsShareLink {
+  return {
+    id: row.id,
+    token: row.token,
+    query_string: row.query_string || '',
+    created_at: row.created_at || new Date().toISOString(),
+    updated_at: row.updated_at || new Date().toISOString(),
+    expires_at: row.expires_at || null,
+    view_count: Number(row.view_count || 0),
+  };
 }
 
 function normalizeQueryString(input: string): string {
-  const trimmed = input.trim();
+  const trimmed = input.trim().slice(0, 3500);
   if (!trimmed) return '';
-  if (trimmed.length > 3500) {
-    return trimmed.slice(0, 3500);
-  }
   return trimmed.startsWith('?') ? trimmed : `?${trimmed}`;
 }
 
@@ -814,63 +886,126 @@ export async function createOpsShareLink(input: {
   query_string: string;
   expires_in_hours?: number | null;
 }): Promise<OpsShareLink> {
-  await ensureOpsStore();
   const id = randomUUID();
   const token = randomUUID().replace(/-/g, '').slice(0, 22);
   const queryString = normalizeQueryString(input.query_string);
   const expiresHours = Number.isFinite(input.expires_in_hours)
     ? Math.max(1, Math.min(24 * 30, Math.round(input.expires_in_hours as number)))
     : null;
-  const expiresAtIso =
+  const expiresAt =
     expiresHours === null
       ? null
       : new Date(Date.now() + expiresHours * 60 * 60 * 1000).toISOString();
+  const now = new Date().toISOString();
 
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO "OpsShareLink" ("id", "token", "queryString", "expiresAt") VALUES (?, ?, ?, ?);`,
+  const stub: OpsShareLink = {
     id,
     token,
-    queryString,
-    expiresAtIso,
-  );
+    query_string: queryString,
+    created_at: now,
+    updated_at: now,
+    expires_at: expiresAt,
+    view_count: 0,
+  };
 
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(
-    `SELECT * FROM "OpsShareLink" WHERE "id" = ? LIMIT 1;`,
-    id,
-  );
-  if (!rows[0]) throw new Error('Failed to create share link.');
-  return mapShareLink(rows[0]);
+  if (!isSupabaseConfigured()) return stub;
+
+  const db = getDb({ admin: true });
+  const { data, error } = await db
+    .from('ops_share_links')
+    .insert({
+      id,
+      token,
+      query_string: queryString,
+      expires_at: expiresAt,
+      view_count: 0,
+      created_at: now,
+      updated_at: now,
+    })
+    .select()
+    .maybeSingle();
+
+  if (error || !data) return stub;
+
+  return mapShareLink(data as ShareLinkDbRow);
 }
 
 export async function getOpsShareLinkByToken(
   token: string,
   options?: { increment_view_count?: boolean },
 ): Promise<OpsShareLink | null> {
-  await ensureOpsStore();
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(
-    `SELECT * FROM "OpsShareLink" WHERE "token" = ? LIMIT 1;`,
-    token.trim(),
-  );
-  const row = rows[0];
-  if (!row) return null;
-  const mapped = mapShareLink(row);
+  if (!isSupabaseConfigured()) return null;
+
+  const db = getDb({ admin: true });
+  const { data, error } = await db
+    .from('ops_share_links')
+    .select('*')
+    .eq('token', token.trim())
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const mapped = mapShareLink(data as ShareLinkDbRow);
   if (mapped.expires_at && new Date(mapped.expires_at).getTime() < Date.now()) {
     return null;
   }
 
   if (options?.increment_view_count) {
-    await prisma.$executeRawUnsafe(
-      `UPDATE "OpsShareLink" SET "viewCount" = "viewCount" + 1, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = ?;`,
-      mapped.id,
-    );
-    const refreshed = await prisma.$queryRawUnsafe<SqlRow[]>(
-      `SELECT * FROM "OpsShareLink" WHERE "id" = ? LIMIT 1;`,
-      mapped.id,
-    );
-    return refreshed[0] ? mapShareLink(refreshed[0]) : mapped;
+    const { data: refreshed } = await db
+      .from('ops_share_links')
+      .update({ view_count: mapped.view_count + 1, updated_at: new Date().toISOString() })
+      .eq('id', mapped.id)
+      .select()
+      .maybeSingle();
+
+    return refreshed ? mapShareLink(refreshed as ShareLinkDbRow) : mapped;
   }
 
   return mapped;
+}
+
+// ── Crawl Jobs ────────────────────────────────────────────────────────────────
+
+type CrawlJobDbRow = {
+  id: string;
+  query: string;
+  industry: string;
+  region: string;
+  intent_mode: string;
+  source_types_json: string;
+  max_sources: number;
+  status: string;
+  attempt_count: number;
+  max_retries: number;
+  worker_id: string | null;
+  next_run_at: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+function mapJob(row: CrawlJobDbRow): OpsCrawlJob {
+  return {
+    id: row.id,
+    query: row.query,
+    industry: row.industry,
+    region: row.region,
+    intent_mode: (row.intent_mode || 'discover') as SearchIntentMode,
+    source_types: parseJsonSafe<SourceType[]>(row.source_types_json || '[]', []),
+    max_sources: Number(row.max_sources || 0),
+    status: (row.status || 'queued') as OpsCrawlJob['status'],
+    attempt_count: Number(row.attempt_count || 0),
+    max_retries: Number(row.max_retries || 2),
+    worker_id: row.worker_id || null,
+    next_run_at: row.next_run_at || null,
+    started_at: row.started_at || null,
+    finished_at: row.finished_at || null,
+    error: row.error || null,
+    created_at: row.created_at || new Date().toISOString(),
+    updated_at: row.updated_at || new Date().toISOString(),
+  };
 }
 
 export async function createOpsCrawlJob(input: {
@@ -883,73 +1018,205 @@ export async function createOpsCrawlJob(input: {
   max_retries?: number;
   next_run_at?: string | null;
 }): Promise<OpsCrawlJob> {
-  await ensureOpsStore();
   const id = randomUUID();
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO "OpsCrawlJob" ("id", "query", "industry", "region", "intentMode", "sourceTypesJson", "maxSources", "status", "attemptCount", "maxRetries", "nextRunAt") VALUES (?, ?, ?, ?, ?, ?, ?, 'queued', 0, ?, ?);`,
+  const now = new Date().toISOString();
+  const stub: OpsCrawlJob = {
     id,
-    input.query,
-    input.industry,
-    input.region,
-    input.intent_mode,
-    JSON.stringify(input.source_types),
-    input.max_sources,
-    input.max_retries ?? 2,
-    input.next_run_at || null,
-  );
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(`SELECT * FROM "OpsCrawlJob" WHERE "id" = ? LIMIT 1;`, id);
-  if (!rows[0]) throw new Error('Failed to create crawl job.');
-  return mapJob(rows[0]);
+    query: input.query,
+    industry: input.industry,
+    region: input.region,
+    intent_mode: input.intent_mode,
+    source_types: input.source_types,
+    max_sources: input.max_sources,
+    status: 'queued',
+    attempt_count: 0,
+    max_retries: input.max_retries ?? 2,
+    worker_id: null,
+    next_run_at: input.next_run_at || null,
+    started_at: null,
+    finished_at: null,
+    error: null,
+    created_at: now,
+    updated_at: now,
+  };
+
+  if (!isSupabaseConfigured()) return stub;
+
+  const db = getDb({ admin: true });
+  const { data, error } = await db
+    .from('ops_crawl_jobs')
+    .insert({
+      id,
+      query: input.query,
+      industry: input.industry,
+      region: input.region,
+      intent_mode: input.intent_mode,
+      source_types_json: JSON.stringify(input.source_types),
+      max_sources: input.max_sources,
+      status: 'queued',
+      attempt_count: 0,
+      max_retries: input.max_retries ?? 2,
+      next_run_at: input.next_run_at || null,
+      created_at: now,
+      updated_at: now,
+    })
+    .select()
+    .maybeSingle();
+
+  if (error || !data) return stub;
+
+  return mapJob(data as CrawlJobDbRow);
 }
 
 export async function getOpsCrawlJob(id: string): Promise<OpsCrawlJob | null> {
-  await ensureOpsStore();
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(`SELECT * FROM "OpsCrawlJob" WHERE "id" = ? LIMIT 1;`, id);
-  return rows[0] ? mapJob(rows[0]) : null;
+  if (!isSupabaseConfigured()) return null;
+
+  const db = getDb({ admin: true });
+  const { data, error } = await db
+    .from('ops_crawl_jobs')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  return mapJob(data as CrawlJobDbRow);
 }
 
 export async function listOpsCrawlJobs(limit = 40): Promise<OpsCrawlJob[]> {
-  await ensureOpsStore();
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(`SELECT * FROM "OpsCrawlJob" ORDER BY datetime("createdAt") DESC LIMIT ?;`, Math.max(1, Math.min(limit, 250)));
-  return rows.map(mapJob);
+  if (!isSupabaseConfigured()) return [];
+
+  const db = getDb({ admin: true });
+  const { data, error } = await db
+    .from('ops_crawl_jobs')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(safeLimit(limit, 250));
+
+  if (error || !data) return [];
+
+  return (data as CrawlJobDbRow[]).map(mapJob);
 }
 
-export async function claimDueOpsCrawlJobs(workerId: string, limit = 1): Promise<OpsCrawlJob[]> {
-  await ensureOpsStore();
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(
-    `SELECT * FROM "OpsCrawlJob" WHERE "status" = 'queued' AND ("nextRunAt" IS NULL OR datetime("nextRunAt") <= CURRENT_TIMESTAMP) ORDER BY datetime("createdAt") ASC LIMIT ?;`,
-    Math.max(1, Math.min(limit, 50)),
-  );
+export async function claimDueOpsCrawlJobs(
+  workerId: string,
+  limit = 1,
+): Promise<OpsCrawlJob[]> {
+  if (!isSupabaseConfigured()) return [];
+
+  const db = getDb({ admin: true });
+  const now = new Date().toISOString();
+
+  // Fetch candidates
+  const { data: candidates, error } = await db
+    .from('ops_crawl_jobs')
+    .select('*')
+    .eq('status', 'queued')
+    .or(`next_run_at.is.null,next_run_at.lte.${now}`)
+    .order('created_at', { ascending: true })
+    .limit(safeLimit(limit, 50));
+
+  if (error || !candidates) return [];
 
   const claimed: OpsCrawlJob[] = [];
-  for (const row of rows) {
-    const rowId = str(row, 'id');
-    if (!rowId) {
-      continue;
+  for (const row of candidates as CrawlJobDbRow[]) {
+    const { data: updated } = await db
+      .from('ops_crawl_jobs')
+      .update({
+        status: 'running',
+        worker_id: workerId,
+        started_at: now,
+        attempt_count: (row.attempt_count || 0) + 1,
+        error: null,
+        updated_at: now,
+      })
+      .eq('id', row.id)
+      .eq('status', 'queued')
+      .select()
+      .maybeSingle();
+
+    if (updated) {
+      claimed.push(mapJob(updated as CrawlJobDbRow));
     }
-    await prisma.$executeRawUnsafe(
-      `UPDATE "OpsCrawlJob" SET "status" = 'running', "workerId" = ?, "startedAt" = CURRENT_TIMESTAMP, "attemptCount" = "attemptCount" + 1, "error" = NULL, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = ? AND "status" = 'queued';`,
-      workerId,
-      rowId,
-    );
-    const refreshed = await getOpsCrawlJob(rowId);
-    if (refreshed && refreshed.status === 'running') claimed.push(refreshed);
   }
+
   return claimed;
 }
 
 export async function completeOpsCrawlJob(id: string): Promise<void> {
-  await ensureOpsStore();
-  await prisma.$executeRawUnsafe(`UPDATE "OpsCrawlJob" SET "status" = 'completed', "finishedAt" = CURRENT_TIMESTAMP, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = ?;`, id);
+  if (!isSupabaseConfigured()) return;
+
+  const db = getDb({ admin: true });
+  const now = new Date().toISOString();
+  await db
+    .from('ops_crawl_jobs')
+    .update({ status: 'completed', finished_at: now, updated_at: now })
+    .eq('id', id);
 }
 
-export async function failOpsCrawlJob(id: string, error: string, scheduleRetry: boolean): Promise<void> {
-  await ensureOpsStore();
+export async function failOpsCrawlJob(
+  id: string,
+  error: string,
+  scheduleRetry: boolean,
+): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+
+  const db = getDb({ admin: true });
+  const now = new Date().toISOString();
+
   if (scheduleRetry) {
-    await prisma.$executeRawUnsafe(`UPDATE "OpsCrawlJob" SET "status" = 'queued', "error" = ?, "nextRunAt" = datetime('now', '+15 minutes'), "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = ?;`, error, id);
+    const retryAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    await db
+      .from('ops_crawl_jobs')
+      .update({ status: 'queued', error, next_run_at: retryAt, updated_at: now })
+      .eq('id', id);
     return;
   }
-  await prisma.$executeRawUnsafe(`UPDATE "OpsCrawlJob" SET "status" = 'failed', "error" = ?, "finishedAt" = CURRENT_TIMESTAMP, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = ?;`, error, id);
+
+  await db
+    .from('ops_crawl_jobs')
+    .update({ status: 'failed', error, finished_at: now, updated_at: now })
+    .eq('id', id);
+}
+
+// ── Crawl Snapshots ───────────────────────────────────────────────────────────
+
+type SnapshotDbRow = {
+  id: string;
+  job_id: string;
+  url: string;
+  source_type: string;
+  title: string;
+  status: string;
+  http_status: number | null;
+  content_hash: string | null;
+  changed: boolean;
+  requires_js_render: boolean;
+  quality_score: number;
+  quality_flags_json: string;
+  provenance_snippet: string;
+  extracted_text: string | null;
+  created_at: string;
+};
+
+function mapSnapshot(row: SnapshotDbRow): OpsCrawlSnapshot {
+  return {
+    id: row.id,
+    job_id: row.job_id,
+    url: row.url,
+    source_type: (row.source_type || 'other') as SourceType,
+    title: row.title,
+    status: (row.status || 'success') as OpsCrawlSnapshot['status'],
+    http_status: row.http_status ?? null,
+    content_hash: row.content_hash || null,
+    changed: Boolean(row.changed),
+    requires_js_render: Boolean(row.requires_js_render),
+    quality_score: Number(row.quality_score || 0),
+    quality_flags: parseJsonSafe<string[]>(row.quality_flags_json || '[]', []),
+    provenance_snippet: row.provenance_snippet || '',
+    extracted_text: row.extracted_text || null,
+    created_at: row.created_at || new Date().toISOString(),
+  };
 }
 
 export async function createOpsCrawlSnapshot(input: {
@@ -967,39 +1234,93 @@ export async function createOpsCrawlSnapshot(input: {
   provenance_snippet: string;
   extracted_text?: string | null;
 }): Promise<OpsCrawlSnapshot> {
-  await ensureOpsStore();
   const id = randomUUID();
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO "OpsCrawlSnapshot" ("id", "jobId", "url", "sourceType", "title", "status", "httpStatus", "contentHash", "changed", "requiresJsRender", "qualityScore", "qualityFlagsJson", "provenanceSnippet", "extractedText") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+  const now = new Date().toISOString();
+  const stub: OpsCrawlSnapshot = {
     id,
-    input.job_id,
-    input.url,
-    input.source_type,
-    input.title,
-    input.status,
-    input.http_status ?? null,
-    input.content_hash ?? null,
-    input.changed ? 1 : 0,
-    input.requires_js_render ? 1 : 0,
-    input.quality_score,
-    JSON.stringify(input.quality_flags),
-    input.provenance_snippet,
-    input.extracted_text ?? null,
-  );
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(`SELECT * FROM "OpsCrawlSnapshot" WHERE "id" = ? LIMIT 1;`, id);
-  if (!rows[0]) throw new Error('Failed to create crawl snapshot.');
-  return mapSnapshot(rows[0]);
+    job_id: input.job_id,
+    url: input.url,
+    source_type: input.source_type,
+    title: input.title,
+    status: input.status,
+    http_status: input.http_status ?? null,
+    content_hash: input.content_hash ?? null,
+    changed: input.changed,
+    requires_js_render: input.requires_js_render,
+    quality_score: input.quality_score,
+    quality_flags: input.quality_flags,
+    provenance_snippet: input.provenance_snippet,
+    extracted_text: input.extracted_text ?? null,
+    created_at: now,
+  };
+
+  if (!isSupabaseConfigured()) return stub;
+
+  const db = getDb({ admin: true });
+  const { data, error } = await db
+    .from('ops_crawl_snapshots')
+    .insert({
+      id,
+      job_id: input.job_id,
+      url: input.url,
+      source_type: input.source_type,
+      title: input.title,
+      status: input.status,
+      http_status: input.http_status ?? null,
+      content_hash: input.content_hash ?? null,
+      changed: input.changed,
+      requires_js_render: input.requires_js_render,
+      quality_score: input.quality_score,
+      quality_flags_json: JSON.stringify(input.quality_flags),
+      provenance_snippet: input.provenance_snippet,
+      extracted_text: input.extracted_text ?? null,
+      created_at: now,
+    })
+    .select()
+    .maybeSingle();
+
+  if (error || !data) return stub;
+
+  return mapSnapshot(data as SnapshotDbRow);
 }
 
-export async function listOpsCrawlSnapshotsByJob(jobId: string): Promise<OpsCrawlSnapshot[]> {
-  await ensureOpsStore();
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(`SELECT * FROM "OpsCrawlSnapshot" WHERE "jobId" = ? ORDER BY datetime("createdAt") DESC;`, jobId);
-  return rows.map(mapSnapshot);
+export async function listOpsCrawlSnapshotsByJob(
+  jobId: string,
+): Promise<OpsCrawlSnapshot[]> {
+  if (!isSupabaseConfigured()) return [];
+
+  const db = getDb({ admin: true });
+  const { data, error } = await db
+    .from('ops_crawl_snapshots')
+    .select('*')
+    .eq('job_id', jobId)
+    .order('created_at', { ascending: false });
+
+  if (error || !data) return [];
+
+  return (data as SnapshotDbRow[]).map(mapSnapshot);
 }
 
-export async function getLatestOpsSnapshotByUrl(url: string): Promise<OpsCrawlSnapshot | null> {
-  await ensureOpsStore();
-  const rows = await prisma.$queryRawUnsafe<SqlRow[]>(`SELECT * FROM "OpsCrawlSnapshot" WHERE "url" = ? ORDER BY datetime("createdAt") DESC LIMIT 1;`, url);
-  return rows[0] ? mapSnapshot(rows[0]) : null;
+export async function getLatestOpsSnapshotByUrl(
+  url: string,
+): Promise<OpsCrawlSnapshot | null> {
+  if (!isSupabaseConfigured()) return null;
+
+  const db = getDb({ admin: true });
+  const { data, error } = await db
+    .from('ops_crawl_snapshots')
+    .select('*')
+    .eq('url', url)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  return mapSnapshot(data as SnapshotDbRow);
 }
 
+// Keep ensureOpsStore as a no-op for backward compat (callers import it).
+export async function ensureOpsStore(): Promise<void> {
+  // No-op: Supabase tables are managed via migrations, not runtime DDL.
+}
