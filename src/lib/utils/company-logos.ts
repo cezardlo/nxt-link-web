@@ -123,7 +123,17 @@ export function domainFromUrl(url: string): string | null {
 }
 
 /**
- * Get Clearbit logo URL for a company.
+ * Resolve a domain to a logo URL using Google Favicon API (free, no key).
+ * Returns a 128px icon — works for virtually every domain on the internet.
+ */
+function logoUrl(domain: string): string {
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+}
+
+/**
+ * Get logo URL for a company.
+ *
+ * Uses Google's free Favicon API (no key, no rate limit, never goes down).
  *
  * Priority order (fully automatic):
  *   1. Website URL domain extraction — works for all vendors with a website
@@ -141,7 +151,7 @@ export function getCompanyLogoUrl(
   if (websiteUrl) {
     const domain = domainFromUrl(websiteUrl);
     if (domain) {
-      return `https://logo.clearbit.com/${domain}`;
+      return logoUrl(domain);
     }
   }
 
@@ -149,13 +159,13 @@ export function getCompanyLogoUrl(
 
   // 2. Exact match in manual mapping
   if (COMPANY_DOMAINS[lower]) {
-    return `https://logo.clearbit.com/${COMPANY_DOMAINS[lower]}`;
+    return logoUrl(COMPANY_DOMAINS[lower]);
   }
 
   // 3. Fuzzy match — company name contains known key or vice versa
   for (const [key, domain] of Object.entries(COMPANY_DOMAINS)) {
     if (lower.includes(key) || key.includes(lower)) {
-      return `https://logo.clearbit.com/${domain}`;
+      return logoUrl(domain);
     }
   }
 
@@ -165,7 +175,7 @@ export function getCompanyLogoUrl(
     .trim()
     .replace(/\s+/g, '');
   if (guess.length >= 3) {
-    return `https://logo.clearbit.com/${guess}.com`;
+    return logoUrl(`${guess}.com`);
   }
 
   return null;
