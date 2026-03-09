@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { PageTopBar } from '@/components/PageTopBar';
+import type { DiscoveredOpportunity } from '@/lib/engines/opportunity-engine';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -301,6 +302,23 @@ function getBarColor(score: number): string {
 export default function OpportunitiesPage() {
   const [selected, setSelected] = useState<string>('autonomous-border');
   const [sortBy, setSortBy] = useState<'score' | 'trend'>('score');
+  const [liveOpps, setLiveOpps] = useState<DiscoveredOpportunity[]>([]);
+  const [liveLoading, setLiveLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch('/api/opportunities');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data.ok) setLiveOpps(data.data.opportunities ?? []);
+      } catch { /* degrade */ }
+      finally { if (!cancelled) setLiveLoading(false); }
+    }
+    void load();
+    return () => { cancelled = true; };
+  }, []);
 
   const trendOrder: Record<string, number> = {
     accelerating: 0,
@@ -350,6 +368,61 @@ export default function OpportunitiesPage() {
           </p>
         </div>
       </div>
+
+      {/* AI-DISCOVERED OPPORTUNITIES */}
+      {(liveOpps.length > 0 || liveLoading) && (
+        <div className="max-w-6xl mx-auto px-6 py-6">
+          <div className="border border-[#00ff88]/20 rounded-sm p-5 bg-[#00ff88]/[0.02]">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse" style={{ boxShadow: '0 0 6px #00ff88cc' }} />
+                <span className="text-[9px] tracking-[0.2em] text-[#00ff88]/60 uppercase">AI-Discovered Opportunities</span>
+              </div>
+              <span className="text-[8px] text-white/20">{liveOpps.length} found</span>
+            </div>
+            {liveLoading ? (
+              <div className="py-4 text-center">
+                <span className="font-mono text-[9px] text-white/20 animate-pulse">Scanning signals...</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {liveOpps.slice(0, 9).map((opp) => {
+                  const typeColor =
+                    opp.type === 'underserved_market' ? '#00ff88' :
+                    opp.type === 'early_mover' ? '#00d4ff' :
+                    opp.type === 'funding_surge' ? '#ffb800' :
+                    opp.type === 'patent_gap' ? '#a855f7' :
+                    opp.type === 'convergence_play' ? '#f97316' :
+                    opp.type === 'policy_tailwind' ? '#00d4ff' :
+                    opp.type === 'supply_chain_gap' ? '#ff3b30' :
+                    opp.type === 'talent_arbitrage' ? '#ffd700' : '#ffffff';
+                  return (
+                    <div key={opp.id} className="border border-white/[0.06] rounded-sm p-3 bg-black/40 hover:border-white/[0.12] transition-colors">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-1 h-1 rounded-full" style={{ backgroundColor: typeColor }} />
+                          <span className="font-mono text-[7px] tracking-[0.15em] uppercase" style={{ color: typeColor }}>{opp.type.replace(/_/g, ' ')}</span>
+                        </div>
+                        <span className="font-mono text-[11px] font-bold" style={{ color: typeColor }}>{opp.score}</span>
+                      </div>
+                      <p className="font-mono text-[9px] text-white/45 mb-1.5 line-clamp-2">{opp.title}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[7px] text-white/20">{opp.timing.replace(/_/g, ' ')}</span>
+                        <span className="font-mono text-[7px]" style={{ color: opp.risk_level === 'high' ? '#ff3b30' : opp.risk_level === 'medium' ? '#f97316' : '#00ff88' }}>{opp.risk_level}</span>
+                        {opp.industries.length > 0 && (
+                          <Link href={`/industry/${opp.industries[0]}`} className="font-mono text-[7px] text-[#00d4ff]/40 hover:text-[#00d4ff] transition-colors">
+                            {opp.industries[0]}
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* SIGNAL STRENGTH RADAR — horizontal bar chart */}
       <div className="max-w-6xl mx-auto px-6 py-6">
