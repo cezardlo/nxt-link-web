@@ -13,7 +13,7 @@
 // All data sourced from: knowledge graph, intel signals, static catalogs.
 // No LLM calls — pure data assembly.
 
-import { getIndustryEcosystem, getEntityBySlug, searchEntities } from '@/db/queries/knowledge-graph';
+import { getIndustryEcosystem } from '@/db/queries/knowledge-graph';
 import type { EntityRow, ConnectedEntity } from '@/db/queries/knowledge-graph';
 import { getIntelSignals } from '@/db/queries/intel-signals';
 import type { IntelSignalRow } from '@/db/queries/intel-signals';
@@ -157,10 +157,9 @@ export async function buildIndustryProfile(slug: string): Promise<IndustryProfil
 
   // Fetch data in parallel
   const signalIndustry = SLUG_TO_SIGNAL_INDUSTRY[slug] ?? slug;
-  const [ecosystem, signals, graphEntity] = await Promise.all([
+  const [ecosystem, signals] = await Promise.all([
     getIndustryEcosystem(slug),
     getIntelSignals({ industry: signalIndustry, limit: 100 }),
-    getEntityBySlug(slug, 'industry'),
   ]);
 
   // ── Block 1: Snapshot ──

@@ -80,7 +80,7 @@ function scoreToStage(score: number): AdoptionStage {
 
 // ─── Momentum Detection ─────────────────────────────────────────────────────────
 
-function detectMomentum(signals: IntelSignalRow[]): 'accelerating' | 'steady' | 'decelerating' {
+export function detectMomentum(signals: IntelSignalRow[]): 'accelerating' | 'steady' | 'decelerating' {
   if (signals.length < 3) return 'steady';
 
   const now = Date.now();

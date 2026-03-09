@@ -19,6 +19,7 @@ import { CompanyTooltip } from '@/components/CompanyTooltip';
 
 import type { IndustryProfile, TimelineEvent, OpportunityEntry } from '@/lib/engines/industry-profile';
 import type { AdoptionProfile } from '@/lib/agents/scoring/adoption-curve';
+import type { TrajectoryForecast, RiskAlert, ConvergencePrediction } from '@/lib/engines/prediction-engine';
 
 const IndustryEcosystemGraph = dynamic(
   () => import('@/components/IndustryEcosystemGraph').then(m => ({ default: m.IndustryEcosystemGraph })),
@@ -131,6 +132,9 @@ export default function IndustryDeepDivePage() {
   const [industryInsights, setIndustryInsights] = useState<IndustryInsight[]>([]);
   const [profile, setProfile] = useState<IndustryProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [trajectory, setTrajectory] = useState<TrajectoryForecast | null>(null);
+  const [risks, setRisks] = useState<RiskAlert[]>([]);
+  const [convergences, setConvergences] = useState<ConvergencePrediction[]>([]);
 
   // Build static data (only for known industries)
   const allVendors = Object.values(EL_PASO_VENDORS) as VendorRecord[];
@@ -231,6 +235,39 @@ export default function IndustryDeepDivePage() {
       } catch { /* degrade */ }
     }
     void loadInsights();
+    return () => { cancelled = true; };
+  }, [slug]);
+
+  // ── Fetch predictions ──
+  useEffect(() => {
+    if (!slug) return;
+    let cancelled = false;
+    async function loadPredictions() {
+      try {
+        const res = await fetch('/api/predictions');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled || !data.ok) return;
+        const report = data.data;
+        // Find trajectory for this industry
+        const industryKey = SLUG_TO_SIGNAL_INDUSTRY[slug] ?? slug;
+        const t = report.trajectories?.find((tr: TrajectoryForecast) =>
+          tr.slug === slug || tr.industry === industryKey || tr.slug === industryKey
+        ) ?? null;
+        if (t) setTrajectory(t);
+        // Find risks for this industry
+        const r = (report.risks ?? []).filter((ri: RiskAlert) =>
+          ri.slug === slug || ri.industry === industryKey || ri.slug === industryKey
+        );
+        setRisks(r);
+        // Find convergences involving this industry
+        const c = (report.convergences ?? []).filter((cv: ConvergencePrediction) =>
+          cv.industries.some((ind: string) => ind === industryKey || ind === slug)
+        );
+        setConvergences(c);
+      } catch { /* degrade gracefully */ }
+    }
+    void loadPredictions();
     return () => { cancelled = true; };
   }, [slug]);
 
@@ -447,6 +484,135 @@ export default function IndustryDeepDivePage() {
                   <p className="font-mono text-[11px] text-white/50 leading-[1.9]">
                     {story.outlook}
                   </p>
+                </div>
+              </Section>
+            )}
+
+            {/* ── Prediction: Trajectory Forecast ── */}
+            {trajectory && (
+              <Section title="TRAJECTORY FORECAST" subtitle="Where this industry is heading" color="#a855f7">
+                <div className="space-y-4">
+                  {/* Direction + velocity header */}
+                  <div className="flex items-center gap-3">
+                    <div className="font-mono text-[10px] font-medium" style={{
+                      color: trajectory.direction === 'accelerating' ? '#00ff88'
+                           : trajectory.direction === 'growing' ? '#00d4ff'
+                           : trajectory.direction === 'declining' ? '#ff3b30'
+                           : trajectory.direction === 'volatile' ? '#f97316'
+                           : '#ffffff40',
+                    }}>
+                      {trajectory.direction === 'accelerating' ? '▲▲' : trajectory.direction === 'growing' ? '▲' : trajectory.direction === 'declining' ? '▼' : trajectory.direction === 'volatile' ? '◆' : '─'}
+                      {' '}{trajectory.direction.toUpperCase()}
+                    </div>
+                    <div className="font-mono text-[8px] text-white/25">
+                      velocity: {trajectory.velocity > 0 ? '+' : ''}{trajectory.velocity}/30d
+                    </div>
+                    <div className="font-mono text-[8px] text-white/15 ml-auto">
+                      confidence: {Math.round(trajectory.confidence * 100)}%
+                    </div>
+                  </div>
+
+                  {/* Score prediction bars */}
+                  <div className="grid grid-cols-3 gap-[1px] bg-white/[0.03]">
+                    {[
+                      { label: 'NOW', score: trajectory.current_score, color: '#00d4ff' },
+                      { label: '30D', score: trajectory.predicted_score_30d, color: '#a855f7' },
+                      { label: '90D', score: trajectory.predicted_score_90d, color: trajectory.predicted_score_90d > trajectory.current_score ? '#00ff88' : '#ff3b30' },
+                    ].map(({ label: lbl, score, color: c }) => (
+                      <div key={lbl} className="bg-black p-3">
+                        <div className="font-mono text-[7px] tracking-[0.25em] text-white/20 mb-2">{lbl}</div>
+                        <div className="w-full h-1 bg-white/[0.04] rounded-full overflow-hidden">
+                          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${score}%`, backgroundColor: c }} />
+                        </div>
+                        <div className="font-mono text-[11px] mt-1.5" style={{ color: c }}>{score}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Catalysts + Risks */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {trajectory.catalysts.length > 0 && (
+                      <div>
+                        <div className="font-mono text-[7px] tracking-[0.25em] text-[#00ff88]/40 mb-2">CATALYSTS</div>
+                        {trajectory.catalysts.map((c, i) => (
+                          <div key={i} className="flex items-start gap-2 mb-1.5">
+                            <span className="text-[#00ff88]/40 text-[8px] mt-0.5">+</span>
+                            <span className="font-mono text-[9px] text-white/35">{c}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {trajectory.risk_factors.length > 0 && (
+                      <div>
+                        <div className="font-mono text-[7px] tracking-[0.25em] text-[#ff3b30]/40 mb-2">RISK FACTORS</div>
+                        {trajectory.risk_factors.map((r, i) => (
+                          <div key={i} className="flex items-start gap-2 mb-1.5">
+                            <span className="text-[#ff3b30]/40 text-[8px] mt-0.5">!</span>
+                            <span className="font-mono text-[9px] text-white/35">{r}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Next stage estimate */}
+                  {trajectory.adoption_next_stage && trajectory.time_to_next_stage_days && (
+                    <div className="border border-white/[0.04] rounded-sm p-3 bg-white/[0.01]">
+                      <div className="font-mono text-[7px] tracking-[0.25em] text-white/15 mb-1">NEXT MILESTONE</div>
+                      <div className="font-mono text-[10px] text-white/50">
+                        Transition to <span style={{ color: '#a855f7' }}>{trajectory.adoption_next_stage}</span>
+                        {' '}— est. <span className="text-white/70">{trajectory.time_to_next_stage_days < 60
+                          ? `${trajectory.time_to_next_stage_days} days`
+                          : `${Math.round(trajectory.time_to_next_stage_days / 30)} months`
+                        }</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Section>
+            )}
+
+            {/* ── Prediction: Risks ── */}
+            {risks.length > 0 && (
+              <Section title="RISK ALERTS" subtitle="Detected threats to monitor" color="#ff3b30">
+                <div className="space-y-2">
+                  {risks.map((r, i) => {
+                    const sevColor = r.severity === 'critical' ? '#ff3b30' : r.severity === 'high' ? '#f97316' : r.severity === 'medium' ? '#ffb800' : '#6b7280';
+                    return (
+                      <div key={i} className="border border-white/[0.04] rounded-sm p-3 bg-white/[0.01]">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: sevColor }} />
+                          <span className="font-mono text-[7px] tracking-[0.2em] uppercase" style={{ color: sevColor }}>{r.severity} — {r.risk_type.replace(/_/g, ' ')}</span>
+                        </div>
+                        <p className="font-mono text-[9px] text-white/40 leading-relaxed">{r.description}</p>
+                        <p className="font-mono text-[8px] text-white/20 mt-1">{r.suggested_action}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Section>
+            )}
+
+            {/* ── Prediction: Convergences ── */}
+            {convergences.length > 0 && (
+              <Section title="CONVERGENCE DETECTED" subtitle="Industries moving together" color="#a855f7">
+                <div className="space-y-2">
+                  {convergences.map((c, i) => (
+                    <div key={i} className="border border-white/[0.04] rounded-sm p-3 bg-white/[0.01]">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="font-mono text-[10px] text-[#a855f7]/60">{c.industries.join(' × ')}</span>
+                        <span className="font-mono text-[7px] text-white/15 ml-auto">{c.time_horizon.replace(/_/g, ' ')}</span>
+                      </div>
+                      <p className="font-mono text-[9px] text-white/35 leading-relaxed">{c.prediction}</p>
+                      {c.shared_companies.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {c.shared_companies.map(co => (
+                            <span key={co} className="font-mono text-[7px] text-[#00d4ff]/30 border border-[#00d4ff]/10 px-1.5 py-0.5 rounded-sm">{co}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </Section>
             )}

@@ -14,6 +14,7 @@ import {
   runSignalIntake,
   runKnowledgeEngine,
   runReasoningEngine,
+  runPredictionEngine,
   runCreationEngine,
   runPublishingEngine,
   runQualityControl,
@@ -44,6 +45,7 @@ export async function runIntelligenceLoop(): Promise<PipelineResult> {
     signal_intake: { status: 'skipped', duration_ms: 0, tasks_completed: 0, events_emitted: 0, errors: [] },
     knowledge_engine: { status: 'skipped', duration_ms: 0, tasks_completed: 0, events_emitted: 0, errors: [] },
     reasoning_engine: { status: 'skipped', duration_ms: 0, tasks_completed: 0, events_emitted: 0, errors: [] },
+    prediction_engine: { status: 'skipped', duration_ms: 0, tasks_completed: 0, events_emitted: 0, errors: [] },
     creation_engine: { status: 'skipped', duration_ms: 0, tasks_completed: 0, events_emitted: 0, errors: [] },
     publishing_engine: { status: 'skipped', duration_ms: 0, tasks_completed: 0, events_emitted: 0, errors: [] },
     quality_control: { status: 'skipped', duration_ms: 0, tasks_completed: 0, events_emitted: 0, errors: [] },
@@ -81,6 +83,17 @@ export async function runIntelligenceLoop(): Promise<PipelineResult> {
   } catch (err) {
     const msg = `Layer 3 crashed: ${err instanceof Error ? err.message : 'unknown'}`;
     layers.reasoning_engine = { status: 'failed', duration_ms: 0, tasks_completed: 0, events_emitted: 0, errors: [msg] };
+    allErrors.push(msg);
+  }
+
+  // ── Layer 3.5: Prediction Engine (Predict) ──
+  console.log('[agent-os] Layer 3.5: Prediction Engine...');
+  try {
+    layers.prediction_engine = await runPredictionEngine();
+    console.log(`[agent-os] Layer 3.5 done: ${layers.prediction_engine.events_emitted} events, ${layers.prediction_engine.duration_ms}ms`);
+  } catch (err) {
+    const msg = `Layer 3.5 crashed: ${err instanceof Error ? err.message : 'unknown'}`;
+    layers.prediction_engine = { status: 'failed', duration_ms: 0, tasks_completed: 0, events_emitted: 0, errors: [msg] };
     allErrors.push(msg);
   }
 

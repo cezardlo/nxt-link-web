@@ -27,6 +27,11 @@ export type EventType =
   | 'industry_emerging'
   | 'market_shift'
   | 'convergence_detected'
+  // Layer 3.5 — Prediction Engine
+  | 'forecast_generated'
+  | 'convergence_predicted'
+  | 'timing_estimated'
+  | 'risk_detected'
   // Layer 4 — Creation Engine
   | 'page_generated'
   | 'profile_updated'
@@ -63,6 +68,7 @@ export type TaskType =
   | 'merge_entities'
   | 'score_industry'
   | 'detect_patterns'
+  | 'run_predictions'
   | 'run_framework'
   | 'build_industry_page'
   | 'update_profile'
@@ -90,6 +96,7 @@ export type LayerName =
   | 'signal_intake'
   | 'knowledge_engine'
   | 'reasoning_engine'
+  | 'prediction_engine'
   | 'creation_engine'
   | 'publishing_engine'
   | 'quality_control';

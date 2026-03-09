@@ -1,5 +1,5 @@
 // src/lib/agents/os/layers.ts
-// The 6 layers of the Agent OS pipeline.
+// The 7 layers of the Agent OS pipeline.
 // Each layer runs its agents, emits events, and feeds the next layer.
 
 import type { LayerRunResult } from './types';
@@ -12,6 +12,7 @@ import { runGraphBuilderAgent } from '@/lib/agents/agents/graph-builder-agent';
 import { getIntelSignals } from '@/db/queries/intel-signals';
 import { getEntitiesByType } from '@/db/queries/knowledge-graph';
 import { scoreEmergingIndustry, shouldCreateCandidate } from '@/lib/agents/scoring/emerging-industry-score';
+import { runPredictions } from '@/lib/engines/prediction-engine';
 import { buildIndustryProfile } from '@/lib/engines/industry-profile';
 import { INDUSTRIES } from '@/lib/data/technology-catalog';
 
@@ -222,6 +223,101 @@ export async function runReasoningEngine(): Promise<LayerRunResult> {
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Reasoning engine failed';
+    errors.push(msg);
+  }
+
+  return {
+    status: errors.length > 0 ? 'partial' : 'success',
+    duration_ms: Date.now() - start,
+    tasks_completed: tasksCompleted,
+    events_emitted: eventsEmitted,
+    errors,
+  };
+}
+
+// ─── Layer 3.5: Prediction Engine ────────────────────────────────────────────────
+// Forecasts trajectories, detects convergence, estimates timing, flags risks.
+
+export async function runPredictionEngine(): Promise<LayerRunResult> {
+  const start = Date.now();
+  const errors: string[] = [];
+  let eventsEmitted = 0;
+  let tasksCompleted = 0;
+
+  try {
+    const report = await runPredictions();
+    tasksCompleted++;
+
+    // Store the full report in shared memory
+    sharedMemory.set('prediction_report', report);
+    sharedMemory.set('prediction_last_run', new Date().toISOString());
+
+    // Emit events for key findings
+    for (const t of report.trajectories.slice(0, 20)) {
+      await eventBus.emit(createEvent(
+        'forecast_generated',
+        'prediction_engine',
+        'trajectory-forecaster',
+        {
+          industry: t.industry,
+          direction: t.direction,
+          velocity: t.velocity,
+          current_score: t.current_score,
+          predicted_30d: t.predicted_score_30d,
+          predicted_90d: t.predicted_score_90d,
+        },
+      ));
+      eventsEmitted++;
+    }
+
+    for (const c of report.convergences) {
+      await eventBus.emit(createEvent(
+        'convergence_predicted',
+        'prediction_engine',
+        'convergence-detector',
+        {
+          industries: c.industries,
+          score: c.convergence_score,
+          time_horizon: c.time_horizon,
+          shared_companies: c.shared_companies.length,
+        },
+      ));
+      eventsEmitted++;
+    }
+
+    for (const t of report.timing) {
+      await eventBus.emit(createEvent(
+        'timing_estimated',
+        'prediction_engine',
+        'timing-estimator',
+        {
+          industry: t.industry,
+          next_milestone: t.next_milestone,
+          estimated_days: t.estimated_days,
+        },
+      ));
+      eventsEmitted++;
+    }
+
+    for (const r of report.risks) {
+      await eventBus.emit(createEvent(
+        'risk_detected',
+        'prediction_engine',
+        'risk-scanner',
+        {
+          industry: r.industry,
+          risk_type: r.risk_type,
+          severity: r.severity,
+          description: r.description,
+        },
+      ));
+      eventsEmitted++;
+    }
+
+    console.log(`[agent-os] Prediction: ${report.trajectories.length} forecasts, ${report.convergences.length} convergences, ${report.risks.length} risks`);
+
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Prediction engine failed';
     errors.push(msg);
   }
 
