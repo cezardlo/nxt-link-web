@@ -6,45 +6,41 @@ import { runProductDiscoveryAgent } from '@/lib/agents/agents/product-discovery-
 import { runConferenceIntelAgent } from '@/lib/agents/agents/conference-intel-agent';
 import { runEntityAgent } from '@/lib/agents/agents/entity-agent';
 import { runInsightAgent } from '@/lib/agents/agents/insight-agent';
-import { runGraphBuilderAgent } from '@/lib/agents/agents/graph-builder-agent';
+import { runIntelligenceLoop } from '@/lib/agents/os';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 export async function GET() {
-  // Phase 1: Run discovery agents in parallel
+  // Phase 1: Run legacy discovery agents in parallel
   const [, intel, products, confIntel, entityResult] = await Promise.all([
-    // Orchestrator: feeds, vendors, swarm pipeline
     orchestrator.run({ trigger: 'hourly' }),
 
-    // Intel discovery: patents, research, case studies, hiring, funding, M&A
     runIntelDiscoveryAgent().catch(err => {
       console.error('[cron] Intel discovery failed:', err);
       return null;
     }),
 
-    // Product discovery: extract machines/solutions from signals + vendors
     runProductDiscoveryAgent().catch(err => {
       console.error('[cron] Product discovery failed:', err);
       return null;
     }),
 
-    // Conference intelligence: companies, tech clusters, trends
     runConferenceIntelAgent().catch(err => {
       console.error('[cron] Conference intel failed:', err);
       return null;
     }),
 
-    // Entity extraction: populate knowledge graph from vendors + technologies
     runEntityAgent().catch(err => {
       console.error('[cron] Entity agent failed:', err);
       return null;
     }),
   ]);
 
-  // Phase 2: Build knowledge graph from signals → entities → relationships
-  const graphResult = await runGraphBuilderAgent().catch(err => {
-    console.error('[cron] Graph builder failed:', err);
+  // Phase 2: Run the Agent OS intelligence loop
+  // Observe → Structure → Analyze → Create → Publish → Audit
+  const pipeline = await runIntelligenceLoop().catch(err => {
+    console.error('[cron] Intelligence loop failed:', err);
     return null;
   });
 
@@ -57,12 +53,23 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     timestamp: new Date().toISOString(),
+    // Legacy agent results
     intel_signals: intel ? intel.signals.length : 0,
     products_discovered: products ? products.total_discovered : 0,
     conference_signals: confIntel ? confIntel.signals_detected : 0,
-    graph_entities: graphResult ? graphResult.entities_created : (entityResult ? entityResult.entities_created : 0),
-    graph_relationships: graphResult ? graphResult.relationships_created : (entityResult ? entityResult.relationships_created : 0),
-    graph_signals_processed: graphResult ? graphResult.signals_processed : 0,
+    graph_entities: entityResult ? entityResult.entities_created : 0,
+    graph_relationships: entityResult ? entityResult.relationships_created : 0,
     insights_generated: insightResult ? insightResult.insights.length : 0,
+    // Agent OS pipeline results
+    pipeline: pipeline ? {
+      run_id: pipeline.run_id,
+      duration_ms: pipeline.duration_ms,
+      events_total: pipeline.events_total,
+      tasks_total: pipeline.tasks_total,
+      errors: pipeline.errors.length,
+      layers: Object.fromEntries(
+        Object.entries(pipeline.layers).map(([k, v]) => [k, v.status])
+      ),
+    } : null,
   });
 }

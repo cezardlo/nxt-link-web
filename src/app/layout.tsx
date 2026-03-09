@@ -43,6 +43,11 @@ export const metadata: Metadata = {
     description: 'Live vendor map, IKER scores, CBP border wait times, and federal contract signals for El Paso, TX.',
   },
   robots: { index: true, follow: true },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'NXT//LINK',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

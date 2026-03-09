@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -13,9 +13,12 @@ import { ProductCatalog } from '@/components/ProductCatalog';
 import { CompanyCard } from '@/components/CompanyCard';
 import DiscoveryFeed from '@/components/DiscoveryFeed';
 import type { IndustryProduct } from '@/lib/intelligence/industry-scan';
-import { timeAgo } from '@/lib/utils/format';
+import { timeAgo, fmtDate } from '@/lib/utils/format';
 import { SignalBadge } from '@/components/SignalBadge';
 import { CompanyTooltip } from '@/components/CompanyTooltip';
+
+import type { IndustryProfile, TimelineEvent, OpportunityEntry } from '@/lib/engines/industry-profile';
+import type { AdoptionProfile } from '@/lib/agents/scoring/adoption-curve';
 
 const IndustryEcosystemGraph = dynamic(
   () => import('@/components/IndustryEcosystemGraph').then(m => ({ default: m.IndustryEcosystemGraph })),
@@ -89,6 +92,22 @@ type ScanResult = {
   sources_scraped?: number;
 };
 
+// ─── Signal type colors ──────────────────────────────────────────────────────
+
+const SIGNAL_TYPE_COLOR: Record<string, string> = {
+  patent_filing: '#ffb800', research_paper: '#00d4ff', funding_round: '#00ff88',
+  merger_acquisition: '#f97316', contract_award: '#ffd700', product_launch: '#00d4ff',
+  hiring_signal: '#a855f7', regulatory_action: '#ff3b30', facility_expansion: '#00ff88',
+  case_study: '#ffb800',
+};
+
+const SIGNAL_TYPE_LABEL: Record<string, string> = {
+  patent_filing: 'PATENT', research_paper: 'RESEARCH', funding_round: 'FUNDING',
+  merger_acquisition: 'M&A', contract_award: 'CONTRACT', product_launch: 'PRODUCT',
+  hiring_signal: 'HIRING', regulatory_action: 'REGULATORY', facility_expansion: 'EXPANSION',
+  case_study: 'CASE STUDY',
+};
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function IndustryDeepDivePage() {
@@ -98,11 +117,11 @@ export default function IndustryDeepDivePage() {
   const industry = INDUSTRIES.find((i) => i.slug === slug);
   const story = industry ? INDUSTRY_STORIES[industry.slug] : undefined;
 
-  // For custom industries: derive label from slug
   const isCustom = !industry;
   const label = industry?.label ?? slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   const color = industry?.color ?? '#00d4ff';
 
+  // ── State ──
   const [products, setProducts] = useState<IndustryProduct[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
   const [scanData, setScanData] = useState<ScanResult | null>(null);
@@ -110,8 +129,10 @@ export default function IndustryDeepDivePage() {
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
   const [industryInsights, setIndustryInsights] = useState<IndustryInsight[]>([]);
+  const [profile, setProfile] = useState<IndustryProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
-  // Build data (only for known industries)
+  // Build static data (only for known industries)
   const allVendors = Object.values(EL_PASO_VENDORS) as VendorRecord[];
   const vendorCats = industry ? CATEGORY_TO_VENDOR_CATS[industry.category] ?? [] : [];
   const localVendors = allVendors.filter((v) => vendorCats.includes(v.category));
@@ -128,7 +149,6 @@ export default function IndustryDeepDivePage() {
       }))
     : [];
 
-  // Vendor lookup for tooltip
   const findVendor = (companyName: string) => {
     const lower = companyName.toLowerCase();
     return Object.values(EL_PASO_VENDORS).find(v =>
@@ -136,12 +156,28 @@ export default function IndustryDeepDivePage() {
     );
   };
 
-  // Tier vendors
   const establishedVendors = localVendors.filter(v => v.ikerScore >= 70).sort((a, b) => b.ikerScore - a.ikerScore);
   const emergingVendors = localVendors.filter(v => v.ikerScore >= 45 && v.ikerScore < 70).sort((a, b) => b.ikerScore - a.ikerScore);
   const specializedVendors = localVendors.filter(v => v.ikerScore < 45).sort((a, b) => b.ikerScore - a.ikerScore);
 
-  // Fetch products + scan data (works for both known and custom industries)
+  // ── Fetch profile (8-block data) ──
+  useEffect(() => {
+    if (!slug) return;
+    let cancelled = false;
+    async function loadProfile() {
+      try {
+        const res = await fetch(`/api/industry/${slug}/profile`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data.ok) setProfile(data.data);
+      } catch { /* degrade */ }
+      finally { if (!cancelled) setProfileLoading(false); }
+    }
+    void loadProfile();
+    return () => { cancelled = true; };
+  }, [slug]);
+
+  // ── Fetch products + scan data ──
   useEffect(() => {
     if (!slug) return;
     let cancelled = false;
@@ -162,7 +198,7 @@ export default function IndustryDeepDivePage() {
     return () => { cancelled = true; };
   }, [slug]);
 
-  // Fetch intel signals for this industry
+  // ── Fetch intel signals ──
   useEffect(() => {
     if (!slug) return;
     let cancelled = false;
@@ -180,28 +216,25 @@ export default function IndustryDeepDivePage() {
     return () => { cancelled = true; };
   }, [slug]);
 
-  // Fetch industry-relevant insights
+  // ── Fetch industry insights ──
   useEffect(() => {
     if (!slug) return;
     let cancelled = false;
     async function loadInsights() {
       try {
-        // Map slug to intel industry key
         const industryKey = SLUG_TO_SIGNAL_INDUSTRY[slug];
         if (!industryKey) return;
         const res = await fetch(`/api/insights?industry=${industryKey}&limit=4`);
         if (!res.ok) return;
         const data = await res.json();
-        if (!cancelled && data.ok) {
-          setIndustryInsights(data.insights ?? []);
-        }
+        if (!cancelled && data.ok) setIndustryInsights(data.insights ?? []);
       } catch { /* degrade */ }
     }
     void loadInsights();
     return () => { cancelled = true; };
   }, [slug]);
 
-  // Fetch discovery feed
+  // ── Fetch discovery feed ──
   useEffect(() => {
     let cancelled = false;
     async function loadFeed() {
@@ -247,13 +280,10 @@ export default function IndustryDeepDivePage() {
     }, 0) / (technologies.length * 9) * 100
   ));
 
-  // Signal type colors (labels handled by SignalBadge component)
-  const signalTypeColor: Record<string, string> = {
-    patent_filing: '#ffb800', research_paper: '#00d4ff', funding_round: '#00ff88',
-    merger_acquisition: '#f97316', contract_award: '#ffd700', product_launch: '#00d4ff',
-    hiring_signal: '#a855f7', regulatory_action: '#ff3b30', facility_expansion: '#00ff88',
-    case_study: '#ffb800',
-  };
+  // Use profile adoption data when available
+  const adoption = profile?.blocks.adoption ?? null;
+  const timeline = profile?.blocks.timeline ?? [];
+  const opportunities = profile?.blocks.opportunities ?? [];
 
   return (
     <div className="bg-black min-h-screen">
@@ -282,6 +312,31 @@ export default function IndustryDeepDivePage() {
         <div className="pb-10 border-b border-white/[0.06]">
           <div className="flex items-start justify-between gap-8">
             <div className="min-w-0 flex-1">
+              {/* Snapshot badge row */}
+              {adoption && (
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="font-mono text-[7px] tracking-[0.2em] px-2 py-0.5 rounded-sm border"
+                    style={{ borderColor: `${color}30`, color: `${color}aa` }}>
+                    {adoption.stage_label.toUpperCase()}
+                  </span>
+                  <span className="font-mono text-[7px] tracking-[0.2em] px-2 py-0.5 rounded-sm border"
+                    style={{
+                      borderColor: adoption.momentum === 'accelerating' ? '#00ff8830' : adoption.momentum === 'decelerating' ? '#ff3b3030' : '#ffffff15',
+                      color: adoption.momentum === 'accelerating' ? '#00ff88aa' : adoption.momentum === 'decelerating' ? '#ff3b30aa' : '#ffffff40',
+                    }}>
+                    {adoption.momentum === 'accelerating' ? '↑' : adoption.momentum === 'decelerating' ? '↓' : '→'} {adoption.momentum.toUpperCase()}
+                  </span>
+                  {profile && (
+                    <span className="font-mono text-[7px] tracking-[0.2em] px-2 py-0.5 rounded-sm border"
+                      style={{
+                        borderColor: profile.blocks.snapshot.competition === 'high' ? '#ff3b3030' : profile.blocks.snapshot.competition === 'medium' ? '#ffb80030' : '#00ff8830',
+                        color: profile.blocks.snapshot.competition === 'high' ? '#ff3b30aa' : profile.blocks.snapshot.competition === 'medium' ? '#ffb800aa' : '#00ff88aa',
+                      }}>
+                      {profile.blocks.snapshot.competition.toUpperCase()} COMPETITION
+                    </span>
+                  )}
+                </div>
+              )}
               <div className="font-mono text-[8px] tracking-[0.4em] text-white/25 uppercase mb-4">
                 {story?.headline ?? label.toUpperCase()}
               </div>
@@ -302,7 +357,7 @@ export default function IndustryDeepDivePage() {
                 </div>
               )}
             </div>
-            {/* Sector score — pill shape, no hard border box */}
+            {/* Sector score */}
             <div className="flex flex-col items-center gap-2 shrink-0 pt-2">
               <div
                 className="rounded-full px-6 py-4 text-center"
@@ -378,7 +433,14 @@ export default function IndustryDeepDivePage() {
         {/* ═══════════════════════════════════════════════════════════════════════ */}
         {level === 'understand' && (
           <>
-            {/* Where it's heading — story headline/summary */}
+            {/* Adoption Curve Visualization */}
+            {adoption && (
+              <Section title="ADOPTION CURVE" subtitle={adoption.description} color="#a855f7">
+                <AdoptionCurveViz adoption={adoption} accentColor={color} />
+              </Section>
+            )}
+
+            {/* Where it's heading */}
             {story?.outlook && (
               <Section title="WHERE IT'S HEADING" color="#00ff88">
                 <div className="border-l-2 pl-5 py-1" style={{ borderColor: `${color}40` }}>
@@ -399,24 +461,12 @@ export default function IndustryDeepDivePage() {
                       className="group border border-white/[0.04] rounded-sm p-4 hover:border-white/[0.08] hover:bg-white/[0.01] transition-all duration-200"
                     >
                       <div className="flex items-center gap-2 mb-2">
-                        <div
-                          className="w-4 h-[2px] rounded-full"
-                          style={{ backgroundColor: ins.color, opacity: 0.6 }}
-                        />
-                        <span
-                          className="font-mono text-[6px] tracking-[0.2em] uppercase"
-                          style={{ color: `${ins.color}80` }}
-                        >
-                          {ins.type}
-                        </span>
+                        <div className="w-4 h-[2px] rounded-full" style={{ backgroundColor: ins.color, opacity: 0.6 }} />
+                        <span className="font-mono text-[6px] tracking-[0.2em] uppercase" style={{ color: `${ins.color}80` }}>{ins.type}</span>
                         <span className="font-mono text-[6px] text-white/15 ml-auto">{ins.confidence}%</span>
                       </div>
-                      <h4 className="font-mono text-[10px] text-white/55 font-medium mb-1.5 group-hover:text-white/70 transition-colors">
-                        {ins.title}
-                      </h4>
-                      <p className="font-mono text-[8px] text-white/25 leading-[1.6] line-clamp-2">
-                        {ins.description}
-                      </p>
+                      <h4 className="font-mono text-[10px] text-white/55 font-medium mb-1.5 group-hover:text-white/70 transition-colors">{ins.title}</h4>
+                      <p className="font-mono text-[8px] text-white/25 leading-[1.6] line-clamp-2">{ins.description}</p>
                       {ins.companies.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {ins.companies.slice(0, 3).map(c => (
@@ -430,7 +480,7 @@ export default function IndustryDeepDivePage() {
               </Section>
             )}
 
-            {/* What's happening now — bullets + recent headlines */}
+            {/* What's happening now */}
             <Section title="WHAT'S HAPPENING NOW" color={color}>
               <div className="space-y-2.5">
                 {story?.bullets.map((b, i) => (
@@ -448,9 +498,7 @@ export default function IndustryDeepDivePage() {
                       <div key={i} className="flex items-start gap-3">
                         <span className="font-mono text-[8px] text-white/15 shrink-0 mt-0.5">{item.timeAgo}</span>
                         {item.url ? (
-                          <a href={item.url} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-white/40 hover:text-white/60 transition-colors leading-snug truncate">
-                            {item.title}
-                          </a>
+                          <a href={item.url} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-white/40 hover:text-white/60 transition-colors leading-snug truncate">{item.title}</a>
                         ) : (
                           <span className="font-mono text-[10px] text-white/40 leading-snug truncate">{item.title}</span>
                         )}
@@ -462,7 +510,7 @@ export default function IndustryDeepDivePage() {
               )}
             </Section>
 
-            {/* Key Technologies — 3-column grid */}
+            {/* Key Technologies */}
             {technologies.length > 0 && (
               <Section title="KEY TECHNOLOGIES" subtitle={`${technologies.length} tracked across maturity stages`} color={color}>
                 <div className="grid grid-cols-3 gap-[1px] bg-white/[0.03]">
@@ -483,9 +531,7 @@ export default function IndustryDeepDivePage() {
                               <div className="font-mono text-[8px] text-white/20 leading-snug mt-0.5">{t.description.slice(0, 80)}</div>
                             </Link>
                           ))}
-                          {techs.length === 0 && (
-                            <span className="font-mono text-[8px] text-white/10">None tracked</span>
-                          )}
+                          {techs.length === 0 && <span className="font-mono text-[8px] text-white/10">None tracked</span>}
                         </div>
                       </div>
                     );
@@ -494,31 +540,30 @@ export default function IndustryDeepDivePage() {
               </Section>
             )}
 
-            {/* Major Players — top 4 only */}
+            {/* Major Players */}
             {localVendors.length > 0 && (
               <Section title="MAJOR PLAYERS" subtitle={`Top companies in ${label.toLowerCase()}`} color="#ffb800">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {localVendors.sort((a, b) => b.ikerScore - a.ikerScore).slice(0, 4).map((v) => (
-                    <CompanyCard
-                      key={v.id}
-                      id={v.id}
-                      name={v.name}
-                      website={v.website}
-                      category={v.category}
-                      tags={v.tags}
-                      ikerScore={v.ikerScore}
-                      accentColor="#ffb800"
-                    />
+                    <CompanyCard key={v.id} id={v.id} name={v.name} website={v.website} category={v.category} tags={v.tags} ikerScore={v.ikerScore} accentColor="#ffb800" />
                   ))}
                 </div>
                 {localVendors.length > 4 && (
-                  <button
-                    onClick={() => setLevel('explore')}
-                    className="block w-full text-center font-mono text-[8px] tracking-[0.2em] py-3 mt-3 text-white/20 hover:text-white/40 transition-colors border border-white/[0.04] hover:border-white/[0.08]"
-                  >
+                  <button onClick={() => setLevel('explore')} className="block w-full text-center font-mono text-[8px] tracking-[0.2em] py-3 mt-3 text-white/20 hover:text-white/40 transition-colors border border-white/[0.04] hover:border-white/[0.08]">
                     EXPLORE ALL {localVendors.length} COMPANIES →
                   </button>
                 )}
+              </Section>
+            )}
+
+            {/* Opportunities */}
+            {opportunities.length > 0 && (
+              <Section title="OPPORTUNITIES" subtitle="Detected from signal patterns" color="#00ff88">
+                <div className="space-y-2">
+                  {opportunities.map((opp, i) => (
+                    <OpportunityCard key={i} opportunity={opp} index={i} />
+                  ))}
+                </div>
               </Section>
             )}
 
@@ -534,11 +579,7 @@ export default function IndustryDeepDivePage() {
                   ))}
                 </div>
                 <div className="mt-4 text-center">
-                  <Link
-                    href={`/industry/${slug}/solve`}
-                    className="inline-block font-mono text-[8px] tracking-[0.2em] border rounded-sm px-4 py-2 transition-colors"
-                    style={{ borderColor: `${color}30`, color: `${color}90` }}
-                  >
+                  <Link href={`/industry/${slug}/solve`} className="inline-block font-mono text-[8px] tracking-[0.2em] border rounded-sm px-4 py-2 transition-colors" style={{ borderColor: `${color}30`, color: `${color}90` }}>
                     SOLVE A PROBLEM →
                   </Link>
                 </div>
@@ -563,7 +604,14 @@ export default function IndustryDeepDivePage() {
               />
             </Section>
 
-            {/* All vendors — full tiered view */}
+            {/* Industry Timeline */}
+            {timeline.length > 0 && (
+              <Section title="INDUSTRY TIMELINE" subtitle="What happened in this industry" color="#ffb800">
+                <IndustryTimelineViz events={timeline} />
+              </Section>
+            )}
+
+            {/* All vendors */}
             {localVendors.length > 0 && (
               <Section title="ALL VENDORS" subtitle={`${localVendors.length} companies active in ${label.toLowerCase()}`} color="#ffb800">
                 {([
@@ -579,23 +627,11 @@ export default function IndustryDeepDivePage() {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {tier.vendors.slice(0, 8).map((v) => (
-                        <CompanyCard
-                          key={v.id}
-                          id={v.id}
-                          name={v.name}
-                          website={v.website}
-                          category={v.category}
-                          tags={v.tags}
-                          ikerScore={v.ikerScore}
-                          accentColor={tier.tierColor}
-                        />
+                        <CompanyCard key={v.id} id={v.id} name={v.name} website={v.website} category={v.category} tags={v.tags} ikerScore={v.ikerScore} accentColor={tier.tierColor} />
                       ))}
                     </div>
                     {tier.vendors.length > 8 && (
-                      <Link
-                        href={`/vendors?industry=${slug}`}
-                        className="block text-center font-mono text-[8px] tracking-wider py-2 mt-2 text-white/15 hover:text-white/30 transition-colors"
-                      >
+                      <Link href={`/vendors?industry=${slug}`} className="block text-center font-mono text-[8px] tracking-wider py-2 mt-2 text-white/15 hover:text-white/30 transition-colors">
                         VIEW ALL {tier.vendors.length} →
                       </Link>
                     )}
@@ -605,11 +641,7 @@ export default function IndustryDeepDivePage() {
             )}
 
             {/* Products & Equipment */}
-            <Section
-              title="PRODUCTS & EQUIPMENT"
-              subtitle={productsLoading ? 'Scanning sources...' : `${products.length} products discovered`}
-              color="#00d4ff"
-            >
+            <Section title="PRODUCTS & EQUIPMENT" subtitle={productsLoading ? 'Scanning sources...' : `${products.length} products discovered`} color="#00d4ff">
               <ProductCatalog products={products} accentColor={color} loading={productsLoading} />
             </Section>
 
@@ -643,19 +675,10 @@ export default function IndustryDeepDivePage() {
                 <Section title="CONNECTED INDUSTRIES" subtitle="Cross-industry relationships" color="#a855f7">
                   <div className="grid grid-cols-2 gap-2">
                     {connections.map(c => (
-                      <Link
-                        key={c.industry.slug}
-                        href={`/industry/${c.industry.slug}`}
-                        className="group flex items-center gap-3 p-3 border border-white/[0.04] hover:border-white/[0.10] hover:bg-white/[0.02] transition-all"
-                      >
-                        <div
-                          className="w-2 h-2 rounded-full shrink-0"
-                          style={{ backgroundColor: c.industry.color, boxShadow: `0 0 6px ${c.industry.color}60` }}
-                        />
+                      <Link key={c.industry.slug} href={`/industry/${c.industry.slug}`} className="group flex items-center gap-3 p-3 border border-white/[0.04] hover:border-white/[0.10] hover:bg-white/[0.02] transition-all">
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c.industry.color, boxShadow: `0 0 6px ${c.industry.color}60` }} />
                         <div className="min-w-0 flex-1">
-                          <div className="font-mono text-[10px] text-white/55 group-hover:text-white/75 transition-colors uppercase truncate">
-                            {c.industry.label}
-                          </div>
+                          <div className="font-mono text-[10px] text-white/55 group-hover:text-white/75 transition-colors uppercase truncate">{c.industry.label}</div>
                           <div className="font-mono text-[8px] text-white/20 mt-0.5">
                             {c.sharedVendors > 0 && <span>{c.sharedVendors} shared vendors</span>}
                             {c.sharedVendors > 0 && c.sharedKeywords > 0 && <span> · </span>}
@@ -691,7 +714,7 @@ export default function IndustryDeepDivePage() {
               ) : (
                 <div className="space-y-[2px]">
                   {signals.slice(0, 15).map((sig) => {
-                    const sigColor = signalTypeColor[sig.signal_type] ?? '#ffffff';
+                    const sigColor = SIGNAL_TYPE_COLOR[sig.signal_type] ?? '#ffffff';
                     return (
                       <div
                         key={sig.id}
@@ -701,9 +724,7 @@ export default function IndustryDeepDivePage() {
                         <SignalBadge type={sig.signal_type} size="sm" />
                         <div className="min-w-0 flex-1">
                           {sig.url ? (
-                            <a href={sig.url} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-white/40 hover:text-white/65 transition-colors truncate block">
-                              {sig.title}
-                            </a>
+                            <a href={sig.url} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-white/40 hover:text-white/65 transition-colors truncate block">{sig.title}</a>
                           ) : (
                             <span className="font-mono text-[10px] text-white/40 truncate block">{sig.title}</span>
                           )}
@@ -725,6 +746,30 @@ export default function IndustryDeepDivePage() {
                 </div>
               )}
             </Section>
+
+            {/* Signal Breakdown (from adoption profile) */}
+            {adoption && Object.keys(adoption.signal_breakdown).length > 0 && (
+              <Section title="SIGNAL BREAKDOWN" subtitle="Distribution by type" color="#a855f7">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {Object.entries(adoption.signal_breakdown)
+                    .sort(([, a], [, b]) => b - a)
+                    .map(([type, count]) => {
+                      const sigColor = SIGNAL_TYPE_COLOR[type] ?? '#ffffff';
+                      const maxCount = Math.max(...Object.values(adoption.signal_breakdown));
+                      const pct = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                      return (
+                        <div key={type} className="relative p-3 border border-white/[0.04] overflow-hidden">
+                          <div className="absolute inset-0 opacity-[0.04]" style={{ background: `linear-gradient(90deg, ${sigColor} ${pct}%, transparent ${pct}%)` }} />
+                          <div className="relative flex items-center justify-between">
+                            <span className="font-mono text-[8px] tracking-[0.15em] text-white/40 uppercase">{SIGNAL_TYPE_LABEL[type] ?? type}</span>
+                            <span className="font-mono text-[11px] font-bold" style={{ color: sigColor }}>{count}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </Section>
+            )}
 
             {/* Latest Intelligence */}
             <Section title="LATEST INTELLIGENCE" subtitle="Live news and breakthroughs" color="#00ff88">
@@ -762,21 +807,195 @@ export default function IndustryDeepDivePage() {
         <div className="flex flex-col items-center gap-5 py-10 border-t border-white/[0.05] mt-8">
           <span className="font-mono text-[8px] tracking-[0.4em] text-white/10 uppercase">NXT//LINK</span>
           <div className="flex items-center gap-6">
-            <Link
-              href={`/industry/${slug}/solve`}
-              className="font-mono text-[8px] tracking-[0.2em] text-white/20 hover:text-white/45 transition-colors duration-200"
-            >
+            <Link href={`/industry/${slug}/solve`} className="font-mono text-[8px] tracking-[0.2em] text-white/20 hover:text-white/45 transition-colors duration-200">
               SOLVE A PROBLEM →
             </Link>
             <span className="text-white/8 select-none">·</span>
-            <Link
-              href="/vendors"
-              className="font-mono text-[8px] tracking-[0.2em] text-white/20 hover:text-white/45 transition-colors duration-200"
-            >
+            <Link href="/vendors" className="font-mono text-[8px] tracking-[0.2em] text-white/20 hover:text-white/45 transition-colors duration-200">
               BROWSE VENDORS →
             </Link>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Adoption Curve Visualization ───────────────────────────────────────────
+
+const STAGES: Array<{ key: string; label: string; range: [number, number] }> = [
+  { key: 'innovators', label: 'Innovators', range: [0, 20] },
+  { key: 'early_adopters', label: 'Early Adopters', range: [20, 40] },
+  { key: 'early_majority', label: 'Early Majority', range: [40, 60] },
+  { key: 'late_majority', label: 'Late Majority', range: [60, 80] },
+  { key: 'laggards', label: 'Laggards', range: [80, 100] },
+];
+
+function AdoptionCurveViz({ adoption, accentColor }: { adoption: AdoptionProfile; accentColor: string }) {
+  return (
+    <div className="space-y-4">
+      {/* S-curve bar */}
+      <div className="relative">
+        <div className="flex gap-[1px]">
+          {STAGES.map((s) => {
+            const isActive = adoption.stage === s.key;
+            const isPast = STAGES.findIndex(x => x.key === adoption.stage) > STAGES.findIndex(x => x.key === s.key);
+            return (
+              <div
+                key={s.key}
+                className="flex-1 relative group cursor-default"
+              >
+                {/* Bar segment */}
+                <div
+                  className="h-8 transition-all duration-300"
+                  style={{
+                    backgroundColor: isActive ? `${accentColor}30` : isPast ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)',
+                    borderBottom: isActive ? `2px solid ${accentColor}` : '2px solid transparent',
+                  }}
+                >
+                  {isActive && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: accentColor, boxShadow: `0 0 8px ${accentColor}cc` }} />
+                    </div>
+                  )}
+                </div>
+                {/* Label */}
+                <div className="text-center mt-2">
+                  <span className={`font-mono text-[7px] tracking-[0.15em] uppercase ${isActive ? 'text-white/60' : 'text-white/15'}`}>
+                    {s.label}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Stats row */}
+      <div className="flex items-center gap-6 pt-2">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[7px] tracking-[0.15em] text-white/20">SCORE</span>
+          <span className="font-mono text-[11px] font-bold" style={{ color: accentColor }}>{adoption.score}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[7px] tracking-[0.15em] text-white/20">CONFIDENCE</span>
+          <span className="font-mono text-[11px] text-white/50">{Math.round(adoption.confidence * 100)}%</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[7px] tracking-[0.15em] text-white/20">MOMENTUM</span>
+          <span className="font-mono text-[11px]" style={{
+            color: adoption.momentum === 'accelerating' ? '#00ff88' : adoption.momentum === 'decelerating' ? '#ff3b30' : '#ffffff60',
+          }}>
+            {adoption.momentum === 'accelerating' ? '↑ Accelerating' : adoption.momentum === 'decelerating' ? '↓ Decelerating' : '→ Steady'}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[7px] tracking-[0.15em] text-white/20">COMPANIES</span>
+          <span className="font-mono text-[11px] text-white/50">{adoption.company_count}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Industry Timeline Visualization ────────────────────────────────────────
+
+function IndustryTimelineViz({ events }: { events: TimelineEvent[] }) {
+  // Group events by month
+  const grouped = useMemo(() => {
+    const groups = new Map<string, TimelineEvent[]>();
+    for (const e of events) {
+      const d = new Date(e.date);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(e);
+    }
+    // Sort keys descending
+    const sorted = Array.from(groups.entries() as Iterable<[string, TimelineEvent[]]>)
+      .sort(([a], [b]) => b.localeCompare(a));
+    return sorted;
+  }, [events]);
+
+  if (events.length === 0) {
+    return (
+      <div className="py-6 text-center">
+        <span className="font-mono text-[9px] text-white/15">No timeline events yet. Signals will appear as they are collected.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      {/* Vertical timeline line */}
+      <div className="absolute left-[52px] top-0 bottom-0 w-[1px] bg-white/[0.06]" />
+
+      <div className="space-y-6">
+        {grouped.map(([monthKey, monthEvents]) => {
+          const d = new Date(monthEvents[0].date);
+          const monthLabel = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+          return (
+            <div key={monthKey}>
+              {/* Month header */}
+              <div className="flex items-center gap-3 mb-3">
+                <span className="font-mono text-[8px] tracking-[0.2em] text-white/30 w-[44px] text-right shrink-0">{monthLabel.toUpperCase()}</span>
+                <div className="w-2 h-2 rounded-full bg-white/10 relative z-10 shrink-0" />
+              </div>
+
+              {/* Events */}
+              <div className="space-y-[2px]">
+                {monthEvents.map((event, i) => {
+                  const sigColor = SIGNAL_TYPE_COLOR[event.type] ?? '#ffffff';
+                  return (
+                    <div key={`${monthKey}-${i}`} className="flex items-start gap-3 pl-[62px] py-1.5 hover:bg-white/[0.015] transition-colors group">
+                      <span className="font-mono text-[8px] text-white/15 shrink-0 w-[32px] mt-0.5">{fmtDate(event.date)}</span>
+                      <div className="w-1 h-1 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: sigColor, boxShadow: `0 0 4px ${sigColor}80` }} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-[6px] tracking-[0.15em] px-1.5 py-0.5 rounded-sm" style={{ backgroundColor: `${sigColor}15`, color: `${sigColor}90` }}>
+                            {SIGNAL_TYPE_LABEL[event.type] ?? event.type.toUpperCase()}
+                          </span>
+                          {event.company && (
+                            <span className="font-mono text-[8px] text-white/20">{event.company}</span>
+                          )}
+                        </div>
+                        <div className="mt-1">
+                          {event.url ? (
+                            <a href={event.url} target="_blank" rel="noopener noreferrer" className="font-mono text-[9px] text-white/40 hover:text-white/60 transition-colors leading-snug">
+                              {event.title}
+                            </a>
+                          ) : (
+                            <span className="font-mono text-[9px] text-white/40 leading-snug">{event.title}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Opportunity Card ───────────────────────────────────────────────────────
+
+function OpportunityCard({ opportunity, index }: { opportunity: OpportunityEntry; index: number }) {
+  const strengthColor = opportunity.strength === 'strong' ? '#00ff88' : opportunity.strength === 'moderate' ? '#ffb800' : '#00d4ff';
+  return (
+    <div className="flex items-start gap-4 p-4 border border-white/[0.04] hover:border-white/[0.08] hover:bg-white/[0.01] transition-all">
+      <div className="flex flex-col items-center gap-1 shrink-0">
+        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: strengthColor, boxShadow: `0 0 6px ${strengthColor}80` }} />
+        <span className="font-mono text-[6px] tracking-[0.15em] uppercase" style={{ color: `${strengthColor}80` }}>
+          {opportunity.strength}
+        </span>
+      </div>
+      <div className="min-w-0 flex-1">
+        <h4 className="font-mono text-[10px] text-white/55 font-medium mb-1">{opportunity.title}</h4>
+        <p className="font-mono text-[8px] text-white/25 leading-[1.6]">{opportunity.reason}</p>
       </div>
     </div>
   );
@@ -824,9 +1043,8 @@ function AnimatedNumber({ value, prefix = '' }: { value: string; prefix?: string
     const animate = (ts: number) => {
       if (!start) start = ts;
       const progress = Math.min((ts - start) / 700, 1);
-      const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+      const eased = 1 - Math.pow(1 - progress, 3);
       const current = Math.round(numericPart * eased);
-      // Preserve original format (e.g. "$42M", "1,772")
       setDisplay(value.replace(String(numericPart), String(current)));
       if (progress < 1) raf = requestAnimationFrame(animate);
     };
