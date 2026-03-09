@@ -1,291 +1,281 @@
 'use client';
 
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { EL_PASO_VENDORS } from '@/lib/data/el-paso-vendors';
-import { TECHNOLOGY_CATALOG } from '@/lib/data/technology-catalog';
-import { CONFERENCES } from '@/lib/data/conferences';
-import { INNOVATION_CYCLES } from '@/lib/data/innovation-cycle';
+import { useRouter } from 'next/navigation';
+import { INDUSTRIES } from '@/lib/data/technology-catalog';
 
-const VENDOR_COUNT = Object.keys(EL_PASO_VENDORS).length;
-const TECH_COUNT = TECHNOLOGY_CATALOG.length;
-const CONF_COUNT = CONFERENCES.length;
-const CYCLE_COUNT = INNOVATION_CYCLES.length;
+// ─── Suggestion prompts that rotate ──────────────────────────────────────────
 
-const VALUE_BLOCKS = [
-  {
-    color: '#00d4ff',
-    title: 'MONITOR',
-    desc: 'Track vendor activity, contracts, patents, and hiring signals in real-time.',
-  },
-  {
-    color: '#ffd700',
-    title: 'ANALYZE',
-    desc: 'AI-powered industry analysis with structured problem solving.',
-  },
-  {
-    color: '#00ff88',
-    title: 'CONNECT',
-    desc: 'Map technologies to vendors, vendors to contracts, contracts to opportunities.',
-  },
-] as const;
-
-const QUICK_ACCESS = [
-  { href: '/map',                        label: 'INTELLIGENCE MAP',  sub: 'Live platform',                              color: '#00d4ff' },
-  { href: '/universe',                   label: 'INDUSTRY UNIVERSE', sub: '70+ entities',                               color: '#a855f7' },
-  { href: '/radar',                      label: 'GLOBAL RADAR',      sub: '12 domains',                                 color: '#ff3b30' },
-  { href: '/industries',                 label: 'INDUSTRIES',        sub: '8 sectors',                                  color: '#ffd700' },
-  { href: '/vendors',                    label: 'VENDOR REGISTRY',   sub: `${VENDOR_COUNT} companies`,                  color: '#ff8c00' },
-  { href: '/solve',                      label: 'PROBLEM SOLVER',    sub: 'AI analysis',                                color: '#00ff88' },
-  { href: '/innovation',                 label: 'INNOVATION CYCLE',  sub: `${CYCLE_COUNT} lifecycles`,                  color: '#a855f7' },
-  { href: '/signals',                    label: 'SIGNAL FEED',       sub: 'Prioritized intel',                          color: '#ffb800' },
-  { href: '/opportunities',              label: 'OPPORTUNITIES',     sub: '15 emerging',                                color: '#00ff88' },
-  { href: '/simulate',                   label: 'IMPACT SIMULATOR',  sub: '8 scenarios',                                color: '#f97316' },
-  { href: '/conferences',                label: 'CONFERENCES',       sub: `${CONF_COUNT.toLocaleString()} events`,      color: '#00d4ff' },
-  { href: '/technology/tech-zero-trust', label: 'TECHNOLOGIES',      sub: `${TECH_COUNT} tracked`,                      color: 'rgba(255,255,255,0.55)' },
+const SUGGESTIONS = [
+  'pipeline inspection',
+  'solar maintenance',
+  'warehouse automation',
+  'drone inspection',
+  'water desalination',
+  'autonomous vehicles',
+  'border surveillance',
+  'medical robotics',
+  'smart grid',
+  'cold chain logistics',
 ];
 
+// ─── Global shift insights (signals turned into simple language) ─────────────
+
+const GLOBAL_SHIFTS = [
+  {
+    title: 'Robotics entering solar maintenance',
+    desc: 'Autonomous cleaning and inspection systems are replacing manual field crews across utility-scale solar farms.',
+    industries: ['Energy', 'Robotics', 'Manufacturing'],
+    color: '#ffd700',
+  },
+  {
+    title: 'AI monitoring transforming pipelines',
+    desc: 'Computer vision and acoustic sensors are detecting pipeline anomalies weeks before traditional inspection methods.',
+    industries: ['Energy', 'AI/ML', 'Infrastructure'],
+    color: '#00d4ff',
+  },
+  {
+    title: 'Warehouse automation accelerating',
+    desc: 'Labor shortages are driving rapid adoption of autonomous mobile robots and pick-and-place systems.',
+    industries: ['Logistics', 'Robotics', 'Manufacturing'],
+    color: '#00ff88',
+  },
+  {
+    title: 'Border technology modernization',
+    desc: 'Integrated sensor networks and AI-powered surveillance are replacing legacy detection systems across US borders.',
+    industries: ['Defense', 'Cybersecurity', 'AI/ML'],
+    color: '#f97316',
+  },
+];
+
+// ─── Page ────────────────────────────────────────────────────────────────────
+
 export default function Home() {
+  const router = useRouter();
+  const [query, setQuery] = useState('');
+  const [placeholder, setPlaceholder] = useState('');
+  const [suggestionIdx, setSuggestionIdx] = useState(0);
+  const [charIdx, setCharIdx] = useState(0);
+  const [isFocused, setIsFocused] = useState(false);
+
+  // Typing animation for placeholder
+  useEffect(() => {
+    if (isFocused || query) return;
+    const suggestion = SUGGESTIONS[suggestionIdx];
+    if (charIdx <= suggestion.length) {
+      const timer = setTimeout(() => {
+        setPlaceholder(suggestion.slice(0, charIdx));
+        setCharIdx((c) => c + 1);
+      }, 60);
+      return () => clearTimeout(timer);
+    } else {
+      const timer = setTimeout(() => {
+        setCharIdx(0);
+        setSuggestionIdx((i) => (i + 1) % SUGGESTIONS.length);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [charIdx, suggestionIdx, isFocused, query]);
+
+  const handleSearch = useCallback(() => {
+    const q = query.trim();
+    if (!q) return;
+    const slug = q.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+    router.push(`/industry/${slug}`);
+  }, [query, router]);
+
   return (
     <main className="min-h-screen bg-black flex flex-col relative overflow-hidden">
 
-      {/* Grid background */}
-      <div className="fixed inset-0 grid-pattern pointer-events-none" />
-
-      {/* Subtle radial vignette to focus center */}
+      {/* Subtle radial glow */}
       <div
         className="fixed inset-0 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse 80% 70% at 50% 40%, transparent 0%, rgba(0,0,0,0.55) 100%)',
+          background: 'radial-gradient(ellipse 60% 50% at 50% 30%, rgba(0,212,255,0.03) 0%, transparent 70%)',
         }}
       />
 
-      {/* Scan line animation */}
-      <div className="scan-line" />
-
       {/* ── Top bar ─────────────────────────────────────────────── */}
-      <header className="relative z-10 h-11 flex items-center justify-between px-6 border-b border-white/[0.06] shrink-0 bg-black/60 backdrop-blur-sm">
-        <span className="font-mono text-[12px] tracking-[0.45em] text-white/90 glow-cyan">
+      <header className="relative z-10 h-12 flex items-center justify-between px-6 shrink-0">
+        <span className="font-mono text-[12px] tracking-[0.45em] text-white/80">
           NXT<span style={{ color: '#00d4ff' }}>{'//'}</span>LINK
         </span>
 
-        <div className="flex items-center gap-2">
-          <span
-            className="w-1.5 h-1.5 rounded-full"
-            style={{ backgroundColor: '#00ff88', boxShadow: '0 0 6px #00ff88cc' }}
-          />
-          <span className="font-mono text-[8px] tracking-[0.3em] text-white/40 uppercase">
-            PROTOTYPE · PROOF OF CONCEPT
-          </span>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/map"
+            className="font-mono text-[8px] tracking-[0.25em] text-white/25 hover:text-white/50 transition-colors uppercase"
+          >
+            MAP
+          </Link>
+          <Link
+            href="/industries"
+            className="font-mono text-[8px] tracking-[0.25em] text-white/25 hover:text-white/50 transition-colors uppercase"
+          >
+            INDUSTRIES
+          </Link>
+          <Link
+            href="/signals"
+            className="font-mono text-[8px] tracking-[0.25em] text-white/25 hover:text-white/50 transition-colors uppercase"
+          >
+            SIGNALS
+          </Link>
         </div>
       </header>
 
-      {/* ── Body ─────────────────────────────────────────────────── */}
-      <div className="relative z-10 flex-1 flex flex-col items-center px-4 sm:px-8 pb-12">
+      {/* ── Hero: Search ────────────────────────────────────────── */}
+      <section className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 -mt-16">
 
-        {/* ── Hero section ──────────────────────────────────────── */}
-        <section className="w-full max-w-3xl text-center pt-20 pb-4 slide-up">
+        {/* Eyebrow */}
+        <div className="font-mono text-[8px] tracking-[0.5em] text-white/20 uppercase mb-6">
+          GLOBAL INDUSTRY INTELLIGENCE
+        </div>
 
-          {/* Eyebrow label */}
-          <div className="inline-flex items-center gap-3 mb-6">
-            <div className="h-px w-8" style={{ background: 'rgba(0,212,255,0.4)' }} />
-            <span className="font-mono text-[8px] tracking-[0.5em] text-white/40 uppercase">
-              El Paso, Texas
+        {/* Main heading — minimal */}
+        <h1
+          className="text-center font-semibold tracking-tight text-white/90 leading-[1.1] mb-10"
+          style={{ fontFamily: 'var(--font-space-grotesk)', fontSize: 'clamp(28px, 4.5vw, 48px)' }}
+        >
+          Explore any industry
+        </h1>
+
+        {/* Search bar — large, centered, calm */}
+        <div className="w-full max-w-xl relative">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            placeholder={isFocused ? 'Type an industry or technology...' : placeholder || ' '}
+            className="w-full bg-white/[0.04] border border-white/[0.10] rounded-lg px-5 py-4 font-mono text-[13px] text-white/80 placeholder:text-white/20 focus:outline-none focus:border-[#00d4ff]/30 focus:bg-white/[0.06] transition-all duration-300"
+          />
+          {query.trim() && (
+            <button
+              onClick={handleSearch}
+              className="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-[9px] tracking-[0.2em] text-[#00d4ff]/70 hover:text-[#00d4ff] transition-colors"
+            >
+              EXPLORE →
+            </button>
+          )}
+        </div>
+
+        {/* Quick suggestions */}
+        <div className="flex flex-wrap items-center justify-center gap-2 mt-4 max-w-xl">
+          {SUGGESTIONS.slice(0, 5).map((s) => (
+            <button
+              key={s}
+              onClick={() => {
+                setQuery(s);
+                const slug = s.replace(/\s+/g, '-');
+                router.push(`/industry/${slug}`);
+              }}
+              className="font-mono text-[8px] tracking-wider text-white/20 border border-white/[0.06] rounded-full px-3 py-1.5 hover:text-white/40 hover:border-white/[0.12] hover:bg-white/[0.03] transition-all duration-200"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Global Shifts ───────────────────────────────────────── */}
+      <section className="relative z-10 px-6 pb-16">
+        <div className="max-w-4xl mx-auto">
+
+          {/* Section label */}
+          <div className="flex items-center gap-4 mb-6">
+            <div className="h-px flex-1 bg-white/[0.04]" />
+            <span className="font-mono text-[7px] tracking-[0.4em] text-white/15 uppercase">
+              GLOBAL SHIFTS
             </span>
-            <div className="h-px w-8" style={{ background: 'rgba(0,212,255,0.4)' }} />
+            <div className="h-px flex-1 bg-white/[0.04]" />
           </div>
 
-          {/* Main heading */}
-          <h1
-            className="font-mono font-bold tracking-[0.18em] text-white/90 leading-none mb-3"
-            style={{ fontSize: 'clamp(28px, 5vw, 52px)', letterSpacing: '0.18em' }}
-          >
-            TECHNOLOGY
-            <br />
-            <span style={{ color: '#00d4ff' }} className="glow-cyan">INTELLIGENCE</span>
-          </h1>
+          {/* Shift cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {GLOBAL_SHIFTS.map((shift) => (
+              <div
+                key={shift.title}
+                className="group border border-white/[0.05] rounded-sm p-5 hover:border-white/[0.10] hover:bg-white/[0.015] transition-all duration-300 cursor-default"
+              >
+                <div
+                  className="w-6 h-[2px] mb-3 rounded-full transition-all duration-300 group-hover:w-10"
+                  style={{ backgroundColor: shift.color, opacity: 0.6 }}
+                />
+                <h3 className="font-mono text-[11px] text-white/65 font-medium mb-2 group-hover:text-white/80 transition-colors">
+                  {shift.title}
+                </h3>
+                <p className="font-mono text-[9px] text-white/25 leading-[1.7] mb-3 group-hover:text-white/35 transition-colors">
+                  {shift.desc}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {shift.industries.map((ind) => (
+                    <span
+                      key={ind}
+                      className="font-mono text-[6px] tracking-[0.15em] text-white/15 border border-white/[0.06] rounded-full px-2 py-0.5 uppercase"
+                    >
+                      {ind}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-          {/* Sub-label */}
-          <p className="font-mono text-[9px] tracking-[0.6em] text-white/25 uppercase mb-6">
-            PLATFORM
-          </p>
+      {/* ── Industry Explorer (bottom grid) ─────────────────────── */}
+      <section className="relative z-10 px-6 pb-20">
+        <div className="max-w-4xl mx-auto">
 
-          {/* Description */}
-          <p className="font-mono text-[11px] leading-relaxed text-white/50 max-w-xl mx-auto mb-10">
-            Real-time monitoring of {VENDOR_COUNT} vendors, {TECH_COUNT} technologies, and {CONF_COUNT.toLocaleString()} conferences
-            across 8 industries. El Paso, Texas.
-          </p>
+          {/* Section label */}
+          <div className="flex items-center gap-4 mb-6">
+            <div className="h-px flex-1 bg-white/[0.04]" />
+            <span className="font-mono text-[7px] tracking-[0.4em] text-white/15 uppercase">
+              INDUSTRIES
+            </span>
+            <div className="h-px flex-1 bg-white/[0.04]" />
+          </div>
 
-          {/* CTA buttons */}
-          <div className="flex items-center justify-center gap-3 flex-wrap">
-            <Link
-              href="/map"
-              className="font-mono text-[10px] tracking-[0.3em] text-[#00d4ff] border border-[#00d4ff]/40 bg-[#00d4ff]/8 px-8 py-3 rounded-sm hover:bg-[#00d4ff]/18 hover:border-[#00d4ff]/70 transition-all duration-200"
-              style={{ boxShadow: '0 0 0 0 rgba(0,212,255,0)' }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 0 18px rgba(0,212,255,0.2)';
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 0 0 0 rgba(0,212,255,0)';
-              }}
-            >
-              ENTER PLATFORM →
-            </Link>
+          {/* Sector grid — clean, minimal */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {INDUSTRIES.map((ind) => (
+              <Link
+                key={ind.slug}
+                href={`/industry/${ind.slug}`}
+                className="group flex flex-col items-center justify-center py-6 border border-white/[0.05] rounded-sm hover:border-white/[0.12] hover:bg-white/[0.02] transition-all duration-300"
+              >
+                <div
+                  className="w-2 h-2 rounded-full mb-3 transition-transform duration-300 group-hover:scale-125"
+                  style={{ backgroundColor: ind.color, boxShadow: `0 0 10px ${ind.color}50` }}
+                />
+                <span className="font-mono text-[10px] tracking-[0.15em] text-white/45 group-hover:text-white/70 transition-colors uppercase">
+                  {ind.label}
+                </span>
+              </Link>
+            ))}
+          </div>
+
+          {/* Subtle "explore all" */}
+          <div className="text-center mt-6">
             <Link
               href="/industries"
-              className="font-mono text-[10px] tracking-[0.3em] text-white/50 border border-white/[0.15] px-8 py-3 rounded-sm hover:text-white/75 hover:border-white/30 hover:bg-white/[0.03] transition-all duration-200"
+              className="font-mono text-[8px] tracking-[0.3em] text-white/15 hover:text-white/35 transition-colors uppercase"
             >
-              EXPLORE INDUSTRIES
+              VIEW ALL SECTORS →
             </Link>
           </div>
-        </section>
-
-        {/* ── Stats strip ───────────────────────────────────────── */}
-        <div className="w-full max-w-3xl slide-up-delay-1">
-          <div className="divider-glow" />
-          <div className="border-x border-white/[0.06] grid grid-cols-5 bg-black/40">
-
-            <div className="text-center border-r border-white/[0.06] px-3 py-4">
-              <div
-                className="font-mono text-[18px] font-bold leading-none"
-                style={{ color: '#00d4ff', textShadow: '0 0 14px rgba(0,212,255,0.5)' }}
-              >
-                {VENDOR_COUNT}
-              </div>
-              <div className="font-mono text-[8px] tracking-[0.3em] text-white/30 uppercase mt-1.5">
-                Vendors
-              </div>
-            </div>
-
-            <div className="text-center border-r border-white/[0.06] px-3 py-4">
-              <div className="font-mono text-[18px] font-bold text-white/80 leading-none">{TECH_COUNT}</div>
-              <div className="font-mono text-[8px] tracking-[0.3em] text-white/30 uppercase mt-1.5">
-                Technologies
-              </div>
-            </div>
-
-            <div className="text-center border-r border-white/[0.06] px-3 py-4">
-              <div
-                className="font-mono text-[18px] font-bold leading-none glow-gold"
-                style={{ color: '#ffd700' }}
-              >
-                8
-              </div>
-              <div className="font-mono text-[8px] tracking-[0.3em] text-white/30 uppercase mt-1.5">
-                Industries
-              </div>
-            </div>
-
-            <div className="text-center border-r border-white/[0.06] px-3 py-4">
-              <div className="font-mono text-[18px] font-bold text-white/80 leading-none">
-                {CONF_COUNT.toLocaleString()}
-              </div>
-              <div className="font-mono text-[8px] tracking-[0.3em] text-white/30 uppercase mt-1.5">
-                Conferences
-              </div>
-            </div>
-
-            <div className="text-center px-3 py-4">
-              <div className="flex items-center justify-center gap-1.5 leading-none">
-                <span className="relative flex h-2 w-2 shrink-0">
-                  <span
-                    className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60"
-                    style={{ backgroundColor: '#00ff88' }}
-                  />
-                  <span
-                    className="relative inline-flex rounded-full h-2 w-2"
-                    style={{ backgroundColor: '#00ff88', boxShadow: '0 0 6px #00ff88cc' }}
-                  />
-                </span>
-                <span
-                  className="font-mono text-[18px] font-bold glow-green"
-                  style={{ color: '#00ff88' }}
-                >
-                  LIVE
-                </span>
-              </div>
-              <div className="font-mono text-[8px] tracking-[0.3em] text-white/30 uppercase mt-1.5">
-                Intel Feeds
-              </div>
-            </div>
-
-          </div>
-          <div className="divider-glow" />
         </div>
+      </section>
 
-        {/* ── Value proposition cards ────────────────────────────── */}
-        <div className="w-full max-w-3xl grid grid-cols-1 sm:grid-cols-3 gap-3 mt-10 slide-up-delay-2">
-          {VALUE_BLOCKS.map(({ color, title, desc }) => (
-            <div
-              key={title}
-              className="group border border-white/[0.06] rounded-sm p-6 bg-black/20 hover:bg-black/40 hover:border-white/[0.12] transition-all duration-200"
-            >
-              {/* Accent line */}
-              <div
-                className="w-8 h-[2px] mb-4 transition-all duration-200 group-hover:w-12"
-                style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}80` }}
-              />
-              <div
-                className="font-mono text-[11px] tracking-[0.25em] mb-3 uppercase"
-                style={{ color }}
-              >
-                {title}
-              </div>
-              <p className="font-mono text-[10px] leading-relaxed text-white/40 group-hover:text-white/55 transition-colors duration-200">
-                {desc}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {/* ── Section label ─────────────────────────────────────── */}
-        <div className="w-full max-w-3xl flex items-center gap-4 mt-12 mb-4 slide-up-delay-3">
-          <div className="h-px flex-1 bg-white/[0.05]" />
-          <span className="font-mono text-[8px] tracking-[0.4em] text-white/25 uppercase">
-            Quick Access
-          </span>
-          <div className="h-px flex-1 bg-white/[0.05]" />
-        </div>
-
-        {/* ── Quick access grid ─────────────────────────────────── */}
-        <div className="w-full max-w-3xl grid grid-cols-2 sm:grid-cols-3 gap-2 slide-up-delay-4">
-          {QUICK_ACCESS.map(({ href, label, sub, color }) => (
-            <Link
-              key={href}
-              href={href}
-              className="group border border-white/[0.05] rounded-sm p-4 hover:border-white/[0.12] hover:bg-white/[0.02] transition-all duration-150"
-              style={{ transform: 'translateY(0)' }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-1px)';
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(0)';
-              }}
-            >
-              <div className="flex items-center gap-2 mb-1.5">
-                <span
-                  className="w-1.5 h-1.5 rounded-full shrink-0"
-                  style={{ backgroundColor: color, boxShadow: `0 0 5px ${color}99` }}
-                />
-                <span className="font-mono text-[9px] tracking-[0.2em] text-white/55 group-hover:text-white/80 transition-colors uppercase">
-                  {label}
-                </span>
-              </div>
-              <div className="font-mono text-[8px] text-white/25 pl-3.5 group-hover:text-white/40 transition-colors">
-                {sub}
-              </div>
-            </Link>
-          ))}
-        </div>
-
-        {/* ── Footer ───────────────────────────────────────────── */}
-        <div className="mt-14 pb-2 text-center slide-up-delay-5">
-          <div className="divider-glow w-48 mx-auto mb-5" />
-          <span className="font-mono text-[7px] tracking-[0.35em] text-white/20 uppercase">
-            {'NXT//LINK · El Paso, TX · IKER Intelligence Engine v2.0'}
-          </span>
-        </div>
-
-      </div>
+      {/* ── Footer ──────────────────────────────────────────────── */}
+      <footer className="relative z-10 py-4 text-center border-t border-white/[0.04]">
+        <span className="font-mono text-[7px] tracking-[0.35em] text-white/10 uppercase">
+          NXT//LINK
+        </span>
+      </footer>
     </main>
   );
 }
