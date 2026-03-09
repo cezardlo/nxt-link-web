@@ -328,7 +328,7 @@ export default function IndustryDeepDivePage() {
     }
     void loadFeed();
     return () => { cancelled = true; };
-  }, [industry]);
+  }, [industry, label]);
 
   const [level, setLevel] = useState<'understand' | 'explore' | 'analyze'>('understand');
 

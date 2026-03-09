@@ -4,6 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import './globals.css';
 import { Analytics } from '@vercel/analytics/react';
 import { AppShell } from '@/components/AppShell';
+import { AuthProvider } from '@/components/AuthProvider';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -54,7 +55,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={`${inter.variable} ${spaceGrotesk.variable} ${ibmPlexMono.variable} font-sans antialiased bg-black text-white`}>
-        <AppShell>{children}</AppShell>
+        <AuthProvider>
+          <AppShell>{children}</AppShell>
+        </AuthProvider>
         <Analytics />
       </body>
     </html>

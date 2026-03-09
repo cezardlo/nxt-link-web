@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, type ReactNode } from 'react';
+import Image from 'next/image';
 import { getCompanyLogoUrl, companyInitials } from '@/lib/utils/company-logos';
 
 type Props = {
@@ -39,13 +40,14 @@ export function CompanyTooltip({ name, website, category, ikerScore, tags, child
             {/* Logo */}
             <div className="shrink-0 w-7 h-7 rounded-full overflow-hidden bg-white/[0.06] flex items-center justify-center border border-white/[0.08]">
               {logoUrl && !imgError ? (
-                <img
+                <Image
                   src={logoUrl}
                   alt={name}
                   width={28}
                   height={28}
                   className="w-full h-full object-contain bg-white/90 p-0.5"
                   onError={() => setImgError(true)}
+                  unoptimized
                 />
               ) : (
                 <span className="font-mono text-[8px] font-bold text-[#00d4ff]">{initials}</span>

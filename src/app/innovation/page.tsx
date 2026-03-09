@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { PageTopBar } from '@/components/PageTopBar';
@@ -169,14 +170,14 @@ export default function InnovationPage() {
     return [...stageDisruptions, ...globalForStage].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
     );
-  }, [activeStage, stageData.disruptions]);
+  }, [stageData.disruptions]);
 
   const stageConnections = useMemo(() => {
     const companyNames = new Set(stageData.companies.map((c) => c.name));
     return TECH_CONNECTIONS.filter(
       (c: TechConnection) => companyNames.has(c.from) || companyNames.has(c.to),
     );
-  }, [activeStage, stageData.companies]);
+  }, [stageData.companies]);
 
   const stageCounts = useMemo(() => {
     const counts: Record<InnovationStage, number> = {
@@ -587,11 +588,14 @@ export default function InnovationPage() {
                       >
                         <div className="flex items-center gap-2">
                           {!hasErr && company.logo ? (
-                            <img
+                            <Image
                               src={company.logo}
                               alt={company.name}
+                              width={28}
+                              height={28}
                               className="w-7 h-7 rounded-sm bg-white/5 object-contain"
                               onError={() => setImgError((p) => new Set(p).add(imgKey))}
+                              unoptimized
                             />
                           ) : (
                             <div className="w-7 h-7 rounded-sm flex items-center justify-center text-[10px] font-medium"
@@ -641,11 +645,14 @@ export default function InnovationPage() {
                         <div key={product.name} className="border border-white/[0.06] rounded-sm p-2.5 hover:border-white/[0.12] transition-all flex gap-2.5">
                           {/* Company logo */}
                           {!logoErr && logoUrl ? (
-                            <img
+                            <Image
                               src={logoUrl}
                               alt={product.company}
+                              width={28}
+                              height={28}
                               className="w-7 h-7 rounded-sm bg-white/5 object-contain shrink-0"
                               onError={() => setImgError((p) => new Set(p).add(logoKey))}
+                              unoptimized
                             />
                           ) : (
                             <div className="w-7 h-7 rounded-sm flex items-center justify-center text-[10px] font-medium shrink-0"

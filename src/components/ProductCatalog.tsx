@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { getCompanyLogoUrl, companyInitials } from '@/lib/utils/company-logos';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -124,7 +125,7 @@ function ProductCard({ product, accentColor }: { product: Product; accentColor: 
         {/* Company logo */}
         <div className="shrink-0 w-8 h-8 rounded-full overflow-hidden bg-white/[0.06] flex items-center justify-center border border-white/[0.08] mt-0.5">
           {logoUrl && !imgError ? (
-            <img
+            <Image
               src={logoUrl}
               alt={product.company_name}
               width={32}
@@ -132,6 +133,7 @@ function ProductCard({ product, accentColor }: { product: Product; accentColor: 
               className="w-full h-full object-contain bg-white/90 p-0.5"
               onError={() => setImgError(true)}
               loading="lazy"
+              unoptimized
             />
           ) : (
             <span

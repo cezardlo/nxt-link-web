@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { getCompanyLogoUrl, companyInitials } from '@/lib/utils/company-logos';
 
@@ -43,7 +44,7 @@ export function CompanyCard({
       {/* Logo or initials fallback */}
       <div className="shrink-0 w-10 h-10 rounded-full overflow-hidden bg-white/[0.06] flex items-center justify-center border border-white/[0.08]">
         {logoUrl && !imgError ? (
-          <img
+          <Image
             src={logoUrl}
             alt={name}
             width={40}
@@ -51,6 +52,7 @@ export function CompanyCard({
             className="w-full h-full object-contain bg-white/90 p-0.5"
             onError={() => setImgError(true)}
             loading="lazy"
+            unoptimized
           />
         ) : (
           <span
