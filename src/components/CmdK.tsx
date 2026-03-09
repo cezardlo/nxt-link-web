@@ -253,7 +253,7 @@ export function CmdK({
       window.open(item.conference.website, '_blank', 'noopener,noreferrer');
       onClose();
     } else if (item.kind === 'technology') {
-      window.location.href = '/industry/' + encodeURIComponent(item.technology.category.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
+      window.location.href = `/technology/${item.technology.id}`;
       onClose();
     } else if (item.kind === 'explore') {
       window.location.href = `/industry/${item.slug}`;

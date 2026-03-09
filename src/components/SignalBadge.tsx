@@ -9,6 +9,15 @@ const SIGNAL_COLORS: Record<string, string> = {
   regulatory: '#ff3b30',
   partnership: '#00d4ff',
   product_launch: '#00ff88',
+  patent_filing: '#a855f7',
+  funding_round: '#00ff88',
+  hiring_signal: '#00d4ff',
+  contract_award: '#ffd700',
+  research_paper: '#f97316',
+  regulatory_action: '#ff3b30',
+  merger_acquisition: '#f97316',
+  facility_expansion: '#00ff88',
+  case_study: '#ffb800',
 };
 
 type SignalBadgeProps = {

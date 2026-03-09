@@ -13,6 +13,7 @@ import { CompanyCard } from '@/components/CompanyCard';
 import DiscoveryFeed from '@/components/DiscoveryFeed';
 import type { IndustryProduct } from '@/lib/intelligence/industry-scan';
 import { timeAgo } from '@/lib/utils/format';
+import { SignalBadge } from '@/components/SignalBadge';
 
 // ─── Vendor category mapping ─────────────────────────────────────────────────
 
@@ -295,7 +296,7 @@ export default function IndustryDeepDivePage() {
                 className="font-mono text-[22px] font-bold leading-none tracking-tight transition-all duration-200 group-hover:tracking-widest"
                 style={{ color: stat.color, textShadow: `0 0 12px ${stat.color}40` }}
               >
-                {stat.value}
+                <AnimatedNumber value={stat.value} />
               </div>
               <div className="font-mono text-[7px] tracking-[0.3em] text-white/20 mt-2 group-hover:text-white/35 transition-colors duration-200">{stat.label}</div>
             </div>
@@ -603,12 +604,7 @@ export default function IndustryDeepDivePage() {
                         className="flex items-center gap-3 py-2.5 pr-3 pl-4 hover:bg-white/[0.025] transition-colors relative"
                         style={{ borderLeft: `2px solid ${sigColor}30` }}
                       >
-                        <span
-                          className="font-mono text-[7px] tracking-[0.15em] shrink-0"
-                          style={{ color: `${sigColor}99` }}
-                        >
-                          {signalTypeLabel[sig.signal_type] ?? sig.signal_type.toUpperCase()}
-                        </span>
+                        <SignalBadge type={sig.signal_type} size="sm" />
                         <div className="min-w-0 flex-1">
                           {sig.url ? (
                             <a href={sig.url} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-white/40 hover:text-white/65 transition-colors truncate block">
@@ -712,6 +708,33 @@ function Section({ title, subtitle, color, children }: {
   );
 }
 
+
+function AnimatedNumber({ value, prefix = '' }: { value: string; prefix?: string }) {
+  const [display, setDisplay] = useState(value);
+  const numericPart = parseInt(value.replace(/[^0-9]/g, ''), 10);
+
+  useEffect(() => {
+    if (isNaN(numericPart) || numericPart === 0 || value === '···') {
+      setDisplay(value);
+      return;
+    }
+    let start: number | null = null;
+    let raf: number;
+    const animate = (ts: number) => {
+      if (!start) start = ts;
+      const progress = Math.min((ts - start) / 700, 1);
+      const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+      const current = Math.round(numericPart * eased);
+      // Preserve original format (e.g. "$42M", "1,772")
+      setDisplay(value.replace(String(numericPart), String(current)));
+      if (progress < 1) raf = requestAnimationFrame(animate);
+    };
+    raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
+  }, [value, numericPart]);
+
+  return <>{prefix}{display}</>;
+}
 
 function formatBudget(budgetM: number): string {
   if (budgetM >= 1000) return `$${(budgetM / 1000).toFixed(1)}B`;
