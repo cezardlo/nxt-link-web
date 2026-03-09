@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { PageTopBar } from '@/components/PageTopBar';
+import { getCompanyLogoUrl } from '@/lib/utils/company-logos';
 import {
   INNOVATION_CYCLES,
   getInnovationCycle,
@@ -126,30 +127,8 @@ function findVendorId(entityName: string): string | null {
   return null;
 }
 
-const COMPANY_DOMAINS: Record<string, string> = {
-  'openai': 'openai.com', 'anthropic': 'anthropic.com', 'meta ai': 'meta.com',
-  'palantir': 'palantir.com', 'anduril': 'anduril.com', 'shield ai': 'shield.ai',
-  'scale ai': 'scale.com', 'databricks': 'databricks.com', 'figure ai': 'figure.ai',
-  'sarcos': 'sarcos.com', 'mistral ai': 'mistral.ai', 'xai': 'x.ai',
-  'aws': 'aws.amazon.com', 'google cloud': 'cloud.google.com', 'azure': 'azure.microsoft.com',
-  'crowdstrike': 'crowdstrike.com', 'palo alto networks': 'paloaltonetworks.com',
-  'datadog': 'datadog.com', 'snowflake': 'snowflake.com', 'splunk': 'splunk.com',
-  'verkada': 'verkada.com', 'flock safety': 'flocksafety.com',
-  'motorola solutions': 'motorolasolutions.com', 'l3harris': 'l3harris.com',
-  'raytheon': 'rtx.com', 'lockheed martin': 'lockheedmartin.com',
-  'boeing': 'boeing.com', 'northrop grumman': 'northropgrumman.com',
-  'bae systems': 'baesystems.com', 'gdit': 'gdit.com', 'saic': 'saic.com',
-  'google': 'google.com', 'microsoft': 'microsoft.com', 'deepmind': 'deepmind.com',
-};
-
-function getCompanyLogo(company: string): string | null {
-  const lower = company.toLowerCase();
-  if (COMPANY_DOMAINS[lower]) return `https://logo.clearbit.com/${COMPANY_DOMAINS[lower]}`;
-  for (const [key, domain] of Object.entries(COMPANY_DOMAINS)) {
-    if (lower.includes(key) || key.includes(lower)) return `https://logo.clearbit.com/${domain}`;
-  }
-  return null;
-}
+// Company logo resolution now uses shared utility: getCompanyLogoUrl()
+const getCompanyLogo = (company: string) => getCompanyLogoUrl(company);
 
 function formatDate(iso: string): string {
   const d = new Date(iso);

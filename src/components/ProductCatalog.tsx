@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { getCompanyLogoUrl, companyInitials } from '@/lib/utils/company-logos';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,11 +37,11 @@ export function ProductCatalog({ products, accentColor, loading }: Props) {
 
   if (loading) {
     return (
-      <div className="space-y-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {Array.from({ length: 6 }).map((_, i) => (
           <div
             key={i}
-            className="h-24 bg-white/[0.02] border border-white/[0.04] rounded-sm animate-pulse"
+            className="h-28 bg-white/[0.02] border border-white/[0.04] rounded-sm animate-pulse"
           />
         ))}
       </div>
@@ -102,9 +103,12 @@ export function ProductCatalog({ products, accentColor, loading }: Props) {
   );
 }
 
-// ─── Product Card ─────────────────────────────────────────────────────────────
+// ─── Product Card (with company logo) ────────────────────────────────────────
 
 function ProductCard({ product, accentColor }: { product: Product; accentColor: string }) {
+  const [imgError, setImgError] = useState(false);
+  const logoUrl = getCompanyLogoUrl(product.company_name, product.company_url);
+  const initials = companyInitials(product.company_name);
   const confidenceColor =
     product.confidence >= 0.7 ? '#00ff88' : product.confidence >= 0.4 ? '#ffb800' : '#ff3b30';
 
@@ -113,18 +117,43 @@ function ProductCard({ product, accentColor }: { product: Product; accentColor: 
       href={product.company_url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block p-3 bg-white/[0.02] border border-white/[0.04] rounded-sm hover:bg-white/[0.04] hover:border-white/[0.08] transition-all group"
+      className="block p-4 bg-white/[0.015] border border-white/[0.05] rounded-sm hover:bg-white/[0.035] hover:border-white/[0.10] transition-all duration-200 group"
     >
-      {/* Header */}
-      <div className="flex items-start justify-between gap-2 mb-1.5">
+      {/* Header with logo */}
+      <div className="flex items-start gap-3 mb-2.5">
+        {/* Company logo */}
+        <div className="shrink-0 w-8 h-8 rounded-full overflow-hidden bg-white/[0.06] flex items-center justify-center border border-white/[0.08] mt-0.5">
+          {logoUrl && !imgError ? (
+            <img
+              src={logoUrl}
+              alt={product.company_name}
+              width={32}
+              height={32}
+              className="w-full h-full object-contain bg-white/90 p-0.5"
+              onError={() => setImgError(true)}
+              loading="lazy"
+            />
+          ) : (
+            <span
+              className="font-mono text-[9px] font-bold"
+              style={{ color: accentColor }}
+            >
+              {initials}
+            </span>
+          )}
+        </div>
+
+        {/* Name + source */}
         <div className="min-w-0 flex-1">
-          <div className="font-mono text-[10px] text-white/80 font-bold truncate group-hover:text-white transition-colors">
+          <div className="font-mono text-[11px] text-white/75 font-medium truncate group-hover:text-white/90 transition-colors">
             {product.company_name}
           </div>
           <div className="font-mono text-[7px] text-white/20 tracking-[0.1em] uppercase">
             {product.source_type}
           </div>
         </div>
+
+        {/* Confidence */}
         <div className="shrink-0 flex items-center gap-1">
           <div
             className="w-1.5 h-1.5 rounded-full"
@@ -137,19 +166,19 @@ function ProductCard({ product, accentColor }: { product: Product; accentColor: 
       </div>
 
       {/* Summary */}
-      <div className="font-mono text-[8px] text-white/50 leading-relaxed line-clamp-3 mb-2">
+      <div className="font-mono text-[9px] text-white/40 leading-[1.7] line-clamp-2 mb-2.5">
         {product.product_summary}
       </div>
 
       {/* Problems solved */}
       {product.problems_solved.length > 0 && (
-        <div className="space-y-0.5 mb-2">
+        <div className="space-y-0.5 mb-2.5">
           {product.problems_solved.slice(0, 3).map((problem, j) => (
             <div key={j} className="flex items-start gap-1.5">
               <span className="font-mono text-[7px] mt-px" style={{ color: accentColor }}>
                 ›
               </span>
-              <span className="font-mono text-[7px] text-white/35 leading-tight">
+              <span className="font-mono text-[7px] text-white/30 leading-tight">
                 {problem}
               </span>
             </div>
@@ -162,10 +191,10 @@ function ProductCard({ product, accentColor }: { product: Product; accentColor: 
         {product.industry_areas.slice(0, 3).map((area) => (
           <span
             key={area}
-            className="font-mono text-[6px] tracking-[0.1em] px-1 py-px rounded-sm"
+            className="font-mono text-[6px] tracking-[0.1em] px-1.5 py-0.5 rounded-sm"
             style={{
-              color: accentColor,
-              border: `1px solid ${accentColor}30`,
+              color: `${accentColor}99`,
+              border: `1px solid ${accentColor}20`,
               backgroundColor: `${accentColor}08`,
             }}
           >

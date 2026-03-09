@@ -9,6 +9,7 @@ import { INDUSTRIES, TECHNOLOGY_CATALOG } from '@/lib/data/technology-catalog';
 import { INDUSTRY_STORIES } from '@/lib/data/industry-stories';
 import { EL_PASO_VENDORS, type VendorRecord } from '@/lib/data/el-paso-vendors';
 import { ProductCatalog } from '@/components/ProductCatalog';
+import { CompanyCard } from '@/components/CompanyCard';
 import DiscoveryFeed from '@/components/DiscoveryFeed';
 import type { IndustryProduct } from '@/lib/intelligence/industry-scan';
 import { timeAgo } from '@/lib/utils/format';
@@ -360,23 +361,41 @@ export default function IndustryDeepDivePage() {
         {/* ═══ 4. MAJOR PLAYERS ═══ */}
         {localVendors.length > 0 && (
         <Section title="MAJOR PLAYERS" subtitle={`${localVendors.length} companies active in ${label.toLowerCase()}`} color="#ffb800">
-          {localVendors.length === 0 ? (
-            <div className="py-6 text-center">
-              <span className="font-mono text-[9px] text-white/15">No local vendors mapped to this sector yet.</span>
+          {([
+            { label: 'ESTABLISHED LEADERS', vendors: establishedVendors, tierColor: '#00ff88' },
+            { label: 'EMERGING VENDORS', vendors: emergingVendors, tierColor: '#00d4ff' },
+            { label: 'SPECIALIZED / NICHE', vendors: specializedVendors, tierColor: '#ffb800' },
+          ] as const).filter(t => t.vendors.length > 0).map(tier => (
+            <div key={tier.label} className="mb-6 last:mb-0">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tier.tierColor }} />
+                <span className="font-mono text-[8px] tracking-[0.25em] text-white/25">{tier.label}</span>
+                <span className="font-mono text-[8px] text-white/15">{tier.vendors.length}</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {tier.vendors.slice(0, 8).map((v) => (
+                  <CompanyCard
+                    key={v.id}
+                    id={v.id}
+                    name={v.name}
+                    website={v.website}
+                    category={v.category}
+                    tags={v.tags}
+                    ikerScore={v.ikerScore}
+                    accentColor={tier.tierColor}
+                  />
+                ))}
+              </div>
+              {tier.vendors.length > 8 && (
+                <Link
+                  href={`/vendors?industry=${slug}`}
+                  className="block text-center font-mono text-[8px] tracking-wider py-2 mt-2 text-white/15 hover:text-white/30 transition-colors"
+                >
+                  VIEW ALL {tier.vendors.length} →
+                </Link>
+              )}
             </div>
-          ) : (
-            <div className="space-y-6">
-              {establishedVendors.length > 0 && (
-                <VendorTier label="ESTABLISHED LEADERS" vendors={establishedVendors} color="#00ff88" slug={slug} />
-              )}
-              {emergingVendors.length > 0 && (
-                <VendorTier label="EMERGING VENDORS" vendors={emergingVendors} color="#00d4ff" slug={slug} />
-              )}
-              {specializedVendors.length > 0 && (
-                <VendorTier label="SPECIALIZED / NICHE" vendors={specializedVendors} color="#ffb800" slug={slug} />
-              )}
-            </div>
-          )}
+          ))}
         </Section>
         )}
 
@@ -611,60 +630,6 @@ function Section({ title, subtitle, color, children }: {
   );
 }
 
-// ─── Vendor Tier Component ──────────────────────────────────────────────────
-
-function VendorTier({ label, vendors, color, slug }: {
-  label: string;
-  vendors: VendorRecord[];
-  color: string;
-  slug: string;
-}) {
-  return (
-    <div>
-      <div className="flex items-center gap-2 mb-2">
-        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
-        <span className="font-mono text-[8px] tracking-[0.25em] text-white/25">{label}</span>
-        <span className="font-mono text-[8px] text-white/15">{vendors.length}</span>
-      </div>
-      <div className="border border-white/[0.04]">
-        {vendors.slice(0, 8).map((v) => (
-          <Link
-            key={v.id}
-            href={`/vendor/${v.id}`}
-            className="flex items-center gap-4 px-4 py-2.5 border-b border-white/[0.03] last:border-b-0 hover:bg-white/[0.03] transition-colors group"
-          >
-            <div className="min-w-0 flex-1">
-              <div className="font-mono text-[11px] text-white/55 group-hover:text-white/75 transition-colors truncate">{v.name}</div>
-              {v.tags.length > 0 && (
-                <div className="flex gap-1.5 mt-0.5">
-                  {v.tags.slice(0, 3).map((tag) => (
-                    <span key={tag} className="font-mono text-[7px] tracking-wider text-white/20">{tag.toUpperCase()}</span>
-                  ))}
-                </div>
-              )}
-            </div>
-            <span className="font-mono text-[8px] text-white/20 shrink-0">{v.category}</span>
-            <span
-              className="font-mono text-[10px] font-bold shrink-0"
-              style={{ color, textShadow: `0 0 6px ${color}60` }}
-            >
-              {v.ikerScore}
-            </span>
-            <span className="font-mono text-[8px] text-white/15 group-hover:text-white/30 transition-colors">→</span>
-          </Link>
-        ))}
-      </div>
-      {vendors.length > 8 && (
-        <Link
-          href={`/vendors?industry=${slug}`}
-          className="block text-center font-mono text-[8px] tracking-wider py-2 text-white/15 hover:text-white/30 transition-colors"
-        >
-          VIEW ALL {vendors.length} →
-        </Link>
-      )}
-    </div>
-  );
-}
 
 function formatBudget(budgetM: number): string {
   if (budgetM >= 1000) return `$${(budgetM / 1000).toFixed(1)}B`;
