@@ -20,9 +20,16 @@ const SUGGESTIONS = [
   'cold chain logistics',
 ];
 
-// ─── Global shift insights (signals turned into simple language) ─────────────
+// ─── Global shift insights (fallback when trend API unavailable) ─────────────
 
-const GLOBAL_SHIFTS = [
+type ShiftCard = {
+  title: string;
+  desc: string;
+  industries: string[];
+  color: string;
+};
+
+const FALLBACK_SHIFTS: ShiftCard[] = [
   {
     title: 'Robotics entering solar maintenance',
     desc: 'Autonomous cleaning and inspection systems are replacing manual field crews across utility-scale solar farms.',
@@ -49,6 +56,13 @@ const GLOBAL_SHIFTS = [
   },
 ];
 
+// Stage → color mapping for live trends
+const STAGE_COLORS: Record<string, string> = {
+  emerging: '#f97316',
+  accelerating: '#00d4ff',
+  established: '#00ff88',
+};
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -58,6 +72,31 @@ export default function Home() {
   const [suggestionIdx, setSuggestionIdx] = useState(0);
   const [charIdx, setCharIdx] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
+  const [shifts, setShifts] = useState<ShiftCard[]>(FALLBACK_SHIFTS);
+  const [isLive, setIsLive] = useState(false);
+
+  // Fetch live trends from trend agent
+  useEffect(() => {
+    let cancelled = false;
+    async function loadTrends() {
+      try {
+        const res = await fetch('/api/agents/trends');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled || !data.ok || !data.trends?.length) return;
+        const live: ShiftCard[] = data.trends.slice(0, 4).map((t: { keyword: string; stage: string; signal_count: number; industries: string[]; latest_signal: string }) => ({
+          title: `${t.keyword.charAt(0).toUpperCase() + t.keyword.slice(1)} is ${t.stage}`,
+          desc: t.latest_signal || `${t.signal_count} signals detected across multiple sources.`,
+          industries: t.industries.slice(0, 3),
+          color: STAGE_COLORS[t.stage] ?? '#00d4ff',
+        }));
+        setShifts(live);
+        setIsLive(true);
+      } catch { /* keep fallback */ }
+    }
+    void loadTrends();
+    return () => { cancelled = true; };
+  }, []);
 
   // Typing animation for placeholder
   useEffect(() => {
@@ -187,15 +226,23 @@ export default function Home() {
           {/* Section label */}
           <div className="flex items-center gap-4 mb-6">
             <div className="h-px flex-1 bg-white/[0.04]" />
-            <span className="font-mono text-[7px] tracking-[0.4em] text-white/15 uppercase">
-              GLOBAL SHIFTS
-            </span>
+            <div className="flex items-center gap-2">
+              {isLive && (
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-50" style={{ backgroundColor: '#00ff88' }} />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ backgroundColor: '#00ff88' }} />
+                </span>
+              )}
+              <span className="font-mono text-[7px] tracking-[0.4em] text-white/15 uppercase">
+                {isLive ? 'LIVE TRENDS' : 'GLOBAL SHIFTS'}
+              </span>
+            </div>
             <div className="h-px flex-1 bg-white/[0.04]" />
           </div>
 
           {/* Shift cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {GLOBAL_SHIFTS.map((shift) => (
+            {shifts.map((shift) => (
               <div
                 key={shift.title}
                 className="group border border-white/[0.05] rounded-sm p-5 hover:border-white/[0.10] hover:bg-white/[0.015] transition-all duration-300 cursor-default"
