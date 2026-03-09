@@ -214,13 +214,7 @@ export default function IndustryDeepDivePage() {
     }, 0) / (technologies.length * 9) * 100
   ));
 
-  // Signal type labels
-  const signalTypeLabel: Record<string, string> = {
-    patent_filing: 'PATENT', research_paper: 'RESEARCH', case_study: 'CASE STUDY',
-    hiring_signal: 'HIRING', funding_round: 'FUNDING', merger_acquisition: 'M&A',
-    contract_award: 'CONTRACT', product_launch: 'LAUNCH', regulatory_action: 'REGULATORY',
-    facility_expansion: 'EXPANSION',
-  };
+  // Signal type colors (labels handled by SignalBadge component)
   const signalTypeColor: Record<string, string> = {
     patent_filing: '#ffb800', research_paper: '#00d4ff', funding_round: '#00ff88',
     merger_acquisition: '#f97316', contract_award: '#ffd700', product_launch: '#00d4ff',

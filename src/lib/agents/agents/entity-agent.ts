@@ -7,8 +7,6 @@ import { INDUSTRIES, TECHNOLOGY_CATALOG } from '@/lib/data/technology-catalog';
 import {
   upsertEntity,
   addRelationship,
-  type EntityType,
-  type RelationshipType,
 } from '@/db/queries/knowledge-graph';
 import { isSupabaseConfigured } from '@/db/client';
 
