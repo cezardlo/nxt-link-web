@@ -10,7 +10,12 @@ export type EntityType =
   | 'problem'
   | 'signal'
   | 'event'
-  | 'location';
+  | 'location'
+  | 'force'
+  | 'trajectory'
+  | 'opportunity'
+  | 'discovery'
+  | 'policy';
 
 export type RelationshipType =
   | 'creates'
@@ -19,7 +24,17 @@ export type RelationshipType =
   | 'belongs_to'
   | 'related_to'
   | 'occurs_in'
-  | 'influences';
+  | 'influences'
+  | 'builds'
+  | 'funds'
+  | 'regulates'
+  | 'competes_with'
+  | 'supplies'
+  | 'enables'
+  | 'depends_on'
+  | 'located_in'
+  | 'accelerates'
+  | 'affects';
 
 export type EntityRow = {
   id: string;
@@ -28,6 +43,8 @@ export type EntityRow = {
   slug: string;
   description: string | null;
   metadata: Record<string, unknown>;
+  aliases: string[];
+  last_seen_at: string;
   created_at: string;
   updated_at: string;
 };
@@ -38,6 +55,8 @@ export type EntityRelationshipRow = {
   target_entity_id: string;
   relationship_type: RelationshipType;
   confidence: number;
+  evidence_count: number;
+  last_seen_at: string;
   source_attribution: string | null;
   created_at: string;
 };
@@ -50,6 +69,7 @@ export type EntityUpsert = {
   slug: string;
   description?: string | null;
   metadata?: Record<string, unknown>;
+  aliases?: string[];
 };
 
 // ---------- Entity CRUD ----------
@@ -59,6 +79,7 @@ export async function upsertEntity(entity: EntityUpsert): Promise<string | null>
   if (!isSupabaseConfigured()) return null;
 
   const db = getDb({ admin: true });
+  const now = new Date().toISOString();
   const { data, error } = await db
     .from('entities')
     .upsert(
@@ -68,7 +89,9 @@ export async function upsertEntity(entity: EntityUpsert): Promise<string | null>
         slug: entity.slug,
         description: entity.description ?? null,
         metadata: entity.metadata ?? {},
-        updated_at: new Date().toISOString(),
+        aliases: JSON.stringify(entity.aliases ?? []),
+        updated_at: now,
+        last_seen_at: now,
       },
       { onConflict: 'slug' },
     )
@@ -81,6 +104,37 @@ export async function upsertEntity(entity: EntityUpsert): Promise<string | null>
   }
 
   return (data as { id: string } | null)?.id ?? null;
+}
+
+/** Resolve an entity by name — checks slug, then name, then aliases. Returns entity ID or null. */
+export async function resolveEntity(
+  name: string,
+  type?: EntityType,
+): Promise<string | null> {
+  if (!isSupabaseConfigured()) return null;
+
+  const db = getDb();
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+  // 1. Try slug match
+  let q = db.from('entities').select('id').eq('slug', slug);
+  if (type) q = q.eq('entity_type', type);
+  const { data: bySlug } = await q.limit(1).maybeSingle();
+  if (bySlug) return (bySlug as { id: string }).id;
+
+  // 2. Try exact name match (case-insensitive)
+  let q2 = db.from('entities').select('id').ilike('name', name);
+  if (type) q2 = q2.eq('entity_type', type);
+  const { data: byName } = await q2.limit(1).maybeSingle();
+  if (byName) return (byName as { id: string }).id;
+
+  // 3. Try alias match — aliases @> '["name"]'
+  let q3 = db.from('entities').select('id').contains('aliases', JSON.stringify([name]));
+  if (type) q3 = q3.eq('entity_type', type);
+  const { data: byAlias } = await q3.limit(1).maybeSingle();
+  if (byAlias) return (byAlias as { id: string }).id;
+
+  return null;
 }
 
 /** Find an entity by slug, optionally filtering by type. */
@@ -165,17 +219,36 @@ export async function addRelationship(
 
   const db = getDb({ admin: true });
 
-  // Check for existing duplicate
+  const now = new Date().toISOString();
+
+  // Check for existing relationship — if found, strengthen it
   const { data: existing } = await db
     .from('entity_relationships')
-    .select('id')
+    .select('id, evidence_count, confidence')
     .eq('source_entity_id', sourceId)
     .eq('target_entity_id', targetId)
     .eq('relationship_type', type)
     .limit(1)
     .maybeSingle();
 
-  if (existing) return (existing as { id: string }).id;
+  if (existing) {
+    const row = existing as { id: string; evidence_count: number; confidence: number };
+    const newCount = (row.evidence_count ?? 1) + 1;
+    // Confidence grows with evidence: min(1.0, base + evidence × 0.05)
+    const newConfidence = Math.min(1, Math.max(confidence, row.confidence) + 0.05);
+
+    await db
+      .from('entity_relationships')
+      .update({
+        evidence_count: newCount,
+        confidence: newConfidence,
+        last_seen_at: now,
+        updated_at: now,
+      })
+      .eq('id', row.id);
+
+    return row.id;
+  }
 
   const { data, error } = await db
     .from('entity_relationships')
@@ -184,6 +257,8 @@ export async function addRelationship(
       target_entity_id: targetId,
       relationship_type: type,
       confidence: Math.max(0, Math.min(confidence, 1)),
+      evidence_count: 1,
+      last_seen_at: now,
       source_attribution: sourceAttribution,
     })
     .select('id')

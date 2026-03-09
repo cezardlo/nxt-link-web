@@ -329,7 +329,7 @@ export default function OpportunitiesPage() {
     <div className="bg-black min-h-screen font-mono">
       {/* TOP BAR */}
       <PageTopBar
-        backHref="/radar"
+        backHref="/industries"
         backLabel="RADAR"
         breadcrumbs={[{ label: 'OPPORTUNITY RADAR' }]}
         rightSlot={

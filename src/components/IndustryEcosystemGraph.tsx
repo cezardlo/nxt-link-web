@@ -235,6 +235,27 @@ export function IndustryEcosystemGraph({
     return found ? found.label : type.toUpperCase();
   };
 
+  // Empty state when no ecosystem data
+  if (vendors.length === 0 && technologies.length === 0) {
+    return (
+      <div
+        className="relative bg-black border border-white/[0.08] rounded-sm overflow-hidden flex flex-col items-center justify-center"
+        style={{ height: 380 }}
+      >
+        <div
+          className="w-8 h-[2px] rounded-full mb-4"
+          style={{ backgroundColor: accentColor, opacity: 0.4 }}
+        />
+        <span className="font-mono text-[10px] tracking-[0.2em] text-white/25 uppercase">
+          No ecosystem data yet
+        </span>
+        <span className="font-mono text-[8px] text-white/15 mt-2">
+          Vendors and technologies will appear as intelligence is gathered
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div
       className="relative bg-black border border-white/[0.08] rounded-sm overflow-hidden"

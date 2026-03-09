@@ -20,48 +20,68 @@ const SUGGESTIONS = [
   'cold chain logistics',
 ];
 
-// ─── Global shift insights (fallback when trend API unavailable) ─────────────
+// ─── Insight card type ────────────────────────────────────────────────────────
 
-type ShiftCard = {
+type InsightCard = {
   title: string;
   desc: string;
   industries: string[];
+  companies: string[];
   color: string;
+  type: string;
+  confidence: number;
+  momentum: string;
 };
 
-const FALLBACK_SHIFTS: ShiftCard[] = [
-  {
-    title: 'Robotics entering solar maintenance',
-    desc: 'Autonomous cleaning and inspection systems are replacing manual field crews across utility-scale solar farms.',
-    industries: ['Energy', 'Robotics', 'Manufacturing'],
-    color: '#ffd700',
-  },
-  {
-    title: 'AI monitoring transforming pipelines',
-    desc: 'Computer vision and acoustic sensors are detecting pipeline anomalies weeks before traditional inspection methods.',
-    industries: ['Energy', 'AI/ML', 'Infrastructure'],
-    color: '#00d4ff',
-  },
+const TYPE_LABELS: Record<string, string> = {
+  pattern: 'PATTERN',
+  cluster: 'CLUSTER',
+  implication: 'IMPLICATION',
+  opportunity: 'OPPORTUNITY',
+};
+
+const FALLBACK_INSIGHTS: InsightCard[] = [
   {
     title: 'Warehouse automation accelerating',
-    desc: 'Labor shortages are driving rapid adoption of autonomous mobile robots and pick-and-place systems.',
-    industries: ['Logistics', 'Robotics', 'Manufacturing'],
+    desc: 'Labor shortages driving rapid adoption of autonomous mobile robots. 12 signals detected across funding, hiring, and patents.',
+    industries: ['Supply Chain', 'Manufacturing'],
+    companies: ['AutoStore', 'Locus Robotics', 'GreyOrange'],
     color: '#00ff88',
+    type: 'pattern',
+    confidence: 85,
+    momentum: 'accelerating',
   },
   {
-    title: 'Border technology modernization',
-    desc: 'Integrated sensor networks and AI-powered surveillance are replacing legacy detection systems across US borders.',
-    industries: ['Defense', 'Cybersecurity', 'AI/ML'],
+    title: 'AI entering industrial inspection',
+    desc: 'Computer vision and acoustic sensors detecting pipeline anomalies and infrastructure failures weeks before traditional methods.',
+    industries: ['Energy', 'AI/ML'],
+    companies: ['Gecko Robotics', 'Percepto', 'Flyability'],
+    color: '#00d4ff',
+    type: 'cluster',
+    confidence: 78,
+    momentum: 'accelerating',
+  },
+  {
+    title: 'Major capital flowing into new sectors',
+    desc: 'Significant funding rounds detected across cybersecurity, defense tech, and supply chain. Capital formation signals upcoming product launches.',
+    industries: ['Cybersecurity', 'Defense'],
+    companies: ['CrowdStrike', 'Anduril'],
+    color: '#ffd700',
+    type: 'implication',
+    confidence: 82,
+    momentum: 'steady',
+  },
+  {
+    title: 'Cybersecurity: high momentum',
+    desc: 'Driven by capital inflow, workforce expansion, and contract awards. Zero-trust and OT security are fastest-growing segments.',
+    industries: ['Cybersecurity'],
+    companies: ['Palo Alto Networks', 'Dragos'],
     color: '#f97316',
+    type: 'opportunity',
+    confidence: 88,
+    momentum: 'accelerating',
   },
 ];
-
-// Stage → color mapping for live trends
-const STAGE_COLORS: Record<string, string> = {
-  emerging: '#f97316',
-  accelerating: '#00d4ff',
-  established: '#00ff88',
-};
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
@@ -72,29 +92,47 @@ export default function Home() {
   const [suggestionIdx, setSuggestionIdx] = useState(0);
   const [charIdx, setCharIdx] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
-  const [shifts, setShifts] = useState<ShiftCard[]>(FALLBACK_SHIFTS);
+  const [insights, setInsights] = useState<InsightCard[]>(FALLBACK_INSIGHTS);
   const [isLive, setIsLive] = useState(false);
+  const [signalsAnalyzed, setSignalsAnalyzed] = useState(0);
 
-  // Fetch live trends from trend agent
+  // Fetch live insights from insight agent
   useEffect(() => {
     let cancelled = false;
-    async function loadTrends() {
+    async function loadInsights() {
       try {
-        const res = await fetch('/api/agents/trends');
+        const res = await fetch('/api/insights?limit=6');
         if (!res.ok) return;
         const data = await res.json();
-        if (cancelled || !data.ok || !data.trends?.length) return;
-        const live: ShiftCard[] = data.trends.slice(0, 4).map((t: { keyword: string; stage: string; signal_count: number; industries: string[]; latest_signal: string }) => ({
-          title: `${t.keyword.charAt(0).toUpperCase() + t.keyword.slice(1)} is ${t.stage}`,
-          desc: t.latest_signal || `${t.signal_count} signals detected across multiple sources.`,
-          industries: t.industries.slice(0, 3),
-          color: STAGE_COLORS[t.stage] ?? '#00d4ff',
+        if (cancelled || !data.ok || !data.insights?.length) return;
+
+        type RawInsight = {
+          title: string;
+          description: string;
+          industries: string[];
+          companies: string[];
+          color: string;
+          type: string;
+          confidence: number;
+          momentum: string;
+        };
+
+        const live: InsightCard[] = data.insights.slice(0, 6).map((i: RawInsight) => ({
+          title: i.title,
+          desc: i.description,
+          industries: i.industries.slice(0, 3),
+          companies: i.companies?.slice(0, 3) ?? [],
+          color: i.color,
+          type: i.type,
+          confidence: i.confidence,
+          momentum: i.momentum,
         }));
-        setShifts(live);
-        setIsLive(true);
+        setInsights(live);
+        setIsLive(data.is_live ?? false);
+        setSignalsAnalyzed(data.signals_analyzed ?? 0);
       } catch { /* keep fallback */ }
     }
-    void loadTrends();
+    void loadInsights();
     return () => { cancelled = true; };
   }, []);
 
@@ -219,7 +257,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Global Shifts ───────────────────────────────────────── */}
+      {/* ── Intelligence Insights ─────────────────────────────────── */}
       <section className="relative z-10 px-6 pb-16">
         <div className="max-w-4xl mx-auto">
 
@@ -234,31 +272,65 @@ export default function Home() {
                 </span>
               )}
               <span className="font-mono text-[7px] tracking-[0.4em] text-white/15 uppercase">
-                {isLive ? 'LIVE TRENDS' : 'GLOBAL SHIFTS'}
+                {isLive ? `LIVE INTELLIGENCE · ${signalsAnalyzed} SIGNALS ANALYZED` : 'GLOBAL INTELLIGENCE'}
               </span>
             </div>
             <div className="h-px flex-1 bg-white/[0.04]" />
           </div>
 
-          {/* Shift cards */}
+          {/* Insight cards — 2-col grid, up to 6 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {shifts.map((shift) => (
+            {insights.map((insight) => (
               <div
-                key={shift.title}
+                key={insight.title}
                 className="group border border-white/[0.05] rounded-sm p-5 hover:border-white/[0.10] hover:bg-white/[0.015] transition-all duration-300 cursor-default"
               >
-                <div
-                  className="w-6 h-[2px] mb-3 rounded-full transition-all duration-300 group-hover:w-10"
-                  style={{ backgroundColor: shift.color, opacity: 0.6 }}
-                />
+                {/* Type badge + accent bar */}
+                <div className="flex items-center gap-2 mb-3">
+                  <div
+                    className="w-6 h-[2px] rounded-full transition-all duration-300 group-hover:w-10"
+                    style={{ backgroundColor: insight.color, opacity: 0.6 }}
+                  />
+                  <span
+                    className="font-mono text-[6px] tracking-[0.25em] uppercase"
+                    style={{ color: `${insight.color}80` }}
+                  >
+                    {TYPE_LABELS[insight.type] ?? insight.type}
+                  </span>
+                  {insight.confidence >= 80 && (
+                    <span className="font-mono text-[6px] tracking-wider text-white/15 ml-auto">
+                      {insight.confidence}%
+                    </span>
+                  )}
+                </div>
+
+                {/* Title */}
                 <h3 className="font-mono text-[11px] text-white/65 font-medium mb-2 group-hover:text-white/80 transition-colors">
-                  {shift.title}
+                  {insight.title}
                 </h3>
+
+                {/* Description */}
                 <p className="font-mono text-[9px] text-white/25 leading-[1.7] mb-3 group-hover:text-white/35 transition-colors">
-                  {shift.desc}
+                  {insight.desc}
                 </p>
+
+                {/* Companies (if present) */}
+                {insight.companies.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {insight.companies.map((c) => (
+                      <span
+                        key={c}
+                        className="font-mono text-[7px] text-[#00d4ff]/30 group-hover:text-[#00d4ff]/50 transition-colors"
+                      >
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Industry tags */}
                 <div className="flex flex-wrap gap-1.5">
-                  {shift.industries.map((ind) => (
+                  {insight.industries.map((ind) => (
                     <span
                       key={ind}
                       className="font-mono text-[6px] tracking-[0.15em] text-white/15 border border-white/[0.06] rounded-full px-2 py-0.5 uppercase"
@@ -269,6 +341,16 @@ export default function Home() {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* View all link */}
+          <div className="text-center mt-4">
+            <Link
+              href="/signals"
+              className="font-mono text-[8px] tracking-[0.3em] text-white/15 hover:text-white/35 transition-colors uppercase"
+            >
+              VIEW ALL SIGNALS →
+            </Link>
           </div>
         </div>
       </section>

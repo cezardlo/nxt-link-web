@@ -69,6 +69,17 @@ type FeedItem = {
   url?: string;
 };
 
+type IndustryInsight = {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  confidence: number;
+  companies: string[];
+  color: string;
+  momentum: string;
+};
+
 type ScanResult = {
   executive_summary?: string;
   products?: IndustryProduct[];
@@ -98,6 +109,7 @@ export default function IndustryDeepDivePage() {
   const [signals, setSignals] = useState<IntelSignal[]>([]);
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
+  const [industryInsights, setIndustryInsights] = useState<IndustryInsight[]>([]);
 
   // Build data (only for known industries)
   const allVendors = Object.values(EL_PASO_VENDORS) as VendorRecord[];
@@ -165,6 +177,27 @@ export default function IndustryDeepDivePage() {
       } catch { /* degrade */ }
     }
     void loadSignals();
+    return () => { cancelled = true; };
+  }, [slug]);
+
+  // Fetch industry-relevant insights
+  useEffect(() => {
+    if (!slug) return;
+    let cancelled = false;
+    async function loadInsights() {
+      try {
+        // Map slug to intel industry key
+        const industryKey = SLUG_TO_SIGNAL_INDUSTRY[slug];
+        if (!industryKey) return;
+        const res = await fetch(`/api/insights?industry=${industryKey}&limit=4`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data.ok) {
+          setIndustryInsights(data.insights ?? []);
+        }
+      } catch { /* degrade */ }
+    }
+    void loadInsights();
     return () => { cancelled = true; };
   }, [slug]);
 
@@ -352,6 +385,47 @@ export default function IndustryDeepDivePage() {
                   <p className="font-mono text-[11px] text-white/50 leading-[1.9]">
                     {story.outlook}
                   </p>
+                </div>
+              </Section>
+            )}
+
+            {/* Intelligence Insights */}
+            {industryInsights.length > 0 && (
+              <Section title="INTELLIGENCE INSIGHTS" subtitle="Patterns and opportunities detected" color="#00d4ff">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {industryInsights.map((ins) => (
+                    <div
+                      key={ins.id}
+                      className="group border border-white/[0.04] rounded-sm p-4 hover:border-white/[0.08] hover:bg-white/[0.01] transition-all duration-200"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div
+                          className="w-4 h-[2px] rounded-full"
+                          style={{ backgroundColor: ins.color, opacity: 0.6 }}
+                        />
+                        <span
+                          className="font-mono text-[6px] tracking-[0.2em] uppercase"
+                          style={{ color: `${ins.color}80` }}
+                        >
+                          {ins.type}
+                        </span>
+                        <span className="font-mono text-[6px] text-white/15 ml-auto">{ins.confidence}%</span>
+                      </div>
+                      <h4 className="font-mono text-[10px] text-white/55 font-medium mb-1.5 group-hover:text-white/70 transition-colors">
+                        {ins.title}
+                      </h4>
+                      <p className="font-mono text-[8px] text-white/25 leading-[1.6] line-clamp-2">
+                        {ins.description}
+                      </p>
+                      {ins.companies.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {ins.companies.slice(0, 3).map(c => (
+                            <span key={c} className="font-mono text-[7px] text-[#00d4ff]/30">{c}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </Section>
             )}
