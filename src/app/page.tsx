@@ -96,6 +96,16 @@ export default function Home() {
   const [isLive, setIsLive] = useState(false);
   const [signalsAnalyzed, setSignalsAnalyzed] = useState(0);
 
+  type WhatChanged = {
+    signals_today: number;
+    signals_week: number;
+    active_industries: string[];
+    top_signals: Array<{ title: string; signal_type: string; industry: string; company: string | null; importance: number; discovered_at: string }>;
+    funding_total_30d: number;
+    new_industries: string[];
+  };
+  const [whatChanged, setWhatChanged] = useState<WhatChanged | null>(null);
+
   // Fetch live insights from insight agent
   useEffect(() => {
     let cancelled = false;
@@ -133,6 +143,21 @@ export default function Home() {
       } catch { /* keep fallback */ }
     }
     void loadInsights();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Fetch what changed today
+  useEffect(() => {
+    let cancelled = false;
+    async function loadWhatChanged() {
+      try {
+        const res = await fetch('/api/what-changed');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data.ok) setWhatChanged(data.data);
+      } catch { /* degrade gracefully */ }
+    }
+    void loadWhatChanged();
     return () => { cancelled = true; };
   }, []);
 
@@ -354,6 +379,86 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ── What Changed Today ─────────────────────────────────── */}
+      {whatChanged && (whatChanged.signals_today > 0 || whatChanged.top_signals.length > 0) && (
+        <section className="relative z-10 px-6 pb-16">
+          <div className="max-w-4xl mx-auto">
+
+            {/* Section label */}
+            <div className="flex items-center gap-4 mb-6">
+              <div className="h-px flex-1 bg-white/[0.04]" />
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-50" style={{ backgroundColor: '#ffb800' }} />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ backgroundColor: '#ffb800' }} />
+                </span>
+                <span className="font-mono text-[7px] tracking-[0.4em] text-white/15 uppercase">
+                  WHAT CHANGED TODAY
+                </span>
+              </div>
+              <div className="h-px flex-1 bg-white/[0.04]" />
+            </div>
+
+            {/* Stats row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+              {[
+                { label: 'SIGNALS TODAY', value: whatChanged.signals_today, color: '#00d4ff' },
+                { label: 'THIS WEEK', value: whatChanged.signals_week, color: '#a855f7' },
+                { label: 'ACTIVE INDUSTRIES', value: whatChanged.active_industries.length, color: '#00ff88' },
+                { label: 'FUNDING 30D', value: whatChanged.funding_total_30d > 0 ? `$${(whatChanged.funding_total_30d / 1_000_000).toFixed(0)}M` : '—', color: '#ffd700' },
+              ].map(({ label: lbl, value, color: c }) => (
+                <div key={lbl} className="border border-white/[0.04] rounded-sm p-3 text-center">
+                  <div className="font-mono text-[16px] font-medium" style={{ color: c }}>{value}</div>
+                  <div className="font-mono text-[6px] tracking-[0.3em] text-white/15 mt-1">{lbl}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Top signals */}
+            {whatChanged.top_signals.length > 0 && (
+              <div className="space-y-[2px]">
+                {whatChanged.top_signals.slice(0, 5).map((sig, i) => {
+                  const typeColor: Record<string, string> = {
+                    patent_filing: '#ffb800', funding_round: '#00ff88', contract_award: '#ffd700',
+                    product_launch: '#00d4ff', hiring_signal: '#a855f7', merger_acquisition: '#f97316',
+                    regulatory_action: '#ff3b30', facility_expansion: '#00ff88', research_paper: '#00d4ff',
+                  };
+                  const c = typeColor[sig.signal_type] ?? '#ffffff30';
+                  return (
+                    <div key={i} className="flex items-center gap-3 py-2 px-3 border border-white/[0.03] hover:border-white/[0.06] transition-colors">
+                      <div className="w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: c }} />
+                      <span className="font-mono text-[7px] tracking-[0.15em] uppercase shrink-0" style={{ color: `${c}80` }}>
+                        {sig.signal_type.replace(/_/g, ' ').slice(0, 8)}
+                      </span>
+                      <span className="font-mono text-[10px] text-white/40 truncate flex-1">{sig.title}</span>
+                      {sig.company && <span className="font-mono text-[8px] text-white/20 shrink-0">{sig.company}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* New industries detected */}
+            {whatChanged.new_industries.length > 0 && (
+              <div className="mt-4 border border-[#00ff88]/10 rounded-sm p-3 bg-[#00ff88]/[0.02]">
+                <div className="font-mono text-[7px] tracking-[0.3em] text-[#00ff88]/40 mb-2">NEW INDUSTRIES DETECTED THIS WEEK</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {whatChanged.new_industries.map(ind => (
+                    <Link
+                      key={ind}
+                      href={`/industry/${ind.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                      className="font-mono text-[9px] text-[#00ff88]/50 border border-[#00ff88]/15 rounded-full px-2.5 py-1 hover:text-[#00ff88]/80 hover:border-[#00ff88]/30 transition-colors"
+                    >
+                      {ind}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* ── Industry Explorer (bottom grid) ─────────────────────── */}
       <section className="relative z-10 px-6 pb-20">

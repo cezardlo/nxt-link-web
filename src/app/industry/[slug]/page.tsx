@@ -20,6 +20,7 @@ import { CompanyTooltip } from '@/components/CompanyTooltip';
 import type { IndustryProfile, TimelineEvent, OpportunityEntry } from '@/lib/engines/industry-profile';
 import type { AdoptionProfile } from '@/lib/agents/scoring/adoption-curve';
 import type { TrajectoryForecast, RiskAlert, ConvergencePrediction } from '@/lib/engines/prediction-engine';
+import type { PorterForce } from '@/lib/engines/strategic-frameworks';
 
 const IndustryEcosystemGraph = dynamic(
   () => import('@/components/IndustryEcosystemGraph').then(m => ({ default: m.IndustryEcosystemGraph })),
@@ -871,6 +872,85 @@ export default function IndustryDeepDivePage() {
         {/* ═══════════════════════════════════════════════════════════════════════ */}
         {level === 'analyze' && (
           <>
+            {/* Porter's Five Forces */}
+            {profile?.blocks.porter && (
+              <Section title="PORTER'S FIVE FORCES" subtitle={`Industry attractiveness: ${profile.blocks.porter.overall_label} (${profile.blocks.porter.overall_attractiveness}/100)`} color="#a855f7">
+                <div className="space-y-2">
+                  {Object.values(profile.blocks.porter.forces).map((force: PorterForce) => {
+                    const barColor =
+                      force.level === 'very_high' ? '#ff3b30' :
+                      force.level === 'high' ? '#f97316' :
+                      force.level === 'moderate' ? '#ffb800' :
+                      force.level === 'low' ? '#00d4ff' : '#00ff88';
+                    return (
+                      <div key={force.name} className="border border-white/[0.04] rounded-sm p-3 bg-white/[0.01]">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-mono text-[10px] text-white/50">{force.name}</span>
+                          <span className="font-mono text-[8px] tracking-[0.2em] uppercase" style={{ color: barColor }}>{force.level.replace('_', ' ')}</span>
+                        </div>
+                        <div className="w-full h-1 bg-white/[0.04] rounded-full overflow-hidden mb-2">
+                          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${force.score}%`, backgroundColor: barColor }} />
+                        </div>
+                        <p className="font-mono text-[8px] text-white/25 leading-relaxed">{force.description}</p>
+                        {force.evidence.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-1.5">
+                            {force.evidence.map((e, i) => (
+                              <span key={i} className="font-mono text-[7px] text-white/15">{e}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <div className="flex items-center justify-between pt-2 border-t border-white/[0.04]">
+                    <span className="font-mono text-[8px] text-white/20">Confidence: {Math.round(profile.blocks.porter.confidence * 100)}%</span>
+                    <span className="font-mono text-[10px]" style={{ color: profile.blocks.porter.overall_attractiveness >= 50 ? '#00ff88' : '#f97316' }}>
+                      {profile.blocks.porter.overall_label}
+                    </span>
+                  </div>
+                </div>
+              </Section>
+            )}
+
+            {/* PESTLE Analysis */}
+            {profile?.blocks.pestle && (
+              <Section title="PESTLE ANALYSIS" subtitle={`Environment: ${profile.blocks.pestle.overall_environment} · Dominant: ${profile.blocks.pestle.dominant_factor}`} color="#00d4ff">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {profile.blocks.pestle.factors.map((factor) => {
+                    const sentColor = factor.sentiment === 'positive' ? '#00ff88' : factor.sentiment === 'negative' ? '#ff3b30' : '#ffb800';
+                    return (
+                      <div key={factor.category} className="border border-white/[0.04] rounded-sm p-3 bg-white/[0.01]">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: sentColor }} />
+                          <span className="font-mono text-[8px] tracking-[0.2em] text-white/40 uppercase">{factor.label}</span>
+                        </div>
+                        <div className="w-full h-1 bg-white/[0.04] rounded-full overflow-hidden mb-2">
+                          <div className="h-full rounded-full" style={{ width: `${factor.score}%`, backgroundColor: sentColor, opacity: 0.6 }} />
+                        </div>
+                        <p className="font-mono text-[8px] text-white/20 leading-relaxed line-clamp-2">{factor.description}</p>
+                        {factor.evidence.length > 0 && (
+                          <div className="mt-1.5">
+                            {factor.evidence.slice(0, 2).map((e, i) => (
+                              <div key={i} className="font-mono text-[7px] text-white/12">{e}</div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center justify-between pt-2 mt-2 border-t border-white/[0.04]">
+                  <span className="font-mono text-[8px] text-white/20">Confidence: {Math.round(profile.blocks.pestle.confidence * 100)}%</span>
+                  <span className="font-mono text-[8px]" style={{
+                    color: profile.blocks.pestle.overall_environment === 'favorable' ? '#00ff88' :
+                           profile.blocks.pestle.overall_environment === 'challenging' ? '#ff3b30' : '#ffb800'
+                  }}>
+                    {profile.blocks.pestle.overall_environment.toUpperCase()} ENVIRONMENT
+                  </span>
+                </div>
+              </Section>
+            )}
+
             {/* Signals & Evidence */}
             <Section title="SIGNALS & EVIDENCE" subtitle="Recent intelligence from patents, funding, hiring, contracts" color="#ffb800">
               {signals.length === 0 ? (

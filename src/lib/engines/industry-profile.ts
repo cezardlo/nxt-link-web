@@ -14,6 +14,8 @@
 // No LLM calls — pure data assembly.
 
 import { getIndustryEcosystem } from '@/db/queries/knowledge-graph';
+import { scorePorterForces, scorePestle } from '@/lib/engines/strategic-frameworks';
+import type { PorterAnalysis, PestleAnalysis } from '@/lib/engines/strategic-frameworks';
 import type { EntityRow, ConnectedEntity } from '@/db/queries/knowledge-graph';
 import { getIntelSignals } from '@/db/queries/intel-signals';
 import type { IntelSignalRow } from '@/db/queries/intel-signals';
@@ -109,6 +111,8 @@ export type IndustryProfile = {
     adoption: AdoptionProfile;
     timeline: TimelineEvent[];
     opportunities: OpportunityEntry[];
+    porter: PorterAnalysis;
+    pestle: PestleAnalysis;
   };
   generated_at: string;
 };
@@ -186,6 +190,12 @@ export async function buildIndustryProfile(slug: string): Promise<IndustryProfil
   // ── Block 8: Opportunities ──
   const opportunities = buildOpportunities(slug, signals, adoption, snapshot);
 
+  // ── Block 9: Porter's Five Forces ──
+  const porter = scorePorterForces(signals, snapshot.company_count, snapshot.technology_count);
+
+  // ── Block 10: PESTLE ──
+  const pestle = scorePestle(signals, snapshot.company_count);
+
   return {
     slug,
     label,
@@ -200,6 +210,8 @@ export async function buildIndustryProfile(slug: string): Promise<IndustryProfil
       adoption,
       timeline,
       opportunities,
+      porter,
+      pestle,
     },
     generated_at: new Date().toISOString(),
   };
