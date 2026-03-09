@@ -123,34 +123,49 @@ export function domainFromUrl(url: string): string | null {
 }
 
 /**
- * Get Clearbit logo URL for a company name.
- * Tries exact match first, then fuzzy substring match,
- * then falls back to website URL domain extraction.
+ * Get Clearbit logo URL for a company.
+ *
+ * Priority order (fully automatic):
+ *   1. Website URL domain extraction — works for all vendors with a website
+ *   2. Manual mapping exact match — covers name→domain mismatches (RTX, etc.)
+ *   3. Manual mapping fuzzy match — substring matching
+ *   4. Domain guess from company name — "Palantir" → palantir.com
+ *
+ * Most companies resolve at step 1 with zero configuration.
  */
 export function getCompanyLogoUrl(
   companyName: string,
   websiteUrl?: string,
 ): string | null {
+  // 1. Website URL — most reliable, fully automatic
+  if (websiteUrl) {
+    const domain = domainFromUrl(websiteUrl);
+    if (domain) {
+      return `https://logo.clearbit.com/${domain}`;
+    }
+  }
+
   const lower = companyName.toLowerCase().trim();
 
-  // 1. Exact match
+  // 2. Exact match in manual mapping
   if (COMPANY_DOMAINS[lower]) {
     return `https://logo.clearbit.com/${COMPANY_DOMAINS[lower]}`;
   }
 
-  // 2. Fuzzy match — company name contains known key or vice versa
+  // 3. Fuzzy match — company name contains known key or vice versa
   for (const [key, domain] of Object.entries(COMPANY_DOMAINS)) {
     if (lower.includes(key) || key.includes(lower)) {
       return `https://logo.clearbit.com/${domain}`;
     }
   }
 
-  // 3. Extract domain from website URL
-  if (websiteUrl) {
-    const domain = domainFromUrl(websiteUrl);
-    if (domain) {
-      return `https://logo.clearbit.com/${domain}`;
-    }
+  // 4. Domain guess — "Palantir Technologies" → palantir.com
+  const guess = lower
+    .replace(/\b(inc|llc|corp|ltd|technologies|solutions|systems|group|co)\b/gi, '')
+    .trim()
+    .replace(/\s+/g, '');
+  if (guess.length >= 3) {
+    return `https://logo.clearbit.com/${guess}.com`;
   }
 
   return null;
