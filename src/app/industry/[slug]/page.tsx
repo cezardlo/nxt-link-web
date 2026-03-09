@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 
 import { PageTopBar } from '@/components/PageTopBar';
 import { INDUSTRIES, TECHNOLOGY_CATALOG } from '@/lib/data/technology-catalog';
@@ -14,6 +15,12 @@ import DiscoveryFeed from '@/components/DiscoveryFeed';
 import type { IndustryProduct } from '@/lib/intelligence/industry-scan';
 import { timeAgo } from '@/lib/utils/format';
 import { SignalBadge } from '@/components/SignalBadge';
+import { CompanyTooltip } from '@/components/CompanyTooltip';
+
+const IndustryEcosystemGraph = dynamic(
+  () => import('@/components/IndustryEcosystemGraph').then(m => ({ default: m.IndustryEcosystemGraph })),
+  { ssr: false }
+);
 
 // ─── Vendor category mapping ─────────────────────────────────────────────────
 
@@ -108,6 +115,14 @@ export default function IndustryDeepDivePage() {
         governmentBudgetFY25M: t.governmentBudgetFY25M,
       }))
     : [];
+
+  // Vendor lookup for tooltip
+  const findVendor = (companyName: string) => {
+    const lower = companyName.toLowerCase();
+    return Object.values(EL_PASO_VENDORS).find(v =>
+      v.name.toLowerCase().includes(lower) || lower.includes(v.name.toLowerCase())
+    );
+  };
 
   // Tier vendors
   const establishedVendors = localVendors.filter(v => v.ikerScore >= 70).sort((a, b) => b.ikerScore - a.ikerScore);
@@ -469,6 +484,17 @@ export default function IndustryDeepDivePage() {
         {/* ═══════════════════════════════════════════════════════════════════════ */}
         {level === 'explore' && (
           <>
+            {/* Ecosystem Map */}
+            <Section title="ECOSYSTEM MAP" subtitle="Interactive technology ecosystem" color="#a855f7">
+              <IndustryEcosystemGraph
+                slug={slug}
+                industryLabel={label}
+                accentColor={color}
+                vendors={localVendors.map(v => ({ id: v.id, name: v.name, website: v.website, tags: v.tags }))}
+                technologies={technologies.map(t => ({ id: t.id, name: t.name }))}
+              />
+            </Section>
+
             {/* All vendors — full tiered view */}
             {localVendors.length > 0 && (
               <Section title="ALL VENDORS" subtitle={`${localVendors.length} companies active in ${label.toLowerCase()}`} color="#ffb800">
@@ -614,9 +640,16 @@ export default function IndustryDeepDivePage() {
                             <span className="font-mono text-[10px] text-white/40 truncate block">{sig.title}</span>
                           )}
                         </div>
-                        {sig.company && (
-                          <span className="font-mono text-[8px] text-white/20 shrink-0">{sig.company}</span>
-                        )}
+                        {sig.company && (() => {
+                          const v = findVendor(sig.company);
+                          return v ? (
+                            <CompanyTooltip name={v.name} website={v.website} category={v.category} ikerScore={v.ikerScore} tags={v.tags}>
+                              <span className="font-mono text-[8px] text-white/20 shrink-0 cursor-default hover:text-white/40 transition-colors">{sig.company}</span>
+                            </CompanyTooltip>
+                          ) : (
+                            <span className="font-mono text-[8px] text-white/20 shrink-0">{sig.company}</span>
+                          );
+                        })()}
                         <span className="font-mono text-[8px] text-white/12 shrink-0">{sig.source}</span>
                       </div>
                     );
