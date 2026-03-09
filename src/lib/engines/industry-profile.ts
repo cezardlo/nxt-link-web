@@ -16,6 +16,8 @@
 import { getIndustryEcosystem } from '@/db/queries/knowledge-graph';
 import { scorePorterForces, scorePestle } from '@/lib/engines/strategic-frameworks';
 import type { PorterAnalysis, PestleAnalysis } from '@/lib/engines/strategic-frameworks';
+import { buildValueChain } from '@/lib/engines/value-chain-engine';
+import type { ValueChainAnalysis } from '@/lib/engines/value-chain-engine';
 import type { EntityRow, ConnectedEntity } from '@/db/queries/knowledge-graph';
 import { getIntelSignals } from '@/db/queries/intel-signals';
 import type { IntelSignalRow } from '@/db/queries/intel-signals';
@@ -113,6 +115,7 @@ export type IndustryProfile = {
     opportunities: OpportunityEntry[];
     porter: PorterAnalysis;
     pestle: PestleAnalysis;
+    value_chain: ValueChainAnalysis;
   };
   generated_at: string;
 };
@@ -196,6 +199,9 @@ export async function buildIndustryProfile(slug: string): Promise<IndustryProfil
   // ── Block 10: PESTLE ──
   const pestle = scorePestle(signals, snapshot.company_count);
 
+  // ── Block 11: Value Chain ──
+  const value_chain = buildValueChain(signals, snapshot.company_count, snapshot.technology_count);
+
   return {
     slug,
     label,
@@ -212,6 +218,7 @@ export async function buildIndustryProfile(slug: string): Promise<IndustryProfil
       opportunities,
       porter,
       pestle,
+      value_chain,
     },
     generated_at: new Date().toISOString(),
   };

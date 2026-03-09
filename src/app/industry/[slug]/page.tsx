@@ -21,6 +21,8 @@ import type { IndustryProfile, TimelineEvent, OpportunityEntry } from '@/lib/eng
 import type { AdoptionProfile } from '@/lib/agents/scoring/adoption-curve';
 import type { TrajectoryForecast, RiskAlert, ConvergencePrediction } from '@/lib/engines/prediction-engine';
 import type { PorterForce } from '@/lib/engines/strategic-frameworks';
+import type { ValueChainTier } from '@/lib/engines/value-chain-engine';
+import type { DiscoveredOpportunity } from '@/lib/engines/opportunity-engine';
 
 const IndustryEcosystemGraph = dynamic(
   () => import('@/components/IndustryEcosystemGraph').then(m => ({ default: m.IndustryEcosystemGraph })),
@@ -136,6 +138,7 @@ export default function IndustryDeepDivePage() {
   const [trajectory, setTrajectory] = useState<TrajectoryForecast | null>(null);
   const [risks, setRisks] = useState<RiskAlert[]>([]);
   const [convergences, setConvergences] = useState<ConvergencePrediction[]>([]);
+  const [engineOpportunities, setEngineOpportunities] = useState<DiscoveredOpportunity[]>([]);
 
   // Build static data (only for known industries)
   const allVendors = Object.values(EL_PASO_VENDORS) as VendorRecord[];
@@ -269,6 +272,27 @@ export default function IndustryDeepDivePage() {
       } catch { /* degrade gracefully */ }
     }
     void loadPredictions();
+    return () => { cancelled = true; };
+  }, [slug]);
+
+  // ── Fetch opportunity engine ──
+  useEffect(() => {
+    if (!slug) return;
+    let cancelled = false;
+    async function loadOpportunities() {
+      try {
+        const res = await fetch('/api/opportunities');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled || !data.ok) return;
+        const industryKey = SLUG_TO_SIGNAL_INDUSTRY[slug] ?? slug;
+        const opps = (data.data.opportunities ?? []).filter((o: DiscoveredOpportunity) =>
+          o.industries.some((ind: string) => ind === industryKey || ind === slug)
+        );
+        setEngineOpportunities(opps);
+      } catch { /* degrade */ }
+    }
+    void loadOpportunities();
     return () => { cancelled = true; };
   }, [slug]);
 
@@ -760,14 +784,22 @@ export default function IndustryDeepDivePage() {
         {/* ═══════════════════════════════════════════════════════════════════════ */}
         {level === 'explore' && (
           <>
-            {/* Ecosystem Map */}
+            {/* Ecosystem Map — prefer profile data (from knowledge graph), fall back to static */}
             <Section title="ECOSYSTEM MAP" subtitle="Interactive technology ecosystem" color="#a855f7">
               <IndustryEcosystemGraph
                 slug={slug}
                 industryLabel={label}
                 accentColor={color}
-                vendors={localVendors.map(v => ({ id: v.id, name: v.name, website: v.website, tags: v.tags }))}
-                technologies={technologies.map(t => ({ id: t.id, name: t.name }))}
+                vendors={
+                  profile && profile.blocks.companies.length > 0
+                    ? profile.blocks.companies.map(c => ({ id: c.id, name: c.name, website: c.website, tags: c.tags }))
+                    : localVendors.map(v => ({ id: v.id, name: v.name, website: v.website, tags: v.tags }))
+                }
+                technologies={
+                  profile && profile.blocks.technologies.length > 0
+                    ? profile.blocks.technologies.map(t => ({ id: t.id, name: t.name }))
+                    : technologies.map(t => ({ id: t.id, name: t.name }))
+                }
               />
             </Section>
 
@@ -947,6 +979,94 @@ export default function IndustryDeepDivePage() {
                   }}>
                     {profile.blocks.pestle.overall_environment.toUpperCase()} ENVIRONMENT
                   </span>
+                </div>
+              </Section>
+            )}
+
+            {/* Value Chain */}
+            {profile?.blocks.value_chain && (
+              <Section title="VALUE CHAIN" subtitle={`Integration: ${profile.blocks.value_chain.integration_score}/100 · Strongest: ${profile.blocks.value_chain.strongest_tier.replace(/_/g, ' ')}`} color="#ffd700">
+                <div className="space-y-1.5">
+                  {profile.blocks.value_chain.tiers.map((tier: ValueChainTier) => {
+                    const barColor = tier.gap_detected ? '#ff3b30' :
+                      tier.activity_score >= 60 ? '#00ff88' :
+                      tier.activity_score >= 30 ? '#00d4ff' :
+                      tier.activity_score > 0 ? '#ffb800' : 'rgba(255,255,255,0.08)';
+                    return (
+                      <div key={tier.slug} className="border border-white/[0.04] rounded-sm p-3 bg-white/[0.01]">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-[10px] text-white/50">{tier.name}</span>
+                            {tier.gap_detected && (
+                              <span className="font-mono text-[7px] tracking-[0.2em] text-[#ff3b30] border border-[#ff3b30]/30 px-1.5 py-0.5 rounded-sm">GAP</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="font-mono text-[8px] text-white/20">{tier.signal_count} signals</span>
+                            <span className="font-mono text-[8px] text-white/20">{tier.company_density} cos</span>
+                            <span className="font-mono text-[10px] font-bold" style={{ color: barColor }}>{tier.activity_score}</span>
+                          </div>
+                        </div>
+                        <div className="w-full h-1 bg-white/[0.04] rounded-full overflow-hidden mb-1.5">
+                          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${tier.activity_score}%`, backgroundColor: barColor }} />
+                        </div>
+                        {tier.key_signals.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {tier.key_signals.map((s, i) => (
+                              <span key={i} className="font-mono text-[7px] text-white/15 truncate max-w-[200px]">{s}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {profile.blocks.value_chain.bottleneck_tiers.length > 0 && (
+                  <div className="mt-3 p-2 border border-[#ff3b30]/20 bg-[#ff3b30]/[0.03] rounded-sm">
+                    <span className="font-mono text-[8px] text-[#ff3b30]/60">BOTTLENECKS: {profile.blocks.value_chain.bottleneck_tiers.map(t => t.replace(/_/g, ' ')).join(', ')}</span>
+                  </div>
+                )}
+              </Section>
+            )}
+
+            {/* Opportunity Engine */}
+            {engineOpportunities.length > 0 && (
+              <Section title="OPPORTUNITY RADAR" subtitle={`${engineOpportunities.length} opportunities detected by AI engine`} color="#00ff88">
+                <div className="space-y-2">
+                  {engineOpportunities.slice(0, 8).map((opp) => {
+                    const typeColor =
+                      opp.type === 'underserved_market' ? '#00ff88' :
+                      opp.type === 'early_mover' ? '#00d4ff' :
+                      opp.type === 'funding_surge' ? '#ffb800' :
+                      opp.type === 'patent_gap' ? '#a855f7' :
+                      opp.type === 'convergence_play' ? '#f97316' :
+                      opp.type === 'policy_tailwind' ? '#00d4ff' :
+                      opp.type === 'supply_chain_gap' ? '#ff3b30' :
+                      opp.type === 'talent_arbitrage' ? '#ffd700' : '#ffffff';
+                    const riskColor = opp.risk_level === 'high' ? '#ff3b30' : opp.risk_level === 'medium' ? '#f97316' : '#00ff88';
+                    return (
+                      <div key={opp.id} className="border border-white/[0.04] rounded-sm p-3 bg-white/[0.01]">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: typeColor, boxShadow: `0 0 4px ${typeColor}80` }} />
+                            <span className="font-mono text-[10px] text-white/55">{opp.title}</span>
+                          </div>
+                          <span className="font-mono text-[11px] font-bold" style={{ color: typeColor }}>{opp.score}</span>
+                        </div>
+                        <p className="font-mono text-[9px] text-white/30 mb-2 leading-relaxed">{opp.description}</p>
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {opp.evidence.slice(0, 3).map((e, i) => (
+                            <span key={i} className="font-mono text-[7px] text-white/20 bg-white/[0.02] px-1.5 py-0.5 rounded-sm">{e}</span>
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-mono text-[7px] tracking-[0.15em] uppercase" style={{ color: typeColor }}>{opp.type.replace(/_/g, ' ')}</span>
+                          <span className="font-mono text-[7px] text-white/15">{opp.timing.replace(/_/g, ' ')}</span>
+                          <span className="font-mono text-[7px]" style={{ color: riskColor }}>{opp.risk_level} risk</span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </Section>
             )}
