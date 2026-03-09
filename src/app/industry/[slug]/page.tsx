@@ -131,7 +131,7 @@ export default function IndustryDeepDivePage() {
   const [feedLoading, setFeedLoading] = useState(true);
   const [industryInsights, setIndustryInsights] = useState<IndustryInsight[]>([]);
   const [profile, setProfile] = useState<IndustryProfile | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
+  const [, setProfileLoading] = useState(true);
   const [trajectory, setTrajectory] = useState<TrajectoryForecast | null>(null);
   const [risks, setRisks] = useState<RiskAlert[]>([]);
   const [convergences, setConvergences] = useState<ConvergencePrediction[]>([]);
@@ -727,7 +727,7 @@ export default function IndustryDeepDivePage() {
               <Section title="OPPORTUNITIES" subtitle="Detected from signal patterns" color="#00ff88">
                 <div className="space-y-2">
                   {opportunities.map((opp, i) => (
-                    <OpportunityCard key={i} opportunity={opp} index={i} />
+                    <OpportunityCard key={i} opportunity={opp} />
                   ))}
                 </div>
               </Section>
@@ -1073,7 +1073,6 @@ function IndustryTimelineViz({ events }: { events: TimelineEvent[] }) {
     for (const e of events) {
       const d = new Date(e.date);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const label = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(e);
     }
@@ -1149,7 +1148,7 @@ function IndustryTimelineViz({ events }: { events: TimelineEvent[] }) {
 
 // ─── Opportunity Card ───────────────────────────────────────────────────────
 
-function OpportunityCard({ opportunity, index }: { opportunity: OpportunityEntry; index: number }) {
+function OpportunityCard({ opportunity }: { opportunity: OpportunityEntry }) {
   const strengthColor = opportunity.strength === 'strong' ? '#00ff88' : opportunity.strength === 'moderate' ? '#ffb800' : '#00d4ff';
   return (
     <div className="flex items-start gap-4 p-4 border border-white/[0.04] hover:border-white/[0.08] hover:bg-white/[0.01] transition-all">
