@@ -13,6 +13,7 @@ import { getIntelSignals } from '@/db/queries/intel-signals';
 import { getEntitiesByType } from '@/db/queries/knowledge-graph';
 import { scoreEmergingIndustry, shouldCreateCandidate } from '@/lib/agents/scoring/emerging-industry-score';
 import { runPredictions } from '@/lib/engines/prediction-engine';
+import { runOpportunityEngine } from '@/lib/engines/opportunity-engine';
 import { buildIndustryProfile } from '@/lib/engines/industry-profile';
 import { INDUSTRIES } from '@/lib/data/technology-catalog';
 
@@ -318,6 +319,55 @@ export async function runPredictionEngine(): Promise<LayerRunResult> {
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Prediction engine failed';
+    errors.push(msg);
+  }
+
+  return {
+    status: errors.length > 0 ? 'partial' : 'success',
+    duration_ms: Date.now() - start,
+    tasks_completed: tasksCompleted,
+    events_emitted: eventsEmitted,
+    errors,
+  };
+}
+
+// ─── Layer 3.75: Opportunity Engine ─────────────────────────────────────────────
+// Discovers actionable opportunities from signal patterns + strategic frameworks.
+
+export async function runOpportunityEngineLayer(): Promise<LayerRunResult> {
+  const start = Date.now();
+  const errors: string[] = [];
+  let eventsEmitted = 0;
+  let tasksCompleted = 0;
+
+  try {
+    const report = await runOpportunityEngine();
+    tasksCompleted++;
+
+    sharedMemory.set('opportunity_report', report);
+    sharedMemory.set('opportunity_last_run', new Date().toISOString());
+
+    for (const opp of report.opportunities.slice(0, 20)) {
+      await eventBus.emit(createEvent(
+        'opportunity_scored',
+        'prediction_engine', // closest layer
+        'opportunity-engine',
+        {
+          id: opp.id,
+          type: opp.type,
+          title: opp.title,
+          score: opp.score,
+          industries: opp.industries,
+          timing: opp.timing,
+          risk_level: opp.risk_level,
+        },
+      ));
+      eventsEmitted++;
+    }
+
+    console.log(`[agent-os] Opportunities: ${report.opportunities.length} discovered across ${report.industry_coverage} industries`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Opportunity engine failed';
     errors.push(msg);
   }
 

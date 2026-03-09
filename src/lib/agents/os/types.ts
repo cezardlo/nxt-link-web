@@ -32,6 +32,8 @@ export type EventType =
   | 'convergence_predicted'
   | 'timing_estimated'
   | 'risk_detected'
+  // Layer 3.75 — Opportunity Engine
+  | 'opportunity_scored'
   // Layer 4 — Creation Engine
   | 'page_generated'
   | 'profile_updated'
@@ -69,6 +71,7 @@ export type TaskType =
   | 'score_industry'
   | 'detect_patterns'
   | 'run_predictions'
+  | 'run_opportunities'
   | 'run_framework'
   | 'build_industry_page'
   | 'update_profile'

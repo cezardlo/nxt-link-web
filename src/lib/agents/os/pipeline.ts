@@ -15,6 +15,7 @@ import {
   runKnowledgeEngine,
   runReasoningEngine,
   runPredictionEngine,
+  runOpportunityEngineLayer,
   runCreationEngine,
   runPublishingEngine,
   runQualityControl,
@@ -94,6 +95,23 @@ export async function runIntelligenceLoop(): Promise<PipelineResult> {
   } catch (err) {
     const msg = `Layer 3.5 crashed: ${err instanceof Error ? err.message : 'unknown'}`;
     layers.prediction_engine = { status: 'failed', duration_ms: 0, tasks_completed: 0, events_emitted: 0, errors: [msg] };
+    allErrors.push(msg);
+  }
+
+  // ── Layer 3.75: Opportunity Engine ──
+  console.log('[agent-os] Layer 3.75: Opportunity Engine...');
+  try {
+    const oppResult = await runOpportunityEngineLayer();
+    // Merge opportunity results into prediction_engine layer stats
+    layers.prediction_engine.events_emitted += oppResult.events_emitted;
+    layers.prediction_engine.tasks_completed += oppResult.tasks_completed;
+    if (oppResult.errors.length > 0) {
+      layers.prediction_engine.errors.push(...oppResult.errors);
+      allErrors.push(...oppResult.errors);
+    }
+    console.log(`[agent-os] Layer 3.75 done: ${oppResult.events_emitted} events, ${oppResult.duration_ms}ms`);
+  } catch (err) {
+    const msg = `Layer 3.75 crashed: ${err instanceof Error ? err.message : 'unknown'}`;
     allErrors.push(msg);
   }
 
