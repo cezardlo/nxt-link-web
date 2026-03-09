@@ -12,7 +12,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       {showNav && <NavRail />}
-      <div className={showNav ? 'md:pl-16' : ''}>
+      <div className={showNav ? 'md:pl-14' : ''}>
         {children}
       </div>
       {showNav && <MobileNav />}
