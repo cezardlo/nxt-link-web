@@ -397,6 +397,15 @@ export default function IndustryDeepDivePage() {
                       {profile.blocks.snapshot.competition.toUpperCase()} COMPETITION
                     </span>
                   )}
+                  {profile?.confidence && (
+                    <span className="font-mono text-[7px] tracking-[0.2em] px-2 py-0.5 rounded-sm border"
+                      style={{
+                        borderColor: profile.confidence.level === 3 ? '#00ff8830' : profile.confidence.level === 2 ? '#ffb80030' : '#ff3b3030',
+                        color: profile.confidence.level === 3 ? '#00ff88aa' : profile.confidence.level === 2 ? '#ffb800aa' : '#ff3b30aa',
+                      }}>
+                      L{profile.confidence.level} · {profile.confidence.label.toUpperCase()}
+                    </span>
+                  )}
                 </div>
               )}
               <div className="font-mono text-[8px] tracking-[0.4em] text-white/25 uppercase mb-4">

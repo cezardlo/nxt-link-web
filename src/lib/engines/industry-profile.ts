@@ -99,11 +99,23 @@ export type OpportunityEntry = {
   strength: 'strong' | 'moderate' | 'emerging';
 };
 
+export type ConfidenceLevel = 1 | 2 | 3;
+
+export type ConfidenceAssessment = {
+  level: ConfidenceLevel;
+  label: string;           // 'Search Result' | 'Candidate Industry' | 'Full Industry'
+  signal_count: number;
+  company_count: number;
+  graph_connectivity: number; // 0-100
+  reasons: string[];
+};
+
 export type IndustryProfile = {
   slug: string;
   label: string;
   color: string;
   is_core: boolean;
+  confidence: ConfidenceAssessment;
   blocks: {
     snapshot: IndustrySnapshot;
     explanation: IndustryExplanation;
@@ -202,11 +214,15 @@ export async function buildIndustryProfile(slug: string): Promise<IndustryProfil
   // ── Block 11: Value Chain ──
   const value_chain = buildValueChain(signals, snapshot.company_count, snapshot.technology_count);
 
+  // ── Confidence Assessment ──
+  const confidence = assessConfidence(signals, snapshot, ecosystemData);
+
   return {
     slug,
     label,
     color,
     is_core: isCore,
+    confidence,
     blocks: {
       snapshot,
       explanation,
@@ -578,4 +594,72 @@ function buildOpportunities(
   }
 
   return opportunities.slice(0, 5);
+}
+
+// ─── Confidence Assessment ──────────────────────────────────────────────────
+
+/**
+ * Three-level confidence system:
+ * Level 1 — Search Result: weak evidence (1-2 signals)
+ * Level 2 — Candidate Industry: moderate evidence (3-7 signals, few companies)
+ * Level 3 — Full Industry: strong evidence (8+ signals, multiple companies, strong graph)
+ */
+function assessConfidence(
+  signals: IntelSignalRow[],
+  snapshot: IndustrySnapshot,
+  ecosystem: EcosystemData,
+): ConfidenceAssessment {
+  const signalCount = signals.length;
+  const companyCount = snapshot.company_count;
+  const graphNodes = ecosystem.nodes.length;
+  const graphEdges = ecosystem.edges.length;
+
+  // Graph connectivity: how rich the knowledge graph is (0-100)
+  const graphConnectivity = Math.min(100, Math.round(
+    (graphNodes * 5 + graphEdges * 3) / 2
+  ));
+
+  const reasons: string[] = [];
+
+  // Level 3: Full Industry (8+ signals, 3+ companies, graph connectivity > 30)
+  if (signalCount >= 8 && companyCount >= 3 && graphConnectivity > 30) {
+    reasons.push(`${signalCount} signals provide strong evidence`);
+    reasons.push(`${companyCount} companies tracked`);
+    if (graphConnectivity > 60) reasons.push('Rich knowledge graph connections');
+    return {
+      level: 3,
+      label: 'Full Industry',
+      signal_count: signalCount,
+      company_count: companyCount,
+      graph_connectivity: graphConnectivity,
+      reasons,
+    };
+  }
+
+  // Level 2: Candidate Industry (3+ signals)
+  if (signalCount >= 3 || companyCount >= 2) {
+    reasons.push(`${signalCount} signals detected`);
+    if (companyCount > 0) reasons.push(`${companyCount} companies identified`);
+    if (signalCount < 8) reasons.push('More signals needed for full confidence');
+    return {
+      level: 2,
+      label: 'Candidate Industry',
+      signal_count: signalCount,
+      company_count: companyCount,
+      graph_connectivity: graphConnectivity,
+      reasons,
+    };
+  }
+
+  // Level 1: Search Result
+  reasons.push(signalCount > 0 ? `Only ${signalCount} signal(s) detected` : 'No signals yet');
+  reasons.push('Early signal — still emerging');
+  return {
+    level: 1,
+    label: 'Search Result',
+    signal_count: signalCount,
+    company_count: companyCount,
+    graph_connectivity: graphConnectivity,
+    reasons,
+  };
 }
