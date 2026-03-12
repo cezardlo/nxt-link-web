@@ -292,3 +292,65 @@ body {
   background: radial-gradient(ellipse at 50% 50%, rgba(80,20,0,0) 35%, rgba(30,0,0,0.65) 100%);
   pointer-events: none;
 }
+
+/* ─── Timeline: Horizontal Alive ──────────────────────────────── */
+
+@keyframes wire-pulse {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.timeline-wire-pulse {
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%, transparent 40%,
+    rgba(0,212,255,0.6) 50%,
+    transparent 60%, transparent 100%);
+  background-size: 50% 100%;
+  animation: wire-pulse 4s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes now-radiate {
+  0%   { transform: translate(-50%,-50%) scale(1); opacity: 0.5; }
+  100% { transform: translate(-50%,-50%) scale(3.5); opacity: 0; }
+}
+
+@keyframes node-pulse {
+  0%, 100% { box-shadow: 0 0 6px currentColor; }
+  50%      { box-shadow: 0 0 14px currentColor, 0 0 24px currentColor; }
+}
+.timeline-node-pulse { animation: node-pulse 2s ease-in-out infinite; }
+
+@keyframes timeline-scan {
+  0%   { left: -2px; }
+  100% { left: 100%; }
+}
+.timeline-scan-line {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 1px;
+  background: linear-gradient(to bottom,
+    transparent 0%, rgba(0,212,255,0.12) 20%,
+    rgba(0,212,255,0.25) 50%, rgba(0,212,255,0.12) 80%,
+    transparent 100%);
+  animation: timeline-scan 8s linear infinite;
+  pointer-events: none;
+  z-index: 5;
+}
+
+@keyframes future-shimmer {
+  0%   { background-position: -300px 0; }
+  100% { background-position: 300px 0; }
+}
+.timeline-future-shimmer {
+  background: linear-gradient(90deg,
+    transparent 0%, rgba(0,212,255,0.04) 40%,
+    rgba(0,212,255,0.08) 50%, rgba(0,212,255,0.04) 60%,
+    transparent 100%);
+  background-size: 600px 100%;
+  animation: future-shimmer 4s linear infinite;
+  pointer-events: none;
+}
+
+.timeline-scroll { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.timeline-scroll::-webkit-scrollbar { display: none; }
