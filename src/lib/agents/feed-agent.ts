@@ -137,9 +137,10 @@ const SOURCE_ID_BY_NAME = new Map(FEED_SOURCES.map((s) => [s.name, s.id]));
 // - Total per cycle: ~3,000 sources
 // - Full rotation through 78K sources: ~35 cycles (~2.9 hours at 5min intervals)
 
-const MAX_TIER1 = 200;
-const MAX_TIER2 = 600;
-const MAX_ROTATING = 2200;
+// Vercel serverless has 60s limit — keep budget tight
+const MAX_TIER1 = 40;
+const MAX_TIER2 = 60;
+const MAX_ROTATING = 100;
 let rotationOffsetT2 = 0;
 let rotationOffsetT34 = 0;
 
@@ -190,7 +191,7 @@ function setStoredFeedItems(store: FeedStore): void {
 
 // ─── RSS fetching (with concurrency control & rotation) ─────────────────────
 
-const MAX_CONCURRENT_FETCHES = 80; // fetch 80 feeds at a time (balanced concurrency for ~3000/cycle)
+const MAX_CONCURRENT_FETCHES = 30; // keep low for Vercel serverless 60s limit
 
 async function fetchSourceBatch(sources: FeedSourceEntry[]): Promise<PromiseSettledResult<ParsedItem[]>[]> {
   return Promise.allSettled(
