@@ -21,6 +21,9 @@ import type { ConferenceRecord } from '@/lib/data/conference-intel';
 import { buildConferenceClusters } from '@/lib/utils/conference-clusters';
 import type { ConferenceCluster } from '@/lib/utils/conference-clusters';
 import { EL_PASO_VENDORS } from '@/lib/data/el-paso-vendors';
+import { COUNTRY_TECH_MAP } from '@/lib/data/country-tech-map';
+import type { CountryTechProfile } from '@/lib/data/country-tech-map';
+import type { IntelSignalMapPoint } from '@/hooks/useMapData';
 import MapGL from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -398,11 +401,26 @@ type Props = {
   disruptionPoints?: DisruptionMapPoint[];
   contracts?: ContractPoint[];
   samBusinesses?: SamBusinessPoint[];
+  countrySignalCounts?: Record<string, number>;
+  intelSignalPoints?: IntelSignalMapPoint[];
 };
 
 type ViewState = typeof INITIAL_VIEW;
 
-export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onConferenceSelect, onClusterSelect, onPointCountChange, flyTo, initialViewState, onViewStateChange, flights = [], seismicEvents = [], activeVendorIds = [], borderCrossings = [], borderWaitTimes = [], crimeHotspots = [], disruptionPoints = [], contracts = [], samBusinesses = [] }: Props) {
+const SIGNAL_TYPE_COLORS: Record<string, [number, number, number]> = {
+  funding_round:      [255, 184, 0],
+  merger_acquisition: [249, 115, 22],
+  contract_award:     [0, 255, 136],
+  patent_filing:      [0, 212, 255],
+  research_paper:     [168, 85, 247],
+  hiring_signal:      [255, 100, 0],
+  product_launch:     [0, 212, 255],
+  regulatory_action:  [255, 184, 0],
+  facility_expansion: [0, 255, 136],
+  case_study:         [100, 180, 255],
+};
+
+export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onConferenceSelect, onClusterSelect, onPointCountChange, flyTo, initialViewState, onViewStateChange, flights = [], seismicEvents = [], activeVendorIds = [], borderCrossings = [], borderWaitTimes = [], crimeHotspots = [], disruptionPoints = [], contracts = [], samBusinesses = [], countrySignalCounts = {}, intelSignalPoints = [] }: Props) {
   const [points, setPoints] = useState<MapPoint[]>(EL_PASO_STUBS);
   const [loading, setLoading] = useState(false);
   const [viewState, setViewState] = useState<ViewState>(() => ({
@@ -1184,6 +1202,184 @@ export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onConferenc
       );
     }
 
+    // ── Intel Signals — live global signal events as pulsing dots ─────────
+    if (activeLayers.has('intelSignals') && intelSignalPoints.length > 0 && viewState.zoom < 8) {
+      result.push(
+        new ScatterplotLayer({
+          id: 'intel-signals-ring',
+          data: intelSignalPoints,
+          getPosition: (d: IntelSignalMapPoint) => [d.lon, d.lat] as [number, number],
+          getRadius: (d: IntelSignalMapPoint) => 80000 + d.importance * 160000,
+          getFillColor: (d: IntelSignalMapPoint) => {
+            const [r, g, b] = SIGNAL_TYPE_COLORS[d.signal_type] ?? [0, 212, 255];
+            const alpha = Math.round(8 + 18 * (0.5 + 0.5 * Math.sin(pulsePhase * Math.PI * 2)));
+            return [r, g, b, alpha] as [number, number, number, number];
+          },
+          getLineColor: (d: IntelSignalMapPoint) => {
+            const [r, g, b] = SIGNAL_TYPE_COLORS[d.signal_type] ?? [0, 212, 255];
+            return [r, g, b, Math.round(120 + 80 * Math.sin(pulsePhase * Math.PI * 2))] as [number, number, number, number];
+          },
+          lineWidthMinPixels: 1,
+          stroked: true,
+          filled: true,
+          radiusUnits: 'meters',
+          pickable: false,
+          updateTriggers: { getFillColor: [pulsePhase], getLineColor: [pulsePhase] },
+        }) as unknown as Layer,
+      );
+      result.push(
+        new ScatterplotLayer({
+          id: 'intel-signals-dot',
+          data: intelSignalPoints,
+          getPosition: (d: IntelSignalMapPoint) => [d.lon, d.lat] as [number, number],
+          getRadius: 20000,
+          getFillColor: (d: IntelSignalMapPoint) => {
+            const [r, g, b] = SIGNAL_TYPE_COLORS[d.signal_type] ?? [0, 212, 255];
+            return [r, g, b, 200] as [number, number, number, number];
+          },
+          radiusUnits: 'meters',
+          pickable: false,
+        }) as unknown as Layer,
+      );
+    }
+
+    // ── Global Tech Countries — heat map with live signal pulsing ──────────
+    if (activeLayers.has('globalTech') && viewState.zoom < 7) {
+      const hexToRgb = (hex: string): [number, number, number] => {
+        const h = hex.replace('#', '');
+        return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+      };
+
+      const maxSignals = Math.max(1, ...Object.values(countrySignalCounts));
+      const pulse = 0.5 + 0.5 * Math.sin(pulsePhase * Math.PI * 2); // 0→1 oscillation
+
+      // ── Layer 1: Soft outer glow halo (pixel-radius, scales with activity)
+      result.push(
+        new ScatterplotLayer({
+          id: 'country-tech-halo',
+          data: COUNTRY_TECH_MAP,
+          getPosition: (d: CountryTechProfile) => [d.lon, d.lat] as [number, number],
+          getRadius: (d: CountryTechProfile) => {
+            const liveBoost = (countrySignalCounts[d.code] ?? 0) / maxSignals;
+            return Math.round(28 + (d.techScore / 100) * 18 + liveBoost * 20);
+          },
+          radiusUnits: 'pixels',
+          radiusMinPixels: 20,
+          radiusMaxPixels: 80,
+          getFillColor: (d: CountryTechProfile) => {
+            const [r, g, b] = hexToRgb(d.color);
+            const liveBoost = (countrySignalCounts[d.code] ?? 0) / maxSignals;
+            const alpha = Math.round((18 + liveBoost * 22) * (0.5 + 0.5 * pulse));
+            return [r, g, b, alpha] as [number, number, number, number];
+          },
+          stroked: false,
+          filled: true,
+          pickable: false,
+          updateTriggers: { getFillColor: [pulsePhase, countrySignalCounts], getRadius: countrySignalCounts },
+        }) as unknown as Layer,
+      );
+
+      // ── Layer 2: Crisp ring border — brighter when signals active
+      result.push(
+        new ScatterplotLayer({
+          id: 'country-tech-ring',
+          data: COUNTRY_TECH_MAP,
+          getPosition: (d: CountryTechProfile) => [d.lon, d.lat] as [number, number],
+          getRadius: (d: CountryTechProfile) => {
+            const liveBoost = (countrySignalCounts[d.code] ?? 0) / maxSignals;
+            return Math.round(16 + (d.techScore / 100) * 10 + liveBoost * 10);
+          },
+          radiusUnits: 'pixels',
+          radiusMinPixels: 12,
+          radiusMaxPixels: 42,
+          getFillColor: [0, 0, 0, 0] as [number, number, number, number],
+          getLineColor: (d: CountryTechProfile) => {
+            const [r, g, b] = hexToRgb(d.color);
+            const liveBoost = (countrySignalCounts[d.code] ?? 0) / maxSignals;
+            const alpha = Math.round(90 + liveBoost * 120 + 40 * pulse);
+            return [r, g, b, Math.min(255, alpha)] as [number, number, number, number];
+          },
+          lineWidthMinPixels: 1,
+          stroked: true,
+          filled: true,
+          pickable: false,
+          updateTriggers: { getLineColor: [pulsePhase, countrySignalCounts], getRadius: countrySignalCounts },
+        }) as unknown as Layer,
+      );
+
+      // ── Layer 3: Core dot — solid, country color
+      result.push(
+        new ScatterplotLayer({
+          id: 'country-tech-dot',
+          data: COUNTRY_TECH_MAP,
+          getPosition: (d: CountryTechProfile) => [d.lon, d.lat] as [number, number],
+          getRadius: 5,
+          radiusUnits: 'pixels',
+          radiusMinPixels: 3,
+          radiusMaxPixels: 8,
+          getFillColor: (d: CountryTechProfile) => {
+            const [r, g, b] = hexToRgb(d.color);
+            return [r, g, b, 230] as [number, number, number, number];
+          },
+          stroked: false,
+          filled: true,
+          pickable: false,
+        }) as unknown as Layer,
+      );
+
+      // ── Layer 4: Country code + name label
+      result.push(
+        new TextLayer({
+          id: 'country-tech-labels',
+          data: COUNTRY_TECH_MAP,
+          getPosition: (d: CountryTechProfile) => [d.lon, d.lat] as [number, number],
+          getText: (d: CountryTechProfile) => {
+            const signals = countrySignalCounts[d.code] ?? 0;
+            return signals > 0 ? `${d.code} ◉${signals}` : d.code;
+          },
+          getSize: 11,
+          getColor: (d: CountryTechProfile) => {
+            const [r, g, b] = hexToRgb(d.color);
+            return [r, g, b, 255] as [number, number, number, number];
+          },
+          fontFamily: '"IBM Plex Mono", monospace',
+          fontWeight: 'bold',
+          getTextAnchor: 'middle',
+          getAlignmentBaseline: 'bottom',
+          getPixelOffset: [0, -12] as [number, number],
+          background: true,
+          getBackgroundColor: [0, 0, 0, 210] as [number, number, number, number],
+          backgroundPadding: [4, 2, 4, 2] as [number, number, number, number],
+          pickable: false,
+          sizeUnits: 'pixels',
+          updateTriggers: { getText: countrySignalCounts },
+        }) as unknown as Layer,
+      );
+
+      // ── Layer 5: Top companies — shown below dot (only at zoom < 4)
+      if (viewState.zoom < 4) {
+        result.push(
+          new TextLayer({
+            id: 'country-tech-companies',
+            data: COUNTRY_TECH_MAP,
+            getPosition: (d: CountryTechProfile) => [d.lon, d.lat] as [number, number],
+            getText: (d: CountryTechProfile) => d.keyCompanies.slice(0, 3).join(' · '),
+            getSize: 9,
+            getColor: [200, 200, 200, 190] as [number, number, number, number],
+            fontFamily: '"IBM Plex Mono", monospace',
+            getTextAnchor: 'middle',
+            getAlignmentBaseline: 'top',
+            getPixelOffset: [0, 14] as [number, number],
+            background: true,
+            getBackgroundColor: [0, 0, 0, 180] as [number, number, number, number],
+            backgroundPadding: [3, 1, 3, 1] as [number, number, number, number],
+            pickable: false,
+            sizeUnits: 'pixels',
+          }) as unknown as Layer,
+        );
+      }
+    }
+
     // ── Conferences — World Monitor bubble style (sized circles + count) ──
     if (activeLayers.has('conferences')) {
       // WM color by count: green (few) → yellow → orange → red (many)
@@ -1726,7 +1922,7 @@ export function MapCanvas({ activeLayers, timeRange, onVendorSelect, onConferenc
     }
 
     return result;
-  }, [points, activeLayers, pulsePhase, viewState.zoom, flights, seismicEvents, activeVendorIds, borderCrossings, borderWaitTimes, crimeHotspots, disruptionPoints, contracts, samBusinesses]);
+  }, [points, activeLayers, pulsePhase, viewState.zoom, flights, seismicEvents, activeVendorIds, borderCrossings, borderWaitTimes, crimeHotspots, disruptionPoints, contracts, samBusinesses, countrySignalCounts, intelSignalPoints]);
 
   const handleClick = useCallback(
     (info: PickingInfo) => {

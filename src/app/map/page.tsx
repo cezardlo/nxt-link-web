@@ -50,6 +50,8 @@ export default function MapPage() {
     crimeArticles, crimeHotspots,
     contracts, samBusinesses,
     disruptionPoints,
+    countrySignalCounts,
+    intelSignalPoints,
     dataFreshness, fetchErrors,
   } = useMapData(layers);
 
@@ -199,6 +201,8 @@ export default function MapPage() {
             disruptionPoints={disruptionPoints}
             contracts={contracts}
             samBusinesses={samBusinesses}
+            countrySignalCounts={countrySignalCounts}
+            intelSignalPoints={intelSignalPoints}
           />
 
           {/* Mode overlay (scanlines / vignette) */}

@@ -39,16 +39,23 @@ export type InsightAgentResult = {
 // ─── Industry Display Names ─────────────────────────────────────────────────────
 
 const INDUSTRY_LABELS: Record<string, string> = {
+  // New slugs (canonical)
+  'healthcare': 'Healthcare & Biotech',
+  'defense': 'Defense & Aerospace',
+  'ai-ml': 'AI/ML',
+  'logistics': 'Supply Chain & Logistics',
+  // Legacy slugs (existing Supabase rows)
   'health_biotech': 'Healthcare & Biotech',
-  'manufacturing': 'Manufacturing',
   'aerospace_defense': 'Defense & Aerospace',
+  'ai_ml': 'AI/ML',
+  'supply_chain': 'Supply Chain',
+  // Unchanged
+  'manufacturing': 'Manufacturing',
   'agriculture': 'Agriculture',
   'construction': 'Construction',
   'energy': 'Energy',
   'fintech': 'Fintech',
   'cybersecurity': 'Cybersecurity',
-  'ai_ml': 'AI/ML',
-  'supply_chain': 'Supply Chain',
   'general': 'General',
 };
 
@@ -122,7 +129,7 @@ function detectPatterns(signals: IntelSignalRow[]): Insight[] {
   const patterns: Insight[] = [];
 
   for (const [industry, group] of Array.from(byIndustry.entries() as Iterable<[string, IntelSignalRow[]]>)) {
-    if (group.length < 4) continue;
+    if (group.length < 2) continue;
 
     const types = uniqueStrings(group.map(s => s.signal_type));
     if (types.length < 2) continue; // need signal diversity
@@ -169,7 +176,7 @@ function detectClusters(signals: IntelSignalRow[]): Insight[] {
   const clusters: Insight[] = [];
 
   for (const [signalType, group] of Array.from(byType.entries() as Iterable<[string, IntelSignalRow[]]>)) {
-    if (group.length < 3) continue;
+    if (group.length < 2) continue;
 
     const industries = uniqueStrings(group.map(s => s.industry));
     if (industries.length < 2) continue; // need cross-industry spread

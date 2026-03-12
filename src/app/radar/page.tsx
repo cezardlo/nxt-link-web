@@ -31,6 +31,7 @@ type LiveSectorScore = {
 type IntelResponse = {
   ok: boolean;
   sectorScores?: LiveSectorScore[];
+  by_industry?: Record<string, number>;
   detectedAt?: string;
   feedAsOf?: string;
 };
@@ -48,6 +49,25 @@ const SECTOR_TO_DOMAIN: Record<string, string> = {
   'manufacturing-tech':   'industrial',
   'industrial-ai':        'tech-trends',
   'supply-chain-software':'supply-chain',
+};
+
+// ── Industry-slug-to-Domain mapping (Supabase path) ──────────────────────────
+// Maps intel_signals.industry slugs → radar domain IDs
+const INDUSTRY_TO_DOMAIN: Record<string, string> = {
+  'defense':       'geopolitics',
+  'cybersecurity': 'cybersecurity',
+  'ai-ml':         'tech-trends',
+  'healthcare':    'research',
+  'manufacturing': 'industrial',
+  'energy':        'energy',
+  'logistics':     'supply-chain',
+  'border-tech':   'supply-chain',
+  'fintech':       'capital',
+  // Legacy slugs still in DB
+  'aerospace_defense': 'geopolitics',
+  'ai_ml':             'tech-trends',
+  'health_biotech':    'research',
+  'supply_chain':      'supply-chain',
 };
 
 // ── Static Data (March 2026) ─────────────────────────────────────────────────
@@ -257,6 +277,25 @@ function mapSectorTrend(t: 'rising' | 'stable' | 'falling'): RadarDomain['trend'
   return 'stable';
 }
 
+/** Build synthetic sector scores from by_industry counts (Supabase path) */
+function buildSectorScoresFromByIndustry(
+  byIndustry: Record<string, number>,
+): LiveSectorScore[] {
+  const maxCount = Math.max(1, ...Object.values(byIndustry));
+  return Object.entries(byIndustry)
+    .filter(([, count]) => count > 0)
+    .map(([industry, count]) => ({
+      id: industry,
+      label: industry,
+      color: '#00d4ff',
+      // Normalize: highest bucket → 85, scale rest proportionally, floor at 30
+      score: Math.round(30 + (count / maxCount) * 55),
+      trend: count >= 10 ? 'rising' : count >= 4 ? 'stable' : 'falling',
+      articleCount: count,
+      contractCount: 0,
+    } as LiveSectorScore));
+}
+
 /** Merge live sector scores into the static domain list */
 function applyLiveScores(
   domains: RadarDomain[],
@@ -266,7 +305,7 @@ function applyLiveScores(
   const domainScores = new Map<string, { totalScore: number; count: number; trend: RadarDomain['trend']; headlines: string[] }>();
 
   for (const sector of sectors) {
-    const domainId = SECTOR_TO_DOMAIN[sector.id];
+    const domainId = SECTOR_TO_DOMAIN[sector.id] ?? INDUSTRY_TO_DOMAIN[sector.id];
     if (!domainId) continue;
 
     const existing = domainScores.get(domainId);
@@ -316,11 +355,20 @@ export default function RadarPage() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: IntelResponse = await res.json();
 
-      if (data.ok && data.sectorScores && data.sectorScores.length > 0) {
-        const merged = applyLiveScores(RADAR_DOMAINS, data.sectorScores);
-        setDomains(merged);
-        setIsLive(true);
-        setLastUpdated(data.detectedAt ?? new Date().toISOString());
+      if (data.ok) {
+        // Supabase path returns by_industry counts; memory path returns sectorScores
+        const sectors = data.sectorScores && data.sectorScores.length > 0
+          ? data.sectorScores
+          : data.by_industry && Object.keys(data.by_industry).length > 0
+            ? buildSectorScoresFromByIndustry(data.by_industry)
+            : null;
+
+        if (sectors && sectors.length > 0) {
+          const merged = applyLiveScores(RADAR_DOMAINS, sectors);
+          setDomains(merged);
+          setIsLive(true);
+          setLastUpdated(data.detectedAt ?? new Date().toISOString());
+        }
       }
     } catch {
       // Keep static fallback — no-op

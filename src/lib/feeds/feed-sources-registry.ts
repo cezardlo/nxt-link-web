@@ -1340,6 +1340,183 @@ const EXPANDED_SOURCES: FeedSourceEntry[] = [
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// WORLD MONITOR GLOBAL TECH FEEDS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const WM_AIML_DIRECT: CompactDirect[] = [
+  ['wm-arxiv-robotics', 'ArXiv Robotics', 'https://export.arxiv.org/rss/cs.RO', ['robotics','research','papers','academic'], 2, 'global'],
+  ['wm-arxiv-cv', 'ArXiv Computer Vision', 'https://export.arxiv.org/rss/cs.CV', ['computer vision','research','papers','academic'], 2, 'global'],
+  ['wm-arxiv-sys-control', 'ArXiv Systems Control', 'https://export.arxiv.org/rss/eess.SY', ['systems','control','research','papers'], 2, 'global'],
+  ['wm-robot-report', 'The Robot Report', 'https://www.therobotreport.com/feed/', ['robotics','automation','industry'], 2, 'global'],
+  ['wm-robotics-biz-review', 'Robotics Business Review', 'https://www.roboticsbusinessreview.com/feed/', ['robotics','business','automation'], 3, 'global'],
+];
+
+const WM_ENTERPRISE_DIRECT: CompactDirect[] = [
+  ['wm-ieee-spectrum', 'IEEE Spectrum', 'https://spectrum.ieee.org/feed/rss', ['engineering','technology','standards','ieee'], 1, 'global'],
+  ['wm-automation-world', 'Automation World', 'https://www.automationworld.com/rss.xml', ['automation','manufacturing','industrial'], 2, 'global'],
+  ['wm-industryweek', 'IndustryWeek', 'https://www.industryweek.com/rss', ['manufacturing','industry','operations'], 2, 'national'],
+  ['wm-manufacturing-dive', 'Manufacturing Dive', 'https://www.manufacturingdive.com/feeds/news/', ['manufacturing','industry','news'], 2, 'national'],
+  ['wm-eu-startups', 'EU Startups', 'https://eu-startups.com/feed/', ['europe','startups','funding','venture'], 3, 'global'],
+  ['wm-tech-eu', 'Tech.eu', 'https://tech.eu/feed/', ['europe','technology','startups','innovation'], 3, 'global'],
+  ['wm-techcabal', 'TechCabal Africa', 'https://techcabal.com/feed/', ['africa','technology','startups','fintech'], 3, 'global'],
+];
+
+const WM_SUPPLY_DIRECT: CompactDirect[] = [
+  ['wm-supply-chain-dive', 'Supply Chain Dive', 'https://www.supplychaindive.com/feeds/news/', ['supply chain','logistics','procurement'], 2, 'national'],
+];
+
+const WM_GLOBAL_TECH_GN: CompactGN[] = [
+  ['wm-gn-germany-mfg', 'GN: Germany Manufacturing', 'Germany manufacturing automation Siemens Bosch Industry 4.0', ['germany','manufacturing','automation','siemens','bosch'], 2, 'global'],
+  ['wm-gn-japan-robotics', 'GN: Japan Robotics', 'Japan robotics Keyence Fanuc manufacturing technology', ['japan','robotics','keyence','fanuc','sensors'], 2, 'global'],
+  ['wm-gn-israel-cyber', 'GN: Israel Cybersecurity', 'Israel cybersecurity startup technology CyberArk Check Point', ['israel','cybersecurity','cyberark','checkpoint'], 2, 'global'],
+  ['wm-gn-china-ai', 'GN: China AI Robotics', 'China AI robotics technology startup manufacturing', ['china','ai','robotics','manufacturing'], 2, 'global'],
+  ['wm-gn-skorea-semi', 'GN: South Korea Semiconductors', 'South Korea semiconductor Samsung SK Hynix technology', ['south korea','semiconductor','samsung','sk hynix'], 2, 'global'],
+  ['wm-gn-india-tech', 'GN: India Tech Startups', 'India technology startup AI funding Bangalore', ['india','technology','startups','ai','bangalore'], 2, 'global'],
+  ['wm-gn-singapore-fintech', 'GN: Singapore Fintech AI', 'Singapore fintech AI technology startup', ['singapore','fintech','ai','startup'], 2, 'global'],
+  ['wm-gn-taiwan-semi', 'GN: Taiwan Semiconductors', 'Taiwan semiconductor TSMC chip technology', ['taiwan','semiconductor','tsmc','chip'], 2, 'global'],
+  ['wm-gn-netherlands-asml', 'GN: Netherlands ASML', 'Netherlands ASML semiconductor lithography technology', ['netherlands','asml','semiconductor','lithography'], 2, 'global'],
+  ['wm-gn-sweden-robotics', 'GN: Sweden Robotics', 'Sweden ABB robotics industrial automation', ['sweden','abb','robotics','industrial','automation'], 2, 'global'],
+];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GLOBAL SUPPLY CHAIN DISRUPTION SIGNALS
+// Everything that moves the world: ports, shipping, trade wars, sanctions,
+// chokepoints, commodity prices, logistics crises, geopolitical shocks
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const GLOBAL_SUPPLY_CHAIN_DIRECT: CompactDirect[] = [
+  // Shipping & Logistics Intelligence
+  ['sc-freightwaves', 'FreightWaves', 'https://www.freightwaves.com/news/feed', ['freight','shipping','trucking','logistics','rates'], 1, 'global'],
+  ['sc-joc', 'Journal of Commerce', 'https://www.joc.com/rss/general-news', ['shipping','ports','ocean freight','containers','trade'], 1, 'global'],
+  ['sc-loadstar', 'The Loadstar', 'https://theloadstar.com/feed/', ['shipping','freight','logistics','aviation cargo'], 1, 'global'],
+  ['sc-seatrade', 'Seatrade Maritime', 'https://www.seatrade-maritime.com/rss/general-news', ['maritime','shipping','ports','vessels'], 1, 'global'],
+  ['sc-lloyds-list', 'Lloyd\'s List Intelligence', 'https://www.lloydslist.com/rss', ['maritime','shipping','tanker','container ship'], 1, 'global'],
+  ['sc-container-news', 'Container News', 'https://container-news.com/feed/', ['containers','shipping lines','port congestion'], 2, 'global'],
+  ['sc-alphaliner', 'Alphaliner', 'https://www.alphaliner.com/rss', ['container shipping','vessel capacity','alliance shipping'], 2, 'global'],
+  ['sc-hellenic-shipping', 'Hellenic Shipping News', 'https://www.hellenicshippingnews.com/feed/', ['shipping','tanker','dry bulk','charter'], 2, 'global'],
+  ['sc-tradewindsnews', 'TradeWinds', 'https://www.tradewindsnews.com/rss', ['shipping','shipbuilding','vessels','maritime'], 2, 'global'],
+  // Port & Trade Data
+  ['sc-port-technology', 'Port Technology International', 'https://www.porttechnology.org/feed/', ['port automation','terminal operations','smart port'], 2, 'global'],
+  ['sc-world-cargo-news', 'World Cargo News', 'https://www.worldcargonews.com/feed/', ['air cargo','freight','logistics'], 2, 'global'],
+  ['sc-air-cargo-news', 'Air Cargo News', 'https://www.aircargonews.net/feed/', ['air freight','cargo airlines','express delivery'], 2, 'global'],
+  // Commodity & Trade Intelligence
+  ['sc-platts-commodities', 'S&P Global Commodity Insights', 'https://www.spglobal.com/commodityinsights/rss/news-and-research', ['commodities','oil','gas','metals','trade'], 1, 'global'],
+  ['sc-metal-bulletin', 'Fastmarkets Metal Bulletin', 'https://www.metalbulletin.com/rss', ['metals','steel','aluminum','copper','rare earth'], 2, 'global'],
+  ['sc-agrimoney', 'Agrimoney', 'https://www.agrimoney.com/news/feed', ['agriculture','grain','food supply','commodity prices'], 2, 'global'],
+];
+
+const GLOBAL_SUPPLY_CHAIN_GN: CompactGN[] = [
+  // Port disruptions & chokepoints
+  ['sc-gn-suez-canal', 'GN: Suez Canal', 'Suez Canal disruption shipping delay container reroute', ['suez canal','chokepoint','shipping disruption'], 1, 'global'],
+  ['sc-gn-panama-canal', 'GN: Panama Canal', 'Panama Canal water level shipping restriction delay', ['panama canal','drought shipping','chokepoint'], 1, 'global'],
+  ['sc-gn-strait-hormuz', 'GN: Strait of Hormuz', 'Strait of Hormuz tanker oil shipping threat', ['hormuz','oil tanker','shipping threat','iran'], 1, 'global'],
+  ['sc-gn-red-sea', 'GN: Red Sea Crisis', 'Red Sea Houthi shipping attack vessel reroute', ['red sea','houthi','shipping attack','container ship'], 1, 'global'],
+  ['sc-gn-south-china-sea', 'GN: South China Sea', 'South China Sea shipping route tension dispute', ['south china sea','shipping lane','taiwan strait'], 1, 'global'],
+  ['sc-gn-port-congestion', 'GN: Port Congestion', 'port congestion delay container backlog shipping', ['port congestion','container delay','supply chain'], 1, 'global'],
+  // Trade wars & sanctions
+  ['sc-gn-us-china-trade', 'GN: US-China Trade', 'US China trade war tariff technology ban export control', ['us china trade','tariffs','export control','decoupling'], 1, 'global'],
+  ['sc-gn-russia-sanctions', 'GN: Russia Sanctions', 'Russia sanctions technology export ban supply chain impact', ['russia sanctions','export ban','trade restriction'], 1, 'global'],
+  ['sc-gn-chip-export', 'GN: Chip Export Controls', 'semiconductor export control chip ban NVIDIA China', ['chip ban','semiconductor export','export controls','nvidia china'], 1, 'global'],
+  ['sc-gn-nearshoring', 'GN: Nearshoring', 'nearshoring Mexico manufacturing supply chain relocation', ['nearshoring','friend-shoring','supply chain shift','mexico manufacturing'], 2, 'global'],
+  ['sc-gn-onshoring', 'GN: Reshoring', 'reshoring onshoring US manufacturing supply chain', ['reshoring','onshoring','us manufacturing','chips act','inflation reduction act'], 2, 'national'],
+  // Commodity supply signals
+  ['sc-gn-rare-earth', 'GN: Rare Earth Metals', 'rare earth metals China supply lithium cobalt neodymium', ['rare earth','critical minerals','lithium','cobalt','china supply'], 1, 'global'],
+  ['sc-gn-semiconductor-supply', 'GN: Chip Supply', 'semiconductor chip shortage supply wafer production capacity', ['chip shortage','semiconductor supply','wafer fab','foundry capacity'], 1, 'global'],
+  ['sc-gn-energy-supply', 'GN: Energy Supply Chain', 'natural gas LNG energy supply disruption Europe Asia', ['lng','natural gas supply','energy security','pipeline'], 1, 'global'],
+  ['sc-gn-food-supply', 'GN: Food Supply Chain', 'global food supply disruption wheat grain shortage prices', ['food security','wheat supply','grain shortage','food inflation'], 1, 'global'],
+  // Logistics tech
+  ['sc-gn-logistics-ai', 'GN: Logistics AI', 'logistics AI automation warehouse robot delivery technology', ['logistics ai','supply chain automation','delivery robot'], 2, 'global'],
+  ['sc-gn-blockchain-trade', 'GN: Blockchain Trade', 'blockchain supply chain trade finance digital trade document', ['blockchain supply chain','digital trade','smart contract trade'], 3, 'global'],
+  // Country-specific supply chains
+  ['sc-gn-china-factory', 'GN: China Factory', 'China factory production shutdown zero covid manufacturing', ['china production','factory shutdown','china supply'], 2, 'global'],
+  ['sc-gn-mexico-manufacturing', 'GN: Mexico Manufacturing', 'Mexico manufacturing Juarez maquiladora supply chain nearshore', ['mexico manufacturing','maquiladora','juarez factory','nearshore'], 2, 'global'],
+  ['sc-gn-vietnam-supply', 'GN: Vietnam Supply Chain', 'Vietnam manufacturing export electronics supply chain', ['vietnam manufacturing','southeast asia supply','electronics export'], 2, 'global'],
+  ['sc-gn-india-supply', 'GN: India Manufacturing', 'India manufacturing export supply chain technology production', ['india manufacturing','make in india','supply chain india'], 2, 'global'],
+];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RESEARCH & PATENT SIGNALS
+// arXiv papers, USPTO patents, academic breakthroughs — see the future first
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const RESEARCH_PATENT_DIRECT: CompactDirect[] = [
+  // arXiv — live research feeds
+  ['arxiv-ai', 'ArXiv AI', 'https://export.arxiv.org/rss/cs.AI', ['ai','machine learning','research','papers'], 1, 'global'],
+  ['arxiv-ml', 'ArXiv Machine Learning', 'https://export.arxiv.org/rss/cs.LG', ['machine learning','deep learning','neural network','papers'], 1, 'global'],
+  ['arxiv-robotics', 'ArXiv Robotics', 'https://export.arxiv.org/rss/cs.RO', ['robotics','autonomous systems','robot learning','papers'], 1, 'global'],
+  ['arxiv-cv', 'ArXiv Computer Vision', 'https://export.arxiv.org/rss/cs.CV', ['computer vision','image recognition','detection','papers'], 1, 'global'],
+  ['arxiv-cr', 'ArXiv Cryptography Security', 'https://export.arxiv.org/rss/cs.CR', ['cryptography','security','privacy','zero knowledge'], 1, 'global'],
+  ['arxiv-ne', 'ArXiv Neural Networks', 'https://export.arxiv.org/rss/cs.NE', ['neural networks','evolutionary computation','genetic algorithm'], 2, 'global'],
+  ['arxiv-sy', 'ArXiv Systems Control', 'https://export.arxiv.org/rss/eess.SY', ['systems control','signal processing','autonomous control'], 2, 'global'],
+  ['arxiv-sp', 'ArXiv Signal Processing', 'https://export.arxiv.org/rss/eess.SP', ['signal processing','communications','sensor fusion'], 2, 'global'],
+  ['arxiv-mat', 'ArXiv Materials Science', 'https://export.arxiv.org/rss/cond-mat.mtrl-sci', ['materials science','semiconductor materials','battery materials'], 2, 'global'],
+  // IEEE
+  ['ieee-spectrum-rss', 'IEEE Spectrum', 'https://spectrum.ieee.org/feed/rss', ['engineering','technology','standards','ieee'], 1, 'global'],
+  ['ieee-access', 'IEEE Access', 'https://ieeeaccess.ieee.org/rss/articles', ['open access research','engineering','technology'], 2, 'global'],
+  // Nature & Science
+  ['nature-tech', 'Nature Technology', 'https://www.nature.com/subjects/technology/rss', ['nature','technology','breakthrough','research'], 1, 'global'],
+  ['science-mag', 'Science Magazine', 'https://www.science.org/rss/news_current.xml', ['science','breakthrough','research','academic'], 1, 'global'],
+  ['mit-tech-review', 'MIT Technology Review', 'https://www.technologyreview.com/topstories.rss', ['technology','innovation','research','mit'], 1, 'global'],
+  // Defense research
+  ['darpa-news', 'DARPA News', 'https://www.darpa.mil/News/news-release-rss.xml', ['darpa','defense research','advanced technology','government r&d'], 1, 'national'],
+  ['dod-research', 'DoD Research', 'https://www.defense.gov/News/Releases/rss/', ['pentagon','defense research','military tech','dod'], 1, 'national'],
+];
+
+const RESEARCH_PATENT_GN: CompactGN[] = [
+  ['rp-gn-patents-ai', 'GN: AI Patents', 'AI artificial intelligence patent filing breakthrough technology', ['ai patent','machine learning patent','tech filing'], 2, 'global'],
+  ['rp-gn-patents-defense', 'GN: Defense Patents', 'defense military patent hypersonic missile drone autonomous', ['defense patent','military technology filing','weapons patent'], 2, 'global'],
+  ['rp-gn-patents-semi', 'GN: Semiconductor Patents', 'semiconductor chip patent advanced node process technology', ['semiconductor patent','chip design patent','process node'], 2, 'global'],
+  ['rp-gn-patents-robot', 'GN: Robotics Patents', 'robotics automation patent humanoid robot autonomous manipulation', ['robotics patent','automation filing','robot design'], 2, 'global'],
+  ['rp-gn-breakthrough', 'GN: Tech Breakthroughs', 'technology breakthrough invention discovery research paper', ['breakthrough','invention','discovery','research'], 2, 'global'],
+  ['rp-gn-quantum', 'GN: Quantum Computing', 'quantum computing breakthrough qubit IBM Google Microsoft', ['quantum computing','qubit','quantum advantage'], 1, 'global'],
+  ['rp-gn-fusion', 'GN: Nuclear Fusion', 'nuclear fusion breakthrough clean energy reactor plasma', ['fusion energy','nuclear fusion','clean energy breakthrough'], 1, 'global'],
+  ['rp-gn-biotech', 'GN: Biotech Breakthroughs', 'biotech breakthrough gene therapy drug discovery clinical trial', ['biotech','gene therapy','drug discovery','clinical'], 2, 'global'],
+];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GEOPOLITICAL & WORLD EVENTS SIGNALS
+// Wars, sanctions, elections, treaties — signals that move supply chains
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const GEOPOLITICAL_DIRECT: CompactDirect[] = [
+  ['geo-acled', 'ACLED Conflict Data', 'https://acleddata.com/feed/', ['conflict','war','violence','geopolitical'], 1, 'global'],
+  ['geo-rferl', 'Radio Free Europe', 'https://www.rferl.org/api/ztyqvqxqvp', ['russia','ukraine','eastern europe','conflict'], 1, 'global'],
+  ['geo-janes', 'Jane\'s Defence', 'https://www.janes.com/feeds/news', ['defense','military intelligence','weapons','conflict'], 1, 'global'],
+  ['geo-sipri', 'SIPRI', 'https://www.sipri.org/rss', ['arms trade','military spending','conflict','peace'], 1, 'global'],
+  ['geo-iiss', 'IISS Analysis', 'https://www.iiss.org/rss', ['defense','strategic analysis','military balance'], 1, 'global'],
+  ['geo-foreign-affairs', 'Foreign Affairs', 'https://www.foreignaffairs.com/rss.xml', ['foreign policy','geopolitics','strategy','international'], 1, 'global'],
+  ['geo-war-on-rocks', 'War on the Rocks', 'https://warontherocks.com/feed/', ['defense','strategy','military affairs','foreign policy'], 1, 'global'],
+  ['geo-bellingcat', 'Bellingcat', 'https://www.bellingcat.com/feed/', ['open source intelligence','conflict','geopolitics','osint'], 2, 'global'],
+];
+
+const GEOPOLITICAL_WORLD_GN: CompactGN[] = [
+  ['geo-gn-ukraine-war', 'GN: Ukraine War', 'Ukraine war Russia military drone technology weapon supply', ['ukraine war','russia military','drone warfare'], 1, 'global'],
+  ['geo-gn-taiwan-tension', 'GN: Taiwan Strait', 'Taiwan China military tension strait technology semiconductor', ['taiwan military','china taiwan','strait tension'], 1, 'global'],
+  ['geo-gn-middle-east', 'GN: Middle East Tech', 'Middle East technology defense drone missile conflict', ['middle east','drone conflict','defense technology'], 1, 'global'],
+  ['geo-gn-nato-defense', 'GN: NATO Defense', 'NATO defense spending technology procurement contract alliance', ['nato','defense spending','military alliance'], 1, 'global'],
+  ['geo-gn-indo-pacific', 'GN: Indo-Pacific', 'Indo-Pacific security technology defense Australia Japan Korea', ['indo-pacific','aukus','quad','asia pacific defense'], 1, 'global'],
+  ['geo-gn-africa-tech', 'GN: Africa Technology', 'Africa technology startup mobile money fintech infrastructure', ['africa technology','african startup','mobile africa'], 2, 'global'],
+  ['geo-gn-latin-america', 'GN: Latin America Tech', 'Latin America technology startup Brazil Mexico manufacturing', ['latin america tech','brazil startup','mexico tech'], 2, 'global'],
+  ['geo-gn-sanctions-tech', 'GN: Tech Sanctions', 'technology sanctions export ban restriction technology company', ['tech sanctions','export restriction','technology ban'], 1, 'global'],
+  ['geo-gn-critical-minerals', 'GN: Critical Minerals', 'critical minerals supply chain lithium cobalt rare earth geopolitics', ['critical minerals','resource security','mining geopolitics'], 1, 'global'],
+];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HIRING & TALENT SIGNALS
+// Hiring surges = growth signals. Companies that are hiring = companies doing things
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const HIRING_SIGNAL_GN: CompactGN[] = [
+  ['hr-gn-defense-hiring', 'GN: Defense Contractor Hiring', 'Lockheed Raytheon Boeing Northrop hiring defense engineer jobs', ['defense hiring','defense jobs','contractor recruitment'], 2, 'national'],
+  ['hr-gn-ai-hiring', 'GN: AI Engineer Hiring', 'AI engineer hiring machine learning talent recruiting tech', ['ai hiring','ml jobs','tech talent','engineer recruitment'], 2, 'national'],
+  ['hr-gn-robotics-hiring', 'GN: Robotics Hiring', 'robotics engineer hiring automation manufacturing jobs expansion', ['robotics hiring','automation jobs','robot engineer'], 2, 'global'],
+  ['hr-gn-cyber-hiring', 'GN: Cybersecurity Hiring', 'cybersecurity analyst hiring CISO SOC security talent shortage', ['cyber hiring','security jobs','ciso recruitment'], 2, 'national'],
+  ['hr-gn-semi-hiring', 'GN: Semiconductor Hiring', 'semiconductor engineer hiring fab technician chip design jobs', ['semiconductor jobs','chip design hiring','fab technician'], 2, 'global'],
+  ['hr-gn-space-hiring', 'GN: Space Tech Hiring', 'SpaceX Blue Origin Rocket Lab hiring space engineer expansion', ['space hiring','aerospace jobs','rocket engineer'], 2, 'national'],
+  ['hr-gn-layoffs', 'GN: Tech Layoffs', 'technology company layoff workforce reduction headcount cut', ['tech layoffs','workforce reduction','company downsizing'], 2, 'global'],
+];
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // ASSEMBLE THE FULL REGISTRY
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1387,6 +1564,22 @@ export const FEED_REGISTRY: FeedSourceEntry[] = [
   ...MANUFACTURING_AEROSPACE_MEGA_SOURCES,
   ...AGRICULTURE_MEGA_SOURCES,
   ...CONSTRUCTION_INFRA_MEGA_SOURCES,
+  // ─── World Monitor Global Tech Feeds ───────────────────────────────────────
+  ...directEntries('AI/ML', WM_AIML_DIRECT),
+  ...directEntries('Enterprise', WM_ENTERPRISE_DIRECT),
+  ...directEntries('Supply Chain', WM_SUPPLY_DIRECT),
+  ...gnEntries('Enterprise', WM_GLOBAL_TECH_GN),
+  // ─── Global Supply Chain Disruption Signals ────────────────────────────────
+  ...directEntries('Supply Chain', GLOBAL_SUPPLY_CHAIN_DIRECT),
+  ...gnEntries('Supply Chain', GLOBAL_SUPPLY_CHAIN_GN),
+  // ─── Research & Patent Signals ─────────────────────────────────────────────
+  ...directEntries('AI/ML', RESEARCH_PATENT_DIRECT),
+  ...gnEntries('General', RESEARCH_PATENT_GN),
+  // ─── Geopolitical & World Events ───────────────────────────────────────────
+  ...directEntries('Defense', GEOPOLITICAL_DIRECT),
+  ...gnEntries('Defense', GEOPOLITICAL_WORLD_GN),
+  // ─── Hiring & Talent Signals ───────────────────────────────────────────────
+  ...gnEntries('General', HIRING_SIGNAL_GN),
 ];
 
 // Quick lookup by ID

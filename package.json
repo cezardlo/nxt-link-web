@@ -12,9 +12,7 @@
     "verify": "npm run lint && npm run typecheck && npm run test && npm run build",
     "ai:build": "tsx scripts/run-ai-builder.ts",
     "ai:autobuild": "powershell -ExecutionPolicy Bypass -File scripts/run-autobuilder.ps1",
-    "db:seed": "npx tsx scripts/seed-supabase.ts",
-    "db:seed:graph": "npx tsx scripts/seed-knowledge-graph.ts",
-    "db:seed:all": "npx tsx scripts/seed-supabase.ts && npx tsx scripts/seed-knowledge-graph.ts"
+    "db:seed": "npx tsx scripts/seed-supabase.ts"
   },
   "dependencies": {
     "@deck.gl/aggregation-layers": "^9.2.9",
@@ -22,7 +20,6 @@
     "@deck.gl/extensions": "^9.2.9",
     "@deck.gl/layers": "^9.2.9",
     "@deck.gl/react": "^9.2.9",
-    "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.97.0",
     "@vercel/analytics": "^1.6.1",
     "clsx": "^2.1.1",

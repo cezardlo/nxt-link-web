@@ -1,1435 +1,990 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
-import dynamic from 'next/dynamic';
 
 import { PageTopBar } from '@/components/PageTopBar';
-import { INDUSTRIES, TECHNOLOGY_CATALOG } from '@/lib/data/technology-catalog';
-import { INDUSTRY_STORIES } from '@/lib/data/industry-stories';
-import { EL_PASO_VENDORS, type VendorRecord } from '@/lib/data/el-paso-vendors';
-import { ProductCatalog } from '@/components/ProductCatalog';
-import { CompanyCard } from '@/components/CompanyCard';
-import DiscoveryFeed from '@/components/DiscoveryFeed';
-import type { IndustryProduct } from '@/lib/intelligence/industry-scan';
-import { timeAgo, fmtDate } from '@/lib/utils/format';
-import { SignalBadge } from '@/components/SignalBadge';
-import { CompanyTooltip } from '@/components/CompanyTooltip';
+import { timeAgo, scoreColor, formatUsd, compactNumber } from '@/lib/utils/format';
+import type { KgTechnologyRow } from '@/db/queries/kg-technologies';
+import type { KgSignalRow } from '@/db/queries/kg-signals';
+import type { KgDiscoveryRow } from '@/db/queries/kg-discoveries';
+import type { KgIndustryRow } from '@/db/queries/kg-industries';
+import type { VendorRecord } from '@/db/queries/vendors';
+import type { ProductRow } from '@/db/queries/products';
+import type { ConferenceRecord } from '@/db/queries/conferences';
+import type { IntelSignalRow } from '@/db/queries/intel-signals';
 
-import type { IndustryProfile, TimelineEvent, OpportunityEntry } from '@/lib/engines/industry-profile';
-import type { AdoptionProfile } from '@/lib/agents/scoring/adoption-curve';
-import type { TrajectoryForecast, RiskAlert, ConvergencePrediction } from '@/lib/engines/prediction-engine';
-import type { PorterForce } from '@/lib/engines/strategic-frameworks';
-import type { ValueChainTier } from '@/lib/engines/value-chain-engine';
-import type { DiscoveredOpportunity } from '@/lib/engines/opportunity-engine';
+// ─── Constants ───────────────────────────────────────────────────────────────
 
-const IndustryEcosystemGraph = dynamic(
-  () => import('@/components/IndustryEcosystemGraph').then(m => ({ default: m.IndustryEcosystemGraph })),
-  { ssr: false }
-);
+const EL_PASO_LAT = 31.7619;
+const EL_PASO_LON = -106.485;
 
-// ─── Vendor category mapping ─────────────────────────────────────────────────
-
-const CATEGORY_TO_VENDOR_CATS: Record<string, string[]> = {
-  'AI/ML':          ['AI / ML', 'IoT', 'Analytics', 'AI/R&D'],
-  'Cybersecurity':  ['Cybersecurity'],
-  'Defense':        ['Defense', 'Defense IT'],
-  'Border Tech':    ['Border Tech'],
-  'Manufacturing':  ['Manufacturing', 'Robotics', 'Fabrication', 'Warehousing', 'Robotics & Automation', 'Warehouse Automation'],
-  'Energy':         ['Energy', 'Water Tech', 'Energy Tech'],
-  'Healthcare':     ['Health Tech', 'Healthcare'],
-  'Logistics':      ['Logistics', 'Warehousing', 'Trucking', 'Supply Chain Software'],
+const PRIORITY_COLORS: Record<string, string> = {
+  P0: '#ff3b30', P1: '#f97316', P2: '#ffd700', P3: '#64748b',
+};
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const PRIORITY_LABELS: Record<string, string> = {
+  P0: 'CRITICAL', P1: 'HIGH', P2: 'MEDIUM', P3: 'LOW',
 };
 
-// ─── Industry → intel signal mapping ──────────────────────────────────────────
-
-const SLUG_TO_SIGNAL_INDUSTRY: Record<string, string> = {
-  'ai-ml': 'ai_ml',
-  'cybersecurity': 'cybersecurity',
-  'defense': 'aerospace_defense',
-  'border-tech': 'construction',
-  'manufacturing': 'manufacturing',
-  'energy': 'energy',
-  'healthcare': 'health_biotech',
-  'logistics': 'supply_chain',
+const SIGNAL_TYPE_COLORS: Record<string, string> = {
+  breakthrough: '#00d4ff', investment: '#00ff88', policy: '#ffd700',
+  disruption: '#ff3b30', regulatory_change: '#f97316', supply_chain_risk: '#ff3b30',
+  startup_formation: '#a855f7', manufacturing_expansion: '#00ff88',
 };
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type IntelSignal = {
-  id: string;
-  signal_type: string;
-  title: string;
-  company: string | null;
-  source: string | null;
-  importance_score: number;
-  discovered_at: string;
-  url: string | null;
+const INTEL_TYPE_COLORS: Record<string, string> = {
+  patent_filing: '#00d4ff', research_paper: '#a855f7', funding_round: '#00ff88',
+  merger_acquisition: '#ffd700', contract_award: '#00ff88', product_launch: '#00d4ff',
+  hiring_signal: '#f97316', regulatory_action: '#ffd700', facility_expansion: '#00ff88',
+  case_study: '#64748b',
 };
 
-type FeedItem = {
-  title: string;
-  category: string;
-  source: string;
-  timeAgo: string;
-  url?: string;
+const QUADRANT_COLORS: Record<string, string> = {
+  adopt: '#00ff88', trial: '#00d4ff', assess: '#ffd700', explore: '#64748b',
 };
 
-type IndustryInsight = {
-  id: string;
-  type: string;
+const MATURITY_ORDER = ['research', 'emerging', 'early_adoption', 'growth', 'mainstream'];
+const MATURITY_LABELS: Record<string, string> = {
+  research: 'Research', emerging: 'Emerging', early_adoption: 'Early Adoption',
+  growth: 'Growth', mainstream: 'Mainstream',
+};
+
+const COMPLEXITY_COLORS: Record<string, string> = {
+  low: '#00ff88', medium: '#ffd700', high: '#f97316', critical: '#ff3b30',
+};
+
+// ─── Utilities ───────────────────────────────────────────────────────────────
+
+function distanceFromElPaso(lat: number, lon: number): number {
+  const R = 3959; // miles
+  const dLat = (lat - EL_PASO_LAT) * Math.PI / 180;
+  const dLon = (lon - EL_PASO_LON) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(EL_PASO_LAT * Math.PI / 180) * Math.cos(lat * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function clearbitLogo(domain: string): string {
+  const d = domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  return `https://logo.clearbit.com/${d}`;
+}
+
+function maturityPercent(stage: string | null): number {
+  if (!stage) return 0;
+  const idx = MATURITY_ORDER.indexOf(stage);
+  return idx < 0 ? 20 : ((idx + 1) / MATURITY_ORDER.length) * 100;
+}
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+type IndustryData = {
+  industry: KgIndustryRow;
+  technologies: KgTechnologyRow[];
+  signals: KgSignalRow[];
+  discoveries: KgDiscoveryRow[];
+  vendors: VendorRecord[];
+  products: ProductRow[];
+  conferences: ConferenceRecord[];
+  intelSignals: IntelSignalRow[];
+};
+
+// ─── Supplier data (hardcoded global suppliers — grows over time) ───────────
+
+type Supplier = {
+  name: string;
+  tier: 1 | 2;
+  part: string;
+  critical: boolean;
+  country: string;
+};
+
+const GLOBAL_SUPPLIERS: Supplier[] = [
+  { name: 'Parker Hannifin', tier: 1, part: 'Hydraulic systems & motion control', critical: true, country: 'US' },
+  { name: 'Bosch Rexroth', tier: 1, part: 'Drive & control technology', critical: true, country: 'DE' },
+  { name: 'Steel Technologies', tier: 1, part: 'Flat-rolled steel processing', critical: true, country: 'US' },
+  { name: 'Siemens AG', tier: 1, part: 'Industrial automation & PLCs', critical: true, country: 'DE' },
+  { name: 'ABB Ltd', tier: 1, part: 'Robotics & power systems', critical: true, country: 'CH' },
+  { name: 'Honeywell', tier: 1, part: 'Process controls & safety systems', critical: false, country: 'US' },
+  { name: 'Rockwell Automation', tier: 1, part: 'Industrial control & info solutions', critical: false, country: 'US' },
+  { name: 'Schneider Electric', tier: 1, part: 'Energy management & automation', critical: false, country: 'FR' },
+  { name: 'Fanuc', tier: 1, part: 'CNC systems & industrial robots', critical: true, country: 'JP' },
+  { name: 'Mitsubishi Electric', tier: 2, part: 'Factory automation & inverters', critical: false, country: 'JP' },
+  { name: 'Omron', tier: 2, part: 'Sensing & control components', critical: false, country: 'JP' },
+  { name: 'TE Connectivity', tier: 2, part: 'Connectors & sensors', critical: false, country: 'CH' },
+  { name: 'Eaton Corp', tier: 2, part: 'Power distribution equipment', critical: false, country: 'IE' },
+  { name: 'SMC Corporation', tier: 2, part: 'Pneumatic components', critical: false, country: 'JP' },
+  { name: 'Keyence', tier: 2, part: 'Machine vision & measurement', critical: false, country: 'JP' },
+  { name: 'Balluff', tier: 2, part: 'Industrial sensors & networking', critical: false, country: 'DE' },
+];
+
+// ─── Timeline data (global industry history) ────────────────────────────────
+
+type TimelineEntry = {
+  year: number;
   title: string;
   description: string;
-  confidence: number;
-  companies: string[];
-  color: string;
-  momentum: string;
+  type: 'milestone' | 'disruption' | 'regulation' | 'forecast';
 };
 
-type ScanResult = {
-  executive_summary?: string;
-  products?: IndustryProduct[];
-  funding_signals?: Array<{ company: string; stage: string; amount?: string }>;
-  industry_areas?: Array<{ area: string; score: number }>;
-  sources_discovered?: number;
-  sources_scraped?: number;
-};
+const INDUSTRY_TIMELINE: TimelineEntry[] = [
+  // ── Origins ──
+  { year: 1925, title: 'First Assembly Line Automation', description: 'Ford Motor Company introduces automated conveyor systems in manufacturing, setting the standard for mass production globally.', type: 'milestone' },
+  { year: 1947, title: 'Transistor Invented', description: 'Bell Labs creates the transistor — the foundation of all modern electronics, computing, and digital technology.', type: 'milestone' },
+  { year: 1954, title: 'First Industrial Robot', description: 'George Devol patents the Unimate, the first programmable industrial robot arm. Deployed at GM in 1961.', type: 'milestone' },
+  { year: 1958, title: 'Integrated Circuit', description: 'Jack Kilby (TI) and Robert Noyce (Fairchild) independently invent the integrated circuit, launching the semiconductor age.', type: 'milestone' },
+  { year: 1969, title: 'First PLC Invented', description: 'Bedford Associates develop the Modicon 084, the first programmable logic controller. ARPANET also goes live this year.', type: 'milestone' },
+  { year: 1971, title: 'First Microprocessor', description: 'Intel releases the 4004 — the first commercial microprocessor. Computing becomes embeddable in every device.', type: 'milestone' },
+  // ── Digital Age ──
+  { year: 1980, title: 'CAD/CAM Revolution', description: 'Computer-aided design and manufacturing transforms engineering workflows globally. AutoCAD launches in 1982.', type: 'milestone' },
+  { year: 1983, title: 'TCP/IP Standard Adopted', description: 'ARPANET switches to TCP/IP, creating the internet protocol stack still used today. The internet is born.', type: 'milestone' },
+  { year: 1990, title: 'ERP Systems Emerge', description: 'SAP R/3 and Oracle launch enterprise resource planning, integrating manufacturing, finance, and supply chain.', type: 'milestone' },
+  { year: 1994, title: 'World Wide Web Goes Commercial', description: 'Netscape IPO sparks the commercial internet revolution. E-commerce, SaaS, and digital transformation begin.', type: 'milestone' },
+  { year: 1997, title: 'Six Sigma Goes Global', description: 'GE adopts Six Sigma methodology under Jack Welch, sparking worldwide quality revolution in manufacturing.', type: 'milestone' },
+  { year: 2000, title: 'Dot-Com Crash', description: 'Technology spending drops 30%, wiping $5T in market value. Reshapes vendor landscape and startup ecosystem permanently.', type: 'disruption' },
+  // ── Cloud & Mobile Era ──
+  { year: 2006, title: 'Cloud Computing Begins', description: 'AWS launches EC2 and S3, beginning the shift from on-premise to cloud infrastructure. Google Cloud and Azure follow.', type: 'milestone' },
+  { year: 2007, title: 'iPhone Launches', description: 'Apple introduces the iPhone, catalyzing the mobile revolution. Smartphones become the primary computing platform for 5B+ people.', type: 'disruption' },
+  { year: 2008, title: 'Global Financial Crisis', description: 'Lehman Brothers collapses. $22T in global wealth destroyed. Accelerates fintech, drives efficiency/automation mandates.', type: 'disruption' },
+  { year: 2010, title: 'Industry 4.0 Coined', description: 'German government introduces "Industrie 4.0" — smart factory vision with IoT, cyber-physical systems, and digital twins.', type: 'milestone' },
+  { year: 2012, title: 'Deep Learning Breakthrough', description: 'AlexNet wins ImageNet with 15% error rate (vs 26%), launching the modern AI/ML era in computer vision and beyond.', type: 'disruption' },
+  // ── AI & Disruption Era ──
+  { year: 2016, title: 'IIoT Standards Published', description: 'Industrial Internet Consortium publishes reference architecture for Industrial IoT. Also: AlphaGo defeats world Go champion.', type: 'regulation' },
+  { year: 2017, title: 'Transformer Architecture', description: 'Google publishes "Attention Is All You Need" — the architecture behind GPT, BERT, and every modern LLM.', type: 'milestone' },
+  { year: 2018, title: 'US-China Trade War Begins', description: 'Tariffs on $360B+ of goods disrupt global supply chains. Tech decoupling accelerates reshoring and friend-shoring.', type: 'disruption' },
+  { year: 2020, title: 'COVID-19 Pandemic', description: 'Global supply chain collapse. Remote work becomes permanent. Automation investment surges 40% as labor costs spike.', type: 'disruption' },
+  { year: 2021, title: 'Global Chip Shortage', description: 'Semiconductor shortage costs auto industry $210B. Exposes fragility of just-in-time manufacturing globally.', type: 'disruption' },
+  { year: 2022, title: 'CHIPS Act & EU Chips Act', description: 'US invests $280B, EU commits €43B in domestic semiconductor manufacturing. On-shoring era begins.', type: 'regulation' },
+  { year: 2023, title: 'Generative AI Wave', description: 'ChatGPT reaches 100M users in 2 months. GPT-4, Claude, Gemini transform every industry from code to content to manufacturing.', type: 'disruption' },
+  { year: 2024, title: 'AI Agent Frameworks', description: 'Multi-agent AI systems begin autonomous decision-making in enterprise workflows. $25B+ in AI infrastructure spending.', type: 'milestone' },
+  // ── Where Things Are Heading ──
+  { year: 2025, title: 'Edge AI + On-Device Inference', description: 'AI inference moves to device/factory floor — sub-10ms latency. Apple, NVIDIA, Qualcomm ship dedicated AI silicon. Real-time defect detection becomes standard.', type: 'forecast' },
+  { year: 2026, title: 'Autonomous Supply Chains', description: 'AI-managed logistics networks reduce human intervention by 60% in tier-1 operations. Predictive inventory replaces reactive ordering. Digital freight matching becomes dominant.', type: 'forecast' },
+  { year: 2027, title: 'Quantum Computing Advantage', description: 'First practical quantum advantage in materials science, drug discovery, and logistics optimization. D-Wave, IBM, Google race to 10K+ qubit systems.', type: 'forecast' },
+  { year: 2028, title: 'Human-AI Collaboration Standard', description: 'Most knowledge work becomes AI-augmented. AI co-pilots handle 70% of routine decisions. New job categories emerge: AI trainers, prompt engineers, AI ethicists at scale.', type: 'forecast' },
+  { year: 2029, title: 'Sovereign AI Mandates', description: 'Major nations require domestic AI training infrastructure. Data sovereignty laws reshape cloud architecture. AI becomes geopolitical leverage.', type: 'forecast' },
+  { year: 2030, title: 'Carbon-Neutral Manufacturing', description: 'EU carbon border tax fully enforced. AI-optimized energy grids reduce industrial emissions 45%. Green hydrogen scales to cost parity with natural gas.', type: 'forecast' },
+  { year: 2032, title: 'Autonomous Everything', description: 'Level 4 autonomous vehicles in 50+ cities. Robotic warehouses handle 80% of e-commerce. Lights-out factories operate 24/7 across Asia and North America.', type: 'forecast' },
+  { year: 2035, title: 'AGI-Adjacent Systems', description: 'AI systems demonstrate general reasoning across domains. Enterprise decisions increasingly delegated to AI with human oversight. Entire industries restructure around AI-first workflows.', type: 'forecast' },
+];
 
-// ─── Signal type colors ──────────────────────────────────────────────────────
-
-const SIGNAL_TYPE_COLOR: Record<string, string> = {
-  patent_filing: '#ffb800', research_paper: '#00d4ff', funding_round: '#00ff88',
-  merger_acquisition: '#f97316', contract_award: '#ffd700', product_launch: '#00d4ff',
-  hiring_signal: '#a855f7', regulatory_action: '#ff3b30', facility_expansion: '#00ff88',
-  case_study: '#ffb800',
-};
-
-const SIGNAL_TYPE_LABEL: Record<string, string> = {
-  patent_filing: 'PATENT', research_paper: 'RESEARCH', funding_round: 'FUNDING',
-  merger_acquisition: 'M&A', contract_award: 'CONTRACT', product_launch: 'PRODUCT',
-  hiring_signal: 'HIRING', regulatory_action: 'REGULATORY', facility_expansion: 'EXPANSION',
-  case_study: 'CASE STUDY',
-};
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Page Component ──────────────────────────────────────────────────────────
 
 export default function IndustryDeepDivePage() {
   const params = useParams();
   const slug = typeof params.slug === 'string' ? params.slug : '';
+  const label = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
-  const industry = INDUSTRIES.find((i) => i.slug === slug);
-  const story = industry ? INDUSTRY_STORIES[industry.slug] : undefined;
+  const [data, setData] = useState<IndustryData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [expandedTimeline, setExpandedTimeline] = useState<number | null>(null);
 
-  const isCustom = !industry;
-  const label = industry?.label ?? slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-  const color = industry?.color ?? '#00d4ff';
-
-  // ── State ──
-  const [products, setProducts] = useState<IndustryProduct[]>([]);
-  const [productsLoading, setProductsLoading] = useState(false);
-  const [scanData, setScanData] = useState<ScanResult | null>(null);
-  const [signals, setSignals] = useState<IntelSignal[]>([]);
-  const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
-  const [feedLoading, setFeedLoading] = useState(true);
-  const [industryInsights, setIndustryInsights] = useState<IndustryInsight[]>([]);
-  const [profile, setProfile] = useState<IndustryProfile | null>(null);
-  const [, setProfileLoading] = useState(true);
-  const [trajectory, setTrajectory] = useState<TrajectoryForecast | null>(null);
-  const [risks, setRisks] = useState<RiskAlert[]>([]);
-  const [convergences, setConvergences] = useState<ConvergencePrediction[]>([]);
-  const [engineOpportunities, setEngineOpportunities] = useState<DiscoveredOpportunity[]>([]);
-
-  // Build static data (only for known industries)
-  const allVendors = Object.values(EL_PASO_VENDORS) as VendorRecord[];
-  const vendorCats = industry ? CATEGORY_TO_VENDOR_CATS[industry.category] ?? [] : [];
-  const localVendors = allVendors.filter((v) => vendorCats.includes(v.category));
-
-  const technologies = industry
-    ? TECHNOLOGY_CATALOG.filter((t) => t.category === industry.category).map((t) => ({
-        id: t.id,
-        name: t.name,
-        description: t.description,
-        maturityLevel: t.maturityLevel,
-        relatedVendorCount: t.relatedVendorCount,
-        elPasoRelevance: t.elPasoRelevance,
-        governmentBudgetFY25M: t.governmentBudgetFY25M,
-      }))
-    : [];
-
-  const findVendor = (companyName: string) => {
-    const lower = companyName.toLowerCase();
-    return Object.values(EL_PASO_VENDORS).find(v =>
-      v.name.toLowerCase().includes(lower) || lower.includes(v.name.toLowerCase())
-    );
-  };
-
-  const establishedVendors = localVendors.filter(v => v.ikerScore >= 70).sort((a, b) => b.ikerScore - a.ikerScore);
-  const emergingVendors = localVendors.filter(v => v.ikerScore >= 45 && v.ikerScore < 70).sort((a, b) => b.ikerScore - a.ikerScore);
-  const specializedVendors = localVendors.filter(v => v.ikerScore < 45).sort((a, b) => b.ikerScore - a.ikerScore);
-
-  // ── Fetch profile (8-block data) ──
-  useEffect(() => {
+  const fetchData = useCallback(async () => {
     if (!slug) return;
-    let cancelled = false;
-    async function loadProfile() {
-      try {
-        const res = await fetch(`/api/industry/${slug}/profile`);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled && data.ok) setProfile(data.data);
-      } catch { /* degrade */ }
-      finally { if (!cancelled) setProfileLoading(false); }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/industry/${slug}`);
+      if (!res.ok) {
+        setError(res.status === 404 ? 'Industry not found' : 'Failed to load');
+        return;
+      }
+      const json = await res.json();
+      setData(json);
+      setLastRefresh(new Date());
+    } catch {
+      setError('Network error');
+    } finally {
+      setLoading(false);
     }
-    void loadProfile();
-    return () => { cancelled = true; };
   }, [slug]);
 
-  // ── Fetch products + scan data ──
-  useEffect(() => {
-    if (!slug) return;
-    let cancelled = false;
-    setProductsLoading(true);
-    async function loadProducts() {
-      try {
-        const res = await fetch(`/api/industry/${slug}/products`);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled && data.ok) {
-          setProducts(data.scan?.products ?? []);
-          setScanData(data.scan ?? null);
-        }
-      } catch { /* degrade */ }
-      finally { if (!cancelled) setProductsLoading(false); }
-    }
-    void loadProducts();
-    return () => { cancelled = true; };
-  }, [slug]);
+  useEffect(() => { void fetchData(); }, [fetchData]);
 
-  // ── Fetch intel signals ──
-  useEffect(() => {
-    if (!slug) return;
-    let cancelled = false;
-    async function loadSignals() {
-      try {
-        const sigIndustry = SLUG_TO_SIGNAL_INDUSTRY[slug] ?? '';
-        if (!sigIndustry) return;
-        const res = await fetch(`/api/agents/intel-signals?industry=${sigIndustry}&limit=20`);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled && data.ok) setSignals(data.signals ?? []);
-      } catch { /* degrade */ }
-    }
-    void loadSignals();
-    return () => { cancelled = true; };
-  }, [slug]);
-
-  // ── Fetch industry insights ──
-  useEffect(() => {
-    if (!slug) return;
-    let cancelled = false;
-    async function loadInsights() {
-      try {
-        const industryKey = SLUG_TO_SIGNAL_INDUSTRY[slug];
-        if (!industryKey) return;
-        const res = await fetch(`/api/insights?industry=${industryKey}&limit=4`);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled && data.ok) setIndustryInsights(data.insights ?? []);
-      } catch { /* degrade */ }
-    }
-    void loadInsights();
-    return () => { cancelled = true; };
-  }, [slug]);
-
-  // ── Fetch predictions ──
-  useEffect(() => {
-    if (!slug) return;
-    let cancelled = false;
-    async function loadPredictions() {
-      try {
-        const res = await fetch('/api/predictions');
-        if (!res.ok) return;
-        const data = await res.json();
-        if (cancelled || !data.ok) return;
-        const report = data.data;
-        // Find trajectory for this industry
-        const industryKey = SLUG_TO_SIGNAL_INDUSTRY[slug] ?? slug;
-        const t = report.trajectories?.find((tr: TrajectoryForecast) =>
-          tr.slug === slug || tr.industry === industryKey || tr.slug === industryKey
-        ) ?? null;
-        if (t) setTrajectory(t);
-        // Find risks for this industry
-        const r = (report.risks ?? []).filter((ri: RiskAlert) =>
-          ri.slug === slug || ri.industry === industryKey || ri.slug === industryKey
-        );
-        setRisks(r);
-        // Find convergences involving this industry
-        const c = (report.convergences ?? []).filter((cv: ConvergencePrediction) =>
-          cv.industries.some((ind: string) => ind === industryKey || ind === slug)
-        );
-        setConvergences(c);
-      } catch { /* degrade gracefully */ }
-    }
-    void loadPredictions();
-    return () => { cancelled = true; };
-  }, [slug]);
-
-  // ── Fetch opportunity engine ──
-  useEffect(() => {
-    if (!slug) return;
-    let cancelled = false;
-    async function loadOpportunities() {
-      try {
-        const res = await fetch('/api/opportunities');
-        if (!res.ok) return;
-        const data = await res.json();
-        if (cancelled || !data.ok) return;
-        const industryKey = SLUG_TO_SIGNAL_INDUSTRY[slug] ?? slug;
-        const opps = (data.data.opportunities ?? []).filter((o: DiscoveredOpportunity) =>
-          o.industries.some((ind: string) => ind === industryKey || ind === slug)
-        );
-        setEngineOpportunities(opps);
-      } catch { /* degrade */ }
-    }
-    void loadOpportunities();
-    return () => { cancelled = true; };
-  }, [slug]);
-
-  // ── Fetch discovery feed ──
-  useEffect(() => {
-    let cancelled = false;
-    async function loadFeed() {
-      try {
-        const res = await fetch('/api/feeds');
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled && data.ok) {
-          const items = (data.all ?? [])
-            .filter((a: { category?: string; title?: string }) => {
-              const cat = (a.category ?? '').toLowerCase();
-              const title = (a.title ?? '').toLowerCase();
-              const searchTerm = label.toLowerCase().split('/')[0].trim();
-              const catKey = industry?.category?.toLowerCase().split('/')[0].trim() ?? searchTerm;
-              return cat.includes(searchTerm) || cat.includes(catKey) || title.includes(searchTerm);
-            })
-            .slice(0, 12)
-            .map((a: { title: string; category: string; source: string; pubDate: string; link?: string }) => ({
-              title: a.title,
-              category: a.category ?? industry?.label ?? '',
-              source: a.source ?? '',
-              timeAgo: timeAgo(a.pubDate),
-              url: a.link,
-            }));
-          setFeedItems(items);
-        }
-      } catch { /* degrade */ }
-      finally { if (!cancelled) setFeedLoading(false); }
-    }
-    void loadFeed();
-    return () => { cancelled = true; };
-  }, [industry, label]);
-
-  const [level, setLevel] = useState<'understand' | 'explore' | 'analyze'>('understand');
-
-  const totalBudget = technologies.reduce((sum, t) => sum + (t.governmentBudgetFY25M ?? 0), 0);
-
-  const sectorScore = technologies.length === 0 ? 0 : Math.min(100, Math.round(
-    technologies.reduce((sum, t) => {
-      const m = t.maturityLevel === 'mature' ? 3 : t.maturityLevel === 'growing' ? 2 : 1;
-      const r = t.elPasoRelevance === 'high' ? 3 : t.elPasoRelevance === 'medium' ? 2 : 1;
-      return sum + m * r;
-    }, 0) / (technologies.length * 9) * 100
-  ));
-
-  // Use profile adoption data when available
-  const adoption = profile?.blocks.adoption ?? null;
-  const timeline = profile?.blocks.timeline ?? [];
-  const opportunities = profile?.blocks.opportunities ?? [];
-
-  return (
-    <div className="bg-black min-h-screen">
-      <PageTopBar
-        backHref="/industries"
-        backLabel="EXPLORE"
-        breadcrumbs={[
-          { label: 'INDUSTRIES', href: '/industries' },
-          { label: label }
-        ]}
-        showLiveDot={true}
-        rightSlot={
-          <Link
-            href={`/industry/${slug}/solve`}
-            className="font-mono text-[8px] tracking-[0.2em] border rounded-sm px-2.5 py-1 transition-colors"
-            style={{ borderColor: `${color}40`, color: `${color}cc` }}
-          >
-            PROBLEM SOLVER →
-          </Link>
-        }
-      />
-
-      <div className="max-w-5xl mx-auto px-6 py-8 flex flex-col gap-0">
-
-        {/* ═══ 1. HERO — Industry name + executive summary ═══ */}
-        <div className="pb-10 border-b border-white/[0.06]">
-          <div className="flex items-start justify-between gap-8">
-            <div className="min-w-0 flex-1">
-              {/* Snapshot badge row */}
-              {adoption && (
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="font-mono text-[7px] tracking-[0.2em] px-2 py-0.5 rounded-sm border"
-                    style={{ borderColor: `${color}30`, color: `${color}aa` }}>
-                    {adoption.stage_label.toUpperCase()}
-                  </span>
-                  <span className="font-mono text-[7px] tracking-[0.2em] px-2 py-0.5 rounded-sm border"
-                    style={{
-                      borderColor: adoption.momentum === 'accelerating' ? '#00ff8830' : adoption.momentum === 'decelerating' ? '#ff3b3030' : '#ffffff15',
-                      color: adoption.momentum === 'accelerating' ? '#00ff88aa' : adoption.momentum === 'decelerating' ? '#ff3b30aa' : '#ffffff40',
-                    }}>
-                    {adoption.momentum === 'accelerating' ? '↑' : adoption.momentum === 'decelerating' ? '↓' : '→'} {adoption.momentum.toUpperCase()}
-                  </span>
-                  {profile && (
-                    <span className="font-mono text-[7px] tracking-[0.2em] px-2 py-0.5 rounded-sm border"
-                      style={{
-                        borderColor: profile.blocks.snapshot.competition === 'high' ? '#ff3b3030' : profile.blocks.snapshot.competition === 'medium' ? '#ffb80030' : '#00ff8830',
-                        color: profile.blocks.snapshot.competition === 'high' ? '#ff3b30aa' : profile.blocks.snapshot.competition === 'medium' ? '#ffb800aa' : '#00ff88aa',
-                      }}>
-                      {profile.blocks.snapshot.competition.toUpperCase()} COMPETITION
-                    </span>
-                  )}
-                  {profile?.confidence && (
-                    <span className="font-mono text-[7px] tracking-[0.2em] px-2 py-0.5 rounded-sm border"
-                      style={{
-                        borderColor: profile.confidence.level === 3 ? '#00ff8830' : profile.confidence.level === 2 ? '#ffb80030' : '#ff3b3030',
-                        color: profile.confidence.level === 3 ? '#00ff88aa' : profile.confidence.level === 2 ? '#ffb800aa' : '#ff3b30aa',
-                      }}>
-                      L{profile.confidence.level} · {profile.confidence.label.toUpperCase()}
-                    </span>
-                  )}
-                </div>
-              )}
-              <div className="font-mono text-[8px] tracking-[0.4em] text-white/25 uppercase mb-4">
-                {story?.headline ?? label.toUpperCase()}
-              </div>
-              <h1
-                className="text-[32px] font-semibold tracking-tight text-white/90 leading-tight mb-5"
-                style={{ fontFamily: 'var(--font-space-grotesk)' }}
-              >
-                {label}
-              </h1>
-              {(story?.summary || scanData?.executive_summary) && (
-                <p className="font-mono text-[11px] text-white/40 leading-[1.9] max-w-2xl">
-                  {story?.summary ?? scanData?.executive_summary}
-                </p>
-              )}
-              {isCustom && !scanData && productsLoading && (
-                <div className="font-mono text-[9px] text-white/20 tracking-wide mt-3 animate-pulse">
-                  SCANNING INTELLIGENCE SOURCES...
-                </div>
-              )}
-            </div>
-            {/* Sector score */}
-            <div className="flex flex-col items-center gap-2 shrink-0 pt-2">
-              <div
-                className="rounded-full px-6 py-4 text-center"
-                style={{ background: `${color}0d`, border: `1px solid ${color}22` }}
-              >
-                <div
-                  className="font-mono text-[32px] font-bold leading-none tracking-tight"
-                  style={{ color: color, textShadow: `0 0 20px ${color}55` }}
-                >
-                  {sectorScore}
-                </div>
-              </div>
-              <div className="font-mono text-[6px] tracking-[0.35em] text-white/20 uppercase">SECTOR SCORE</div>
-            </div>
-          </div>
-        </div>
-
-        {/* ═══ 2. STATS BAR ═══ */}
-        <div className="grid grid-cols-5 border-b border-white/[0.06]">
-          {[
-            { label: 'TECHNOLOGIES', value: String(technologies.length), color: color },
-            { label: 'LOCAL VENDORS', value: String(localVendors.length), color: '#ffb800' },
-            { label: 'FY25 BUDGET', value: formatBudget(totalBudget), color: '#00ff88' },
-            { label: 'PRODUCTS', value: productsLoading ? '···' : String(products.length), color: '#00d4ff' },
-            { label: 'SIGNALS', value: String(signals.length), color: '#f97316' },
-          ].map((stat, i, arr) => (
-            <div
-              key={stat.label}
-              className="group bg-black py-5 px-4 text-center transition-colors duration-200 hover:bg-white/[0.025] cursor-default"
-              style={{ borderRight: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}
-            >
-              <div
-                className="font-mono text-[22px] font-bold leading-none tracking-tight transition-all duration-200 group-hover:tracking-widest"
-                style={{ color: stat.color, textShadow: `0 0 12px ${stat.color}40` }}
-              >
-                <AnimatedNumber value={stat.value} />
-              </div>
-              <div className="font-mono text-[7px] tracking-[0.3em] text-white/20 mt-2 group-hover:text-white/35 transition-colors duration-200">{stat.label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* ═══ TAB BAR — Progressive Disclosure Levels ═══ */}
-        <div className="flex items-center gap-0 border-b border-white/[0.06]">
-          {([
-            { key: 'understand' as const, label: 'UNDERSTAND', accent: color },
-            { key: 'explore' as const, label: 'EXPLORE', accent: '#ffb800' },
-            { key: 'analyze' as const, label: 'ANALYZE', accent: '#f97316' },
-          ]).map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setLevel(tab.key)}
-              className="relative font-mono text-[8px] tracking-[0.25em] uppercase px-5 py-3.5 transition-colors duration-200"
-              style={{
-                color: level === tab.key ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.2)',
-              }}
-              onMouseEnter={(e) => { if (level !== tab.key) e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; }}
-              onMouseLeave={(e) => { if (level !== tab.key) e.currentTarget.style.color = 'rgba(255,255,255,0.2)'; }}
-            >
-              {tab.label}
-              {level === tab.key && (
-                <div
-                  className="absolute bottom-0 left-0 right-0 h-[2px]"
-                  style={{ backgroundColor: tab.accent }}
-                />
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* ═══════════════════════════════════════════════════════════════════════ */}
-        {/* ═══ LEVEL 1: UNDERSTAND (default) ═══════════════════════════════════ */}
-        {/* ═══════════════════════════════════════════════════════════════════════ */}
-        {level === 'understand' && (
-          <>
-            {/* Adoption Curve Visualization */}
-            {adoption && (
-              <Section title="ADOPTION CURVE" subtitle={adoption.description} color="#a855f7">
-                <AdoptionCurveViz adoption={adoption} accentColor={color} />
-              </Section>
-            )}
-
-            {/* Where it's heading */}
-            {story?.outlook && (
-              <Section title="WHERE IT'S HEADING" color="#00ff88">
-                <div className="border-l-2 pl-5 py-1" style={{ borderColor: `${color}40` }}>
-                  <p className="font-mono text-[11px] text-white/50 leading-[1.9]">
-                    {story.outlook}
-                  </p>
-                </div>
-              </Section>
-            )}
-
-            {/* ── Prediction: Trajectory Forecast ── */}
-            {trajectory && (
-              <Section title="TRAJECTORY FORECAST" subtitle="Where this industry is heading" color="#a855f7">
-                <div className="space-y-4">
-                  {/* Direction + velocity header */}
-                  <div className="flex items-center gap-3">
-                    <div className="font-mono text-[10px] font-medium" style={{
-                      color: trajectory.direction === 'accelerating' ? '#00ff88'
-                           : trajectory.direction === 'growing' ? '#00d4ff'
-                           : trajectory.direction === 'declining' ? '#ff3b30'
-                           : trajectory.direction === 'volatile' ? '#f97316'
-                           : '#ffffff40',
-                    }}>
-                      {trajectory.direction === 'accelerating' ? '▲▲' : trajectory.direction === 'growing' ? '▲' : trajectory.direction === 'declining' ? '▼' : trajectory.direction === 'volatile' ? '◆' : '─'}
-                      {' '}{trajectory.direction.toUpperCase()}
-                    </div>
-                    <div className="font-mono text-[8px] text-white/25">
-                      velocity: {trajectory.velocity > 0 ? '+' : ''}{trajectory.velocity}/30d
-                    </div>
-                    <div className="font-mono text-[8px] text-white/15 ml-auto">
-                      confidence: {Math.round(trajectory.confidence * 100)}%
-                    </div>
-                  </div>
-
-                  {/* Score prediction bars */}
-                  <div className="grid grid-cols-3 gap-[1px] bg-white/[0.03]">
-                    {[
-                      { label: 'NOW', score: trajectory.current_score, color: '#00d4ff' },
-                      { label: '30D', score: trajectory.predicted_score_30d, color: '#a855f7' },
-                      { label: '90D', score: trajectory.predicted_score_90d, color: trajectory.predicted_score_90d > trajectory.current_score ? '#00ff88' : '#ff3b30' },
-                    ].map(({ label: lbl, score, color: c }) => (
-                      <div key={lbl} className="bg-black p-3">
-                        <div className="font-mono text-[7px] tracking-[0.25em] text-white/20 mb-2">{lbl}</div>
-                        <div className="w-full h-1 bg-white/[0.04] rounded-full overflow-hidden">
-                          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${score}%`, backgroundColor: c }} />
-                        </div>
-                        <div className="font-mono text-[11px] mt-1.5" style={{ color: c }}>{score}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Catalysts + Risks */}
-                  <div className="grid grid-cols-2 gap-3">
-                    {trajectory.catalysts.length > 0 && (
-                      <div>
-                        <div className="font-mono text-[7px] tracking-[0.25em] text-[#00ff88]/40 mb-2">CATALYSTS</div>
-                        {trajectory.catalysts.map((c, i) => (
-                          <div key={i} className="flex items-start gap-2 mb-1.5">
-                            <span className="text-[#00ff88]/40 text-[8px] mt-0.5">+</span>
-                            <span className="font-mono text-[9px] text-white/35">{c}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {trajectory.risk_factors.length > 0 && (
-                      <div>
-                        <div className="font-mono text-[7px] tracking-[0.25em] text-[#ff3b30]/40 mb-2">RISK FACTORS</div>
-                        {trajectory.risk_factors.map((r, i) => (
-                          <div key={i} className="flex items-start gap-2 mb-1.5">
-                            <span className="text-[#ff3b30]/40 text-[8px] mt-0.5">!</span>
-                            <span className="font-mono text-[9px] text-white/35">{r}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Next stage estimate */}
-                  {trajectory.adoption_next_stage && trajectory.time_to_next_stage_days && (
-                    <div className="border border-white/[0.04] rounded-sm p-3 bg-white/[0.01]">
-                      <div className="font-mono text-[7px] tracking-[0.25em] text-white/15 mb-1">NEXT MILESTONE</div>
-                      <div className="font-mono text-[10px] text-white/50">
-                        Transition to <span style={{ color: '#a855f7' }}>{trajectory.adoption_next_stage}</span>
-                        {' '}— est. <span className="text-white/70">{trajectory.time_to_next_stage_days < 60
-                          ? `${trajectory.time_to_next_stage_days} days`
-                          : `${Math.round(trajectory.time_to_next_stage_days / 30)} months`
-                        }</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </Section>
-            )}
-
-            {/* ── Prediction: Risks ── */}
-            {risks.length > 0 && (
-              <Section title="RISK ALERTS" subtitle="Detected threats to monitor" color="#ff3b30">
-                <div className="space-y-2">
-                  {risks.map((r, i) => {
-                    const sevColor = r.severity === 'critical' ? '#ff3b30' : r.severity === 'high' ? '#f97316' : r.severity === 'medium' ? '#ffb800' : '#6b7280';
-                    return (
-                      <div key={i} className="border border-white/[0.04] rounded-sm p-3 bg-white/[0.01]">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: sevColor }} />
-                          <span className="font-mono text-[7px] tracking-[0.2em] uppercase" style={{ color: sevColor }}>{r.severity} — {r.risk_type.replace(/_/g, ' ')}</span>
-                        </div>
-                        <p className="font-mono text-[9px] text-white/40 leading-relaxed">{r.description}</p>
-                        <p className="font-mono text-[8px] text-white/20 mt-1">{r.suggested_action}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </Section>
-            )}
-
-            {/* ── Prediction: Convergences ── */}
-            {convergences.length > 0 && (
-              <Section title="CONVERGENCE DETECTED" subtitle="Industries moving together" color="#a855f7">
-                <div className="space-y-2">
-                  {convergences.map((c, i) => (
-                    <div key={i} className="border border-white/[0.04] rounded-sm p-3 bg-white/[0.01]">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className="font-mono text-[10px] text-[#a855f7]/60">{c.industries.join(' × ')}</span>
-                        <span className="font-mono text-[7px] text-white/15 ml-auto">{c.time_horizon.replace(/_/g, ' ')}</span>
-                      </div>
-                      <p className="font-mono text-[9px] text-white/35 leading-relaxed">{c.prediction}</p>
-                      {c.shared_companies.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mt-2">
-                          {c.shared_companies.map(co => (
-                            <span key={co} className="font-mono text-[7px] text-[#00d4ff]/30 border border-[#00d4ff]/10 px-1.5 py-0.5 rounded-sm">{co}</span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </Section>
-            )}
-
-            {/* Intelligence Insights */}
-            {industryInsights.length > 0 && (
-              <Section title="INTELLIGENCE INSIGHTS" subtitle="Patterns and opportunities detected" color="#00d4ff">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {industryInsights.map((ins) => (
-                    <div
-                      key={ins.id}
-                      className="group border border-white/[0.04] rounded-sm p-4 hover:border-white/[0.08] hover:bg-white/[0.01] transition-all duration-200"
-                    >
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-4 h-[2px] rounded-full" style={{ backgroundColor: ins.color, opacity: 0.6 }} />
-                        <span className="font-mono text-[6px] tracking-[0.2em] uppercase" style={{ color: `${ins.color}80` }}>{ins.type}</span>
-                        <span className="font-mono text-[6px] text-white/15 ml-auto">{ins.confidence}%</span>
-                      </div>
-                      <h4 className="font-mono text-[10px] text-white/55 font-medium mb-1.5 group-hover:text-white/70 transition-colors">{ins.title}</h4>
-                      <p className="font-mono text-[8px] text-white/25 leading-[1.6] line-clamp-2">{ins.description}</p>
-                      {ins.companies.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {ins.companies.slice(0, 3).map(c => (
-                            <span key={c} className="font-mono text-[7px] text-[#00d4ff]/30">{c}</span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </Section>
-            )}
-
-            {/* What's happening now */}
-            <Section title="WHAT'S HAPPENING NOW" color={color}>
-              <div className="space-y-2.5">
-                {story?.bullets.map((b, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <div className="w-1 h-1 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: color, opacity: 0.6 }} />
-                    <span className="font-mono text-[11px] text-white/50 leading-relaxed">{b}</span>
-                  </div>
-                ))}
-              </div>
-              {feedItems.length > 0 && (
-                <div className="mt-5 pt-4 border-t border-white/[0.04]">
-                  <div className="font-mono text-[7px] tracking-[0.3em] text-white/15 mb-3">RECENT HEADLINES</div>
-                  <div className="space-y-2">
-                    {feedItems.slice(0, 5).map((item, i) => (
-                      <div key={i} className="flex items-start gap-3">
-                        <span className="font-mono text-[8px] text-white/15 shrink-0 mt-0.5">{item.timeAgo}</span>
-                        {item.url ? (
-                          <a href={item.url} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-white/40 hover:text-white/60 transition-colors leading-snug truncate">{item.title}</a>
-                        ) : (
-                          <span className="font-mono text-[10px] text-white/40 leading-snug truncate">{item.title}</span>
-                        )}
-                        <span className="font-mono text-[7px] text-white/15 shrink-0">{item.source}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </Section>
-
-            {/* Key Technologies */}
-            {technologies.length > 0 && (
-              <Section title="KEY TECHNOLOGIES" subtitle={`${technologies.length} tracked across maturity stages`} color={color}>
-                <div className="grid grid-cols-3 gap-[1px] bg-white/[0.03]">
-                  {(['emerging', 'growing', 'mature'] as const).map(stage => {
-                    const techs = technologies.filter(t => t.maturityLevel === stage);
-                    const stageColor = stage === 'emerging' ? '#f97316' : stage === 'growing' ? '#00d4ff' : '#00ff88';
-                    return (
-                      <div key={stage} className="bg-black p-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: stageColor }} />
-                          <span className="font-mono text-[8px] tracking-[0.25em] text-white/30 uppercase">{stage}</span>
-                          <span className="font-mono text-[8px] text-white/15 ml-auto">{techs.length}</span>
-                        </div>
-                        <div className="space-y-2">
-                          {techs.map(t => (
-                            <Link key={t.id} href={`/technology/${t.id}`} className="block group">
-                              <div className="font-mono text-[10px] text-white/50 group-hover:text-white/70 transition-colors">{t.name}</div>
-                              <div className="font-mono text-[8px] text-white/20 leading-snug mt-0.5">{t.description.slice(0, 80)}</div>
-                            </Link>
-                          ))}
-                          {techs.length === 0 && <span className="font-mono text-[8px] text-white/10">None tracked</span>}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </Section>
-            )}
-
-            {/* Major Players */}
-            {localVendors.length > 0 && (
-              <Section title="MAJOR PLAYERS" subtitle={`Top companies in ${label.toLowerCase()}`} color="#ffb800">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {localVendors.sort((a, b) => b.ikerScore - a.ikerScore).slice(0, 4).map((v) => (
-                    <CompanyCard key={v.id} id={v.id} name={v.name} website={v.website} category={v.category} tags={v.tags} ikerScore={v.ikerScore} accentColor="#ffb800" />
-                  ))}
-                </div>
-                {localVendors.length > 4 && (
-                  <button onClick={() => setLevel('explore')} className="block w-full text-center font-mono text-[8px] tracking-[0.2em] py-3 mt-3 text-white/20 hover:text-white/40 transition-colors border border-white/[0.04] hover:border-white/[0.08]">
-                    EXPLORE ALL {localVendors.length} COMPANIES →
-                  </button>
-                )}
-              </Section>
-            )}
-
-            {/* Opportunities */}
-            {opportunities.length > 0 && (
-              <Section title="OPPORTUNITIES" subtitle="Detected from signal patterns" color="#00ff88">
-                <div className="space-y-2">
-                  {opportunities.map((opp, i) => (
-                    <OpportunityCard key={i} opportunity={opp} />
-                  ))}
-                </div>
-              </Section>
-            )}
-
-            {/* Problems being solved */}
-            {story?.problems && story.problems.length > 0 && (
-              <Section title="PROBLEMS BEING SOLVED" color="#ff3b30">
-                <div className="grid grid-cols-2 gap-3">
-                  {story.problems.map((problem, i) => (
-                    <div key={i} className="flex items-start gap-3 p-3 border border-white/[0.04] bg-white/[0.01]">
-                      <div className="font-mono text-[10px] text-[#ff3b30]/40 shrink-0 mt-0.5">{String(i + 1).padStart(2, '0')}</div>
-                      <span className="font-mono text-[10px] text-white/45 leading-relaxed">{problem}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4 text-center">
-                  <Link href={`/industry/${slug}/solve`} className="inline-block font-mono text-[8px] tracking-[0.2em] border rounded-sm px-4 py-2 transition-colors" style={{ borderColor: `${color}30`, color: `${color}90` }}>
-                    SOLVE A PROBLEM →
-                  </Link>
-                </div>
-              </Section>
-            )}
-          </>
-        )}
-
-        {/* ═══════════════════════════════════════════════════════════════════════ */}
-        {/* ═══ LEVEL 2: EXPLORE ═══════════════════════════════════════════════ */}
-        {/* ═══════════════════════════════════════════════════════════════════════ */}
-        {level === 'explore' && (
-          <>
-            {/* Ecosystem Map — prefer profile data (from knowledge graph), fall back to static */}
-            <Section title="ECOSYSTEM MAP" subtitle="Interactive technology ecosystem" color="#a855f7">
-              <IndustryEcosystemGraph
-                slug={slug}
-                industryLabel={label}
-                accentColor={color}
-                vendors={
-                  profile && profile.blocks.companies.length > 0
-                    ? profile.blocks.companies.map(c => ({ id: c.id, name: c.name, website: c.website, tags: c.tags }))
-                    : localVendors.map(v => ({ id: v.id, name: v.name, website: v.website, tags: v.tags }))
-                }
-                technologies={
-                  profile && profile.blocks.technologies.length > 0
-                    ? profile.blocks.technologies.map(t => ({ id: t.id, name: t.name }))
-                    : technologies.map(t => ({ id: t.id, name: t.name }))
-                }
-              />
-            </Section>
-
-            {/* Industry Timeline */}
-            {timeline.length > 0 && (
-              <Section title="INDUSTRY TIMELINE" subtitle="What happened in this industry" color="#ffb800">
-                <IndustryTimelineViz events={timeline} />
-              </Section>
-            )}
-
-            {/* All vendors */}
-            {localVendors.length > 0 && (
-              <Section title="ALL VENDORS" subtitle={`${localVendors.length} companies active in ${label.toLowerCase()}`} color="#ffb800">
-                {([
-                  { label: 'ESTABLISHED LEADERS', vendors: establishedVendors, tierColor: '#00ff88' },
-                  { label: 'EMERGING VENDORS', vendors: emergingVendors, tierColor: '#00d4ff' },
-                  { label: 'SPECIALIZED / NICHE', vendors: specializedVendors, tierColor: '#ffb800' },
-                ] as const).filter(t => t.vendors.length > 0).map(tier => (
-                  <div key={tier.label} className="mb-6 last:mb-0">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tier.tierColor }} />
-                      <span className="font-mono text-[8px] tracking-[0.25em] text-white/25">{tier.label}</span>
-                      <span className="font-mono text-[8px] text-white/15">{tier.vendors.length}</span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {tier.vendors.slice(0, 8).map((v) => (
-                        <CompanyCard key={v.id} id={v.id} name={v.name} website={v.website} category={v.category} tags={v.tags} ikerScore={v.ikerScore} accentColor={tier.tierColor} />
-                      ))}
-                    </div>
-                    {tier.vendors.length > 8 && (
-                      <Link href={`/vendors?industry=${slug}`} className="block text-center font-mono text-[8px] tracking-wider py-2 mt-2 text-white/15 hover:text-white/30 transition-colors">
-                        VIEW ALL {tier.vendors.length} →
-                      </Link>
-                    )}
-                  </div>
-                ))}
-              </Section>
-            )}
-
-            {/* Products & Equipment */}
-            <Section title="PRODUCTS & EQUIPMENT" subtitle={productsLoading ? 'Scanning sources...' : `${products.length} products discovered`} color="#00d4ff">
-              <ProductCatalog products={products} accentColor={color} loading={productsLoading} />
-            </Section>
-
-            {/* Connected Industries */}
-            {!isCustom && (() => {
-              const otherIndustries = INDUSTRIES.filter(i => i.slug !== slug);
-              const connections = otherIndustries
-                .map(other => {
-                  const otherVendorCats = CATEGORY_TO_VENDOR_CATS[other.category] ?? [];
-                  const sharedVendors = allVendors.filter(v =>
-                    vendorCats.includes(v.category) && otherVendorCats.includes(v.category)
-                  ).length;
-                  const otherTechs = TECHNOLOGY_CATALOG.filter(t => t.category === other.category);
-                  const sharedKeywords = technologies.filter(t =>
-                    otherTechs.some(ot =>
-                      t.name.toLowerCase().split(' ').some(w =>
-                        w.length > 3 && ot.name.toLowerCase().includes(w)
-                      )
-                    )
-                  ).length;
-                  const strength = sharedVendors * 2 + sharedKeywords;
-                  return { industry: other, strength, sharedVendors, sharedKeywords };
-                })
-                .filter(c => c.strength > 0)
-                .sort((a, b) => b.strength - a.strength)
-                .slice(0, 4);
-
-              if (connections.length === 0) return null;
-
-              return (
-                <Section title="CONNECTED INDUSTRIES" subtitle="Cross-industry relationships" color="#a855f7">
-                  <div className="grid grid-cols-2 gap-2">
-                    {connections.map(c => (
-                      <Link key={c.industry.slug} href={`/industry/${c.industry.slug}`} className="group flex items-center gap-3 p-3 border border-white/[0.04] hover:border-white/[0.10] hover:bg-white/[0.02] transition-all">
-                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c.industry.color, boxShadow: `0 0 6px ${c.industry.color}60` }} />
-                        <div className="min-w-0 flex-1">
-                          <div className="font-mono text-[10px] text-white/55 group-hover:text-white/75 transition-colors uppercase truncate">{c.industry.label}</div>
-                          <div className="font-mono text-[8px] text-white/20 mt-0.5">
-                            {c.sharedVendors > 0 && <span>{c.sharedVendors} shared vendors</span>}
-                            {c.sharedVendors > 0 && c.sharedKeywords > 0 && <span> · </span>}
-                            {c.sharedKeywords > 0 && <span>{c.sharedKeywords} tech overlap</span>}
-                          </div>
-                        </div>
-                        <span className="font-mono text-[8px] text-white/15 group-hover:text-[#a855f7]/50 transition-colors shrink-0">→</span>
-                      </Link>
-                    ))}
-                  </div>
-                </Section>
-              );
-            })()}
-
-            {/* Discovery Feed */}
-            <Section title="DISCOVERY FEED" subtitle="Live news and breakthroughs" color="#00ff88">
-              <DiscoveryFeed items={feedItems} accentColor={color} loading={feedLoading} />
-            </Section>
-          </>
-        )}
-
-        {/* ═══════════════════════════════════════════════════════════════════════ */}
-        {/* ═══ LEVEL 3: ANALYZE ═══════════════════════════════════════════════ */}
-        {/* ═══════════════════════════════════════════════════════════════════════ */}
-        {level === 'analyze' && (
-          <>
-            {/* Porter's Five Forces */}
-            {profile?.blocks.porter && (
-              <Section title="PORTER'S FIVE FORCES" subtitle={`Industry attractiveness: ${profile.blocks.porter.overall_label} (${profile.blocks.porter.overall_attractiveness}/100)`} color="#a855f7">
-                <div className="space-y-2">
-                  {Object.values(profile.blocks.porter.forces).map((force: PorterForce) => {
-                    const barColor =
-                      force.level === 'very_high' ? '#ff3b30' :
-                      force.level === 'high' ? '#f97316' :
-                      force.level === 'moderate' ? '#ffb800' :
-                      force.level === 'low' ? '#00d4ff' : '#00ff88';
-                    return (
-                      <div key={force.name} className="border border-white/[0.04] rounded-sm p-3 bg-white/[0.01]">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-mono text-[10px] text-white/50">{force.name}</span>
-                          <span className="font-mono text-[8px] tracking-[0.2em] uppercase" style={{ color: barColor }}>{force.level.replace('_', ' ')}</span>
-                        </div>
-                        <div className="w-full h-1 bg-white/[0.04] rounded-full overflow-hidden mb-2">
-                          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${force.score}%`, backgroundColor: barColor }} />
-                        </div>
-                        <p className="font-mono text-[8px] text-white/25 leading-relaxed">{force.description}</p>
-                        {force.evidence.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mt-1.5">
-                            {force.evidence.map((e, i) => (
-                              <span key={i} className="font-mono text-[7px] text-white/15">{e}</span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                  <div className="flex items-center justify-between pt-2 border-t border-white/[0.04]">
-                    <span className="font-mono text-[8px] text-white/20">Confidence: {Math.round(profile.blocks.porter.confidence * 100)}%</span>
-                    <span className="font-mono text-[10px]" style={{ color: profile.blocks.porter.overall_attractiveness >= 50 ? '#00ff88' : '#f97316' }}>
-                      {profile.blocks.porter.overall_label}
-                    </span>
-                  </div>
-                </div>
-              </Section>
-            )}
-
-            {/* PESTLE Analysis */}
-            {profile?.blocks.pestle && (
-              <Section title="PESTLE ANALYSIS" subtitle={`Environment: ${profile.blocks.pestle.overall_environment} · Dominant: ${profile.blocks.pestle.dominant_factor}`} color="#00d4ff">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {profile.blocks.pestle.factors.map((factor) => {
-                    const sentColor = factor.sentiment === 'positive' ? '#00ff88' : factor.sentiment === 'negative' ? '#ff3b30' : '#ffb800';
-                    return (
-                      <div key={factor.category} className="border border-white/[0.04] rounded-sm p-3 bg-white/[0.01]">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: sentColor }} />
-                          <span className="font-mono text-[8px] tracking-[0.2em] text-white/40 uppercase">{factor.label}</span>
-                        </div>
-                        <div className="w-full h-1 bg-white/[0.04] rounded-full overflow-hidden mb-2">
-                          <div className="h-full rounded-full" style={{ width: `${factor.score}%`, backgroundColor: sentColor, opacity: 0.6 }} />
-                        </div>
-                        <p className="font-mono text-[8px] text-white/20 leading-relaxed line-clamp-2">{factor.description}</p>
-                        {factor.evidence.length > 0 && (
-                          <div className="mt-1.5">
-                            {factor.evidence.slice(0, 2).map((e, i) => (
-                              <div key={i} className="font-mono text-[7px] text-white/12">{e}</div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="flex items-center justify-between pt-2 mt-2 border-t border-white/[0.04]">
-                  <span className="font-mono text-[8px] text-white/20">Confidence: {Math.round(profile.blocks.pestle.confidence * 100)}%</span>
-                  <span className="font-mono text-[8px]" style={{
-                    color: profile.blocks.pestle.overall_environment === 'favorable' ? '#00ff88' :
-                           profile.blocks.pestle.overall_environment === 'challenging' ? '#ff3b30' : '#ffb800'
-                  }}>
-                    {profile.blocks.pestle.overall_environment.toUpperCase()} ENVIRONMENT
-                  </span>
-                </div>
-              </Section>
-            )}
-
-            {/* Value Chain */}
-            {profile?.blocks.value_chain && (
-              <Section title="VALUE CHAIN" subtitle={`Integration: ${profile.blocks.value_chain.integration_score}/100 · Strongest: ${profile.blocks.value_chain.strongest_tier.replace(/_/g, ' ')}`} color="#ffd700">
-                <div className="space-y-1.5">
-                  {profile.blocks.value_chain.tiers.map((tier: ValueChainTier) => {
-                    const barColor = tier.gap_detected ? '#ff3b30' :
-                      tier.activity_score >= 60 ? '#00ff88' :
-                      tier.activity_score >= 30 ? '#00d4ff' :
-                      tier.activity_score > 0 ? '#ffb800' : 'rgba(255,255,255,0.08)';
-                    return (
-                      <div key={tier.slug} className="border border-white/[0.04] rounded-sm p-3 bg-white/[0.01]">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-[10px] text-white/50">{tier.name}</span>
-                            {tier.gap_detected && (
-                              <span className="font-mono text-[7px] tracking-[0.2em] text-[#ff3b30] border border-[#ff3b30]/30 px-1.5 py-0.5 rounded-sm">GAP</span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="font-mono text-[8px] text-white/20">{tier.signal_count} signals</span>
-                            <span className="font-mono text-[8px] text-white/20">{tier.company_density} cos</span>
-                            <span className="font-mono text-[10px] font-bold" style={{ color: barColor }}>{tier.activity_score}</span>
-                          </div>
-                        </div>
-                        <div className="w-full h-1 bg-white/[0.04] rounded-full overflow-hidden mb-1.5">
-                          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${tier.activity_score}%`, backgroundColor: barColor }} />
-                        </div>
-                        {tier.key_signals.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {tier.key_signals.map((s, i) => (
-                              <span key={i} className="font-mono text-[7px] text-white/15 truncate max-w-[200px]">{s}</span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                {profile.blocks.value_chain.bottleneck_tiers.length > 0 && (
-                  <div className="mt-3 p-2 border border-[#ff3b30]/20 bg-[#ff3b30]/[0.03] rounded-sm">
-                    <span className="font-mono text-[8px] text-[#ff3b30]/60">BOTTLENECKS: {profile.blocks.value_chain.bottleneck_tiers.map(t => t.replace(/_/g, ' ')).join(', ')}</span>
-                  </div>
-                )}
-              </Section>
-            )}
-
-            {/* Opportunity Engine */}
-            {engineOpportunities.length > 0 && (
-              <Section title="OPPORTUNITY RADAR" subtitle={`${engineOpportunities.length} opportunities detected by AI engine`} color="#00ff88">
-                <div className="space-y-2">
-                  {engineOpportunities.slice(0, 8).map((opp) => {
-                    const typeColor =
-                      opp.type === 'underserved_market' ? '#00ff88' :
-                      opp.type === 'early_mover' ? '#00d4ff' :
-                      opp.type === 'funding_surge' ? '#ffb800' :
-                      opp.type === 'patent_gap' ? '#a855f7' :
-                      opp.type === 'convergence_play' ? '#f97316' :
-                      opp.type === 'policy_tailwind' ? '#00d4ff' :
-                      opp.type === 'supply_chain_gap' ? '#ff3b30' :
-                      opp.type === 'talent_arbitrage' ? '#ffd700' : '#ffffff';
-                    const riskColor = opp.risk_level === 'high' ? '#ff3b30' : opp.risk_level === 'medium' ? '#f97316' : '#00ff88';
-                    return (
-                      <div key={opp.id} className="border border-white/[0.04] rounded-sm p-3 bg-white/[0.01]">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: typeColor, boxShadow: `0 0 4px ${typeColor}80` }} />
-                            <span className="font-mono text-[10px] text-white/55">{opp.title}</span>
-                          </div>
-                          <span className="font-mono text-[11px] font-bold" style={{ color: typeColor }}>{opp.score}</span>
-                        </div>
-                        <p className="font-mono text-[9px] text-white/30 mb-2 leading-relaxed">{opp.description}</p>
-                        <div className="flex flex-wrap gap-1 mb-2">
-                          {opp.evidence.slice(0, 3).map((e, i) => (
-                            <span key={i} className="font-mono text-[7px] text-white/20 bg-white/[0.02] px-1.5 py-0.5 rounded-sm">{e}</span>
-                          ))}
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="font-mono text-[7px] tracking-[0.15em] uppercase" style={{ color: typeColor }}>{opp.type.replace(/_/g, ' ')}</span>
-                          <span className="font-mono text-[7px] text-white/15">{opp.timing.replace(/_/g, ' ')}</span>
-                          <span className="font-mono text-[7px]" style={{ color: riskColor }}>{opp.risk_level} risk</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </Section>
-            )}
-
-            {/* Signals & Evidence */}
-            <Section title="SIGNALS & EVIDENCE" subtitle="Recent intelligence from patents, funding, hiring, contracts" color="#ffb800">
-              {signals.length === 0 ? (
-                <div className="py-6 text-center">
-                  <span className="font-mono text-[9px] text-white/15">No signals collected yet. Data accumulates over time.</span>
-                </div>
-              ) : (
-                <div className="space-y-[2px]">
-                  {signals.slice(0, 15).map((sig) => {
-                    const sigColor = SIGNAL_TYPE_COLOR[sig.signal_type] ?? '#ffffff';
-                    return (
-                      <div
-                        key={sig.id}
-                        className="flex items-center gap-3 py-2.5 pr-3 pl-4 hover:bg-white/[0.025] transition-colors relative"
-                        style={{ borderLeft: `2px solid ${sigColor}30` }}
-                      >
-                        <SignalBadge type={sig.signal_type} size="sm" />
-                        <div className="min-w-0 flex-1">
-                          {sig.url ? (
-                            <a href={sig.url} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-white/40 hover:text-white/65 transition-colors truncate block">{sig.title}</a>
-                          ) : (
-                            <span className="font-mono text-[10px] text-white/40 truncate block">{sig.title}</span>
-                          )}
-                        </div>
-                        {sig.company && (() => {
-                          const v = findVendor(sig.company);
-                          return v ? (
-                            <CompanyTooltip name={v.name} website={v.website} category={v.category} ikerScore={v.ikerScore} tags={v.tags}>
-                              <span className="font-mono text-[8px] text-white/20 shrink-0 cursor-default hover:text-white/40 transition-colors">{sig.company}</span>
-                            </CompanyTooltip>
-                          ) : (
-                            <span className="font-mono text-[8px] text-white/20 shrink-0">{sig.company}</span>
-                          );
-                        })()}
-                        <span className="font-mono text-[8px] text-white/12 shrink-0">{sig.source}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Section>
-
-            {/* Signal Breakdown (from adoption profile) */}
-            {adoption && Object.keys(adoption.signal_breakdown).length > 0 && (
-              <Section title="SIGNAL BREAKDOWN" subtitle="Distribution by type" color="#a855f7">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {Object.entries(adoption.signal_breakdown)
-                    .sort(([, a], [, b]) => b - a)
-                    .map(([type, count]) => {
-                      const sigColor = SIGNAL_TYPE_COLOR[type] ?? '#ffffff';
-                      const maxCount = Math.max(...Object.values(adoption.signal_breakdown));
-                      const pct = maxCount > 0 ? (count / maxCount) * 100 : 0;
-                      return (
-                        <div key={type} className="relative p-3 border border-white/[0.04] overflow-hidden">
-                          <div className="absolute inset-0 opacity-[0.04]" style={{ background: `linear-gradient(90deg, ${sigColor} ${pct}%, transparent ${pct}%)` }} />
-                          <div className="relative flex items-center justify-between">
-                            <span className="font-mono text-[8px] tracking-[0.15em] text-white/40 uppercase">{SIGNAL_TYPE_LABEL[type] ?? type}</span>
-                            <span className="font-mono text-[11px] font-bold" style={{ color: sigColor }}>{count}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              </Section>
-            )}
-
-            {/* Latest Intelligence */}
-            <Section title="LATEST INTELLIGENCE" subtitle="Live news and breakthroughs" color="#00ff88">
-              <DiscoveryFeed items={feedItems} accentColor={color} loading={feedLoading} />
-            </Section>
-
-            {/* Industry areas + funding signals (custom industries) */}
-            {isCustom && scanData?.industry_areas && scanData.industry_areas.length > 0 && (
-              <Section title="INDUSTRY AREAS" subtitle="Detected from intelligence scan" color={color}>
-                {scanData.industry_areas.filter(a => a.score > 0).map((area, i) => (
-                  <div key={i} className="flex items-center gap-3 mb-1.5">
-                    <div className="w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: color, opacity: 0.6 }} />
-                    <span className="font-mono text-[10px] text-white/45">{area.area}</span>
-                    <div className="flex-1 h-[1px] bg-white/[0.04]" />
-                    <span className="font-mono text-[9px] font-bold" style={{ color }}>{area.score}</span>
-                  </div>
-                ))}
-              </Section>
-            )}
-
-            {isCustom && scanData?.funding_signals && scanData.funding_signals.length > 0 && (
-              <Section title="FUNDING SIGNALS" subtitle="Investment activity detected" color="#00ff88">
-                {scanData.funding_signals.slice(0, 5).map((f, i) => (
-                  <div key={i} className="flex items-start gap-3 mb-1">
-                    <span className="font-mono text-[8px] text-[#00ff88]/60 shrink-0">$</span>
-                    <span className="font-mono text-[10px] text-white/45">{f.company} — {f.stage}{f.amount ? ` (${f.amount})` : ''}</span>
-                  </div>
-                ))}
-              </Section>
-            )}
-          </>
-        )}
-
-        {/* ═══ FOOTER ═══ */}
-        <div className="flex flex-col items-center gap-5 py-10 border-t border-white/[0.05] mt-8">
-          <span className="font-mono text-[8px] tracking-[0.4em] text-white/10 uppercase">NXT//LINK</span>
-          <div className="flex items-center gap-6">
-            <Link href={`/industry/${slug}/solve`} className="font-mono text-[8px] tracking-[0.2em] text-white/20 hover:text-white/45 transition-colors duration-200">
-              SOLVE A PROBLEM →
-            </Link>
-            <span className="text-white/8 select-none">·</span>
-            <Link href="/vendors" className="font-mono text-[8px] tracking-[0.2em] text-white/20 hover:text-white/45 transition-colors duration-200">
-              BROWSE VENDORS →
-            </Link>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Adoption Curve Visualization ───────────────────────────────────────────
-
-const STAGES: Array<{ key: string; label: string; range: [number, number] }> = [
-  { key: 'innovators', label: 'Innovators', range: [0, 20] },
-  { key: 'early_adopters', label: 'Early Adopters', range: [20, 40] },
-  { key: 'early_majority', label: 'Early Majority', range: [40, 60] },
-  { key: 'late_majority', label: 'Late Majority', range: [60, 80] },
-  { key: 'laggards', label: 'Laggards', range: [80, 100] },
-];
-
-function AdoptionCurveViz({ adoption, accentColor }: { adoption: AdoptionProfile; accentColor: string }) {
-  return (
-    <div className="space-y-4">
-      {/* S-curve bar */}
-      <div className="relative">
-        <div className="flex gap-[1px]">
-          {STAGES.map((s) => {
-            const isActive = adoption.stage === s.key;
-            const isPast = STAGES.findIndex(x => x.key === adoption.stage) > STAGES.findIndex(x => x.key === s.key);
-            return (
-              <div
-                key={s.key}
-                className="flex-1 relative group cursor-default"
-              >
-                {/* Bar segment */}
-                <div
-                  className="h-8 transition-all duration-300"
-                  style={{
-                    backgroundColor: isActive ? `${accentColor}30` : isPast ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)',
-                    borderBottom: isActive ? `2px solid ${accentColor}` : '2px solid transparent',
-                  }}
-                >
-                  {isActive && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: accentColor, boxShadow: `0 0 8px ${accentColor}cc` }} />
-                    </div>
-                  )}
-                </div>
-                {/* Label */}
-                <div className="text-center mt-2">
-                  <span className={`font-mono text-[7px] tracking-[0.15em] uppercase ${isActive ? 'text-white/60' : 'text-white/15'}`}>
-                    {s.label}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Stats row */}
-      <div className="flex items-center gap-6 pt-2">
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-[7px] tracking-[0.15em] text-white/20">SCORE</span>
-          <span className="font-mono text-[11px] font-bold" style={{ color: accentColor }}>{adoption.score}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-[7px] tracking-[0.15em] text-white/20">CONFIDENCE</span>
-          <span className="font-mono text-[11px] text-white/50">{Math.round(adoption.confidence * 100)}%</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-[7px] tracking-[0.15em] text-white/20">MOMENTUM</span>
-          <span className="font-mono text-[11px]" style={{
-            color: adoption.momentum === 'accelerating' ? '#00ff88' : adoption.momentum === 'decelerating' ? '#ff3b30' : '#ffffff60',
-          }}>
-            {adoption.momentum === 'accelerating' ? '↑ Accelerating' : adoption.momentum === 'decelerating' ? '↓ Decelerating' : '→ Steady'}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-[7px] tracking-[0.15em] text-white/20">COMPANIES</span>
-          <span className="font-mono text-[11px] text-white/50">{adoption.company_count}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Industry Timeline Visualization ────────────────────────────────────────
-
-function IndustryTimelineViz({ events }: { events: TimelineEvent[] }) {
-  // Group events by month
-  const grouped = useMemo(() => {
-    const groups = new Map<string, TimelineEvent[]>();
-    for (const e of events) {
-      const d = new Date(e.date);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push(e);
-    }
-    // Sort keys descending
-    const sorted = Array.from(groups.entries() as Iterable<[string, TimelineEvent[]]>)
-      .sort(([a], [b]) => b.localeCompare(a));
-    return sorted;
-  }, [events]);
-
-  if (events.length === 0) {
+  if (loading) {
     return (
-      <div className="py-6 text-center">
-        <span className="font-mono text-[9px] text-white/15">No timeline events yet. Signals will appear as they are collected.</span>
+      <div className="bg-black min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-4" style={{ borderColor: '#00d4ff', borderTopColor: 'transparent' }} />
+          <p className="font-mono text-[10px] tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>LOADING INDUSTRY DATA...</p>
+        </div>
       </div>
     );
   }
 
+  if (error || !data) {
+    return (
+      <div className="bg-black min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="font-mono text-sm text-white/50 mb-4">{error ?? 'No data'}</p>
+          <button onClick={fetchData} className="font-mono text-[10px] tracking-widest px-4 py-2 border rounded-sm" style={{ borderColor: '#00d4ff40', color: '#00d4ff' }}>
+            RETRY
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const { industry, technologies, signals, discoveries, vendors, products, conferences, intelSignals = [] } = data;
+
+  const tier1Suppliers = GLOBAL_SUPPLIERS.filter(s => s.tier === 1);
+  const tier2Suppliers = GLOBAL_SUPPLIERS.filter(s => s.tier === 2);
+
   return (
-    <div className="relative">
-      {/* Vertical timeline line */}
-      <div className="absolute left-[52px] top-0 bottom-0 w-[1px] bg-white/[0.06]" />
+    <div className="bg-black min-h-screen">
+      <PageTopBar
+        backHref="/search"
+        backLabel="SEARCH"
+        breadcrumbs={[
+          { label: 'INDUSTRIES', href: '/search' },
+          { label: label }
+        ]}
+        showLiveDot={true}
+        rightSlot={
+          <button
+            onClick={fetchData}
+            className="font-mono text-[8px] tracking-[0.2em] border rounded-sm px-2.5 py-1 transition-colors hover:bg-white/5"
+            style={{ borderColor: '#00d4ff40', color: '#00d4ffcc' }}
+          >
+            {loading ? 'REFRESHING...' : 'REFRESH DATA'}
+          </button>
+        }
+      />
 
-      <div className="space-y-6">
-        {grouped.map(([monthKey, monthEvents]) => {
-          const d = new Date(monthEvents[0].date);
-          const monthLabel = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-          return (
-            <div key={monthKey}>
-              {/* Month header */}
-              <div className="flex items-center gap-3 mb-3">
-                <span className="font-mono text-[8px] tracking-[0.2em] text-white/30 w-[44px] text-right shrink-0">{monthLabel.toUpperCase()}</span>
-                <div className="w-2 h-2 rounded-full bg-white/10 relative z-10 shrink-0" />
-              </div>
+      <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col gap-0">
 
-              {/* Events */}
-              <div className="space-y-[2px]">
-                {monthEvents.map((event, i) => {
-                  const sigColor = SIGNAL_TYPE_COLOR[event.type] ?? '#ffffff';
-                  return (
-                    <div key={`${monthKey}-${i}`} className="flex items-start gap-3 pl-[62px] py-1.5 hover:bg-white/[0.015] transition-colors group">
-                      <span className="font-mono text-[8px] text-white/15 shrink-0 w-[32px] mt-0.5">{fmtDate(event.date)}</span>
-                      <div className="w-1 h-1 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: sigColor, boxShadow: `0 0 4px ${sigColor}80` }} />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-[6px] tracking-[0.15em] px-1.5 py-0.5 rounded-sm" style={{ backgroundColor: `${sigColor}15`, color: `${sigColor}90` }}>
-                            {SIGNAL_TYPE_LABEL[event.type] ?? event.type.toUpperCase()}
-                          </span>
-                          {event.company && (
-                            <span className="font-mono text-[8px] text-white/20">{event.company}</span>
-                          )}
-                        </div>
-                        <div className="mt-1">
-                          {event.url ? (
-                            <a href={event.url} target="_blank" rel="noopener noreferrer" className="font-mono text-[9px] text-white/40 hover:text-white/60 transition-colors leading-snug">
-                              {event.title}
-                            </a>
-                          ) : (
-                            <span className="font-mono text-[9px] text-white/40 leading-snug">{event.title}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+        {/* ═══ HERO ═══ */}
+        <div className="pb-8 border-b border-white/[0.06]">
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-white mb-2" style={{ fontFamily: 'var(--font-space-grotesk), sans-serif' }}>
+                {industry.name}
+              </h1>
+              {industry.description && (
+                <p className="text-sm leading-relaxed max-w-2xl" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  {industry.description}
+                </p>
+              )}
+            </div>
+            {/* IKER Ring */}
+            <div className="shrink-0 ml-6">
+              <IkerRing score={industry.iker_score} size={72} />
+            </div>
+          </div>
+
+          {/* Stats bar */}
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-4 mt-6">
+            <StatBlock label="TECHNOLOGIES" value={technologies.length} color="#00d4ff" />
+            <StatBlock label="VENDORS" value={vendors.length} color="#00ff88" />
+            <StatBlock label="PRODUCTS" value={products.length} color="#ffd700" />
+            <StatBlock label="SIGNALS" value={signals.length} color="#f97316" />
+            <StatBlock label="INTEL" value={intelSignals.length} color="#a855f7" />
+            <StatBlock label="RESEARCH" value={discoveries.length} color="#a855f7" />
+          </div>
+
+          {lastRefresh && (
+            <p className="font-mono text-[8px] tracking-widest mt-4" style={{ color: 'rgba(255,255,255,0.2)' }}>
+              LAST REFRESH: {lastRefresh.toLocaleTimeString('en-US', { hour12: false })}
+            </p>
+          )}
+        </div>
+
+        {/* ═══ 1. VENDORS — Clearbit logos, distance, IKER ring, trend ═══ */}
+        <Section title="VENDORS" icon="🏢" count={vendors.length} color="#00ff88">
+          {vendors.length === 0 ? (
+            <EmptyState label="No vendors discovered yet" />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {vendors.sort((a, b) => b.ikerScore - a.ikerScore).slice(0, 12).map(v => (
+                <VendorCard key={v.id} vendor={v} />
+              ))}
+            </div>
+          )}
+        </Section>
+
+        {/* ═══ 2. PRODUCTS — photos, badges, star ratings, deployment, complexity ═══ */}
+        <Section title="PRODUCTS" icon="📦" count={products.length} color="#ffd700">
+          {products.length === 0 ? (
+            <EmptyState label="No products discovered yet" />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {products.sort((a, b) => b.confidence - a.confidence).slice(0, 12).map(p => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          )}
+        </Section>
+
+        {/* ═══ 3. SUPPLIERS — Tier 1/2 supply chain map ═══ */}
+        <Section title="SUPPLY CHAIN" icon="⛓️" count={GLOBAL_SUPPLIERS.length} color="#f97316">
+          <div className="space-y-4">
+            {/* Tier 1 */}
+            <div>
+              <h4 className="font-mono text-[9px] tracking-[0.2em] mb-3" style={{ color: '#ff3b30' }}>
+                TIER 1 — CRITICAL PATH
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {tier1Suppliers.map(s => (
+                  <SupplierCard key={s.name} supplier={s} />
+                ))}
               </div>
             </div>
-          );
-        })}
+            {/* Tier 2 */}
+            <div>
+              <h4 className="font-mono text-[9px] tracking-[0.2em] mb-3" style={{ color: '#ffd700' }}>
+                TIER 2 — SECONDARY COMPONENTS
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {tier2Suppliers.map(s => (
+                  <SupplierCard key={s.name} supplier={s} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        {/* ═══ 4. TECHNOLOGIES — quadrant, maturity bars, velocity ═══ */}
+        <Section title="TECHNOLOGIES" icon="⚡" count={technologies.length} color="#00d4ff">
+          {technologies.length === 0 ? (
+            <EmptyState label="No technologies tracked yet" />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {technologies.sort((a, b) => (b.iker_score ?? 0) - (a.iker_score ?? 0)).slice(0, 12).map(t => (
+                <TechnologyCard key={t.id} tech={t} />
+              ))}
+            </div>
+          )}
+        </Section>
+
+        {/* ═══ 5. RESEARCH — papers, citations, institutions ═══ */}
+        <Section title="RESEARCH" icon="🔬" count={discoveries.length} color="#a855f7">
+          {discoveries.length === 0 ? (
+            <EmptyState label="No research papers discovered yet" />
+          ) : (
+            <div className="space-y-2">
+              {discoveries.sort((a, b) => (b.iker_impact_score ?? 0) - (a.iker_impact_score ?? 0)).slice(0, 10).map(d => (
+                <ResearchCard key={d.id} discovery={d} />
+              ))}
+            </div>
+          )}
+        </Section>
+
+        {/* ═══ 6. CONFERENCES — relevance, attendees, register ═══ */}
+        <Section title="CONFERENCES" icon="🎯" count={conferences.length} color="#ffd700">
+          {conferences.length === 0 ? (
+            <EmptyState label="No conferences tracked yet" />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {[...conferences].sort((a, b) => b.relevanceScore - a.relevanceScore).slice(0, 8).map(c => (
+                <ConferenceCard key={c.id} conference={c} />
+              ))}
+            </div>
+          )}
+        </Section>
+
+        {/* ═══ 7. TIMELINE — 1925 to 2035 ═══ */}
+        <Section title="TIMELINE" icon="📅" count={INDUSTRY_TIMELINE.length} color="#00d4ff">
+          <div className="relative">
+            {/* Vertical line */}
+            <div className="absolute left-[7px] top-0 bottom-0 w-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
+            <div className="space-y-1">
+              {INDUSTRY_TIMELINE.map((entry, idx) => {
+                const currentYear = new Date().getFullYear();
+                const isFuture = entry.year > currentYear;
+                const isExpanded = expandedTimeline === entry.year;
+                const prevEntry = idx > 0 ? INDUSTRY_TIMELINE[idx - 1] : null;
+                const showNowMarker = prevEntry && prevEntry.year <= currentYear && entry.year > currentYear;
+                const showForecastHeader = entry.type === 'forecast' && (idx === 0 || INDUSTRY_TIMELINE[idx - 1].type !== 'forecast');
+
+                return (
+                  <div key={entry.year}>
+                    {/* NOW marker — shows between past and future */}
+                    {showNowMarker && (
+                      <div className="flex items-center gap-3 py-3 px-2">
+                        <div className="w-[14px] h-[14px] rounded-full shrink-0 flex items-center justify-center animate-pulse"
+                          style={{ background: '#00ff88', boxShadow: '0 0 12px #00ff88aa' }} />
+                        <div className="flex-1 flex items-center gap-3">
+                          <span className="font-mono text-[11px] font-bold" style={{ color: '#00ff88' }}>
+                            {currentYear} — YOU ARE HERE
+                          </span>
+                          <div className="flex-1 h-px" style={{ background: 'linear-gradient(to right, #00ff8844, transparent)' }} />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* WHERE THINGS ARE HEADING divider */}
+                    {showForecastHeader && (
+                      <div className="flex items-center gap-3 py-4 px-2">
+                        <div className="w-[14px] flex justify-center shrink-0">
+                          <div className="w-px h-4" style={{ background: '#00d4ff44' }} />
+                        </div>
+                        <span className="font-mono text-[9px] tracking-[0.3em] font-bold" style={{ color: '#00d4ff' }}>
+                          WHERE THINGS ARE HEADING
+                        </span>
+                        <div className="flex-1 h-px" style={{ background: 'linear-gradient(to right, #00d4ff33, transparent)' }} />
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => setExpandedTimeline(isExpanded ? null : entry.year)}
+                      className="w-full text-left flex items-start gap-3 py-2 px-2 rounded-sm transition-colors hover:bg-white/[0.03]"
+                      style={{ opacity: isFuture ? 0.45 : 1 }}
+                    >
+                      <div className="w-[14px] h-[14px] rounded-full shrink-0 mt-0.5 flex items-center justify-center"
+                        style={{
+                          background: entry.type === 'disruption' ? '#ff3b30' :
+                            entry.type === 'regulation' ? '#ffd700' :
+                            entry.type === 'forecast' ? '#00d4ff33' : '#00ff88',
+                          boxShadow: entry.type === 'disruption' ? '0 0 8px #ff3b3066' :
+                            entry.type === 'forecast' ? '0 0 6px #00d4ff22' : '0 0 6px #00ff8844',
+                          border: entry.type === 'forecast' ? '1px dashed #00d4ff44' : 'none',
+                        }}
+                      >
+                        {isFuture && <span className="text-[6px]" style={{ color: '#00d4ff' }}>?</span>}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-[10px] font-bold" style={{ color: isFuture ? '#00d4ff' : 'white' }}>
+                            {entry.year}
+                          </span>
+                          <span className="text-xs" style={{ color: isFuture ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.7)' }}>{entry.title}</span>
+                          {entry.type === 'disruption' && (
+                            <span className="font-mono text-[7px] tracking-widest px-1.5 py-0.5 rounded-sm" style={{ background: '#ff3b3020', color: '#ff3b30', border: '1px solid #ff3b3030' }}>
+                              DISRUPTION
+                            </span>
+                          )}
+                          {entry.type === 'regulation' && (
+                            <span className="font-mono text-[7px] tracking-widest px-1.5 py-0.5 rounded-sm" style={{ background: '#ffd70020', color: '#ffd700', border: '1px solid #ffd70030' }}>
+                              REGULATION
+                            </span>
+                          )}
+                          {entry.type === 'forecast' && (
+                            <span className="font-mono text-[7px] tracking-widest px-1.5 py-0.5 rounded-sm" style={{ background: '#00d4ff15', color: '#00d4ff88', border: '1px dashed #00d4ff30' }}>
+                              FORECAST
+                            </span>
+                          )}
+                        </div>
+                        {isExpanded && (
+                          <p className="text-xs mt-1 leading-relaxed" style={{ color: isFuture ? 'rgba(0,212,255,0.5)' : 'rgba(255,255,255,0.4)' }}>
+                            {entry.description}
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </Section>
+
+        {/* ═══ 8. SIGNALS — P0-P3 live feed ═══ */}
+        <Section title="LIVE SIGNALS" icon="📡" count={signals.length} color="#ff3b30">
+          {signals.length === 0 ? (
+            <EmptyState label="No active signals detected" />
+          ) : (
+            <div className="space-y-2">
+              {signals.sort((a, b) => {
+                const pOrder: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3 };
+                return (pOrder[a.priority] ?? 4) - (pOrder[b.priority] ?? 4);
+              }).slice(0, 15).map(s => (
+                <SignalCard key={s.id} signal={s} />
+              ))}
+            </div>
+          )}
+        </Section>
+
+        {/* ═══ 9. INTEL SIGNALS — importance-scored intel feed ═══ */}
+        <Section title="INTEL SIGNALS" icon="🔍" count={intelSignals.length} color="#a855f7">
+          {intelSignals.length === 0 ? (
+            <EmptyState label="No intel signals discovered yet" />
+          ) : (
+            <div className="space-y-2">
+              {[...intelSignals].sort((a, b) => b.importance_score - a.importance_score).slice(0, 20).map(s => (
+                <IntelSignalCard key={s.id} signal={s} />
+              ))}
+            </div>
+          )}
+        </Section>
+
       </div>
     </div>
   );
 }
 
-// ─── Opportunity Card ───────────────────────────────────────────────────────
+// ─── Section Wrapper ─────────────────────────────────────────────────────────
 
-function OpportunityCard({ opportunity }: { opportunity: OpportunityEntry }) {
-  const strengthColor = opportunity.strength === 'strong' ? '#00ff88' : opportunity.strength === 'moderate' ? '#ffb800' : '#00d4ff';
-  return (
-    <div className="flex items-start gap-4 p-4 border border-white/[0.04] hover:border-white/[0.08] hover:bg-white/[0.01] transition-all">
-      <div className="flex flex-col items-center gap-1 shrink-0">
-        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: strengthColor, boxShadow: `0 0 6px ${strengthColor}80` }} />
-        <span className="font-mono text-[6px] tracking-[0.15em] uppercase" style={{ color: `${strengthColor}80` }}>
-          {opportunity.strength}
-        </span>
-      </div>
-      <div className="min-w-0 flex-1">
-        <h4 className="font-mono text-[10px] text-white/55 font-medium mb-1">{opportunity.title}</h4>
-        <p className="font-mono text-[8px] text-white/25 leading-[1.6]">{opportunity.reason}</p>
-      </div>
-    </div>
-  );
-}
-
-// ─── Reusable Section Component ──────────────────────────────────────────────
-
-function Section({ title, subtitle, color, children }: {
+function Section({ title, icon, count, color, children }: {
   title: string;
-  subtitle?: string;
+  icon: string;
+  count: number;
   color: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="mt-12 group/section">
-      <div className="flex items-center gap-3 mb-5 opacity-60 hover:opacity-100 transition-opacity duration-300">
-        <div
-          className="w-[3px] h-4 shrink-0 rounded-full"
-          style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}60` }}
-        />
-        <div>
-          <h2 className="font-mono text-[9px] tracking-[0.35em] text-white/50 uppercase">{title}</h2>
-          {subtitle && (
-            <span className="font-mono text-[8px] tracking-wider text-white/20 mt-0.5 block">{subtitle}</span>
-          )}
-        </div>
+    <div className="py-8 border-b border-white/[0.06]">
+      <div className="flex items-center gap-3 mb-5">
+        <span className="text-sm">{icon}</span>
+        <h2 className="font-mono text-[11px] tracking-[0.2em] font-medium" style={{ color }}>
+          {title}
+        </h2>
+        <span className="font-mono text-[9px] tracking-widest px-2 py-0.5 rounded-sm"
+          style={{ background: `${color}10`, color: `${color}88`, border: `1px solid ${color}20` }}>
+          {count}
+        </span>
       </div>
       {children}
     </div>
   );
 }
 
+// ─── Stat Block ──────────────────────────────────────────────────────────────
 
-function AnimatedNumber({ value, prefix = '' }: { value: string; prefix?: string }) {
-  const [display, setDisplay] = useState(value);
-  const numericPart = parseInt(value.replace(/[^0-9]/g, ''), 10);
-
-  useEffect(() => {
-    if (isNaN(numericPart) || numericPart === 0 || value === '···') {
-      setDisplay(value);
-      return;
-    }
-    let start: number | null = null;
-    let raf: number;
-    const animate = (ts: number) => {
-      if (!start) start = ts;
-      const progress = Math.min((ts - start) / 700, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      const current = Math.round(numericPart * eased);
-      setDisplay(value.replace(String(numericPart), String(current)));
-      if (progress < 1) raf = requestAnimationFrame(animate);
-    };
-    raf = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(raf);
-  }, [value, numericPart]);
-
-  return <>{prefix}{display}</>;
+function StatBlock({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className="rounded-sm p-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <p className="font-mono text-[8px] tracking-[0.2em] mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>{label}</p>
+      <p className="font-mono text-lg font-bold" style={{ color }}>{value}</p>
+    </div>
+  );
 }
 
-function formatBudget(budgetM: number): string {
-  if (budgetM >= 1000) return `$${(budgetM / 1000).toFixed(1)}B`;
-  return `$${Math.round(budgetM)}M`;
+// ─── Empty State ─────────────────────────────────────────────────────────────
+
+function EmptyState({ label }: { label: string }) {
+  return (
+    <div className="rounded-sm p-8 text-center" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
+      <p className="font-mono text-[10px] tracking-widest" style={{ color: 'rgba(255,255,255,0.2)' }}>{label}</p>
+    </div>
+  );
+}
+
+// ─── IKER Ring ───────────────────────────────────────────────────────────────
+
+function IkerRing({ score, size = 56 }: { score: number | null; size?: number }) {
+  const s = score ?? 0;
+  const color = scoreColor(s);
+  const r = (size - 6) / 2;
+  const circumference = 2 * Math.PI * r;
+  const dashoffset = circumference * (1 - s / 100);
+
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth="3"
+          strokeDasharray={circumference} strokeDashoffset={dashoffset} strokeLinecap="round"
+          style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="font-mono text-[8px] tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>IKER</span>
+        <span className="font-mono text-sm font-bold" style={{ color }}>{s}</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── 1. Vendor Card ──────────────────────────────────────────────────────────
+
+function VendorCard({ vendor }: { vendor: VendorRecord }) {
+  const dist = distanceFromElPaso(vendor.lat, vendor.lon);
+  const domain = vendor.website?.replace(/^https?:\/\//, '').replace(/\/.*$/, '') ?? '';
+  const logoUrl = domain ? clearbitLogo(domain) : null;
+
+  return (
+    <div className="group rounded-sm p-4 transition-all hover:border-[#00ff8840]"
+      style={{
+        background: 'rgba(255,255,255,0.03)',
+        border: '1px solid rgba(255,255,255,0.06)',
+      }}>
+      <div className="flex items-start gap-3">
+        {/* Logo */}
+        <div className="w-10 h-10 rounded-sm shrink-0 overflow-hidden flex items-center justify-center"
+          style={{ background: 'rgba(255,255,255,0.06)' }}>
+          {logoUrl ? (
+            <img src={logoUrl} alt="" className="w-8 h-8 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+          ) : (
+            <span className="font-mono text-[10px] text-white/30">{vendor.name.charAt(0)}</span>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-medium text-white truncate">{vendor.name}</h3>
+            <IkerRing score={vendor.ikerScore} size={32} />
+          </div>
+          <p className="font-mono text-[9px] tracking-wide mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            {vendor.category}
+          </p>
+        </div>
+      </div>
+
+      {/* Bottom row */}
+      <div className="flex items-center gap-3 mt-3 font-mono text-[9px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+        <span>{Math.round(dist)} mi from EP</span>
+        {domain && <span className="truncate">{domain}</span>}
+        {/* Trend bar */}
+        <div className="flex-1 flex justify-end">
+          <div className="flex gap-px items-end h-3">
+            {[30, 50, 40, 70, 60, 80, vendor.ikerScore].map((v, i) => (
+              <div key={i} className="w-1 rounded-t-sm" style={{
+                height: `${v / 100 * 12}px`,
+                background: i === 6 ? scoreColor(v) : 'rgba(255,255,255,0.1)',
+              }} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── 2. Product Card ─────────────────────────────────────────────────────────
+
+function ProductCard({ product }: { product: ProductRow }) {
+  const isNew = Date.now() - new Date(product.created_at).getTime() < 30 * 86400000;
+  const complexityColor = COMPLEXITY_COLORS[product.maturity] ?? '#64748b';
+  const stars = Math.min(5, Math.max(1, Math.round(product.confidence * 5)));
+
+  return (
+    <div className="group rounded-sm p-4 transition-all hover:border-[#ffd70040]"
+      style={{
+        background: 'rgba(255,255,255,0.03)',
+        border: '1px solid rgba(255,255,255,0.06)',
+      }}>
+      <div className="flex items-start justify-between mb-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-sm font-medium text-white">{product.product_name}</h3>
+            {isNew && (
+              <span className="font-mono text-[7px] tracking-widest px-1.5 py-0.5 rounded-sm"
+                style={{ background: '#00ff8815', color: '#00ff88', border: '1px solid #00ff8830' }}>
+                NEW
+              </span>
+            )}
+            {product.tags?.includes('ev-certified') && (
+              <span className="font-mono text-[7px] tracking-widest px-1.5 py-0.5 rounded-sm"
+                style={{ background: '#00d4ff15', color: '#00d4ff', border: '1px solid #00d4ff30' }}>
+                EV CERTIFIED
+              </span>
+            )}
+          </div>
+          {product.company && (
+            <p className="font-mono text-[9px] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>{product.company}</p>
+          )}
+        </div>
+        {/* Complexity indicator */}
+        <span className="font-mono text-[7px] tracking-widest px-1.5 py-0.5 rounded-sm shrink-0"
+          style={{ background: `${complexityColor}15`, color: complexityColor, border: `1px solid ${complexityColor}30` }}>
+          {product.maturity.toUpperCase()}
+        </span>
+      </div>
+
+      {product.description && (
+        <p className="text-xs leading-relaxed mb-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          {product.description.slice(0, 100)}
+        </p>
+      )}
+
+      <div className="flex items-center gap-3 font-mono text-[9px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+        {/* Star rating */}
+        <span style={{ color: '#ffd700' }}>
+          {'★'.repeat(stars)}{'☆'.repeat(5 - stars)}
+        </span>
+        {product.price_range && <span>{product.price_range}</span>}
+        {product.product_type && <span>{product.product_type}</span>}
+        {product.use_cases?.length > 0 && (
+          <span>{product.use_cases.length} use cases</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── 3. Supplier Card ────────────────────────────────────────────────────────
+
+function SupplierCard({ supplier }: { supplier: Supplier }) {
+  return (
+    <div className="rounded-sm p-3 transition-all hover:border-white/20"
+      style={{
+        background: 'rgba(255,255,255,0.03)',
+        border: `1px solid ${supplier.critical ? 'rgba(255,59,48,0.2)' : 'rgba(255,255,255,0.06)'}`,
+      }}>
+      <div className="flex items-center gap-2 mb-1">
+        <h3 className="text-sm font-medium text-white">{supplier.name}</h3>
+        {supplier.critical && (
+          <span className="font-mono text-[7px] tracking-widest px-1.5 py-0.5 rounded-sm"
+            style={{ background: '#ff3b3015', color: '#ff3b30', border: '1px solid #ff3b3030' }}>
+            CRITICAL
+          </span>
+        )}
+        <span className="font-mono text-[8px] tracking-wide ml-auto" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          {supplier.country}
+        </span>
+      </div>
+      <p className="font-mono text-[9px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.35)' }}>
+        {supplier.part}
+      </p>
+    </div>
+  );
+}
+
+// ─── 4. Technology Card ──────────────────────────────────────────────────────
+
+function TechnologyCard({ tech }: { tech: KgTechnologyRow }) {
+  const quadrantColor = QUADRANT_COLORS[tech.radar_quadrant ?? ''] ?? '#64748b';
+  const matPct = maturityPercent(tech.maturity_stage);
+
+  return (
+    <div className="rounded-sm p-4 transition-all hover:border-[#00d4ff40]"
+      style={{
+        background: 'rgba(255,255,255,0.03)',
+        border: '1px solid rgba(255,255,255,0.06)',
+      }}>
+      <div className="flex items-start justify-between mb-2">
+        <h3 className="text-sm font-medium text-white">{tech.name}</h3>
+        <div className="flex items-center gap-2 shrink-0">
+          {tech.radar_quadrant && (
+            <span className="font-mono text-[7px] tracking-widest px-1.5 py-0.5 rounded-sm"
+              style={{ background: `${quadrantColor}15`, color: quadrantColor, border: `1px solid ${quadrantColor}30` }}>
+              {tech.radar_quadrant.toUpperCase()}
+            </span>
+          )}
+          <IkerRing score={tech.iker_score} size={32} />
+        </div>
+      </div>
+
+      {tech.description && (
+        <p className="text-xs leading-relaxed mb-3" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          {tech.description.slice(0, 100)}
+        </p>
+      )}
+
+      {/* Maturity bar */}
+      <div className="mb-2">
+        <div className="flex items-center justify-between mb-1">
+          <span className="font-mono text-[8px] tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            MATURITY
+          </span>
+          <span className="font-mono text-[8px]" style={{ color: quadrantColor }}>
+            {MATURITY_LABELS[tech.maturity_stage ?? ''] ?? tech.maturity_stage ?? '—'}
+          </span>
+        </div>
+        <div className="h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
+          <div className="h-full rounded-full transition-all" style={{ width: `${matPct}%`, background: quadrantColor }} />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 font-mono text-[9px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+        {tech.signal_velocity != null && tech.signal_velocity > 0 && (
+          <span style={{ color: '#f97316' }}>+{tech.signal_velocity} signals/30d</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── 5. Research Card ────────────────────────────────────────────────────────
+
+function ResearchCard({ discovery }: { discovery: KgDiscoveryRow }) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const impactColor = scoreColor(discovery.iker_impact_score ?? 0);
+
+  return (
+    <div className="rounded-sm p-4 transition-all hover:border-[#a855f740]"
+      style={{
+        background: 'rgba(255,255,255,0.03)',
+        border: '1px solid rgba(255,255,255,0.06)',
+      }}>
+      <div className="flex items-start gap-4">
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-medium text-white mb-1">{discovery.title}</h3>
+          <div className="flex items-center gap-3 flex-wrap font-mono text-[9px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            {discovery.research_institution && (
+              <span style={{ color: '#a855f7' }}>{discovery.research_institution}</span>
+            )}
+            {discovery.discovery_type && (
+              <span className="px-1.5 py-0.5 rounded-sm" style={{ background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)' }}>
+                {discovery.discovery_type.replace(/_/g, ' ').toUpperCase()}
+              </span>
+            )}
+            {discovery.trl_level != null && (
+              <span>TRL {discovery.trl_level}</span>
+            )}
+            {discovery.published_at && (
+              <span>{new Date(discovery.published_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
+            )}
+          </div>
+          {discovery.summary && (
+            <p className="text-xs leading-relaxed mt-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              {discovery.summary.slice(0, 150)}
+            </p>
+          )}
+        </div>
+        <div className="shrink-0 flex flex-col items-center gap-1">
+          <IkerRing score={discovery.iker_impact_score} size={36} />
+          {discovery.source_url && (
+            <a href={discovery.source_url} target="_blank" rel="noopener noreferrer"
+              className="font-mono text-[7px] tracking-widest px-2 py-1 rounded-sm transition-colors hover:bg-white/5"
+              style={{ color: '#00d4ff', border: '1px solid #00d4ff30' }}>
+              READ PAPER
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── 6. Conference Card ──────────────────────────────────────────────────────
+
+function ConferenceCard({ conference }: { conference: ConferenceRecord }) {
+  const relevanceColor = scoreColor(conference.relevanceScore);
+
+  return (
+    <div className="rounded-sm p-4 transition-all hover:border-[#ffd70040]"
+      style={{
+        background: 'rgba(255,255,255,0.03)',
+        border: '1px solid rgba(255,255,255,0.06)',
+      }}>
+      <div className="flex items-start justify-between mb-2">
+        <h3 className="text-sm font-medium text-white">{conference.name}</h3>
+        <span className="font-mono text-[9px] font-bold shrink-0" style={{ color: relevanceColor }}>
+          {conference.relevanceScore}%
+        </span>
+      </div>
+
+      <div className="flex items-center gap-3 mb-2 font-mono text-[9px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+        <span>{conference.location}</span>
+        <span>{conference.month}</span>
+        <span style={{ color: '#00d4ff' }}>{conference.category}</span>
+      </div>
+
+      {conference.description && (
+        <p className="text-xs leading-relaxed mb-3" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          {conference.description.slice(0, 100)}
+        </p>
+      )}
+
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-[9px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          {conference.estimatedExhibitors > 0 && `~${compactNumber(conference.estimatedExhibitors)} exhibitors`}
+        </span>
+        {conference.website && (
+          <a href={conference.website} target="_blank" rel="noopener noreferrer"
+            className="font-mono text-[8px] tracking-widest px-2.5 py-1 rounded-sm transition-colors hover:bg-white/5"
+            style={{ color: '#ffd700', border: '1px solid #ffd70030' }}>
+            REGISTER
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── 8. Signal Card ──────────────────────────────────────────────────────────
+
+function SignalCard({ signal }: { signal: KgSignalRow }) {
+  const pColor = PRIORITY_COLORS[signal.priority] ?? '#64748b';
+  const typeColor = SIGNAL_TYPE_COLORS[signal.signal_type] ?? '#64748b';
+
+  return (
+    <div className="rounded-sm p-3 transition-all hover:border-white/15 flex items-start gap-3"
+      style={{
+        background: 'rgba(255,255,255,0.03)',
+        border: `1px solid ${signal.priority === 'P0' ? 'rgba(255,59,48,0.2)' : 'rgba(255,255,255,0.06)'}`,
+      }}>
+      {/* Priority badge */}
+      <span className="font-mono text-[8px] tracking-widest font-bold px-1.5 py-0.5 rounded-sm shrink-0 mt-0.5"
+        style={{ background: `${pColor}15`, color: pColor, border: `1px solid ${pColor}30` }}>
+        {signal.priority}
+      </span>
+
+      <div className="flex-1 min-w-0">
+        <h4 className="text-xs font-medium text-white mb-1">{signal.title}</h4>
+        <div className="flex items-center gap-2 flex-wrap font-mono text-[8px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          <span className="px-1.5 py-0.5 rounded-sm"
+            style={{ background: `${typeColor}15`, color: typeColor, border: `1px solid ${typeColor}25` }}>
+            {signal.signal_type.replace(/_/g, ' ').toUpperCase()}
+          </span>
+          {signal.source_name && <span>{signal.source_name}</span>}
+          <span>{timeAgo(signal.detected_at)}</span>
+        </div>
+        {signal.description && (
+          <p className="text-[11px] mt-1 leading-relaxed" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            {signal.description.slice(0, 120)}
+          </p>
+        )}
+      </div>
+
+      {signal.source_url && (
+        <a href={signal.source_url} target="_blank" rel="noopener noreferrer"
+          className="font-mono text-[7px] tracking-widest px-2 py-1 rounded-sm shrink-0 mt-0.5 hover:bg-white/5"
+          style={{ color: '#00d4ff', border: '1px solid #00d4ff30' }}>
+          SOURCE
+        </a>
+      )}
+    </div>
+  );
+}
+
+// ─── 9. Intel Signal Card ─────────────────────────────────────────────────────
+
+function IntelSignalCard({ signal }: { signal: IntelSignalRow }) {
+  const typeColor = INTEL_TYPE_COLORS[signal.signal_type] ?? '#64748b';
+  const importancePct = Math.round(signal.importance_score * 100);
+
+  return (
+    <div className="rounded-sm p-3 transition-all hover:border-[#a855f740] flex items-start gap-3"
+      style={{
+        background: 'rgba(255,255,255,0.03)',
+        border: `1px solid ${signal.importance_score >= 0.7 ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.06)'}`,
+      }}>
+      {/* Importance bar */}
+      <div className="shrink-0 mt-1 flex flex-col items-center gap-1">
+        <div className="w-1.5 h-8 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+          <div className="w-full rounded-full" style={{
+            height: `${importancePct}%`,
+            background: importancePct >= 70 ? '#00ff88' : importancePct >= 40 ? '#ffd700' : '#64748b',
+            marginTop: `${100 - importancePct}%`,
+          }} />
+        </div>
+        <span className="font-mono text-[7px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{importancePct}</span>
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <h4 className="text-xs font-medium text-white mb-1">{signal.title}</h4>
+        <div className="flex items-center gap-2 flex-wrap font-mono text-[8px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          <span className="px-1.5 py-0.5 rounded-sm"
+            style={{ background: `${typeColor}15`, color: typeColor, border: `1px solid ${typeColor}25` }}>
+            {signal.signal_type.replace(/_/g, ' ').toUpperCase()}
+          </span>
+          {signal.company && (
+            <span style={{ color: '#00d4ff' }}>{signal.company}</span>
+          )}
+          {signal.amount_usd != null && signal.amount_usd > 0 && (
+            <span style={{ color: '#00ff88' }}>{formatUsd(signal.amount_usd)}</span>
+          )}
+          {signal.source && <span>{signal.source}</span>}
+          <span>{timeAgo(signal.discovered_at)}</span>
+        </div>
+        {signal.evidence && (
+          <p className="text-[11px] mt-1 leading-relaxed" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            {signal.evidence.slice(0, 120)}
+          </p>
+        )}
+      </div>
+
+      {signal.url && (
+        <a href={signal.url} target="_blank" rel="noopener noreferrer"
+          className="font-mono text-[7px] tracking-widest px-2 py-1 rounded-sm shrink-0 mt-0.5 hover:bg-white/5"
+          style={{ color: '#a855f7', border: '1px solid #a855f730' }}>
+          SOURCE
+        </a>
+      )}
+    </div>
+  );
 }

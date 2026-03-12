@@ -19,7 +19,19 @@ export type EntityCategory =
   | 'Manufacturing Tech'
   | 'Industrial AI'
   | 'Logistics Platform'
-  | 'Supply Chain Software';
+  | 'Supply Chain Software'
+  // ── Global categories ────────────────────────────────────────────────────────
+  | 'Computer Vision'
+  | 'Industrial Automation'
+  | 'Global Defense'
+  | 'Energy Intelligence'
+  | 'Global Cybersecurity'
+  | 'Global Robotics'
+  | 'Global AI'
+  | 'Semiconductor'
+  | 'Drone & Autonomy'
+  | 'Global Supply Chain'
+  | 'Enterprise';
 
 export type NxtEntity = {
   id: string;                   // Matches entity_id in el-paso-vendors.ts
@@ -30,6 +42,533 @@ export type NxtEntity = {
   naicsCodes?: string[];        // For SAM.gov contract matching
   ikerScore?: number;           // Baseline IKER score (0–100)
 };
+
+// ─── Global Technology Entities ───────────────────────────────────────────────
+// These are the world's top technology companies across key sectors.
+// Used by the signal engine to detect global tech signals in news feeds.
+
+export const GLOBAL_TECH_ENTITIES: NxtEntity[] = [
+
+  // ── Manufacturing & Industrial Automation ─────────────────────────────────
+  {
+    id: 'siemens',
+    name: 'Siemens',
+    category: 'Industrial Automation',
+    aliases: ['siemens', 'siemens ag', 'siemens digital industries', 'siemens healthineers', 'siemens energy', 'siemens plm'],
+    keywords: ['industrial automation', 'plc', 'scada', 'digital twin', 'mindsphere', 'factory automation', 'process control', 'motion control', 'building automation'],
+    ikerScore: 95,
+  },
+  {
+    id: 'abb',
+    name: 'ABB',
+    category: 'Industrial Automation',
+    aliases: ['abb', 'abb ltd', 'abb robotics', 'abb automation', 'abb electrification'],
+    keywords: ['industrial robot', 'collaborative robot', 'power grid', 'motor drive', 'process automation', 'electrification', 'robotics automation'],
+    ikerScore: 93,
+  },
+  {
+    id: 'rockwell-automation',
+    name: 'Rockwell Automation',
+    category: 'Industrial Automation',
+    aliases: ['rockwell automation', 'rockwell', 'allen bradley', 'factorytalk', 'logix'],
+    keywords: ['plc control', 'industrial iot', 'smart manufacturing', 'connected enterprise', 'discrete manufacturing', 'process manufacturing'],
+    ikerScore: 91,
+  },
+  {
+    id: 'honeywell-industrial',
+    name: 'Honeywell',
+    category: 'Industrial Automation',
+    aliases: ['honeywell', 'honeywell industrial', 'honeywell process solutions', 'honeywell connected plant'],
+    keywords: ['process control', 'dcs', 'industrial cybersecurity', 'warehouse automation', 'building automation', 'iot platform'],
+    ikerScore: 90,
+  },
+  {
+    id: 'emerson-automation',
+    name: 'Emerson',
+    category: 'Industrial Automation',
+    aliases: ['emerson', 'emerson electric', 'emerson automation solutions', 'plantweb', 'deltav'],
+    keywords: ['process automation', 'control valve', 'measurement instrumentation', 'asset management', 'industrial ai'],
+    ikerScore: 88,
+  },
+  {
+    id: 'mitsubishi-electric',
+    name: 'Mitsubishi Electric',
+    category: 'Industrial Automation',
+    aliases: ['mitsubishi electric', 'mitsubishi', 'melsec', 'melservo'],
+    keywords: ['factory automation', 'plc', 'servo motor', 'robot controller', 'cnc machine', 'hvac controls'],
+    ikerScore: 87,
+  },
+  {
+    id: 'fanuc',
+    name: 'Fanuc',
+    category: 'Global Robotics',
+    aliases: ['fanuc', 'fanuc corporation', 'fanuc robotics', 'fanuc robot', 'fanuc cnc'],
+    keywords: ['cnc machine', 'industrial robot', 'robot arm', 'machine tool', 'cobot', 'cobalt robot', 'collaborative robot fanuc'],
+    ikerScore: 92,
+  },
+  {
+    id: 'yokogawa',
+    name: 'Yokogawa',
+    category: 'Industrial Automation',
+    aliases: ['yokogawa', 'yokogawa electric', 'yokogawa dcs', 'centum'],
+    keywords: ['distributed control system', 'process safety', 'plant operations', 'industrial iot', 'asset lifecycle management'],
+    ikerScore: 84,
+  },
+
+  // ── Global Robotics ───────────────────────────────────────────────────────
+  {
+    id: 'boston-dynamics',
+    name: 'Boston Dynamics',
+    category: 'Global Robotics',
+    aliases: ['boston dynamics', 'boston dynamics spot', 'spot robot', 'atlas robot', 'stretch robot'],
+    keywords: ['spot robot', 'quadruped robot', 'mobile robot', 'inspection robot', 'warehouse robot', 'atlas humanoid', 'legged robot', 'robot dog'],
+    ikerScore: 96,
+  },
+  {
+    id: 'kuka',
+    name: 'KUKA',
+    category: 'Global Robotics',
+    aliases: ['kuka', 'kuka robotics', 'kuka ag', 'kuka robot', 'kuka cobot'],
+    keywords: ['industrial robot arm', 'welding robot', 'automotive robot', 'collaborative robot', 'robot programming', 'smart factory robot'],
+    ikerScore: 91,
+  },
+  {
+    id: 'universal-robots',
+    name: 'Universal Robots',
+    category: 'Global Robotics',
+    aliases: ['universal robots', 'ur robots', 'cobot', 'ur3', 'ur5', 'ur10', 'ur16', 'collaborative robot universal'],
+    keywords: ['collaborative robot', 'cobot deployment', 'flexible automation', 'plug and produce', 'light manufacturing robot'],
+    ikerScore: 90,
+  },
+  {
+    id: 'yaskawa',
+    name: 'Yaskawa',
+    category: 'Global Robotics',
+    aliases: ['yaskawa', 'yaskawa electric', 'motoman', 'yaskawa motoman', 'yaskawa robot'],
+    keywords: ['industrial robot', 'servo drive', 'motoman robot', 'welding automation', 'material handling robot'],
+    ikerScore: 88,
+  },
+  {
+    id: 'omron-robotics',
+    name: 'Omron',
+    category: 'Global Robotics',
+    aliases: ['omron', 'omron robotics', 'omron automation', 'omron mobile robot', 'omron ld'],
+    keywords: ['autonomous mobile robot', 'amr', 'collaborative robot', 'mobile manipulator', 'flexible manufacturing'],
+    ikerScore: 85,
+  },
+
+  // ── Computer Vision & Inspection ─────────────────────────────────────────
+  {
+    id: 'keyence',
+    name: 'Keyence',
+    category: 'Computer Vision',
+    aliases: ['keyence', 'keyence corporation', 'keyence cv-x', 'keyence vision', 'keyence sensor'],
+    keywords: ['machine vision', 'image processing', 'quality inspection', 'barcode reader', 'laser sensor', 'measurement sensor', 'industrial camera', 'defect detection'],
+    ikerScore: 94,
+  },
+  {
+    id: 'cognex',
+    name: 'Cognex',
+    category: 'Computer Vision',
+    aliases: ['cognex', 'cognex corporation', 'cognex in-sight', 'cognex dataman'],
+    keywords: ['machine vision system', 'barcode verification', 'vision guided robot', 'surface inspection', 'deep learning vision', 'optical character recognition'],
+    ikerScore: 91,
+  },
+  {
+    id: 'zebra-technologies',
+    name: 'Zebra Technologies',
+    category: 'Computer Vision',
+    aliases: ['zebra technologies', 'zebra tech', 'zebra', 'zebra scanner', 'zebra rfid'],
+    keywords: ['barcode scanner', 'rfid reader', 'mobile computer', 'warehouse visibility', 'asset tracking', 'rugged device'],
+    ikerScore: 87,
+  },
+  {
+    id: 'teledyne-flir',
+    name: 'Teledyne FLIR',
+    category: 'Computer Vision',
+    aliases: ['flir', 'teledyne flir', 'flir systems', 'flir thermal', 'flir camera'],
+    keywords: ['thermal camera', 'infrared imaging', 'predictive maintenance thermal', 'border surveillance thermal', 'industrial thermography', 'drone thermal'],
+    ikerScore: 89,
+  },
+  {
+    id: 'landing-ai',
+    name: 'Landing AI',
+    category: 'Computer Vision',
+    aliases: ['landing ai', 'landingai', 'landing lens'],
+    keywords: ['ai visual inspection', 'defect detection ai', 'computer vision platform', 'manufacturing ai', 'andrew ng ai'],
+    ikerScore: 85,
+  },
+
+  // ── Industrial AI ─────────────────────────────────────────────────────────
+  {
+    id: 'c3-ai',
+    name: 'C3.ai',
+    category: 'Industrial AI',
+    aliases: ['c3.ai', 'c3 ai', 'c3 dot ai', 'c3 enterprise ai'],
+    keywords: ['enterprise ai', 'predictive maintenance', 'supply chain ai', 'fraud detection ai', 'energy management ai', 'manufacturing ai'],
+    ikerScore: 87,
+  },
+  {
+    id: 'sight-machine',
+    name: 'Sight Machine',
+    category: 'Industrial AI',
+    aliases: ['sight machine', 'sightmachine'],
+    keywords: ['manufacturing analytics', 'oee improvement', 'process optimization ai', 'factory intelligence', 'production ai'],
+    ikerScore: 80,
+  },
+  {
+    id: 'sparkcognition',
+    name: 'SparkCognition',
+    category: 'Industrial AI',
+    aliases: ['sparkcognition', 'spark cognition'],
+    keywords: ['industrial ai', 'predictive analytics', 'equipment failure prediction', 'generative ai industrial', 'oil gas ai'],
+    ikerScore: 82,
+  },
+  {
+    id: 'aspentech',
+    name: 'AspenTech',
+    category: 'Industrial AI',
+    aliases: ['aspentech', 'aspen technology', 'aspen hysys', 'aspen plus'],
+    keywords: ['process optimization', 'energy optimization', 'asset performance', 'refinery optimization', 'chemical process ai'],
+    ikerScore: 84,
+  },
+  {
+    id: 'augury',
+    name: 'Augury',
+    category: 'Industrial AI',
+    aliases: ['augury', 'augury ai', 'augury machine health'],
+    keywords: ['machine health', 'vibration analysis', 'predictive maintenance iot', 'equipment monitoring', 'manufacturing reliability'],
+    ikerScore: 81,
+  },
+  {
+    id: 'nvidia-industrial',
+    name: 'NVIDIA',
+    category: 'Global AI',
+    aliases: ['nvidia', 'nvidia corporation', 'nvidia jetson', 'nvidia omniverse', 'nvidia isaac', 'nvidia dgx'],
+    keywords: ['gpu computing', 'ai chips', 'edge ai', 'digital twin omniverse', 'isaac robot', 'jetson edge', 'ai inference', 'cuda'],
+    ikerScore: 98,
+  },
+
+  // ── Global Cybersecurity ──────────────────────────────────────────────────
+  {
+    id: 'crowdstrike',
+    name: 'CrowdStrike',
+    category: 'Global Cybersecurity',
+    aliases: ['crowdstrike', 'crowdstrike falcon', 'crowdstrike holdings'],
+    keywords: ['endpoint detection', 'threat intelligence', 'incident response', 'zero trust', 'threat hunting', 'xdr', 'edr'],
+    ikerScore: 96,
+  },
+  {
+    id: 'palo-alto-networks',
+    name: 'Palo Alto Networks',
+    category: 'Global Cybersecurity',
+    aliases: ['palo alto networks', 'palo alto', 'panos', 'prisma access', 'cortex xdr'],
+    keywords: ['next gen firewall', 'zero trust network', 'cloud security', 'soc automation', 'ot security', 'industrial firewall'],
+    ikerScore: 95,
+  },
+  {
+    id: 'dragos',
+    name: 'Dragos',
+    category: 'Global Cybersecurity',
+    aliases: ['dragos', 'dragos inc', 'dragos platform'],
+    keywords: ['ics security', 'ot cybersecurity', 'industrial control system', 'critical infrastructure protection', 'scada security', 'ot threat detection'],
+    ikerScore: 89,
+  },
+  {
+    id: 'claroty',
+    name: 'Claroty',
+    category: 'Global Cybersecurity',
+    aliases: ['claroty', 'claroty platform'],
+    keywords: ['ot security', 'iot security', 'asset visibility ot', 'industrial network security', 'cyber physical systems'],
+    ikerScore: 86,
+  },
+  {
+    id: 'nozomi-networks',
+    name: 'Nozomi Networks',
+    category: 'Global Cybersecurity',
+    aliases: ['nozomi', 'nozomi networks', 'nozomi guardian'],
+    keywords: ['ot visibility', 'operational technology monitoring', 'industrial network anomaly', 'scada monitoring ai'],
+    ikerScore: 84,
+  },
+  {
+    id: 'fortinet',
+    name: 'Fortinet',
+    category: 'Global Cybersecurity',
+    aliases: ['fortinet', 'fortigate', 'fortios', 'fortisiem', 'fortisoc'],
+    keywords: ['security fabric', 'ot firewall', 'sd-wan security', 'network security', 'industrial firewall'],
+    ikerScore: 91,
+  },
+  {
+    id: 'check-point',
+    name: 'Check Point',
+    category: 'Global Cybersecurity',
+    aliases: ['check point', 'checkpoint software', 'check point software technologies', 'harmony'],
+    keywords: ['threat prevention', 'cloud security', 'mobile security', 'iot security', 'ransomware protection'],
+    ikerScore: 89,
+  },
+  {
+    id: 'wiz-security',
+    name: 'Wiz',
+    category: 'Global Cybersecurity',
+    aliases: ['wiz', 'wiz cloud security', 'wiz io'],
+    keywords: ['cloud security posture', 'cnapp', 'cloud vulnerability', 'cloud risk', 'agentless security'],
+    ikerScore: 88,
+  },
+
+  // ── Warehouse Automation ──────────────────────────────────────────────────
+  {
+    id: 'autostore',
+    name: 'AutoStore',
+    category: 'Warehouse Automation',
+    aliases: ['autostore', 'auto store', 'autostore system'],
+    keywords: ['cube storage', 'goods to person', 'warehouse robot', 'bin picking robot', 'fulfillment automation'],
+    ikerScore: 90,
+  },
+  {
+    id: 'locus-robotics',
+    name: 'Locus Robotics',
+    category: 'Warehouse Automation',
+    aliases: ['locus robotics', 'locus', 'locusbot'],
+    keywords: ['warehouse amr', 'autonomous mobile robot', 'order picking', 'fulfillment robot', 'warehouse efficiency'],
+    ikerScore: 84,
+  },
+  {
+    id: 'greyorange',
+    name: 'GreyOrange',
+    category: 'Warehouse Automation',
+    aliases: ['greyorange', 'grey orange', 'greyorange ranger', 'ranger bot'],
+    keywords: ['fulfillment robot', 'amr sorting', 'ai fulfillment', 'warehouse intelligence', 'omnichannel fulfillment'],
+    ikerScore: 83,
+  },
+  {
+    id: 'geek-plus',
+    name: 'Geek+',
+    category: 'Warehouse Automation',
+    aliases: ['geek+', 'geek plus', 'geekplus'],
+    keywords: ['amr warehouse china', 'goods to person robot', 'sorting robot', 'smart logistics'],
+    ikerScore: 82,
+  },
+  {
+    id: 'berkshire-grey',
+    name: 'Berkshire Grey',
+    category: 'Warehouse Automation',
+    aliases: ['berkshire grey', 'berkshire grey robot', 'bg robot'],
+    keywords: ['ai robotic picking', 'parcel processing robot', 'fulfillment automation', 'goods to person ai'],
+    ikerScore: 80,
+  },
+
+  // ── Supply Chain Intelligence ─────────────────────────────────────────────
+  {
+    id: 'blue-yonder',
+    name: 'Blue Yonder',
+    category: 'Global Supply Chain',
+    aliases: ['blue yonder', 'blueyonder', 'jda software', 'blue yonder scm'],
+    keywords: ['supply chain planning', 'demand planning', 'warehouse management', 'transportation management', 'supply chain ai'],
+    ikerScore: 88,
+  },
+  {
+    id: 'o9-solutions',
+    name: 'o9 Solutions',
+    category: 'Global Supply Chain',
+    aliases: ['o9 solutions', 'o9', 'o9 supply chain'],
+    keywords: ['integrated business planning', 'supply chain digital twin', 'demand sensing', 'supply chain platform'],
+    ikerScore: 83,
+  },
+  {
+    id: 'kinaxis',
+    name: 'Kinaxis',
+    category: 'Global Supply Chain',
+    aliases: ['kinaxis', 'kinaxis rapidresponse', 'rapid response supply chain'],
+    keywords: ['concurrent planning', 'supply chain resilience', 'supply chain visibility', 'scenario planning supply chain'],
+    ikerScore: 82,
+  },
+  {
+    id: 'fourkites',
+    name: 'FourKites',
+    category: 'Global Supply Chain',
+    aliases: ['fourkites', 'four kites', 'fourkites platform'],
+    keywords: ['real time freight visibility', 'supply chain visibility', 'predictive eta', 'last mile tracking'],
+    ikerScore: 80,
+  },
+  {
+    id: 'project44',
+    name: 'project44',
+    category: 'Global Supply Chain',
+    aliases: ['project44', 'project 44', 'p44 supply chain'],
+    keywords: ['supply chain visibility platform', 'ocean freight tracking', 'freight analytics', 'multimodal visibility'],
+    ikerScore: 79,
+  },
+  {
+    id: 'flexport',
+    name: 'Flexport',
+    category: 'Global Supply Chain',
+    aliases: ['flexport', 'flexport logistics'],
+    keywords: ['digital freight forwarder', 'customs clearance', 'ocean freight', 'air freight', 'trade intelligence'],
+    ikerScore: 81,
+  },
+
+  // ── Global Defense Tech ───────────────────────────────────────────────────
+  {
+    id: 'anduril',
+    name: 'Anduril',
+    category: 'Global Defense',
+    aliases: ['anduril', 'anduril industries', 'lattice ai', 'anduril ghost'],
+    keywords: ['defense ai', 'autonomous drone', 'border surveillance ai', 'battlefield ai', 'ghost drone', 'sentry tower', 'lattice platform'],
+    ikerScore: 93,
+  },
+  {
+    id: 'shield-ai',
+    name: 'Shield AI',
+    category: 'Global Defense',
+    aliases: ['shield ai', 'shield artificial intelligence', 'hivemind ai'],
+    keywords: ['autonomous fighter pilot', 'drone swarm', 'military ai', 'unmanned aerial vehicle', 'hivemind autopilot'],
+    ikerScore: 87,
+  },
+  {
+    id: 'palantir',
+    name: 'Palantir',
+    category: 'Global Defense',
+    aliases: ['palantir', 'palantir technologies', 'palantir gotham', 'palantir foundry', 'palantir aip'],
+    keywords: ['data intelligence platform', 'defense ai platform', 'gotham intelligence', 'foundry data', 'ai platform enterprise', 'ontology'],
+    ikerScore: 95,
+  },
+  {
+    id: 'elbit-systems',
+    name: 'Elbit Systems',
+    category: 'Global Defense',
+    aliases: ['elbit', 'elbit systems', 'elbit systems of america'],
+    keywords: ['uav', 'surveillance drone', 'c4i systems', 'border surveillance', 'night vision', 'soldier systems'],
+    ikerScore: 86,
+  },
+
+  // ── Energy Intelligence ───────────────────────────────────────────────────
+  {
+    id: 'schneider-electric',
+    name: 'Schneider Electric',
+    category: 'Energy Intelligence',
+    aliases: ['schneider electric', 'schneider', 'ecostruxure', 'se digital'],
+    keywords: ['energy management', 'smart grid', 'microgrid', 'ecostruxure', 'electrical distribution', 'datacenter power', 'building automation'],
+    ikerScore: 91,
+  },
+  {
+    id: 'itron',
+    name: 'Itron',
+    category: 'Energy Intelligence',
+    aliases: ['itron', 'itron inc', 'itron riva', 'itron smart grid'],
+    keywords: ['smart meter', 'ami system', 'grid intelligence', 'utility analytics', 'demand response', 'grid modernization'],
+    ikerScore: 83,
+  },
+  {
+    id: 'autogrid',
+    name: 'AutoGrid',
+    category: 'Energy Intelligence',
+    aliases: ['autogrid', 'autogrid systems', 'autogrid flex'],
+    keywords: ['flex resource management', 'virtual power plant', 'demand flexibility', 'grid edge ai', 'energy storage optimization'],
+    ikerScore: 78,
+  },
+
+  // ── Semiconductor & Hardware ──────────────────────────────────────────────
+  {
+    id: 'tsmc',
+    name: 'TSMC',
+    category: 'Semiconductor',
+    aliases: ['tsmc', 'taiwan semiconductor', 'taiwan semiconductor manufacturing'],
+    keywords: ['chip manufacturing', 'semiconductor foundry', 'advanced node', '3nm chip', '2nm chip', 'chiplet', 'advanced packaging'],
+    ikerScore: 97,
+  },
+  {
+    id: 'intel',
+    name: 'Intel',
+    category: 'Semiconductor',
+    aliases: ['intel', 'intel corporation', 'intel foundry', 'intel gaudi'],
+    keywords: ['cpu', 'edge ai chip', 'fpga', 'gaudi accelerator', 'intel foundry services', 'semiconductor manufacturing'],
+    ikerScore: 93,
+  },
+  {
+    id: 'qualcomm',
+    name: 'Qualcomm',
+    category: 'Semiconductor',
+    aliases: ['qualcomm', 'qualcomm snapdragon', 'qualcomm ai'],
+    keywords: ['edge ai chip', 'snapdragon', '5g modem', 'ai edge inference', 'iot chip', 'autonomous driving chip'],
+    ikerScore: 91,
+  },
+
+  // ── Drone & Autonomy ──────────────────────────────────────────────────────
+  {
+    id: 'dji',
+    name: 'DJI',
+    category: 'Drone & Autonomy',
+    aliases: ['dji', 'dji enterprise', 'dji matrice', 'dji dock'],
+    keywords: ['commercial drone', 'inspection drone', 'agriculture drone', 'mapping drone', 'enterprise uav', 'drone autonomy'],
+    ikerScore: 90,
+  },
+  {
+    id: 'skydio',
+    name: 'Skydio',
+    category: 'Drone & Autonomy',
+    aliases: ['skydio', 'skydio drone', 'skydio x10'],
+    keywords: ['autonomous drone', 'ai drone', 'infrastructure inspection drone', 'defense drone', 'skydio obstacle avoidance'],
+    ikerScore: 84,
+  },
+  {
+    id: 'percepto',
+    name: 'Percepto',
+    category: 'Drone & Autonomy',
+    aliases: ['percepto', 'percepto drone', 'percepto arc'],
+    keywords: ['autonomous inspection drone', 'drone in a box', 'site monitoring drone', 'industrial autonomy'],
+    ikerScore: 79,
+  },
+  {
+    id: 'flyability',
+    name: 'Flyability',
+    category: 'Drone & Autonomy',
+    aliases: ['flyability', 'flyability elios'],
+    keywords: ['confined space drone', 'indoor drone inspection', 'tank inspection drone', 'elios drone'],
+    ikerScore: 77,
+  },
+
+  // ── Global AI Leaders ─────────────────────────────────────────────────────
+  {
+    id: 'openai',
+    name: 'OpenAI',
+    category: 'Global AI',
+    aliases: ['openai', 'open ai', 'chatgpt', 'gpt-4', 'gpt4', 'gpt-4o', 'sora openai'],
+    keywords: ['large language model', 'chatgpt enterprise', 'gpt api', 'ai assistant', 'generative ai', 'foundation model'],
+    ikerScore: 99,
+  },
+  {
+    id: 'anthropic',
+    name: 'Anthropic',
+    category: 'Global AI',
+    aliases: ['anthropic', 'claude ai', 'claude', 'anthropic ai', 'claude opus', 'claude sonnet'],
+    keywords: ['safe ai', 'constitutional ai', 'claude model', 'enterprise ai', 'ai safety research', 'foundation model'],
+    ikerScore: 97,
+  },
+  {
+    id: 'google-deepmind',
+    name: 'Google DeepMind',
+    category: 'Global AI',
+    aliases: ['google deepmind', 'deepmind', 'gemini', 'gemini pro', 'gemini ultra', 'google ai'],
+    keywords: ['alphafold', 'gemini model', 'foundation model google', 'ai research', 'reinforcement learning', 'protein structure'],
+    ikerScore: 98,
+  },
+  {
+    id: 'hugging-face',
+    name: 'Hugging Face',
+    category: 'Global AI',
+    aliases: ['hugging face', 'huggingface', 'hf hub'],
+    keywords: ['open source ai model', 'transformer model', 'ai hub', 'llm fine tuning', 'model deployment'],
+    ikerScore: 90,
+  },
+  {
+    id: 'microsoft-ai',
+    name: 'Microsoft AI',
+    category: 'Global AI',
+    aliases: ['microsoft copilot', 'microsoft azure ai', 'azure openai', 'copilot', 'azure ml'],
+    keywords: ['copilot enterprise', 'azure ai platform', 'openai partnership', 'ai cloud', 'enterprise llm'],
+    ikerScore: 97,
+  },
+];
 
 // ─── Vendor Entities ─────────────────────────────────────────────────────────
 
@@ -1955,9 +2494,373 @@ export const SECTOR_KEYWORDS: SectorKeywords[] = [
   },
 ];
 
-// ─── Merge extended El Paso entities ─────────────────────────────────────────
-// NXT_ENTITIES_ELPASO adds 50+ EP-specific vendors (defense, cyber, health, etc.)
+// ─── Extended Global Entity Registry ─────────────────────────────────────────
+// 700+ additional global defense, tech, industrial, and emerging companies
+// covering 30+ countries across every major sector.
+
+export const EXTENDED_GLOBAL_ENTITIES: NxtEntity[] = [
+
+  // ══════════════════════════════════════════════════════════════════════
+  // DEFENSE & AEROSPACE — GLOBAL
+  // ══════════════════════════════════════════════════════════════════════
+
+  // United States
+  { id: 'lockheed-martin', name: 'Lockheed Martin', category: 'Global Defense', aliases: ['lockheed martin', 'lockheed', 'lmt', 'lmco', 'lockheed martin corporation'], keywords: ['f-35', 'missile defense', 'space systems', 'aeronautics', 'sikorsky', 'hypersonic', 'c-130', 'f-22', 'aegis'], ikerScore: 99 },
+  { id: 'raytheon', name: 'Raytheon Technologies', category: 'Global Defense', aliases: ['raytheon', 'raytheon technologies', 'rtx', 'rtx corporation', 'raytheon missiles', 'pratt whitney'], keywords: ['patriot missile', 'tomahawk', 'air defense', 'radar systems', 'electronic warfare', 'jet engine', 'cybersecurity defense'], ikerScore: 98 },
+  { id: 'boeing-defense', name: 'Boeing Defense', category: 'Global Defense', aliases: ['boeing defense', 'boeing', 'ba stock', 'boeing company', 'boeing space'], keywords: ['f-15', 'apache helicopter', 'chinook', 'tanker aircraft', 'space launch system', 'surveillance aircraft', 'unmanned systems'], ikerScore: 97 },
+  { id: 'northrop-grumman', name: 'Northrop Grumman', category: 'Global Defense', aliases: ['northrop grumman', 'northrop', 'noc', 'grumman', 'northrop grumman corporation'], keywords: ['b-21 raider', 'stealth bomber', 'space systems', 'cyber operations', 'autonomous systems', 'ground radar', 'missile defense'], ikerScore: 97 },
+  { id: 'general-dynamics', name: 'General Dynamics', category: 'Global Defense', aliases: ['general dynamics', 'gd', 'gdit', 'general dynamics it', 'gd mission systems'], keywords: ['abrams tank', 'stryker', 'submarine', 'it services defense', 'cloud computing defense', 'c4isr', 'command control'], ikerScore: 96 },
+  { id: 'l3harris', name: 'L3Harris Technologies', category: 'Global Defense', aliases: ['l3harris', 'l3 harris', 'harris corporation', 'l3 technologies', 'lhx'], keywords: ['communication systems', 'electronic warfare', 'night vision', 'intelligence surveillance', 'unmanned aerial', 'tactical radio', 'space systems'], ikerScore: 94 },
+  { id: 'leidos', name: 'Leidos', category: 'Global Defense', aliases: ['leidos', 'leidos holdings', 'saic leidos', 'leidos defense'], keywords: ['defense it', 'intelligence systems', 'health it', 'civil programs', 'cybersecurity federal', 'airport security', 'logistics it'], ikerScore: 91 },
+  { id: 'saic', name: 'SAIC', category: 'Global Defense', aliases: ['saic', 'science applications international', 'science applications international corporation'], keywords: ['defense it services', 'intelligence community', 'space systems', 'cyber defense', 'logistics modernization', 'c4isr solutions'], ikerScore: 89 },
+  { id: 'booz-allen', name: 'Booz Allen Hamilton', category: 'Global Defense', aliases: ['booz allen', 'booz allen hamilton', 'bah', 'booz allen hamilton holding'], keywords: ['management consulting defense', 'analytics intelligence', 'cyber consulting', 'digital transformation federal', 'ai government'], ikerScore: 88 },
+  { id: 'caci-international', name: 'CACI International', category: 'Global Defense', aliases: ['caci', 'caci international', 'caci inc'], keywords: ['intelligence analysis', 'cyber operations', 'it modernization', 'enterprise it defense', 'signals intelligence'], ikerScore: 85 },
+  { id: 'moog-inc', name: 'Moog Inc', category: 'Global Defense', aliases: ['moog', 'moog inc', 'moog defense'], keywords: ['flight controls', 'missile actuation', 'space propulsion', 'defense components', 'precision motion control'], ikerScore: 82 },
+  { id: 'textron', name: 'Textron', category: 'Global Defense', aliases: ['textron', 'textron inc', 'textron aviation', 'bell textron', 'textron systems'], keywords: ['bell helicopter', 'cessna', 'unmanned systems', 'armored vehicles', 'marine vessels', 'v-22 osprey'], ikerScore: 85 },
+  { id: 'curtiss-wright', name: 'Curtiss-Wright', category: 'Global Defense', aliases: ['curtiss-wright', 'curtiss wright', 'cw defense'], keywords: ['defense electronics', 'naval systems', 'flight test', 'rugged electronics', 'embedded computing defense'], ikerScore: 80 },
+  { id: 'kratos-defense', name: 'Kratos Defense', category: 'Global Defense', aliases: ['kratos', 'kratos defense', 'kratos defense security solutions'], keywords: ['unmanned combat aerial', 'satellite systems', 'microwave electronics', 'tactical drones', 'valkyrie drone'], ikerScore: 83 },
+  { id: 'shield-ai', name: 'Shield AI', category: 'Global Defense', aliases: ['shield ai', 'shield artificial intelligence', 'hivemind', 'shield ai drone'], keywords: ['autonomous pilot', 'ai pilot', 'f-16 ai', 'military ai', 'swarm intelligence', 'hivemind ai', 'drone autonomy'], ikerScore: 87 },
+  { id: 'anduril', name: 'Anduril Industries', category: 'Global Defense', aliases: ['anduril', 'anduril industries', 'palmer luckey defense', 'lattice ai', 'anduril defense'], keywords: ['lattice os', 'autonomous systems', 'surveillance tower', 'ghost drone', 'counter drone', 'ai defense', 'border surveillance'], ikerScore: 92 },
+  { id: 'joby-aviation', name: 'Joby Aviation', category: 'Drone & Autonomy', aliases: ['joby', 'joby aviation', 'joby s4', 'joby air taxi'], keywords: ['evtol', 'air taxi', 'electric aircraft', 'urban air mobility', 'autonomous flight'], ikerScore: 78 },
+  { id: 'archer-aviation', name: 'Archer Aviation', category: 'Drone & Autonomy', aliases: ['archer aviation', 'archer', 'midnight aircraft'], keywords: ['evtol', 'electric air taxi', 'urban air mobility', 'midnight evtol'], ikerScore: 74 },
+  { id: 'aerovironment', name: 'AeroVironment', category: 'Drone & Autonomy', aliases: ['aerovironment', 'aeroviroment', 'avav', 'raven drone', 'switchblade drone'], keywords: ['switchblade loitering munition', 'raven uav', 'puma drone', 'small uas', 'kamikaze drone', 'tactical drone'], ikerScore: 86 },
+  { id: 'joby-defense', name: 'Wisk Aero', category: 'Drone & Autonomy', aliases: ['wisk', 'wisk aero', 'boeing wisk'], keywords: ['autonomous air taxi', 'cora aircraft', 'urban air mobility'], ikerScore: 72 },
+
+  // European Defense
+  { id: 'bae-systems', name: 'BAE Systems', category: 'Global Defense', aliases: ['bae systems', 'bae', 'british aerospace', 'bae systems plc'], keywords: ['eurofighter typhoon', 'destroyer warship', 'armoured vehicle', 'electronic systems', 'cyber intelligence', 'naval guns', 'combat aircraft'], ikerScore: 97 },
+  { id: 'airbus-defence', name: 'Airbus Defence & Space', category: 'Global Defense', aliases: ['airbus defence', 'airbus defense', 'airbus ds', 'cassidian', 'eads'], keywords: ['a400m transport', 'eurofighter', 'satellite systems', 'drone military', 'earth observation', 'secure communications'], ikerScore: 95 },
+  { id: 'thales', name: 'Thales Group', category: 'Global Defense', aliases: ['thales', 'thales group', 'thomson-csf', 'thales alenia space'], keywords: ['radar systems', 'avionics', 'naval defense', 'secure communications', 'biometrics', 'digital identity', 'air traffic management'], ikerScore: 94 },
+  { id: 'safran', name: 'Safran', category: 'Global Defense', aliases: ['safran', 'safran group', 'snecma', 'turbomeca'], keywords: ['aircraft engines', 'landing systems', 'navigation systems', 'optronics', 'ejection seats', 'helicopter turbines'], ikerScore: 91 },
+  { id: 'dassault', name: 'Dassault Aviation', category: 'Global Defense', aliases: ['dassault', 'dassault aviation', 'dassault systemes defense', 'rafale manufacturer'], keywords: ['rafale fighter', 'falcon jet', 'nEUROn drone', 'combat aircraft france', 'stealth drone'], ikerScore: 89 },
+  { id: 'mbda', name: 'MBDA', category: 'Global Defense', aliases: ['mbda', 'mbda systems', 'mbda missiles'], keywords: ['missile systems', 'meteor missile', 'aster missile', 'brimstone missile', 'exocet', 'air defense europe'], ikerScore: 88 },
+  { id: 'rheinmetall', name: 'Rheinmetall', category: 'Global Defense', aliases: ['rheinmetall', 'rheinmetall ag', 'rheinmetall defence'], keywords: ['lynx infantry vehicle', 'boxer vehicle', 'leopard tank', 'artillery systems', 'ammunition', 'armored vehicles'], ikerScore: 90 },
+  { id: 'knds', name: 'KNDS', category: 'Global Defense', aliases: ['knds', 'krauss-maffei wegmann', 'kmw', 'nexter', 'giat'], keywords: ['leopard 2 tank', 'leclerc tank', 'caesar howitzer', 'armored vehicles europe', 'franco-german defense'], ikerScore: 86 },
+  { id: 'saab-ab', name: 'Saab AB', category: 'Global Defense', aliases: ['saab', 'saab ab', 'saab defense', 'gripen manufacturer'], keywords: ['gripen fighter', 'erieye aew', 'carl-Gustaf', 'at4 rocket', 'underwater defense', 'jas 39'], ikerScore: 87 },
+  { id: 'leonardo-spa', name: 'Leonardo S.p.A.', category: 'Global Defense', aliases: ['leonardo', 'leonardo drs', 'finmeccanica', 'alenia aermacchi', 'agustawestland'], keywords: ['m-346 trainer', 'aw101 helicopter', 'eurofighter electronics', 'naval electronics', 'space systems italy'], ikerScore: 88 },
+  { id: 'hensoldt', name: 'HENSOLDT', category: 'Global Defense', aliases: ['hensoldt', 'hensoldt ag', 'airbus sensors', 'hensoldt sensors'], keywords: ['radar defense', 'optronics military', 'electronic warfare sensors', 'eurofighter radar', 'air surveillance'], ikerScore: 83 },
+
+  // Israel Defense
+  { id: 'elbit-systems', name: 'Elbit Systems', category: 'Global Defense', aliases: ['elbit', 'elbit systems', 'elbit systems of america'], keywords: ['iron dome component', 'night vision goggles', 'hermes drone', 'land systems', 'c4isr israel', 'battle management', 'electronic warfare'], ikerScore: 93 },
+  { id: 'rafael', name: 'Rafael Advanced Defense Systems', category: 'Global Defense', aliases: ['rafael', 'rafael advanced defense', 'rafael defense', 'iron dome manufacturer'], keywords: ['iron dome', 'david sling', 'spike missile', 'trophy active protection', 'barak missile', 'laser beam defense'], ikerScore: 94 },
+  { id: 'iai', name: 'Israel Aerospace Industries', category: 'Global Defense', aliases: ['iai', 'israel aerospace industries', 'israel aircraft industries', 'malat'], keywords: ['heron drone', 'harop loitering', 'arrow missile defense', 'barak air defense', 'iai satellite'], ikerScore: 91 },
+
+  // Asia-Pacific Defense
+  { id: 'mitsubishi-defense', name: 'Mitsubishi Heavy Industries', category: 'Global Defense', aliases: ['mitsubishi heavy industries', 'mhi defense', 'mitsubishi defense', 'mhi'], keywords: ['f-2 fighter', 'f-15j', 'p-1 patrol aircraft', 'type 10 tank', 'destroyer japan', 'space launch vehicle'], ikerScore: 88 },
+  { id: 'kawasaki-defense', name: 'Kawasaki Defense', category: 'Global Defense', aliases: ['kawasaki defense', 'kawasaki heavy industries defense', 'kawasaki aerospace'], keywords: ['c-2 transport', 'p-1 aircraft', 'submarines japan', 'type 82 missile', 'military helicopter japan'], ikerScore: 82 },
+  { id: 'hanwha-defense', name: 'Hanwha Defense', category: 'Global Defense', aliases: ['hanwha defense', 'hanwha', 'hanwha aerospace', 'k9 thunder manufacturer'], keywords: ['k9 thunder howitzer', 'redback infantry vehicle', 'chunmoo rocket', 'korean defense', 'armored vehicle korea'], ikerScore: 85 },
+  { id: 'kddi-defense', name: 'LIG Nex1', category: 'Global Defense', aliases: ['lig nex1', 'lig nexone', 'korean missile defense'], keywords: ['cheon궁 air defense', 'hae sung missile', 'korean air defense system', 'surface-to-air missile korea'], ikerScore: 78 },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // CYBERSECURITY — GLOBAL
+  // ══════════════════════════════════════════════════════════════════════
+
+  { id: 'crowdstrike', name: 'CrowdStrike', category: 'Global Cybersecurity', aliases: ['crowdstrike', 'crowdstrike holdings', 'falcon platform', 'crwd'], keywords: ['endpoint detection response', 'threat intelligence', 'falcon sensor', 'xdr security', 'incident response', 'nation state threat'], ikerScore: 96 },
+  { id: 'palo-alto-networks', name: 'Palo Alto Networks', category: 'Global Cybersecurity', aliases: ['palo alto networks', 'palo alto', 'panw', 'cortex xdr', 'prisma cloud'], keywords: ['next gen firewall', 'cloud security', 'sase network', 'zero trust', 'soc automation', 'cortex xsoar'], ikerScore: 95 },
+  { id: 'sentinelone', name: 'SentinelOne', category: 'Global Cybersecurity', aliases: ['sentinelone', 'sentinel one', 's1 security', 'singularity platform'], keywords: ['ai endpoint protection', 'autonomous threat detection', 'edr platform', 'singularity xdr', 'purple ai'], ikerScore: 90 },
+  { id: 'tenable', name: 'Tenable', category: 'Global Cybersecurity', aliases: ['tenable', 'tenable holdings', 'nessus scanner', 'tenable.io'], keywords: ['vulnerability management', 'nessus', 'cloud security posture', 'ot security', 'attack surface', 'exposure management'], ikerScore: 88 },
+  { id: 'qualys', name: 'Qualys', category: 'Global Cybersecurity', aliases: ['qualys', 'qualys inc', 'qualys cloud platform'], keywords: ['cloud security', 'vulnerability scanning', 'compliance monitoring', 'web application security', 'patch management'], ikerScore: 85 },
+  { id: 'cyberark', name: 'CyberArk', category: 'Global Cybersecurity', aliases: ['cyberark', 'cyberark software', 'privileged access management', 'pam security'], keywords: ['privileged access management', 'identity security', 'zero trust security', 'secrets management', 'cloud privilege'], ikerScore: 88 },
+  { id: 'checkmarx', name: 'Checkmarx', category: 'Global Cybersecurity', aliases: ['checkmarx', 'cx appsec'], keywords: ['application security testing', 'sast security', 'devsecops', 'code security scanning', 'open source security'], ikerScore: 80 },
+  { id: 'darktrace', name: 'Darktrace', category: 'Global Cybersecurity', aliases: ['darktrace', 'darktrace ai', 'darktrace plc'], keywords: ['autonomous response', 'ai cybersecurity', 'industrial ics security', 'self-learning ai security', 'email security ai'], ikerScore: 86 },
+  { id: 'wiz', name: 'Wiz', category: 'Global Cybersecurity', aliases: ['wiz', 'wiz.io', 'wiz cloud security', 'wiz security'], keywords: ['cloud native security', 'cloud posture management', 'agentless cloud scan', 'multi-cloud security', 'cloud vulnerability'], ikerScore: 90 },
+  { id: 'lacework', name: 'Lacework', category: 'Global Cybersecurity', aliases: ['lacework', 'lacework security'], keywords: ['cloud security', 'anomaly detection cloud', 'behavioral analytics security', 'devsecops cloud'], ikerScore: 78 },
+  { id: 'snyk', name: 'Snyk', category: 'Global Cybersecurity', aliases: ['snyk', 'snyk.io', 'snyk security'], keywords: ['developer security', 'open source vulnerability', 'container security', 'iac security', 'supply chain security software'], ikerScore: 83 },
+  { id: 'zscaler', name: 'Zscaler', category: 'Global Cybersecurity', aliases: ['zscaler', 'zscaler inc', 'zs security', 'zero trust exchange'], keywords: ['zero trust network access', 'cloud proxy', 'sase security', 'ztna', 'secure web gateway', 'cloud firewall'], ikerScore: 91 },
+  { id: 'okta', name: 'Okta', category: 'Global Cybersecurity', aliases: ['okta', 'okta inc', 'okta identity', 'auth0'], keywords: ['identity management', 'single sign-on', 'mfa authentication', 'zero trust identity', 'workforce identity'], ikerScore: 88 },
+  { id: 'rapid7', name: 'Rapid7', category: 'Global Cybersecurity', aliases: ['rapid7', 'rapid7 inc', 'insightvm', 'nexpose'], keywords: ['vulnerability management', 'penetration testing', 'detection response', 'threat exposure', 'managed detection'], ikerScore: 84 },
+  { id: 'forcepoint', name: 'Forcepoint', category: 'Global Cybersecurity', aliases: ['forcepoint', 'forcepoint llc', 'websense', 'forcepoint dlp'], keywords: ['data loss prevention', 'insider threat', 'cloud access security', 'behavior analytics security', 'cross domain security'], ikerScore: 82 },
+  { id: 'illumio', name: 'Illumio', category: 'Global Cybersecurity', aliases: ['illumio', 'illumio inc', 'zero trust segmentation'], keywords: ['zero trust segmentation', 'microsegmentation', 'lateral movement prevention', 'cloud segmentation', 'ransomware containment'], ikerScore: 81 },
+  { id: 'exabeam', name: 'Exabeam', category: 'Global Cybersecurity', aliases: ['exabeam', 'exabeam security'], keywords: ['siem security', 'ueba analytics', 'threat detection platform', 'security analytics', 'behavioral detection'], ikerScore: 78 },
+  { id: 'nozomi-networks', name: 'Nozomi Networks', category: 'Global Cybersecurity', aliases: ['nozomi', 'nozomi networks', 'nozomi guardian'], keywords: ['ot security', 'ics cybersecurity', 'industrial network security', 'operational technology monitoring', 'scada security'], ikerScore: 83 },
+  { id: 'claroty', name: 'Claroty', category: 'Global Cybersecurity', aliases: ['claroty', 'claroty platform', 'medigate claroty'], keywords: ['ot security', 'ics visibility', 'industrial cybersecurity', 'healthcare iot security', 'connected device security'], ikerScore: 83 },
+  { id: 'armis', name: 'Armis Security', category: 'Global Cybersecurity', aliases: ['armis', 'armis security', 'armis centrix'], keywords: ['asset intelligence', 'iot security', 'ot security platform', 'unmanaged device security', 'connected asset visibility'], ikerScore: 82 },
+  { id: 'vectra-ai', name: 'Vectra AI', category: 'Global Cybersecurity', aliases: ['vectra ai', 'vectra networks', 'vectra cognito'], keywords: ['network detection response', 'ai threat detection', 'hybrid attack detection', 'identity threat detection'], ikerScore: 79 },
+  { id: 'recorded-future', name: 'Recorded Future', category: 'Global Cybersecurity', aliases: ['recorded future', 'recorded future inc', 'insikt group'], keywords: ['threat intelligence', 'dark web monitoring', 'vulnerability intelligence', 'nation state tracking', 'geopolitical intelligence'], ikerScore: 87 },
+  { id: 'mandiant', name: 'Mandiant', category: 'Global Cybersecurity', aliases: ['mandiant', 'fireeye mandiant', 'google mandiant'], keywords: ['incident response', 'threat intelligence', 'nation state attribution', 'apt tracking', 'breach investigation', 'red team'], ikerScore: 89 },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SEMICONDUCTORS & CHIPS
+  // ══════════════════════════════════════════════════════════════════════
+
+  { id: 'nvidia', name: 'NVIDIA', category: 'Semiconductor', aliases: ['nvidia', 'nvidia corporation', 'nvda', 'nvidia gpu', 'nvidia ai'], keywords: ['gpu computing', 'ai accelerator', 'h100 chip', 'dgx server', 'cuda platform', 'autonomous vehicle chip', 'data center gpu', 'generative ai hardware'], ikerScore: 99 },
+  { id: 'intel-corp', name: 'Intel', category: 'Semiconductor', aliases: ['intel', 'intel corporation', 'intc', 'intel foundry'], keywords: ['x86 processor', 'data center cpu', 'gaudi ai accelerator', 'arc gpu', 'intel foundry services', 'manufacturing process node'], ikerScore: 95 },
+  { id: 'amd-corp', name: 'AMD', category: 'Semiconductor', aliases: ['amd', 'advanced micro devices', 'amd cpu', 'epyc processor', 'instinct gpu'], keywords: ['epyc server chip', 'instinct mi300', 'ai accelerator', 'radeon gpu', 'data center processor', 'xilinx fpga'], ikerScore: 93 },
+  { id: 'tsmc', name: 'TSMC', category: 'Semiconductor', aliases: ['tsmc', 'taiwan semiconductor', 'taiwan semiconductor manufacturing', 'tsm'], keywords: ['semiconductor foundry', '3nm chip', '2nm process', 'advanced node fabrication', 'chip manufacturing', 'fab capacity'], ikerScore: 98 },
+  { id: 'qualcomm', name: 'Qualcomm', category: 'Semiconductor', aliases: ['qualcomm', 'qualcomm inc', 'qcom', 'snapdragon', 'qualcomm technologies'], keywords: ['snapdragon chip', '5g modem', 'ai edge computing', 'mobile processor', 'automotive chip', 'iot connectivity'], ikerScore: 92 },
+  { id: 'broadcom', name: 'Broadcom', category: 'Semiconductor', aliases: ['broadcom', 'broadcom inc', 'avgo', 'broadcom vmware'], keywords: ['network chip', 'asic design', 'storage controller', 'wifi chip', 'data center networking', 'vmware cloud'], ikerScore: 90 },
+  { id: 'marvell-tech', name: 'Marvell Technology', category: 'Semiconductor', aliases: ['marvell', 'marvell technology', 'mrvl'], keywords: ['data infrastructure chip', 'cloud networking', '5g semiconductor', 'custom asic', 'storage processor'], ikerScore: 84 },
+  { id: 'micron-tech', name: 'Micron Technology', category: 'Semiconductor', aliases: ['micron', 'micron technology', 'mu stock', 'micron dram'], keywords: ['dram memory', 'nand flash', 'hbm memory', 'ai memory chip', 'high bandwidth memory', 'memory storage'], ikerScore: 88 },
+  { id: 'samsung-semi', name: 'Samsung Semiconductor', category: 'Semiconductor', aliases: ['samsung semiconductor', 'samsung electronics', 'samsung foundry', 'samsung chip'], keywords: ['samsung dram', 'hbm3 memory', 'foundry services', 'exynos chip', 'nand flash samsung', '3nm process samsung'], ikerScore: 95 },
+  { id: 'sk-hynix', name: 'SK Hynix', category: 'Semiconductor', aliases: ['sk hynix', 'sk hynix inc', 'hynix semiconductor'], keywords: ['hbm memory', 'dram production', 'ai memory', 'hbm3e chip', 'nand flash production'], ikerScore: 87 },
+  { id: 'asml', name: 'ASML', category: 'Semiconductor', aliases: ['asml', 'asml holding', 'euv lithography', 'asml machines'], keywords: ['euv lithography', 'extreme ultraviolet', 'chip making machine', 'semiconductor equipment', 'next-gen lithography'], ikerScore: 97 },
+  { id: 'applied-materials', name: 'Applied Materials', category: 'Semiconductor', aliases: ['applied materials', 'amat', 'applied materials inc'], keywords: ['semiconductor equipment', 'chip deposition', 'etch equipment', 'display technology', 'advanced packaging'], ikerScore: 91 },
+  { id: 'lam-research', name: 'Lam Research', category: 'Semiconductor', aliases: ['lam research', 'lam research corporation', 'lrcx'], keywords: ['wafer fabrication equipment', 'etch deposition', 'cryogenic etch', 'advanced packaging tools', 'memory manufacturing'], ikerScore: 88 },
+  { id: 'arm-holdings', name: 'Arm Holdings', category: 'Semiconductor', aliases: ['arm', 'arm holdings', 'arm architecture', 'arm chip design', 'armh'], keywords: ['risc architecture', 'mobile chip design', 'cpu ip licensing', 'ai chip architecture', 'cortex processor', 'arm server chip'], ikerScore: 94 },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // ARTIFICIAL INTELLIGENCE & MACHINE LEARNING
+  // ══════════════════════════════════════════════════════════════════════
+
+  { id: 'openai', name: 'OpenAI', category: 'Global AI', aliases: ['openai', 'open ai', 'chatgpt maker', 'gpt-4', 'gpt-5', 'openai llc'], keywords: ['gpt-4', 'chatgpt', 'dall-e', 'whisper model', 'openai api', 'large language model', 'agi research', 'sora video ai'], ikerScore: 99 },
+  { id: 'anthropic', name: 'Anthropic', category: 'Global AI', aliases: ['anthropic', 'anthropic pbc', 'claude ai', 'claude anthropic'], keywords: ['claude llm', 'constitutional ai', 'ai safety research', 'enterprise ai', 'claude 3'], ikerScore: 92 },
+  { id: 'google-deepmind', name: 'Google DeepMind', category: 'Global AI', aliases: ['deepmind', 'google deepmind', 'alphabet ai', 'gemini ai', 'bard ai'], keywords: ['gemini model', 'alphafold', 'reinforcement learning', 'ai research google', 'protein structure', 'alphago'], ikerScore: 98 },
+  { id: 'meta-ai', name: 'Meta AI', category: 'Global AI', aliases: ['meta ai', 'facebook ai research', 'fair lab', 'llama model', 'meta llama'], keywords: ['llama 3', 'open source llm', 'meta ai research', 'imagen', 'fair research', 'ai assistant meta'], ikerScore: 93 },
+  { id: 'mistral-ai', name: 'Mistral AI', category: 'Global AI', aliases: ['mistral ai', 'mistral', 'mistral model', 'mixtral'], keywords: ['open source llm', 'mixtral model', 'european ai', 'le chat', 'mistral large'], ikerScore: 84 },
+  { id: 'cohere', name: 'Cohere', category: 'Global AI', aliases: ['cohere', 'cohere inc', 'cohere nlp'], keywords: ['enterprise llm', 'command model', 'rag enterprise', 'text generation api', 'embed model'], ikerScore: 82 },
+  { id: 'inflection-ai', name: 'Inflection AI', category: 'Global AI', aliases: ['inflection ai', 'inflection', 'pi chatbot'], keywords: ['pi ai assistant', 'personal ai', 'conversational ai'], ikerScore: 75 },
+  { id: 'xai-grok', name: 'xAI', category: 'Global AI', aliases: ['xai', 'x.ai', 'grok ai', 'elon musk ai', 'grok chatbot'], keywords: ['grok llm', 'real-time ai', 'x platform ai', 'elon ai company'], ikerScore: 82 },
+  { id: 'baidu-ai', name: 'Baidu AI', category: 'Global AI', aliases: ['baidu', 'baidu ai', 'ernie bot', 'wenxin', 'bidu'], keywords: ['ernie llm', 'chinese ai', 'autonomous driving ai', 'baidu cloud ai', 'wenxin model'], ikerScore: 88 },
+  { id: 'alibaba-ai', name: 'Alibaba AI', category: 'Global AI', aliases: ['alibaba ai', 'tongyi', 'qwen model', 'alibaba damo academy'], keywords: ['qwen model', 'tongyi qianwen', 'alibaba cloud ai', 'chinese llm', 'damo academy'], ikerScore: 86 },
+  { id: 'huawei-ai', name: 'Huawei AI', category: 'Global AI', aliases: ['huawei ai', 'pangu model', 'huawei ascend', 'huawei cloud ai'], keywords: ['pangu llm', 'ascend ai chip', 'mindspore framework', 'huawei cloud', 'chinese ai chip'], ikerScore: 85 },
+  { id: 'scale-ai', name: 'Scale AI', category: 'Global AI', aliases: ['scale ai', 'scale ai inc', 'alexandr wang ai'], keywords: ['ai training data', 'data labeling', 'rlhf training', 'foundation model training', 'government ai', 'defense ai data'], ikerScore: 87 },
+  { id: 'c3ai', name: 'C3.ai', category: 'Global AI', aliases: ['c3.ai', 'c3 ai', 'c3 artificial intelligence', 'ai enterprise'], keywords: ['enterprise ai applications', 'predictive maintenance ai', 'defense ai', 'supply chain ai', 'fraud detection ai'], ikerScore: 82 },
+  { id: 'palantir', name: 'Palantir Technologies', category: 'Global Defense', aliases: ['palantir', 'palantir technologies', 'pltr', 'palantir aip', 'gotham platform'], keywords: ['gotham intelligence platform', 'foundry data platform', 'aip ai platform', 'defense analytics', 'government data', 'battlefield ai'], ikerScore: 96 },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // ROBOTICS — GLOBAL
+  // ══════════════════════════════════════════════════════════════════════
+
+  { id: 'boston-dynamics', name: 'Boston Dynamics', category: 'Global Robotics', aliases: ['boston dynamics', 'boston dynamics spot', 'spot robot', 'atlas robot', 'stretch robot'], keywords: ['spot quadruped', 'atlas humanoid', 'stretch warehouse', 'legged robot', 'inspection robot', 'mobile manipulation'], ikerScore: 94 },
+  { id: 'boston-dynamics-2', name: 'Figure AI', category: 'Global Robotics', aliases: ['figure ai', 'figure robot', 'figure humanoid'], keywords: ['humanoid robot', 'bipedal robot', 'openai humanoid', 'warehouse humanoid', 'general purpose robot'], ikerScore: 85 },
+  { id: 'agility-robotics', name: 'Agility Robotics', category: 'Global Robotics', aliases: ['agility robotics', 'digit robot', 'agility digit'], keywords: ['digit humanoid', 'bipedal humanoid', 'warehouse robot walking', 'amazon humanoid'], ikerScore: 82 },
+  { id: '1x-technologies', name: '1X Technologies', category: 'Global Robotics', aliases: ['1x technologies', 'eve robot', '1x neo', 'halodi robotics'], keywords: ['humanoid robot', 'android robot', 'industrial humanoid', 'physical ai'], ikerScore: 78 },
+  { id: 'apptronik', name: 'Apptronik', category: 'Global Robotics', aliases: ['apptronik', 'apollo robot apptronik', 'nasa robotics spin'], keywords: ['apollo humanoid', 'space robotics', 'nasa robot spinoff', 'construction robot'], ikerScore: 76 },
+  { id: 'fanuc-corp', name: 'Fanuc', category: 'Global Robotics', aliases: ['fanuc', 'fanuc corporation', 'fanuc america', 'fanuc robot'], keywords: ['industrial robot arm', 'cnc machine', 'collaborative robot fanuc', 'robot controller', 'factory automation'], ikerScore: 93 },
+  { id: 'kuka-ag', name: 'KUKA', category: 'Global Robotics', aliases: ['kuka', 'kuka ag', 'kuka robotics', 'midea kuka'], keywords: ['kuka robot arm', 'industrial automation germany', 'collaborative robot kuka', 'welding robot', 'automotive robot'], ikerScore: 91 },
+  { id: 'universal-robots', name: 'Universal Robots', category: 'Global Robotics', aliases: ['universal robots', 'ur robots', 'ur5 robot', 'cobot universal', 'teradyne ur'], keywords: ['collaborative robot', 'cobot arm', 'easy programming robot', 'flexible automation', 'ur5 ur10'], ikerScore: 88 },
+  { id: 'yaskawa-electric', name: 'Yaskawa Electric', category: 'Global Robotics', aliases: ['yaskawa', 'yaskawa electric', 'yaskawa motoman', 'motoman robot'], keywords: ['motoman robot', 'servo drive', 'industrial robot japan', 'welding robot yaskawa', 'motion control'], ikerScore: 87 },
+  { id: 'staubli', name: 'Stäubli', category: 'Global Robotics', aliases: ['stäubli', 'staubli', 'staubli robotics'], keywords: ['precision robot arm', 'clean room robot', 'fast pick robot', 'connector systems', 'textile machine'], ikerScore: 80 },
+  { id: 'omron-robotics', name: 'OMRON Robotics', category: 'Global Robotics', aliases: ['omron robotics', 'omron automation', 'omron mobile robot', 'ld mobile robot'], keywords: ['mobile robot amr', 'autonomous mobile', 'industrial automation omron', 'vision inspection omron'], ikerScore: 82 },
+  { id: 'autostore-system', name: 'AutoStore', category: 'Warehouse Automation', aliases: ['autostore', 'auto store', 'autostore system', 'autostore grid'], keywords: ['cube storage automation', 'grid robot warehouse', 'automated storage retrieval', 'robotic fulfillment'], ikerScore: 87 },
+  { id: 'locus-robotics', name: 'Locus Robotics', category: 'Warehouse Automation', aliases: ['locus robotics', 'locus robot', 'locusbot'], keywords: ['warehouse amr', 'order fulfillment robot', 'pick assist robot', 'distribution center robot'], ikerScore: 83 },
+  { id: 'greyorange', name: 'GreyOrange', category: 'Warehouse Automation', aliases: ['greyorange', 'grey orange', 'ranger robot', 'butler robot greyorange'], keywords: ['fulfillment robot', 'warehouse ai', 'sortation robot', 'picking robot', 'last-mile fulfillment'], ikerScore: 80 },
+  { id: 'geekplus', name: 'Geek+', category: 'Warehouse Automation', aliases: ['geek+', 'geekplus', 'geek plus robotics', 'goods-to-person robot'], keywords: ['goods to person robot', 'amr warehouse china', 'sorting robot', 'mobile shelving robot'], ikerScore: 82 },
+  { id: 'six-river-systems', name: '6 River Systems', category: 'Warehouse Automation', aliases: ['6 river systems', 'six river systems', 'chuck robot shopify'], keywords: ['chuck robot', 'collaborative fulfillment', 'voice picking robot', 'warehouse collaboration'], ikerScore: 79 },
+  { id: 'berkshire-grey', name: 'Berkshire Grey', category: 'Warehouse Automation', aliases: ['berkshire grey', 'berkshire grey inc'], keywords: ['piece picking robot', 'parcel sortation', 'retail fulfillment automation', 'ai-powered picking'], ikerScore: 77 },
+  { id: 'symbotic', name: 'Symbotic', category: 'Warehouse Automation', aliases: ['symbotic', 'symbotic inc', 'walmart automation', 'symbot'], keywords: ['warehouse robotics system', 'symbot robot', 'automated distribution', 'walmart fulfillment robot'], ikerScore: 83 },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // DRONES & AUTONOMOUS SYSTEMS
+  // ══════════════════════════════════════════════════════════════════════
+
+  { id: 'dji', name: 'DJI', category: 'Drone & Autonomy', aliases: ['dji', 'dji drone', 'da jiang innovations', 'mavic drone', 'phantom drone'], keywords: ['consumer drone', 'enterprise drone', 'fpv racing', 'agricultural drone', 'inspection drone', 'matrice drone'], ikerScore: 90 },
+  { id: 'skydio', name: 'Skydio', category: 'Drone & Autonomy', aliases: ['skydio', 'skydio drone', 'skydio x10'], keywords: ['autonomous drone', 'ai powered drone', 'infrastructure inspection drone', 'defense drone usa', 'obstacle avoidance drone'], ikerScore: 83 },
+  { id: 'zipline-drone', name: 'Zipline', category: 'Drone & Autonomy', aliases: ['zipline', 'zipline drone', 'zipline delivery', 'zipline medical'], keywords: ['medical delivery drone', 'last-mile drone delivery', 'healthcare drone logistics', 'autonomous delivery zip'], ikerScore: 80 },
+  { id: 'wing-alphabet', name: 'Wing (Alphabet)', category: 'Drone & Autonomy', aliases: ['wing', 'wing aviation', 'google wing', 'alphabet wing drone'], keywords: ['drone delivery alphabet', 'urban delivery drone', 'faa drone approval'], ikerScore: 78 },
+  { id: 'joby-aviation-2', name: 'Joby Aviation', category: 'Drone & Autonomy', aliases: ['joby aviation', 'joby'], keywords: ['evtol aircraft', 'electric air taxi', 'urban air mobility', 'autonomous aviation'], ikerScore: 78 },
+  { id: 'wingscopex', name: 'Wingcopter', category: 'Drone & Autonomy', aliases: ['wingcopter', 'wingcopter drone', 'tiltrotor delivery'], keywords: ['tiltrotor drone', 'medical drone delivery', 'last mile drone', 'hybrid drone'], ikerScore: 72 },
+  { id: 'firestorm-labs', name: 'Sarcos Technology', category: 'Drone & Autonomy', aliases: ['sarcos', 'sarcos robotics', 'guardian xo', 'exoskeleton'], keywords: ['powered exoskeleton', 'industrial exosuit', 'military exoskeleton', 'robotic exosuit'], ikerScore: 74 },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // COMPUTER VISION & SENSORS
+  // ══════════════════════════════════════════════════════════════════════
+
+  { id: 'keyence', name: 'Keyence', category: 'Computer Vision', aliases: ['keyence', 'keyence corporation', 'keyence sensor', 'keyence laser'], keywords: ['industrial sensor', 'vision system', 'barcode scanner', 'laser measurement', 'microscope digital', 'safety sensor'], ikerScore: 92 },
+  { id: 'cognex', name: 'Cognex', category: 'Computer Vision', aliases: ['cognex', 'cognex corporation', 'cognex vision', 'dataman reader'], keywords: ['machine vision system', 'vision sensor', 'barcode reading', 'inspection vision', 'id reader factory'], ikerScore: 89 },
+  { id: 'teledyne-flir', name: 'Teledyne FLIR', category: 'Computer Vision', aliases: ['teledyne flir', 'flir systems', 'flir thermal', 'teledyne technologies'], keywords: ['thermal imaging', 'infrared camera', 'surveillance camera', 'border detection camera', 'military thermal'], ikerScore: 88 },
+  { id: 'basler-ag', name: 'Basler', category: 'Computer Vision', aliases: ['basler', 'basler ag', 'basler camera'], keywords: ['industrial camera', 'machine vision camera', 'area scan camera', 'line scan camera'], ikerScore: 81 },
+  { id: 'landing-ai', name: 'Landing AI', category: 'Computer Vision', aliases: ['landing ai', 'landingai', 'andrew ng ai', 'visual ai'], keywords: ['visual ai inspection', 'computer vision platform', 'manufacturing ai inspection', 'landinglens'], ikerScore: 82 },
+  { id: 'zebra-tech', name: 'Zebra Technologies', category: 'Computer Vision', aliases: ['zebra technologies', 'zebra tech', 'zbra', 'zebra barcode'], keywords: ['barcode printer', 'rfid systems', 'mobile computers warehouse', 'label printing', 'inventory tracking'], ikerScore: 85 },
+  { id: 'isra-vision', name: 'ISRA Vision', category: 'Computer Vision', aliases: ['isra vision', 'isra', 'isra vision ag'], keywords: ['surface inspection system', 'automated optical inspection', '3d measurement', 'automotive vision'], ikerScore: 78 },
+  { id: 'viavi-solutions', name: 'Viavi Solutions', category: 'Computer Vision', aliases: ['viavi', 'viavi solutions', 'jdsu'], keywords: ['optical inspection', 'network test', 'fiber optic measurement', 'anti-counterfeiting'], ikerScore: 76 },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SPACE TECH
+  // ══════════════════════════════════════════════════════════════════════
+
+  { id: 'spacex', name: 'SpaceX', category: 'Global Defense', aliases: ['spacex', 'space exploration technologies', 'starlink', 'elon musk rocket', 'falcon 9', 'starship rocket'], keywords: ['falcon 9 launch', 'starship mega rocket', 'starlink satellite internet', 'reusable rocket', 'nasa artemis', 'crewed spaceflight'], ikerScore: 98 },
+  { id: 'blue-origin', name: 'Blue Origin', category: 'Global Defense', aliases: ['blue origin', 'new shepard', 'new glenn rocket', 'jeff bezos rocket'], keywords: ['new glenn rocket', 'lunar lander blue', 'space tourism', 'orbital rocket', 'be-4 engine'], ikerScore: 88 },
+  { id: 'rocket-lab', name: 'Rocket Lab', category: 'Global Defense', aliases: ['rocket lab', 'rklb', 'electron rocket', 'neutron rocket'], keywords: ['small satellite launch', 'electron vehicle', 'photon spacecraft', 'neutron reusable rocket'], ikerScore: 83 },
+  { id: 'planet-labs', name: 'Planet Labs', category: 'Global Defense', aliases: ['planet labs', 'planet.com', 'planet satellite', 'planetscope'], keywords: ['earth observation satellite', 'daily satellite imagery', 'smallsat constellation', 'geospatial analytics'], ikerScore: 84 },
+  { id: 'maxar-tech', name: 'Maxar Technologies', category: 'Global Defense', aliases: ['maxar', 'maxar technologies', 'digitalglobe', 'worldview satellite'], keywords: ['satellite imagery', 'geospatial intelligence', 'earth observation defense', 'worldview constellation'], ikerScore: 85 },
+  { id: 'airbus-space', name: 'Airbus Defence Space', category: 'Global Defense', aliases: ['airbus space', 'astrium', 'airbus intelligence'], keywords: ['pleiades satellite', 'earth observation airbus', 'military communication satellite', 'sar satellite'], ikerScore: 88 },
+  { id: 'oneweb', name: 'OneWeb', category: 'Global Defense', aliases: ['oneweb', 'oneweb satellite', 'eutelsat oneweb'], keywords: ['low earth orbit broadband', 'leo satellite constellation', 'global internet satellite'], ikerScore: 80 },
+  { id: 'iceye', name: 'ICEYE', category: 'Global Defense', aliases: ['iceye', 'iceye satellite', 'sar satellite iceye'], keywords: ['sar satellite', 'radar imaging satellite', 'persistent monitoring', 'all-weather surveillance'], ikerScore: 81 },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // INDUSTRIAL AI & MANUFACTURING TECH
+  // ══════════════════════════════════════════════════════════════════════
+
+  { id: 'c3ai-industrial', name: 'SparkCognition', category: 'Industrial AI', aliases: ['sparkcognition', 'sparkcognition industrial ai', 'darwin ai', 'generative ai industrial'], keywords: ['industrial ai analytics', 'predictive maintenance ai', 'ai energy', 'defense ai ml', 'turbine ai'], ikerScore: 81 },
+  { id: 'aspentech', name: 'AspenTech', category: 'Industrial AI', aliases: ['aspentech', 'aspen technology', 'aspen plus', 'aspenone'], keywords: ['process optimization', 'digital twin plant', 'aspen dmcplus', 'refinery optimization', 'chemical plant ai'], ikerScore: 82 },
+  { id: 'sight-machine', name: 'Sight Machine', category: 'Industrial AI', aliases: ['sight machine', 'sightmachine', 'manufacturing analytics'], keywords: ['factory analytics', 'manufacturing ai', 'process intelligence', 'quality ai factory'], ikerScore: 77 },
+  { id: 'augury', name: 'Augury', category: 'Industrial AI', aliases: ['augury', 'augury inc', 'machine health ai'], keywords: ['machine health monitoring', 'vibration analysis', 'predictive maintenance sensor', 'ai asset monitoring'], ikerScore: 79 },
+  { id: 'uptake', name: 'Uptake Technologies', category: 'Industrial AI', aliases: ['uptake', 'uptake technologies', 'uptake industrial ai'], keywords: ['industrial ai asset', 'predictive analytics equipment', 'condition monitoring', 'fleet intelligence'], ikerScore: 76 },
+  { id: 'ptc-inc', name: 'PTC Inc', category: 'Industrial AI', aliases: ['ptc', 'ptc inc', 'windchill plm', 'thingworx iot'], keywords: ['product lifecycle management', 'iot platform thingworx', 'augmented reality vuforia', 'digital twin ptc', 'cad software'], ikerScore: 84 },
+  { id: 'dassault-systemes', name: 'Dassault Systèmes', category: 'Industrial AI', aliases: ['dassault systemes', '3ds', 'catia cad', 'solidworks', 'simulia'], keywords: ['catia design', 'solidworks 3d', '3dexperience platform', 'simulation software', 'digital twin automotive'], ikerScore: 88 },
+  { id: 'hexagon-ab', name: 'Hexagon AB', category: 'Industrial AI', aliases: ['hexagon', 'hexagon ab', 'hexagon manufacturing', 'leica geosystems'], keywords: ['metrology systems', 'coordinate measuring machine', 'manufacturing intelligence', 'geospatial solutions', 'autonomous reality capture'], ikerScore: 85 },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // ENERGY TECH
+  // ══════════════════════════════════════════════════════════════════════
+
+  { id: 'schneider-electric', name: 'Schneider Electric', category: 'Energy Intelligence', aliases: ['schneider electric', 'schneider', 'se energy', 'aveva schneider'], keywords: ['energy management', 'smart grid', 'building automation', 'industrial control', 'data center power', 'microgrid'], ikerScore: 90 },
+  { id: 'siemens-energy', name: 'Siemens Energy', category: 'Energy Intelligence', aliases: ['siemens energy', 'siemens energy ag', 'gamesa turbine'], keywords: ['wind turbine', 'power generation', 'gas turbine', 'grid stabilization', 'hydrogen energy', 'energy transition'], ikerScore: 87 },
+  { id: 'vestas', name: 'Vestas', category: 'Energy Intelligence', aliases: ['vestas', 'vestas wind systems', 'vestas turbine'], keywords: ['wind energy', 'offshore wind turbine', 'wind farm', 'renewable energy'], ikerScore: 85 },
+  { id: 'nextracker', name: 'Nextracker', category: 'Energy Intelligence', aliases: ['nextracker', 'nxt solar tracker', 'solar tracking system'], keywords: ['solar tracker', 'single-axis tracker', 'utility solar', 'bifacial solar'], ikerScore: 80 },
+  { id: 'fluence-energy', name: 'Fluence Energy', category: 'Energy Intelligence', aliases: ['fluence', 'fluence energy', 'abb siemens battery'], keywords: ['battery energy storage', 'grid scale battery', 'energy storage system', 'bess'], ikerScore: 79 },
+  { id: 'opower', name: 'Oracle Energy & Water', category: 'Energy Intelligence', aliases: ['oracle utilities', 'opower', 'oracle energy'], keywords: ['utility software', 'smart meter analytics', 'energy engagement', 'grid management software'], ikerScore: 76 },
+  { id: 'itron', name: 'Itron', category: 'Energy Intelligence', aliases: ['itron', 'itron inc', 'smart meter itron'], keywords: ['smart meter', 'ami system', 'utility analytics', 'water meter', 'grid edge intelligence'], ikerScore: 82 },
+  { id: 'landis-gyr', name: 'Landis+Gyr', category: 'Energy Intelligence', aliases: ['landis gyr', 'landis+gyr', 'landis & gyr'], keywords: ['smart metering', 'electricity meter', 'head-end system', 'energy data management'], ikerScore: 80 },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SUPPLY CHAIN & LOGISTICS PLATFORMS
+  // ══════════════════════════════════════════════════════════════════════
+
+  { id: 'blue-yonder', name: 'Blue Yonder', category: 'Supply Chain Software', aliases: ['blue yonder', 'jda software', 'blue yonder panasonic'], keywords: ['supply chain planning', 'demand forecasting', 'transportation management', 'warehouse management system', 'order management'], ikerScore: 85 },
+  { id: 'o9-solutions', name: 'o9 Solutions', category: 'Supply Chain Software', aliases: ['o9 solutions', 'o9', 'o9 supply chain'], keywords: ['integrated business planning', 'demand sensing', 'supply chain control tower', 'scenario planning supply'], ikerScore: 80 },
+  { id: 'kinaxis', name: 'Kinaxis', category: 'Supply Chain Software', aliases: ['kinaxis', 'kinaxis inc', 'rapidresponse kinaxis'], keywords: ['supply chain orchestration', 'rapid response planning', 'concurrent planning', 'supply chain resilience'], ikerScore: 79 },
+  { id: 'fourkites', name: 'FourKites', category: 'Supply Chain Software', aliases: ['fourkites', 'four kites', 'fourkites visibility'], keywords: ['supply chain visibility', 'shipment tracking', 'eta prediction', 'freight intelligence'], ikerScore: 78 },
+  { id: 'project44', name: 'project44', category: 'Supply Chain Software', aliases: ['project44', 'project 44', 'p44 supply'], keywords: ['supply chain visibility platform', 'carrier connectivity', 'freight tracking', 'ocean visibility'], ikerScore: 78 },
+  { id: 'flexport', name: 'Flexport', category: 'Supply Chain Software', aliases: ['flexport', 'flexport freight', 'flexport logistics'], keywords: ['digital freight forwarder', 'customs brokerage', 'ocean freight', 'supply chain software'], ikerScore: 80 },
+  { id: 'stord', name: 'Stord', category: 'Supply Chain Software', aliases: ['stord', 'stord fulfillment'], keywords: ['cloud supply chain', 'fulfillment platform', 'distributed warehousing'], ikerScore: 72 },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // HEALTH TECH & BIOTECH
+  // ══════════════════════════════════════════════════════════════════════
+
+  { id: 'medtronic', name: 'Medtronic', category: 'Health Tech', aliases: ['medtronic', 'medtronic plc', 'medtronic device'], keywords: ['medical device', 'cardiac monitoring', 'surgical robot', 'insulin pump', 'spinal implant', 'deep brain stimulation'], ikerScore: 88 },
+  { id: 'abbott-labs', name: 'Abbott Laboratories', category: 'Health Tech', aliases: ['abbott', 'abbott laboratories', 'abbott diagnostics', 'libre glucose'], keywords: ['diagnostics point care', 'continuous glucose monitor', 'cardiac monitoring', 'rapid test', 'vascular device'], ikerScore: 86 },
+  { id: 'philips-health', name: 'Philips Healthcare', category: 'Health Tech', aliases: ['philips healthcare', 'philips health', 'royal philips', 'philips medical'], keywords: ['mri machine', 'patient monitoring', 'ultrasound system', 'icu monitoring', 'remote patient care'], ikerScore: 87 },
+  { id: 'siemens-healthineers', name: 'Siemens Healthineers', category: 'Health Tech', aliases: ['siemens healthineers', 'siemens medical', 'syngo platform'], keywords: ['ct scanner', 'pet scan', 'lab diagnostics', 'digital health', 'ai radiology', 'molecular diagnostics'], ikerScore: 89 },
+  { id: 'intuitive-surgical', name: 'Intuitive Surgical', category: 'Health Tech', aliases: ['intuitive surgical', 'da vinci robot', 'isrg', 'davinci surgery'], keywords: ['surgical robot', 'da vinci system', 'minimally invasive surgery', 'robotic surgery'], ikerScore: 90 },
+  { id: 'moderna', name: 'Moderna', category: 'Health Tech', aliases: ['moderna', 'moderna inc', 'moderna mrna'], keywords: ['mrna vaccine', 'mrna therapeutics', 'covid vaccine', 'cancer vaccine', 'personalized medicine'], ikerScore: 85 },
+  { id: 'tempus-ai', name: 'Tempus AI', category: 'Health Tech', aliases: ['tempus ai', 'tempus', 'tempus labs'], keywords: ['ai diagnostics', 'precision medicine', 'genomic analysis', 'oncology ai', 'clinical data platform'], ikerScore: 80 },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // CLOUD & ENTERPRISE TECH
+  // ══════════════════════════════════════════════════════════════════════
+
+  { id: 'aws', name: 'Amazon Web Services', category: 'Global AI', aliases: ['aws', 'amazon web services', 'amazon cloud', 'amazon ec2', 'amazon s3'], keywords: ['cloud computing', 'serverless computing', 'ml services aws', 'cloud storage', 'bedrock ai aws', 'govcloud'], ikerScore: 97 },
+  { id: 'microsoft-azure', name: 'Microsoft Azure', category: 'Global AI', aliases: ['microsoft azure', 'azure cloud', 'msft cloud', 'azure openai'], keywords: ['azure cloud services', 'azure openai service', 'copilot enterprise', 'azure government', 'azure arc', 'microsoft 365'], ikerScore: 97 },
+  { id: 'google-cloud', name: 'Google Cloud', category: 'Global AI', aliases: ['google cloud', 'gcp', 'google cloud platform', 'vertex ai'], keywords: ['vertex ai', 'google cloud ai', 'bigquery analytics', 'kubernetes engine', 'apigee platform', 'cloud spanner'], ikerScore: 94 },
+  { id: 'oracle-cloud', name: 'Oracle Cloud', category: 'Global AI', aliases: ['oracle cloud', 'oci', 'oracle infrastructure', 'oracle database'], keywords: ['oracle database cloud', 'oci compute', 'erp cloud oracle', 'autonomous database', 'oracle fusion'], ikerScore: 88 },
+  { id: 'servicenow', name: 'ServiceNow', category: 'Global AI', aliases: ['servicenow', 'now platform', 'servicenow itil'], keywords: ['it service management', 'workflow automation', 'enterprise platform', 'ai operations', 'digital workflows'], ikerScore: 87 },
+  { id: 'salesforce', name: 'Salesforce', category: 'Global AI', aliases: ['salesforce', 'salesforce inc', 'crm platform', 'einstein ai', 'slack salesforce'], keywords: ['crm platform', 'einstein ai', 'sales cloud', 'service cloud', 'mulesoft integration'], ikerScore: 89 },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // TELECOM & CONNECTIVITY
+  // ══════════════════════════════════════════════════════════════════════
+
+  { id: 'ericsson', name: 'Ericsson', category: 'Manufacturing Tech', aliases: ['ericsson', 'ericsson telecom', 'lm ericsson', 'telefonaktiebolaget ericsson'], keywords: ['5g network', 'telecom equipment', 'radio access network', 'core network', '5g private network', 'open ran'], ikerScore: 88 },
+  { id: 'nokia-networks', name: 'Nokia Networks', category: 'Manufacturing Tech', aliases: ['nokia', 'nokia networks', 'nokia bell labs', 'nokia solutions networks'], keywords: ['5g infrastructure', 'open ran', 'private 5g', 'network software', 'air defense radar nokia'], ikerScore: 87 },
+  { id: 'cisco-systems', name: 'Cisco Systems', category: 'Global Cybersecurity', aliases: ['cisco', 'cisco systems', 'csco', 'cisco networking', 'webex'], keywords: ['network switch', 'routing equipment', 'network security', 'zero trust cisco', 'unified communications', 'industrial iot cisco'], ikerScore: 90 },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // EMERGING / HIGH-GROWTH
+  // ══════════════════════════════════════════════════════════════════════
+
+  { id: 'relativity-space', name: 'Relativity Space', category: 'Global Defense', aliases: ['relativity space', 'terran rocket', '3d printed rocket'], keywords: ['3d printed rocket', 'terran r rocket', 'additive manufacturing rocket', 'methane rocket'], ikerScore: 79 },
+  { id: 'true-anomaly', name: 'True Anomaly', category: 'Global Defense', aliases: ['true anomaly', 'true anomaly spacecraft', 'jackal spacecraft'], keywords: ['space domain awareness', 'satellite inspector', 'orbital warfare', 'space surveillance'], ikerScore: 78 },
+  { id: 'sievert-defense', name: 'Epirus', category: 'Global Defense', aliases: ['epirus', 'epirus systems', 'leonidas drone counter'], keywords: ['high power microwave', 'counter drone directed energy', 'leonidas system', 'electronic warfare'], ikerScore: 80 },
+  { id: 'vannevar-labs', name: 'Vannevar Labs', category: 'Global Defense', aliases: ['vannevar labs', 'vannevar', 'vannevar ai defense'], keywords: ['ai defense analytics', 'geospatial ai', 'battlefield intelligence', 'defense software'], ikerScore: 77 },
+  { id: 'rebellion-defense', name: 'Rebellion Defense', category: 'Global Defense', aliases: ['rebellion defense', 'rebellion', 'rebellion ai dod'], keywords: ['ai defense platform', 'ml defense analytics', 'dod digital transformation', 'counter threat ai'], ikerScore: 76 },
+  { id: 'hadrian', name: 'Hadrian', category: 'Manufacturing Tech', aliases: ['hadrian', 'hadrian automation', 'cnc factory automation'], keywords: ['autonomous factory', 'cnc machining ai', 'defense parts manufacturing', 'precision machining startup'], ikerScore: 78 },
+  { id: 'velo3d', name: 'Velo3D', category: 'Manufacturing Tech', aliases: ['velo3d', 'velo 3d', 'sapphire printer', 'metal 3d printing'], keywords: ['metal additive manufacturing', 'aerospace 3d printing', '3d printed metal parts', 'complex geometry manufacturing'], ikerScore: 77 },
+  { id: 'markforged', name: 'Markforged', category: 'Manufacturing Tech', aliases: ['markforged', 'mark forged', 'digital forge', 'continuous fiber printing'], keywords: ['3d printing industrial', 'continuous fiber reinforcement', 'metal 3d printing', 'defense spare parts'], ikerScore: 76 },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // MIDDLE EAST — UAE, Saudi Arabia, Israel (expanded)
+  // ══════════════════════════════════════════════════════════════════════
+
+  { id: 'edge-group', name: 'EDGE Group', category: 'Global Defense', aliases: ['edge group', 'edge uae', 'edge defense uae', 'caracal uae'], keywords: ['uae defense technology', 'autonomous weapons uae', 'unmanned systems uae', 'smart weapon emirates'], ikerScore: 82 },
+  { id: 'g42-ai', name: 'G42', category: 'Global AI', aliases: ['g42', 'g42 ai', 'group 42', 'g42 healthcare', 'g42 cloud uae'], keywords: ['uae artificial intelligence', 'sovereign ai uae', 'abu dhabi ai', 'g42 microsoft partnership', 'llm arabic'], ikerScore: 84 },
+  { id: 'presight-ai', name: 'Presight AI', category: 'Global AI', aliases: ['presight', 'presight ai', 'presight abu dhabi'], keywords: ['surveillance ai uae', 'smart city analytics uae', 'crime prediction ai', 'citywide surveillance analytics'], ikerScore: 75 },
+  { id: 'stc-saudi', name: 'Saudi Telecom (STC)', category: 'Global Cybersecurity', aliases: ['stc', 'saudi telecom', 'stc cybersecurity', 'help ag'], keywords: ['saudi 5g', 'saudi telecom security', 'cybersecurity saudi', 'neom connectivity', 'saudi cloud'], ikerScore: 76 },
+  { id: 'aramco-digital', name: 'Aramco Digital', category: 'Energy Intelligence', aliases: ['aramco digital', 'saudi aramco digital', 'aramco ai', 'iktva'], keywords: ['oil field ai', 'petrochemical ai', 'energy iot saudi', 'oilfield robotics', 'upstream digital twin'], ikerScore: 83 },
+  { id: 'wiz-cloud', name: 'Wiz', category: 'Global Cybersecurity', aliases: ['wiz', 'wiz cloud security', 'wiz inc', 'wiz cnapp'], keywords: ['cloud security posture', 'cnapp platform', 'cloud vulnerability', 'agentless security', 'cloud native security'], ikerScore: 89 },
+  { id: 'sygnia-cyber', name: 'Sygnia', category: 'Global Cybersecurity', aliases: ['sygnia', 'sygnia cyber', 'sygnia incident response'], keywords: ['cyber incident response', 'nation state attack response', 'threat hunting', 'red team cyber'], ikerScore: 78 },
+  { id: 'cognyte', name: 'Cognyte', category: 'Global Cybersecurity', aliases: ['cognyte', 'cognyte software', 'verint security division'], keywords: ['osint platform', 'intelligence analytics', 'crime analytics', 'investigative analytics'], ikerScore: 77 },
+  { id: 'imi-systems', name: 'IMI Systems', category: 'Global Defense', aliases: ['imi systems', 'elbit imi', 'israel military industries'], keywords: ['artillery system israel', 'mortar system', 'infantry weapon israel', 'active protection system'], ikerScore: 79 },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SOUTHEAST ASIA — Singapore, Vietnam, Indonesia, Thailand, Malaysia
+  // ══════════════════════════════════════════════════════════════════════
+
+  { id: 'sea-group', name: 'Sea Group', category: 'Global Supply Chain', aliases: ['sea group', 'sea limited', 'shopee', 'garena', 'seamoney'], keywords: ['southeast asia ecommerce', 'digital payments sea', 'logistics southeast asia', 'shopee logistics'], ikerScore: 80 },
+  { id: 'grab-holdings', name: 'Grab', category: 'Global Supply Chain', aliases: ['grab', 'grab holdings', 'grabfood', 'grabexpress logistics'], keywords: ['southeast asia delivery', 'last mile sea', 'ride hailing logistics', 'super app logistics'], ikerScore: 78 },
+  { id: 'singtel', name: 'Singtel', category: 'Global Cybersecurity', aliases: ['singtel', 'singapore telecom', 'trustwave singtel', 'ncs singtel'], keywords: ['singapore 5g security', 'managed security services asia', 'telecom cybersecurity apac', 'singtel optus'], ikerScore: 76 },
+  { id: 'st-engineering', name: 'ST Engineering', category: 'Global Defense', aliases: ['st engineering', 'singapore technologies engineering', 'stee', 'vie aerospace'], keywords: ['singapore defense contractor', 'satellite communication singapore', 'urban solutions', 'autonomous vehicle singapore', 'military vehicle'], ikerScore: 81 },
+  { id: 'dsta-singapore', name: 'DSTA Singapore', category: 'Global Defense', aliases: ['dsta', 'defence science technology agency', 'singapore defence'], keywords: ['singapore defense procurement', 'rsaf technology', 'singapore armed forces tech', 'naval defense singapore'], ikerScore: 73 },
+  { id: 'viettel-cyber', name: 'Viettel Cybersecurity', category: 'Global Cybersecurity', aliases: ['viettel', 'viettel cyber', 'vcslab', 'viettel cybersecurity'], keywords: ['vietnam cybersecurity', 'southeast asia threat intel', 'vietnamese apt', 'viettel pentest'], ikerScore: 70 },
+  { id: 'myeg-services', name: 'MyEG', category: 'Enterprise', aliases: ['myeg', 'myeg services', 'malaysia egovernment'], keywords: ['malaysia digital government', 'egovernment services', 'digital id malaysia', 'blockchain government asia'], ikerScore: 65 },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SOUTH AMERICA — Brazil, Colombia, Chile, Argentina
+  // ══════════════════════════════════════════════════════════════════════
+
+  { id: 'embraer-defense', name: 'Embraer Defense', category: 'Global Defense', aliases: ['embraer', 'embraer defense', 'embraer security', 'embraer kc390'], keywords: ['brazil military aircraft', 'kc390 tanker', 'a-29 super tucano', 'defense aviation brazil', 'eve evtol'], ikerScore: 83 },
+  { id: 'totvs', name: 'TOTVS', category: 'Enterprise', aliases: ['totvs', 'totvs brazil', 'rm totvs', 'protheus totvs'], keywords: ['brazil erp', 'latin america enterprise software', 'smb software brazil', 'fluig platform'], ikerScore: 72 },
+  { id: 'weg-automation', name: 'WEG', category: 'Industrial Automation', aliases: ['weg', 'weg sa', 'weg electric', 'weg automation'], keywords: ['electric motor brazil', 'industrial automation brazil', 'energy efficiency motor', 'weg drives'], ikerScore: 75 },
+  { id: 'stefanini-group', name: 'Stefanini', category: 'Enterprise', aliases: ['stefanini', 'stefanini group', 'stefanini it'], keywords: ['it services latam', 'digital transformation brazil', 'managed services latin america', 'stefanini ai'], ikerScore: 70 },
+  { id: 'lulo-bank', name: 'Rappi', category: 'Global Supply Chain', aliases: ['rappi', 'rappi delivery', 'rappi colombia'], keywords: ['latin america delivery', 'last mile latam', 'quick commerce colombia', 'rappi drone delivery'], ikerScore: 68 },
+  { id: 'mercadolibre-tech', name: 'MercadoLibre', category: 'Global Supply Chain', aliases: ['mercadolibre', 'meli', 'mercado libre', 'mercadopago', 'mercado envios'], keywords: ['latam logistics', 'latin america fulfillment', 'ecommerce brazil argentina', 'mercadopago fintech'], ikerScore: 82 },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // EASTERN EUROPE — Poland, Czech Republic, Romania, Baltic States
+  // ══════════════════════════════════════════════════════════════════════
+
+  { id: 'pgz-poland', name: 'Polska Grupa Zbrojeniowa (PGZ)', category: 'Global Defense', aliases: ['pgz', 'polska grupa zbrojeniowa', 'pzl mielec', 'poland defense'], keywords: ['poland defense industry', 'nato eastern flank', 'k2 tank poland', 'homar rocket artillery poland', 'polish military'], ikerScore: 78 },
+  { id: 'cd-projekt', name: 'CD Projekt', category: 'Enterprise', aliases: ['cd projekt', 'cdpr', 'cd projekt red', 'cyberpunk 2077 dev'], keywords: ['poland game engine', 'redam engine', 'simulation technology', 'virtual world engine'], ikerScore: 68 },
+  { id: 'asseco-group', name: 'Asseco', category: 'Enterprise', aliases: ['asseco', 'asseco poland', 'asseco group', 'asseco solutions'], keywords: ['eastern europe banking software', 'government it poland', 'healthcare it poland', 'asseco ecommerce'], ikerScore: 71 },
+  { id: 'eset-security', name: 'ESET', category: 'Global Cybersecurity', aliases: ['eset', 'eset security', 'nod32', 'eset antivirus', 'eset endpoint'], keywords: ['endpoint security europe', 'antivirus eastern europe', 'threat intelligence eset', 'eset apt reports'], ikerScore: 79 },
+  { id: 'cgi-estonia', name: 'Cybernetica', category: 'Global Cybersecurity', aliases: ['cybernetica', 'cybernetica estonia', 'x-tee', 'estonian data exchange'], keywords: ['estonian digital government', 'x-road data exchange', 'e-estonia', 'blockchain government estonia'], ikerScore: 74 },
+  { id: 'bit-sentinel', name: 'Bit Sentinel', category: 'Global Cybersecurity', aliases: ['bit sentinel', 'bit sentinel romania', 'cybersecurity romania'], keywords: ['romanian cybersecurity', 'eastern europe threat', 'pentest romania', 'soc eastern europe'], ikerScore: 66 },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // INDIA — Expanded coverage
+  // ══════════════════════════════════════════════════════════════════════
+
+  { id: 'hal-india', name: 'Hindustan Aeronautics (HAL)', category: 'Global Defense', aliases: ['hal', 'hindustan aeronautics', 'hal india', 'tejas fighter', 'htpb hal'], keywords: ['india military aircraft', 'tejas fighter jet', 'lca tejas', 'dhruv helicopter', 'india defense manufacturing'], ikerScore: 80 },
+  { id: 'drdo-india', name: 'DRDO', category: 'Global Defense', aliases: ['drdo', 'defence research development organisation', 'india defence research'], keywords: ['india missile program', 'akash missile', 'brahmos drdo', 'india defense research', 'india hypersonic'], ikerScore: 79 },
+  { id: 'tata-advanced-systems', name: 'Tata Advanced Systems', category: 'Global Defense', aliases: ['tata advanced systems', 'tasl', 'tata aerospace defense', 'tata sikorsky'], keywords: ['india aerospace manufacturing', 'ch47 india', 'aerostructures india', 'make in india defense'], ikerScore: 77 },
+  { id: 'ideaforge-drones', name: 'ideaForge', category: 'Drone & Autonomy', aliases: ['ideaforge', 'idea forge', 'netra drone', 'switch uav india'], keywords: ['india military drone', 'border surveillance drone india', 'quad rotor india', 'made in india uav'], ikerScore: 74 },
+  { id: 'zoho-corp', name: 'Zoho', category: 'Enterprise', aliases: ['zoho', 'zoho corp', 'zoho crm', 'zoho one', 'manageengine'], keywords: ['india saas', 'smb crm india', 'manageengine it management', 'zoho analytics', 'enterprise software india'], ikerScore: 78 },
+  { id: 'freshworks', name: 'Freshworks', category: 'Enterprise', aliases: ['freshworks', 'freshdesk', 'freshservice', 'freshsales'], keywords: ['customer support saas', 'it service management saas', 'crm saas india', 'freshservice itsm'], ikerScore: 76 },
+  { id: 'quickheal', name: 'Quick Heal', category: 'Global Cybersecurity', aliases: ['quick heal', 'quick heal technologies', 'seqrite', 'quick heal antivirus'], keywords: ['india endpoint security', 'smb cybersecurity india', 'seqrite enterprise', 'ransomware protection india'], ikerScore: 67 },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // ADDITIONAL KOREA & JAPAN
+  // ══════════════════════════════════════════════════════════════════════
+
+  { id: 'hanwha-ocean', name: 'Hanwha Ocean', category: 'Global Defense', aliases: ['hanwha ocean', 'hanwha daewoo', 'dsme korea', 'korea shipbuilding'], keywords: ['korea submarine', 'destroyer korea', 'naval shipbuilding korea', 'uss submarine export', 'ssn korea'], ikerScore: 80 },
+  { id: 'lig-nex1', name: 'LIG Nex1', category: 'Global Defense', aliases: ['lig nex1', 'lg innotek defense', 'korea guided missile', 'cheongung missile'], keywords: ['korea missile defense', 'cheongung sam system', 'korea radar', 'korea torpedo', 'guided weapon korea'], ikerScore: 78 },
+  { id: 'kakao-enterprise', name: 'Kakao Enterprise', category: 'Global AI', aliases: ['kakao', 'kakao enterprise', 'kakao ai', 'kakaotalk', 'kogpt'], keywords: ['korea llm', 'kogpt language model', 'kakao cloud ai', 'korea ai platform', 'koreanl nlp'], ikerScore: 75 },
+  { id: 'naver-cloud', name: 'NAVER Cloud', category: 'Global AI', aliases: ['naver', 'naver cloud', 'clova ai', 'hyperclova', 'naver search'], keywords: ['korea cloud computing', 'hyperclova llm', 'naver ai research', 'korean nlp ai', 'clova studio'], ikerScore: 77 },
+  { id: 'kawasaki-defense', name: 'Kawasaki Defense', category: 'Global Defense', aliases: ['kawasaki', 'kawasaki defense', 'kawasaki heavy industries defense', 'p-1 patrol'], keywords: ['japan submarine', 'p1 maritime patrol japan', 'japan military shipbuilding', 'kawasaki aerospace defense'], ikerScore: 79 },
+  { id: 'subaru-defense', name: 'Subaru Corporation Defense', category: 'Global Defense', aliases: ['subaru defense', 'fuji heavy industries', 'subaru t-7', 'subaru uh60'], keywords: ['japan trainer aircraft', 'japan helicopter', 'fuji heavy defense', 'uh60 japan license'], ikerScore: 72 },
+  { id: 'nec-defense', name: 'NEC Defense', category: 'Global Defense', aliases: ['nec', 'nec corporation defense', 'nec facial recognition', 'nec c2 systems'], keywords: ['japan c2 systems', 'air defense command japan', 'nec biometric', 'nec defense it', 'radar nec'], ikerScore: 78 },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // AFRICA & GLOBAL SOUTH
+  // ══════════════════════════════════════════════════════════════════════
+
+  { id: 'flutterwave', name: 'Flutterwave', category: 'Enterprise', aliases: ['flutterwave', 'flutterwave africa', 'flutterwave payments'], keywords: ['africa payments infrastructure', 'fintech africa', 'cross border payments africa', 'nigeria fintech'], ikerScore: 72 },
+  { id: 'andela-talent', name: 'Andela', category: 'Enterprise', aliases: ['andela', 'andela africa', 'andela developers'], keywords: ['africa software talent', 'remote tech talent', 'distributed engineering africa'], ikerScore: 65 },
+  { id: 'denel-aerospace', name: 'Denel', category: 'Global Defense', aliases: ['denel', 'denel south africa', 'denel aerospace', 'rooivalk helicopter'], keywords: ['south africa defense', 'rooivalk attack helicopter', 'umkhonto missile south africa', 'africa arms manufacturer'], ikerScore: 70 },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // ADDITIONAL US — Defense & AI startups
+  // ══════════════════════════════════════════════════════════════════════
+
+  { id: 'joby-aviation', name: 'Joby Aviation', category: 'Drone & Autonomy', aliases: ['joby', 'joby aviation', 'joby evtol', 'joby air taxi'], keywords: ['evtol air taxi', 'urban air mobility', 'electric vtol', 'nasa uam', 'army evtol joby'], ikerScore: 79 },
+  { id: 'archer-aviation', name: 'Archer Aviation', category: 'Drone & Autonomy', aliases: ['archer aviation', 'archer evtol', 'midnight aircraft'], keywords: ['electric air taxi', 'evtol certification', 'urban air mobility archer', 'usaf agility prime'], ikerScore: 76 },
+  { id: 'hermeus', name: 'Hermeus', category: 'Global Defense', aliases: ['hermeus', 'hermeus aerospace', 'quarterhorse hypersonic'], keywords: ['hypersonic aircraft', 'mach 5 aircraft', 'turbine based combined cycle', 'hypersonic commercial'], ikerScore: 80 },
+  { id: 'overland-ai', name: 'Overland AI', category: 'Drone & Autonomy', aliases: ['overland ai', 'overland autonomous vehicle'], keywords: ['autonomous ground vehicle military', 'uncrewed ground vehicle', 'army autonomous logistics', 'ugv navigation ai'], ikerScore: 77 },
+  { id: 'quantum-systems', name: 'Quantum Systems', category: 'Drone & Autonomy', aliases: ['quantum systems', 'quantum-systems gmbh', 'vector uav'], keywords: ['vtol fixed wing drone', 'isr drone germany', 'trinity pro drone', 'autonomous uas recon'], ikerScore: 76 },
+  { id: 'leidos-health', name: 'Leidos', category: 'Defense Tech', aliases: ['leidos', 'leidos holdings', 'leidos health', 'leidos defense'], keywords: ['health it federal', 'dha contract leidos', 'veterans it leidos', 'enterprise it dod leidos', 'c2 systems leidos'], ikerScore: 86 },
+  { id: 'sarcos-robotics', name: 'Sarcos Technology', category: 'Global Robotics', aliases: ['sarcos', 'sarcos robotics', 'guardian xo', 'sarcos exoskeleton'], keywords: ['industrial exoskeleton', 'powered exosuit', 'guardian xo exoskeleton', 'human augmentation industrial'], ikerScore: 74 },
+  { id: 'apptronik', name: 'Apptronik', category: 'Global Robotics', aliases: ['apptronik', 'apollo robot', 'apptronik humanoid'], keywords: ['humanoid robot logistics', 'apollo humanoid robot', 'nasa humanoid robot', 'bipedal robot manufacturing'], ikerScore: 78 },
+  { id: 'gecko-robotics', name: 'Gecko Robotics', category: 'Global Robotics', aliases: ['gecko robotics', 'toka robot', 'inspection robot gecko'], keywords: ['infrastructure inspection robot', 'tank inspection robot', 'power plant inspection robot', 'military infrastructure inspection'], ikerScore: 75 },
+];
+
+// ─── Merge all entity registries ─────────────────────────────────────────────
+// 1. El Paso ecosystem vendors (defense, cyber, health, border, etc.)
 NXT_ENTITIES.push(...NXT_ENTITIES_ELPASO);
+// 2. Global technology companies (Siemens, Boston Dynamics, CrowdStrike, etc.)
+NXT_ENTITIES.push(...GLOBAL_TECH_ENTITIES);
+// 3. Extended global registry (500+ additional companies across 30+ countries)
+NXT_ENTITIES.push(...EXTENDED_GLOBAL_ENTITIES);
 
 // ─── Lookups ──────────────────────────────────────────────────────────────────
 

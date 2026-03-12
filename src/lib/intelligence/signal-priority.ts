@@ -75,6 +75,84 @@ export type PrioritizedSignal = {
   industriesImpacted: string[];
 };
 
+/* ------------------------------------------------------------------ */
+/*  Text-Based P0-P3 Classifier                                       */
+/*  Classifies ANY signal text into disruption priority level.         */
+/* ------------------------------------------------------------------ */
+
+export type TextPriorityClassification = {
+  priority: PriorityTier;
+  reason: string;
+  urgency: number; // 0-100
+};
+
+const P0_PATTERNS: Array<{ re: RegExp; reason: string }> = [
+  { re: /\b(world\s+war|nuclear\s+(strike|war|attack))\b/i, reason: 'Nuclear/global conflict' },
+  { re: /\bglobal\s+(pandemic|financial\s+crisis|recession|collapse)\b/i, reason: 'Global systemic crisis' },
+  { re: /\bglobal\s+(chip|semiconductor)\s+(shortage|crisis)\b/i, reason: 'Global chip crisis' },
+  { re: /\b(TSMC|ASML)\b.*\b(destroy|attack|shut\s*down|seized)\b/i, reason: 'Critical semiconductor infrastructure threat' },
+];
+
+const P1_PATTERNS: Array<{ re: RegExp; reason: string }> = [
+  { re: /\b(billion|B)\b.*\b(acquisition|merger|takeover)\b/i, reason: 'Billion-dollar M&A' },
+  { re: /\bsanction\b.*\b(sweeping|comprehensive|new|major)\b/i, reason: 'Major sanctions' },
+  { re: /\bexport\s+(ban|control)\b.*\b(chip|semiconductor|AI|quantum)\b/i, reason: 'Technology export ban' },
+  { re: /\b(market|stock)\s+(crash|plunge|collapse)\b/i, reason: 'Market crash' },
+  { re: /\bcyber\s*attack\b.*\b(critical|infrastructure|pipeline|grid)\b/i, reason: 'Critical infrastructure attack' },
+  { re: /\b(earthquake|tsunami)\b.*\b(magnitude\s+[789]|devastating)\b/i, reason: 'Major natural disaster' },
+  { re: /\b(breakthrough|first[- ]ever|world[- ]record)\b.*\b(quantum|fusion|superconductor)\b/i, reason: 'Scientific breakthrough' },
+  { re: /\b(war|invasion)\b.*\b(escalat|spread|widen)\b/i, reason: 'Conflict escalation' },
+];
+
+const P2_PATTERNS: Array<{ re: RegExp; reason: string }> = [
+  { re: /\braises?\s+\$?\d+\s*(million|M|billion|B)\b/i, reason: 'Significant funding' },
+  { re: /\bseries\s+[a-d]\b/i, reason: 'Startup funding stage' },
+  { re: /\bpatent\s+(grant|award|fil)\b/i, reason: 'Patent activity' },
+  { re: /\bregulat(ion|ory)\b.*\b(new|proposed|passed)\b/i, reason: 'New regulation' },
+  { re: /\b(contract|deal)\b.*\b(million|M|billion|B)\b/i, reason: 'Major contract' },
+  { re: /\bnew\s+(factory|fab|plant|facility)\b/i, reason: 'Manufacturing expansion' },
+  { re: /\bclinical\s+trial\b.*\b(success|positive|phase\s+3)\b/i, reason: 'Positive clinical trial' },
+];
+
+/** Classify any text into P0-P3 priority using regex pattern matching */
+export function classifyTextPriority(text: string): TextPriorityClassification {
+  for (const { re, reason } of P0_PATTERNS) {
+    if (re.test(text)) return { priority: 'P0-CRITICAL', reason, urgency: 95 };
+  }
+  for (const { re, reason } of P1_PATTERNS) {
+    if (re.test(text)) return { priority: 'P1-HIGH', reason, urgency: 75 };
+  }
+  for (const { re, reason } of P2_PATTERNS) {
+    if (re.test(text)) return { priority: 'P2-MEDIUM', reason, urgency: 50 };
+  }
+  return { priority: 'P3-LOW', reason: 'Early signal', urgency: 25 };
+}
+
+/** Batch classify signals by their text content */
+export function batchClassifyPriority(
+  signals: Array<{ id: string; title: string; evidence?: string }>,
+): Map<string, TextPriorityClassification> {
+  const results = new Map<string, TextPriorityClassification>();
+  for (const sig of signals) {
+    results.set(sig.id, classifyTextPriority(`${sig.title} ${sig.evidence ?? ''}`));
+  }
+  return results;
+}
+
+/** Returns priority label for display */
+export function getPriorityLabel(tier: PriorityTier): string {
+  switch (tier) {
+    case 'P0-CRITICAL': return 'GLOBAL DISRUPTION';
+    case 'P1-HIGH': return 'INDUSTRY DISRUPTION';
+    case 'P2-MEDIUM': return 'EMERGING TREND';
+    case 'P3-LOW': return 'EARLY SIGNAL';
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Hardcoded Seed Signals (static fallback)                          */
+/* ------------------------------------------------------------------ */
+
 export const PRIORITIZED_SIGNALS: PrioritizedSignal[] = [
   {
     id: 'sig-001',

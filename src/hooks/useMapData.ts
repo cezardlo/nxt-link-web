@@ -14,6 +14,17 @@ import type {
 import type { CrimeFeedItem } from '@/components/CrimeNewsOverlay';
 import type { PortWaitTime } from '@/app/api/live/border-wait/route';
 import { ALL_DISRUPTIONS } from '@/lib/data/innovation-dashboard-data';
+import { COUNTRY_TECH_MAP } from '@/lib/data/country-tech-map';
+
+export type IntelSignalMapPoint = {
+  id: string;
+  lat: number;
+  lon: number;
+  title: string;
+  signal_type: string;
+  country_code: string;
+  importance: number;
+};
 
 // ── API response shapes ────────────────────────────────────────────────────
 type FlightApiResponse       = { ok: boolean; aircraft?: FlightPoint[] };
@@ -92,6 +103,8 @@ export interface UseMapDataReturn {
   contracts: ContractPoint[];
   samBusinesses: SamBusinessPoint[];
   disruptionPoints: DisruptionMapPoint[];
+  countrySignalCounts: Record<string, number>;
+  intelSignalPoints: IntelSignalMapPoint[];
   dataFreshness: Record<string, number>;
   fetchErrors: Record<string, boolean>;
 }
@@ -105,6 +118,8 @@ export function useMapData(layers: LayerState): UseMapDataReturn {
   const [crimeHotspots, setCrimeHotspots] = useState<CrimeHotspot[]>([]);
   const [contracts, setContracts] = useState<ContractPoint[]>([]);
   const [samBusinesses, setSamBusinesses] = useState<SamBusinessPoint[]>([]);
+  const [countrySignalCounts, setCountrySignalCounts] = useState<Record<string, number>>({});
+  const [intelSignalPoints, setIntelSignalPoints] = useState<IntelSignalMapPoint[]>([]);
   const [dataFreshness, setDataFreshness] = useState<Record<string, number>>({});
   const [fetchErrors, setFetchErrors] = useState<Record<string, boolean>>({});
 
@@ -322,6 +337,135 @@ export function useMapData(layers: LayerState): UseMapDataReturn {
     return () => clearInterval(id);
   }, [layers.samBusinesses, markFresh, markError]);
 
+  // ── Country signal heat map — maps intel signals to ISO country codes ──────
+  // Entity name → ISO country code mapping for major global companies
+  const ENTITY_COUNTRY_MAP: Record<string, string> = {
+    // US
+    'lockheed martin': 'US', 'raytheon': 'US', 'boeing': 'US', 'northrop grumman': 'US',
+    'general dynamics': 'US', 'l3harris': 'US', 'anduril': 'US', 'shield ai': 'US',
+    'palantir': 'US', 'crowdstrike': 'US', 'palo alto networks': 'US', 'nvidia': 'US',
+    'intel': 'US', 'amd': 'US', 'qualcomm': 'US', 'spacex': 'US', 'google': 'US',
+    'microsoft': 'US', 'amazon': 'US', 'apple': 'US', 'meta': 'US', 'openai': 'US',
+    'anthropic': 'US', 'boston dynamics': 'US', 'skydio': 'US', 'scale ai': 'US',
+    'c3.ai': 'US', 'leidos': 'US', 'saic': 'US', 'booz allen': 'US', 'caci': 'US',
+    // Germany
+    'siemens': 'DE', 'bosch': 'DE', 'sap': 'DE', 'kuka': 'DE', 'rheinmetall': 'DE',
+    'diehl': 'DE', 'hensoldt': 'DE', 'thyssenkrupp': 'DE', 'airbus': 'DE',
+    // Israel
+    'elbit': 'IL', 'rafael': 'IL', 'iai': 'IL', 'cyberark': 'IL', 'check point': 'IL',
+    'wiz': 'IL', 'cellebrite': 'IL', 'checkpoint': 'IL',
+    // Japan
+    'keyence': 'JP', 'fanuc': 'JP', 'yaskawa': 'JP', 'honda': 'JP', 'sony': 'JP',
+    'mitsubishi': 'JP', 'kawasaki': 'JP', 'nec': 'JP', 'fujitsu': 'JP',
+    // South Korea
+    'samsung': 'KR', 'sk hynix': 'KR', 'hanwha': 'KR', 'hyundai': 'KR', 'lg': 'KR',
+    // China
+    'dji': 'CN', 'huawei': 'CN', 'hikvision': 'CN', 'sensetime': 'CN', 'baidu': 'CN',
+    'alibaba': 'CN', 'tencent': 'CN',
+    // Taiwan
+    'tsmc': 'TW', 'foxconn': 'TW', 'mediatek': 'TW', 'asus': 'TW',
+    // Netherlands
+    'asml': 'NL', 'philips': 'NL', 'nxp': 'NL',
+    // UK
+    'bae systems': 'GB', 'rolls-royce': 'GB', 'arm': 'GB', 'qinetiq': 'GB', 'darktrace': 'GB',
+    // France
+    'thales': 'FR', 'safran': 'FR', 'dassault': 'FR', 'mbda': 'FR',
+    // Sweden / Switzerland
+    'saab': 'SE', 'saab ab': 'SE', 'ericsson': 'SE', 'volvo': 'SE',
+    'abb': 'CH',
+    // Italy
+    'leonardo': 'IT', 'finmeccanica': 'IT', 'agustawestland': 'IT',
+    // Spain
+    'indra': 'ES', 'navantia': 'ES',
+    // Poland
+    'pge': 'PL', 'pzl': 'PL',
+    // Australia
+    'asx': 'AU', 'bae systems australia': 'AU', 'austal': 'AU',
+    // India
+    'tata': 'IN', 'infosys': 'IN', 'wipro': 'IN', 'hindustan aeronautics': 'IN',
+    'hal': 'IN', 'drdo': 'IN', 'mahindra defence': 'IN',
+    // Brazil
+    'embraer': 'BR', 'embraer defense': 'BR',
+    // UAE
+    'edge group': 'AE', 'calidus': 'AE',
+    // Norway
+    'kongsberg': 'NO', 'nammo': 'NO',
+    // Canada
+    'cae': 'CA', 'magellan aerospace': 'CA', 'l3 mps': 'CA',
+    // Singapore
+    'st engineering': 'SG', 'dsta': 'SG',
+    // Turkey
+    'baykar': 'TR', 'aselsan': 'TR', 'tusas': 'TR', 'roketsan': 'TR',
+    // Finland
+    'nokia': 'FI', 'patria': 'FI',
+    // Czech Republic
+    'tatra': 'CZ',
+  };
+
+  useEffect(() => {
+    async function fetchCountrySignals() {
+      try {
+        // Always fetch intel signals (needed for signal dots layer)
+        const res = await fetch('/api/intel-signals');
+        if (!res.ok) return;
+        const data = await res.json() as {
+          signals?: Array<{ company?: string; title?: string; signal_type?: string; importance?: number }>;
+        };
+        const signals = data.signals ?? [];
+
+        // Build country → coordinate lookup
+        const countryCoords: Record<string, [number, number]> = {};
+        for (const c of COUNTRY_TECH_MAP) countryCoords[c.code] = [c.lat, c.lon];
+
+        // Map signals to countries + build signal map points
+        const counts: Record<string, number> = {};
+        const sigPoints: IntelSignalMapPoint[] = [];
+
+        signals.forEach((sig, idx) => {
+          const text = ((sig.company ?? '') + ' ' + (sig.title ?? '')).toLowerCase();
+          let code: string | null = null;
+          for (const [entity, iso] of Object.entries(ENTITY_COUNTRY_MAP)) {
+            if (text.includes(entity)) { code = iso; break; }
+          }
+          if (!code) return;
+          counts[code] = (counts[code] ?? 0) + 1;
+
+          const base = countryCoords[code];
+          if (!base) return;
+          // Deterministic jitter from index
+          const seed = idx * 2654435761;
+          const jLat = (((seed & 0xff) / 255) - 0.5) * 10;
+          const jLon = ((((seed >> 8) & 0xff) / 255) - 0.5) * 14;
+          sigPoints.push({
+            id: `sig-${idx}`,
+            lat: base[0] + jLat,
+            lon: base[1] + jLon,
+            title: sig.title ?? '',
+            signal_type: sig.signal_type ?? 'general',
+            country_code: code,
+            importance: sig.importance ?? 0.5,
+          });
+        });
+
+        setIntelSignalPoints(sigPoints);
+
+        // Country heat: prefer dedicated endpoint, fallback to derived counts
+        const caRes = await fetch('/api/country-activity');
+        if (caRes.ok) {
+          const caData = await caRes.json() as { ok: boolean; counts?: Record<string, number> };
+          if (caData.ok && caData.counts && Object.keys(caData.counts).length > 0) {
+            setCountrySignalCounts(caData.counts);
+            return;
+          }
+        }
+        if (Object.keys(counts).length > 0) setCountrySignalCounts(counts);
+      } catch { /* silent */ }
+    }
+    void fetchCountrySignals();
+    const id = setInterval(fetchCountrySignals, 300_000); // refresh every 5 min
+    return () => clearInterval(id);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   return {
     flights,
     seismicEvents,
@@ -332,6 +476,8 @@ export function useMapData(layers: LayerState): UseMapDataReturn {
     contracts,
     samBusinesses,
     disruptionPoints,
+    countrySignalCounts,
+    intelSignalPoints,
     dataFreshness,
     fetchErrors,
   };

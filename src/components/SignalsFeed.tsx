@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { EL_PASO_VENDORS } from '@/lib/data/el-paso-vendors';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -317,12 +317,70 @@ function SummaryBar({ signals }: { signals: SignalItem[] }) {
   );
 }
 
+// ─── API signal → SignalItem adapter ─────────────────────────────────────────
+
+type ApiSignal = {
+  title: string;
+  signal_type: string;
+  company?: string | null;
+  confidence?: number;
+  importance?: number;
+  discovered_at?: string;
+};
+
+const API_TYPE_MAP: Record<string, SignalItemType> = {
+  patent_filing:      'patent_filing',
+  research_paper:     'patent_filing',
+  funding_round:      'funding',
+  merger_acquisition: 'funding',
+  contract_award:     'contract_award',
+  contract_alert:     'contract_award',
+  product_launch:     'partnership',
+  facility_expansion: 'expansion',
+  hiring_signal:      'expansion',
+  regulatory_action:  'risk',
+  case_study:         'partnership',
+};
+
+function adaptApiSignals(apiSignals: ApiSignal[]): SignalItem[] {
+  return apiSignals.map((s, i) => ({
+    id: `live-${i}-${s.title.slice(0, 10)}`,
+    type: API_TYPE_MAP[s.signal_type] ?? 'contract_award',
+    title: s.title,
+    vendor: s.company ?? undefined,
+    confidence: s.confidence ?? s.importance ?? 0.7,
+    timestamp: s.discovered_at ?? new Date().toISOString(),
+    category: s.signal_type,
+  }));
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function SignalsFeed() {
   const [activeFilter, setActiveFilter] = useState<FilterChip>('ALL');
+  const [liveSignals, setLiveSignals] = useState<SignalItem[] | null>(null);
+  const [isLive, setIsLive] = useState(false);
 
-  const allSignals = useMemo(() => buildMockSignals(), []);
+  useEffect(() => {
+    async function fetchLive() {
+      try {
+        const res = await fetch('/api/intel-signals');
+        if (!res.ok) return;
+        const data = await res.json() as { signals?: ApiSignal[]; source?: string };
+        const signals = data.signals ?? [];
+        if (signals.length >= 5) {
+          setLiveSignals(adaptApiSignals(signals));
+          setIsLive(data.source === 'supabase');
+        }
+      } catch { /* fall through to mock */ }
+    }
+    void fetchLive();
+    const id = setInterval(fetchLive, 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const mockSignals = useMemo(() => buildMockSignals(), []);
+  const allSignals = liveSignals ?? mockSignals;
 
   const filtered = useMemo(() => {
     const types = FILTER_TO_TYPES[activeFilter];
@@ -353,19 +411,35 @@ export function SignalsFeed() {
             </span>
           </div>
           <span className="font-mono text-[7px] text-white/20 tracking-[0.05em] pl-2.5">
-            SIMULATED FROM VENDOR REGISTRY
+            {isLive ? 'LIVE FROM SUPABASE BRAIN' : liveSignals ? 'CACHED INTEL SIGNALS' : 'SIMULATED FROM VENDOR REGISTRY'}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <span className="font-mono text-[8px] text-white/18 tabular-nums">
             {filtered.length}/{allSignals.length}
           </span>
-          <span
-            className="font-mono text-[7px] px-1.5 py-px rounded-sm tracking-wider"
-            style={{ color: '#ffb800bb', background: '#ffb80015', border: '1px solid #ffb80025' }}
-          >
-            SIM
-          </span>
+          {isLive ? (
+            <span
+              className="font-mono text-[7px] px-1.5 py-px rounded-sm tracking-wider"
+              style={{ color: '#00ff88bb', background: '#00ff8815', border: '1px solid #00ff8825' }}
+            >
+              LIVE
+            </span>
+          ) : liveSignals ? (
+            <span
+              className="font-mono text-[7px] px-1.5 py-px rounded-sm tracking-wider"
+              style={{ color: '#00d4ffbb', background: '#00d4ff15', border: '1px solid #00d4ff25' }}
+            >
+              CACHED
+            </span>
+          ) : (
+            <span
+              className="font-mono text-[7px] px-1.5 py-px rounded-sm tracking-wider"
+              style={{ color: '#ffb800bb', background: '#ffb80015', border: '1px solid #ffb80025' }}
+            >
+              SIM
+            </span>
+          )}
         </div>
       </div>
 

@@ -1,32 +1,56 @@
-# Free external cron — triggers NXT LINK agent pipeline
-# GitHub Actions is free for public repos (2000 min/month for private)
-# This replaces the Vercel Hobby cron limitation (1 daily max)
+# NXT LINK — Agent Pipeline Cron
+# Runs the full intelligence pipeline every 6 hours.
+# Free on GitHub Actions (4×/day = 8 min/day, well under 2000 min/month limit).
+#
+# Required GitHub Secrets:
+#   SITE_URL       — https://www.nxtlinktech.com
+#   CRON_SECRET    — Matches CRON_SECRET env var in Vercel
 
 name: Agent Pipeline Cron
 
 on:
   schedule:
-    # Run every 6 hours (4 times/day) — free tier friendly
+    # Every 6 hours: midnight, 6am, noon, 6pm UTC
     - cron: '0 0,6,12,18 * * *'
-  workflow_dispatch: # Manual trigger from GitHub UI
+  workflow_dispatch:
 
 jobs:
   run-agents:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 5
+
     steps:
-      - name: Trigger agent cron
+      - name: Trigger agent cron pipeline
+        id: cron
         run: |
-          curl -s -o /dev/null -w "%{http_code}" \
-            "${{ secrets.SITE_URL }}/api/agents/cron" \
-            -H "User-Agent: NXTLink-GitHubActions/1.0"
+          STATUS=$(curl -s -o /tmp/cron_response.txt -w '%{http_code}' \
+            "$SITE_URL/api/agents/cron" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H "User-Agent: NXTLink-GitHubActions/1.0")
+          echo "cron_status=$STATUS" >> "$GITHUB_OUTPUT"
+          echo "Cron pipeline: HTTP $STATUS"
+          cat /tmp/cron_response.txt | head -200
+          if [ "$STATUS" -ge 400 ]; then
+            echo "::error::Agent cron returned HTTP $STATUS"
+            exit 1
+          fi
         env:
           SITE_URL: ${{ secrets.SITE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
 
       - name: Trigger insight generation
         run: |
-          curl -s -o /dev/null -w "%{http_code}" \
-            "${{ secrets.SITE_URL }}/api/insights" \
-            -H "User-Agent: NXTLink-GitHubActions/1.0"
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
+            "$SITE_URL/api/insights" \
+            -H "User-Agent: NXTLink-GitHubActions/1.0")
+          echo "Insights: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::Insight generation returned HTTP $STATUS"; fi
         env:
           SITE_URL: ${{ secrets.SITE_URL }}
+
+      - name: Print summary
+        if: always()
+        run: |
+          echo "### NXT LINK Agent Pipeline" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Run time: $(date -u)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Status: ${{ steps.cron.outputs.cron_status }}" >> "$GITHUB_STEP_SUMMARY"

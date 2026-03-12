@@ -127,3 +127,37 @@ export {
   type ConnectedEntity,
   type IndustryEcosystem,
 } from './queries/knowledge-graph';
+
+export {
+  getMlPattern,
+  getMlPatternsByAgent,
+  setMlPattern,
+  loadAllPatterns,
+  deleteMlPattern,
+  type MlPatternRow,
+  type MlPatternUpsert,
+} from './queries/ml-patterns';
+
+export {
+  logPrediction,
+  recordOutcome,
+  getPredictionsReadyToMeasure,
+  getPredictionAccuracy,
+  type PredictionType,
+  type PredictionOutcomeRow,
+  type PredictionOutcomeInsert,
+} from './queries/prediction-outcomes';
+
+export {
+  updateCountryActivity,
+  getCountryActivity,
+  getCountrySignalCounts,
+  type CountryActivityRow,
+} from './queries/country-activity';
+
+export {
+  filterUnseen,
+  markUrlsSeen,
+  isUrlSeen,
+  getSeenUrlHashes,
+} from './queries/feed-dedup';

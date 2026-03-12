@@ -51,6 +51,51 @@ const CATEGORY_COLOR: Record<string, string> = {
   'Auto / Fleet':         '#737373',
 };
 
+// Extract root domain from URL for logo fetching
+function extractDomain(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url.startsWith('http') ? url : `https://${url}`);
+    return u.hostname.replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+}
+
+// Tiny company logo using Google's favicon service (no API key needed)
+function CompanyLogo({ url, name }: { url: string | null; name: string | null }) {
+  const domain = extractDomain(url);
+  const initials = (name ?? '?').slice(0, 2).toUpperCase();
+
+  if (!domain) {
+    return (
+      <div className="w-6 h-6 rounded-sm bg-white/[0.06] border border-white/[0.08] flex items-center justify-center shrink-0">
+        <span className="font-mono text-[7px] text-white/30">{initials}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-6 h-6 rounded-sm bg-white/[0.04] border border-white/[0.06] flex items-center justify-center shrink-0 overflow-hidden">
+      <img
+        src={`https://www.google.com/s2/favicons?sz=32&domain=${domain}`}
+        alt=""
+        width={16}
+        height={16}
+        className="w-4 h-4 object-contain"
+        onError={(e) => {
+          const target = e.currentTarget as HTMLImageElement;
+          target.style.display = 'none';
+          const parent = target.parentElement;
+          if (parent) {
+            parent.innerHTML = `<span class="font-mono text-[7px] text-white/30">${initials}</span>`;
+          }
+        }}
+      />
+    </div>
+  );
+}
+
 function categoryColor(cat: string | null): string {
   if (!cat) return '#6b7280';
   for (const [key, val] of Object.entries(CATEGORY_COLOR)) {
@@ -142,7 +187,8 @@ function VendorsContent() {
         setError(qErr.message);
       } else {
         const rows = (data as VendorRow[]) ?? [];
-        setVendors(rows.filter((r) => r.status?.trim().toLowerCase() === 'approved'));
+        const validStatuses = new Set(['active', 'approved']);
+        setVendors(rows.filter((r) => validStatuses.has(r.status?.trim().toLowerCase() ?? '')));
       }
       setLoading(false);
     }
@@ -373,6 +419,9 @@ function VendorsContent() {
                       className="w-1.5 h-1.5 rounded-full shrink-0"
                       style={{ backgroundColor: color, boxShadow: `0 0 6px ${color}aa` }}
                     />
+
+                    {/* Col 1b: company logo */}
+                    <CompanyLogo url={vendor.company_url} name={vendor.company_name} />
 
                     {/* Col 2: name + description */}
                     <div className="flex-1 min-w-0">

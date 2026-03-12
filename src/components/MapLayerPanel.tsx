@@ -23,6 +23,8 @@ const GROUPS: Group[] = [
     accent: '#00d4ff',
     layers: [
       { key: 'globalHubs',  label: 'TECH HUBS',   color: '#00d4ff' },
+      { key: 'globalTech',   label: 'COUNTRY TECH',   color: '#00ff88', subtitle: 'live heat map' },
+      { key: 'intelSignals', label: 'INTEL SIGNALS',  color: '#f97316', subtitle: 'live signal events' },
       { key: 'conferences', label: 'CONFERENCES', color: '#ffb800' },
     ],
   },

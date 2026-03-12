@@ -96,7 +96,7 @@ const AGENTS: AgentCard[] = [
   { id: 'signal',  name: 'SIGNAL ENGINE', status: 'active', lastRun: '2m ago',  runsToday: 144, detail: '6 detectors · Jaccard 0.3' },
   { id: 'vendor',  name: 'VENDOR INTEL',  status: 'active', lastRun: '14m ago', runsToday:  96, detail: '98 tracked entities' },
   { id: 'product', name: 'PRODUCT SCAN',  status: 'idle',   lastRun: '1h ago',  runsToday:  24, detail: 'Product database sync' },
-  { id: 'sources', name: 'SOURCE MGR',    status: 'active', lastRun: '5m ago',  runsToday: 192, detail: '73,526 indexed sources' },
+  { id: 'sources', name: 'SOURCE MGR',    status: 'active', lastRun: '5m ago',  runsToday: 192, detail: '200,000+ indexed sources' },
   { id: 'docs',    name: 'DOC PARSER',    status: 'idle',   lastRun: '3h ago',  runsToday:   8, detail: 'SAM + contract filings' },
 ];
 
@@ -482,6 +482,19 @@ function ActivityTimeline() {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
+// Agent endpoint map — which API route each agent triggers
+const AGENT_ENDPOINTS: Record<string, string> = {
+  feed:     '/api/feeds',
+  signal:   '/api/intel-signals',
+  vendor:   '/api/agents/vendor-discovery',
+  product:  '/api/agents/product-scanner',
+  sources:  '/api/agents/quality-sources',
+  docs:     '/api/agents/docs-sync',
+  cron:     '/api/agents/cron',
+  discover: '/api/agents/auto-discover',
+  enrich:   '/api/agents/enrich-entity',
+};
+
 export default function CommandCenterPage() {
   const [utcTime, setUtcTime]         = useState(formatUtc());
   const [localTime, setLocalTime]     = useState(formatLocal());
@@ -494,8 +507,11 @@ export default function CommandCenterPage() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_events]                      = useState<UpcomingEvent[]>(FALLBACK_EVENTS);
   const [feedCount, setFeedCount]     = useState(0);
+  const [agents, setAgents]           = useState<AgentCard[]>(AGENTS);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [pulsePhase, setPulsePhase]   = useState(0);
+  const [triggeringAgent, setTriggeringAgent] = useState<string | null>(null);
+  const [triggerResult, setTriggerResult]     = useState<{ agent: string; ok: boolean } | null>(null);
   const rafRef = useRef<number | null>(null);
   const startRef = useRef<number>(0);
 
@@ -522,9 +538,12 @@ export default function CommandCenterPage() {
   // ── Data fetch ───────────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
     try {
-      const [signalsRes, feedsRes] = await Promise.allSettled([
+      const [signalsRes, feedsRes, runsRes] = await Promise.allSettled([
         fetch('/api/intel-signals').then((r) => r.json()) as Promise<IntelSignalsResponse>,
         fetch('/api/feeds').then((r) => r.json()) as Promise<FeedsResponse>,
+        fetch('/api/agents/runs').then((r) => r.json()) as Promise<{
+          runs?: Array<{ agent_type: string; status: string; created_at: string; completed_at?: string }>;
+        }>,
       ]);
 
       if (signalsRes.status === 'fulfilled' && signalsRes.value.ok) {
@@ -559,6 +578,42 @@ export default function CommandCenterPage() {
         setFeedCount(feedsRes.value.all.length);
       }
 
+      // Wire real agent run data to agent cards
+      if (runsRes.status === 'fulfilled' && runsRes.value.runs && runsRes.value.runs.length > 0) {
+        const runs = runsRes.value.runs;
+        // Group by agent type, find most recent run per agent
+        const latestByType = new Map<string, { status: string; created_at: string }>();
+        for (const run of runs) {
+          const existing = latestByType.get(run.agent_type);
+          if (!existing || run.created_at > existing.created_at) {
+            latestByType.set(run.agent_type, run);
+          }
+        }
+        const runsToday = (agentType: string): number =>
+          runs.filter((r) => r.agent_type === agentType &&
+            new Date(r.created_at).toDateString() === new Date().toDateString()
+          ).length;
+        const timeAgo = (iso: string): string => {
+          const diffMs = Date.now() - new Date(iso).getTime();
+          const mins = Math.floor(diffMs / 60000);
+          if (mins < 1) return 'just now';
+          if (mins < 60) return `${mins}m ago`;
+          return `${Math.floor(mins / 60)}h ago`;
+        };
+        setAgents(prev => prev.map((card) => {
+          const run = latestByType.get(card.id);
+          if (!run) return card;
+          const status: AgentStatus = run.status === 'completed' ? 'active'
+            : run.status === 'failed' ? 'error' : 'idle';
+          return {
+            ...card,
+            status,
+            lastRun: timeAgo(run.created_at),
+            runsToday: runsToday(card.id),
+          };
+        }));
+      }
+
       setLastRefresh(new Date());
     } catch {
       // silently fall through to static data
@@ -570,6 +625,30 @@ export default function CommandCenterPage() {
     const id = setInterval(() => { void fetchData(); }, 60_000);
     return () => clearInterval(id);
   }, [fetchData]);
+
+  // ── Manual agent trigger ─────────────────────────────────────────────────────
+  const triggerAgent = useCallback(async (agentId: string) => {
+    const endpoint = AGENT_ENDPOINTS[agentId];
+    if (!endpoint || triggeringAgent) return;
+    setTriggeringAgent(agentId);
+    try {
+      const method = agentId === 'feed' || agentId === 'signal' ? 'GET' : 'POST';
+      const res = await fetch(endpoint, { method });
+      setTriggerResult({ agent: agentId, ok: res.ok });
+      if (res.ok) {
+        setAgents(prev => prev.map(a => a.id === agentId
+          ? { ...a, status: 'active', lastRun: 'just now' }
+          : a,
+        ));
+        void fetchData();
+      }
+    } catch {
+      setTriggerResult({ agent: agentId, ok: false });
+    } finally {
+      setTriggeringAgent(null);
+      setTimeout(() => setTriggerResult(null), 4000);
+    }
+  }, [triggeringAgent, fetchData]);
 
   // ── Heartbeat wave path (SVG) ────────────────────────────────────────────────
   const heartbeatPath = (() => {
@@ -847,10 +926,36 @@ export default function CommandCenterPage() {
 
           {/* AGENT STATUS */}
           <div className="shrink-0">
-            <SectionHeader label="AGENT STATUS" accent="#00ff88" right="6 PROCESSES" />
+            <SectionHeader
+              label="AGENT STATUS"
+              accent="#00ff88"
+              right={
+                <button
+                  onClick={() => void triggerAgent('cron')}
+                  disabled={!!triggeringAgent}
+                  className="font-mono text-[6px] tracking-[0.15em] text-[#00ff88]/60 hover:text-[#00ff88] border border-[#00ff88]/20 hover:border-[#00ff88]/50 px-1.5 py-0.5 rounded-sm transition-colors disabled:opacity-30"
+                >
+                  {triggeringAgent === 'cron' ? 'RUNNING…' : 'RUN ALL'}
+                </button>
+              }
+            />
+            {/* Trigger result toast */}
+            {triggerResult && (
+              <div
+                className="mx-2 mb-1 px-2 py-1 rounded-sm font-mono text-[7px]"
+                style={{
+                  backgroundColor: triggerResult.ok ? 'rgba(0,255,136,0.08)' : 'rgba(255,59,48,0.08)',
+                  border: `1px solid ${triggerResult.ok ? 'rgba(0,255,136,0.2)' : 'rgba(255,59,48,0.2)'}`,
+                  color: triggerResult.ok ? '#00ff88' : '#ff3b30',
+                }}
+              >
+                {triggerResult.ok ? `✓ ${triggerResult.agent.toUpperCase()} triggered` : `✗ ${triggerResult.agent.toUpperCase()} failed`}
+              </div>
+            )}
             <div className="p-2 space-y-1">
-              {AGENTS.map((agent) => {
+              {agents.map((agent) => {
                 const sc = agentStatusColor(agent.status);
+                const isRunning = triggeringAgent === agent.id;
                 return (
                   <div
                     key={agent.id}
@@ -858,8 +963,8 @@ export default function CommandCenterPage() {
                     style={{ border: '1px solid rgba(255,255,255,0.04)' }}
                   >
                     {/* Status dot */}
-                    {agent.status === 'active' ? (
-                      <LiveDot color={sc} size={6} />
+                    {(agent.status === 'active' || isRunning) ? (
+                      <LiveDot color={isRunning ? '#ffb800' : sc} size={6} />
                     ) : (
                       <span
                         className="w-1.5 h-1.5 rounded-full shrink-0"
@@ -876,6 +981,15 @@ export default function CommandCenterPage() {
                         <span className="font-mono text-[6px] tabular-nums" style={{ color: sc }}>{agent.runsToday}×</span>
                       </div>
                     </div>
+                    {/* Trigger button */}
+                    <button
+                      onClick={() => void triggerAgent(agent.id)}
+                      disabled={!!triggeringAgent}
+                      className="shrink-0 font-mono text-[6px] tracking-[0.1em] text-white/20 hover:text-[#00d4ff] border border-white/[0.06] hover:border-[#00d4ff]/30 px-1.5 py-0.5 rounded-sm transition-colors disabled:opacity-20"
+                      title={`Trigger ${agent.name}`}
+                    >
+                      {isRunning ? '…' : '▶'}
+                    </button>
                   </div>
                 );
               })}

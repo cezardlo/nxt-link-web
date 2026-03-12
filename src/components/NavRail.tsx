@@ -3,20 +3,20 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/AuthProvider';
 
 const NAV_ITEMS = [
-  { href: '/map',         label: 'MAP',         icon: '◎', color: '#00d4ff' },
-  { href: '/industries',  label: 'EXPLORE',     icon: '⬡', color: '#ffd700' },
-  { href: '/signals',     label: 'SIGNALS',     icon: '◈', color: '#ffb800' },
-  { href: '/vendors',     label: 'VENDORS',     icon: '◆', color: '#f97316' },
+  { href: '/map',          label: 'MAP',        icon: '◎', color: '#00d4ff' },
+  { href: '/industries',   label: 'EXPLORE',    icon: '⬡', color: '#ffd700' },
+  { href: '/signals',      label: 'SIGNALS',    icon: '◈', color: '#ffb800' },
+  { href: '/iker',         label: 'IKER',       icon: '◈', color: '#ffd700' },
+  { href: '/vendors',      label: 'VENDORS',    icon: '◆', color: '#f97316' },
   { href: '/opportunities', label: 'OPPS',      icon: '△', color: '#00ff88' },
+  { href: '/command',      label: 'COMMAND',    icon: '⬡', color: '#a855f7' },
 ];
 
 export function NavRail() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading: authLoading, signOut } = useAuth();
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -92,39 +92,9 @@ export function NavRail() {
         );
       })}
 
-      {/* Bottom: Auth + System Status */}
+      {/* Bottom: System Status */}
       <div className="mt-auto flex flex-col items-center gap-2">
         <div className="w-5 h-px bg-white/[0.06]" />
-
-        {/* Auth button */}
-        {!authLoading && (
-          user ? (
-            <button
-              onClick={async () => { await signOut(); router.push('/'); }}
-              className="w-10 h-10 flex flex-col items-center justify-center rounded-md transition-all group hover:bg-white/[0.04]"
-              title={`Sign out (${user.email ?? ''})`}
-            >
-              <div
-                className="w-6 h-6 rounded-full flex items-center justify-center border border-[#00d4ff]/25 bg-[#00d4ff]/[0.08] group-hover:border-[#00d4ff]/50 transition-colors"
-              >
-                <span className="font-mono text-[9px] font-bold text-[#00d4ff]/70 group-hover:text-[#00d4ff] transition-colors">
-                  {(user.email?.[0] ?? 'U').toUpperCase()}
-                </span>
-              </div>
-              <span className="font-mono text-[5px] tracking-[0.2em] text-white/12 mt-0.5 group-hover:text-white/25 transition-colors">OUT</span>
-            </button>
-          ) : (
-            <Link
-              href="/auth"
-              className="w-10 h-10 flex flex-col items-center justify-center rounded-md transition-all group hover:bg-white/[0.04]"
-              title="Sign in"
-            >
-              <span className="font-mono text-[12px] text-white/20 group-hover:text-[#00d4ff]/60 transition-colors">⊙</span>
-              <span className="font-mono text-[5px] tracking-[0.2em] text-white/12 mt-0.5 group-hover:text-white/25 transition-colors">LOGIN</span>
-            </Link>
-          )
-        )}
-
         <Link
           href="/platform/status"
           className="w-10 h-10 flex flex-col items-center justify-center rounded-md transition-all group hover:bg-white/[0.04]"

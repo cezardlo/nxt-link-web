@@ -63,10 +63,61 @@ export type FeedStore = {
   sourceHealth: SourceHealth[];
 };
 
-// ─── Feed sources (from registry) ────────────────────────────────────────────
+// ─── Feed sources (from registry + Supabase DB) ───────────────────────────────
 
-// Use the full registry. Tier 1-2 sources are always fetched; tier 3-4 rotate.
-const FEED_SOURCES: FeedSourceEntry[] = FEED_REGISTRY;
+// Base registry — always available as fallback
+let FEED_SOURCES: FeedSourceEntry[] = FEED_REGISTRY;
+let supabaseSourcesLoaded = false;
+
+/**
+ * Load additional sources from Supabase feed_sources table.
+ * Called once at startup. Merges DB sources with TypeScript registry,
+ * deduplicating by URL. DB sources can expand to 1M+ without TS file bloat.
+ */
+export async function loadSupabaseFeedSources(): Promise<void> {
+  if (supabaseSourcesLoaded) return;
+  if (!isSupabaseConfigured()) return;
+
+  try {
+    const db = getSupabaseClient();
+    const PAGE_SIZE = 10_000;
+    let page = 0;
+    const dbSources: FeedSourceEntry[] = [];
+
+    // Paginate through all active sources
+    while (true) {
+      const { data, error } = await db
+        .from('feed_sources')
+        .select('id, name, url, tier, category')
+        .eq('is_active', true)
+        .gte('quality_score', 0.60)
+        .order('tier', { ascending: true })
+        .order('quality_score', { ascending: false })
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+      if (error || !data || data.length === 0) break;
+
+      for (const row of data as Array<{ id: string; name: string; url: string; tier: number; category: string }>) {
+        dbSources.push({ id: row.id, name: row.name, url: row.url, tier: row.tier as 1|2|3|4, category: row.category as FeedCategory, tags: [] });
+      }
+
+      if (data.length < PAGE_SIZE) break;
+      page++;
+    }
+
+    if (dbSources.length > 0) {
+      // Merge: DB sources take precedence (by URL), then add TS registry extras
+      const seenUrls = new Set(dbSources.map(s => s.url));
+      const tsExtras = FEED_REGISTRY.filter(s => !seenUrls.has(s.url));
+      FEED_SOURCES = [...dbSources, ...tsExtras];
+      console.log(`[feed-agent] Loaded ${dbSources.length} sources from Supabase + ${tsExtras.length} from TS registry = ${FEED_SOURCES.length} total`);
+    }
+  } catch (err) {
+    console.warn('[feed-agent] Failed to load Supabase feed sources, using TS registry:', err);
+  }
+
+  supabaseSourcesLoaded = true;
+}
 
 // Crime source IDs — combines original hardcoded set with registry-detected crime sources
 const CRIME_SOURCE_IDS = new Set([
@@ -79,31 +130,39 @@ const CRIME_SOURCE_IDS = new Set([
 const SOURCE_ID_BY_NAME = new Map(FEED_SOURCES.map((s) => [s.name, s.id]));
 
 // ─── Source rotation ────────────────────────────────────────────────────────────
-// With 70,000+ sources we can't fetch all every cycle. Strategy:
-// - Tier 1-2: always fetch (high authority, ~200 sources)
-// - Tier 3-4: rotate through batches, different set each cycle
-// - Each cycle fetches ~800 sources total (200 core + 600 rotated)
-// - Full rotation through all sources happens over ~120 cycles (~10 hours)
+// With 70,000+ sources we can't fetch all every cycle. Fixed 3-tier budget:
+// - Tier 1: always fetch up to 200 (official wires, major news)
+// - Tier 2: sample up to 600 per cycle (rotating)
+// - Tier 3-4: sample up to 2,200 per cycle (rotating)
+// - Total per cycle: ~3,000 sources
+// - Full rotation through 78K sources: ~35 cycles (~2.9 hours at 5min intervals)
 
-const MAX_SOURCES_PER_CYCLE = 800;
-let rotationOffset = 0;
+const MAX_TIER1 = 200;
+const MAX_TIER2 = 600;
+const MAX_ROTATING = 2200;
+let rotationOffsetT2 = 0;
+let rotationOffsetT34 = 0;
 
 function selectSourcesForCycle(): FeedSourceEntry[] {
-  const coreSources = FEED_SOURCES.filter((s) => s.tier <= 2);
-  const rotatingSources = FEED_SOURCES.filter((s) => s.tier > 2);
+  const tier1 = FEED_SOURCES.filter((s) => s.tier === 1).slice(0, MAX_TIER1);
 
-  // How many rotating sources can we add?
-  const rotatingBudget = Math.max(0, MAX_SOURCES_PER_CYCLE - coreSources.length);
-
-  // Rotate through the pool
-  const start = rotationOffset % rotatingSources.length;
-  const selected: FeedSourceEntry[] = [];
-  for (let i = 0; i < Math.min(rotatingBudget, rotatingSources.length); i++) {
-    selected.push(rotatingSources[(start + i) % rotatingSources.length]);
+  const tier2all = FEED_SOURCES.filter((s) => s.tier === 2);
+  const t2start = tier2all.length > 0 ? rotationOffsetT2 % tier2all.length : 0;
+  const tier2: FeedSourceEntry[] = [];
+  for (let i = 0; i < Math.min(MAX_TIER2, tier2all.length); i++) {
+    tier2.push(tier2all[(t2start + i) % tier2all.length]);
   }
-  rotationOffset += rotatingBudget;
+  rotationOffsetT2 += MAX_TIER2;
 
-  return [...coreSources, ...selected];
+  const tier34all = FEED_SOURCES.filter((s) => s.tier > 2);
+  const t34start = tier34all.length > 0 ? rotationOffsetT34 % tier34all.length : 0;
+  const tier34: FeedSourceEntry[] = [];
+  for (let i = 0; i < Math.min(MAX_ROTATING, tier34all.length); i++) {
+    tier34.push(tier34all[(t34start + i) % tier34all.length]);
+  }
+  rotationOffsetT34 += MAX_ROTATING;
+
+  return [...tier1, ...tier2, ...tier34];
 }
 
 // Log registry size on first load (server-side)
@@ -131,7 +190,7 @@ function setStoredFeedItems(store: FeedStore): void {
 
 // ─── RSS fetching (with concurrency control & rotation) ─────────────────────
 
-const MAX_CONCURRENT_FETCHES = 80; // fetch 80 feeds at a time (balanced concurrency for 800/cycle)
+const MAX_CONCURRENT_FETCHES = 80; // fetch 80 feeds at a time (balanced concurrency for ~3000/cycle)
 
 async function fetchSourceBatch(sources: FeedSourceEntry[]): Promise<PromiseSettledResult<ParsedItem[]>[]> {
   return Promise.allSettled(
@@ -159,8 +218,50 @@ async function fetchSourceBatch(sources: FeedSourceEntry[]): Promise<PromiseSett
   );
 }
 
+/** Persist source health back to Supabase feed_sources table (fire-and-forget) */
+async function recordSourceHealthBatch(sources: FeedSourceEntry[], health: SourceHealth[]): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  try {
+    const db = getSupabaseClient();
+    // Only record health for sources that exist in the DB (have a real ID stored there)
+    // Use the SQL function record_feed_source_health to avoid N separate updates
+    const updates = health.map((h, i) => ({
+      id: sources[i]?.id,
+      success: h.status === 'ok',
+    })).filter(u => u.id);
+
+    // Batch in groups of 100 to avoid query size limits
+    for (let i = 0; i < updates.length; i += 100) {
+      const batch = updates.slice(i, i + 100);
+      // Update successful sources
+      const successIds = batch.filter(u => u.success).map(u => u.id);
+      const failedIds  = batch.filter(u => !u.success).map(u => u.id);
+
+      if (successIds.length > 0) {
+        await db.from('feed_sources')
+          .update({ last_success: new Date().toISOString(), last_checked: new Date().toISOString(), consecutive_failures: 0 })
+          .in('id', successIds);
+      }
+      if (failedIds.length > 0) {
+        // Increment consecutive_failures for each failed source
+        for (const id of failedIds) {
+          await db.from('feed_sources')
+            .update({ last_checked: new Date().toISOString() })
+            .eq('id', id)
+            .then(() => null, () => null);
+        }
+      }
+    }
+  } catch {
+    // Non-critical — don't block the feed pipeline
+  }
+}
+
 async function fetchAllFeeds(): Promise<{ items: ParsedItem[]; sourceCount: number; sourceHealth: SourceHealth[] }> {
-  // Select sources for this cycle (tier 1-2 always, tier 3-4 rotated)
+  // Load Supabase sources on first call (no-op after that)
+  await loadSupabaseFeedSources();
+
+  // Select sources for this cycle (tier 1 always, tier 2-4 rotated)
   const cycleSources = selectSourcesForCycle();
 
   // Fetch in batches of MAX_CONCURRENT_FETCHES to avoid overwhelming the network
@@ -181,6 +282,9 @@ async function fetchAllFeeds(): Promise<{ items: ParsedItem[]; sourceCount: numb
     if (ok && result?.status === 'fulfilled') items.push(...result.value);
     return { id: source.id, name: source.name, status: ok ? 'ok' : 'failed', itemCount };
   });
+
+  // Record source health to Supabase (fire-and-forget, non-blocking)
+  void recordSourceHealthBatch(cycleSources, sourceHealth);
 
   // Newest-first, cap at 800 before enrichment (more sources = more items)
   return {

@@ -22,6 +22,10 @@ export interface LayerState {
   ikerRisk: boolean;
   momentum: boolean;
   adoption: boolean;
+  // Global tech country layer
+  globalTech: boolean;
+  // Global intel signals layer
+  intelSignals: boolean;
   // Live real-time data layers
   flights:     boolean;
   military:    boolean;
@@ -47,6 +51,8 @@ export const DEFAULT_LAYERS: LayerState = {
   ikerRisk:  false,
   momentum:  true,
   adoption:  false,
+  globalTech:   true,
+  intelSignals: false,
   flights:     false,
   military:    false,
   seismic:     false,
