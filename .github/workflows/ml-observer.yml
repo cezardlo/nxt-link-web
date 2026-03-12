@@ -1,0 +1,107 @@
+# NXT LINK — Python ML Observer Pipeline
+# Runs the full intelligence collection cycle using Python ML tools.
+# Free on GitHub Actions (uses Ubuntu + open-source Python libs).
+#
+# What this does every night:
+#   1. Collect — fetch RSS feeds from 64+ sources across 8 industries
+#   2. Classify — extract signal types, companies, products via NLP
+#   3. Extract — structure deployments, products, milestones
+#   4. Verify  — dedup, conflict-detect, score source reliability
+#   5. Learn   — rerank sources, grow entity memory, promote/demote sources
+#   6. Push    — sync intel signals + entities + products to Supabase
+#
+# Required GitHub Secrets:
+#   SUPABASE_URL            — https://xxxx.supabase.co
+#   SUPABASE_SERVICE_KEY    — Supabase service_role key (write access)
+#   GEMINI_API_KEY          — For NLP enrichment (optional, degraded gracefully)
+
+name: ML Observer Pipeline
+
+on:
+  schedule:
+    # Run nightly at 03:00 UTC (after main agent cron at 00:00)
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      command:
+        description: 'Command to run (all, collect, classify, extract, learn, push)'
+        required: false
+        default: 'all'
+
+jobs:
+  ml-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: scripts/industry-observer
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'scripts/industry-observer/requirements.txt'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Initialize database
+        run: python -c "from models import init_db; init_db()"
+
+      - name: Run collect phase
+        if: ${{ github.event.inputs.command == 'all' || github.event.inputs.command == 'collect' || github.event_name == 'schedule' }}
+        run: python main.py collect
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Run classify phase
+        if: ${{ github.event.inputs.command == 'all' || github.event.inputs.command == 'classify' || github.event_name == 'schedule' }}
+        run: python main.py classify
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Run extract phase
+        if: ${{ github.event.inputs.command == 'all' || github.event.inputs.command == 'extract' || github.event_name == 'schedule' }}
+        run: python main.py extract
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Run verify phase
+        if: ${{ github.event.inputs.command == 'all' || github.event_name == 'schedule' }}
+        run: python main.py verify
+
+      - name: Run learning cycle (weekly — Mondays only)
+        if: ${{ (github.event.inputs.command == 'learn' || github.event_name == 'schedule') && (github.event.inputs.command == 'learn' || contains(github.run_id, '0')) }}
+        run: python main.py learn
+        continue-on-error: true  # Don't fail pipeline if learning fails
+
+      - name: Push to Supabase
+        if: ${{ github.event.inputs.command == 'all' || github.event.inputs.command == 'push' || github.event_name == 'schedule' }}
+        run: python push_to_supabase.py --days 2
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+      - name: Trigger country activity update
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.command == 'all' }}
+        run: |
+          if [ -n "$SITE_URL" ]; then
+            curl -s -o /dev/null -w "Country activity update: HTTP %{http_code}\n" \
+              "$SITE_URL/api/country-activity?refresh=1" \
+              -H "User-Agent: NXTLink-MLObserver/1.0"
+          else
+            echo "SITE_URL not set — skipping country activity trigger"
+          fi
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+        continue-on-error: true
+
+      - name: Print pipeline summary
+        if: always()
+        run: python main.py status
+        continue-on-error: true

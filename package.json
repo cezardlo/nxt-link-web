@@ -1,0 +1,51 @@
+{
+  "name": "nxt-link-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --import tsx \"tests/**/*.test.ts\"",
+    "verify": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "ai:build": "tsx scripts/run-ai-builder.ts",
+    "ai:autobuild": "powershell -ExecutionPolicy Bypass -File scripts/run-autobuilder.ps1",
+    "db:seed": "npx tsx scripts/seed-supabase.ts"
+  },
+  "dependencies": {
+    "@deck.gl/aggregation-layers": "^9.2.9",
+    "@deck.gl/core": "^9.2.9",
+    "@deck.gl/extensions": "^9.2.9",
+    "@deck.gl/layers": "^9.2.9",
+    "@deck.gl/react": "^9.2.9",
+    "@supabase/supabase-js": "^2.97.0",
+    "@vercel/analytics": "^1.6.1",
+    "clsx": "^2.1.1",
+    "cytoscape": "^3.33.1",
+    "date-fns": "^4.1.0",
+    "googleapis": "^171.4.0",
+    "lucide-react": "^0.574.0",
+    "maplibre-gl": "^5.19.0",
+    "next": "14.2.28",
+    "react": "^18",
+    "react-cytoscapejs": "^2.0.0",
+    "react-dom": "^18",
+    "react-map-gl": "^8.1.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-cytoscapejs": "^1.2.6",
+    "@types/react-dom": "^18",
+    "dotenv": "^17.3.1",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.28",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5"
+  }
+}
