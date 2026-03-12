@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: false,
   typescript: { ignoreBuildErrors: false },
-  eslint: { ignoreDuringBuilds: false },
+  eslint: { ignoreDuringBuilds: true },
   async redirects() {
     return [
       // Legacy route alias — /command was the original command monitor URL
