@@ -3,7 +3,7 @@
 // Sources: USPTO, EPO, WIPO, Google Patents via RSS, patent news outlets
 
 import { fetchWithRetry } from '@/lib/http/fetch-with-retry';
-import { parseAnyFeed, type ParsedItem } from '@/lib/rss/parser';
+import { parseAnyFeed } from '@/lib/rss/parser';
 import type { QualityFeedSource } from '@/lib/feeds/quality-source-feeds';
 
 // ── Types ──────────────────────────────────────────────────────────────────────

@@ -54,7 +54,7 @@ export default function SearchPage() {
   useEffect(() => {
     async function loadAll() {
       try {
-        const [techRes, indRes] = await Promise.all([
+        const [] = await Promise.all([
           fetch('/api/search?q=*').then(r => r.json()),
           fetch('/api/search?q=*').then(r => r.json()),
         ]);

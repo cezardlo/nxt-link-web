@@ -58,3 +58,5 @@ __pycache__/
 # Prevent V: drive cache from being committed
 V:\*
 V:/
+
+.vercel

@@ -43,7 +43,7 @@ export async function getSeenUrlHashes(urls: string[]): Promise<Set<string>> {
  */
 export async function filterUnseen<T extends { url?: string | null }>(
   items: T[],
-  _sourceId?: string,
+  _sourceId?: string, // eslint-disable-line @typescript-eslint/no-unused-vars
 ): Promise<T[]> {
   const withUrls = items.filter(i => i.url);
   if (withUrls.length === 0) return items;
