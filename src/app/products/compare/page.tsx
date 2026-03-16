@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PRODUCT_CATALOG, type Product } from '@/lib/data/product-catalog';
@@ -101,7 +101,7 @@ const CATEGORIES = [
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
-export default function ProductComparePage() {
+function ProductCompareInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -670,5 +670,13 @@ export default function ProductComparePage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ProductComparePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black" />}>
+      <ProductCompareInner />
+    </Suspense>
   );
 }
