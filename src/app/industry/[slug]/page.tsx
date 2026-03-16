@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 
+import { EcosystemDiagram } from '@/components/EcosystemDiagram';
+
 import { PageTopBar } from '@/components/PageTopBar';
 import { timeAgo, scoreColor, formatUsd, compactNumber } from '@/lib/utils/format';
 import type { KgTechnologyRow } from '@/db/queries/kg-technologies';
@@ -181,6 +183,7 @@ export default function IndustryDeepDivePage() {
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [expandedTimeline, setExpandedTimeline] = useState<number | null>(null);
+  const [ecosystemOpen, setEcosystemOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!slug) return;
@@ -358,6 +361,41 @@ export default function IndustryDeepDivePage() {
             </div>
           )}
         </Section>
+
+        {/* ═══ 4b. ECOSYSTEM MAP — auto-generated Excalidraw diagram ═══ */}
+        <div className="py-8 border-b border-white/[0.06]">
+          <button
+            onClick={() => setEcosystemOpen(o => !o)}
+            className="w-full flex items-center gap-3 mb-0 group"
+          >
+            <span className="text-sm">🗺️</span>
+            <h2 className="font-mono text-[11px] tracking-[0.2em] font-medium" style={{ color: '#00d4ff' }}>
+              ECOSYSTEM MAP
+            </h2>
+            <span
+              className="font-mono text-[9px] tracking-widest px-2 py-0.5 rounded-sm"
+              style={{ background: '#00d4ff10', color: '#00d4ff88', border: '1px solid #00d4ff20' }}
+            >
+              {vendors.slice(0, 8).length + technologies.slice(0, 8).length} NODES
+            </span>
+            <span className="ml-auto font-mono text-[9px] tracking-widest" style={{ color: '#00d4ff44' }}>
+              {ecosystemOpen ? '▲ COLLAPSE' : '▼ EXPAND'}
+            </span>
+          </button>
+
+          {ecosystemOpen && (
+            <div className="mt-5">
+              <EcosystemDiagram
+                industryName={industry.name}
+                companies={vendors.slice(0, 8).map(v => ({ name: v.name, role: v.category }))}
+                technologies={technologies.slice(0, 8).map(t => ({ name: t.name, maturity: t.maturity_stage ?? undefined }))}
+              />
+              <p className="font-mono text-[8px] tracking-widest mt-2" style={{ color: 'rgba(255,255,255,0.15)' }}>
+                CYAN — INDUSTRY HUB · GREEN — KEY VENDORS · PURPLE — TECHNOLOGIES · VIEW-ONLY MODE
+              </p>
+            </div>
+          )}
+        </div>
 
         {/* ═══ 5. RESEARCH — papers, citations, institutions ═══ */}
         <Section title="RESEARCH" icon="🔬" count={discoveries.length} color="#a855f7">
