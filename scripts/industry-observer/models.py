@@ -75,6 +75,7 @@ def _json_set(value: Any) -> str:
 class Source(Base):
     """A content source (website / RSS feed) tracked by the observer."""
 
+    __allow_unmapped__ = True
     __tablename__ = "sources"
 
     id: int = Column(Integer, primary_key=True, autoincrement=True)
@@ -106,6 +107,7 @@ class Source(Base):
 class RawItem(Base):
     """A raw fetched article or page — not yet classified."""
 
+    __allow_unmapped__ = True
     __tablename__ = "raw_items"
 
     id: int = Column(Integer, primary_key=True, autoincrement=True)
@@ -130,6 +132,7 @@ class RawItem(Base):
 class ClassifiedItem(Base):
     """A raw item after classification — knows its industry, zone, tech, and signal type."""
 
+    __allow_unmapped__ = True
     __tablename__ = "classified_items"
 
     id: int = Column(Integer, primary_key=True, autoincrement=True)
@@ -165,6 +168,7 @@ class ClassifiedItem(Base):
 class Deployment(Base):
     """A structured record of a real-world technology deployment."""
 
+    __allow_unmapped__ = True
     __tablename__ = "deployments"
 
     id: int = Column(Integer, primary_key=True, autoincrement=True)
@@ -197,6 +201,7 @@ class Deployment(Base):
 class Product(Base):
     """A vendor product entry synthesized from multiple classified items."""
 
+    __allow_unmapped__ = True
     __tablename__ = "products"
 
     id: int = Column(Integer, primary_key=True, autoincrement=True)
@@ -258,6 +263,7 @@ class Product(Base):
 class Milestone(Base):
     """A technology adoption milestone (e.g. 'Warehouse robots hit 1M units shipped 2024')."""
 
+    __allow_unmapped__ = True
     __tablename__ = "milestones"
 
     id: int = Column(Integer, primary_key=True, autoincrement=True)
@@ -289,6 +295,7 @@ class Milestone(Base):
 class Feedback(Base):
     """Human feedback on a classified or extracted item."""
 
+    __allow_unmapped__ = True
     __tablename__ = "feedback"
 
     id: int = Column(Integer, primary_key=True, autoincrement=True)
@@ -307,6 +314,7 @@ class Feedback(Base):
 class EntityAlias(Base):
     """Canonical name → alias mapping for companies, vendors, and products."""
 
+    __allow_unmapped__ = True
     __tablename__ = "entity_aliases"
 
     id: int = Column(Integer, primary_key=True, autoincrement=True)

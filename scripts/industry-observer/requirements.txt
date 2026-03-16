@@ -11,3 +11,5 @@ python-dotenv>=1.0
 SQLAlchemy>=2.0
 lxml>=5.1
 tqdm>=4.66
+vaderSentiment>=3.3.2
+supabase>=2.0.0
