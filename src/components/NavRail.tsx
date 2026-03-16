@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { href: '/products/compare', label: 'COMPARE', icon: '⧉', color: '#a855f7' },
   { href: '/rfp',              label: 'RFP',     icon: '🏛', color: '#ffd700' },
   { href: '/report/cybersecurity', label: 'REPORT', icon: '📄', color: '#f97316' },
+  { href: '/world',            label: 'WORLD',   icon: '🌐', color: '#00d4ff' },
 ];
 
 const SHORTCUT_COUNT = 7;

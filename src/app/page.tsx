@@ -736,6 +736,7 @@ export default function Home() {
             { href: '/ask',        label: 'ASK'      },
             { href: '/trajectory', label: 'TRAJ'     },
             { href: '/rfp',        label: 'RFP'      },
+            { href: '/world',      label: 'WORLD'    },
           ].map(({ href, label }) => (
             <Link key={href} href={href} className="font-mono text-[7px] tracking-[0.25em] text-white/45 hover:text-[#00d4ff] transition-colors">
               {label}
@@ -1053,6 +1054,7 @@ export default function Home() {
                 { href: '/trajectory',      label: 'Tech Trajectory',        color: '#00ff88' },
                 { href: '/products/compare', label: 'Compare Products',      color: '#a855f7' },
                 { href: '/rfp',             label: 'Gov Contracts (RFP)',    color: '#ffd700' },
+                { href: '/world',           label: 'Global Tech Atlas',      color: '#00d4ff' },
               ].map(({ href, label, color }) => (
                 <Link key={href} href={href} className="group flex items-center justify-between py-1 px-2 rounded-sm hover:bg-white/[0.04] transition-colors">
                   <span className="font-mono text-[7px] tracking-[0.1em] text-white/45 group-hover:text-white/80 transition-colors">{label}</span>
