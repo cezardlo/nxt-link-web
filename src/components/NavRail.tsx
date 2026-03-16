@@ -5,14 +5,22 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 const NAV_ITEMS = [
-  { href: '/map',          label: 'MAP',        icon: '◎', color: '#00d4ff' },
-  { href: '/industries',   label: 'EXPLORE',    icon: '⬡', color: '#ffd700' },
-  { href: '/signals',      label: 'SIGNALS',    icon: '◈', color: '#ffb800' },
-  { href: '/iker',         label: 'IKER',       icon: '◈', color: '#ffd700' },
-  { href: '/vendors',      label: 'VENDORS',    icon: '◆', color: '#f97316' },
-  { href: '/opportunities', label: 'OPPS',      icon: '△', color: '#00ff88' },
-  { href: '/command',      label: 'COMMAND',    icon: '⬡', color: '#a855f7' },
+  { href: '/map',              label: 'MAP',     icon: '◎', color: '#00d4ff' },
+  { href: '/industries',       label: 'EXPLORE', icon: '⬡', color: '#ffd700' },
+  { href: '/signals',          label: 'SIGNALS', icon: '◈', color: '#ffb800' },
+  { href: '/iker',             label: 'IKER',    icon: '◈', color: '#ffd700' },
+  { href: '/vendors',          label: 'VENDORS', icon: '◆', color: '#f97316' },
+  { href: '/opportunities',    label: 'OPPS',    icon: '△', color: '#00ff88' },
+  { href: '/command',          label: 'COMMAND', icon: '⬡', color: '#a855f7' },
+  // ── New intelligence tools ──
+  { href: '/ask',              label: 'ASK',     icon: '⬢', color: '#00d4ff' },
+  { href: '/trajectory',       label: 'TRAJ',    icon: '↗', color: '#00ff88' },
+  { href: '/products/compare', label: 'COMPARE', icon: '⧉', color: '#a855f7' },
+  { href: '/rfp',              label: 'RFP',     icon: '🏛', color: '#ffd700' },
+  { href: '/report/cybersecurity', label: 'REPORT', icon: '📄', color: '#f97316' },
 ];
+
+const SHORTCUT_COUNT = 7;
 
 export function NavRail() {
   const pathname = usePathname();
@@ -22,7 +30,7 @@ export function NavRail() {
     function handleKey(e: KeyboardEvent) {
       if (!e.ctrlKey && !e.metaKey) return;
       const idx = parseInt(e.key, 10);
-      if (idx >= 1 && idx <= NAV_ITEMS.length) {
+      if (idx >= 1 && idx <= SHORTCUT_COUNT) {
         e.preventDefault();
         router.push(NAV_ITEMS[idx - 1].href);
       }
@@ -52,15 +60,17 @@ export function NavRail() {
       {/* Nav items */}
       {NAV_ITEMS.map((item, i) => {
         const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+        const shortcutLabel = i < SHORTCUT_COUNT ? ` (Ctrl+${i + 1})` : '';
         return (
-          <Link
-            key={item.href}
+          <div key={item.href} className="flex flex-col items-center w-full">
+            {i === 7 && <div className="w-5 h-px bg-white/[0.06] my-1" />}
+            <Link
             href={item.href}
             className="relative w-10 h-10 flex flex-col items-center justify-center rounded-md transition-all duration-200 group hover:bg-white/[0.04]"
             style={{
               backgroundColor: isActive ? `${item.color}10` : undefined,
             }}
-            title={`${item.label} (Ctrl+${i + 1})`}
+            title={`${item.label}${shortcutLabel}`}
           >
             {/* Active indicator */}
             {isActive && (
@@ -89,6 +99,7 @@ export function NavRail() {
               {item.label}
             </span>
           </Link>
+          </div>
         );
       })}
 

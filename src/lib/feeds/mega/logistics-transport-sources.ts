@@ -1,0 +1,488 @@
+// src/lib/feeds/mega/logistics-transport-sources.ts
+// NXT//LINK Logistics & Transport Mega-Registry — 5,250+ intelligence sources
+// Matrices × cross-product expansion = 5,250 unique Google News RSS feeds
+
+import type { FeedCategory } from '@/lib/agents/feed-agent';
+
+type TopicMatrix = {
+  prefix: string;
+  category: FeedCategory;
+  tier: 1 | 2 | 3 | 4;
+  region?: 'el-paso' | 'texas' | 'national' | 'global';
+  entities: string[];
+  contexts: string[];
+};
+
+const GN = (q: string) =>
+  `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
+
+type FeedSourceEntry = {
+  id: string;
+  name: string;
+  url: string;
+  category: FeedCategory;
+  tags: string[];
+  tier: 1 | 2 | 3 | 4;
+  region?: 'el-paso' | 'texas' | 'national' | 'global';
+};
+
+function expandMatrix(m: TopicMatrix): FeedSourceEntry[] {
+  const results: FeedSourceEntry[] = [];
+  for (const entity of m.entities) {
+    for (const context of m.contexts) {
+      const slug = `${entity} ${context}`
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .slice(0, 40);
+      const id = `${m.prefix}-${slug}`;
+      const query = `${entity} ${context}`;
+      results.push({
+        id,
+        name: `GN: ${entity.slice(0, 18)} ${context.slice(0, 10)}`,
+        url: GN(query),
+        category: m.category,
+        tags: query
+          .toLowerCase()
+          .split(/\s+/)
+          .filter((w) => w.length > 2),
+        tier: m.tier,
+        region: m.region ?? 'national',
+      });
+    }
+  }
+  return results;
+}
+
+// ─── MATRIX 1: LOGISTICS COMPANIES MEGA ───────────────────────────────────────
+// 80 entities × 20 contexts = 1,600 entries
+const LOGISTICS_COMPANIES_MEGA: TopicMatrix = {
+  prefix: 'log-co',
+  category: 'Supply Chain',
+  tier: 3,
+  region: 'national',
+  entities: [
+    'FedEx',
+    'UPS',
+    'DHL',
+    'Amazon Logistics',
+    'XPO Logistics',
+    'JB Hunt',
+    'Schneider National',
+    'Werner Enterprises',
+    'Knight-Swift Transportation',
+    'Heartland Express',
+    'Old Dominion Freight Line',
+    'Saia',
+    'Estes Express',
+    'ABF Freight',
+    'YRC Worldwide',
+    'TFI International',
+    'Ryder System',
+    'Penske Logistics',
+    'NFI Industries',
+    'Echo Global Logistics',
+    'Coyote Logistics',
+    'CH Robinson',
+    'Landstar System',
+    'Total Quality Logistics',
+    'Uber Freight',
+    'Convoy',
+    'Transfix',
+    'Loadsmart',
+    'project44',
+    'FourKites',
+    'Descartes Systems',
+    'MercuryGate',
+    'Blue Yonder',
+    'Kinaxis',
+    'o9 Solutions',
+    'E2open',
+    'Manhattan Associates',
+    'Korber Supply Chain',
+    'HighJump',
+    'Infor WMS',
+    'SAP Transportation Management',
+    'Oracle Transportation Management',
+    'GT Nexus',
+    'Flexport',
+    'Freightos',
+    'Maersk',
+    'MSC Mediterranean Shipping',
+    'CMA CGM',
+    'Hapag-Lloyd',
+    'ONE Ocean Network Express',
+    'Evergreen Marine',
+    'COSCO Shipping',
+    'Yang Ming Marine',
+    'HMM',
+    'ZIM Integrated Shipping',
+    'Matson Navigation',
+    'Crowley Maritime',
+    'TOTE Maritime',
+    'Danaos Corporation',
+    'Costamare',
+    'Star Bulk Carriers',
+    'Safe Bulkers',
+    'Eagle Bulk Shipping',
+    'Genco Shipping',
+    'Diana Shipping',
+    'Navios Maritime',
+    'Euronav',
+    'Frontline',
+    'DHT Holdings',
+    'International Seaways',
+    'Scorpio Tankers',
+    'Ardmore Shipping',
+    'Nordic American Tankers',
+    'Teekay Corporation',
+    'Stena Bulk',
+    'Wallenius Wilhelmsen',
+    'UECC',
+    'Grimaldi Lines',
+    'K Line',
+    'NYK Line',
+  ],
+  contexts: [
+    'revenue',
+    'contract',
+    'acquisition',
+    'partnership',
+    'technology',
+    'automation',
+    'AI',
+    'expansion',
+    'layoff',
+    'hiring',
+    'fleet',
+    'warehouse',
+    'last mile',
+    'cross-border',
+    'sustainability',
+    'electric vehicle',
+    'drone delivery',
+    'autonomous',
+    'regulation',
+    'earnings',
+  ],
+};
+
+// ─── MATRIX 2: PORT INFRASTRUCTURE MEGA ───────────────────────────────────────
+// 40 entities × 20 contexts = 800 entries
+const PORT_INFRASTRUCTURE_MEGA: TopicMatrix = {
+  prefix: 'log-port',
+  category: 'Supply Chain',
+  tier: 3,
+  region: 'global',
+  entities: [
+    'Port of Los Angeles',
+    'Port of Long Beach',
+    'Port of New York',
+    'Port of Savannah',
+    'Port of Houston',
+    'Port of Charleston',
+    'Port of Virginia',
+    'Port of Oakland',
+    'Port of Seattle',
+    'Port of Tacoma',
+    'Port of New Orleans',
+    'Port of Miami',
+    'Port of Jacksonville',
+    'Port of Baltimore',
+    'Port of Philadelphia',
+    'Port of Boston',
+    'Port of Portland',
+    'Port Laredo',
+    'Port El Paso',
+    'Port Otay Mesa',
+    'Port of Rotterdam',
+    'Port of Shanghai',
+    'Port of Singapore',
+    'Port of Busan',
+    'Port of Hong Kong',
+    'Port of Shenzhen',
+    'Port of Ningbo',
+    'Port of Guangzhou',
+    'Port of Qingdao',
+    'Port of Tianjin',
+    'Port of Dubai',
+    'Port of Hamburg',
+    'Port of Antwerp',
+    'Port of Felixstowe',
+    'Port of Piraeus',
+    'Port of Valencia',
+    'Port of Barcelona',
+    'Port of Genoa',
+    'Port of Colombo',
+    'Port of Tanjung Pelepas',
+  ],
+  contexts: [
+    'throughput',
+    'expansion',
+    'automation',
+    'crane',
+    'terminal',
+    'congestion',
+    'delay',
+    'investment',
+    'dredging',
+    'rail connection',
+    'truck turn time',
+    'digital twin',
+    'smart port',
+    'cybersecurity',
+    'labor',
+    'strike',
+    'environmental',
+    'LNG bunkering',
+    'shore power',
+    'emissions',
+  ],
+};
+
+// ─── MATRIX 3: AUTONOMOUS VEHICLES MEGA ───────────────────────────────────────
+// 50 entities × 25 contexts = 1,250 entries
+const AUTONOMOUS_VEHICLES_MEGA: TopicMatrix = {
+  prefix: 'log-av',
+  category: 'Supply Chain',
+  tier: 4,
+  region: 'national',
+  entities: [
+    'Waymo',
+    'Cruise',
+    'Aurora Innovation',
+    'TuSimple',
+    'Plus AI',
+    'Embark Trucks',
+    'Kodiak Robotics',
+    'Gatik',
+    'Nuro',
+    'Starship Technologies',
+    'Kiwibot',
+    'Serve Robotics',
+    'Amazon Scout',
+    'FedEx Roxo',
+    'Udelv',
+    'Einride',
+    'Volta Trucks',
+    'Rivian commercial',
+    'BrightDrop',
+    'Arrival',
+    'Canoo',
+    'Lordstown Motors',
+    'Nikola',
+    'Hyliion',
+    'Xos Trucks',
+    'Lion Electric',
+    'Blue Bird',
+    'Proterra',
+    'New Flyer',
+    'BYD commercial',
+    'Daimler Truck',
+    'Volvo Autonomous Solutions',
+    'PACCAR',
+    'Navistar',
+    'Kenworth',
+    'Peterbilt',
+    'Mack Trucks',
+    'Western Star',
+    'Freightliner',
+    'Tesla Semi',
+    'Optimus Ride',
+    'May Mobility',
+    'Beep',
+    'Local Motors',
+    'EasyMile',
+    'Navya',
+    '2getthere',
+    'Ohmio',
+    'Aurrigo',
+    'Sensible 4',
+  ],
+  contexts: [
+    'test',
+    'deployment',
+    'permit',
+    'regulation',
+    'NHTSA',
+    'FMCSA',
+    'safety',
+    'accident',
+    'partnership',
+    'funding',
+    'IPO',
+    'revenue',
+    'expansion',
+    'technology',
+    'LiDAR',
+    'radar',
+    'camera',
+    'V2X',
+    '5G',
+    'edge computing',
+    'HD mapping',
+    'simulation',
+    'validation',
+    'insurance',
+    'public acceptance',
+  ],
+};
+
+// ─── MATRIX 4: WAREHOUSING & ROBOTICS MEGA ────────────────────────────────────
+// 40 entities × 20 contexts = 800 entries
+const WAREHOUSING_ROBOTICS_MEGA: TopicMatrix = {
+  prefix: 'log-wh',
+  category: 'Supply Chain',
+  tier: 3,
+  region: 'national',
+  entities: [
+    'Amazon Robotics',
+    'Locus Robotics',
+    '6 River Systems',
+    'Fetch Robotics',
+    'inVia Robotics',
+    'GreyOrange',
+    'Geek Plus Robotics',
+    'Quicktron',
+    'HAI Robotics',
+    'AutoStore',
+    'Ocado Technology',
+    'Exotec',
+    'Dematic',
+    'Honeywell Intelligrated',
+    'KUKA',
+    'Fanuc',
+    'ABB Robotics',
+    'Yaskawa',
+    'Universal Robots',
+    'Doosan Robotics',
+    'Techman Robot',
+    'Franka Emika',
+    'Kassow Robots',
+    'Agility Robotics',
+    'Boston Dynamics',
+    'Figure AI',
+    'Apptronik',
+    '1X Technologies',
+    'Sanctuary AI',
+    'Covariant',
+    'Kindred AI',
+    'RightHand Robotics',
+    'Berkshire Grey',
+    'Plus One Robotics',
+    'Mujin',
+    'Symbotic',
+    'Vecna Robotics',
+    'Waypoint Robotics',
+    'Seegrid',
+    'Crown Equipment',
+  ],
+  contexts: [
+    'deployment',
+    'contract',
+    'patent',
+    'funding',
+    'acquisition',
+    'partnership',
+    'warehouse',
+    'fulfillment center',
+    'sortation',
+    'picking',
+    'packing',
+    'palletizing',
+    'depalletizing',
+    'goods-to-person',
+    'autonomous mobile robot',
+    'automated guided vehicle',
+    'robotic arm',
+    'machine vision',
+    'AI planning',
+    'fleet management',
+  ],
+};
+
+// ─── MATRIX 5: TRADE & CUSTOMS MEGA ───────────────────────────────────────────
+// 40 entities × 20 contexts = 800 entries
+const TRADE_CUSTOMS_MEGA: TopicMatrix = {
+  prefix: 'log-trd',
+  category: 'Supply Chain',
+  tier: 4,
+  region: 'global',
+  entities: [
+    'customs brokerage',
+    'trade compliance',
+    'export control',
+    'import duty',
+    'tariff classification',
+    'free trade zone',
+    'foreign trade zone',
+    'bonded warehouse',
+    'customs valuation',
+    'rules of origin',
+    'certificate of origin',
+    'trade agreement',
+    'USMCA',
+    'RCEP',
+    'CPTPP',
+    'EU trade',
+    'UK trade',
+    'Africa trade',
+    'ASEAN trade',
+    'Mercosur',
+    'trade facilitation',
+    'single window',
+    'AEO Authorized Economic Operator',
+    'C-TPAT',
+    'trusted trader',
+    'pre-clearance',
+    'risk management',
+    'trade finance',
+    'letter of credit',
+    'supply chain finance',
+    'blockchain trade',
+    'digital trade',
+    'e-commerce customs',
+    'de minimis threshold',
+    'Section 301',
+    'Section 232',
+    'entity list',
+    'denied parties',
+    'sanctions compliance',
+    'OFAC',
+  ],
+  contexts: [
+    'regulation',
+    'policy',
+    'enforcement',
+    'penalty',
+    'technology',
+    'automation',
+    'AI',
+    'digitization',
+    'reform',
+    'dispute',
+    'negotiation',
+    'statistics',
+    'data',
+    'trend',
+    'forecast',
+    'impact assessment',
+    'compliance update',
+    'court ruling',
+    'CBP update',
+    'WTO ruling',
+  ],
+};
+
+// ─── EXPORT ────────────────────────────────────────────────────────────────────
+
+export const LOGISTICS_TRANSPORT_MEGA_SOURCES: FeedSourceEntry[] = [
+  ...expandMatrix(LOGISTICS_COMPANIES_MEGA),   // 80 × 20 = 1,600
+  ...expandMatrix(PORT_INFRASTRUCTURE_MEGA),   // 40 × 20 =   800
+  ...expandMatrix(AUTONOMOUS_VEHICLES_MEGA),   // 50 × 25 = 1,250
+  ...expandMatrix(WAREHOUSING_ROBOTICS_MEGA),  // 40 × 20 =   800
+  ...expandMatrix(TRADE_CUSTOMS_MEGA),         // 40 × 20 =   800
+  // ─────────────────────────────────────────────────────────
+  // TOTAL: 5,250 entries
+];
+
+export type { FeedSourceEntry };

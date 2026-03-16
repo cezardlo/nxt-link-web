@@ -58,6 +58,63 @@ type CountryActivity = {
   counts?: Record<string, number>;
 };
 
+// ─── Intelligence Operations types ────────────────────────────────────────────
+
+type ConvergenceEvent = {
+  id: string;
+  industry: string;
+  confidence: number;
+  signals: string[];
+  summary: string;
+  signalCount: number;
+  detectedAt: string;
+  window: string;
+};
+
+type TrendingItem = {
+  term: string;
+  type: string;
+  mentions: number;
+  spike: number;
+  velocity: string;
+  relatedIndustries: string[];
+};
+
+type IndustryDisruptionScore = {
+  industry: string;
+  slug: string;
+  score: number;
+  trend: string;
+  trendDelta: number;
+  topSignals: string[];
+};
+
+type DailyBriefSection = {
+  title: string;
+  priority: string;
+  summary: string;
+  keyDevelopments: string[];
+  signalCount: number;
+  sentiment: string;
+};
+
+type DailyBriefData = {
+  status: string;
+  generatedAt: string;
+  executiveSummary: string;
+  sections: DailyBriefSection[];
+  crossCuttingThemes: string[];
+  watchList: string[];
+  totalSignalsProcessed: number;
+};
+
+type IntelOpsData = {
+  convergence: { ok: boolean; convergenceCount?: number; data?: ConvergenceEvent[] } | null;
+  trending: { ok: boolean; trending?: TrendingItem[] } | null;
+  disruption: { ok: boolean; industries?: IndustryDisruptionScore[] } | null;
+  brief: { ok: boolean; data?: DailyBriefData } | null;
+};
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const PRIORITY_META: Record<SignalPriority, { color: string; label: string; glow: string }> = {
@@ -107,6 +164,22 @@ const COUNTRY_FLAGS: Record<string, string> = {
   US: '🇺🇸', CN: '🇨🇳', DE: '🇩🇪', JP: '🇯🇵', IL: '🇮🇱',
   GB: '🇬🇧', FR: '🇫🇷', KR: '🇰🇷', TW: '🇹🇼', IN: '🇮🇳',
   SE: '🇸🇪', NL: '🇳🇱', TR: '🇹🇷', CA: '🇨🇦', AU: '🇦🇺',
+};
+
+// velocity label to arrow glyphs
+const VELOCITY_ARROWS: Record<string, string> = {
+  explosive: '↑↑↑',
+  surging:   '↑↑',
+  rising:    '↑',
+  steady:    '→',
+};
+
+// IDI trend to color
+const IDI_TREND_COLOR: Record<string, string> = {
+  surging:   '#ff3b30',
+  rising:    '#f97316',
+  stable:    '#6b7280',
+  declining: '#374151',
 };
 
 function timeAgo(iso: string): string {
@@ -301,6 +374,204 @@ function FeedRow({ sig }: { sig: CuratedSignal }) {
   );
 }
 
+// ─── Intelligence Operations Cards ───────────────────────────────────────────
+
+function ConvergenceCard({ data }: { data: IntelOpsData['convergence'] }) {
+  const events = data?.data?.slice(0, 3) ?? [];
+  return (
+    <div
+      className="rounded-sm p-2.5"
+      style={{ border: '1px solid rgba(0,212,255,0.12)', background: 'rgba(0,212,255,0.03)' }}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-mono text-[7px] tracking-[0.25em]" style={{ color: '#00d4ff' }}>CONVERGENCE</span>
+        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#00d4ff', boxShadow: '0 0 4px #00d4ff' }} />
+      </div>
+
+      {events.length === 0 ? (
+        <span className="font-mono text-[7px] text-white/25 italic">SCANNING...</span>
+      ) : (
+        <div className="space-y-1.5">
+          {events.map((ev) => {
+            const pct = Math.round(ev.confidence * 100);
+            return (
+              <div key={ev.id} className="flex items-center justify-between gap-2">
+                <span className="font-mono text-[7px] text-white/65 truncate flex-1 capitalize">
+                  {ev.industry.replace(/-/g, ' ')}
+                </span>
+                <div
+                  className="px-1 py-0.5 rounded-sm shrink-0"
+                  style={{ backgroundColor: 'rgba(0,212,255,0.12)', border: '1px solid rgba(0,212,255,0.25)' }}
+                >
+                  <span className="font-mono text-[6px] tabular-nums" style={{ color: '#00d4ff' }}>{pct}%</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {data?.convergenceCount !== undefined && data.convergenceCount > 0 && (
+        <div className="mt-2 pt-1.5 border-t border-white/[0.05] flex items-center justify-between">
+          <span className="font-mono text-[6px] text-white/25">{data.convergenceCount} events detected</span>
+          <Link href="/signals" className="font-mono text-[6px] text-[#00d4ff]/50 hover:text-[#00d4ff] transition-colors">
+            VIEW →
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TrendingEngineCard({ data }: { data: IntelOpsData['trending'] }) {
+  const items = data?.trending?.slice(0, 5) ?? [];
+  return (
+    <div
+      className="rounded-sm p-2.5"
+      style={{ border: '1px solid rgba(255,215,0,0.12)', background: 'rgba(255,215,0,0.02)' }}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-mono text-[7px] tracking-[0.25em]" style={{ color: '#ffd700' }}>TRENDING</span>
+        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#ffd700', boxShadow: '0 0 4px #ffd700' }} />
+      </div>
+
+      {items.length === 0 ? (
+        <span className="font-mono text-[7px] text-white/25 italic">ANALYZING SIGNAL CLUSTERS...</span>
+      ) : (
+        <div className="space-y-1">
+          {items.map((item, i) => {
+            const arrows = VELOCITY_ARROWS[item.velocity] ?? '\u2192';
+            const arrowColor = item.velocity === 'explosive' ? '#ff3b30'
+              : item.velocity === 'surging' ? '#f97316'
+              : item.velocity === 'rising'  ? '#00ff88'
+              : '#6b7280';
+            return (
+              <div key={item.term} className="flex items-center gap-1.5">
+                <span className="font-mono text-[6px] text-white/20 tabular-nums w-3 shrink-0">{i + 1}</span>
+                <span className="font-mono text-[7px] text-white/65 flex-1 truncate capitalize">{item.term}</span>
+                <span className="font-mono text-[7px] shrink-0" style={{ color: arrowColor }}>{arrows}</span>
+                {item.spike > 1 && (
+                  <span className="font-mono text-[6px] tabular-nums text-white/30 shrink-0">{item.spike.toFixed(1)}x</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="mt-2 pt-1.5 border-t border-white/[0.05] flex justify-end">
+        <Link href="/signals" className="font-mono text-[6px] text-[#ffd700]/50 hover:text-[#ffd700] transition-colors">
+          ALL TRENDS →
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function DisruptionIndexCard({ data }: { data: IntelOpsData['disruption'] }) {
+  const industries = (data?.industries ?? [])
+    .slice()
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+
+  return (
+    <div
+      className="rounded-sm p-2.5"
+      style={{ border: '1px solid rgba(249,115,22,0.12)', background: 'rgba(249,115,22,0.02)' }}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-mono text-[7px] tracking-[0.25em]" style={{ color: '#f97316' }}>DISRUPTION INDEX</span>
+        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#f97316', boxShadow: '0 0 4px #f97316' }} />
+      </div>
+
+      {industries.length === 0 ? (
+        <span className="font-mono text-[7px] text-white/25 italic">COMPUTING IDI...</span>
+      ) : (
+        <div className="space-y-2">
+          {industries.map((ind) => {
+            const trendColor = IDI_TREND_COLOR[ind.trend] ?? '#6b7280';
+            return (
+              <div key={ind.slug}>
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="font-mono text-[7px] text-white/65 truncate flex-1">{ind.industry}</span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="font-mono text-[6px] uppercase" style={{ color: trendColor }}>{ind.trend}</span>
+                    <span className="font-mono text-[7px] tabular-nums font-medium" style={{ color: '#f97316' }}>{ind.score}</span>
+                  </div>
+                </div>
+                <div className="h-[2px] w-full bg-white/[0.06] rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-1000"
+                    style={{ width: `${ind.score}%`, backgroundColor: '#f97316', boxShadow: '0 0 4px rgba(249,115,22,0.5)' }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="mt-2 pt-1.5 border-t border-white/[0.05] flex justify-end">
+        <Link href="/industries" className="font-mono text-[6px] text-[#f97316]/50 hover:text-[#f97316] transition-colors">
+          ALL SECTORS →
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function DailyBriefCard({ data }: { data: IntelOpsData['brief'] }) {
+  const brief = data?.data;
+  const summary = brief?.executiveSummary ?? '';
+  const themes = brief?.crossCuttingThemes?.slice(0, 3) ?? [];
+
+  return (
+    <div
+      className="rounded-sm p-2.5"
+      style={{ border: '1px solid rgba(168,85,247,0.12)', background: 'rgba(168,85,247,0.02)' }}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-mono text-[7px] tracking-[0.25em]" style={{ color: '#a855f7' }}>DAILY BRIEF</span>
+        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#a855f7', boxShadow: '0 0 4px #a855f7' }} />
+      </div>
+
+      {!brief ? (
+        <span className="font-mono text-[7px] text-white/25 italic">BRIEF GENERATING...</span>
+      ) : (
+        <div className="space-y-1.5">
+          {summary && (
+            <p className="font-mono text-[7px] text-white/55 leading-relaxed line-clamp-3">
+              {summary.slice(0, 120)}{summary.length > 120 ? '...' : ''}
+            </p>
+          )}
+          {themes.length > 0 && (
+            <div className="flex flex-wrap gap-1 pt-0.5">
+              {themes.map((t) => (
+                <span
+                  key={t}
+                  className="font-mono text-[6px] px-1 py-0.5 rounded-sm"
+                  style={{ backgroundColor: 'rgba(168,85,247,0.10)', border: '1px solid rgba(168,85,247,0.20)', color: '#a855f7' }}
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
+          )}
+          {brief.totalSignalsProcessed > 0 && (
+            <span className="font-mono text-[6px] text-white/20 block">
+              {brief.totalSignalsProcessed} signals processed
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className="mt-2 pt-1.5 border-t border-white/[0.05] flex justify-end">
+        <span className="font-mono text-[6px] text-[#a855f7]/50">READ FULL BRIEF →</span>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -318,6 +589,9 @@ export default function Home() {
 
   // Country heat
   const [countryHeat, setCountryHeat] = useState<Record<string, number>>({});
+
+  // Intelligence Operations
+  const [intelOps, setIntelOps] = useState<IntelOpsData | null>(null);
 
   // Fetch curation brief
   useEffect(() => {
@@ -346,6 +620,28 @@ export default function Home() {
       .catch(() => {});
   }, []);
 
+  // Fetch Intelligence Operations engines in parallel
+  useEffect(() => {
+    let cancelled = false;
+    async function loadIntelOps() {
+      const [convRes, trendRes, disruptRes, briefRes] = await Promise.allSettled([
+        fetch('/api/intelligence/convergence?window=24h').then(r => r.ok ? r.json() : null),
+        fetch('/api/intelligence/trending').then(r => r.ok ? r.json() : null),
+        fetch('/api/intelligence/disruption-index').then(r => r.ok ? r.json() : null),
+        fetch('/api/intelligence/daily-brief').then(r => r.ok ? r.json() : null),
+      ]);
+      if (cancelled) return;
+      setIntelOps({
+        convergence: convRes.status === 'fulfilled' ? (convRes.value as IntelOpsData['convergence']) : null,
+        trending:    trendRes.status === 'fulfilled' ? (trendRes.value as IntelOpsData['trending']) : null,
+        disruption:  disruptRes.status === 'fulfilled' ? (disruptRes.value as IntelOpsData['disruption']) : null,
+        brief:       briefRes.status === 'fulfilled' ? (briefRes.value as IntelOpsData['brief']) : null,
+      });
+    }
+    void loadIntelOps();
+    return () => { cancelled = true; };
+  }, []);
+
   // Typing animation
   useEffect(() => {
     if (isFocused || query) return;
@@ -361,7 +657,7 @@ export default function Home() {
   const handleSearch = useCallback(() => {
     const q = query.trim();
     if (!q) return;
-    router.push(`/industry/${q.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-')}`);
+    router.push(`/ask?q=${encodeURIComponent(q)}`);
   }, [query, router]);
 
   // Derived
@@ -437,6 +733,9 @@ export default function Home() {
             { href: '/solve',      label: 'PROBLEMS' },
             { href: '/innovation', label: 'TECH'     },
             { href: '/map',        label: 'MAP'      },
+            { href: '/ask',        label: 'ASK'      },
+            { href: '/trajectory', label: 'TRAJ'     },
+            { href: '/rfp',        label: 'RFP'      },
           ].map(({ href, label }) => (
             <Link key={href} href={href} className="font-mono text-[7px] tracking-[0.25em] text-white/45 hover:text-[#00d4ff] transition-colors">
               {label}
@@ -611,6 +910,20 @@ export default function Home() {
                   </div>
                 )}
 
+                {/* ── Intelligence Operations ────────────────────── */}
+                <section>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="font-mono text-[8px] tracking-[0.3em] text-white/40">INTELLIGENCE OPERATIONS</span>
+                    <PulseDot color="#00d4ff" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <ConvergenceCard data={intelOps?.convergence ?? null} />
+                    <TrendingEngineCard data={intelOps?.trending ?? null} />
+                    <DisruptionIndexCard data={intelOps?.disruption ?? null} />
+                    <DailyBriefCard data={intelOps?.brief ?? null} />
+                  </div>
+                </section>
+
                 {/* ── Signal Feed ───────────────────────────────── */}
                 {brief.signalsFeed.length > 0 && (
                   <div>
@@ -636,7 +949,7 @@ export default function Home() {
             {SUGGESTIONS.slice(0, 7).map(s => (
               <button
                 key={s}
-                onClick={() => router.push(`/industry/${s.replace(/\s+/g, '-')}`)}
+                onClick={() => router.push(`/ask?q=${encodeURIComponent(s)}`)}
                 className="font-mono text-[6px] tracking-[0.08em] text-white/40 border border-white/[0.10] rounded-full px-2.5 py-0.5 hover:text-white/70 hover:border-white/[0.20] transition-all whitespace-nowrap shrink-0"
               >
                 {s}
@@ -731,11 +1044,15 @@ export default function Home() {
             <span className="font-mono text-[6px] tracking-[0.3em] text-white/25 uppercase block mb-2.5">Navigate</span>
             <div className="space-y-1">
               {[
-                { href: '/map',        label: 'Global Map',       color: '#00d4ff' },
-                { href: '/industries', label: 'All Sectors',      color: '#00ff88' },
-                { href: '/solve',      label: 'Problem Solver',   color: '#a855f7' },
-                { href: '/innovation', label: 'Tech Catalog',     color: '#ffb800' },
-                { href: '/radar',      label: 'Disruption Radar', color: '#f97316' },
+                { href: '/map',              label: 'Global Map',            color: '#00d4ff' },
+                { href: '/industries',       label: 'All Sectors',           color: '#00ff88' },
+                { href: '/solve',            label: 'Problem Solver',        color: '#a855f7' },
+                { href: '/innovation',       label: 'Tech Catalog',          color: '#ffb800' },
+                { href: '/radar',            label: 'Disruption Radar',      color: '#f97316' },
+                { href: '/ask',             label: 'Ask Intelligence',       color: '#00d4ff' },
+                { href: '/trajectory',      label: 'Tech Trajectory',        color: '#00ff88' },
+                { href: '/products/compare', label: 'Compare Products',      color: '#a855f7' },
+                { href: '/rfp',             label: 'Gov Contracts (RFP)',    color: '#ffd700' },
               ].map(({ href, label, color }) => (
                 <Link key={href} href={href} className="group flex items-center justify-between py-1 px-2 rounded-sm hover:bg-white/[0.04] transition-colors">
                   <span className="font-mono text-[7px] tracking-[0.1em] text-white/45 group-hover:text-white/80 transition-colors">{label}</span>

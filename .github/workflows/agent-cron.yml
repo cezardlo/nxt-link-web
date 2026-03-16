@@ -48,9 +48,25 @@ jobs:
         env:
           SITE_URL: ${{ secrets.SITE_URL }}
 
+      - name: Refresh IKER scores
+        id: iker
+        run: |
+          STATUS=$(curl -s -o /tmp/iker_response.txt -w '%{http_code}' \
+            -X POST "$SITE_URL/api/agents/iker-refresh" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H "User-Agent: NXTLink-GitHubActions/1.0")
+          echo "iker_status=$STATUS" >> "$GITHUB_OUTPUT"
+          echo "IKER refresh: HTTP $STATUS"
+          cat /tmp/iker_response.txt | head -50
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::IKER refresh returned HTTP $STATUS"; fi
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
       - name: Print summary
         if: always()
         run: |
           echo "### NXT LINK Agent Pipeline" >> "$GITHUB_STEP_SUMMARY"
           echo "- Run time: $(date -u)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Status: ${{ steps.cron.outputs.cron_status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Cron status: ${{ steps.cron.outputs.cron_status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- IKER status: ${{ steps.iker.outputs.iker_status }}" >> "$GITHUB_STEP_SUMMARY"
