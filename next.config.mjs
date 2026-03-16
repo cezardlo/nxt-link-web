@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
+  transpilePackages: ['@excalidraw/excalidraw'],
   typescript: { ignoreBuildErrors: false },
   eslint: { ignoreDuringBuilds: false },
   async redirects() {
