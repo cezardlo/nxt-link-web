@@ -244,6 +244,14 @@ export async function GET(request: Request) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
   void fetch(`${siteUrl}/api/alerts/matches`, { method: 'POST' }).catch(() => null);
 
+  // Phase 6.5: CEO Agent — run daily briefing + monitor platform health
+  // This orchestrates all specialist agents and stores status in shared memory
+  const { ceoAgent } = await import('@/lib/agents/ceo-agent');
+  const dailyBriefing = await ceoAgent.runDailyBriefing().catch(err => {
+    console.error('[cron] CEO daily briefing failed:', err);
+    return null;
+  });
+
   // Phase 7: Measure prediction outcomes (close the learning loop)
   const unmeasured = await getPredictionsReadyToMeasure(20).catch(() => []);
   let outcomesMeasured = 0;
@@ -316,6 +324,15 @@ export async function GET(request: Request) {
         top_industry: r.topIndustries[0] ?? null,
       })),
     },
+    // CEO Agent daily briefing results
+    daily_briefing: dailyBriefing ? {
+      run_id: dailyBriefing.runId,
+      goals_set: dailyBriefing.goalsSet,
+      goals_completed: dailyBriefing.goalsCompleted,
+      platform_health: dailyBriefing.platformHealthStatus,
+      top_findings: dailyBriefing.topFindings,
+      duration_ms: dailyBriefing.durationMs,
+    } : null,
     // Agent OS pipeline results
     pipeline: pipeline ? {
       run_id: pipeline.run_id,

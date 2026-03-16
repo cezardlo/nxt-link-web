@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 type AgentRun = {
   name: string;
@@ -10,6 +10,20 @@ type AgentRun = {
   status: 'running' | 'success' | 'failed' | 'scheduled';
   description: string;
   color: string;
+};
+
+type AgentTeamMember = {
+  role: string;
+  description: string;
+  status: string;
+  library: string;
+  color: string;
+};
+
+type AgentTeamData = {
+  agents: Record<string, AgentTeamMember>;
+  health?: { status: string; apiResponseTime: number };
+  timestamp?: string;
 };
 
 type PlatformStat = {
@@ -94,12 +108,27 @@ const SOURCES = [
 export default function StatusPage() {
   const [now, setNow] = useState(new Date());
   const [pulsePhase, setPulsePhase] = useState(0);
+  const [agentTeam, setAgentTeam] = useState<AgentTeamData | null>(null);
+
+  const fetchAgentStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/agents/status');
+      if (res.ok) {
+        const data = (await res.json()) as AgentTeamData;
+        setAgentTeam(data);
+      }
+    } catch {
+      // Non-fatal — status page still works without agent data
+    }
+  }, []);
 
   useEffect(() => {
     const tick = setInterval(() => setNow(new Date()), 1000);
     const pulse = setInterval(() => setPulsePhase(p => (p + 0.02) % 1), 50);
-    return () => { clearInterval(tick); clearInterval(pulse); };
-  }, []);
+    void fetchAgentStatus();
+    const agentPoll = setInterval(() => void fetchAgentStatus(), 30_000);
+    return () => { clearInterval(tick); clearInterval(pulse); clearInterval(agentPoll); };
+  }, [fetchAgentStatus]);
 
   const stats: PlatformStat[] = [
     { label: 'Data Sources', value: '12 active', color: '#00d4ff' },
@@ -145,6 +174,56 @@ export default function StatusPage() {
               <p className="font-mono text-[13px]" style={{ color: s.color }}>{s.value}</p>
             </div>
           ))}
+        </div>
+
+        {/* Agent Team */}
+        <div className="border border-white/[0.06] rounded-sm overflow-hidden mb-6">
+          <div className="px-4 py-2 border-b border-white/[0.06] bg-white/[0.02] flex items-center justify-between">
+            <span className="font-mono text-[9px] tracking-[0.3em] text-white/30 uppercase">Agent Team</span>
+            {agentTeam?.health && (
+              <span className="font-mono text-[8px]"
+                style={{ color: agentTeam.health.status === 'healthy' ? '#00ff88' : agentTeam.health.status === 'degraded' ? '#ffd700' : '#ff3b30' }}>
+                {agentTeam.health.status.toUpperCase()} · {agentTeam.health.apiResponseTime}ms
+              </span>
+            )}
+          </div>
+          <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-3">
+            {agentTeam
+              ? Object.entries(agentTeam.agents).map(([key, agent]) => {
+                  const statusColor = agent.status === 'running' ? '#00ff88'
+                    : agent.status === 'working' ? '#00d4ff'
+                    : agent.status === 'error' ? '#ff3b30'
+                    : '#ffffff30';
+                  return (
+                    <div key={key}
+                      className="border rounded-sm p-3 relative overflow-hidden"
+                      style={{ borderColor: `${agent.color}20`, background: `${agent.color}06` }}>
+                      {/* Status dot */}
+                      <div className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full"
+                        style={{ background: statusColor, boxShadow: `0 0 5px ${statusColor}` }} />
+                      {/* Role */}
+                      <p className="font-mono text-[13px] font-medium mb-0.5" style={{ color: agent.color, fontFamily: 'Space Grotesk, sans-serif' }}>
+                        {agent.role}
+                      </p>
+                      {/* Description */}
+                      <p className="font-mono text-[8px] text-white/30 leading-relaxed mb-2">{agent.description}</p>
+                      {/* Library badge */}
+                      <span className="font-mono text-[7px] tracking-wide px-1.5 py-0.5 rounded-sm"
+                        style={{ color: agent.color, background: `${agent.color}18`, border: `1px solid ${agent.color}30` }}>
+                        {agent.library}
+                      </span>
+                    </div>
+                  );
+                })
+              : Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="border border-white/[0.04] rounded-sm p-3 animate-pulse bg-white/[0.02]">
+                    <div className="h-3 w-20 bg-white/[0.06] rounded mb-2" />
+                    <div className="h-2 w-full bg-white/[0.04] rounded mb-1" />
+                    <div className="h-2 w-3/4 bg-white/[0.04] rounded" />
+                  </div>
+                ))
+            }
+          </div>
         </div>
 
         {/* 7-Layer Pipeline */}
