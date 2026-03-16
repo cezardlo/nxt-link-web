@@ -621,8 +621,15 @@ function extractMarketData(articles: LiveArticle[]): MarketDataPoint[] {
 function deduplicateArticles(articles: LiveArticle[]): LiveArticle[] {
   const result: LiveArticle[] = [];
   const seenFingerprints = new Set<string>();
+  // Drop articles older than 1 year to prevent stale data contamination
+  const ONE_YEAR_AGO = Date.now() - 365 * 24 * 60 * 60 * 1000;
 
   for (const article of articles) {
+    // Age filter — skip articles with a valid date older than 1 year
+    if (article.publishedAt) {
+      const ts = new Date(article.publishedAt).getTime();
+      if (!isNaN(ts) && ts < ONE_YEAR_AGO) continue;
+    }
     // Create a fingerprint from first 6 significant words
     const words = article.title.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 3);
     const fingerprint = words.slice(0, 6).sort().join('|');
@@ -1208,10 +1215,15 @@ export async function liveSearch(query: string): Promise<LiveSearchResult> {
   }
 
   // ── Step 5: Sort, deduplicate, keep top ──
+  const NOW_MS = Date.now();
   allArticles.sort((a, b) => {
-    // Weight by relevance + credibility
-    const scoreA = a.relevanceScore * (5 - a.credibilityTier);
-    const scoreB = b.relevanceScore * (5 - b.credibilityTier);
+    // Weight by relevance + credibility + recency (last 30d get 1.5x boost)
+    const ageA = a.publishedAt ? (NOW_MS - new Date(a.publishedAt).getTime()) : Infinity;
+    const ageB = b.publishedAt ? (NOW_MS - new Date(b.publishedAt).getTime()) : Infinity;
+    const recencyA = ageA < 30 * 24 * 3600 * 1000 ? 1.5 : 1;
+    const recencyB = ageB < 30 * 24 * 3600 * 1000 ? 1.5 : 1;
+    const scoreA = a.relevanceScore * (5 - a.credibilityTier) * recencyA;
+    const scoreB = b.relevanceScore * (5 - b.credibilityTier) * recencyB;
     return scoreB - scoreA;
   });
 

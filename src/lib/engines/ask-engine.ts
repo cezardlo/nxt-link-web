@@ -354,20 +354,12 @@ function buildLocalVendors(slug: string, query: string): AskVendor[] {
     return { v, score };
   });
 
-  // Return vendors that have ANY match; if none match fall back to top IKER vendors
-  const matched = scored
+  // Return vendors that have a meaningful match; if none match return empty (no defense fallback)
+  return scored
     .filter(({ score }) => score >= 3)
     .sort((a, b) => b.score - a.score)
     .slice(0, 10)
     .map(({ v }) => vendorToAsk(v, true));
-
-  if (matched.length > 0) return matched;
-
-  // Fallback: top El Paso vendors by IKER score (always show something)
-  return allVendors
-    .sort((a, b) => b.ikerScore - a.ikerScore)
-    .slice(0, 6)
-    .map((v) => vendorToAsk(v, true));
 }
 
 function buildGlobalVendors(companies: CompanyEntry[], query: string): AskVendor[] {
@@ -548,7 +540,9 @@ function findBestIndustryMatch(query: string, liveResult?: LiveSearchResult): { 
   }
 
   scores.sort((a, b) => b.score - a.score);
-  return scores.length > 0 ? scores[0] : null;
+  // Require a meaningful score — prevents contaminated signals from matching unrelated industries
+  if (scores.length === 0 || scores[0].score < 8) return null;
+  return scores[0];
 }
 
 // ─── Synthesis Helpers ───────────────────────────────────────────────────────────
@@ -908,11 +902,8 @@ export async function assembleAskResponse(query: string): Promise<AskResponse> {
     if (mergedSignals.length >= 20) break;
   }
 
-  // ── Products + Costs ──
-  let matchedProducts = filterProductsForQuery(query);
-  if (matchedProducts.length === 0 && fallbackSlug) {
-    matchedProducts = filterProductsForQuery(INDUSTRIES.find(i => i.slug === fallbackSlug)?.label ?? '');
-  }
+  // ── Products + Costs ── (only match against the actual query — no industry fallback to avoid contamination)
+  const matchedProducts = filterProductsForQuery(query);
   const matchedFullProducts = PRODUCT_CATALOG.filter((p) => matchedProducts.some((mp) => mp.id === p.id));
   const costRanges = buildCostRanges(matchedFullProducts);
 
