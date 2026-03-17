@@ -76,7 +76,6 @@ export default function TopBar({
   const now        = useClock();
   const online     = useConnectionStatus();
   const [query, setQuery] = useState('');
-  const [alertOpen, setAlertOpen] = useState(false);
 
   const unreadCount  = alerts.filter(a => !a.read).length;
   const criticalCount = signals.filter(s => s.importance >= 0.9).length;
@@ -282,7 +281,7 @@ export default function TopBar({
 
       {/* ── Alert bell ────────────────────────────────────────────────────── */}
       <button
-        onClick={() => { setAlertOpen(o => !o); onAlertClick(); }}
+        onClick={() => { onAlertClick(); }}
         style={{
           position: 'relative',
           marginLeft: 12,

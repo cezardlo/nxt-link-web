@@ -85,7 +85,7 @@ export default function CommandCenterPage() {
     setSelectedSignal(null);
   }, []);
 
-  const handleWatchSelect = useCallback((query: string, _label: string) => {
+  const handleWatchSelect = useCallback((query: string) => {
     setSearchQuery(query);
     setSelectedSignal(null);
   }, []);

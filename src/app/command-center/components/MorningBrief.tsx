@@ -174,7 +174,7 @@ export default function MorningBrief({
           </div>
         )}
 
-        {!loading && items.map((item, i) => {
+        {!loading && items.map((item) => {
           const meta = PRIORITY_META[item.priority];
           return (
             <div
