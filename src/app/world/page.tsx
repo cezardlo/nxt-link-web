@@ -427,8 +427,9 @@ function CountryDetailPanel({
     fetch(`/api/world/signals?country=${country.code}`, { signal: controller.signal })
       .then(async (res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (await res.json()) as { signals?: string[] };
-        setSignalsState({ status: 'ok', signals: data.signals ?? [] });
+        const json = (await res.json()) as { ok: boolean; data?: { signals?: Array<{ title: string; url: string; source: string; category: string }> } };
+        const rawSignals = json.data?.signals ?? [];
+        setSignalsState({ status: 'ok', signals: rawSignals.map(s => s.title) });
       })
       .catch((err: unknown) => {
         if (err instanceof Error && err.name === 'AbortError') return;

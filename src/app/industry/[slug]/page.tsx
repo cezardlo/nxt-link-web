@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useParams } from 'next/navigation';
 
 import { EcosystemDiagram } from '@/components/EcosystemDiagram';
@@ -173,7 +173,7 @@ const INDUSTRY_TIMELINE: TimelineEntry[] = [
 
 // ─── Page Component ──────────────────────────────────────────────────────────
 
-export default function IndustryDeepDivePage() {
+function IndustryDeepDivePageInner() {
   const params = useParams();
   const slug = typeof params.slug === 'string' ? params.slug : '';
   const label = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -550,6 +550,14 @@ export default function IndustryDeepDivePage() {
 
       </div>
     </div>
+  );
+}
+
+export default function IndustryDeepDivePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black" />}>
+      <IndustryDeepDivePageInner />
+    </Suspense>
   );
 }
 

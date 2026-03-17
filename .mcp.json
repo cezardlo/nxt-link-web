@@ -10,7 +10,7 @@
     },
     "obsidian": {
       "command": "npx",
-      "args": ["-y", "obsidian-mcp"]
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "V:\\usuario\\Documents\\NXT LINK"]
     }
   }
 }

@@ -16,8 +16,9 @@ const NAV_ITEMS = [
   { href: '/ask',              label: 'ASK',     icon: '⬢', color: '#00d4ff' },
   { href: '/trajectory',       label: 'TRAJ',    icon: '↗', color: '#00ff88' },
   { href: '/products/compare', label: 'COMPARE', icon: '⧉', color: '#a855f7' },
+  { href: '/products',         label: 'PRODS',   icon: '◫', color: '#00ff88' },
   { href: '/rfp',              label: 'RFP',     icon: '🏛', color: '#ffd700' },
-  { href: '/report/cybersecurity', label: 'REPORT', icon: '📄', color: '#f97316' },
+  { href: '/report/defense',       label: 'REPORT', icon: '📄', color: '#f97316' },
   { href: '/world',            label: 'WORLD',   icon: '🌐', color: '#00d4ff' },
 ];
 
@@ -108,7 +109,7 @@ export function NavRail() {
       <div className="mt-auto flex flex-col items-center gap-2">
         <div className="w-5 h-px bg-white/[0.06]" />
         <Link
-          href="/platform/status"
+          href="/status"
           className="w-10 h-10 flex flex-col items-center justify-center rounded-md transition-all group hover:bg-white/[0.04]"
           title="System Status"
         >

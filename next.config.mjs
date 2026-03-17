@@ -12,9 +12,6 @@ const nextConfig = {
   },
   experimental: {
     serverComponentsExternalPackages: ['googleapis', 'googleapis-common', 'google-auth-library', 'qs'],
-    outputFileTracingIncludes: {
-      '/*': ['./prisma/dev.db', './prisma/migrations/**'],
-    },
   },
   async headers() {
     return [
