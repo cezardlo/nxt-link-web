@@ -15,12 +15,16 @@ const GREEN  = '#00FF88';
 const PURPLE = '#A855F7';
 
 const TYPE_COLOR: Record<SignalType, string> = {
-  vendor_mention:  CYAN,
-  contract_alert:  GOLD,
-  velocity_spike:  GREEN,
-  convergence:     PURPLE,
-  sector_spike:    RED,
-  security_impact: RED,
+  research_paper:      CYAN,
+  patent_filing:       GOLD,
+  funding_round:       PURPLE,
+  contract_award:      GOLD,
+  merger_acquisition:  GREEN,
+  product_launch:      GREEN,
+  facility_expansion:  GREEN,
+  regulatory_action:   RED,
+  hiring_signal:       CYAN,
+  case_study:          CYAN,
 };
 
 // ─── Props ────────────────────────────────────────────────────────────────────

@@ -24,12 +24,16 @@ const EP_LAT  =  31.762;
 
 // Signal type color mapping (used by map layer — exported for reuse)
 export const SIGNAL_COLORS: Record<SignalType, [number, number, number]> = {
-  vendor_mention:  [0,   212, 255],   // cyan
-  contract_alert:  [255, 215,   0],   // gold
-  velocity_spike:  [0,   255, 136],   // green
-  convergence:     [168,  85, 247],   // purple
-  sector_spike:    [255,  59,  48],   // red
-  security_impact: [255,  59,  48],   // red
+  research_paper:      [0,   212, 255],   // cyan — discoveries
+  patent_filing:       [255, 215,   0],   // gold — IP
+  funding_round:       [168,  85, 247],   // purple — investment
+  contract_award:      [255, 215,   0],   // gold — government
+  merger_acquisition:  [0,   255, 136],   // green — growth
+  product_launch:      [0,   255, 136],   // green — companies
+  facility_expansion:  [0,   255, 136],   // green — growth
+  regulatory_action:   [255,  59,  48],   // red — risk
+  hiring_signal:       [0,   212, 255],   // cyan
+  case_study:          [0,   212, 255],   // cyan
 };
 
 // El Paso relevance keywords — signals mentioning these score higher
@@ -64,10 +68,11 @@ function elPasoRelevance(text: string): number {
 /** Map raw signal_type string → typed SignalType (with safe fallback). */
 function toSignalType(raw: string): SignalType {
   const valid: SignalType[] = [
-    'vendor_mention', 'contract_alert', 'velocity_spike',
-    'convergence', 'sector_spike', 'security_impact',
+    'merger_acquisition', 'funding_round', 'contract_award',
+    'research_paper', 'patent_filing', 'facility_expansion',
+    'regulatory_action', 'product_launch', 'hiring_signal', 'case_study',
   ];
-  return valid.includes(raw as SignalType) ? (raw as SignalType) : 'velocity_spike';
+  return valid.includes(raw as SignalType) ? (raw as SignalType) : 'research_paper';
 }
 
 /** Map importance number → SignalPriority tier. */

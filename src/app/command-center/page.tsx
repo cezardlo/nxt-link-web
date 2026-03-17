@@ -36,10 +36,22 @@ function useRawFeed() {
     if (fetched.current) return;
     fetched.current = true;
 
+    // First try GET — if empty, POST to trigger warmup, then retry
     fetch('/api/feeds')
       .then(r => r.json())
       .then(json => {
-        if (json?.all) setItems(json.all.slice(0, 60));
+        if (json?.all?.length > 0) {
+          setItems(json.all.slice(0, 60));
+        } else {
+          // Feed is cold — trigger warmup then retry after 8s
+          fetch('/api/feeds', { method: 'POST' }).catch(() => {});
+          setTimeout(() => {
+            fetch('/api/feeds')
+              .then(r => r.json())
+              .then(j => { if (j?.all?.length > 0) setItems(j.all.slice(0, 60)); })
+              .catch(() => {});
+          }, 8000);
+        }
       })
       .catch(() => {});
 

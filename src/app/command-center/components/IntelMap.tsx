@@ -32,11 +32,12 @@ type ViewKey = keyof typeof VIEWS;
 
 // Filter button config
 const FILTER_TYPES: Array<{ key: SignalType | 'ALL'; label: string; color: string }> = [
-  { key: 'ALL',            label: 'ALL',       color: CYAN   },
-  { key: 'contract_alert', label: 'CONTRACTS', color: '#FFD700' },
-  { key: 'vendor_mention', label: 'VENDORS',   color: CYAN   },
-  { key: 'velocity_spike', label: 'SIGNALS',   color: GREEN  },
-  { key: 'convergence',    label: 'RESEARCH',  color: '#A855F7' },
+  { key: 'ALL',                label: 'ALL',       color: CYAN    },
+  { key: 'contract_award',    label: 'CONTRACTS', color: '#FFD700' },
+  { key: 'research_paper',    label: 'RESEARCH',  color: CYAN    },
+  { key: 'funding_round',     label: 'FUNDING',   color: '#A855F7' },
+  { key: 'merger_acquisition', label: 'M&A',      color: GREEN   },
+  { key: 'patent_filing',     label: 'PATENTS',   color: '#FFD700' },
 ];
 
 // ─── Dot data shape ───────────────────────────────────────────────────────────
@@ -117,6 +118,12 @@ export default function IntelMap({ signals, onDotClick }: Props) {
       updateTriggers:   { getRadius: pulse },
     }),
   ], [dots, pulse, onDotClick]);
+
+  // Force clear loading state after 4s (deck.gl can block onLoad)
+  useEffect(() => {
+    const t = setTimeout(() => setMapLoaded(true), 4000);
+    return () => clearTimeout(t);
+  }, []);
 
   // Hover state for tooltip
   const [hovered, setHovered] = useState<IntelSignal | null>(null);

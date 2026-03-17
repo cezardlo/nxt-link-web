@@ -8,12 +8,16 @@ export type Mode = 'MORNING' | 'WORLD' | 'EL PASO' | 'RESEARCH' | 'CONTRACTS';
 // ─── Signals ──────────────────────────────────────────────────────────────────
 
 export type SignalType =
-  | 'vendor_mention'
-  | 'contract_alert'
-  | 'velocity_spike'
-  | 'convergence'
-  | 'sector_spike'
-  | 'security_impact';
+  | 'merger_acquisition'
+  | 'funding_round'
+  | 'contract_award'
+  | 'research_paper'
+  | 'patent_filing'
+  | 'facility_expansion'
+  | 'regulatory_action'
+  | 'product_launch'
+  | 'hiring_signal'
+  | 'case_study';
 
 export type SignalPriority = 'critical' | 'high' | 'medium' | 'low';
 
