@@ -1,14 +1,8 @@
 import type { Metadata } from 'next';
-import { IBM_Plex_Mono, Inter, Space_Grotesk } from 'next/font/google';
+import { IBM_Plex_Mono, Space_Grotesk } from 'next/font/google';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './globals.css';
 import { Analytics } from '@vercel/analytics/react';
-import { AppShell } from '@/components/AppShell';
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-});
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -28,21 +22,9 @@ export const viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'NXT//LINK — Technology Intelligence Platform',
-  description: 'Discover what technology exists, who builds it, where it deploys, and which vendors are winning contracts in El Paso, TX.',
-  openGraph: {
-    title: 'NXT//LINK — Technology Intelligence Platform',
-    description: 'Live vendor map, IKER scores, CBP border wait times, and federal contract signals for the El Paso–Fort Bliss corridor.',
-    siteName: 'NXT//LINK',
-    locale: 'en_US',
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'NXT//LINK — Technology Intelligence Platform',
-    description: 'Live vendor map, IKER scores, CBP border wait times, and federal contract signals for El Paso, TX.',
-  },
-  robots: { index: true, follow: true },
+  title: 'NXT//LINK — Intelligence Command Center',
+  description: 'Personal technology intelligence command center for El Paso, TX.',
+  robots: { index: false, follow: false },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -53,8 +35,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${spaceGrotesk.variable} ${ibmPlexMono.variable} font-sans antialiased bg-black text-white`}>
-        <AppShell>{children}</AppShell>
+      <body
+        className={`${spaceGrotesk.variable} ${ibmPlexMono.variable} font-mono antialiased`}
+        style={{ margin: 0, padding: 0, overflow: 'hidden', background: '#07070F' }}
+      >
+        {children}
         <Analytics />
       </body>
     </html>
