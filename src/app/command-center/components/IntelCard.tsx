@@ -17,12 +17,16 @@ const PURPLE = '#A855F7';
 const DIM    = 'rgba(0,212,255,0.10)';
 
 const SIGNAL_TYPE_COLOR: Record<string, string> = {
-  vendor_mention:  CYAN,
-  contract_alert:  GOLD,
-  velocity_spike:  GREEN,
-  convergence:     PURPLE,
-  sector_spike:    RED,
-  security_impact: RED,
+  research_paper:      CYAN,
+  patent_filing:       GOLD,
+  funding_round:       PURPLE,
+  contract_award:      GOLD,
+  merger_acquisition:  GREEN,
+  product_launch:      GREEN,
+  facility_expansion:  GREEN,
+  regulatory_action:   RED,
+  hiring_signal:       CYAN,
+  case_study:          CYAN,
 };
 
 const STATUS_COLOR: Record<string, string> = {
