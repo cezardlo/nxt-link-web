@@ -238,15 +238,27 @@ export function useSignals(): SignalsState {
       ]);
 
       // ── Intel signals ────────────────────────────────────────────────────
+      let gotSignals = false;
       if (signalRes.status === 'fulfilled') {
         const data = signalRes.value as { ok?: boolean; data?: IntelSignalsResponse } & IntelSignalsResponse;
 
         // Unwrap nested data if present (some routes wrap in { ok, data })
         const payload: IntelSignalsResponse = data.data ?? data;
 
-        // Raw signals array (supabase path uses 'signals', memory path also 'signals')
+        // Raw signals array
         const rawSignals = payload.signals ?? [];
-        setSignals(rawSignals.map((s, i) => normalizeSignal(s, i)));
+        if (rawSignals.length > 0) {
+          // Deduplicate by title similarity (first 60 chars)
+          const seen = new Set<string>();
+          const unique = rawSignals.filter(s => {
+            const key = (s.title ?? '').slice(0, 60).toLowerCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+          setSignals(unique.map((s, i) => normalizeSignal(s, i)));
+          gotSignals = true;
+        }
 
         // Sector scores — handle both response shapes
         const scoreMap = payload.sectorScores ?? payload.by_industry;
@@ -257,15 +269,18 @@ export function useSignals(): SignalsState {
 
       // ── What changed ─────────────────────────────────────────────────────
       if (changedRes.status === 'fulfilled') {
-        const body = changedRes.value as { ok?: boolean; data?: WhatChangedResponse } & WhatChangedResponse;
-        const payload: WhatChangedResponse = body.data ?? body;
+        // signals_today/week/top_signals are at TOP level, not inside data
+        const body = changedRes.value as Record<string, unknown>;
 
-        setSignalsToday(payload.signals_today ?? 0);
-        setSignalsWeek(payload.signals_week   ?? 0);
+        setSignalsToday(typeof body.signals_today === 'number' ? body.signals_today : 0);
+        setSignalsWeek(typeof body.signals_week === 'number' ? body.signals_week : 0);
 
-        // If intel-signals returned nothing, fall back to what-changed top_signals
-        if (signals.length === 0 && payload.top_signals?.length) {
-          setSignals(payload.top_signals.map((s, i) => normalizeSignal(s, i)));
+        // Only use what-changed as fallback if intel-signals returned nothing
+        if (!gotSignals) {
+          const topSigs = body.top_signals as Array<Record<string, unknown>> | undefined;
+          if (topSigs?.length) {
+            setSignals(topSigs.map((s, i) => normalizeSignal(s as Parameters<typeof normalizeSignal>[0], i)));
+          }
         }
       }
 

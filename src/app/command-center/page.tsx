@@ -133,15 +133,25 @@ export default function CommandCenterPage() {
     : '30% 1fr 30%';
 
   // ── Feed items normalized for LiveFeed ─────────────────────────────────────
-  const feedForLiveFeed = rawFeedItems.map(r => ({
-    id:          r.id,
-    title:       r.title,
-    source:      r.source,
-    category:    r.category,
-    url:         r.link,
-    score:       r.score,
-    publishedAt: r.pubDate,
-  }));
+  const feedForLiveFeed = rawFeedItems.length > 0
+    ? rawFeedItems.map(r => ({
+        id:          r.id,
+        title:       r.title,
+        source:      r.source,
+        category:    r.category,
+        url:         r.link,
+        score:       r.score,
+        publishedAt: r.pubDate,
+      }))
+    : signalsState.signals.slice(0, 30).map(sig => ({
+        id:          sig.id,
+        title:       sig.title,
+        source:      sig.source,
+        category:    sig.industry,
+        url:         sig.url,
+        score:       Math.round(sig.importance * 100),
+        publishedAt: sig.discoveredAt,
+      }));
 
   return (
     <div style={{
