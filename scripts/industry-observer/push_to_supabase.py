@@ -136,8 +136,8 @@ def push_to_supabase(days: int = 7) -> dict[str, int]:
     key = os.environ.get('SUPABASE_SERVICE_KEY') or os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')
 
     if not url or not key:
-        logger.error('SUPABASE_URL and SUPABASE_SERVICE_KEY must be set')
-        return {'error': 1}
+        logger.warning('SUPABASE_URL / SUPABASE_SERVICE_KEY not set — skipping push (add secrets to GitHub repo settings)')
+        return {'skipped': 1}
 
     client = SupabaseClient(url, key)
     session = get_session()
@@ -197,4 +197,4 @@ if __name__ == '__main__':
 
     result = push_to_supabase(days=args.days)
     print(json.dumps(result, indent=2))
-    sys.exit(0 if 'error' not in result else 1)
+    sys.exit(1 if 'error' in result else 0)
