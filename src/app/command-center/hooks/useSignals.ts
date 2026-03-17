@@ -43,26 +43,99 @@ const EP_KEYWORDS = [
   'sunland park', 'cbp', 'customs', 'bwc',
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Global city coordinates for company HQs + industry hubs ────────────────
 
-/**
- * Deterministic lat/lng scatter around El Paso.
- * Same index always produces the same coordinates — no jitter on re-render.
- * Uses golden-angle spiral so dots spread evenly rather than clumping.
- */
-export function signalToCoord(index: number): [number, number] {
-  const angle  = (index * 137.508) % 360;                      // golden angle
-  const radius = 0.025 + (index % 9) * 0.022;                  // 0.025–0.22 degrees (~2–20 km)
-  const lng    = EP_LNG + radius * Math.cos((angle * Math.PI) / 180);
-  const lat    = EP_LAT + radius * Math.sin((angle * Math.PI) / 180);
-  return [parseFloat(lng.toFixed(5)), parseFloat(lat.toFixed(5))];
-}
+const COMPANY_COORDS: Record<string, [number, number]> = {
+  'google':      [-122.084, 37.422],   'alphabet':    [-122.084, 37.422],
+  'apple':       [-122.009, 37.335],   'microsoft':   [-122.126, 47.640],
+  'amazon':      [-122.339, 47.616],   'meta':        [-122.149, 37.485],
+  'nvidia':      [-121.977, 37.370],   'tesla':       [-97.751, 30.228],
+  'openai':      [-122.399, 37.776],   'spacex':      [-118.343, 33.921],
+  'lockheed':    [-77.449, 38.888],    'raytheon':    [-71.268, 42.363],
+  'boeing':      [-87.636, 41.879],    'northrop':    [-118.369, 34.201],
+  'palantir':    [-104.993, 39.740],   'anduril':     [-117.824, 33.685],
+  'cloudflare':  [-122.399, 37.776],   'crowdstrike': [-78.786, 35.841],
+  'samsung':     [127.060, 37.514],    'tsmc':        [120.981, 24.787],
+  'arm':         [-1.258, 52.254],     'asml':        [5.482, 51.441],
+  'intel':       [-121.960, 37.388],   'amd':         [-121.987, 37.376],
+  'wiz':         [-73.985, 40.748],    'databricks':  [-122.399, 37.776],
+};
+
+// Industry hub fallback — if no company match, place near an industry center
+const INDUSTRY_HUBS: Record<string, [number, number]> = {
+  'cybersecurity':      [-77.037, 38.907],    // DC
+  'defense':            [-77.037, 38.907],    // DC
+  'ai':                 [-122.399, 37.776],   // SF
+  'semiconductor':      [-121.960, 37.388],   // Santa Clara
+  'energy':             [-95.370, 29.760],    // Houston
+  'biotech':            [-71.059, 42.360],    // Boston
+  'fintech':            [-73.985, 40.748],    // NYC
+  'logistics':          [-90.049, 35.149],    // Memphis
+  'manufacturing':      [-83.046, 42.332],    // Detroit
+  'aerospace':          [-118.243, 34.052],   // LA
+  'agriculture':        [-93.621, 41.588],    // Des Moines
+  'healthcare':         [-86.158, 39.769],    // Indianapolis
+  'general':            [-98.500, 39.500],    // US center
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Score 0–100 for how relevant a signal is to El Paso. */
 function elPasoRelevance(text: string): number {
   const lower = text.toLowerCase();
   const hits  = EP_KEYWORDS.filter(kw => lower.includes(kw)).length;
   return Math.min(100, hits * 35);
+}
+
+/**
+ * Determine signal coordinates:
+ * 1. If El Paso relevant → scatter around El Paso
+ * 2. If known company → place at company HQ
+ * 3. If known industry → place at industry hub
+ * 4. Fallback → scatter globally across US
+ */
+export function signalToCoord(
+  index: number,
+  company?: string,
+  industry?: string,
+  epRelevance?: number,
+): [number, number] {
+  // Golden-angle scatter function
+  const scatter = (baseLng: number, baseLat: number, spread: number): [number, number] => {
+    const angle  = (index * 137.508) % 360;
+    const radius = spread * 0.3 + (index % 7) * spread * 0.1;
+    const lng    = baseLng + radius * Math.cos((angle * Math.PI) / 180);
+    const lat    = baseLat + radius * Math.sin((angle * Math.PI) / 180);
+    return [parseFloat(lng.toFixed(4)), parseFloat(lat.toFixed(4))];
+  };
+
+  // 1. El Paso relevant → cluster in El Paso
+  if (epRelevance && epRelevance > 0) {
+    return scatter(EP_LNG, EP_LAT, 0.08);
+  }
+
+  // 2. Known company → near HQ
+  if (company) {
+    const key = company.toLowerCase();
+    for (const [name, coords] of Object.entries(COMPANY_COORDS)) {
+      if (key.includes(name) || name.includes(key)) {
+        return scatter(coords[0], coords[1], 0.15);
+      }
+    }
+  }
+
+  // 3. Known industry → near hub
+  if (industry) {
+    const key = industry.toLowerCase();
+    for (const [name, coords] of Object.entries(INDUSTRY_HUBS)) {
+      if (key.includes(name) || name.includes(key)) {
+        return scatter(coords[0], coords[1], 0.4);
+      }
+    }
+  }
+
+  // 4. Fallback — scatter across the US
+  return scatter(-98.5, 39.5, 8);
 }
 
 /** Map raw signal_type string → typed SignalType (with safe fallback). */
@@ -101,6 +174,8 @@ function normalizeSignal(
   const title      = raw.title ?? 'Untitled Signal';
   const type       = toSignalType(raw.signal_type ?? '');
 
+  const epScore = elPasoRelevance(title + ' ' + (raw.industry ?? '') + ' ' + (raw.company ?? ''));
+
   return {
     id:              `sig-${index}-${Date.now()}`,
     type,
@@ -113,8 +188,8 @@ function normalizeSignal(
     discoveredAt:    raw.discovered_at ?? new Date().toISOString(),
     source:          'intel-signals',
     url:             raw.url ?? '',
-    coordinates:     signalToCoord(index),
-    elPasoRelevance: elPasoRelevance(title + ' ' + (raw.industry ?? '')),
+    coordinates:     signalToCoord(index, raw.company ?? undefined, raw.industry ?? undefined, epScore),
+    elPasoRelevance: epScore,
   };
 }
 
