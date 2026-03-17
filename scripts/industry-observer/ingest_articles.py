@@ -2,7 +2,7 @@
 """
 NXT LINK Industry Observer — Article Ingestion
 Fetches articles from discovered sources, extracts structured facts.
-Uses newspaper3k for extraction + spaCy for NLP.
+Uses newspaper4k for extraction + spaCy for NLP.
 Outputs ingested_articles.json
 """
 
