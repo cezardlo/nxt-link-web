@@ -137,14 +137,23 @@ export default function TopBar({ mode, onModeChange, alerts, signals, onSearch, 
       <div className="tb-sep" />
 
       {/* Status */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, margin: '0 10px' }}>
-        <span style={{
-          width: 6, height: 6, borderRadius: '50%',
-          background: online ? G : R,
-          boxShadow: `0 0 8px ${online ? G : R}88`,
-          animation: 'pulse 2.5s ease-in-out infinite',
-        }} />
-        <span style={{ fontSize: 7, letterSpacing: '0.12em', color: online ? `${G}99` : `${R}99` }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '0 10px' }}>
+        <span style={{ position: 'relative', width: 8, height: 8, flexShrink: 0 }}>
+          <span style={{
+            position: 'absolute', inset: 0, borderRadius: '50%',
+            background: online ? G : R,
+            boxShadow: `0 0 10px ${online ? G : R}`,
+            animation: 'pulse 2.2s ease-in-out infinite',
+          }} />
+          {online && (
+            <span style={{
+              position: 'absolute', inset: -3, borderRadius: '50%',
+              border: `1px solid ${G}44`,
+              animation: 'pulse 2.2s ease-in-out infinite',
+            }} />
+          )}
+        </span>
+        <span style={{ fontSize: 7, letterSpacing: '0.14em', color: online ? `${G}aa` : `${R}aa` }}>
           {online ? 'LIVE' : 'OFFLINE'}
         </span>
       </div>
@@ -167,45 +176,46 @@ export default function TopBar({ mode, onModeChange, alerts, signals, onSearch, 
         .tb-root {
           height: 44px; display: flex; align-items: center;
           padding: 0 10px; flex-shrink: 0;
-          background: rgba(5,5,12,0.98);
-          border-bottom: 1px solid rgba(0,212,255,0.06);
+          background: #060a12;
+          border-bottom: 1px solid rgba(0,212,255,0.10);
           position: relative; z-index: 50;
           font-family: 'IBM Plex Mono', monospace;
         }
         .tb-root::after {
           content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(0,212,255,0.12), transparent);
+          background: linear-gradient(90deg, transparent, rgba(0,212,255,0.20), transparent);
         }
-        .tb-sep { width: 1px; height: 18px; background: rgba(0,212,255,0.08); flex-shrink: 0; margin: 0 8px; }
+        .tb-sep { width: 1px; height: 20px; background: rgba(0,212,255,0.10); flex-shrink: 0; margin: 0 8px; }
         .tb-logo { margin-right: 8px; flex-shrink: 0; }
         .tb-mode {
           height: 44px; padding: 0 10px; background: none; border: none;
           cursor: pointer; font-family: 'IBM Plex Mono', monospace;
-          font-size: 8px; letter-spacing: 0.1em;
+          font-size: 8px; letter-spacing: 0.12em;
           transition: all 0.15s;
         }
-        .tb-mode:hover { color: rgba(255,255,255,0.6) !important; }
-        .tb-mode-active { background: rgba(0,212,255,0.03); }
+        .tb-mode:hover { color: rgba(255,255,255,0.65) !important; background: rgba(0,212,255,0.04); }
+        .tb-mode-active { background: rgba(0,212,255,0.05); }
         .tb-search {
-          width: 100%; height: 28px;
-          background: rgba(0,212,255,0.03);
-          border: 1px solid rgba(0,212,255,0.08);
+          width: 100%; height: 27px;
+          background: rgba(0,212,255,0.04);
+          border: 1px solid rgba(0,212,255,0.11);
           border-radius: 2px; padding: 0 10px;
           font-family: 'IBM Plex Mono', monospace;
           font-size: 10px; color: ${C}; outline: none;
-          transition: border-color 0.15s;
+          transition: border-color 0.15s, background 0.15s;
         }
-        .tb-search:focus { border-color: rgba(0,212,255,0.3); background: rgba(0,212,255,0.05); }
-        .tb-search::placeholder { color: rgba(0,212,255,0.2); }
+        .tb-search:focus { border-color: rgba(0,212,255,0.35); background: rgba(0,212,255,0.07); }
+        .tb-search::placeholder { color: rgba(0,212,255,0.22); }
         .tb-alert {
           display: flex; align-items: center; gap: 5;
           padding: 4px 10px; border: 1px solid; border-radius: 2px;
           cursor: pointer; font-family: 'IBM Plex Mono', monospace;
           background: transparent; transition: all 0.15s;
         }
+        .tb-alert:hover { background: rgba(0,212,255,0.05); }
         @keyframes pulse {
-          0%,100% { opacity: 1; }
-          50% { opacity: 0.35; }
+          0%,100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.4; transform: scale(0.85); }
         }
       `}</style>
     </div>

@@ -8,7 +8,7 @@ const CYAN  = '#00D4FF';
 const GREEN = '#00FF88';
 const GOLD  = '#FFD700';
 const RED   = '#FF3B30';
-const DIM   = 'rgba(0,212,255,0.08)';
+const DIM   = 'rgba(0,212,255,0.09)';
 
 const PRIORITY_META: Record<BriefPriority, { label: string; color: string }> = {
   URGENT:      { label: 'URGENT',      color: RED   },
@@ -42,17 +42,22 @@ export default function MorningBrief({
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '8px 10px', borderBottom: `1px solid ${DIM}`,
-        background: 'rgba(0,0,0,0.4)', flexShrink: 0,
+        background: 'rgba(4,8,18,0.8)', flexShrink: 0,
       }}>
-        <span style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD, boxShadow: `0 0 6px ${GOLD}88`, flexShrink: 0 }} />
-        <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, letterSpacing: '0.12em', color: GOLD }}>
-          MORNING BRIEF
+        <span style={{ position: 'relative', width: 7, height: 7, flexShrink: 0 }}>
+          <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: GOLD, boxShadow: `0 0 8px ${GOLD}88` }} />
         </span>
-        <span style={{ marginLeft: 'auto', fontFamily: 'IBM Plex Mono, monospace', fontSize: 8, color: 'rgba(0,212,255,0.4)' }}>
-          {totalSignals > 0 ? `${totalSignals} SIG` : ''}
+        <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, letterSpacing: '0.15em', color: GOLD, textTransform: 'uppercase' }}>
+          Morning Brief
         </span>
+        <span style={{ marginLeft: 'auto', fontFamily: 'IBM Plex Mono, monospace', fontSize: 8, color: '#00d4ff', fontWeight: 600 }}>
+          {totalSignals > 0 ? totalSignals : ''}
+        </span>
+        {totalSignals > 0 && (
+          <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 7, color: 'rgba(0,212,255,0.35)', letterSpacing: '0.1em' }}>SIG</span>
+        )}
         {genTime && (
-          <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 7, color: 'rgba(0,212,255,0.3)' }}>
+          <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 7, color: 'rgba(0,212,255,0.28)', marginLeft: 4 }}>
             {genTime}
           </span>
         )}
@@ -123,36 +128,49 @@ export default function MorningBrief({
               key={item.id}
               onClick={() => onItemClick(item.industry)}
               style={{
-                marginBottom: 6, padding: '8px 10px',
-                background: `${meta.color}06`,
-                borderLeft: `3px solid ${meta.color}`,
-                border: `1px solid ${meta.color}18`,
-                borderLeftWidth: 3,
+                marginBottom: 5, padding: '8px 10px',
+                background: `${meta.color}05`,
+                borderLeft: `2px solid ${meta.color}`,
+                border: `1px solid ${meta.color}14`,
+                borderLeftWidth: 2,
                 borderRadius: 2, cursor: 'pointer',
-                transition: 'background 0.15s',
+                transition: 'background 0.15s, border-color 0.15s',
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = `${meta.color}12`; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = `${meta.color}06`; }}
+              onMouseEnter={e => {
+                const el = e.currentTarget as HTMLDivElement;
+                el.style.background = `${meta.color}0e`;
+                el.style.borderColor = `${meta.color}28`;
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget as HTMLDivElement;
+                el.style.background = `${meta.color}05`;
+                el.style.borderColor = `${meta.color}14`;
+              }}
             >
-              {/* Priority + industry + EP score */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              {/* Priority badge + EP score */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
                 <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
                   fontFamily: 'IBM Plex Mono, monospace', fontSize: 7,
-                  letterSpacing: '0.1em', color: meta.color, fontWeight: 600,
+                  letterSpacing: '0.12em', color: meta.color, fontWeight: 600,
+                  background: `${meta.color}10`, border: `1px solid ${meta.color}28`,
+                  borderRadius: 2, padding: '1px 5px',
                 }}>
-                  ● {meta.label}
+                  <span style={{ width: 4, height: 4, borderRadius: '50%', background: meta.color, display: 'inline-block' }} />
+                  {meta.label}
                 </span>
                 <span style={{
-                  marginLeft: 'auto', fontFamily: 'IBM Plex Mono, monospace',
-                  fontSize: 7, color: 'rgba(0,212,255,0.3)',
-                  maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  fontFamily: 'IBM Plex Mono, monospace',
+                  fontSize: 7, color: 'rgba(0,212,255,0.28)',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  flex: 1,
                 }}>
-                  {item.industry.slice(0, 20)}
+                  {item.industry.slice(0, 22)}
                 </span>
                 <span style={{
                   fontFamily: 'IBM Plex Mono, monospace', fontSize: 7, color: epColor,
-                  background: `${epColor}14`, border: `1px solid ${epColor}30`,
-                  borderRadius: 2, padding: '1px 4px',
+                  background: `${epColor}10`, border: `1px solid ${epColor}25`,
+                  borderRadius: 2, padding: '1px 4px', flexShrink: 0,
                 }}>
                   EP {item.elPasoRelevance}
                 </span>
@@ -160,8 +178,8 @@ export default function MorningBrief({
 
               {/* Headline */}
               <p style={{
-                margin: '0 0 3px', fontFamily: 'IBM Plex Mono, monospace',
-                fontSize: 10, color: 'rgba(255,255,255,0.88)', lineHeight: 1.45, fontWeight: 500,
+                margin: '0 0 4px', fontFamily: 'IBM Plex Mono, monospace',
+                fontSize: 10, color: 'rgba(255,255,255,0.90)', lineHeight: 1.45, fontWeight: 500,
               }}>
                 {item.headline}
               </p>
@@ -169,7 +187,7 @@ export default function MorningBrief({
               {/* Context */}
               <p style={{
                 margin: 0, fontFamily: 'IBM Plex Mono, monospace',
-                fontSize: 9, color: 'rgba(255,255,255,0.5)', lineHeight: 1.5,
+                fontSize: 9, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5,
               }}>
                 {item.context}
               </p>

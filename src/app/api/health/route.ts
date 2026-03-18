@@ -1,120 +1,120 @@
 import { NextResponse } from 'next/server';
 
 import { isSupabaseConfigured, getSupabaseClient } from '@/lib/supabase/client';
-import { getStoredFeedItems } from '@/lib/agents/feed-agent';
 
 export const dynamic = 'force-dynamic';
 
-type SourceCheck = {
-  name: string;
-  status: 'ok' | 'error' | 'empty' | 'no-key';
-  count?: number;
-  latency_ms?: number;
-  error?: string;
+// ---------------------------------------------------------------------------
+// Env-var inventory — report which keys are present without exposing values
+// ---------------------------------------------------------------------------
+const ENV_KEYS = [
+  'GEMINI_API_KEY',
+  'USAJOBS_API_KEY',
+  'SAM_GOV_API_KEY',
+  'USPTO_PATENTSVIEW_API_KEY',
+  'FIRECRAWL_API_KEY',
+  'OPENCORPORATES_API_TOKEN',
+  'CRON_SECRET',
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'OLLAMA_BASE_URL',
+  'INTEL_API_URL',
+  'NEXT_PUBLIC_SITE_URL',
+  'VERCEL_URL',
+] as const;
+
+type EnvKey = (typeof ENV_KEYS)[number];
+
+type EnvStatus = {
+  key: EnvKey;
+  set: boolean;
 };
 
 type HealthReport = {
   ok: boolean;
   timestamp: string;
   overall_grade: 'A' | 'B' | 'C' | 'D' | 'F';
-  supabase: { connected: boolean; vendors?: number; signals?: number; entities?: number };
-  feeds: { cached: boolean; article_count: number; source_count: number; age_minutes: number | null };
-  apis: SourceCheck[];
+  supabase: {
+    connected: boolean;
+    vendors?: number;
+    signals?: number;
+    entities?: number;
+    cron_last_run?: string | null;
+  };
+  feeds: {
+    note: string;
+    warm_endpoint: string;
+  };
+  env: EnvStatus[];
   summary: string;
 };
 
-async function checkApi(name: string, url: string): Promise<SourceCheck> {
-  const start = Date.now();
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
-    const latency = Date.now() - start;
-    if (!res.ok) return { name, status: 'error', latency_ms: latency, error: `HTTP ${res.status}` };
-    const json = await res.json() as Record<string, unknown>;
-    // Try to count items from common response shapes
-    let count = 0;
-    if (Array.isArray(json.data)) count = json.data.length;
-    else if (json.data && typeof json.data === 'object' && 'patents' in json.data) count = (json.data as { patents: unknown[] }).patents?.length ?? 0;
-    else if (json.data && typeof json.data === 'object' && 'jobs' in json.data) count = (json.data as { jobs: unknown[] }).jobs?.length ?? 0;
-    else if (Array.isArray(json.all)) count = json.all.length;
-    else if (Array.isArray(json.signals)) count = json.signals.length;
-    else if (Array.isArray(json.items)) count = json.items.length;
-    else if (typeof json.total === 'number') count = json.total as number;
-    return { name, status: count > 0 ? 'ok' : 'empty', count, latency_ms: latency };
-  } catch (err) {
-    return { name, status: 'error', latency_ms: Date.now() - start, error: err instanceof Error ? err.message : 'Unknown' };
-  }
-}
-
 export async function GET(): Promise<NextResponse> {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : 'https://www.nxtlinktech.com';
+  // ── 1. Supabase connection ────────────────────────────────────────────────
+  let supabase: HealthReport['supabase'] = { connected: false };
 
-  // Check Supabase
-  let supabase = { connected: false, vendors: 0, signals: 0, entities: 0 };
   if (isSupabaseConfigured()) {
     try {
       const db = getSupabaseClient();
-      const [v, s, e] = await Promise.all([
+
+      // Count rows in 3 tables + fetch last cron run timestamp in parallel.
+      // The cron route writes its started_at to agent_runs; if that table
+      // doesn't exist the query gracefully returns null.
+      const [v, s, e, cronRow] = await Promise.all([
         db.from('vendors').select('id', { count: 'exact', head: true }),
         db.from('intel_signals').select('id', { count: 'exact', head: true }),
         db.from('kg_entities').select('id', { count: 'exact', head: true }),
+        db
+          .from('agent_runs')
+          .select('started_at')
+          .order('started_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
+
       supabase = {
         connected: true,
         vendors: v.count ?? 0,
         signals: s.count ?? 0,
         entities: e.count ?? 0,
+        cron_last_run: (cronRow.data as { started_at: string } | null)?.started_at ?? null,
       };
     } catch {
-      supabase.connected = false;
+      supabase = { connected: false };
     }
   }
 
-  // Check feed cache
-  const feedCache = getStoredFeedItems();
-  const feedAge = feedCache
-    ? Math.round((Date.now() - new Date(feedCache.as_of).getTime()) / 60_000)
-    : null;
-  const feeds = {
-    cached: !!feedCache,
-    article_count: feedCache?.items.length ?? 0,
-    source_count: feedCache?.source_count ?? 0,
-    age_minutes: feedAge,
+  // ── 2. Feed cache note (in-memory cache is per-instance; no cross-check) ──
+  const feeds: HealthReport['feeds'] = {
+    note: 'Feed cache is in-memory per serverless instance. POST /api/feeds to warm, or rely on the cron pipeline.',
+    warm_endpoint: '/api/feeds',
   };
 
-  // Check all external APIs in parallel
-  const apis = await Promise.all([
-    checkApi('intel-signals', `${siteUrl}/api/intel-signals`),
-    checkApi('what-changed', `${siteUrl}/api/what-changed`),
-    checkApi('patents', `${siteUrl}/api/intel/patents`),
-    checkApi('research', `${siteUrl}/api/intel/research`),
-    checkApi('cyber', `${siteUrl}/api/intel/cyber`),
-    checkApi('hackernews', `${siteUrl}/api/intel/hackernews`),
-    checkApi('federal-jobs', `${siteUrl}/api/intel/federal-jobs`),
-    checkApi('opportunities', `${siteUrl}/api/opportunities`),
-    checkApi('predictions', `${siteUrl}/api/predictions`),
-  ]);
+  // ── 3. Env-var inventory ──────────────────────────────────────────────────
+  const env: EnvStatus[] = ENV_KEYS.map((key) => ({
+    key,
+    set: Boolean(process.env[key]),
+  }));
 
-  // Calculate grade
-  const okCount = apis.filter(a => a.status === 'ok').length;
-  const totalChecks = apis.length + (supabase.connected ? 1 : 0) + (feeds.cached ? 1 : 0);
-  const passCount = okCount + (supabase.connected ? 1 : 0) + (feeds.cached ? 1 : 0);
-  const pct = totalChecks > 0 ? passCount / totalChecks : 0;
-
-  let grade: HealthReport['overall_grade'] = 'F';
-  if (pct >= 0.9) grade = 'A';
-  else if (pct >= 0.75) grade = 'B';
-  else if (pct >= 0.6) grade = 'C';
-  else if (pct >= 0.4) grade = 'D';
+  // ── 4. Grade based on Supabase + critical env vars ────────────────────────
+  const criticalKeys: EnvKey[] = ['GEMINI_API_KEY', 'NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY'];
+  const criticalMissing = criticalKeys.filter((k) => !process.env[k]);
+  const optionalMissing = ENV_KEYS.filter(
+    (k) => !criticalKeys.includes(k) && !process.env[k],
+  );
 
   const problems: string[] = [];
   if (!supabase.connected) problems.push('Supabase disconnected');
-  if (!feeds.cached) problems.push('Feed cache cold');
-  for (const api of apis) {
-    if (api.status === 'error') problems.push(`${api.name}: ${api.error}`);
-    else if (api.status === 'empty') problems.push(`${api.name}: returning 0 items`);
-  }
+  for (const k of criticalMissing) problems.push(`Missing critical env var: ${k}`);
+  for (const k of optionalMissing) problems.push(`Missing optional env var: ${k}`);
+
+  const criticalOk = supabase.connected && criticalMissing.length === 0;
+  let grade: HealthReport['overall_grade'] = 'F';
+  if (criticalOk && optionalMissing.length === 0) grade = 'A';
+  else if (criticalOk && optionalMissing.length <= 3) grade = 'B';
+  else if (criticalOk && optionalMissing.length <= 6) grade = 'C';
+  else if (criticalOk) grade = 'D';
 
   const report: HealthReport = {
     ok: grade !== 'F',
@@ -122,10 +122,11 @@ export async function GET(): Promise<NextResponse> {
     overall_grade: grade,
     supabase,
     feeds,
-    apis,
-    summary: problems.length === 0
-      ? `All ${totalChecks} checks passed. Platform healthy.`
-      : `${problems.length} issue(s): ${problems.join('; ')}`,
+    env,
+    summary:
+      problems.length === 0
+        ? 'All checks passed. Platform healthy.'
+        : `${problems.length} issue(s): ${problems.join('; ')}`,
   };
 
   return NextResponse.json(report, {

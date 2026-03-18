@@ -2,14 +2,26 @@
 import { useEffect, useState } from 'react';
 import type { IntelSignal, SectorScore, TrajectoryReport } from '../types/intel';
 
-const C = '#00D4FF'; const G = '#00FF88'; const GOLD = '#FFD700';
-const R = '#FF3B30'; const P = '#A855F7'; const DIM = 'rgba(0,212,255,0.06)';
+const C = '#00D4FF'; const G = '#10b981'; const GOLD = '#f59e0b';
+const R = '#f43f5e'; const P = '#A855F7'; const DIM = 'rgba(0,212,255,0.09)';
 
 const TYPE_COLOR: Record<string, string> = {
   research_paper: C, patent_filing: GOLD, funding_round: P,
   contract_award: GOLD, merger_acquisition: G, product_launch: G,
   facility_expansion: G, regulatory_action: R, hiring_signal: C, case_study: C,
 };
+
+function categoryColor(industry: string): string {
+  const s = industry.toLowerCase();
+  if (s.includes('ai') || s.includes('machine') || s.includes('software')) return C;
+  if (s.includes('defense') || s.includes('security') || s.includes('military')) return '#f97316';
+  if (s.includes('health') || s.includes('bio') || s.includes('pharma')) return G;
+  if (s.includes('energy') || s.includes('power') || s.includes('solar')) return GOLD;
+  if (s.includes('supply') || s.includes('logistics') || s.includes('transport')) return '#a78bfa';
+  if (s.includes('finance') || s.includes('fintech') || s.includes('banking')) return GOLD;
+  if (s.includes('cyber')) return R;
+  return C;
+}
 const STATUS_COLOR: Record<string, string> = { strong: G, emerging: C, early: GOLD, lagging: R };
 
 const EP: TrajectoryReport = {
@@ -72,19 +84,19 @@ function TrajectoryView({ sectors, signalsToday, signalsWeek, signals, loading }
 
       {/* Counts */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, marginBottom: 12 }}>
-        <div style={{ padding: 8, background: 'rgba(0,255,136,0.04)', border: `1px solid rgba(0,255,136,0.1)`, borderRadius: 2, textAlign: 'center' }}>
-          <div style={{ fontSize: 7, color: `${G}88`, letterSpacing: '0.12em' }}>TODAY</div>
-          <div style={{ fontSize: 24, color: G, fontWeight: 700, lineHeight: 1.2 }}>{loading ? '—' : signalsToday}</div>
+        <div style={{ padding: 8, background: `${G}06`, border: `1px solid ${G}1e`, borderRadius: 2, textAlign: 'center' }}>
+          <div style={{ fontSize: 7, color: `${G}70`, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 2 }}>Today</div>
+          <div style={{ fontSize: 26, color: G, fontWeight: 700, lineHeight: 1.2 }}>{loading ? '—' : signalsToday}</div>
         </div>
-        <div style={{ padding: 8, background: 'rgba(255,215,0,0.04)', border: `1px solid rgba(255,215,0,0.1)`, borderRadius: 2, textAlign: 'center' }}>
-          <div style={{ fontSize: 7, color: `${GOLD}88`, letterSpacing: '0.12em' }}>THIS WEEK</div>
-          <div style={{ fontSize: 24, color: GOLD, fontWeight: 700, lineHeight: 1.2 }}>{loading ? '—' : signalsWeek}</div>
+        <div style={{ padding: 8, background: `${GOLD}06`, border: `1px solid ${GOLD}1e`, borderRadius: 2, textAlign: 'center' }}>
+          <div style={{ fontSize: 7, color: `${GOLD}70`, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 2 }}>This Week</div>
+          <div style={{ fontSize: 26, color: GOLD, fontWeight: 700, lineHeight: 1.2 }}>{loading ? '—' : signalsWeek}</div>
         </div>
       </div>
 
       {/* Sector status */}
       <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 7, color: 'rgba(0,212,255,0.4)', letterSpacing: '0.12em', marginBottom: 6 }}>CURRENT POSITION</div>
+        <div style={{ fontSize: 7, color: 'rgba(0,212,255,0.38)', letterSpacing: '0.2em', marginBottom: 6, textTransform: 'uppercase' }}>Current Position</div>
         {EP.now.sectors.map((s, i) => (
           <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: `1px solid ${DIM}` }}>
             <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)' }}>{s.name}</span>
@@ -96,7 +108,7 @@ function TrajectoryView({ sectors, signalsToday, signalsWeek, signals, loading }
       {/* Live scores */}
       {sectors.length > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 7, color: 'rgba(0,212,255,0.4)', letterSpacing: '0.12em', marginBottom: 6 }}>SECTOR ACTIVITY</div>
+          <div style={{ fontSize: 7, color: 'rgba(0,212,255,0.38)', letterSpacing: '0.2em', marginBottom: 6, textTransform: 'uppercase' }}>Sector Activity</div>
           {sectors.slice(0, 8).map((s, i) => {
             const bc = s.score > 70 ? G : s.score > 40 ? GOLD : C;
             const max = Math.max(...sectors.map(x => x.score), 1);
@@ -116,16 +128,43 @@ function TrajectoryView({ sectors, signalsToday, signalsWeek, signals, loading }
       {/* Recent activity */}
       {recent.length > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 7, color: 'rgba(0,212,255,0.4)', letterSpacing: '0.12em', marginBottom: 6 }}>RECENT ACTIVITY</div>
-          {recent.map(sig => {
-            const tc = TYPE_COLOR[sig.type] ?? C;
+          <div style={{ fontSize: 7, color: 'rgba(0,212,255,0.38)', letterSpacing: '0.2em', marginBottom: 7, textTransform: 'uppercase' }}>Recent Activity</div>
+          {recent.map((sig, idx) => {
+            const tc = TYPE_COLOR[sig.type] ?? categoryColor(sig.industry);
+            const imp = Math.round(sig.importance * 100);
+            const impLabel = imp >= 80 ? 'HIGH' : imp >= 55 ? 'MED' : 'LOW';
+            const impColor = imp >= 80 ? R : imp >= 55 ? GOLD : 'rgba(255,255,255,0.2)';
+            const discoveredMs = new Date(sig.discoveredAt).getTime();
+            const minsAgo = Math.round((Date.now() - discoveredMs) / 60000);
+            const timeLabel = minsAgo < 60 ? `${minsAgo}m` : `${Math.round(minsAgo / 60)}h`;
             return (
-              <div key={sig.id} style={{ display: 'flex', gap: 6, padding: '4px 0', borderBottom: `1px solid ${DIM}` }}>
-                <span style={{ width: 4, height: 4, borderRadius: '50%', background: tc, marginTop: 4, flexShrink: 0, boxShadow: `0 0 4px ${tc}` }} />
-                <div>
-                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.7)', lineHeight: 1.4 }}>{sig.title.slice(0, 70)}{sig.title.length > 70 ? '…' : ''}</div>
-                  <div style={{ fontSize: 7, color: 'rgba(0,212,255,0.3)', marginTop: 1 }}>{sig.industry} · {sig.company ?? 'N/A'}</div>
+              <div key={sig.id}>
+                <div style={{ display: 'flex', gap: 7, padding: '6px 0', alignItems: 'flex-start' }}>
+                  <span style={{
+                    width: 5, height: 5, borderRadius: '50%', background: tc,
+                    marginTop: 3, flexShrink: 0,
+                    boxShadow: `0 0 6px ${tc}99`,
+                  }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.78)', lineHeight: 1.45, marginBottom: 2 }}>
+                      {sig.title.slice(0, 72)}{sig.title.length > 72 ? '…' : ''}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ fontSize: 7, color: 'rgba(0,212,255,0.30)' }}>{sig.source}</span>
+                      <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.15)' }}>·</span>
+                      <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.22)' }}>{timeLabel} ago</span>
+                    </div>
+                  </div>
+                  <span style={{
+                    fontSize: 7, color: impColor,
+                    background: `${impColor}12`, border: `1px solid ${impColor}28`,
+                    borderRadius: 2, padding: '1px 5px', flexShrink: 0,
+                    letterSpacing: '0.08em',
+                  }}>{impLabel}</span>
                 </div>
+                {idx < recent.length - 1 && (
+                  <div style={{ height: 1, background: DIM, marginLeft: 12 }} />
+                )}
               </div>
             );
           })}
@@ -134,7 +173,7 @@ function TrajectoryView({ sectors, signalsToday, signalsWeek, signals, loading }
 
       {/* Trajectory */}
       <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 7, color: 'rgba(0,212,255,0.4)', letterSpacing: '0.12em', marginBottom: 6 }}>TRAJECTORY</div>
+        <div style={{ fontSize: 7, color: 'rgba(0,212,255,0.38)', letterSpacing: '0.2em', marginBottom: 6, textTransform: 'uppercase' }}>Trajectory</div>
         {[
           { label: '6 MO', items: EP.coming.sixMonths, c: C },
           { label: '12 MO', items: EP.coming.twelveMonths, c: GOLD },
@@ -162,7 +201,7 @@ function TrajectoryView({ sectors, signalsToday, signalsWeek, signals, loading }
 }
 
 function SignalView({ signal, onClose }: { signal: IntelSignal; onClose: () => void }) {
-  const tc = TYPE_COLOR[signal.type] ?? C;
+  const tc = TYPE_COLOR[signal.type] ?? categoryColor(signal.industry);
   const imp = Math.round(signal.importance * 100);
 
   return (
@@ -179,22 +218,33 @@ function SignalView({ signal, onClose }: { signal: IntelSignal; onClose: () => v
       <p style={{ margin: '0 0 12px', fontSize: 11, color: 'rgba(255,255,255,0.92)', lineHeight: 1.55 }}>{signal.title}</p>
 
       <div style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-          <span style={{ fontSize: 7, color: 'rgba(0,212,255,0.4)', letterSpacing: '0.1em' }}>IMPORTANCE</span>
-          <span style={{ fontSize: 10, color: imp >= 80 ? R : imp >= 60 ? GOLD : C, fontWeight: 600 }}>{imp}/100</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+          <span style={{ fontSize: 7, color: 'rgba(0,212,255,0.38)', letterSpacing: '0.2em', textTransform: 'uppercase' }}>Importance</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{
+              fontSize: 7,
+              color: imp >= 80 ? R : imp >= 60 ? GOLD : 'rgba(255,255,255,0.3)',
+              background: `${imp >= 80 ? R : imp >= 60 ? GOLD : 'rgba(255,255,255,0.3)'}14`,
+              border: `1px solid ${imp >= 80 ? R : imp >= 60 ? GOLD : 'rgba(255,255,255,0.15)'}44`,
+              borderRadius: 2, padding: '1px 5px', letterSpacing: '0.1em',
+            }}>
+              {imp >= 80 ? 'HIGH' : imp >= 60 ? 'MEDIUM' : 'LOW'}
+            </span>
+            <span style={{ fontSize: 10, color: imp >= 80 ? R : imp >= 60 ? GOLD : C, fontWeight: 700 }}>{imp}</span>
+          </div>
         </div>
         <Bar value={imp} color={imp >= 80 ? R : imp >= 60 ? GOLD : C} />
       </div>
 
       {[
-        ['INDUSTRY', signal.industry, 'rgba(255,255,255,0.7)'],
-        signal.company ? ['COMPANY', signal.company, GOLD] : null,
-        ['PRIORITY', signal.priority.toUpperCase(), signal.priority === 'critical' ? R : signal.priority === 'high' ? GOLD : C],
-        ['EP RELEVANCE', `${signal.elPasoRelevance}/100`, signal.elPasoRelevance >= 60 ? G : 'rgba(255,255,255,0.5)'],
-        ['DISCOVERED', new Date(signal.discoveredAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), 'rgba(255,255,255,0.5)'],
+        ['Industry', signal.industry, 'rgba(255,255,255,0.75)'],
+        signal.company ? ['Company', signal.company, GOLD] : null,
+        ['Priority', signal.priority.toUpperCase(), signal.priority === 'critical' ? R : signal.priority === 'high' ? GOLD : C],
+        ['EP Relevance', `${signal.elPasoRelevance}/100`, signal.elPasoRelevance >= 60 ? G : 'rgba(255,255,255,0.5)'],
+        ['Discovered', new Date(signal.discoveredAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), 'rgba(255,255,255,0.45)'],
       ].filter(Boolean).map((row, i) => (
-        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: `1px solid ${DIM}` }}>
-          <span style={{ fontSize: 7, color: 'rgba(0,212,255,0.4)', letterSpacing: '0.1em' }}>{row![0]}</span>
+        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: `1px solid ${DIM}` }}>
+          <span style={{ fontSize: 7, color: 'rgba(0,212,255,0.38)', letterSpacing: '0.18em', textTransform: 'uppercase' }}>{row![0]}</span>
           <span style={{ fontSize: 9, color: row![2] as string }}>{row![1]}</span>
         </div>
       ))}
@@ -251,7 +301,7 @@ export default function IntelCard({ selectedSignal, searchQuery, sectors, signal
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '8px 10px', borderBottom: `1px solid ${DIM}`,
-        background: 'rgba(0,0,0,0.3)', flexShrink: 0,
+        background: 'rgba(4,8,18,0.8)', flexShrink: 0,
       }}>
         <span style={{ width: 5, height: 5, borderRadius: '50%', background: C, boxShadow: `0 0 6px ${C}` }} />
         <span style={{ fontSize: 8, letterSpacing: '0.12em', color: C }}>{title}</span>

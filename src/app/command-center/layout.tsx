@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function CommandCenterLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: '#050508' }}>
+    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: '#03050a' }}>
       {children}
     </div>
   );

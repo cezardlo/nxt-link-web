@@ -52,8 +52,8 @@ export default function LiveFeed({ rawItems, onItemClick }: Props) {
   return (
     <div
       style={{
-        height: 32, background: 'rgba(0,0,0,0.92)',
-        borderTop: '1px solid rgba(0,212,255,0.10)',
+        height: 32, background: '#050810',
+        borderTop: '1px solid rgba(0,212,255,0.12)',
         display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0,
       }}
       onMouseEnter={() => setPaused(true)}
@@ -61,19 +61,27 @@ export default function LiveFeed({ rawItems, onItemClick }: Props) {
     >
       {/* Live badge */}
       <div style={{
-        padding: '0 10px', borderRight: '1px solid rgba(0,212,255,0.10)',
-        height: '100%', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0,
+        padding: '0 12px', borderRight: '1px solid rgba(0,212,255,0.10)',
+        height: '100%', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
+        background: 'rgba(0,255,136,0.03)',
       }}>
-        <span style={{
-          width: 5, height: 5, borderRadius: '50%', background: '#00FF88',
-          boxShadow: '0 0 6px #00FF88', display: 'inline-block',
-          animation: 'feed-pulse 2s ease-in-out infinite',
-        }} />
-        <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 8, letterSpacing: '0.12em', color: 'rgba(0,255,136,0.7)' }}>
+        <span style={{ position: 'relative', width: 7, height: 7, flexShrink: 0 }}>
+          <span style={{
+            position: 'absolute', inset: 0, borderRadius: '50%',
+            background: '#00FF88', boxShadow: '0 0 8px #00FF88cc',
+            animation: 'feed-pulse 2s ease-in-out infinite',
+          }} />
+          <span style={{
+            position: 'absolute', inset: -2, borderRadius: '50%',
+            border: '1px solid rgba(0,255,136,0.35)',
+            animation: 'feed-pulse 2s ease-in-out infinite',
+          }} />
+        </span>
+        <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 8, letterSpacing: '0.14em', color: 'rgba(0,255,136,0.8)' }}>
           LIVE
         </span>
         {items.length > 0 && (
-          <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 7, color: 'rgba(0,212,255,0.35)' }}>
+          <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 7, color: '#00d4ff', fontWeight: 600 }}>
             {items.length}
           </span>
         )}
@@ -89,31 +97,38 @@ export default function LiveFeed({ rawItems, onItemClick }: Props) {
         }}>
           {[...display, ...display].map((item, i) => {
             const meta = TYPE_META[item.type];
-            const scoreColor = item.score >= 90 ? '#FF3B30' : item.score >= 75 ? '#FFD700' : '#00D4FF';
+            const importanceLabel = item.score >= 85 ? 'HIGH' : item.score >= 65 ? 'MED' : null;
+            const importanceColor = item.score >= 85 ? '#f43f5e' : '#f59e0b';
             return (
               <span
                 key={i}
                 onClick={() => item.url && onItemClick(item)}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, cursor: item.url ? 'pointer' : 'default' }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: item.url ? 'pointer' : 'default' }}
               >
-                <span style={{ fontSize: 8, color: meta.color }}>{meta.symbol}</span>
-                <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 8, color: meta.color, letterSpacing: '0.06em', opacity: 0.7 }}>
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: meta.color, boxShadow: `0 0 5px ${meta.color}88`, flexShrink: 0 }} />
+                <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 7, color: meta.color, letterSpacing: '0.08em', opacity: 0.75 }}>
                   {item.type.toUpperCase()}
                 </span>
-                <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: 'rgba(255,255,255,0.65)' }}>
+                <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: 'rgba(255,255,255,0.70)' }}>
                   {item.headline.slice(0, 80)}{item.headline.length > 80 ? '…' : ''}
                 </span>
-                {item.score >= 80 && (
-                  <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 7, color: scoreColor, background: `${scoreColor}14`, padding: '0 3px', borderRadius: 1 }}>
-                    {item.score}
+                {importanceLabel && (
+                  <span style={{
+                    fontFamily: 'IBM Plex Mono, monospace', fontSize: 7,
+                    color: importanceColor, background: `${importanceColor}14`,
+                    border: `1px solid ${importanceColor}30`,
+                    padding: '0 4px', borderRadius: 1, flexShrink: 0,
+                    letterSpacing: '0.06em',
+                  }}>
+                    {importanceLabel}
                   </span>
                 )}
                 {item.source && (
-                  <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 7, color: 'rgba(0,212,255,0.25)' }}>
-                    · {item.source}
+                  <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 7, color: 'rgba(0,212,255,0.28)' }}>
+                    {item.source}
                   </span>
                 )}
-                <span style={{ color: 'rgba(0,212,255,0.12)', fontSize: 9 }}>·</span>
+                <span style={{ color: 'rgba(0,212,255,0.15)', fontSize: 9, marginLeft: 6 }}>·</span>
               </span>
             );
           })}

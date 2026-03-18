@@ -9,9 +9,9 @@ import type { WatchItem } from '../types/intel';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CYAN  = '#00D4FF';
-const GREEN = '#00FF88';
-const GOLD  = '#FFD700';
-const RED   = '#FF3B30';
+const GREEN = '#10b981';
+const GOLD  = '#f59e0b';
+const RED   = '#f43f5e';
 const DIM   = 'rgba(0,212,255,0.10)';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -50,7 +50,7 @@ export default function WatchList({ items, onSelect, onAdd, onRemove }: Props) {
         padding: '7px 10px',
         borderBottom: `1px solid ${DIM}`,
         borderTop: `1px solid ${DIM}`,
-        background: 'rgba(0,0,0,0.35)',
+        background: 'rgba(4,8,18,0.8)',
         flexShrink: 0,
       }}>
         <span style={{ fontSize: 10 }}>◎</span>
@@ -154,15 +154,24 @@ export default function WatchList({ items, onSelect, onAdd, onRemove }: Props) {
                 gap: 8,
                 padding: '6px 8px',
                 marginBottom: 3,
-                background: hasSignals ? 'rgba(0,212,255,0.04)' : 'transparent',
-                border: `1px solid ${hasSignals ? 'rgba(0,212,255,0.12)' : 'transparent'}`,
+                background: hasSignals ? 'rgba(0,212,255,0.04)' : 'rgba(0,212,255,0.01)',
+                border: `1px solid ${hasSignals ? 'rgba(0,212,255,0.14)' : 'rgba(0,212,255,0.06)'}`,
+                borderLeft: hasSignals ? `2px solid ${countColor}` : '1px solid rgba(0,212,255,0.06)',
                 borderRadius: 2,
                 cursor: 'pointer',
-                transition: 'background 0.15s',
+                transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s',
               }}
               onClick={() => onSelect(item.query, item.label)}
-              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(0,212,255,0.07)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = hasSignals ? 'rgba(0,212,255,0.04)' : 'transparent'; }}
+              onMouseEnter={e => {
+                const el = e.currentTarget as HTMLDivElement;
+                el.style.background = 'rgba(0,212,255,0.08)';
+                el.style.boxShadow = '0 0 0 1px rgba(0,212,255,0.15)';
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget as HTMLDivElement;
+                el.style.background = hasSignals ? 'rgba(0,212,255,0.04)' : 'rgba(0,212,255,0.01)';
+                el.style.boxShadow = 'none';
+              }}
             >
               {/* Arrow indicator */}
               <span style={{

@@ -166,14 +166,14 @@ export default function CommandCenterPage() {
         .cc-root {
           display: flex; flex-direction: column;
           width: 100vw; height: 100vh;
-          background: #050508; overflow: hidden;
+          background: #03050a; overflow: hidden;
           font-family: 'IBM Plex Mono', monospace;
-          color: rgba(255,255,255,0.8);
+          color: rgba(255,255,255,0.82);
         }
         .cc-grid {
           flex: 1; display: grid;
           grid-template-columns: 280px 1fr 280px;
-          gap: 3px; padding: 3px 3px 0;
+          gap: 2px; padding: 2px 2px 0;
           min-height: 0;
         }
         .cc-grid-trends {
@@ -181,8 +181,8 @@ export default function CommandCenterPage() {
         }
         .cc-panel {
           display: flex; flex-direction: column;
-          background: rgba(5,5,12,0.97);
-          border: 1px solid rgba(0,212,255,0.06);
+          background: #080c14;
+          border: 1px solid rgba(0,212,255,0.08);
           border-radius: 2px;
           overflow: hidden;
           position: relative;
@@ -191,22 +191,26 @@ export default function CommandCenterPage() {
           content: '';
           position: absolute; top: 0; left: 0; right: 0;
           height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(0,212,255,0.15), transparent);
+          background: linear-gradient(90deg, transparent, rgba(0,212,255,0.18), transparent);
           z-index: 1;
+          pointer-events: none;
+        }
+        .cc-panel:hover {
+          border-color: rgba(0,212,255,0.13);
         }
         .cc-left { min-height: 0; }
         .cc-scanline {
           position: fixed; top: 0; left: 0; right: 0; bottom: 0;
           pointer-events: none; z-index: 80;
           background: repeating-linear-gradient(
-            0deg, transparent, transparent 2px,
-            rgba(0,212,255,0.012) 2px, rgba(0,212,255,0.012) 4px
+            0deg, transparent, transparent 3px,
+            rgba(0,212,255,0.008) 3px, rgba(0,212,255,0.008) 4px
           );
         }
         .cc-vignette {
           position: fixed; top: 0; left: 0; right: 0; bottom: 0;
           pointer-events: none; z-index: 79;
-          background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.4) 100%);
+          background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.55) 100%);
         }
         @media (max-width: 1200px) {
           .cc-grid { grid-template-columns: 220px 1fr 220px; }

@@ -14,11 +14,11 @@ import type { TrendAnalysis, SectorMomentum } from '../types/intel';
 // ─── Color constants ───────────────────────────────────────────────────────────
 
 const C    = '#00D4FF';
-const G    = '#00FF88';
-const GOLD = '#FFD700';
+const G    = '#10b981';
+const GOLD = '#f59e0b';
 const O    = '#F97316';
-const R    = '#FF3B30';
-const DIM  = 'rgba(0,212,255,0.07)';
+const R    = '#f43f5e';
+const DIM  = 'rgba(0,212,255,0.09)';
 
 const MOMENTUM_COLOR: Record<SectorMomentum, string> = {
   accelerating: G,
@@ -87,27 +87,32 @@ function BiggestStory({ text }: { text: string }) {
   return (
     <div style={{
       margin: '0 0 10px',
-      padding: '10px 12px',
-      background: 'rgba(0,212,255,0.04)',
-      borderLeft: `3px solid ${C}`,
-      border: `1px solid rgba(0,212,255,0.10)`,
-      borderLeftWidth: 3,
+      padding: '11px 13px',
+      background: 'linear-gradient(135deg, rgba(0,212,255,0.06) 0%, rgba(0,212,255,0.02) 100%)',
+      borderLeft: `2px solid ${C}`,
+      border: `1px solid rgba(0,212,255,0.13)`,
+      borderLeftWidth: 2,
       borderRadius: 2,
+      position: 'relative',
     }}>
       <div style={{
-        fontSize: 7, color: `${C}55`, letterSpacing: '0.15em',
-        marginBottom: 5, fontFamily: 'IBM Plex Mono, monospace',
+        fontSize: 7, color: `rgba(0,212,255,0.42)`, letterSpacing: '0.2em',
+        marginBottom: 6, fontFamily: 'IBM Plex Mono, monospace',
         textTransform: 'uppercase',
       }}>
         Biggest Story
       </div>
       <p style={{
         margin: 0, fontSize: 11,
-        color: 'rgba(255,255,255,0.92)', lineHeight: 1.5,
+        color: 'rgba(255,255,255,0.92)', lineHeight: 1.55,
         fontFamily: 'IBM Plex Mono, monospace', fontWeight: 500,
       }}>
         {text}
       </p>
+      <div style={{
+        position: 'absolute', top: 0, right: 0, bottom: 0, width: 1,
+        background: 'linear-gradient(180deg, transparent, rgba(0,212,255,0.15), transparent)',
+      }} />
     </div>
   );
 }
@@ -144,8 +149,9 @@ function SectorCard({ name, momentum, what_is_happening, where_heading, signal_c
   return (
     <div style={{
       padding: 9,
-      background: 'rgba(0,0,0,0.50)',
-      border: `1px solid rgba(255,255,255,0.07)`,
+      background: `${mc}04`,
+      border: `1px solid ${mc}18`,
+      borderLeft: `2px solid ${mc}`,
       borderRadius: 2,
       display: 'flex', flexDirection: 'column', gap: 5,
     }}>
@@ -200,18 +206,20 @@ function SectorCard({ name, momentum, what_is_happening, where_heading, signal_c
       </p>
 
       {/* Confidence */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <span style={{ fontSize: 7, color: 'rgba(0,212,255,0.25)', fontFamily: 'IBM Plex Mono, monospace', letterSpacing: '0.1em' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <span style={{ fontSize: 7, color: 'rgba(0,212,255,0.28)', fontFamily: 'IBM Plex Mono, monospace', letterSpacing: '0.12em', flexShrink: 0 }}>
           CONF
         </span>
-        <div style={{ flex: 1, height: 2, background: 'rgba(0,212,255,0.08)', borderRadius: 1 }}>
+        <div style={{ flex: 1, height: 3, background: 'rgba(0,212,255,0.07)', borderRadius: 2, overflow: 'hidden' }}>
           <div style={{
             height: '100%', width: `${Math.round(confidence * 100)}%`,
-            background: mc, borderRadius: 1,
-            transition: 'width 0.6s ease',
+            background: `linear-gradient(90deg, ${mc}99, ${mc})`,
+            borderRadius: 2,
+            transition: 'width 0.7s cubic-bezier(.25,.46,.45,.94)',
+            boxShadow: `0 0 4px ${mc}66`,
           }} />
         </div>
-        <span style={{ fontSize: 7, color: `${mc}88`, fontFamily: 'IBM Plex Mono, monospace' }}>
+        <span style={{ fontSize: 7, color: mc, fontFamily: 'IBM Plex Mono, monospace', fontWeight: 600, flexShrink: 0 }}>
           {Math.round(confidence * 100)}%
         </span>
       </div>
@@ -227,8 +235,8 @@ function CrossSectorBlock({ trends }: { trends: TrendAnalysis['cross_sector_tren
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{
-        fontSize: 7, color: 'rgba(0,212,255,0.32)', letterSpacing: '0.15em',
-        marginBottom: 7, fontFamily: 'IBM Plex Mono, monospace', textTransform: 'uppercase',
+        fontSize: 7, color: 'rgba(0,212,255,0.38)', letterSpacing: '0.2em',
+        marginBottom: 8, fontFamily: 'IBM Plex Mono, monospace', textTransform: 'uppercase',
       }}>
         Cross-Sector Signals
       </div>
@@ -281,8 +289,8 @@ function WatchListBlock({ items }: { items: string[] }) {
   return (
     <div>
       <div style={{
-        fontSize: 7, color: 'rgba(0,212,255,0.32)', letterSpacing: '0.15em',
-        marginBottom: 7, fontFamily: 'IBM Plex Mono, monospace', textTransform: 'uppercase',
+        fontSize: 7, color: 'rgba(0,212,255,0.38)', letterSpacing: '0.2em',
+        marginBottom: 8, fontFamily: 'IBM Plex Mono, monospace', textTransform: 'uppercase',
       }}>
         Watch List
       </div>
@@ -359,7 +367,7 @@ export default function TrendPanel() {
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '8px 10px', borderBottom: `1px solid ${DIM}`,
-        background: 'rgba(0,0,0,0.35)', flexShrink: 0,
+        background: 'rgba(4,8,18,0.8)', flexShrink: 0,
       }}>
         <span style={{ width: 5, height: 5, borderRadius: '50%', background: C, boxShadow: `0 0 6px ${C}` }} />
         <span style={{
@@ -399,8 +407,8 @@ export default function TrendPanel() {
             {data.sectors.length > 0 && (
               <div style={{ marginBottom: 14 }}>
                 <div style={{
-                  fontSize: 7, color: 'rgba(0,212,255,0.32)', letterSpacing: '0.15em',
-                  marginBottom: 7, fontFamily: 'IBM Plex Mono, monospace', textTransform: 'uppercase',
+                  fontSize: 7, color: 'rgba(0,212,255,0.38)', letterSpacing: '0.2em',
+                  marginBottom: 8, fontFamily: 'IBM Plex Mono, monospace', textTransform: 'uppercase',
                 }}>
                   Sector Breakdown
                 </div>

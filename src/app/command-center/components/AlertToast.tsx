@@ -8,10 +8,10 @@ import type { Alert, SignalType } from '../types/intel';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const RED    = '#FF3B30';
-const GOLD   = '#FFD700';
+const RED    = '#f43f5e';
+const GOLD   = '#f59e0b';
 const CYAN   = '#00D4FF';
-const GREEN  = '#00FF88';
+const GREEN  = '#10b981';
 const PURPLE = '#A855F7';
 
 const TYPE_COLOR: Record<SignalType, string> = {
@@ -64,13 +64,13 @@ export default function AlertToast({ alerts, onDismiss, onView }: Props) {
       top: 56,
       right: 12,
       width: 300,
-      background: 'rgba(7,7,15,0.97)',
-      border: `1px solid ${accentColor}55`,
-      borderLeft: `3px solid ${accentColor}`,
+      background: `linear-gradient(135deg, #090e18 0%, #060a14 100%)`,
+      border: `1px solid ${accentColor}40`,
+      borderLeft: `2px solid ${accentColor}`,
       borderRadius: 2,
       padding: '10px 12px',
       zIndex: 100,
-      boxShadow: `0 4px 24px ${accentColor}22`,
+      boxShadow: `0 4px 28px rgba(0,0,0,0.5), 0 0 0 1px ${accentColor}14, inset 0 1px 0 rgba(255,255,255,0.04)`,
       animation: 'toast-in 0.25s ease-out',
     }}>
       {/* Header row */}
