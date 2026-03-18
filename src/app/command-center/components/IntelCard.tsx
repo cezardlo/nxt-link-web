@@ -1,363 +1,268 @@
 'use client';
-// src/app/command-center/components/IntelCard.tsx
-// Right panel — 3 states: DEFAULT (trajectory) | SIGNAL (clicked dot) | SEARCH (query)
-// Now with live sector scores from API, animated bars, improved signal detail.
-
 import { useEffect, useState } from 'react';
 import type { IntelSignal, SectorScore, TrajectoryReport } from '../types/intel';
 
-const CYAN   = '#00D4FF';
-const GREEN  = '#00FF88';
-const GOLD   = '#FFD700';
-const RED    = '#FF3B30';
-const PURPLE = '#A855F7';
-const DIM    = 'rgba(0,212,255,0.08)';
+const C = '#00D4FF'; const G = '#00FF88'; const GOLD = '#FFD700';
+const R = '#FF3B30'; const P = '#A855F7'; const DIM = 'rgba(0,212,255,0.06)';
 
-const SIGNAL_TYPE_COLOR: Record<string, string> = {
-  research_paper: CYAN, patent_filing: GOLD, funding_round: PURPLE,
-  contract_award: GOLD, merger_acquisition: GREEN, product_launch: GREEN,
-  facility_expansion: GREEN, regulatory_action: RED, hiring_signal: CYAN, case_study: CYAN,
+const TYPE_COLOR: Record<string, string> = {
+  research_paper: C, patent_filing: GOLD, funding_round: P,
+  contract_award: GOLD, merger_acquisition: G, product_launch: G,
+  facility_expansion: G, regulatory_action: R, hiring_signal: C, case_study: C,
 };
+const STATUS_COLOR: Record<string, string> = { strong: G, emerging: C, early: GOLD, lagging: R };
 
-const STATUS_COLOR: Record<string, string> = { strong: GREEN, emerging: CYAN, early: GOLD, lagging: RED };
-const WINDOW_COLOR: Record<string, string> = { NOW: GREEN, SOON: GOLD, WAIT: RED };
-
-const EP_TRAJECTORY: TrajectoryReport = {
+const EP: TrajectoryReport = {
   location: 'El Paso, TX',
   now: {
-    summary: 'Emerging border technology hub. Logistics automation and cross-border supply chain intelligence are the dominant growth sectors.',
+    summary: 'Emerging border technology hub. Logistics automation and cross-border supply chain intelligence are dominant growth sectors.',
     sectors: [
-      { name: 'Logistics & Supply Chain', status: 'strong'   },
-      { name: 'Border Automation',        status: 'emerging' },
-      { name: 'Manufacturing Tech',       status: 'early'    },
-      { name: 'Defense & Security',       status: 'strong'   },
-      { name: 'Healthcare IT',            status: 'early'    },
+      { name: 'Logistics & Supply Chain', status: 'strong' },
+      { name: 'Border Automation', status: 'emerging' },
+      { name: 'Manufacturing Tech', status: 'early' },
+      { name: 'Defense & Security', status: 'strong' },
+      { name: 'Healthcare IT', status: 'early' },
     ],
   },
   coming: {
-    sixMonths:        ['Warehouse robotics deployments accelerate', 'CBP tech contracts surge'],
-    twelveMonths:     ['Border automation wave reaches SMB vendors', 'UTEP AI commercialization'],
-    twentyFourMonths: ['El Paso top-5 border tech hub', 'Cross-border fintech market opens'],
+    sixMonths: ['Warehouse robotics accelerate', 'CBP tech contracts surge'],
+    twelveMonths: ['Border automation reaches SMBs', 'UTEP AI commercialization'],
+    twentyFourMonths: ['Top-5 border tech hub', 'Cross-border fintech opens'],
   },
-  opportunities: [
-    'SAM.gov IDIQ vehicles closing Q2',
-    'UTEP research partnerships (AI/robotics)',
-    'CBP vendor pre-qualification open',
-    'Workforce automation grants available',
-  ],
+  opportunities: ['SAM.gov IDIQ vehicles Q2', 'UTEP AI/robotics partnerships', 'CBP vendor pre-qual open', 'Automation grants available'],
   windowToAct: 'NOW',
 };
 
 type Props = {
   selectedSignal: IntelSignal | null;
-  searchQuery:    string | null;
-  sectors:        SectorScore[];
-  signalsToday:   number;
-  signalsWeek:    number;
-  loading:        boolean;
-  onClose:        () => void;
+  searchQuery: string | null;
+  sectors: SectorScore[];
+  signalsToday: number;
+  signalsWeek: number;
+  signals: IntelSignal[];
+  loading: boolean;
+  onClose: () => void;
 };
 
-function Mono({ children, size = 10, color = CYAN }: { children: React.ReactNode; size?: number; color?: string }) {
-  return <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: size, color }}>{children}</span>;
-}
-
-function Label({ children, color = 'rgba(0,212,255,0.45)' }: { children: React.ReactNode; color?: string }) {
-  return <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 8, letterSpacing: '0.12em', color, textTransform: 'uppercase' }}>{children}</span>;
-}
-
-// ── Animated bar ────────────────────────────────────────────────────────────
-
-function AnimatedBar({ value, color, delay = 0 }: { value: number; color: string; delay?: number }) {
-  const [width, setWidth] = useState(0);
-  useEffect(() => {
-    const id = setTimeout(() => setWidth(value), 100 + delay);
-    return () => clearTimeout(id);
-  }, [value, delay]);
-
+function Bar({ value, color, delay = 0 }: { value: number; color: string; delay?: number }) {
+  const [w, setW] = useState(0);
+  useEffect(() => { const t = setTimeout(() => setW(value), 80 + delay); return () => clearTimeout(t); }, [value, delay]);
   return (
-    <div style={{ height: 3, background: 'rgba(0,212,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
-      <div style={{
-        height: '100%', width: `${width}%`, background: color,
-        borderRadius: 2, transition: 'width 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-      }} />
+    <div style={{ height: 3, background: 'rgba(0,212,255,0.04)', borderRadius: 2, overflow: 'hidden' }}>
+      <div style={{ height: '100%', width: `${w}%`, background: color, borderRadius: 2, transition: 'width 0.8s cubic-bezier(.25,.46,.45,.94)' }} />
     </div>
   );
 }
 
-// ── Trajectory (default state) ──────────────────────────────────────────────
-
-function TrajectoryView({ report, sectors, signalsToday, signalsWeek, loading }: {
-  report: TrajectoryReport; sectors: SectorScore[];
-  signalsToday: number; signalsWeek: number; loading: boolean;
+function TrajectoryView({ sectors, signalsToday, signalsWeek, signals, loading }: {
+  sectors: SectorScore[]; signalsToday: number; signalsWeek: number;
+  signals: IntelSignal[]; loading: boolean;
 }) {
-  const winColor = WINDOW_COLOR[report.windowToAct] ?? GREEN;
+  // Recent signals for activity feed
+  const recent = signals.slice(0, 5);
 
   return (
     <div style={{ padding: 10 }}>
-      {/* Location header */}
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: G, boxShadow: `0 0 8px ${G}` }} />
+        <span style={{ fontSize: 12, color: G, fontWeight: 600 }}>{EP.location}</span>
+      </div>
+      <p style={{ margin: '0 0 12px', fontSize: 9, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6 }}>{EP.now.summary}</p>
+
+      {/* Counts */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, marginBottom: 12 }}>
+        <div style={{ padding: 8, background: 'rgba(0,255,136,0.04)', border: `1px solid rgba(0,255,136,0.1)`, borderRadius: 2, textAlign: 'center' }}>
+          <div style={{ fontSize: 7, color: `${G}88`, letterSpacing: '0.12em' }}>TODAY</div>
+          <div style={{ fontSize: 24, color: G, fontWeight: 700, lineHeight: 1.2 }}>{loading ? '—' : signalsToday}</div>
+        </div>
+        <div style={{ padding: 8, background: 'rgba(255,215,0,0.04)', border: `1px solid rgba(255,215,0,0.1)`, borderRadius: 2, textAlign: 'center' }}>
+          <div style={{ fontSize: 7, color: `${GOLD}88`, letterSpacing: '0.12em' }}>THIS WEEK</div>
+          <div style={{ fontSize: 24, color: GOLD, fontWeight: 700, lineHeight: 1.2 }}>{loading ? '—' : signalsWeek}</div>
+        </div>
+      </div>
+
+      {/* Sector status */}
       <div style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <div style={{ width: 6, height: 6, borderRadius: '50%', background: GREEN, boxShadow: `0 0 8px ${GREEN}` }} />
-          <Mono size={12} color={GREEN}>{report.location}</Mono>
-        </div>
-        <p style={{ margin: 0, fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>
-          {report.now.summary}
-        </p>
+        <div style={{ fontSize: 7, color: 'rgba(0,212,255,0.4)', letterSpacing: '0.12em', marginBottom: 6 }}>CURRENT POSITION</div>
+        {EP.now.sectors.map((s, i) => (
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: `1px solid ${DIM}` }}>
+            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)' }}>{s.name}</span>
+            <span style={{ fontSize: 8, color: STATUS_COLOR[s.status], fontWeight: 600, textTransform: 'uppercase' }}>{s.status}</span>
+          </div>
+        ))}
       </div>
 
-      {/* Signal counts */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-        <div style={{ flex: 1, padding: '8px', background: 'rgba(0,255,136,0.05)', border: `1px solid rgba(0,255,136,0.12)`, borderRadius: 2, textAlign: 'center' }}>
-          <Label color={GREEN}>Today</Label>
-          <div><Mono size={22} color={GREEN}>{loading ? '—' : signalsToday}</Mono></div>
-        </div>
-        <div style={{ flex: 1, padding: '8px', background: 'rgba(255,215,0,0.05)', border: `1px solid rgba(255,215,0,0.12)`, borderRadius: 2, textAlign: 'center' }}>
-          <Label color={GOLD}>This Week</Label>
-          <div><Mono size={22} color={GOLD}>{loading ? '—' : signalsWeek}</Mono></div>
-        </div>
-      </div>
-
-      {/* NOW — sector statuses */}
-      <div style={{ marginBottom: 12 }}>
-        <Label>Current Position</Label>
-        <div style={{ marginTop: 6 }}>
-          {report.now.sectors.map((s, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0', borderBottom: `1px solid ${DIM}` }}>
-              <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: 'rgba(255,255,255,0.65)' }}>{s.name}</span>
-              <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 8, color: STATUS_COLOR[s.status] ?? CYAN, textTransform: 'uppercase', fontWeight: 600 }}>{s.status}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Live sector scores from API */}
+      {/* Live scores */}
       {sectors.length > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <Label>Live Sector Activity</Label>
-          <div style={{ marginTop: 6 }}>
-            {sectors.slice(0, 8).map((s, i) => {
-              const barColor = s.score > 70 ? GREEN : s.score > 40 ? GOLD : 'rgba(0,212,255,0.5)';
-              const trendIcon = s.trend === 'rising' ? '↑' : s.trend === 'falling' ? '↓' : '→';
-              // Normalize: max score in data = 100%
-              const maxScore = Math.max(...sectors.map(x => x.score), 1);
-              const pct = Math.round((s.score / maxScore) * 100);
-
-              return (
-                <div key={i} style={{ marginBottom: 6 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                    <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: 'rgba(255,255,255,0.6)', textTransform: 'capitalize' }}>
-                      {s.industry.replace(/[-_]/g, ' ')}
-                    </span>
-                    <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 8, color: barColor, fontWeight: 600 }}>
-                      {s.score} {trendIcon}
-                    </span>
-                  </div>
-                  <AnimatedBar value={pct} color={barColor} delay={i * 80} />
+          <div style={{ fontSize: 7, color: 'rgba(0,212,255,0.4)', letterSpacing: '0.12em', marginBottom: 6 }}>SECTOR ACTIVITY</div>
+          {sectors.slice(0, 8).map((s, i) => {
+            const bc = s.score > 70 ? G : s.score > 40 ? GOLD : C;
+            const max = Math.max(...sectors.map(x => x.score), 1);
+            return (
+              <div key={i} style={{ marginBottom: 5 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                  <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.55)', textTransform: 'capitalize' }}>{s.industry.replace(/[-_]/g, ' ')}</span>
+                  <span style={{ fontSize: 8, color: bc, fontWeight: 600 }}>{s.score} {s.trend === 'rising' ? '↑' : s.trend === 'falling' ? '↓' : '→'}</span>
                 </div>
-              );
-            })}
-          </div>
+                <Bar value={Math.round((s.score / max) * 100)} color={bc} delay={i * 60} />
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* COMING */}
-      <div style={{ marginBottom: 12 }}>
-        <Label>Trajectory</Label>
-        <div style={{ marginTop: 6 }}>
-          {[
-            { label: '6 months',  items: report.coming.sixMonths,        color: CYAN },
-            { label: '12 months', items: report.coming.twelveMonths,     color: GOLD },
-            { label: '24 months', items: report.coming.twentyFourMonths, color: PURPLE },
-          ].map(group => (
-            <div key={group.label} style={{ marginBottom: 6 }}>
-              <Label color="rgba(0,212,255,0.3)">{group.label}</Label>
-              {group.items.map((item, i) => (
-                <div key={i} style={{ display: 'flex', gap: 5, marginTop: 3 }}>
-                  <span style={{ color: group.color, fontSize: 8, fontFamily: 'IBM Plex Mono, monospace', flexShrink: 0 }}>›</span>
-                  <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: 'rgba(255,255,255,0.55)', lineHeight: 1.45 }}>{item}</span>
+      {/* Recent activity */}
+      {recent.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 7, color: 'rgba(0,212,255,0.4)', letterSpacing: '0.12em', marginBottom: 6 }}>RECENT ACTIVITY</div>
+          {recent.map(sig => {
+            const tc = TYPE_COLOR[sig.type] ?? C;
+            return (
+              <div key={sig.id} style={{ display: 'flex', gap: 6, padding: '4px 0', borderBottom: `1px solid ${DIM}` }}>
+                <span style={{ width: 4, height: 4, borderRadius: '50%', background: tc, marginTop: 4, flexShrink: 0, boxShadow: `0 0 4px ${tc}` }} />
+                <div>
+                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.7)', lineHeight: 1.4 }}>{sig.title.slice(0, 70)}{sig.title.length > 70 ? '…' : ''}</div>
+                  <div style={{ fontSize: 7, color: 'rgba(0,212,255,0.3)', marginTop: 1 }}>{sig.industry} · {sig.company ?? 'N/A'}</div>
                 </div>
-              ))}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
-      </div>
+      )}
 
-      {/* Opportunities */}
+      {/* Trajectory */}
       <div style={{ marginBottom: 12 }}>
-        <Label>Open Opportunities</Label>
-        <div style={{ marginTop: 6 }}>
-          {report.opportunities.map((opp, i) => (
-            <div key={i} style={{ display: 'flex', gap: 5, padding: '4px 0', borderBottom: `1px solid ${DIM}` }}>
-              <span style={{ color: GREEN, fontSize: 9, fontFamily: 'IBM Plex Mono, monospace', flexShrink: 0 }}>⚡</span>
-              <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: 'rgba(255,255,255,0.65)' }}>{opp}</span>
-            </div>
-          ))}
-        </div>
+        <div style={{ fontSize: 7, color: 'rgba(0,212,255,0.4)', letterSpacing: '0.12em', marginBottom: 6 }}>TRAJECTORY</div>
+        {[
+          { label: '6 MO', items: EP.coming.sixMonths, c: C },
+          { label: '12 MO', items: EP.coming.twelveMonths, c: GOLD },
+          { label: '24 MO', items: EP.coming.twentyFourMonths, c: P },
+        ].map(g => (
+          <div key={g.label} style={{ marginBottom: 4 }}>
+            <span style={{ fontSize: 7, color: 'rgba(0,212,255,0.25)', letterSpacing: '0.1em' }}>{g.label}</span>
+            {g.items.map((item, i) => (
+              <div key={i} style={{ display: 'flex', gap: 4, marginTop: 2 }}>
+                <span style={{ color: g.c, fontSize: 7, flexShrink: 0 }}>›</span>
+                <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', lineHeight: 1.4 }}>{item}</span>
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
 
       {/* Window */}
-      <div style={{ padding: '8px 10px', background: `${winColor}08`, border: `1px solid ${winColor}25`, borderRadius: 2, textAlign: 'center' }}>
-        <Label color={winColor}>Window to Act</Label>
-        <div style={{ marginTop: 4 }}><Mono size={22} color={winColor}>{report.windowToAct}</Mono></div>
+      <div style={{ padding: '8px', background: `${G}06`, border: `1px solid ${G}18`, borderRadius: 2, textAlign: 'center' }}>
+        <div style={{ fontSize: 7, color: `${G}88`, letterSpacing: '0.12em' }}>WINDOW TO ACT</div>
+        <div style={{ fontSize: 24, color: G, fontWeight: 700, lineHeight: 1.3 }}>NOW</div>
       </div>
     </div>
   );
 }
 
-// ── Signal detail (clicked dot) ─────────────────────────────────────────────
-
 function SignalView({ signal, onClose }: { signal: IntelSignal; onClose: () => void }) {
-  const typeColor = SIGNAL_TYPE_COLOR[signal.type] ?? CYAN;
-  const impPct = Math.round(signal.importance * 100);
+  const tc = TYPE_COLOR[signal.type] ?? C;
+  const imp = Math.round(signal.importance * 100);
 
   return (
     <div style={{ padding: 10 }}>
       <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 8px' }}>
-        <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: 'rgba(0,212,255,0.45)', letterSpacing: '0.08em' }}>← BACK</span>
+        <span style={{ fontSize: 9, color: 'rgba(0,212,255,0.4)', letterSpacing: '0.08em' }}>← BACK</span>
       </button>
 
-      {/* Type badge */}
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginBottom: 8, padding: '3px 8px', background: `${typeColor}14`, border: `1px solid ${typeColor}35`, borderRadius: 2 }}>
-        <div style={{ width: 5, height: 5, borderRadius: '50%', background: typeColor, boxShadow: `0 0 6px ${typeColor}` }} />
-        <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 8, color: typeColor, letterSpacing: '0.1em' }}>
-          {signal.type.replace(/_/g, ' ').toUpperCase()}
-        </span>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginBottom: 8, padding: '3px 8px', background: `${tc}12`, border: `1px solid ${tc}30`, borderRadius: 2 }}>
+        <span style={{ width: 5, height: 5, borderRadius: '50%', background: tc, boxShadow: `0 0 6px ${tc}` }} />
+        <span style={{ fontSize: 8, color: tc, letterSpacing: '0.1em' }}>{signal.type.replace(/_/g, ' ').toUpperCase()}</span>
       </div>
 
-      {/* Title */}
-      <p style={{ margin: '0 0 12px', fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: 'rgba(255,255,255,0.92)', lineHeight: 1.55 }}>
-        {signal.title}
-      </p>
+      <p style={{ margin: '0 0 12px', fontSize: 11, color: 'rgba(255,255,255,0.92)', lineHeight: 1.55 }}>{signal.title}</p>
 
-      {/* Importance gauge */}
       <div style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-          <Label>Importance</Label>
-          <Mono size={10} color={impPct >= 80 ? RED : impPct >= 60 ? GOLD : CYAN}>{impPct}/100</Mono>
+          <span style={{ fontSize: 7, color: 'rgba(0,212,255,0.4)', letterSpacing: '0.1em' }}>IMPORTANCE</span>
+          <span style={{ fontSize: 10, color: imp >= 80 ? R : imp >= 60 ? GOLD : C, fontWeight: 600 }}>{imp}/100</span>
         </div>
-        <AnimatedBar value={impPct} color={impPct >= 80 ? RED : impPct >= 60 ? GOLD : CYAN} />
+        <Bar value={imp} color={imp >= 80 ? R : imp >= 60 ? GOLD : C} />
       </div>
 
-      {/* Properties */}
       {[
-        { label: 'Industry', value: signal.industry, color: 'rgba(255,255,255,0.7)' },
-        signal.company ? { label: 'Company', value: signal.company, color: GOLD } : null,
-        { label: 'Priority', value: signal.priority.toUpperCase(), color: signal.priority === 'critical' ? RED : signal.priority === 'high' ? GOLD : CYAN },
-        { label: 'EP Relevance', value: `${signal.elPasoRelevance}/100`, color: signal.elPasoRelevance >= 60 ? GREEN : 'rgba(255,255,255,0.5)' },
-        { label: 'Discovered', value: new Date(signal.discoveredAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), color: 'rgba(255,255,255,0.5)' },
+        ['INDUSTRY', signal.industry, 'rgba(255,255,255,0.7)'],
+        signal.company ? ['COMPANY', signal.company, GOLD] : null,
+        ['PRIORITY', signal.priority.toUpperCase(), signal.priority === 'critical' ? R : signal.priority === 'high' ? GOLD : C],
+        ['EP RELEVANCE', `${signal.elPasoRelevance}/100`, signal.elPasoRelevance >= 60 ? G : 'rgba(255,255,255,0.5)'],
+        ['DISCOVERED', new Date(signal.discoveredAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), 'rgba(255,255,255,0.5)'],
       ].filter(Boolean).map((row, i) => (
         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: `1px solid ${DIM}` }}>
-          <Label>{row!.label}</Label>
-          <Mono size={9} color={row!.color}>{row!.value}</Mono>
+          <span style={{ fontSize: 7, color: 'rgba(0,212,255,0.4)', letterSpacing: '0.1em' }}>{row![0]}</span>
+          <span style={{ fontSize: 9, color: row![2] as string }}>{row![1]}</span>
         </div>
       ))}
 
-      {/* Actions */}
-      <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
         {signal.url && (
           <a href={signal.url} target="_blank" rel="noreferrer" style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            padding: '8px', background: 'rgba(0,212,255,0.06)', border: `1px solid rgba(0,212,255,0.2)`,
-            borderRadius: 2, textDecoration: 'none',
-            fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: CYAN, letterSpacing: '0.06em',
-          }}>
-            ↗ VIEW SOURCE
-          </a>
+            padding: 8, background: `${C}06`, border: `1px solid ${C}18`,
+            borderRadius: 2, textDecoration: 'none', fontSize: 9, color: C, letterSpacing: '0.06em',
+          }}>↗ VIEW SOURCE</a>
         )}
         <a href={`/ask?q=${encodeURIComponent(signal.industry)}`} style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          padding: '8px', background: 'rgba(0,212,255,0.03)', border: `1px solid rgba(0,212,255,0.1)`,
-          borderRadius: 2, textDecoration: 'none',
-          fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: 'rgba(0,212,255,0.6)',
-        }}>
-          ⌕ DEEP DIVE: {signal.industry}
-        </a>
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 8, background: `${C}03`, border: `1px solid ${C}0a`,
+          borderRadius: 2, textDecoration: 'none', fontSize: 9, color: `${C}88`,
+        }}>⌕ DEEP DIVE: {signal.industry}</a>
       </div>
     </div>
   );
 }
-
-// ── Search view ─────────────────────────────────────────────────────────────
 
 function SearchView({ query, onClose }: { query: string; onClose: () => void }) {
   return (
     <div style={{ padding: 10 }}>
       <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 8px' }}>
-        <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: 'rgba(0,212,255,0.45)', letterSpacing: '0.08em' }}>← BACK</span>
+        <span style={{ fontSize: 9, color: 'rgba(0,212,255,0.4)' }}>← BACK</span>
       </button>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-        <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 14, color: CYAN }}>⌕</span>
-        <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: 'rgba(255,255,255,0.9)' }}>{query}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+        <span style={{ fontSize: 14, color: C }}>⌕</span>
+        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.9)' }}>{query}</span>
       </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <a href={`/ask?q=${encodeURIComponent(query)}`} style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          padding: '10px', background: 'rgba(0,212,255,0.08)', border: `1px solid rgba(0,212,255,0.3)`,
-          borderRadius: 2, textDecoration: 'none',
-          fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: CYAN, letterSpacing: '0.08em',
-        }}>
-          FULL INTELLIGENCE SEARCH →
-        </a>
+          padding: 10, background: `${C}08`, border: `1px solid ${C}28`,
+          borderRadius: 2, textDecoration: 'none', fontSize: 10, color: C, letterSpacing: '0.08em',
+        }}>FULL INTELLIGENCE SEARCH →</a>
         <a href={`/industry/${query.toLowerCase().replace(/\s+/g, '-')}`} style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '8px', background: 'rgba(0,212,255,0.03)', border: `1px solid rgba(0,212,255,0.12)`,
-          borderRadius: 2, textDecoration: 'none',
-          fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: 'rgba(0,212,255,0.6)',
-        }}>
-          INDUSTRY PAGE →
-        </a>
+          padding: 8, background: `${C}03`, border: `1px solid ${C}0a`,
+          borderRadius: 2, textDecoration: 'none', fontSize: 9, color: `${C}88`,
+        }}>INDUSTRY PAGE →</a>
       </div>
     </div>
   );
 }
 
-// ── Main ────────────────────────────────────────────────────────────────────
-
-export default function IntelCard({ selectedSignal, searchQuery, sectors, signalsToday, signalsWeek, loading, onClose }: Props) {
-  const title = selectedSignal ? 'Signal Intel'
-              : searchQuery   ? 'Search'
-              : 'El Paso Intelligence';
+export default function IntelCard({ selectedSignal, searchQuery, sectors, signalsToday, signalsWeek, signals, loading, onClose }: Props) {
+  const title = selectedSignal ? 'SIGNAL INTEL' : searchQuery ? 'SEARCH' : 'EL PASO INTELLIGENCE';
 
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', height: '100%',
-      background: 'rgba(7,7,15,0.95)', border: `1px solid ${DIM}`,
-      borderRadius: 2, overflow: 'hidden',
-    }}>
-      {/* Header */}
+    <div className="cc-panel" style={{ position: 'relative' }}>
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '8px 10px', borderBottom: `1px solid ${DIM}`,
-        background: 'rgba(0,0,0,0.4)', flexShrink: 0,
+        background: 'rgba(0,0,0,0.3)', flexShrink: 0,
       }}>
-        <div style={{ width: 5, height: 5, borderRadius: '50%', background: CYAN, boxShadow: `0 0 6px ${CYAN}` }} />
-        <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, letterSpacing: '0.12em', color: CYAN }}>
-          {title}
-        </span>
+        <span style={{ width: 5, height: 5, borderRadius: '50%', background: C, boxShadow: `0 0 6px ${C}` }} />
+        <span style={{ fontSize: 8, letterSpacing: '0.12em', color: C }}>{title}</span>
         {(selectedSignal || searchQuery) && (
-          <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: 'rgba(0,212,255,0.4)', padding: 0 }}>
-            ✕
-          </button>
+          <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', fontSize: 9, color: 'rgba(0,212,255,0.35)', padding: 0 }}>✕</button>
         )}
       </div>
-
       <div style={{ flex: 1, overflowY: 'auto' }}>
-        {selectedSignal ? (
-          <SignalView signal={selectedSignal} onClose={onClose} />
-        ) : searchQuery ? (
-          <SearchView query={searchQuery} onClose={onClose} />
-        ) : (
-          <TrajectoryView
-            report={EP_TRAJECTORY}
-            sectors={sectors}
-            signalsToday={signalsToday}
-            signalsWeek={signalsWeek}
-            loading={loading}
-          />
-        )}
+        {selectedSignal ? <SignalView signal={selectedSignal} onClose={onClose} />
+         : searchQuery ? <SearchView query={searchQuery} onClose={onClose} />
+         : <TrajectoryView sectors={sectors} signalsToday={signalsToday} signalsWeek={signalsWeek} signals={signals} loading={loading} />}
       </div>
     </div>
   );

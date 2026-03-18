@@ -1,25 +1,17 @@
 'use client';
-// src/app/command-center/page.tsx
-// NXT//LINK Command Center — master layout shell.
-// 5 zones: TopBar | Left (Brief+Watch) | Center (Map) | Right (Intel) | Bottom (Feed)
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { IntelSignal, Mode, Alert, FeedItem } from './types/intel';
-
-import TopBar      from './components/TopBar';
+import TopBar       from './components/TopBar';
 import MorningBrief from './components/MorningBrief';
-import WatchList   from './components/WatchList';
-import IntelMap    from './components/IntelMap';
-import IntelCard   from './components/IntelCard';
-import LiveFeed    from './components/LiveFeed';
-import AlertToast  from './components/AlertToast';
-
+import WatchList    from './components/WatchList';
+import IntelMap     from './components/IntelMap';
+import IntelCard    from './components/IntelCard';
+import LiveFeed     from './components/LiveFeed';
+import AlertToast   from './components/AlertToast';
 import { useSignals }   from './hooks/useSignals';
 import { useBriefing }  from './hooks/useBriefing';
 import { useWatchList } from './hooks/useWatchList';
 import { useAlerts }    from './hooks/useAlerts';
-
-// ─── Feed hook ────────────────────────────────────────────────────────────────
 
 function useRawFeed() {
   const [items, setItems] = useState<Array<{
@@ -27,46 +19,33 @@ function useRawFeed() {
     category: string; link?: string; pubDate?: string; score?: number;
   }>>([]);
   const fetched = useRef(false);
-
   useEffect(() => {
     if (fetched.current) return;
     fetched.current = true;
-
-    fetch('/api/feeds')
-      .then(r => r.json())
-      .then(json => {
-        if (json?.all?.length > 0) {
-          setItems(json.all.slice(0, 60));
-        } else {
-          fetch('/api/feeds', { method: 'POST' }).catch(() => {});
-          setTimeout(() => {
-            fetch('/api/feeds')
-              .then(r => r.json())
-              .then(j => { if (j?.all?.length > 0) setItems(j.all.slice(0, 60)); })
-              .catch(() => {});
-          }, 8000);
-        }
-      })
-      .catch(() => {});
-
+    fetch('/api/feeds').then(r => r.json()).then(json => {
+      if (json?.all?.length > 0) setItems(json.all.slice(0, 60));
+      else {
+        fetch('/api/feeds', { method: 'POST' }).catch(() => {});
+        setTimeout(() => {
+          fetch('/api/feeds').then(r => r.json())
+            .then(j => { if (j?.all?.length > 0) setItems(j.all.slice(0, 60)); }).catch(() => {});
+        }, 8000);
+      }
+    }).catch(() => {});
     const id = setInterval(() => {
-      fetch('/api/feeds')
-        .then(r => r.json())
-        .then(json => { if (json?.all) setItems(json.all.slice(0, 60)); })
-        .catch(() => {});
+      fetch('/api/feeds').then(r => r.json())
+        .then(json => { if (json?.all) setItems(json.all.slice(0, 60)); }).catch(() => {});
     }, 5 * 60 * 1000);
     return () => clearInterval(id);
   }, []);
-
   return items;
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
 export default function CommandCenterPage() {
-  const [mode, setMode]               = useState<Mode>('MORNING');
-  const [selectedSignal, setSelectedSignal] = useState<IntelSignal | null>(null);
-  const [searchQuery, setSearchQuery]       = useState<string | null>(null);
+  const [mode, setMode]                         = useState<Mode>('MORNING');
+  const [selectedSignal, setSelectedSignal]     = useState<IntelSignal | null>(null);
+  const [searchQuery, setSearchQuery]           = useState<string | null>(null);
+  const [highlightIndustry, setHighlightIndustry] = useState<string | null>(null);
 
   const signalsState = useSignals();
   const briefState   = useBriefing();
@@ -74,54 +53,34 @@ export default function CommandCenterPage() {
   const alertsState  = useAlerts(signalsState.signals);
   const rawFeedItems = useRawFeed();
 
-  // ── Mode → map filter mapping ────────────────────────────────────────────
   const modeFilter = mode === 'RESEARCH'  ? 'research_paper'
                    : mode === 'CONTRACTS' ? 'contract_award'
                    : null;
 
-  // ── Handlers ─────────────────────────────────────────────────────────────
-
   const handleDotClick = useCallback((signal: IntelSignal) => {
-    setSelectedSignal(signal);
-    setSearchQuery(null);
+    setSelectedSignal(signal); setSearchQuery(null);
   }, []);
-
   const handleSearch = useCallback((query: string) => {
-    setSearchQuery(query);
-    setSelectedSignal(null);
+    setSearchQuery(query); setSelectedSignal(null);
   }, []);
-
   const handleWatchSelect = useCallback((query: string) => {
-    setSearchQuery(query);
-    setSelectedSignal(null);
+    setSearchQuery(query); setSelectedSignal(null);
   }, []);
-
   const handleCardClose = useCallback(() => {
-    setSelectedSignal(null);
-    setSearchQuery(null);
+    setSelectedSignal(null); setSearchQuery(null); setHighlightIndustry(null);
   }, []);
-
   const handleAlertView = useCallback((alert: Alert) => {
     const match = signalsState.signals.find(s => s.headline === alert.headline);
     if (match) { setSelectedSignal(match); setSearchQuery(null); }
     alertsState.markRead(alert.id);
   }, [signalsState.signals, alertsState]);
-
   const handleFeedItemClick = useCallback((item: FeedItem) => {
     if (item.url) window.open(item.url, '_blank');
   }, []);
-
   const handleBriefItemClick = useCallback((industry: string) => {
-    setSearchQuery(industry);
-    setSelectedSignal(null);
+    setSearchQuery(industry); setSelectedSignal(null); setHighlightIndustry(industry);
   }, []);
 
-  // ── Layout by mode ──────────────────────────────────────────────────────
-  const gridCols = mode === 'WORLD'     ? '180px 1fr 220px'
-                 : mode === 'CONTRACTS' ? '220px 1fr 300px'
-                 : '28% 1fr 28%';
-
-  // ── Feed fallback to signals ─────────────────────────────────────────────
   const feedForLiveFeed = rawFeedItems.length > 0
     ? rawFeedItems.map(r => ({
         id: r.id, title: r.title, source: r.source, category: r.category,
@@ -133,36 +92,16 @@ export default function CommandCenterPage() {
       }));
 
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column',
-      width: '100vw', height: '100vh',
-      background: '#07070F', overflow: 'hidden',
-      fontFamily: 'IBM Plex Mono, monospace',
-    }}>
-
-      {/* Zone 1: Top Bar */}
+    <div className="cc-root">
       <TopBar
-        mode={mode}
-        onModeChange={setMode}
-        alerts={alertsState.alerts}
-        signals={signalsState.signals}
-        onSearch={handleSearch}
-        onAlertClick={() => alertsState.markAllRead()}
+        mode={mode} onModeChange={setMode}
+        alerts={alertsState.alerts} signals={signalsState.signals}
+        onSearch={handleSearch} onAlertClick={() => alertsState.markAllRead()}
       />
 
-      {/* Zones 2–4: 3-column grid */}
-      <div style={{
-        flex: 1, display: 'grid', gridTemplateColumns: gridCols,
-        gap: 4, padding: '4px 4px 0', minHeight: 0,
-        transition: 'grid-template-columns 0.3s ease',
-      }}>
-
-        {/* Zone 2 — Left */}
-        <div style={{
-          display: 'flex', flexDirection: 'column', minHeight: 0,
-          background: 'rgba(7,7,15,0.95)', border: '1px solid rgba(0,212,255,0.08)',
-          borderRadius: 2, overflow: 'hidden',
-        }}>
+      <div className="cc-grid">
+        {/* Left Panel */}
+        <div className="cc-panel cc-left">
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
             <MorningBrief
               items={briefState.items}
@@ -174,7 +113,7 @@ export default function CommandCenterPage() {
               onItemClick={handleBriefItemClick}
             />
           </div>
-          <div style={{ flexShrink: 0, maxHeight: '32%', minHeight: 100, overflow: 'hidden' }}>
+          <div style={{ flexShrink: 0, maxHeight: '30%', minHeight: 90, overflow: 'hidden' }}>
             <WatchList
               items={watchState.items}
               onSelect={handleWatchSelect}
@@ -184,43 +123,90 @@ export default function CommandCenterPage() {
           </div>
         </div>
 
-        {/* Zone 3 — Center Map */}
+        {/* Center Map */}
         <IntelMap
           signals={signalsState.signals}
-          mode={mode}
-          modeFilter={modeFilter}
+          mode={mode} modeFilter={modeFilter}
           selectedSignalId={selectedSignal?.id ?? null}
+          highlightIndustry={highlightIndustry}
           onDotClick={handleDotClick}
         />
 
-        {/* Zone 4 — Right Intel */}
+        {/* Right Panel */}
         <IntelCard
           selectedSignal={selectedSignal}
           searchQuery={searchQuery}
           sectors={signalsState.sectors}
           signalsToday={signalsState.signalsToday}
           signalsWeek={signalsState.signalsWeek}
+          signals={signalsState.signals}
           loading={signalsState.loading}
           onClose={handleCardClose}
         />
       </div>
 
-      {/* Zone 5: Bottom Feed */}
       <LiveFeed rawItems={feedForLiveFeed} onItemClick={handleFeedItemClick} />
 
-      {/* Alert Toast */}
       <AlertToast
         alerts={alertsState.alerts}
         onDismiss={alertsState.dismiss}
         onView={handleAlertView}
       />
 
-      {/* Global scanline effect */}
-      <div style={{
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        pointerEvents: 'none', zIndex: 60,
-        background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,212,255,0.015) 2px, rgba(0,212,255,0.015) 4px)',
-      }} />
+      {/* Scanline + vignette overlays */}
+      <div className="cc-scanline" />
+      <div className="cc-vignette" />
+
+      <style>{`
+        .cc-root {
+          display: flex; flex-direction: column;
+          width: 100vw; height: 100vh;
+          background: #050508; overflow: hidden;
+          font-family: 'IBM Plex Mono', monospace;
+          color: rgba(255,255,255,0.8);
+        }
+        .cc-grid {
+          flex: 1; display: grid;
+          grid-template-columns: 280px 1fr 280px;
+          gap: 3px; padding: 3px 3px 0;
+          min-height: 0;
+        }
+        .cc-panel {
+          display: flex; flex-direction: column;
+          background: rgba(5,5,12,0.97);
+          border: 1px solid rgba(0,212,255,0.06);
+          border-radius: 2px;
+          overflow: hidden;
+          position: relative;
+        }
+        .cc-panel::before {
+          content: '';
+          position: absolute; top: 0; left: 0; right: 0;
+          height: 1px;
+          background: linear-gradient(90deg, transparent, rgba(0,212,255,0.15), transparent);
+          z-index: 1;
+        }
+        .cc-left { min-height: 0; }
+        .cc-scanline {
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          pointer-events: none; z-index: 80;
+          background: repeating-linear-gradient(
+            0deg, transparent, transparent 2px,
+            rgba(0,212,255,0.012) 2px, rgba(0,212,255,0.012) 4px
+          );
+        }
+        .cc-vignette {
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          pointer-events: none; z-index: 79;
+          background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.4) 100%);
+        }
+        @media (max-width: 1200px) {
+          .cc-grid { grid-template-columns: 240px 1fr 240px; }
+        }
+        @media (max-width: 900px) {
+          .cc-grid { grid-template-columns: 1fr; grid-template-rows: 200px 1fr 200px; }
+        }
+      `}</style>
     </div>
   );
 }

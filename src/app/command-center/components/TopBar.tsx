@@ -1,29 +1,21 @@
 'use client';
-// src/app/command-center/components/TopBar.tsx
-// Always-visible top bar: logo · mode switcher · search · clock · alerts · status
-
 import { useEffect, useState } from 'react';
 import type { Mode, IntelSignal, Alert } from '../types/intel';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const CYAN    = '#00D4FF';
-const GREEN   = '#00FF88';
-const GOLD    = '#FFD700';
-const RED     = '#FF3B30';
-const PURPLE  = '#A855F7';
+const C = '#00D4FF';
+const G = '#00FF88';
+const GOLD = '#FFD700';
+const R = '#FF3B30';
+const P = '#A855F7';
 
 const MODES: Mode[] = ['MORNING', 'WORLD', 'EL PASO', 'RESEARCH', 'CONTRACTS'];
-
-const MODE_META: Record<Mode, { label: string; color: string; shortcut: string }> = {
-  MORNING:   { label: 'MORNING',   color: GOLD,   shortcut: '1' },
-  WORLD:     { label: 'WORLD',     color: CYAN,   shortcut: '2' },
-  'EL PASO': { label: 'EL PASO',  color: GREEN,  shortcut: '3' },
-  RESEARCH:  { label: 'RESEARCH',  color: PURPLE, shortcut: '4' },
-  CONTRACTS: { label: 'CONTRACTS', color: GOLD,   shortcut: '5' },
+const MODE_META: Record<Mode, { color: string; icon: string }> = {
+  MORNING:   { color: GOLD, icon: '☀' },
+  WORLD:     { color: C,    icon: '◎' },
+  'EL PASO': { color: G,    icon: '◉' },
+  RESEARCH:  { color: P,    icon: '◆' },
+  CONTRACTS: { color: GOLD, icon: '⚡' },
 };
-
-// ─── Live clock ───────────────────────────────────────────────────────────────
 
 function useClock() {
   const [now, setNow] = useState(() => new Date());
@@ -34,317 +26,187 @@ function useClock() {
   return now;
 }
 
-// ─── Connection status ────────────────────────────────────────────────────────
-
-function useConnectionStatus() {
-  const [online, setOnline] = useState(true);
-  useEffect(() => {
-    setOnline(navigator.onLine);
-    const up   = () => setOnline(true);
-    const down = () => setOnline(false);
-    window.addEventListener('online',  up);
-    window.addEventListener('offline', down);
-    return () => {
-      window.removeEventListener('online',  up);
-      window.removeEventListener('offline', down);
-    };
-  }, []);
-  return online;
-}
-
-// ─── Props ────────────────────────────────────────────────────────────────────
-
 type Props = {
   mode: Mode;
-  onModeChange: (mode: Mode) => void;
+  onModeChange: (m: Mode) => void;
   alerts: Alert[];
   signals: IntelSignal[];
-  onSearch: (query: string) => void;
+  onSearch: (q: string) => void;
   onAlertClick: () => void;
 };
 
-// ─── TopBar ───────────────────────────────────────────────────────────────────
-
-export default function TopBar({
-  mode,
-  onModeChange,
-  alerts,
-  signals,
-  onSearch,
-  onAlertClick,
-}: Props) {
-  const now        = useClock();
-  const online     = useConnectionStatus();
+export default function TopBar({ mode, onModeChange, alerts, signals, onSearch, onAlertClick }: Props) {
+  const now = useClock();
   const [query, setQuery] = useState('');
+  const [online, setOnline] = useState(true);
 
-  const unreadCount  = alerts.filter(a => !a.read).length;
-  const criticalCount = signals.filter(s => s.importance >= 0.9).length;
-  const totalAlerts  = unreadCount + criticalCount;
+  useEffect(() => {
+    setOnline(navigator.onLine);
+    const up = () => setOnline(true);
+    const down = () => setOnline(false);
+    window.addEventListener('online', up);
+    window.addEventListener('offline', down);
+    return () => { window.removeEventListener('online', up); window.removeEventListener('offline', down); };
+  }, []);
 
-  const timeStr = now.toLocaleTimeString('en-US', {
-    hour12: true,
-    hour:   '2-digit',
-    minute: '2-digit',
-  });
-  const dateStr = now.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month:   'short',
-    day:     'numeric',
-  }).toUpperCase();
-
-  function handleSearch(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter' && query.trim()) {
-      onSearch(query.trim());
-      setQuery('');
-    }
-  }
-
-  // Keyboard shortcuts: 1–5 switch mode
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      // Only fire if no input is focused
       if (document.activeElement?.tagName === 'INPUT') return;
-      const index = parseInt(e.key) - 1;
-      if (index >= 0 && index < MODES.length) {
-        onModeChange(MODES[index]);
-      }
+      const i = parseInt(e.key) - 1;
+      if (i >= 0 && i < MODES.length) onModeChange(MODES[i]);
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onModeChange]);
 
-  return (
-    <div style={{
-      height: 48,
-      background: 'rgba(0,0,0,0.90)',
-      borderBottom: '1px solid rgba(0,212,255,0.14)',
-      display: 'flex',
-      alignItems: 'center',
-      padding: '0 12px',
-      gap: 0,
-      flexShrink: 0,
-      position: 'relative',
-      zIndex: 50,
-    }}>
+  const unread = alerts.filter(a => !a.read).length;
+  const critical = signals.filter(s => s.importance >= 0.9).length;
+  const total = unread + critical;
 
-      {/* ── Logo ──────────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginRight: 16, flexShrink: 0 }}>
-        <span style={{
-          fontFamily: 'Space Grotesk, sans-serif',
-          fontSize: 14,
-          fontWeight: 700,
-          color: CYAN,
-          letterSpacing: '0.06em',
-        }}>
-          NXT//LINK
-        </span>
-        <span style={{
-          fontFamily: 'IBM Plex Mono, monospace',
-          fontSize: 7,
-          color: 'rgba(0,212,255,0.35)',
-          letterSpacing: '0.14em',
-        }}>
-          CMD
+  const time = now.toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const date = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase();
+
+  function doSearch(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter' && query.trim()) { onSearch(query.trim()); setQuery(''); }
+  }
+
+  return (
+    <div className="tb-root">
+      {/* Logo */}
+      <div className="tb-logo">
+        <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 15, fontWeight: 700, color: C, letterSpacing: '0.08em' }}>
+          NXT<span style={{ color: 'rgba(0,212,255,0.35)' }}>//</span>LINK
         </span>
       </div>
 
-      <Divider />
+      <div className="tb-sep" />
 
-      {/* ── Mode switcher ─────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: 2, marginRight: 16, flexShrink: 0 }}>
-        {MODES.map(m => {
-          const meta    = MODE_META[m];
-          const active  = mode === m;
+      {/* Mode tabs */}
+      <div style={{ display: 'flex', gap: 1 }}>
+        {MODES.map((m, i) => {
+          const meta = MODE_META[m];
+          const active = mode === m;
           return (
             <button
-              key={m}
-              onClick={() => onModeChange(m)}
-              title={`Switch to ${m} mode (press ${meta.shortcut})`}
+              key={m} onClick={() => onModeChange(m)}
+              title={`${m} (${i + 1})`}
+              className={`tb-mode ${active ? 'tb-mode-active' : ''}`}
               style={{
-                height: 26,
-                padding: '0 10px',
-                background: active ? `${meta.color}18` : 'transparent',
-                border: active
-                  ? `1px solid ${meta.color}55`
-                  : '1px solid transparent',
-                borderRadius: 2,
-                cursor: 'pointer',
-                fontFamily: 'IBM Plex Mono, monospace',
-                fontSize: 8,
-                letterSpacing: '0.1em',
-                color: active ? meta.color : 'rgba(255,255,255,0.28)',
-                transition: 'all 0.15s ease',
-                boxShadow: active ? `0 0 8px ${meta.color}22` : 'none',
-              }}
+                '--mc': meta.color,
+                borderBottom: active ? `2px solid ${meta.color}` : '2px solid transparent',
+                color: active ? meta.color : 'rgba(255,255,255,0.25)',
+              } as React.CSSProperties}
             >
-              {meta.label}
+              <span style={{ fontSize: 9, marginRight: 3 }}>{meta.icon}</span>
+              {m}
             </button>
           );
         })}
       </div>
 
-      <Divider />
+      <div className="tb-sep" />
 
-      {/* ── Search ────────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, maxWidth: 360, position: 'relative', margin: '0 16px' }}>
-        <span style={{
-          position: 'absolute',
-          left: 9,
-          top: '50%',
-          transform: 'translateY(-50%)',
-          color: 'rgba(0,212,255,0.35)',
-          fontSize: 13,
-          pointerEvents: 'none',
-          lineHeight: 1,
-        }}>
-          ⌕
-        </span>
+      {/* Search */}
+      <div style={{ flex: 1, maxWidth: 400, position: 'relative', margin: '0 12px' }}>
         <input
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          onKeyDown={handleSearch}
-          placeholder="Search any industry, company, or technology…"
-          style={{
-            width: '100%',
-            height: 28,
-            background: 'rgba(0,212,255,0.05)',
-            border: '1px solid rgba(0,212,255,0.16)',
-            borderRadius: 2,
-            paddingLeft: 28,
-            paddingRight: 10,
-            fontFamily: 'IBM Plex Mono, monospace',
-            fontSize: 10,
-            color: CYAN,
-            outline: 'none',
-            transition: 'border-color 0.15s',
-          }}
-          onFocus={e  => { e.currentTarget.style.borderColor = 'rgba(0,212,255,0.45)'; }}
-          onBlur={e   => { e.currentTarget.style.borderColor = 'rgba(0,212,255,0.16)'; }}
+          value={query} onChange={e => setQuery(e.target.value)} onKeyDown={doSearch}
+          placeholder="Search industry, company, technology…"
+          className="tb-search"
         />
       </div>
 
-      {/* ── Spacer ────────────────────────────────────────────────────────── */}
       <div style={{ flex: 1 }} />
 
-      {/* ── Clock ─────────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginRight: 16, flexShrink: 0 }}>
-        <span style={{
-          fontFamily: 'IBM Plex Mono, monospace',
-          fontSize: 13,
-          color: GREEN,
-          letterSpacing: '0.04em',
-          lineHeight: 1.2,
-        }}>
-          {timeStr}
-        </span>
-        <span style={{
-          fontFamily: 'IBM Plex Mono, monospace',
-          fontSize: 7,
-          color: 'rgba(0,212,255,0.4)',
-          letterSpacing: '0.1em',
-        }}>
-          {dateStr}
-        </span>
+      {/* Signal count */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 16 }}>
+        <span style={{ fontSize: 9, color: G }}>{signals.length}</span>
+        <span style={{ fontSize: 7, color: 'rgba(0,255,136,0.4)', letterSpacing: '0.1em' }}>SIGNALS</span>
       </div>
 
-      <Divider />
+      <div className="tb-sep" />
 
-      {/* ── Connection status ─────────────────────────────────────────────── */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 5,
-        marginLeft: 12,
-        marginRight: 12,
-        flexShrink: 0,
-      }}>
+      {/* Clock */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginRight: 12 }}>
+        <span style={{ fontSize: 14, color: G, letterSpacing: '0.03em', lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>
+          {time}
+        </span>
+        <span style={{ fontSize: 7, color: 'rgba(0,212,255,0.35)', letterSpacing: '0.12em' }}>{date}</span>
+      </div>
+
+      <div className="tb-sep" />
+
+      {/* Status */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, margin: '0 10px' }}>
         <span style={{
-          width: 6,
-          height: 6,
-          borderRadius: '50%',
-          background: online ? GREEN : RED,
-          boxShadow: `0 0 6px ${online ? GREEN : RED}99`,
-          display: 'inline-block',
-          animation: online ? 'status-pulse 2.5s ease-in-out infinite' : 'none',
+          width: 6, height: 6, borderRadius: '50%',
+          background: online ? G : R,
+          boxShadow: `0 0 8px ${online ? G : R}88`,
+          animation: 'pulse 2.5s ease-in-out infinite',
         }} />
-        <span style={{
-          fontFamily: 'IBM Plex Mono, monospace',
-          fontSize: 7,
-          letterSpacing: '0.1em',
-          color: online ? 'rgba(0,255,136,0.6)' : 'rgba(255,59,48,0.7)',
-        }}>
+        <span style={{ fontSize: 7, letterSpacing: '0.12em', color: online ? `${G}99` : `${R}99` }}>
           {online ? 'LIVE' : 'OFFLINE'}
         </span>
       </div>
 
-      <Divider />
+      <div className="tb-sep" />
 
-      {/* ── Alert bell ────────────────────────────────────────────────────── */}
-      <button
-        onClick={() => { onAlertClick(); }}
-        style={{
-          position: 'relative',
-          marginLeft: 12,
-          background: totalAlerts > 0 ? 'rgba(255,59,48,0.08)' : 'transparent',
-          border: totalAlerts > 0
-            ? '1px solid rgba(255,59,48,0.3)'
-            : '1px solid rgba(0,212,255,0.12)',
-          borderRadius: 2,
-          padding: '4px 10px',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          transition: 'all 0.15s',
-        }}
-        title="View alerts"
-      >
-        <span style={{ fontSize: 12, lineHeight: 1 }}>
-          {totalAlerts > 0 ? '⚡' : '🔔'}
-        </span>
-        {totalAlerts > 0 && (
-          <span style={{
-            fontFamily: 'IBM Plex Mono, monospace',
-            fontSize: 10,
-            fontWeight: 700,
-            color: RED,
-            letterSpacing: '0.04em',
-          }}>
-            {totalAlerts}
-          </span>
-        )}
-        {totalAlerts === 0 && (
-          <span style={{
-            fontFamily: 'IBM Plex Mono, monospace',
-            fontSize: 8,
-            color: 'rgba(0,212,255,0.35)',
-            letterSpacing: '0.08em',
-          }}>
-            ALL CLEAR
-          </span>
-        )}
+      {/* Alerts */}
+      <button onClick={onAlertClick} className="tb-alert" style={{
+        background: total > 0 ? 'rgba(255,59,48,0.08)' : 'transparent',
+        borderColor: total > 0 ? 'rgba(255,59,48,0.25)' : 'rgba(0,212,255,0.08)',
+      }}>
+        <span style={{ fontSize: 11 }}>{total > 0 ? '⚡' : '◌'}</span>
+        {total > 0
+          ? <span style={{ fontSize: 11, fontWeight: 700, color: R }}>{total}</span>
+          : <span style={{ fontSize: 7, color: 'rgba(0,212,255,0.3)', letterSpacing: '0.1em' }}>CLEAR</span>
+        }
       </button>
 
-      {/* ── CSS animations ────────────────────────────────────────────────── */}
       <style>{`
-        @keyframes status-pulse {
-          0%, 100% { opacity: 1; }
-          50%       { opacity: 0.4; }
+        .tb-root {
+          height: 44px; display: flex; align-items: center;
+          padding: 0 10px; flex-shrink: 0;
+          background: rgba(5,5,12,0.98);
+          border-bottom: 1px solid rgba(0,212,255,0.06);
+          position: relative; z-index: 50;
+          font-family: 'IBM Plex Mono', monospace;
+        }
+        .tb-root::after {
+          content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+          background: linear-gradient(90deg, transparent, rgba(0,212,255,0.12), transparent);
+        }
+        .tb-sep { width: 1px; height: 18px; background: rgba(0,212,255,0.08); flex-shrink: 0; margin: 0 8px; }
+        .tb-logo { margin-right: 8px; flex-shrink: 0; }
+        .tb-mode {
+          height: 44px; padding: 0 10px; background: none; border: none;
+          cursor: pointer; font-family: 'IBM Plex Mono', monospace;
+          font-size: 8px; letter-spacing: 0.1em;
+          transition: all 0.15s;
+        }
+        .tb-mode:hover { color: rgba(255,255,255,0.6) !important; }
+        .tb-mode-active { background: rgba(0,212,255,0.03); }
+        .tb-search {
+          width: 100%; height: 28px;
+          background: rgba(0,212,255,0.03);
+          border: 1px solid rgba(0,212,255,0.08);
+          border-radius: 2px; padding: 0 10px;
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 10px; color: ${C}; outline: none;
+          transition: border-color 0.15s;
+        }
+        .tb-search:focus { border-color: rgba(0,212,255,0.3); background: rgba(0,212,255,0.05); }
+        .tb-search::placeholder { color: rgba(0,212,255,0.2); }
+        .tb-alert {
+          display: flex; align-items: center; gap: 5;
+          padding: 4px 10px; border: 1px solid; border-radius: 2px;
+          cursor: pointer; font-family: 'IBM Plex Mono', monospace;
+          background: transparent; transition: all 0.15s;
+        }
+        @keyframes pulse {
+          0%,100% { opacity: 1; }
+          50% { opacity: 0.35; }
         }
       `}</style>
     </div>
-  );
-}
-
-// ─── Helper ───────────────────────────────────────────────────────────────────
-
-function Divider() {
-  return (
-    <div style={{
-      width: 1,
-      height: 20,
-      background: 'rgba(0,212,255,0.1)',
-      flexShrink: 0,
-    }} />
   );
 }
