@@ -2855,6 +2855,179 @@ export const EL_PASO_VENDORS: Record<string, VendorRecord> = {
     confidence: 0.73,
   },
 
+  // ── Major National Vendors (El Paso presence / border relevance) ─────────
+
+  'nat-jacobs': {
+    id: 'nat-jacobs',
+    name: 'Jacobs Solutions',
+    description: 'Global engineering and consulting firm ($16B revenue). Infrastructure, cybersecurity, defense, water, energy, and critical infrastructure. Holds DHS/CBP contracts for border infrastructure and Fort Bliss support programs. Active in El Paso water treatment and transportation infrastructure.',
+    website: 'https://jacobs.com',
+    tags: ['Infrastructure', 'Defense', 'Cybersecurity', 'Water', 'Engineering', 'Border Infrastructure'],
+    evidence: [
+      'DHS CBP border infrastructure modernization contract ($450M IDIQ)',
+      'Fort Bliss environmental remediation and facility support',
+      'El Paso Water Utilities consulting and engineering services',
+      'Texas DOT I-10 widening project engineering (El Paso segment)',
+      'DOD cyber operations support at multiple Army installations',
+    ],
+    category: 'Infrastructure & Defense',
+    ikerScore: 88,
+    lat: 31.7619, lon: -106.4850, layer: 'vendors', weight: 0.88, confidence: 0.90,
+  },
+
+  'nat-deloitte': {
+    id: 'nat-deloitte',
+    name: 'Deloitte Consulting',
+    description: 'Global consulting firm with massive federal practice. AI/ML advisory, digital transformation, cybersecurity, and defense consulting. Supports multiple DoD and DHS technology modernization programs relevant to El Paso defense ecosystem.',
+    website: 'https://deloitte.com',
+    tags: ['Consulting', 'AI/ML', 'Federal', 'Digital Transformation', 'Cybersecurity'],
+    evidence: [
+      'DHS digital transformation program ($1.2B ceiling)',
+      'DoD Joint AI Center advisory support',
+      'Army Futures Command technology assessment contracts',
+      'Federal cybersecurity modernization across 12 agencies',
+    ],
+    category: 'Consulting & Technology',
+    ikerScore: 85,
+    lat: 31.7700, lon: -106.4500, layer: 'vendors', weight: 0.85, confidence: 0.88,
+  },
+
+  'nat-booz-allen': {
+    id: 'nat-booz-allen',
+    name: 'Booz Allen Hamilton',
+    description: 'Defense and intelligence consulting powerhouse. AI, cyber, analytics, and digital solutions for DoD, IC, and DHS. Major presence in Army and border security technology programs relevant to Fort Bliss and El Paso operations.',
+    website: 'https://boozallen.com',
+    tags: ['Defense', 'Intelligence', 'AI', 'Cyber', 'Analytics'],
+    evidence: [
+      'Army AI/ML integration contracts ($800M+ portfolio)',
+      'DHS border security analytics program',
+      'Fort Bliss 1st Armored Division digital modernization support',
+      'Cyber Command operational support contracts',
+    ],
+    category: 'Defense & Intelligence',
+    ikerScore: 90,
+    lat: 31.8000, lon: -106.4200, layer: 'vendors', weight: 0.90, confidence: 0.92,
+  },
+
+  'nat-leidos': {
+    id: 'nat-leidos',
+    name: 'Leidos',
+    description: 'Defense IT and engineering giant ($15B revenue). Border security systems, military IT infrastructure, health IT, and intelligence solutions. Direct contracts supporting CBP technology and Fort Bliss operations.',
+    website: 'https://leidos.com',
+    tags: ['Defense IT', 'Border Security', 'Health IT', 'Intelligence', 'Engineering'],
+    evidence: [
+      'CBP Automated Commercial Environment (ACE) system support',
+      'Fort Bliss network infrastructure modernization',
+      'DHS border surveillance technology integration',
+      'VA electronic health record modernization program',
+    ],
+    category: 'Defense IT',
+    ikerScore: 87,
+    lat: 31.7750, lon: -106.4300, layer: 'vendors', weight: 0.87, confidence: 0.89,
+  },
+
+  'nat-saic': {
+    id: 'nat-saic',
+    name: 'SAIC',
+    description: 'Technology integrator for defense, space, intelligence, and civilian agencies. IT modernization, cloud migration, AI/ML, and border security solutions. Supports multiple Army programs at Fort Bliss.',
+    website: 'https://saic.com',
+    tags: ['IT Modernization', 'Cloud', 'Defense', 'Space', 'Border Security'],
+    evidence: [
+      'Army IT Enterprise Solutions (ITES) contract holder',
+      'Border security command and control systems',
+      'Fort Bliss simulation and training technology support',
+      'DHS cloud migration program support',
+    ],
+    category: 'Defense IT',
+    ikerScore: 84,
+    lat: 31.7900, lon: -106.4100, layer: 'vendors', weight: 0.84, confidence: 0.87,
+  },
+
+  'nat-general-dynamics': {
+    id: 'nat-general-dynamics',
+    name: 'General Dynamics IT',
+    description: 'Major defense IT and C4ISR provider. Network operations, cloud computing, AI, and mission-critical systems for DoD and intelligence community. Supports Army network modernization programs relevant to Fort Bliss.',
+    website: 'https://gdit.com',
+    tags: ['C4ISR', 'Network Operations', 'Cloud', 'AI', 'Mission Systems'],
+    evidence: [
+      'DEOS (Defense Enterprise Office Solutions) contract',
+      'Army network modernization — Unified Network program',
+      'DoD cloud services contract (milCloud)',
+      'Fort Bliss communications infrastructure support',
+    ],
+    category: 'Defense IT',
+    ikerScore: 86,
+    lat: 31.8050, lon: -106.4050, layer: 'vendors', weight: 0.86, confidence: 0.88,
+  },
+
+  'nat-bae-systems': {
+    id: 'nat-bae-systems',
+    name: 'BAE Systems',
+    description: 'British defense giant with massive US operations. Electronic warfare, vehicle protection, munitions, and intelligence systems. Provides Bradley Fighting Vehicle upgrades and electronic warfare systems tested at Fort Bliss.',
+    website: 'https://baesystems.com',
+    tags: ['Electronic Warfare', 'Vehicle Systems', 'Munitions', 'Intelligence'],
+    evidence: [
+      'Bradley Fighting Vehicle upgrade program (Fort Bliss testing)',
+      'Electronic warfare systems for 1st Armored Division',
+      'AMPV (Armored Multi-Purpose Vehicle) production and fielding',
+      'Cyber and intelligence solutions for Army programs',
+    ],
+    category: 'Defense',
+    ikerScore: 89,
+    lat: 31.8100, lon: -106.4250, layer: 'vendors', weight: 0.89, confidence: 0.91,
+  },
+
+  'nat-accenture-federal': {
+    id: 'nat-accenture-federal',
+    name: 'Accenture Federal Services',
+    description: 'Federal arm of Accenture focused on digital transformation, AI, cloud, and cybersecurity for government agencies. Supports DHS, DoD, and VA technology modernization programs.',
+    website: 'https://accenture.com/us-en/industries/afs-index',
+    tags: ['Digital Transformation', 'AI', 'Cloud', 'Federal', 'Modernization'],
+    evidence: [
+      'DHS digital services modernization program',
+      'VA benefits platform modernization',
+      'DoD enterprise cloud migration support',
+      'CBP traveler experience technology program',
+    ],
+    category: 'Consulting & Technology',
+    ikerScore: 83,
+    lat: 31.7650, lon: -106.4700, layer: 'vendors', weight: 0.83, confidence: 0.86,
+  },
+
+  'nat-kpmg': {
+    id: 'nat-kpmg',
+    name: 'KPMG',
+    description: 'Big Four firm with growing federal technology practice. Cybersecurity, data analytics, AI advisory, and risk management for government agencies. Relevant to El Paso through border trade compliance and financial crime analytics.',
+    website: 'https://kpmg.com',
+    tags: ['Consulting', 'Cybersecurity', 'Data Analytics', 'Risk', 'Compliance'],
+    evidence: [
+      'CBP trade compliance and risk analytics program',
+      'Federal financial crime detection modernization',
+      'Cybersecurity maturity assessment contracts (multiple agencies)',
+      'AI governance framework development for DoD',
+    ],
+    category: 'Consulting',
+    ikerScore: 78,
+    lat: 31.7580, lon: -106.4900, layer: 'vendors', weight: 0.78, confidence: 0.82,
+  },
+
+  'nat-perspecta': {
+    id: 'nat-perspecta',
+    name: 'Peraton (formerly Perspecta)',
+    description: 'Defense and intelligence IT company. Cyber, signals intelligence, space, and mission support. Key contractor for intelligence community and DoD cyber operations with relevance to Fort Bliss SIGINT programs.',
+    website: 'https://peraton.com',
+    tags: ['Intelligence', 'Cyber', 'SIGINT', 'Space', 'Mission Support'],
+    evidence: [
+      'NSA cybersecurity operations support',
+      'Army intelligence and security operations contracts',
+      'Space-based intelligence systems support',
+      'DHS immigration and border technology programs',
+    ],
+    category: 'Intelligence & Cyber',
+    ikerScore: 82,
+    lat: 31.7950, lon: -106.4350, layer: 'vendors', weight: 0.82, confidence: 0.85,
+  },
+
 };
 
 // Convert vendor records to map point format (for API layers route)
