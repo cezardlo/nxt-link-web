@@ -11,7 +11,6 @@ import type {
   SectorScore,
   SignalType,
   SignalPriority,
-  WhatChangedResponse,
 } from '../types/intel';
 
 // ─── Constants ────────────────────────────────────────────────────────────────

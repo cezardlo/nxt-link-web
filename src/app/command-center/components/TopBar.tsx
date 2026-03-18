@@ -75,7 +75,7 @@ export default function TopBar({ mode, onModeChange, alerts, signals, onSearch, 
       {/* Logo */}
       <div className="tb-logo">
         <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 15, fontWeight: 700, color: C, letterSpacing: '0.08em' }}>
-          NXT<span style={{ color: 'rgba(0,212,255,0.35)' }}>//</span>LINK
+          NXT<span style={{ color: 'rgba(0,212,255,0.35)' }}>{'/'}{'/'}</span>LINK
         </span>
       </div>
 
