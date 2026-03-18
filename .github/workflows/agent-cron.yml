@@ -48,6 +48,24 @@ jobs:
         env:
           SITE_URL: ${{ secrets.SITE_URL }}
 
+      - name: Warm RSS feeds
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
+            -X POST "$SITE_URL/api/feeds" \
+            -H "User-Agent: NXTLink-GitHubActions/1.0")
+          echo "Feed warmup: HTTP $STATUS"
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+
+      - name: Refresh intel signals
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
+            "$SITE_URL/api/intel-signals" \
+            -H "User-Agent: NXTLink-GitHubActions/1.0")
+          echo "Intel signals: HTTP $STATUS"
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+
       - name: Refresh IKER scores
         id: iker
         run: |
