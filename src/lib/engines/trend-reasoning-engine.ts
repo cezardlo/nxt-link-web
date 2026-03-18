@@ -1,12 +1,12 @@
 // src/lib/engines/trend-reasoning-engine.ts
 // Trend Reasoning Engine — explains what's happening, what might happen, and
-// where things are heading. Works entirely without an LLM (algorithmic).
-// When GEMINI_API_KEY is present it will optionally enrich the overall narrative.
+// where things are heading. Algorithmic core with optional AI narrative enhancement.
 //
 // Inputs:  IntelSignalRow[] from db/queries/intel-signals
 // Outputs: TrendAnalysis — plain-English briefing structured for CEO-level reading
 
 import type { IntelSignalRow } from '@/db/queries/intel-signals';
+import { runParallelJsonEnsemble } from '@/lib/llm/parallel-router';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -37,6 +37,7 @@ export type TrendAnalysis = {
   biggest_story: string;
   watch_list: string[];
   total_signals_analyzed: number;
+  ai_enhanced: boolean;
 };
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
@@ -405,53 +406,201 @@ function buildWatchList(
   return Array.from(watchSet).slice(0, 10);
 }
 
-// ─── Optional Gemini enhancement ─────────────────────────────────────────────
+// ─── AI narrative enhancement ────────────────────────────────────────────────
 
-async function tryGeminiNarrativeEnhancement(
-  draft: string,
+/** Shape the LLM must return for the overall narrative enhancement. */
+type OverallNarrativeResponse = {
+  overall_narrative: string;
+};
+
+/** Shape the LLM must return for a single sector enhancement. */
+type SectorNarrativeResponse = {
+  what_is_happening: string;
+  what_might_happen: string;
+  where_heading: string;
+};
+
+/** Module-level cache: key → { data, expiresAt } */
+type CacheEntry = { data: TrendAnalysis; expiresAt: number };
+const narrativeCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+function makeCacheKey(analysis: TrendAnalysis): string {
+  // Key on signal count + top sector names to avoid stale keys on identical-looking inputs
+  const sectorNames = analysis.sectors.map(s => s.name).join('|');
+  return `${analysis.total_signals_analyzed}:${sectorNames}`;
+}
+
+function isValidNarrativeString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 20;
+}
+
+/**
+ * Enhance the overall narrative with a 3-sentence executive summary.
+ * Returns enhanced string or null if the LLM call fails.
+ */
+async function enhanceOverallNarrative(
+  algorithmicNarrative: string,
   topSignalTitles: string[],
+  acceleratingSectors: string[],
 ): Promise<string | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey.trim() === '') return null;
+  try {
+    const userPrompt = `
+ALGORITHMIC DRAFT:
+"${algorithmicNarrative}"
 
-  const prompt = `You are a senior technology intelligence analyst briefing a CEO.
-Rewrite the following draft narrative in 2–3 crisp, jargon-free sentences.
-Keep the facts. Make it sound like a human analyst, not a report generator.
-
-Draft: "${draft}"
-
-Top signals for context:
+TOP SIGNALS (by importance):
 ${topSignalTitles.slice(0, 5).map((t, i) => `${i + 1}. ${t}`).join('\n')}
 
-Return ONLY the rewritten narrative paragraph, nothing else.`;
+ACCELERATING SECTORS: ${acceleratingSectors.join(', ') || 'none identified'}
 
-  try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 8000);
+Rewrite the draft as a 3-sentence executive summary. Name specific companies, dollar amounts, or dates where available in the signals. Be direct — no filler phrases like "it is worth noting".
 
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.35, maxOutputTokens: 256 },
-        }),
-        signal: ctrl.signal,
+Return JSON: { "overall_narrative": "<3-sentence summary>" }`;
+
+    const { result } = await runParallelJsonEnsemble<OverallNarrativeResponse>({
+      systemPrompt: 'You are a senior technology intelligence analyst at a Bloomberg-style platform. Write clear, specific narratives for a CEO. Name companies, dollar amounts, dates. No jargon. Be direct.',
+      userPrompt,
+      temperature: 0.3,
+      maxProviders: 1,
+      budget: { preferLowCostProviders: true, reserveCompletionTokens: 300 },
+      parse: (content) => {
+        const raw = JSON.parse(content) as Record<string, unknown>;
+        if (!isValidNarrativeString(raw['overall_narrative'])) {
+          throw new Error('overall_narrative missing or too short');
+        }
+        return { overall_narrative: raw['overall_narrative'] as string };
       },
-    );
+    });
 
-    clearTimeout(timer);
-    if (!res.ok) return null;
-
-    const json = await res.json() as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    };
-    const text = (json.candidates?.[0]?.content?.parts?.[0]?.text ?? '').trim();
-    return text.length > 20 ? text : null;
+    return isValidNarrativeString(result.overall_narrative) ? result.overall_narrative : null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Enhance narrative fields for a single sector.
+ * Returns enhanced SectorNarrativeResponse or null on failure.
+ */
+async function enhanceSectorNarrative(
+  sector: SectorTrend,
+): Promise<SectorNarrativeResponse | null> {
+  try {
+    const userPrompt = `
+SECTOR: ${sector.name}
+MOMENTUM: ${sector.momentum}
+SIGNAL COUNT: ${sector.signal_count}
+CONFIDENCE: ${Math.round(sector.confidence * 100)}%
+
+TOP SIGNALS:
+${sector.signals_driving_this.slice(0, 5).map((t, i) => `${i + 1}. ${t}`).join('\n')}
+
+RISK FACTORS:
+${sector.risk_factors.slice(0, 2).join('\n')}
+
+ALGORITHMIC DRAFTS:
+- what_is_happening: "${sector.what_is_happening}"
+- what_might_happen: "${sector.what_might_happen}"
+- where_heading: "${sector.where_heading}"
+
+Rewrite each field as a single, specific, jargon-free sentence a CEO would immediately understand. Reference signal titles or company names where possible. Do not add hedging phrases.
+
+Return JSON:
+{
+  "what_is_happening": "<1 sentence>",
+  "what_might_happen": "<1 sentence>",
+  "where_heading": "<1 sentence>"
+}`;
+
+    const { result } = await runParallelJsonEnsemble<SectorNarrativeResponse>({
+      systemPrompt: 'You are a senior technology intelligence analyst at a Bloomberg-style platform. Write clear, specific narratives for a CEO. Name companies, dollar amounts, dates. No jargon. Be direct.',
+      userPrompt,
+      temperature: 0.3,
+      maxProviders: 1,
+      budget: { preferLowCostProviders: true, reserveCompletionTokens: 250 },
+      parse: (content) => {
+        const raw = JSON.parse(content) as Record<string, unknown>;
+        if (
+          !isValidNarrativeString(raw['what_is_happening']) ||
+          !isValidNarrativeString(raw['what_might_happen']) ||
+          !isValidNarrativeString(raw['where_heading'])
+        ) {
+          throw new Error('sector narrative fields missing or too short');
+        }
+        return {
+          what_is_happening: raw['what_is_happening'] as string,
+          what_might_happen: raw['what_might_happen'] as string,
+          where_heading: raw['where_heading'] as string,
+        };
+      },
+    });
+
+    return result;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Attempt to enhance a fully-built algorithmic TrendAnalysis with AI narratives.
+ * Enhances: overall_narrative + top 3 sectors by signal count.
+ * Falls back to algorithmic text on any failure.
+ */
+async function enhanceWithAI(analysis: TrendAnalysis): Promise<TrendAnalysis> {
+  // Check module-level cache first
+  const cacheKey = makeCacheKey(analysis);
+  const cached = narrativeCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+
+  try {
+    const acceleratingSectors = analysis.sectors
+      .filter(s => s.momentum === 'accelerating')
+      .map(s => s.name);
+
+    const topSignalTitles = analysis.sectors
+      .flatMap(s => s.signals_driving_this)
+      .slice(0, 5);
+
+    // Run overall narrative + top 3 sector enhancements concurrently
+    const topSectors = analysis.sectors.slice(0, 3);
+
+    const [overallResult, ...sectorResults] = await Promise.all([
+      enhanceOverallNarrative(analysis.overall_narrative, topSignalTitles, acceleratingSectors),
+      ...topSectors.map(s => enhanceSectorNarrative(s)),
+    ]);
+
+    // Merge AI results back into a copy of the analysis
+    const enhancedSectors = analysis.sectors.map((sector, index) => {
+      const aiResult = sectorResults[index];
+      if (!aiResult) return sector;
+      return {
+        ...sector,
+        what_is_happening: aiResult.what_is_happening,
+        what_might_happen: aiResult.what_might_happen,
+        where_heading: aiResult.where_heading,
+      };
+    });
+
+    const enhanced: TrendAnalysis = {
+      ...analysis,
+      overall_narrative: overallResult ?? analysis.overall_narrative,
+      sectors: enhancedSectors,
+      ai_enhanced: true,
+    };
+
+    // Store in module-level cache
+    narrativeCache.set(cacheKey, {
+      data: enhanced,
+      expiresAt: Date.now() + CACHE_TTL_MS,
+    });
+
+    return enhanced;
+  } catch {
+    // Graceful fallback — return algorithmic version untouched
+    return analysis;
   }
 }
 
@@ -459,7 +608,7 @@ Return ONLY the rewritten narrative paragraph, nothing else.`;
 
 export async function runTrendReasoningEngine(
   signals: IntelSignalRow[],
-  options: { useGemini?: boolean } = {},
+  options: { useAI?: boolean } = {},
 ): Promise<TrendAnalysis> {
   const timestamp = new Date().toISOString();
 
@@ -472,6 +621,7 @@ export async function runTrendReasoningEngine(
       biggest_story: 'No signals available.',
       watch_list: [],
       total_signals_analyzed: 0,
+      ai_enhanced: false,
     };
   }
 
@@ -522,21 +672,10 @@ export async function runTrendReasoningEngine(
   const watchList = buildWatchList(sectorTrends, signals);
 
   // 7. Overall narrative (algorithmic draft)
-  const algorithmicNarrative = buildOverallNarrative(sectorTrends, signals);
+  const overallNarrative = buildOverallNarrative(sectorTrends, signals);
 
-  // 8. Optional Gemini enhancement
-  let overallNarrative = algorithmicNarrative;
-  if (options.useGemini !== false) {
-    const topTitles = [...signals]
-      .sort((a, b) => b.importance_score - a.importance_score)
-      .slice(0, 5)
-      .map(s => s.title);
-
-    const enhanced = await tryGeminiNarrativeEnhancement(algorithmicNarrative, topTitles);
-    if (enhanced) overallNarrative = enhanced;
-  }
-
-  return {
+  // 8. Assemble algorithmic result
+  const algorithmicAnalysis: TrendAnalysis = {
     timestamp,
     overall_narrative: overallNarrative,
     sectors: sectorTrends,
@@ -544,5 +683,13 @@ export async function runTrendReasoningEngine(
     biggest_story: biggestStory,
     watch_list: watchList,
     total_signals_analyzed: signals.length,
+    ai_enhanced: false,
   };
+
+  // 9. Attempt AI enhancement (gracefully falls back to algorithmic on failure)
+  if (options.useAI !== false) {
+    return enhanceWithAI(algorithmicAnalysis);
+  }
+
+  return algorithmicAnalysis;
 }
