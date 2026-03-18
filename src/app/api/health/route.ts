@@ -130,6 +130,5 @@ export async function GET(): Promise<NextResponse> {
 
   return NextResponse.json(report, {
     headers: { 'Cache-Control': 'no-store' },
-    status: report.ok ? 200 : 503,
   });
 }
