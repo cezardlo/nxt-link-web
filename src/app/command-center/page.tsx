@@ -201,10 +201,22 @@ export default function CommandCenterPage() {
           background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.4) 100%);
         }
         @media (max-width: 1200px) {
-          .cc-grid { grid-template-columns: 240px 1fr 240px; }
+          .cc-grid { grid-template-columns: 220px 1fr 220px; }
         }
         @media (max-width: 900px) {
-          .cc-grid { grid-template-columns: 1fr; grid-template-rows: 200px 1fr 200px; }
+          .cc-grid {
+            grid-template-columns: 1fr;
+            grid-template-rows: auto 1fr auto;
+            gap: 2px; padding: 2px;
+          }
+          .cc-left { max-height: 35vh; }
+        }
+        @media (max-width: 600px) {
+          .cc-grid {
+            grid-template-columns: 1fr;
+            grid-template-rows: auto 1fr;
+          }
+          .cc-left { max-height: 30vh; }
         }
       `}</style>
     </div>
