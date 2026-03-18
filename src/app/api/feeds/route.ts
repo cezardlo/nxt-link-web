@@ -30,8 +30,24 @@ export async function GET(request: Request): Promise<NextResponse> {
     }, { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' } });
   }
 
-  // Cold start: return empty immediately, warm cache in background
-  runFeedAgent().catch(() => {});
+  // Cold start: try to warm for up to 45s before responding empty
+  try {
+    const store = await Promise.race([
+      runFeedAgent(),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 45_000)),
+    ]);
+    if (store) {
+      return NextResponse.json({
+        ok: true,
+        all: store.items,
+        as_of: store.as_of,
+        enriched: store.enriched,
+        source_count: store.source_count,
+        sourceHealth: store.sourceHealth,
+      }, { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' } });
+    }
+  } catch { /* fall through */ }
+
   return NextResponse.json({
     ok: true,
     all: [],

@@ -63,6 +63,26 @@ export async function GET(request: Request): Promise<NextResponse> {
     });
   }
 
+  const apiKey = process.env.USAJOBS_API_KEY;
+  if (!apiKey) {
+    // No API key — return curated El Paso tech job categories
+    const fallback = {
+      jobs: [
+        { title: 'IT Specialist (INFOSEC)', organization: 'U.S. Army — Fort Bliss', location: 'El Paso, TX', salary: '$82,764 – $107,590 Per Year', url: 'https://www.usajobs.gov/Search/Results?k=IT+specialist&l=El+Paso', openDate: '', closeDate: '' },
+        { title: 'Cybersecurity Analyst', organization: 'DHS — CBP', location: 'El Paso, TX', salary: '$72,553 – $94,317 Per Year', url: 'https://www.usajobs.gov/Search/Results?k=cybersecurity&l=El+Paso', openDate: '', closeDate: '' },
+        { title: 'Electronics Engineer', organization: 'U.S. Army NETCOM', location: 'Fort Bliss, TX', salary: '$98,496 – $128,043 Per Year', url: 'https://www.usajobs.gov/Search/Results?k=electronics+engineer&l=El+Paso', openDate: '', closeDate: '' },
+        { title: 'Data Scientist', organization: 'DEA — El Paso Intelligence Center', location: 'El Paso, TX', salary: '$86,962 – $134,435 Per Year', url: 'https://www.usajobs.gov/Search/Results?k=data+scientist&l=El+Paso', openDate: '', closeDate: '' },
+        { title: 'Contract Specialist', organization: 'U.S. Army — Fort Bliss', location: 'Fort Bliss, TX', salary: '$59,966 – $94,317 Per Year', url: 'https://www.usajobs.gov/Search/Results?k=contract+specialist&l=El+Paso', openDate: '', closeDate: '' },
+      ],
+      total: 5,
+      note: 'Set USAJOBS_API_KEY env var for live results. Free at developer.usajobs.gov',
+    };
+    cache = { data: fallback, ts: Date.now() };
+    return NextResponse.json({ ok: true, data: fallback }, {
+      headers: { 'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=120' },
+    });
+  }
+
   try {
     const res = await fetch(
       'https://data.usajobs.gov/api/search?Keyword=technology&LocationName=El%20Paso%2C%20Texas&ResultsPerPage=20',
@@ -70,7 +90,7 @@ export async function GET(request: Request): Promise<NextResponse> {
         headers: {
           Host: 'data.usajobs.gov',
           'User-Agent': 'nxtlink@nxtlinktech.com',
-          'Authorization-Key': '',
+          'Authorization-Key': apiKey,
         },
         signal: AbortSignal.timeout(15_000),
       },
