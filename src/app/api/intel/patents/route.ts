@@ -74,7 +74,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json({ ok: true, data }, {
       headers: { 'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=120' },
     });
-  } catch (err) {
+  } catch {
     // Fallback: return curated recent patent categories so the UI isn't empty
     const fallback = {
       patents: [
