@@ -1,6 +1,6 @@
 # NXT LINK — Agent Pipeline Cron
-# Runs the full intelligence pipeline every 6 hours.
-# Free on GitHub Actions (4×/day = 8 min/day, well under 2000 min/month limit).
+# Runs the full intelligence pipeline every 6 hours in 4 phases.
+# Free on GitHub Actions (4x/day = ~12 min/day, well under 2000 min/month limit).
 #
 # Required GitHub Secrets:
 #   SITE_URL       — https://www.nxtlinktech.com
@@ -17,27 +17,87 @@ on:
 jobs:
   run-agents:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
 
     steps:
-      - name: Trigger agent cron pipeline
-        id: cron
+      # ── Phase 1: Discovery (intel, products, patents, startups) ──
+      - name: 'Phase 1: Discovery'
+        id: phase1
+        continue-on-error: true
         run: |
-          STATUS=$(curl -s -o /tmp/cron_response.txt -w '%{http_code}' \
-            "$SITE_URL/api/agents/cron" \
+          STATUS=$(curl -s -o /tmp/phase1.txt -w '%{http_code}' \
+            --max-time 90 \
+            "$SITE_URL/api/agents/cron?phase=1" \
             -H "x-cron-secret: $CRON_SECRET" \
             -H "User-Agent: NXTLink-GitHubActions/1.0")
-          echo "cron_status=$STATUS" >> "$GITHUB_OUTPUT"
-          echo "Cron pipeline: HTTP $STATUS"
-          cat /tmp/cron_response.txt | head -200
-          if [ "$STATUS" -ge 400 ]; then
-            echo "::error::Agent cron returned HTTP $STATUS"
-            exit 1
-          fi
+          echo "phase1_status=$STATUS" >> "$GITHUB_OUTPUT"
+          echo "Phase 1 Discovery: HTTP $STATUS"
+          head -c 200 /tmp/phase1.txt; echo
         env:
           SITE_URL: ${{ secrets.SITE_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
 
+      - name: Wait 10s before Phase 2
+        run: sleep 10
+
+      # ── Phase 2: Processing (curation, graph builder) ──
+      - name: 'Phase 2: Processing'
+        id: phase2
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /tmp/phase2.txt -w '%{http_code}' \
+            --max-time 90 \
+            "$SITE_URL/api/agents/cron?phase=2" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H "User-Agent: NXTLink-GitHubActions/1.0")
+          echo "phase2_status=$STATUS" >> "$GITHUB_OUTPUT"
+          echo "Phase 2 Processing: HTTP $STATUS"
+          head -c 200 /tmp/phase2.txt; echo
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
+      - name: Wait 10s before Phase 3
+        run: sleep 10
+
+      # ── Phase 3: Intelligence (Agent OS, insights, country activity) ──
+      - name: 'Phase 3: Intelligence'
+        id: phase3
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /tmp/phase3.txt -w '%{http_code}' \
+            --max-time 90 \
+            "$SITE_URL/api/agents/cron?phase=3" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H "User-Agent: NXTLink-GitHubActions/1.0")
+          echo "phase3_status=$STATUS" >> "$GITHUB_OUTPUT"
+          echo "Phase 3 Intelligence: HTTP $STATUS"
+          head -c 200 /tmp/phase3.txt; echo
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
+      - name: Wait 10s before Phase 4
+        run: sleep 10
+
+      # ── Phase 4: Learning (IKER, CEO briefing, predictions) ──
+      - name: 'Phase 4: Learning'
+        id: phase4
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /tmp/phase4.txt -w '%{http_code}' \
+            --max-time 90 \
+            "$SITE_URL/api/agents/cron?phase=4" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H "User-Agent: NXTLink-GitHubActions/1.0")
+          echo "phase4_status=$STATUS" >> "$GITHUB_OUTPUT"
+          echo "Phase 4 Learning: HTTP $STATUS"
+          head -c 200 /tmp/phase4.txt; echo
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
+      # ── Post-pipeline: existing refreshes ──
       - name: Trigger insight generation
         run: |
           STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
@@ -75,7 +135,7 @@ jobs:
             -H "User-Agent: NXTLink-GitHubActions/1.0")
           echo "iker_status=$STATUS" >> "$GITHUB_OUTPUT"
           echo "IKER refresh: HTTP $STATUS"
-          cat /tmp/iker_response.txt | head -50
+          head -c 200 /tmp/iker_response.txt; echo
           if [ "$STATUS" -ge 400 ]; then echo "::warning::IKER refresh returned HTTP $STATUS"; fi
         env:
           SITE_URL: ${{ secrets.SITE_URL }}
@@ -86,5 +146,8 @@ jobs:
         run: |
           echo "### NXT LINK Agent Pipeline" >> "$GITHUB_STEP_SUMMARY"
           echo "- Run time: $(date -u)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Cron status: ${{ steps.cron.outputs.cron_status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Phase 1 (Discovery): ${{ steps.phase1.outputs.phase1_status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Phase 2 (Processing): ${{ steps.phase2.outputs.phase2_status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Phase 3 (Intelligence): ${{ steps.phase3.outputs.phase3_status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Phase 4 (Learning): ${{ steps.phase4.outputs.phase4_status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- IKER status: ${{ steps.iker.outputs.iker_status }}" >> "$GITHUB_STEP_SUMMARY"

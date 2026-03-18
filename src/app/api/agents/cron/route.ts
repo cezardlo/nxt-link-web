@@ -1,105 +1,93 @@
 import { NextResponse } from 'next/server';
 
-import { orchestrator } from '@/lib/agents/orchestrator';
-import { runIntelDiscoveryAgent } from '@/lib/agents/agents/intel-discovery-agent';
-import { runIntelCurationAgent } from '@/lib/agents/agents/intel-curation-agent';
-import { runProductDiscoveryAgent } from '@/lib/agents/agents/product-discovery-agent';
-import { runConferenceIntelAgent } from '@/lib/agents/agents/conference-intel-agent';
-import { runEntityAgent } from '@/lib/agents/agents/entity-agent';
-import { runGraphBuilderAgent } from '@/lib/agents/agents/graph-builder-agent';
-import { runInsightAgent } from '@/lib/agents/agents/insight-agent';
-import { runIntelligenceLoop } from '@/lib/agents/os';
-import { updateCountryActivity } from '@/db/queries/country-activity';
-import { runContinentIntelAgent } from '@/lib/agents/agents/continent-intel-agent';
-import { upsertContinentActivity } from '@/db/queries/continent-activity';
-import { runAutoDiscovery } from '@/lib/agents/autonomous/auto-entity-registry';
-import { runPatentDiscoveryAgent } from '@/lib/agents/agents/patent-discovery-agent';
-import { runStartupDiscoveryAgent } from '@/lib/agents/agents/startup-discovery-agent';
-import { runResearchDiscoveryAgent } from '@/lib/agents/agents/research-discovery-agent';
-import { runSupplyChainAgent } from '@/lib/agents/agents/supply-chain-agent';
-import { runDisruptionMonitorAgent } from '@/lib/agents/agents/disruption-monitor-agent';
-import { persistCronResults } from '@/lib/agents/persist/cron-persist';
-import {
-  loadLearningFromSupabase,
-  persistLearningToSupabase,
-  batchUpdateIkerScores,
-  detectEmergingClusters,
-  recordPatternMatch,
-  markLearnRun,
-} from '@/lib/agents/swarm/learning';
-import type { SignalFinding, SignalType } from '@/lib/intelligence/signal-engine';
-import { getPredictionsReadyToMeasure, recordOutcome } from '@/db/queries/prediction-outcomes';
-
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-export async function GET(request: Request) {
-  // Optional CRON_SECRET protection — skipped if no secret is configured
+// ---------------------------------------------------------------------------
+// Auth helper — reused across all phases
+// ---------------------------------------------------------------------------
+function checkAuth(request: Request): boolean {
   const expected = process.env.CRON_SECRET;
-  if (expected) {
-    const provided =
-      request.headers.get('x-cron-secret') ??
-      new URL(request.url).searchParams.get('secret') ??
-      // Vercel cron sends Authorization: Bearer <secret>
-      request.headers.get('authorization')?.replace('Bearer ', '');
-    if (provided !== expected) {
-      return new Response('Unauthorized', { status: 401 });
-    }
-  }
-  // Phase 0: Load persisted learning state from Supabase into memory
-  // This warms the in-memory pattern store so learning accumulates across runs
+  if (!expected) return true; // no secret configured → open
+  const provided =
+    request.headers.get('x-cron-secret') ??
+    new URL(request.url).searchParams.get('secret') ??
+    request.headers.get('authorization')?.replace('Bearer ', '');
+  return provided === expected;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 1 — DISCOVERY
+// Runs all data-gathering agents in parallel batches.
+// ---------------------------------------------------------------------------
+async function runPhase1() {
+  const {
+    orchestrator,
+  } = await import('@/lib/agents/orchestrator');
+  const { runIntelDiscoveryAgent } = await import('@/lib/agents/agents/intel-discovery-agent');
+  const { runProductDiscoveryAgent } = await import('@/lib/agents/agents/product-discovery-agent');
+  const { runConferenceIntelAgent } = await import('@/lib/agents/agents/conference-intel-agent');
+  const { runEntityAgent } = await import('@/lib/agents/agents/entity-agent');
+  const { runPatentDiscoveryAgent } = await import('@/lib/agents/agents/patent-discovery-agent');
+  const { runStartupDiscoveryAgent } = await import('@/lib/agents/agents/startup-discovery-agent');
+  const { runResearchDiscoveryAgent } = await import('@/lib/agents/agents/research-discovery-agent');
+  const { runSupplyChainAgent } = await import('@/lib/agents/agents/supply-chain-agent');
+  const { runDisruptionMonitorAgent } = await import('@/lib/agents/agents/disruption-monitor-agent');
+  const { persistCronResults } = await import('@/lib/agents/persist/cron-persist');
+  const { loadLearningFromSupabase } = await import('@/lib/agents/swarm/learning');
+
+  // Phase 0: warm in-memory learning state
   const loaded = await loadLearningFromSupabase().catch(() => ({ patterns: 0, iker: 0, clusters: 0 }));
 
-  // Phase 1: Run legacy discovery agents in parallel
+  // Phase 1a: primary discovery agents
   const [, intel, products, confIntel, entityResult] = await Promise.all([
-    orchestrator.run({ trigger: 'hourly' }),
-
+    orchestrator.run({ trigger: 'hourly' }).catch(err => {
+      console.error('[cron/phase1] Orchestrator failed:', err);
+      return null;
+    }),
     runIntelDiscoveryAgent().catch(err => {
-      console.error('[cron] Intel discovery failed:', err);
+      console.error('[cron/phase1] Intel discovery failed:', err);
       return null;
     }),
-
     runProductDiscoveryAgent().catch(err => {
-      console.error('[cron] Product discovery failed:', err);
+      console.error('[cron/phase1] Product discovery failed:', err);
       return null;
     }),
-
     runConferenceIntelAgent().catch(err => {
-      console.error('[cron] Conference intel failed:', err);
+      console.error('[cron/phase1] Conference intel failed:', err);
       return null;
     }),
-
     runEntityAgent().catch(err => {
-      console.error('[cron] Entity agent failed:', err);
+      console.error('[cron/phase1] Entity agent failed:', err);
       return null;
     }),
   ]);
 
-  // Phase 1.3: Run specialized discovery agents in parallel
+  // Phase 1b: specialised discovery agents
   const [patents, startups, research, supplyChain, disruptions] = await Promise.all([
     runPatentDiscoveryAgent().catch(err => {
-      console.error('[cron] Patent discovery failed:', err);
+      console.error('[cron/phase1] Patent discovery failed:', err);
       return null;
     }),
     runStartupDiscoveryAgent().catch(err => {
-      console.error('[cron] Startup discovery failed:', err);
+      console.error('[cron/phase1] Startup discovery failed:', err);
       return null;
     }),
     runResearchDiscoveryAgent().catch(err => {
-      console.error('[cron] Research discovery failed:', err);
+      console.error('[cron/phase1] Research discovery failed:', err);
       return null;
     }),
     runSupplyChainAgent().catch(err => {
-      console.error('[cron] Supply chain agent failed:', err);
+      console.error('[cron/phase1] Supply chain agent failed:', err);
       return null;
     }),
     runDisruptionMonitorAgent().catch(err => {
-      console.error('[cron] Disruption monitor failed:', err);
+      console.error('[cron/phase1] Disruption monitor failed:', err);
       return null;
     }),
   ]);
 
-  // Phase 1.4: Persist specialized agent results to knowledge graph tables
+  // Phase 1c: persist specialised results to knowledge-graph tables
   const cronPersistence = await persistCronResults({
     patents,
     startups,
@@ -107,24 +95,60 @@ export async function GET(request: Request) {
     supplyChain,
     disruptions,
   }).catch(err => {
-    console.error('[cron] Persistence to KG tables failed:', err);
+    console.error('[cron/phase1] KG persistence failed:', err);
     return { persisted: 0, errors: [String(err)] };
   });
 
-  // Phase 1.5: Run Intel Curation Agent (Gemini-powered department)
-  // Takes discovery signals and curates them into a structured brief
-  const curationResult = await runIntelCurationAgent(intel?.signals ?? []).catch(err => {
-    console.error('[cron] Intel curation failed:', err);
+  return {
+    phase: 1,
+    learning_loaded: loaded,
+    intel_signals: intel?.signals.length ?? 0,
+    products_discovered: products?.total_discovered ?? 0,
+    conference_signals: confIntel?.signals_detected ?? 0,
+    entities_created: entityResult?.entities_created ?? 0,
+    relationships_created: entityResult?.relationships_created ?? 0,
+    patents_detected: patents?.total_patents_detected ?? 0,
+    startups_detected: startups?.total_startups_detected ?? 0,
+    startups_funding_usd: startups?.total_funding_detected_usd ?? 0,
+    research_detected: research?.total_research_detected ?? 0,
+    supply_chain_disruptions: supplyChain?.total_disruptions_detected ?? 0,
+    supply_chain_critical: supplyChain?.critical_count ?? 0,
+    global_disruptions: disruptions?.total_disruptions ?? 0,
+    disruptions_p0: disruptions?.p0_count ?? 0,
+    disruptions_p1: disruptions?.p1_count ?? 0,
+    kg_persisted: cronPersistence.persisted,
+    kg_errors: cronPersistence.errors.length,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2 — PROCESSING
+// Curates the signals discovered in phase 1, runs auto-discovery, builds graph.
+// ---------------------------------------------------------------------------
+async function runPhase2() {
+  const { runIntelDiscoveryAgent } = await import('@/lib/agents/agents/intel-discovery-agent');
+  const { runIntelCurationAgent } = await import('@/lib/agents/agents/intel-curation-agent');
+  const { runAutoDiscovery } = await import('@/lib/agents/autonomous/auto-entity-registry');
+  const { runGraphBuilderAgent } = await import('@/lib/agents/agents/graph-builder-agent');
+
+  // Re-fetch a fresh (cached) intel store so this phase is self-contained
+  const intel = await runIntelDiscoveryAgent().catch(err => {
+    console.error('[cron/phase2] Intel discovery (re-fetch) failed:', err);
     return null;
   });
 
-  // Phase 1.6: Auto-Discovery — detect unknown companies from signals
-  // Build pseudo-ArticleCluster[] from intel signals for candidate detection
+  const signals = intel?.signals ?? [];
+
+  // Phase 2a: curation
+  const curationResult = await runIntelCurationAgent(signals).catch(err => {
+    console.error('[cron/phase2] Intel curation failed:', err);
+    return null;
+  });
+
+  // Phase 2b: auto-discovery
   const autoDiscoveryResult = await (async () => {
-    const signals = intel?.signals ?? [];
     if (signals.length < 5) return null;
     const geminiKey = process.env.GEMINI_API_KEY;
-    // Group signals by company and build minimal cluster shapes
     const clusterMap = new Map<string, typeof signals>();
     for (const sig of signals) {
       const key = sig.company?.toLowerCase() ?? 'unknown';
@@ -132,10 +156,9 @@ export async function GET(request: Request) {
       arr.push(sig);
       clusterMap.set(key, arr);
     }
-    // Cast to ArticleCluster — detectCandidateEntities only reads articles[].title + description
-    const clusters = Array.from(clusterMap.values())
-      .filter(arr => arr.length >= 2)
-      .map((arr, idx) => ({
+    const clusters = Array.from(clusterMap.entries() as Iterable<[string, typeof signals]>)
+      .filter(([, arr]) => arr.length >= 2)
+      .map(([, arr], idx) => ({
         id: `auto-${idx}`,
         headline: arr[0].title,
         articles: arr.map(s => ({
@@ -159,50 +182,137 @@ export async function GET(request: Request) {
         clusterSize: arr.length,
       }));
     return runAutoDiscovery(clusters as never[], geminiKey).catch(err => {
-      console.error('[cron] Auto-discovery failed:', err);
+      console.error('[cron/phase2] Auto-discovery failed:', err);
       return null;
     });
   })();
 
-  // Phase 2: Build knowledge graph from newly discovered signals
+  // Phase 2c: graph builder
   const graphResult = await runGraphBuilderAgent({ enableAutoDiscovery: true }).catch(err => {
-    console.error('[cron] Graph builder failed:', err);
+    console.error('[cron/phase2] Graph builder failed:', err);
     return null;
   });
 
-  // Phase 3: Run the Agent OS intelligence loop
-  // Observe → Structure → Analyze → Create → Publish → Audit
+  return {
+    phase: 2,
+    curation: curationResult ? {
+      published: curationResult.totalPublished,
+      hidden: curationResult.hiddenAsNoise,
+      hero: curationResult.homepageHero.length,
+      trending: curationResult.homepageTrending.length,
+      patterns: curationResult.topPatterns.length,
+    } : null,
+    auto_discovery: autoDiscoveryResult ? {
+      detected: autoDiscoveryResult.detected,
+      enriched: autoDiscoveryResult.enriched,
+      registered: autoDiscoveryResult.registered,
+      new_entities: autoDiscoveryResult.newEntities.map((e: { name: string }) => e.name),
+    } : null,
+    graph_entities: graphResult?.entities_created ?? 0,
+    graph_relationships: graphResult?.relationships_created ?? 0,
+    graph_signals_processed: graphResult?.signals_processed ?? 0,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3 — INTELLIGENCE
+// Runs the Agent OS loop, insight agent, and geographic heat maps.
+// ---------------------------------------------------------------------------
+async function runPhase3() {
+  const { runIntelligenceLoop } = await import('@/lib/agents/os');
+  const { runInsightAgent } = await import('@/lib/agents/agents/insight-agent');
+  const { updateCountryActivity } = await import('@/db/queries/country-activity');
+  const { runContinentIntelAgent } = await import('@/lib/agents/agents/continent-intel-agent');
+  const { upsertContinentActivity } = await import('@/db/queries/continent-activity');
+  const { runIntelDiscoveryAgent } = await import('@/lib/agents/agents/intel-discovery-agent');
+
+  // Grab fresh signals for continent routing (cached, so fast)
+  const intel = await runIntelDiscoveryAgent().catch(() => null);
+  const signals = intel?.signals ?? [];
+
+  // Phase 3a: Agent OS pipeline
   const pipeline = await runIntelligenceLoop().catch(err => {
-    console.error('[cron] Intelligence loop failed:', err);
+    console.error('[cron/phase3] Intelligence loop failed:', err);
     return null;
   });
 
-  // Phase 4: Generate insights from freshly collected signals
+  // Phase 3b: insight agent
   const insightResult = await runInsightAgent().catch(err => {
-    console.error('[cron] Insight agent failed:', err);
+    console.error('[cron/phase3] Insight agent failed:', err);
     return null;
   });
 
-  // Phase 5: Update country activity heat map
+  // Phase 3c: country activity heat map
   const countryCount = await updateCountryActivity().catch(err => {
-    console.error('[cron] Country activity update failed:', err);
+    console.error('[cron/phase3] Country activity update failed:', err);
     return 0;
   });
 
-  // Phase 5.5: Continent intelligence — bucket signals into 5 regional departments
-  const continentReport = runContinentIntelAgent(intel?.signals ?? []);
+  // Phase 3d: continent intelligence buckets
+  const continentReport = runContinentIntelAgent(signals);
   let continentsUpdated = 0;
   for (const report of continentReport.continentReports) {
     const ok = await upsertContinentActivity(report).catch(() => false);
     if (ok) continentsUpdated++;
   }
 
-  // Phase 6: Learning — update IKER scores + detect patterns from new signals
-  // Adapt IntelSignal[] → minimal SignalFinding[] for learning functions
+  return {
+    phase: 3,
+    pipeline: pipeline ? {
+      run_id: pipeline.run_id,
+      duration_ms: pipeline.duration_ms,
+      events_total: pipeline.events_total,
+      tasks_total: pipeline.tasks_total,
+      errors: pipeline.errors.length,
+      layers: Object.fromEntries(
+        Object.entries(pipeline.layers).map(([k, v]) => [k, v.status]),
+      ),
+    } : null,
+    insights_generated: insightResult?.insights.length ?? 0,
+    countries_updated: countryCount,
+    continent_intel: {
+      continents_updated: continentsUpdated,
+      total_signals_routed: continentReport.totalSignalsRouted,
+      reports: continentReport.continentReports.map(r => ({
+        id: r.continentId,
+        label: r.label,
+        signals: r.signalsTotal,
+        heat: r.heatScore,
+        trend: r.trendDirection,
+        top_industry: r.topIndustries[0] ?? null,
+      })),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Phase 4 — LEARNING
+// Updates IKER scores, detects patterns, runs CEO briefing, measures outcomes.
+// ---------------------------------------------------------------------------
+async function runPhase4() {
+  const { runIntelDiscoveryAgent } = await import('@/lib/agents/agents/intel-discovery-agent');
+  const {
+    loadLearningFromSupabase,
+    persistLearningToSupabase,
+    batchUpdateIkerScores,
+    detectEmergingClusters,
+    recordPatternMatch,
+    markLearnRun,
+  } = await import('@/lib/agents/swarm/learning');
+  const { getPredictionsReadyToMeasure, recordOutcome } = await import('@/db/queries/prediction-outcomes');
+  type SignalFindingLocal = import('@/lib/intelligence/signal-engine').SignalFinding;
+  type SignalTypeLocal = import('@/lib/intelligence/signal-engine').SignalType;
+
+  // Warm learning state
+  await loadLearningFromSupabase().catch(() => null);
+
+  // Get signals (cached)
+  const intel = await runIntelDiscoveryAgent().catch(() => null);
   const rawSignals = intel?.signals ?? [];
-  const adaptedSignals: SignalFinding[] = rawSignals.map(s => ({
+
+  const adaptedSignals: SignalFindingLocal[] = rawSignals.map(s => ({
     id: s.id,
-    type: (s.type as SignalType) ?? 'vendor_mention',
+    type: (s.type as SignalTypeLocal) ?? 'vendor_mention',
     priority: 'normal' as const,
     title: s.title,
     description: s.evidence ?? '',
@@ -240,91 +350,36 @@ export async function GET(request: Request) {
     learnPersisted = await persistLearningToSupabase().catch(() => ({ patterns: 0, iker: 0, clusters: 0 }));
   }
 
-  // Phase 7.5: Scan new signals against alert rules (fire-and-forget)
+  // Fire-and-forget alert scan (does not count toward the 60s budget)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
   void fetch(`${siteUrl}/api/alerts/matches`, { method: 'POST' }).catch(() => null);
 
-  // Phase 6.5: CEO Agent — run daily briefing + monitor platform health
-  // This orchestrates all specialist agents and stores status in shared memory
+  // CEO daily briefing
   const { ceoAgent } = await import('@/lib/agents/ceo-agent');
   const dailyBriefing = await ceoAgent.runDailyBriefing().catch(err => {
-    console.error('[cron] CEO daily briefing failed:', err);
+    console.error('[cron/phase4] CEO daily briefing failed:', err);
     return null;
   });
 
-  // Phase 7: Measure prediction outcomes (close the learning loop)
+  // Measure prediction outcomes
   const unmeasured = await getPredictionsReadyToMeasure(20).catch(() => []);
   let outcomesMeasured = 0;
   for (const pred of unmeasured) {
-    const entitySignals = adaptedSignals.filter(s =>
-      s.entityId === pred.entity_id,
-    );
+    const entitySignals = adaptedSignals.filter(s => s.entityId === pred.entity_id);
     const actualScore = entitySignals.length > 0
-      ? Math.min(1, pred.predicted_score + (entitySignals.length * 0.05))
+      ? Math.min(1, pred.predicted_score + entitySignals.length * 0.05)
       : Math.max(0, pred.predicted_score - 0.1);
     await recordOutcome(pred.id, actualScore).catch(() => null);
     outcomesMeasured++;
   }
 
-  return NextResponse.json({
-    ok: true,
-    timestamp: new Date().toISOString(),
-    // Legacy agent results
-    intel_signals: intel ? intel.signals.length : 0,
-    products_discovered: products ? products.total_discovered : 0,
-    conference_signals: confIntel ? confIntel.signals_detected : 0,
-    graph_entities: (entityResult?.entities_created ?? 0) + (graphResult?.entities_created ?? 0),
-    graph_relationships: (entityResult?.relationships_created ?? 0) + (graphResult?.relationships_created ?? 0),
-    graph_signals_processed: graphResult?.signals_processed ?? 0,
-    insights_generated: insightResult ? insightResult.insights.length : 0,
-    countries_updated: countryCount,
-    learning_loaded: loaded,
+  return {
+    phase: 4,
     iker_updates: ikerUpdates,
     patterns_persisted: learnPersisted.patterns,
     iker_persisted: learnPersisted.iker,
     clusters_persisted: learnPersisted.clusters,
     outcomes_measured: outcomesMeasured,
-    // Curation + Auto-discovery results
-    curation: curationResult ? {
-      published: curationResult.totalPublished,
-      hidden: curationResult.hiddenAsNoise,
-      hero: curationResult.homepageHero.length,
-      trending: curationResult.homepageTrending.length,
-      patterns: curationResult.topPatterns.length,
-    } : null,
-    auto_discovery: autoDiscoveryResult ? {
-      detected: autoDiscoveryResult.detected,
-      enriched: autoDiscoveryResult.enriched,
-      registered: autoDiscoveryResult.registered,
-      new_entities: autoDiscoveryResult.newEntities.map(e => e.name),
-    } : null,
-    // Knowledge graph persistence
-    kg_persisted: cronPersistence.persisted,
-    kg_errors: cronPersistence.errors.length,
-    // Specialized discovery agents
-    patents_detected: patents?.total_patents_detected ?? 0,
-    startups_detected: startups?.total_startups_detected ?? 0,
-    startups_funding_usd: startups?.total_funding_detected_usd ?? 0,
-    research_detected: research?.total_research_detected ?? 0,
-    supply_chain_disruptions: supplyChain?.total_disruptions_detected ?? 0,
-    supply_chain_critical: supplyChain?.critical_count ?? 0,
-    global_disruptions: disruptions?.total_disruptions ?? 0,
-    disruptions_p0: disruptions?.p0_count ?? 0,
-    disruptions_p1: disruptions?.p1_count ?? 0,
-    // Continent intelligence results
-    continent_intel: {
-      continents_updated: continentsUpdated,
-      total_signals_routed: continentReport.totalSignalsRouted,
-      reports: continentReport.continentReports.map(r => ({
-        id: r.continentId,
-        label: r.label,
-        signals: r.signalsTotal,
-        heat: r.heatScore,
-        trend: r.trendDirection,
-        top_industry: r.topIndustries[0] ?? null,
-      })),
-    },
-    // CEO Agent daily briefing results
     daily_briefing: dailyBriefing ? {
       run_id: dailyBriefing.runId,
       goals_set: dailyBriefing.goalsSet,
@@ -333,16 +388,67 @@ export async function GET(request: Request) {
       top_findings: dailyBriefing.topFindings,
       duration_ms: dailyBriefing.durationMs,
     } : null,
-    // Agent OS pipeline results
-    pipeline: pipeline ? {
-      run_id: pipeline.run_id,
-      duration_ms: pipeline.duration_ms,
-      events_total: pipeline.events_total,
-      tasks_total: pipeline.tasks_total,
-      errors: pipeline.errors.length,
-      layers: Object.fromEntries(
-        Object.entries(pipeline.layers).map(([k, v]) => [k, v.status])
-      ),
-    } : null,
-  });
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Route handler
+// ---------------------------------------------------------------------------
+export async function GET(request: Request) {
+  if (!checkAuth(request)) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const phase = searchParams.get('phase');
+
+  const timestamp = new Date().toISOString();
+
+  try {
+    if (phase === '1') {
+      const result = await runPhase1();
+      return NextResponse.json({ ok: true, timestamp, ...result });
+    }
+
+    if (phase === '2') {
+      const result = await runPhase2();
+      return NextResponse.json({ ok: true, timestamp, ...result });
+    }
+
+    if (phase === '3') {
+      const result = await runPhase3();
+      return NextResponse.json({ ok: true, timestamp, ...result });
+    }
+
+    if (phase === '4') {
+      const result = await runPhase4();
+      return NextResponse.json({ ok: true, timestamp, ...result });
+    }
+
+    // No phase specified — run Phase 1 only (Vercel cron backward compat)
+    // Callers should use ?phase=1 through ?phase=4 for full pipeline.
+    if (!phase) {
+      const result = await runPhase1();
+      return NextResponse.json({
+        ok: true,
+        timestamp,
+        note: 'No phase specified — ran phase 1 (discovery) by default. Call ?phase=1 through ?phase=4 sequentially for the full pipeline.',
+        ...result,
+      });
+    }
+
+    return NextResponse.json(
+      {
+        ok: false,
+        message: `Unknown phase "${phase}". Use ?phase=1 (discovery), ?phase=2 (processing), ?phase=3 (intelligence), or ?phase=4 (learning).`,
+      },
+      { status: 400 },
+    );
+  } catch (err) {
+    console.error('[cron] Unhandled error in phase', phase, err);
+    return NextResponse.json(
+      { ok: false, message: 'Internal error', error: String(err) },
+      { status: 500 },
+    );
+  }
 }
