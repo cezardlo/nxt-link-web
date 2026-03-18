@@ -3,7 +3,7 @@
 
 // ─── Mode ─────────────────────────────────────────────────────────────────────
 
-export type Mode = 'MORNING' | 'WORLD' | 'EL PASO' | 'RESEARCH' | 'CONTRACTS';
+export type Mode = 'MORNING' | 'WORLD' | 'EL PASO' | 'RESEARCH' | 'CONTRACTS' | 'TRENDS';
 
 // ─── Signals ──────────────────────────────────────────────────────────────────
 
@@ -179,6 +179,40 @@ export type IntelSignalsResponse = {
   sectorScores?: Record<string, number>;
   by_industry?: Record<string, number>;
   source?: 'supabase' | 'memory';
+};
+
+// ─── Trend Analysis ───────────────────────────────────────────────────────────
+// Mirrors TrendAnalysis from src/lib/engines/trend-reasoning-engine.ts
+
+export type SectorMomentum = 'accelerating' | 'steady' | 'slowing' | 'declining';
+
+export type TrendSector = {
+  name: string;
+  what_is_happening: string;
+  what_might_happen: string;
+  where_heading: string;
+  confidence: number;
+  signals_driving_this: string[];
+  risk_factors: string[];
+  momentum: SectorMomentum;
+  signal_count: number;
+};
+
+export type TrendCrossSector = {
+  trend: string;
+  sectors_affected: string[];
+  evidence: string[];
+  timeline: string;
+};
+
+export type TrendAnalysis = {
+  timestamp: string;
+  overall_narrative: string;
+  sectors: TrendSector[];
+  cross_sector_trends: TrendCrossSector[];
+  biggest_story: string;
+  watch_list: string[];
+  total_signals_analyzed: number;
 };
 
 /** Shape returned by /api/feeds GET */

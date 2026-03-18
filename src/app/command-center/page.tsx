@@ -6,6 +6,7 @@ import MorningBrief from './components/MorningBrief';
 import WatchList    from './components/WatchList';
 import IntelMap     from './components/IntelMap';
 import IntelCard    from './components/IntelCard';
+import TrendPanel   from './components/TrendPanel';
 import LiveFeed     from './components/LiveFeed';
 import AlertToast   from './components/AlertToast';
 import { useSignals }   from './hooks/useSignals';
@@ -99,7 +100,7 @@ export default function CommandCenterPage() {
         onSearch={handleSearch} onAlertClick={() => alertsState.markAllRead()}
       />
 
-      <div className="cc-grid">
+      <div className={`cc-grid${mode === 'TRENDS' ? ' cc-grid-trends' : ''}`}>
         {/* Left Panel */}
         <div className="cc-panel cc-left">
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
@@ -132,17 +133,21 @@ export default function CommandCenterPage() {
           onDotClick={handleDotClick}
         />
 
-        {/* Right Panel */}
-        <IntelCard
-          selectedSignal={selectedSignal}
-          searchQuery={searchQuery}
-          sectors={signalsState.sectors}
-          signalsToday={signalsState.signalsToday}
-          signalsWeek={signalsState.signalsWeek}
-          signals={signalsState.signals}
-          loading={signalsState.loading}
-          onClose={handleCardClose}
-        />
+        {/* Right Panel — TrendPanel in TRENDS mode, IntelCard otherwise */}
+        {mode === 'TRENDS' ? (
+          <TrendPanel />
+        ) : (
+          <IntelCard
+            selectedSignal={selectedSignal}
+            searchQuery={searchQuery}
+            sectors={signalsState.sectors}
+            signalsToday={signalsState.signalsToday}
+            signalsWeek={signalsState.signalsWeek}
+            signals={signalsState.signals}
+            loading={signalsState.loading}
+            onClose={handleCardClose}
+          />
+        )}
       </div>
 
       <LiveFeed rawItems={feedForLiveFeed} onItemClick={handleFeedItemClick} />
@@ -170,6 +175,9 @@ export default function CommandCenterPage() {
           grid-template-columns: 280px 1fr 280px;
           gap: 3px; padding: 3px 3px 0;
           min-height: 0;
+        }
+        .cc-grid-trends {
+          grid-template-columns: 280px 1fr 360px;
         }
         .cc-panel {
           display: flex; flex-direction: column;

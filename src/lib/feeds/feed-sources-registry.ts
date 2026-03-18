@@ -58,6 +58,7 @@ const DEFENSE_DIRECT: CompactDirect[] = [
   ['def-breaking-defense', 'Breaking Defense', 'https://breakingdefense.com/feed/', ['defense','contracts','military'], 1],
   ['def-defense-news', 'Defense News', 'https://www.defensenews.com/arc/outboundfeeds/rss/', ['defense','procurement','weapons'], 1],
   ['def-c4isrnet', 'C4ISRNET', 'https://www.c4isrnet.com/arc/outboundfeeds/rss/', ['c4isr','electronic warfare','signals'], 1],
+  ['def-spacenews', 'SpaceNews', 'https://spacenews.com/feed/', ['space','defense','satellite','launch'], 1],
   ['def-defensescoop', 'DefenseScoop', 'https://defensescoop.com/feed/', ['defense','technology','dod'], 2],
   ['def-military-times', 'Military Times', 'https://www.militarytimes.com/arc/outboundfeeds/rss/', ['military','troops','veterans'], 2],
   ['def-army-times', 'Army Times', 'https://www.armytimes.com/arc/outboundfeeds/rss/', ['army','soldiers','modernization'], 2],
@@ -273,6 +274,12 @@ const AI_DIRECT: CompactDirect[] = [
   ['ai-zdnet', 'ZDNet', 'https://www.zdnet.com/news/rss.xml', ['tech','enterprise','analysis'], 2],
   ['ai-aibusiness', 'AI Business', 'https://aibusiness.com/feed/', ['ai','enterprise','applications'], 2],
   ['ai-ap-tech', 'AP Tech', 'https://feeds.apnews.com/rss/apf-technology', ['tech','news','breaking'], 1],
+  // Tier 1 wire services — USA-first
+  ['wire-ap-top', 'AP Top News', 'https://feeds.apnews.com/rss/apf-topnews', ['wire','breaking','usa'], 1],
+  ['wire-ap-politics', 'AP Politics', 'https://feeds.apnews.com/rss/apf-politics', ['politics','government','usa'], 1],
+  ['wire-reuters-us', 'Reuters US', 'https://feeds.reuters.com/reuters/topNews', ['wire','breaking','usa'], 1],
+  ['wire-reuters-tech', 'Reuters Tech', 'https://feeds.reuters.com/reuters/technologyNews', ['wire','technology','usa'], 1],
+  ['wire-reuters-biz', 'Reuters Business', 'https://feeds.reuters.com/reuters/businessNews', ['wire','business','markets'], 1],
   ['ai-bbc-tech', 'BBC Tech', 'https://feeds.bbci.co.uk/news/technology/rss.xml', ['tech','news','uk'], 1],
   ['ai-techradar', 'TechRadar', 'https://www.techradar.com/feeds/articletype/news', ['tech','reviews','consumer'], 2],
   ['ai-robot-report', 'Robot Report', 'https://www.therobotreport.com/feed/', ['robotics','automation','drones'], 2],
@@ -638,6 +645,10 @@ const GOV_DIRECT: CompactDirect[] = [
   ['gov-dot', 'DOT', 'https://www.transportation.gov/feed/rss', ['dot','transportation','infrastructure'], 1],
   ['gov-sba', 'SBA News', 'https://www.sba.gov/blogs.xml', ['sba','small business','loans'], 2],
   ['gov-gsa', 'GSA News', 'https://www.gsa.gov/rss', ['gsa','procurement','facilities'], 2],
+  // Tier 1 USA official sources
+  ['gov-doj', 'DOJ Press Releases', 'https://www.justice.gov/feeds/opa/justice-news.xml', ['doj','justice','law enforcement','federal'], 1],
+  ['gov-fbi', 'FBI News', 'https://www.fbi.gov/feeds/fbi-in-the-news/rss.xml', ['fbi','law enforcement','federal','crime'], 1],
+  ['gov-cisa-alerts', 'CISA Advisories', 'https://www.cisa.gov/cybersecurity-advisories/all.xml', ['cisa','cyber','advisories','government'], 1],
 ];
 
 const GOV_GN: CompactGN[] = [

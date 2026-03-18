@@ -8,13 +8,14 @@ const GOLD = '#FFD700';
 const R = '#FF3B30';
 const P = '#A855F7';
 
-const MODES: Mode[] = ['MORNING', 'WORLD', 'EL PASO', 'RESEARCH', 'CONTRACTS'];
+const MODES: Mode[] = ['MORNING', 'WORLD', 'EL PASO', 'RESEARCH', 'CONTRACTS', 'TRENDS'];
 const MODE_META: Record<Mode, { color: string; icon: string }> = {
   MORNING:   { color: GOLD, icon: '☀' },
   WORLD:     { color: C,    icon: '◎' },
   'EL PASO': { color: G,    icon: '◉' },
   RESEARCH:  { color: P,    icon: '◆' },
   CONTRACTS: { color: GOLD, icon: '⚡' },
+  TRENDS:    { color: C,    icon: '▲' },
 };
 
 function useClock() {

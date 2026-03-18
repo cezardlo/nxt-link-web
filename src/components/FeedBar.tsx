@@ -41,6 +41,18 @@ const CATEGORY_COLORS: Record<string, string> = {
   'General':      '#6b7280',
 };
 
+const CATEGORY_ABBREV: Record<string, string> = {
+  'AI/ML':        'AI',
+  'Cybersecurity':'CYBER',
+  'Defense':      'DEF',
+  'Enterprise':   'ENT',
+  'Supply Chain': 'SC',
+  'Energy':       'NRG',
+  'Finance':      'FIN',
+  'Crime':        'CRIME',
+  'General':      'GEN',
+};
+
 const SOURCE_COLORS: Record<string, string> = {
   TechCrunch: '#00d4ff',
   Reuters:    '#f97316',
@@ -143,20 +155,30 @@ export function FeedBar({ timeRange }: Props) {
             const sentSym   = SENTIMENT_SYMBOL[sentiment];
             const isHigh    = (item.score ?? 0) >= 7;
 
+            const catAbbrev = item.category ? (CATEGORY_ABBREV[item.category] ?? 'GEN') : undefined;
+
             return (
               <a
                 key={i}
                 href={item.link !== '#' ? item.link : undefined}
                 target={item.link !== '#' ? '_blank' : undefined}
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 hover:opacity-80 transition-opacity cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 hover:opacity-80 transition-opacity cursor-pointer"
               >
-                {/* Category color bar */}
-                {catColor && (
-                  <span
-                    className="w-0.5 h-3 rounded-full shrink-0"
-                    style={{ backgroundColor: catColor, opacity: 0.6 }}
-                  />
+                {/* Category badge: dot + abbreviation */}
+                {catColor && catAbbrev && (
+                  <span className="inline-flex items-center gap-0.5 shrink-0">
+                    <span
+                      className="w-1.5 h-1.5 rounded-full shrink-0"
+                      style={{ backgroundColor: catColor, boxShadow: `0 0 4px ${catColor}99` }}
+                    />
+                    <span
+                      className="font-mono text-[7px] font-bold tracking-widest shrink-0"
+                      style={{ color: catColor, opacity: 0.85 }}
+                    >
+                      {catAbbrev}
+                    </span>
+                  </span>
                 )}
 
                 {/* Sentiment indicator */}
@@ -166,17 +188,6 @@ export function FeedBar({ timeRange }: Props) {
                 >
                   {sentSym}
                 </span>
-
-                {/* Source chip */}
-                <span
-                  className="font-mono text-[8px] font-bold tracking-wider shrink-0"
-                  style={{ color: srcColor, opacity: 0.8 }}
-                >
-                  {(item.source ?? '').toUpperCase()}
-                </span>
-
-                {/* Separator */}
-                <span className="font-mono text-[8px] text-white/10 shrink-0">·</span>
 
                 {/* Title */}
                 <span
@@ -189,8 +200,17 @@ export function FeedBar({ timeRange }: Props) {
                   {item.title}
                 </span>
 
+                {/* Source name after title */}
+                <span className="font-mono text-[8px] text-white/20 shrink-0">—</span>
+                <span
+                  className="font-mono text-[8px] font-bold tracking-wider shrink-0"
+                  style={{ color: srcColor, opacity: 0.7 }}
+                >
+                  {(item.source ?? '').toUpperCase()}
+                </span>
+
                 {/* Separator dot */}
-                <span className="font-mono text-[8px] text-white/[0.06] shrink-0 ml-2">◈</span>
+                <span className="font-mono text-[8px] text-white/[0.06] shrink-0 ml-1">◈</span>
               </a>
             );
           })}
