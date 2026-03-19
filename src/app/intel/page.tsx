@@ -596,18 +596,25 @@ function SignalsScreen({
 
 // ─── SCREEN 2 — WHERE HEADING ─────────────────────────────────────────────────
 
-function MomentumArrow({ momentum }: { momentum: string }) {
-  if (momentum === 'accelerating') return <span style={{ color: GREEN, fontSize: 16 }}>↑</span>;
-  if (momentum === 'slowing' || momentum === 'declining') return <span style={{ color: RED, fontSize: 16 }}>↓</span>;
-  return <span style={{ color: GOLD, fontSize: 16 }}>→</span>;
+function plainMomentum(m: string): { label: string; color: string; emoji: string } {
+  if (m === 'accelerating') return { label: 'Growing fast', color: GREEN, emoji: '↑' };
+  if (m === 'slowing')      return { label: 'Slowing down', color: GOLD,  emoji: '↘' };
+  if (m === 'declining')    return { label: 'Shrinking',    color: RED,   emoji: '↓' };
+  return                           { label: 'Holding steady', color: CYAN, emoji: '→' };
 }
 
-function momentumColor(m: string): string {
-  if (m === 'accelerating') return GREEN;
-  if (m === 'declining') return RED;
-  if (m === 'slowing') return `${RED}aa`;
-  return GOLD;
-}
+// Static plain-English summaries per sector (used when API has no trend data)
+const SECTOR_SUMMARY: Record<string, { happening: string; next: string; heading: string }> = {
+  'Defense':      { happening: 'The military is buying more AI and autonomous systems. Fort Bliss contracts are active.', next: 'Expect more software-defined weapons and drone programs.', heading: 'Spending will keep rising through the decade.' },
+  'AI/ML':        { happening: 'Companies across every industry are deploying AI to cut costs and speed up decisions.', next: 'The next 12 months will see AI move from pilots to mandatory infrastructure.', heading: 'Every business will need an AI strategy or lose to competitors who have one.' },
+  'Cybersecurity':{ happening: 'Government contractors must meet new CMMC compliance rules or lose contracts.', next: 'A wave of security audits and vendor replacements is coming.', heading: 'Cybersecurity spending will not stop growing — the threat environment forces it.' },
+  'Energy':       { happening: 'Grid modernization and clean energy mandates are creating long-term infrastructure projects.', next: 'Microgrids, battery storage, and solar will dominate procurement for 10+ years.', heading: 'The energy transition is funded and irreversible.' },
+  'Manufacturing':{ happening: 'Labor shortages and reshoring policy are making automation the only economic option.', next: 'Robotics and cobots will replace repetitive tasks in most factories within 5 years.', heading: 'Factories that do not automate will not be able to compete on price.' },
+  'Healthcare':   { happening: 'Hospitals and clinics are adopting AI diagnostics and electronic health systems at speed.', next: 'AI-assisted diagnostics will become standard of care in most specialties.', heading: 'Healthcare technology spending will double in the next 8 years.' },
+  'Logistics':    { happening: 'Same-day delivery expectations are forcing every logistics company to automate warehouses.', next: 'Autonomous forklifts and AI route optimization will become table stakes.', heading: 'The logistics gap between automated and manual operations will become too large to bridge.' },
+  'Border Tech':  { happening: 'CBP and DHS are investing heavily in biometrics, cameras, and AI screening at ports of entry.', next: 'Every major crossing will have AI-assisted inspection within 3 years.', heading: 'Border technology is a permanent and growing budget line — it does not follow political cycles.' },
+  'Finance':      { happening: 'Digital payment platforms and AI fraud detection are replacing legacy banking infrastructure.', next: 'Community banks that do not modernize will lose customers to digital-native competitors.', heading: 'The cost of not having modern financial technology will exceed the cost of building it.' },
+};
 
 function HeadingScreen({
   trends, forecasts, opportunities, loading,
@@ -622,6 +629,15 @@ function HeadingScreen({
   const trend = trends.find(t => t.name.toLowerCase().includes(sector.toLowerCase()) || sector.toLowerCase().includes(t.name.toLowerCase()));
   const forecast = forecasts.find(f => f.industry.toLowerCase().includes(sector.toLowerCase()) || sector.toLowerCase().includes(f.industry.toLowerCase()));
   const sectorOpps = opportunities.filter(o => o.industries.some(i => i.toLowerCase().includes(sector.toLowerCase()) || sector.toLowerCase().includes(i.toLowerCase()))).slice(0, 3);
+  const staticSummary = SECTOR_SUMMARY[sector];
+
+  const momentum = trend ? plainMomentum(trend.momentum) : null;
+  const happening = trend?.what_is_happening ?? staticSummary?.happening ?? '';
+  const next = trend?.what_might_happen ?? staticSummary?.next ?? '';
+  const heading = trend?.where_heading ?? staticSummary?.heading ?? '';
+
+  const dir30 = forecast ? (forecast.predicted_score_30d > forecast.current_score + 3 ? 'more active' : forecast.predicted_score_30d < forecast.current_score - 3 ? 'less active' : 'about the same') : null;
+  const dir90 = forecast ? (forecast.predicted_score_90d > forecast.current_score + 3 ? 'more active' : forecast.predicted_score_90d < forecast.current_score - 3 ? 'less active' : 'about the same') : null;
 
   return (
     <div>
@@ -629,15 +645,15 @@ function HeadingScreen({
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
         {SECTORS.map(s => {
           const t = trends.find(x => x.name.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(x.name.toLowerCase()));
-          const col = t ? momentumColor(t.momentum) : 'rgba(255,255,255,0.25)';
+          const pm = t ? plainMomentum(t.momentum) : null;
           const isActive = s === sector;
           return (
             <button
               key={s}
               onClick={() => setSector(s)}
               style={{
-                fontFamily: MONO, fontSize: 9, letterSpacing: '0.1em',
-                padding: '5px 12px', borderRadius: 2,
+                fontFamily: MONO, fontSize: 9, letterSpacing: '0.08em',
+                padding: '6px 14px', borderRadius: 2,
                 background: isActive ? `${ORANGE}18` : 'transparent',
                 border: `1px solid ${isActive ? ORANGE : 'rgba(255,255,255,0.1)'}`,
                 color: isActive ? ORANGE : 'rgba(255,255,255,0.55)',
@@ -645,7 +661,7 @@ function HeadingScreen({
               }}
             >
               {s}
-              {t && <span style={{ marginLeft: 5, color: col, fontSize: 8 }}>{t.momentum === 'accelerating' ? '↑' : t.momentum === 'declining' ? '↓' : '→'}</span>}
+              {pm && <span style={{ marginLeft: 5, color: pm.color, fontSize: 9 }}>{pm.emoji}</span>}
             </button>
           );
         })}
@@ -656,126 +672,93 @@ function HeadingScreen({
           {[0,1,2].map(i => <Panel key={i}><Skeleton h={14} w="60%" /><div style={{ height: 8 }} /><Skeleton h={11} /></Panel>)}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14 }}>
-          {/* Trend card */}
-          <Panel style={{ borderLeft: `3px solid ${trend ? momentumColor(trend.momentum) : ORANGE}` }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-              {trend && <MomentumArrow momentum={trend.momentum} />}
-              <span style={{ fontFamily: MONO, fontSize: 8, color: ORANGE, letterSpacing: '0.14em' }}>
-                {sector.toUpperCase()} — TREND
-              </span>
-              {trend && (
-                <span style={{ marginLeft: 'auto', fontFamily: MONO, fontSize: 9, color: momentumColor(trend.momentum), letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  {trend.momentum}
-                </span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+          {/* Big status banner */}
+          <Panel style={{ borderLeft: `4px solid ${momentum?.color ?? ORANGE}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              <span style={{ fontSize: 28, lineHeight: 1 }}>{momentum?.emoji ?? '→'}</span>
+              <div>
+                <div style={{ fontFamily: MONO, fontSize: 18, color: momentum?.color ?? ORANGE, lineHeight: 1, letterSpacing: '0.04em' }}>
+                  {momentum?.label ?? 'Holding steady'}
+                </div>
+                <div style={{ fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.3)', marginTop: 3, letterSpacing: '0.1em' }}>
+                  {sector.toUpperCase()} RIGHT NOW
+                </div>
+              </div>
+              {dir30 && (
+                <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                  <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(255,255,255,0.5)', lineHeight: 1.5 }}>
+                    In 30 days: <span style={{ color: dir30 === 'more active' ? GREEN : dir30 === 'less active' ? RED : GOLD }}>{dir30}</span>
+                  </div>
+                  {dir90 && (
+                    <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(255,255,255,0.5)', lineHeight: 1.5 }}>
+                      In 90 days: <span style={{ color: dir90 === 'more active' ? GREEN : dir90 === 'less active' ? RED : GOLD }}>{dir90}</span>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
-            {trend ? (
-              <>
-                <p style={{ fontFamily: MONO, fontSize: 11, color: 'rgba(255,255,255,0.8)', margin: '0 0 8px', lineHeight: 1.6 }}>
-                  {trend.what_is_happening}
-                </p>
-                <p style={{ fontFamily: MONO, fontSize: 10, color: 'rgba(255,255,255,0.5)', margin: '0 0 8px', lineHeight: 1.55 }}>
-                  {trend.what_might_happen}
-                </p>
-                <p style={{ fontFamily: MONO, fontSize: 10, color: `${CYAN}88`, margin: 0, lineHeight: 1.55 }}>
-                  WHERE HEADING: {trend.where_heading}
-                </p>
-                <div style={{ marginTop: 10, fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.25)' }}>
-                  {trend.signal_count} signals · confidence {Math.round(trend.confidence * 100)}%
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {happening && (
+                <div>
+                  <div style={{ fontFamily: MONO, fontSize: 7, color: `${CYAN}66`, letterSpacing: '0.14em', marginBottom: 4 }}>WHAT IS HAPPENING</div>
+                  <p style={{ fontFamily: MONO, fontSize: 12, color: 'rgba(255,255,255,0.85)', margin: 0, lineHeight: 1.65 }}>{happening}</p>
                 </div>
-              </>
-            ) : (
-              <p style={{ fontFamily: MONO, fontSize: 10, color: 'rgba(255,255,255,0.3)', margin: 0 }}>
-                No trend data for {sector} yet.
-              </p>
-            )}
-          </Panel>
-
-          {/* Forecast card */}
-          <Panel>
-            <div style={{ fontFamily: MONO, fontSize: 8, color: ORANGE, letterSpacing: '0.14em', marginBottom: 12 }}>
-              {sector.toUpperCase()} — TRAJECTORY
+              )}
+              {next && (
+                <div>
+                  <div style={{ fontFamily: MONO, fontSize: 7, color: `${GOLD}66`, letterSpacing: '0.14em', marginBottom: 4 }}>WHAT HAPPENS NEXT</div>
+                  <p style={{ fontFamily: MONO, fontSize: 12, color: 'rgba(255,255,255,0.7)', margin: 0, lineHeight: 1.65 }}>{next}</p>
+                </div>
+              )}
+              {heading && (
+                <div>
+                  <div style={{ fontFamily: MONO, fontSize: 7, color: `${GREEN}66`, letterSpacing: '0.14em', marginBottom: 4 }}>WHERE THIS IS HEADING</div>
+                  <p style={{ fontFamily: MONO, fontSize: 12, color: 'rgba(255,255,255,0.7)', margin: 0, lineHeight: 1.65 }}>{heading}</p>
+                </div>
+              )}
             </div>
-            {forecast ? (
-              <>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
-                  {[
-                    { label: 'NOW', value: Math.round(forecast.current_score), color: CYAN },
-                    { label: '30-DAY', value: Math.round(forecast.predicted_score_30d), color: forecast.predicted_score_30d > forecast.current_score ? GREEN : RED },
-                    { label: '90-DAY', value: Math.round(forecast.predicted_score_90d), color: forecast.predicted_score_90d > forecast.current_score ? GREEN : RED },
-                  ].map(stat => (
-                    <div key={stat.label} style={{ textAlign: 'center' }}>
-                      <div style={{ fontFamily: MONO, fontSize: 22, color: stat.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-                        {stat.value}
-                      </div>
-                      <div style={{ fontFamily: MONO, fontSize: 7, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', marginTop: 3 }}>
-                        {stat.label}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
-                  Stage: <span style={{ color: GOLD }}>{forecast.adoption_stage}</span>
-                  &nbsp;&nbsp;|&nbsp;&nbsp;
-                  Direction: <span style={{ color: momentumColor(forecast.direction) }}>{forecast.direction}</span>
-                </div>
-                {forecast.catalysts.length > 0 && (
-                  <div style={{ marginTop: 8 }}>
-                    {forecast.catalysts.slice(0, 2).map((c, i) => (
-                      <div key={i} style={{ fontFamily: MONO, fontSize: 8, color: `${GREEN}88`, lineHeight: 1.4 }}>
-                        + {c}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              <p style={{ fontFamily: MONO, fontSize: 10, color: 'rgba(255,255,255,0.3)', margin: 0 }}>
-                Generating forecast…
-              </p>
-            )}
           </Panel>
 
           {/* Opportunities */}
           {sectorOpps.length > 0 && (
-            <Panel style={{ gridColumn: '1 / -1' }}>
+            <Panel>
               <div style={{ fontFamily: MONO, fontSize: 8, color: ORANGE, letterSpacing: '0.14em', marginBottom: 12 }}>
-                {sector.toUpperCase()} — OPPORTUNITIES DETECTED
+                OPENINGS DETECTED IN {sector.toUpperCase()}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {sectorOpps.map(opp => (
                   <div key={opp.id} style={{
-                    display: 'flex', gap: 14, alignItems: 'flex-start',
-                    padding: '10px 12px',
+                    padding: '12px 14px',
                     border: `1px solid ${BORDER}`,
-                    borderRadius: 2, background: 'rgba(255,102,0,0.04)',
+                    borderLeft: `3px solid ${GREEN}`,
+                    borderRadius: 2, background: 'rgba(0,255,136,0.03)',
                   }}>
-                    <div style={{
-                      width: 36, flexShrink: 0, textAlign: 'center',
-                      fontFamily: MONO, fontSize: 18, color: GREEN,
-                      lineHeight: 1, fontVariantNumeric: 'tabular-nums',
-                    }}>
-                      {opp.score}
+                    <div style={{ fontFamily: MONO, fontSize: 12, color: 'rgba(255,255,255,0.9)', marginBottom: 6, lineHeight: 1.5 }}>
+                      {opp.title}
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontFamily: MONO, fontSize: 10, color: 'rgba(255,255,255,0.85)', marginBottom: 4, lineHeight: 1.4 }}>
-                        {opp.title}
-                      </div>
-                      <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(255,255,255,0.45)', lineHeight: 1.45 }}>
-                        {opp.description}
-                      </div>
-                      <div style={{ marginTop: 6, display: 'flex', gap: 8 }}>
-                        <span style={{ fontFamily: MONO, fontSize: 7, color: `${GOLD}88`, letterSpacing: '0.08em' }}>
-                          {opp.timing.replace(/_/g, ' ').toUpperCase()}
-                        </span>
-                        <span style={{ fontFamily: MONO, fontSize: 7, color: `${CYAN}66`, letterSpacing: '0.08em' }}>
-                          RISK: {opp.risk_level.toUpperCase()}
-                        </span>
-                      </div>
+                    <div style={{ fontFamily: MONO, fontSize: 10, color: 'rgba(255,255,255,0.5)', lineHeight: 1.6, marginBottom: 8 }}>
+                      {opp.description}
+                    </div>
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <span style={{ fontFamily: MONO, fontSize: 8, color: GOLD }}>
+                        Act: {opp.timing.replace(/_/g, ' ')}
+                      </span>
+                      <span style={{ fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.3)' }}>
+                        Risk: {opp.risk_level}
+                      </span>
                     </div>
                   </div>
                 ))}
+              </div>
+            </Panel>
+          )}
+
+          {sectorOpps.length === 0 && !loading && (
+            <Panel>
+              <div style={{ fontFamily: MONO, fontSize: 10, color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '10px 0' }}>
+                No specific openings detected yet for {sector}. Check back after the next intelligence refresh.
               </div>
             </Panel>
           )}
@@ -1016,11 +999,16 @@ export default function IntelPage() {
     fetch('/api/intel-signals')
       .then(r => r.json())
       .then((j: { ok?: boolean; signals?: LiveSignal[] }) => {
-        if (j.ok && Array.isArray(j.signals) && j.signals.length > 0) {
-          setSignals(j.signals);
-        } else {
-          setSignals(STATIC_SIGNALS);
-        }
+        const raw = (j.ok && Array.isArray(j.signals) && j.signals.length > 0) ? j.signals : STATIC_SIGNALS;
+        // Deduplicate by title similarity (first 50 chars)
+        const seen = new Set<string>();
+        const deduped = raw.filter(s => {
+          const key = s.title.toLowerCase().slice(0, 50).replace(/\s+/g, ' ').trim();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        setSignals(deduped);
       })
       .catch(() => { setSignals(STATIC_SIGNALS); })
       .finally(() => setSignalsLoading(false));
