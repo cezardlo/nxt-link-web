@@ -113,7 +113,7 @@ function sharedWords(a: string, b: string): string[] {
 
 // ─── Detectors ────────────────────────────────────────────────────────────────
 
-function detectEntity(a: RawSignal, b: RawSignal, ai: number, bi: number, signals: RawSignal[]): SignalConnection | null {
+function detectEntity(a: RawSignal, b: RawSignal, ai: number, bi: number): SignalConnection | null {
   const aId = signalId(a, ai);
   const bId = signalId(b, bi);
 
@@ -331,7 +331,7 @@ export function detectSignalConnections(signals: RawSignal[]): ConnectionReport 
 
       // Try each detector in priority order
       const conn =
-        detectEntity(a, b, i, j, signals) ??
+        detectEntity(a, b, i, j) ??
         detectCausal(a, b, i, j) ??
         detectThematic(a, b, i, j) ??
         detectTemporal(a, b, i, j);

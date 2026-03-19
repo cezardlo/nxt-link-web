@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Brain } from '@/lib/brain';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,7 +49,7 @@ type SignalDot = {
   y: number; // SVG viewport y (0-100)
 };
 
-type ViewMode = 'MAP' | 'SCOREBOARD';
+type ViewMode = 'MAP' | 'SCOREBOARD' | 'OPS';
 
 type GeoFilter = 'TEXAS' | 'USA' | 'GLOBAL';
 type CategoryFilter = 'TECH' | 'MONEY' | 'POLICY' | 'SCIENCE' | 'ALL';
@@ -802,15 +803,10 @@ function MapView() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/intel-signals')
-      .then(async (res) => {
-        if (!res.ok) throw new Error('fetch failed');
-        const json = (await res.json()) as { ok: boolean; signals?: IntelSignal[] };
-        if (!cancelled && json.ok && Array.isArray(json.signals) && json.signals.length > 0) {
-          setSignals(json.signals);
-        } else if (!cancelled) {
-          setSignals(STUB_SIGNALS);
-        }
+    Brain.map()
+      .then((data) => {
+        if (cancelled) return;
+        setSignals(data.signals.length > 0 ? (data.signals as IntelSignal[]) : STUB_SIGNALS);
       })
       .catch(() => {
         if (!cancelled) setSignals(STUB_SIGNALS);
@@ -1238,45 +1234,37 @@ function HeaderBar({ viewMode, onToggleView }: { viewMode: ViewMode; onToggleVie
         className="flex items-center rounded-sm overflow-hidden shrink-0"
         style={{ border: '1px solid rgba(255,255,255,0.10)' }}
       >
-        {(['MAP', 'SCOREBOARD'] as ViewMode[]).map((v) => (
+        {([
+          { id: 'MAP',        label: 'SIGNALS' },
+          { id: 'SCOREBOARD', label: 'RANKINGS' },
+          { id: 'OPS',        label: 'LIVE OPS' },
+        ] as { id: ViewMode; label: string }[]).map((v, i, arr) => (
           <button
-            key={v}
-            onClick={() => onToggleView(v)}
+            key={v.id}
+            onClick={() => onToggleView(v.id)}
             style={{
               padding: '3px 12px',
               fontSize: '8px',
               letterSpacing: '0.2em',
               fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-              backgroundColor: viewMode === v ? 'rgba(0,212,255,0.15)' : 'transparent',
-              color: viewMode === v ? '#00d4ff' : 'rgba(255,255,255,0.30)',
+              backgroundColor: viewMode === v.id
+                ? v.id === 'OPS' ? 'rgba(255,102,0,0.15)' : 'rgba(0,212,255,0.15)'
+                : 'transparent',
+              color: viewMode === v.id
+                ? v.id === 'OPS' ? '#ff6600' : '#00d4ff'
+                : 'rgba(255,255,255,0.30)',
               borderTop: 'none',
               borderBottom: 'none',
               borderLeft: 'none',
-              borderRight: v === 'MAP' ? '1px solid rgba(255,255,255,0.10)' : 'none',
+              borderRight: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.10)' : 'none',
               cursor: 'pointer',
               transition: 'all 0.15s',
             }}
           >
-            {v}
+            {v.label}
           </button>
         ))}
       </div>
-
-      {/* Back to platform */}
-      <Link
-        href="/map"
-        style={{
-          fontSize: '8px',
-          letterSpacing: '0.2em',
-          color: 'rgba(255,255,255,0.25)',
-          textDecoration: 'none',
-          padding: '3px 8px',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: '2px',
-        }}
-      >
-        ← MAP
-      </Link>
     </div>
   );
 }
@@ -1293,9 +1281,24 @@ function WorldApp() {
     >
       <HeaderBar viewMode={viewMode} onToggleView={setViewMode} />
 
-      {/* Content area — padded bottom for nav bar */}
-      <div className="flex flex-1 min-h-0 flex-col" style={{ paddingBottom: '48px' }}>
-        {viewMode === 'MAP' ? <MapView /> : <ScoreboardView />}
+      {/* Content area — padded bottom for nav bar (except OPS which is full iframe) */}
+      <div
+        className="flex flex-1 min-h-0 flex-col"
+        style={{
+          paddingBottom: viewMode === 'OPS' ? 0 : '48px',
+          overflowY: viewMode === 'SCOREBOARD' ? 'auto' : 'hidden',
+        }}
+      >
+        {viewMode === 'MAP' && <MapView />}
+        {viewMode === 'SCOREBOARD' && <ScoreboardView />}
+        {viewMode === 'OPS' && (
+          <iframe
+            src="/map"
+            title="Live Operations Platform"
+            style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+            allow="fullscreen"
+          />
+        )}
       </div>
 
       <BottomNavBar active="world" />

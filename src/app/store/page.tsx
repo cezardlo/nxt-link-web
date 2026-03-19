@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { Product } from '@/lib/data/product-catalog';
 import { PRODUCT_CATALOG as _RAW_CATALOG } from '@/lib/data/product-catalog';
+import { Brain } from '@/lib/brain';
 
 // ── Product catalog with runtime fallback guard ───────────────────────────────
 const PRODUCT_CATALOG: Product[] = Array.isArray(_RAW_CATALOG) ? _RAW_CATALOG : [];
@@ -24,15 +25,16 @@ const WHAT_IT_DOES = [
 ] as const;
 
 const INDUSTRIES = [
-  { label: 'Defense',       color: '#ff8c00' },
-  { label: 'AI/ML',         color: '#a855f7' },
-  { label: 'Cybersecurity', color: '#ff3b30' },
-  { label: 'Energy',        color: '#00ff88' },
-  { label: 'Manufacturing', color: '#3b82f6' },
-  { label: 'Healthcare',    color: '#00d4ff' },
-  { label: 'Logistics',     color: '#ffd700' },
-  { label: 'Border Tech',   color: '#ff6600' },
-  { label: 'Finance',       color: '#10b981' },
+  { label: 'Defense',           color: '#ff8c00' },
+  { label: 'AI/ML',             color: '#a855f7' },
+  { label: 'Cybersecurity',     color: '#ff3b30' },
+  { label: 'Energy',            color: '#00ff88' },
+  { label: 'Manufacturing',     color: '#3b82f6' },
+  { label: 'Healthcare',        color: '#00d4ff' },
+  { label: 'Logistics',         color: '#ffd700' },
+  { label: 'Border Tech',       color: '#ff6600' },
+  { label: 'Finance',           color: '#10b981' },
+  { label: 'Quantum Computing', color: '#c084fc', emerging: true },
 ] as const;
 
 const NAV_TABS = ['TODAY', 'EXPLORE', 'WORLD', 'FOLLOW', 'STORE', 'DOSSIER'] as const;
@@ -253,7 +255,7 @@ function SearchResults({ products }: { products: Product[] }) {
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px, 100%), 1fr))',
         gap: 12,
         padding: '0 16px 24px',
       }}
@@ -316,12 +318,25 @@ function StoreInner() {
     | null
   >(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [hotSectors, setHotSectors] = useState<Set<string>>(new Set());
 
   // Sync URL param on load
   useEffect(() => {
     const q = searchParams.get('q');
     if (q) setQuery(q);
   }, [searchParams]);
+
+  // Fetch live sector momentum
+  useEffect(() => {
+    Brain.industry('all')
+      .then((data) => {
+        const accelerating = (data.trending_sectors ?? [])
+          .filter((s) => s.momentum === 'accelerating')
+          .map((s) => s.name.toLowerCase());
+        setHotSectors(new Set(accelerating));
+      })
+      .catch(() => {});
+  }, []);
 
   // Derived data
   const newThisWeek = useMemo(
@@ -610,50 +625,68 @@ function StoreInner() {
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
                   gap: 8,
                   padding: '0 16px',
                 }}
               >
-                {INDUSTRIES.map(ind => (
-                  <button
-                    key={ind.label}
-                    onClick={() => handleIndustryClick(ind.label)}
-                    style={{
-                      background: '#0a0a0a',
-                      border: `1px solid ${ind.color}28`,
-                      borderRadius: 4,
-                      padding: '14px 12px',
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                      fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: 6,
-                    }}
-                  >
-                    <div
+                {INDUSTRIES.map(ind => {
+                  const isHot = hotSectors.has(ind.label.toLowerCase()) || hotSectors.has(ind.label.split('/')[0].trim().toLowerCase());
+                  const isEmerging = 'emerging' in ind && ind.emerging === true;
+                  return (
+                    <button
+                      key={ind.label}
+                      onClick={() => handleIndustryClick(ind.label)}
                       style={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: '50%',
-                        background: ind.color,
-                        boxShadow: `0 0 6px ${ind.color}cc`,
-                      }}
-                    />
-                    <div
-                      style={{
-                        fontSize: 9,
-                        color: ind.color,
-                        letterSpacing: '0.12em',
-                        textTransform: 'uppercase',
+                        background: isHot ? `${ind.color}08` : isEmerging ? '#c084fc08' : '#0a0a0a',
+                        border: `1px solid ${ind.color}${isHot ? '55' : isEmerging ? '40' : '28'}`,
+                        borderRadius: 4,
+                        padding: '14px 12px',
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        fontFamily: "'JetBrains Mono', 'Courier New', monospace",
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 6,
+                        position: 'relative',
                       }}
                     >
-                      {ind.label}
-                    </div>
-                  </button>
-                ))}
+                      {isHot && !isEmerging && (
+                        <span style={{
+                          position: 'absolute', top: 4, right: 6,
+                          fontSize: 7, color: '#00ff88', letterSpacing: '0.1em',
+                        }}>↑ HOT</span>
+                      )}
+                      {isEmerging && (
+                        <span style={{
+                          position: 'absolute', top: 4, right: 4,
+                          fontSize: 6, color: '#c084fc', letterSpacing: '0.08em',
+                          border: '1px solid #c084fc44', borderRadius: 2, padding: '1px 3px',
+                        }}>EMERGING</span>
+                      )}
+                      <div
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: '50%',
+                          background: ind.color,
+                          boxShadow: `0 0 ${isHot ? '10px' : '6px'} ${ind.color}cc`,
+                        }}
+                      />
+                      <div
+                        style={{
+                          fontSize: 9,
+                          color: ind.color,
+                          letterSpacing: '0.12em',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        {ind.label}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </section>
 

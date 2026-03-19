@@ -2,8 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import {
+  Shield, Brain, Lock, Zap, Truck, Activity,
+} from 'lucide-react';
 import { EL_PASO_VENDORS } from '@/lib/data/el-paso-vendors';
 import type { ConnectionChain } from '@/lib/engines/connection-engine';
+import { Radar, IconContainer } from '@/components/ui/radar-effect';
+import { Brain as BindingBrain } from '@/lib/brain';
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
 const ORANGE  = '#ff6600';
@@ -88,6 +93,19 @@ type FiveWhys = {
     vendors: Array<{ id: string; name: string; ikerScore: number; website: string; category: string }>;
   };
 };
+
+// ─── Mobile hook ──────────────────────────────────────────────────────────────
+
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+  return isMobile;
+}
 
 // ─── Priority helpers ─────────────────────────────────────────────────────────
 
@@ -271,39 +289,48 @@ function Panel({ children, style }: { children: React.ReactNode; style?: React.C
 // ─── TOP BAR ─────────────────────────────────────────────────────────────────
 
 function TopBar({ signalCount }: { signalCount: number }) {
+  const isMobile = useIsMobile();
   return (
     <div style={{
       height: 40, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '0 20px', background: '#060606',
+      padding: '0 12px', background: '#060606',
       borderBottom: `1px solid ${BORDER}`,
       position: 'sticky', top: 0, zIndex: 50, flexShrink: 0,
+      overflow: 'hidden',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <Link href="/" style={{ textDecoration: 'none' }}>
-          <span style={{ fontFamily: MONO, fontSize: 14, fontWeight: 700, color: ORANGE, letterSpacing: '0.1em' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 16, minWidth: 0, flexShrink: 1 }}>
+        <Link href="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
+          <span style={{ fontFamily: MONO, fontSize: isMobile ? 12 : 14, fontWeight: 700, color: ORANGE, letterSpacing: '0.08em' }}>
             NXT<span style={{ color: `${ORANGE}44` }}>{'//'}</span>LINK
           </span>
         </Link>
-        <span style={{ width: 1, height: 16, background: BORDER }} />
-        <span style={{ fontFamily: MONO, fontSize: 9, color: GREEN, letterSpacing: '0.12em' }}>
-          ● LIVE INTELLIGENCE
+        {!isMobile && <span style={{ width: 1, height: 16, background: BORDER, flexShrink: 0 }} />}
+        <span style={{ fontFamily: MONO, fontSize: 9, color: GREEN, letterSpacing: isMobile ? '0.06em' : '0.12em', whiteSpace: 'nowrap' }}>
+          {isMobile ? '● LIVE' : '● LIVE INTELLIGENCE'}
         </span>
-        {signalCount > 0 && (
+        {signalCount > 0 && !isMobile && (
           <span style={{ fontFamily: MONO, fontSize: 9, color: `${CYAN}88`, letterSpacing: '0.1em' }}>
             {signalCount.toLocaleString()} SIGNALS
           </span>
         )}
       </div>
-      <div style={{ display: 'flex', gap: 16 }}>
-        {[{ label: 'TODAY', href: '/' }, { label: 'WORLD', href: '/world' }, { label: 'DOSSIER', href: '/dossier' }].map(l => (
-          <Link key={l.href} href={l.href} style={{
-            fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.3)',
-            letterSpacing: '0.12em', textDecoration: 'none',
-          }}>
-            {l.label}
-          </Link>
-        ))}
-      </div>
+      {!isMobile && (
+        <div style={{ display: 'flex', gap: 16 }}>
+          {[{ label: 'TODAY', href: '/' }, { label: 'WORLD', href: '/world' }, { label: 'DOSSIER', href: '/dossier' }].map(l => (
+            <Link key={l.href} href={l.href} style={{
+              fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.3)',
+              letterSpacing: '0.12em', textDecoration: 'none',
+            }}>
+              {l.label}
+            </Link>
+          ))}
+        </div>
+      )}
+      {isMobile && signalCount > 0 && (
+        <span style={{ fontFamily: MONO, fontSize: 8, color: `${CYAN}88`, letterSpacing: '0.06em', flexShrink: 0 }}>
+          {signalCount} SIG
+        </span>
+      )}
     </div>
   );
 }
@@ -315,15 +342,16 @@ type Tab = 'signals' | 'heading' | 'drilldown';
 function TabBar({
   active, onSelect, hasDrilldown,
 }: { active: Tab; onSelect: (t: Tab) => void; hasDrilldown: boolean }) {
-  const tabs: Array<{ key: Tab; label: string }> = [
-    { key: 'signals', label: '01 — SIGNALS NOW' },
-    { key: 'heading', label: '02 — WHERE HEADING' },
-    { key: 'drilldown', label: '03 — DRILL DOWN' },
+  const isMobile = useIsMobile();
+  const tabs: Array<{ key: Tab; label: string; short: string }> = [
+    { key: 'signals',   label: '01 — SIGNALS NOW',    short: '01 SIGNALS' },
+    { key: 'heading',   label: '02 — WHERE HEADING',  short: '02 HEADING' },
+    { key: 'drilldown', label: '03 — DRILL DOWN',     short: '03 DRILL' },
   ];
   return (
     <div style={{
       display: 'flex', borderBottom: `1px solid ${BORDER}`,
-      padding: '0 20px', gap: 2,
+      padding: isMobile ? '0 4px' : '0 20px', gap: 0,
     }}>
       {tabs.map(t => {
         const disabled = t.key === 'drilldown' && !hasDrilldown;
@@ -334,22 +362,104 @@ function TabBar({
             disabled={disabled}
             onClick={() => !disabled && onSelect(t.key)}
             style={{
-              fontFamily: MONO, fontSize: 10, letterSpacing: '0.12em',
-              padding: '12px 20px',
+              flex: isMobile ? 1 : undefined,
+              fontFamily: MONO,
+              fontSize: isMobile ? 8 : 10,
+              letterSpacing: isMobile ? '0.04em' : '0.12em',
+              padding: isMobile ? '10px 4px' : '12px 20px',
               background: 'none', border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
               color: isActive ? ORANGE : disabled ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.4)',
               borderBottom: isActive ? `2px solid ${ORANGE}` : '2px solid transparent',
               marginBottom: -1,
               transition: 'color 0.15s',
+              whiteSpace: 'nowrap',
             }}
           >
-            {t.label}
-            {t.key === 'drilldown' && hasDrilldown && (
+            {isMobile ? t.short : t.label}
+            {t.key === 'drilldown' && hasDrilldown && !isMobile && (
               <span style={{ marginLeft: 8, fontSize: 7, color: GREEN }}>● ACTIVE</span>
+            )}
+            {t.key === 'drilldown' && hasDrilldown && isMobile && (
+              <span style={{ marginLeft: 4, fontSize: 6, color: GREEN }}>●</span>
             )}
           </button>
         );
       })}
+    </div>
+  );
+}
+
+// ─── RADAR HEADER ────────────────────────────────────────────────────────────
+
+const RADAR_INDUSTRIES = [
+  { icon: <Shield size={20} color="#ff6600" />, text: 'DEFENSE',  delay: 0.1 },
+  { icon: <Brain  size={20} color="#00d4ff" />, text: 'AI/ML',    delay: 0.2 },
+  { icon: <Lock   size={20} color="#00ff88" />, text: 'CYBER',    delay: 0.3 },
+  { icon: <Zap    size={20} color="#ffd700" />, text: 'ENERGY',   delay: 0.4 },
+  { icon: <Truck  size={20} color="#ff6600" />, text: 'LOGISTICS',delay: 0.5 },
+  { icon: <Activity size={20} color="#00d4ff" />, text: 'HEALTH', delay: 0.6 },
+];
+
+// Positions for 6 icons evenly spaced in a ring around the radar center
+const ICON_POSITIONS = [
+  { top: '0%',   left: '50%',  transform: 'translate(-50%, -50%)' },  // top center
+  { top: '25%',  left: '92%',  transform: 'translate(-50%, -50%)' },  // top right
+  { top: '75%',  left: '92%',  transform: 'translate(-50%, -50%)' },  // bottom right
+  { top: '100%', left: '50%',  transform: 'translate(-50%, -50%)' },  // bottom center
+  { top: '75%',  left: '8%',   transform: 'translate(-50%, -50%)' },  // bottom left
+  { top: '25%',  left: '8%',   transform: 'translate(-50%, -50%)' },  // top left
+];
+
+function RadarHeader() {
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      padding: '28px 0 20px', marginBottom: 8,
+      borderBottom: `1px solid rgba(255,102,0,0.1)`,
+    }}>
+      {/* Eyebrow label */}
+      <span style={{
+        fontFamily: MONO, fontSize: 8, color: 'rgba(255,102,0,0.5)',
+        letterSpacing: '0.2em', marginBottom: 16,
+      }}>
+        NXT//LINK SECTOR COVERAGE
+      </span>
+
+      {/* Radar + orbiting icons */}
+      <div style={{ position: 'relative', width: 260, height: 260 }}>
+        {/* Center radar */}
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+        }}>
+          <Radar />
+        </div>
+
+        {/* Industry icons in orbit */}
+        {RADAR_INDUSTRIES.map((industry, i) => (
+          <div
+            key={industry.text}
+            style={{
+              position: 'absolute',
+              ...ICON_POSITIONS[i],
+            }}
+          >
+            <IconContainer
+              icon={industry.icon}
+              text={industry.text}
+              delay={industry.delay}
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Subtitle */}
+      <span style={{
+        fontFamily: MONO, fontSize: 9, color: 'rgba(255,255,255,0.25)',
+        letterSpacing: '0.12em', marginTop: 8,
+      }}>
+        GLOBAL TECHNOLOGY INTELLIGENCE — LIVE
+      </span>
     </div>
   );
 }
@@ -526,6 +636,7 @@ function SignalsScreen({
   loading: boolean;
   onDrillDown: (s: LiveSignal) => void;
 }) {
+  const isMobile = useIsMobile();
   const [industryFilter, setIndustryFilter] = useState<string | null>(null);
   const [priorityFilter, setPriorityFilter] = useState<Priority | null>(null);
 
@@ -546,10 +657,17 @@ function SignalsScreen({
   const sorted = [...filtered].sort((a, b) => b.importance - a.importance);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 16, alignItems: 'start' }}>
+    <>
+      <RadarHeader />
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 280px',
+        gap: 16,
+        alignItems: 'start',
+      }}>
       {/* Signal feed */}
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 0 10px', marginBottom: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 0 10px', marginBottom: 2, flexWrap: 'wrap' }}>
           <span style={{ fontFamily: MONO, fontSize: 8, color: ORANGE, letterSpacing: '0.14em' }}>
             SIGNALS NOW
           </span>
@@ -586,11 +704,12 @@ function SignalsScreen({
           )}
         </Panel>
       </div>
-      {/* Heatmap */}
-      <div style={{ position: 'sticky', top: 56 }}>
+      {/* Heatmap — inline on mobile (below feed), sticky on desktop */}
+      <div style={isMobile ? undefined : { position: 'sticky', top: 56 }}>
         <SeverityHeatmap signals={signals} onFilter={handleFilter} />
       </div>
     </div>
+    </>
   );
 }
 
@@ -993,45 +1112,40 @@ export default function IntelPage() {
   const [drillLoading, setDrillLoading] = useState(false);
   const [connections, setConnections] = useState<ConnectionChain[]>([]);
 
+  const isMobilePage = useIsMobile();
+
   const fetchAll = useCallback(async () => {
-    // Screen 1
     setSignalsLoading(true);
-    fetch('/api/intel-signals')
-      .then(r => r.json())
-      .then((j: { ok?: boolean; signals?: LiveSignal[] }) => {
-        const raw = (j.ok && Array.isArray(j.signals) && j.signals.length > 0) ? j.signals : STATIC_SIGNALS;
-        // Deduplicate by title similarity (first 50 chars)
-        const seen = new Set<string>();
-        const deduped = raw.filter(s => {
-          const key = s.title.toLowerCase().slice(0, 50).replace(/\s+/g, ' ').trim();
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
-        setSignals(deduped);
-      })
-      .catch(() => { setSignals(STATIC_SIGNALS); })
-      .finally(() => setSignalsLoading(false));
-
-    // Screen 2 — parallel
     setScreen2Loading(true);
-    Promise.all([
-      fetch('/api/trends/reasoning').then(r => r.json()).catch(() => null),
-      fetch('/api/predictions').then(r => r.json()).catch(() => null),
-      fetch('/api/opportunities').then(r => r.json()).catch(() => null),
-    ]).then(([t, p, o]) => {
-      if (t?.ok && t.data?.sectors) setTrends(t.data.sectors as SectorTrend[]);
-      if (p?.ok && p.data?.trajectories) setForecasts(p.data.trajectories as TrajectoryForecast[]);
-      if (o?.ok && o.data?.opportunities) setOpportunities(o.data.opportunities as DiscoveredOpportunity[]);
-    }).finally(() => setScreen2Loading(false));
+    try {
+      const data = await BindingBrain.signals();
+      const rawSignals = data.signals.length > 0
+        ? (data.signals.map((s) => ({ ...s, importance: s.importance ?? 0 })) as LiveSignal[])
+        : STATIC_SIGNALS;
 
-    // Connections for WHY 5
-    fetch('/api/intelligence/connections')
-      .then(r => r.json())
-      .then((j: { ok?: boolean; chains?: ConnectionChain[] }) => {
-        if (j.ok && Array.isArray(j.chains)) setConnections(j.chains);
-      })
-      .catch(() => {});
+      const seen = new Set<string>();
+      const deduped = rawSignals.filter((s) => {
+        const key = s.title.toLowerCase().slice(0, 50).replace(/\s+/g, ' ').trim();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      setSignals(deduped);
+      setTrends(data.trends as SectorTrend[]);
+      setForecasts(data.forecasts as TrajectoryForecast[]);
+      setOpportunities(data.opportunities as DiscoveredOpportunity[]);
+      setConnections(data.connections as ConnectionChain[]);
+    } catch {
+      setSignals(STATIC_SIGNALS);
+      setTrends([]);
+      setForecasts([]);
+      setOpportunities([]);
+      setConnections([]);
+    } finally {
+      setSignalsLoading(false);
+      setScreen2Loading(false);
+    }
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
@@ -1048,9 +1162,9 @@ export default function IntelPage() {
 
     try {
       // Try enriched signal first
-      const enrichRes = await fetch('/api/intelligence/enriched-signals').then(r => r.json()).catch(() => null) as { ok?: boolean; data?: EnrichedSignal[] } | null;
-      const enriched = enrichRes?.ok && Array.isArray(enrichRes.data)
-        ? enrichRes.data.find((e: EnrichedSignal) => e.title.toLowerCase().includes(signal.title.toLowerCase().slice(0, 30)))
+      const enrichedSignals = await BindingBrain.enrichedSignals().catch(() => []);
+      const enriched = Array.isArray(enrichedSignals)
+        ? (enrichedSignals as EnrichedSignal[]).find((e: EnrichedSignal) => e.title.toLowerCase().includes(signal.title.toLowerCase().slice(0, 30)))
         : null;
 
       const why1 = enriched?.so_what ?? buildWhy1(signal);
@@ -1087,7 +1201,7 @@ export default function IntelPage() {
         <TopBar signalCount={signals.length} />
         <TabBar active={activeTab} onSelect={setActiveTab} hasDrilldown={activeSignal !== null} />
 
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '20px 20px 40px' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobilePage ? '12px 12px 40px' : '20px 20px 40px' }}>
           {activeTab === 'signals' && (
             <SignalsScreen
               signals={signals}

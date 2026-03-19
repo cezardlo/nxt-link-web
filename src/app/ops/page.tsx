@@ -31,19 +31,27 @@ interface SwarmEvent {
   ts?: string;
   created_at?: string;
   agent?: string;
+  source_agent?: string;
   type?: string;
+  event_type?: string;
   payload?: Record<string, unknown>;
 }
 
-interface SwarmReliability {
-  [agentId: string]: { successRate: number; totalRuns: number };
+type SwarmReliabilityMap = Record<string, { successRate: number; totalRuns: number }>;
+
+interface SwarmReliabilityRow {
+  agent_id?: string;
+  agent_name?: string;
+  reliability_score?: number;
+  total_findings?: number;
 }
 
 interface SwarmData {
   ok: boolean;
   events?: SwarmEvent[];
-  reliability?: SwarmReliability;
-  coordinator?: { lastRun?: string; isRunning?: boolean };
+  reliability?: SwarmReliabilityMap | SwarmReliabilityRow[];
+  reliability_map?: SwarmReliabilityMap;
+  coordinator?: { lastRun?: string; isRunning?: boolean; last_dispatch?: string };
 }
 
 interface SignalData {
@@ -179,6 +187,45 @@ function badgeColor(s: 'SUCCESS' | 'FAILED' | 'RUNNING'): string {
 
 function fmtNumber(n: number): string {
   return n >= 1000 ? n.toLocaleString('en-US') : String(n);
+}
+
+function normalizeAgentId(value: string): string {
+  const v = value.trim();
+  const known: Record<string, string> = {
+    FeedAgent: 'feed-agent',
+    EntityAgent: 'vendor-discovery',
+    IKERAgent: 'source-quality',
+    TrendAgent: 'signal-engine',
+    NarrativeAgent: 'docs-sync',
+    AlertAgent: 'product-scanner',
+  };
+  if (known[v]) return known[v];
+  return v
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .replace(/[\s_]+/g, '-')
+    .toLowerCase();
+}
+
+function getReliabilityMap(swarm: SwarmData): SwarmReliabilityMap {
+  if (swarm.reliability_map) return swarm.reliability_map;
+  if (!swarm.reliability) return {};
+
+  if (Array.isArray(swarm.reliability)) {
+    const map: SwarmReliabilityMap = {};
+    for (const row of swarm.reliability) {
+      const id = row.agent_id ?? (row.agent_name ? normalizeAgentId(row.agent_name) : null);
+      if (!id) continue;
+      const rawScore = typeof row.reliability_score === 'number' ? row.reliability_score : 0;
+      const score = rawScore > 1 ? rawScore / 100 : rawScore;
+      map[id] = {
+        successRate: Math.max(0, Math.min(1, score)),
+        totalRuns: row.total_findings ?? 0,
+      };
+    }
+    return map;
+  }
+
+  return swarm.reliability;
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -365,16 +412,28 @@ export default function OpsPage() {
               .slice(0, 12)
               .map((ev, i) => ({
                 id: String(i),
-                ts: ev.ts ? new Date(ev.ts).toLocaleTimeString('en-US', { hour12: false }) : '--:--:--',
-                agent: (ev.agent ?? 'SYSTEM').toUpperCase().replace(/-/g, ' '),
-                action: String(ev.payload?.message ?? ev.type ?? 'Event'),
-                status: ev.type === 'error' ? 'FAILED' : 'SUCCESS',
+                ts: (ev.ts ?? ev.created_at)
+                  ? new Date(ev.ts ?? ev.created_at ?? '').toLocaleTimeString('en-US', { hour12: false })
+                  : '--:--:--',
+                agent: (ev.agent ?? ev.source_agent ?? 'SYSTEM').toUpperCase().replace(/-/g, ' '),
+                action: String(
+                  ev.payload?.message ??
+                  ev.payload?.summary ??
+                  ev.type ??
+                  ev.event_type ??
+                  'Event',
+                ),
+                status:
+                  (ev.type ?? ev.event_type ?? '').toLowerCase() === 'error' ||
+                  (ev.type ?? ev.event_type ?? '').toLowerCase() === 'risk_detected'
+                    ? 'FAILED'
+                    : 'SUCCESS',
               }));
 
             if (realActivity.length > 0) setActivity(realActivity);
 
             // Patch agent statuses from reliability data
-            const rel = swarm.reliability ?? {};
+            const rel = getReliabilityMap(swarm);
             setAgents(prev =>
               prev.map(a => {
                 const key = a.id;
@@ -386,9 +445,10 @@ export default function OpsPage() {
               }),
             );
 
-            if (swarm.coordinator?.lastRun) {
+            const coordinatorLastRun = swarm.coordinator?.lastRun ?? swarm.coordinator?.last_dispatch;
+            if (coordinatorLastRun) {
               // Patch feed agent last run
-              const lr = relTime(swarm.coordinator.lastRun);
+              const lr = relTime(coordinatorLastRun);
               setAgents(prev =>
                 prev.map(a => (a.id === 'feed-agent' ? { ...a, lastRun: lr } : a)),
               );

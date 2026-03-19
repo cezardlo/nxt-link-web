@@ -5,24 +5,26 @@ import { useEffect, useState } from 'react';
 // ─── API response types ───────────────────────────────────────────────────────
 
 type SwarmCommEvent = {
-  timestamp: string;
-  source_agent: string;
-  event_type: string;
+  timestamp?: string;
+  created_at?: string;
+  source_agent?: string;
+  event_type?: string;
   payload?: Record<string, unknown>;
 };
 
 type AgentReliability = {
-  agent_id: string;
-  agent_name: string;
-  reliability_score: number; // 0–100
+  agent_id?: string;
+  agent_name?: string;
+  reliability_score?: number; // 0-1 or 0-100
+  total_findings?: number;
 };
 
 type MemoryEntry = {
   id?: string;
-  topic: string;
-  entry_type: string;
-  confidence: number; // 0–1
-  created_at: string;
+  topic?: string;
+  entry_type?: string;
+  confidence?: number; // 0-1
+  created_at?: string;
 };
 
 type SwarmApiResponse = {
@@ -32,6 +34,10 @@ type SwarmApiResponse = {
   recent_comms?: SwarmCommEvent[];
   agent_reliability?: AgentReliability[];
   memory_entries?: MemoryEntry[];
+  events?: SwarmCommEvent[];
+  reliability?: AgentReliability[];
+  memory?: MemoryEntry[];
+  coordinator?: { last_dispatch?: string | null };
 };
 
 // ─── Color helpers ────────────────────────────────────────────────────────────
@@ -67,7 +73,8 @@ function entryTypeBg(type: string): { bg: string; fg: string } {
   }
 }
 
-function fmtTime(ts: string): string {
+function fmtTime(ts?: string): string {
+  if (!ts) return '--:--:--';
   try {
     const d = new Date(ts);
     return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -76,7 +83,8 @@ function fmtTime(ts: string): string {
   }
 }
 
-function fmtDate(ts: string): string {
+function fmtDate(ts?: string): string {
+  if (!ts) return '--';
   try {
     const d = new Date(ts);
     return d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' });
@@ -169,11 +177,33 @@ export function SwarmStatusPanel() {
     );
   }
 
-  const comms     = data.recent_comms?.slice(0, 10)   ?? [];
-  const agents    = [...(data.agent_reliability ?? [])].sort((a, b) => b.reliability_score - a.reliability_score);
-  const memories  = data.memory_entries?.slice(0, 5)  ?? [];
-  const isActive  = data.is_active ?? false;
-  const agentCount = data.agent_count ?? 0;
+  const comms = (data.recent_comms ?? data.events ?? [])
+    .map((evt) => ({
+      timestamp: evt.timestamp ?? evt.created_at,
+      source_agent: evt.source_agent ?? 'system',
+      event_type: evt.event_type ?? 'swarm_heartbeat',
+      payload: evt.payload,
+    }))
+    .slice(0, 10);
+  const agents = [...(data.agent_reliability ?? data.reliability ?? [])]
+    .map((agent) => {
+      const rawScore = typeof agent.reliability_score === 'number' ? agent.reliability_score : 0;
+      const score = rawScore > 1 ? rawScore : Math.round(rawScore * 100);
+      return {
+        ...agent,
+        agent_name: agent.agent_name ?? agent.agent_id ?? 'unknown',
+        reliability_score: Math.max(0, Math.min(100, score)),
+      };
+    })
+    .sort((a, b) => b.reliability_score - a.reliability_score);
+  const memories = (data.memory_entries ?? data.memory ?? []).slice(0, 5);
+  const inferredActiveFromCoordinator = (() => {
+    const lastDispatch = data.coordinator?.last_dispatch;
+    if (!lastDispatch) return comms.length > 0;
+    return Date.now() - new Date(lastDispatch).getTime() <= 10 * 60 * 1000;
+  })();
+  const isActive = data.is_active ?? inferredActiveFromCoordinator;
+  const agentCount = data.agent_count ?? agents.length;
 
   return (
     <div className="flex flex-col gap-0">
@@ -280,7 +310,7 @@ export function SwarmStatusPanel() {
           agents.map((agent) => {
             const color = reliabilityColor(agent.reliability_score);
             return (
-              <div key={agent.agent_id} className="flex flex-col gap-1 px-3 py-[5px] border-b border-white/[0.03] last:border-0">
+              <div key={agent.agent_id ?? agent.agent_name} className="flex flex-col gap-1 px-3 py-[5px] border-b border-white/[0.03] last:border-0">
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-[9px] text-white/50 flex-1 truncate tracking-wide">
                     {agent.agent_name}
@@ -313,9 +343,11 @@ export function SwarmStatusPanel() {
           </div>
         ) : (
           memories.map((mem, i) => {
-            const { bg, fg } = entryTypeBg(mem.entry_type);
-            const confColor  = confidenceColor(mem.confidence);
-            const confPct    = Math.round(mem.confidence * 100);
+            const entryType = mem.entry_type ?? 'finding';
+            const confidence = typeof mem.confidence === 'number' ? mem.confidence : 0;
+            const { bg, fg } = entryTypeBg(entryType);
+            const confColor  = confidenceColor(confidence);
+            const confPct    = Math.round(confidence * 100);
             return (
               <div
                 key={mem.id ?? i}
@@ -324,13 +356,13 @@ export function SwarmStatusPanel() {
                 {/* Topic + badge row */}
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-[9px] text-white/55 flex-1 truncate leading-tight">
-                    {mem.topic}
+                    {mem.topic ?? 'Untitled memory'}
                   </span>
                   <span
                     className="font-mono text-[7px] tracking-wider px-1.5 py-px rounded-sm shrink-0"
                     style={{ background: bg, color: fg, border: `1px solid ${fg}30` }}
                   >
-                    {(mem.entry_type ?? '').toUpperCase()}
+                    {entryType.toUpperCase()}
                   </span>
                 </div>
 
@@ -355,3 +387,4 @@ export function SwarmStatusPanel() {
     </div>
   );
 }
+

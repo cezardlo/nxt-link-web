@@ -22,6 +22,16 @@ async function hasAuthenticatedUser(): Promise<boolean> {
   }
 }
 
+function isLocalDevRequest(request: Request): boolean {
+  if (process.env.NODE_ENV === 'production') return false;
+  try {
+    const url = new URL(request.url);
+    return url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+  } catch {
+    return false;
+  }
+}
+
 export async function authorizeAgentMutation(
   request: Request,
 ): Promise<AgentMutationAuthResult> {
@@ -31,6 +41,12 @@ export async function authorizeAgentMutation(
   }
 
   if (await hasAuthenticatedUser()) {
+    return { ok: true, actor: 'user' };
+  }
+
+  // Developer ergonomics: allow local manual testing without auth setup.
+  // Production remains protected by cron secret or authenticated session.
+  if (isLocalDevRequest(request)) {
     return { ok: true, actor: 'user' };
   }
 

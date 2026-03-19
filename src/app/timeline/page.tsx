@@ -1,7 +1,9 @@
+/* eslint-disable react/no-unescaped-entities */
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { PageTopBar } from '@/components/PageTopBar';
+import { Timeline } from '@/components/ui/timeline';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -580,7 +582,238 @@ function NowMarker() {
 
 // ─── Page ───────────────────────────────────────────────────────────────────
 
+// ─── Historical timeline data (1950 → present) for Aceternity view ───────────
+
+function HistTag({ color, children }: { color: string; children: React.ReactNode }) {
+  return (
+    <span
+      style={{
+        fontSize: 8,
+        letterSpacing: '0.2em',
+        padding: '2px 8px',
+        border: `1px solid ${color}40`,
+        backgroundColor: `${color}12`,
+        color,
+        borderRadius: 2,
+        marginRight: 6,
+        marginBottom: 6,
+        display: 'inline-block',
+        fontFamily: "'JetBrains Mono', monospace",
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+function HistEntry({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        fontFamily: "'JetBrains Mono', 'Courier New', monospace",
+        fontSize: 11,
+        lineHeight: 1.8,
+        color: 'rgba(255,255,255,0.60)',
+        letterSpacing: '0.02em',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+const HISTORICAL_TIMELINE = [
+  {
+    title: '1950',
+    content: (
+      <HistEntry>
+        <div style={{ marginBottom: 8 }}>
+          <HistTag color="#ff3b30">DEFENSE</HistTag>
+          <HistTag color="#00d4ff">COMPUTING</HistTag>
+        </div>
+        The Cold War ignites the first wave of government-funded technology investment. RAND Corporation pioneers systems analysis and early computer-aided decision-making. Fort Bliss in El Paso becomes a critical missile test and research site — establishing the Southwest as a defense technology corridor that still operates today.
+      </HistEntry>
+    ),
+  },
+  {
+    title: '1958',
+    content: (
+      <HistEntry>
+        <div style={{ marginBottom: 8 }}>
+          <HistTag color="#ff3b30">DEFENSE</HistTag>
+          <HistTag color="#ffd700">AEROSPACE</HistTag>
+        </div>
+        DARPA is founded in direct response to Sputnik. NASA follows months later. Texas Instruments (Dallas) ships the first commercial integrated circuit — connecting the Southwest to the global semiconductor supply chain for the first time.
+      </HistEntry>
+    ),
+  },
+  {
+    title: '1969',
+    content: (
+      <HistEntry>
+        <div style={{ marginBottom: 8 }}>
+          <HistTag color="#00d4ff">NETWORKING</HistTag>
+          <HistTag color="#ff3b30">MILITARY</HistTag>
+        </div>
+        ARPANET transmits its first packet between UCLA and Stanford — the foundational moment of the modern internet. Simultaneously, maquiladora programs launch cross-border manufacturing. El Paso's position as a border hub becomes strategically permanent.
+      </HistEntry>
+    ),
+  },
+  {
+    title: '1975',
+    content: (
+      <HistEntry>
+        <div style={{ marginBottom: 8 }}>
+          <HistTag color="#00d4ff">COMPUTING</HistTag>
+          <HistTag color="#00ff88">ENTERPRISE</HistTag>
+        </div>
+        The personal computer era begins as Altair 8800 ships. Manufacturing automation accelerates as PLCs enter factory floors — directly impacting El Paso's cross-border manufacturing sector. Computer-controlled production reshapes workforce demands across the Southwest.
+      </HistEntry>
+    ),
+  },
+  {
+    title: '1983',
+    content: (
+      <HistEntry>
+        <div style={{ marginBottom: 8 }}>
+          <HistTag color="#00d4ff">NETWORKING</HistTag>
+          <HistTag color="#8b5cf6">POLICY</HistTag>
+        </div>
+        TCP/IP becomes the internet standard. The US Strategic Defense Initiative ("Star Wars") launches, funneling massive R&D into sensor technology and missile defense. Fort Bliss receives expanded mission scope. Cybersecurity as a discipline begins in military research labs.
+      </HistEntry>
+    ),
+  },
+  {
+    title: '1991',
+    content: (
+      <HistEntry>
+        <div style={{ marginBottom: 8 }}>
+          <HistTag color="#00d4ff">NETWORKING</HistTag>
+          <HistTag color="#ff3b30">DEFENSE</HistTag>
+          <HistTag color="#00ff88">LOGISTICS</HistTag>
+        </div>
+        The World Wide Web goes public. Desert Storm demonstrates precision-guided munitions and GPS in combat. NAFTA negotiations begin — El Paso-Juárez becomes one of the busiest commercial crossing points on Earth.
+      </HistEntry>
+    ),
+  },
+  {
+    title: '1995',
+    content: (
+      <HistEntry>
+        <div style={{ marginBottom: 8 }}>
+          <HistTag color="#00d4ff">INTERNET</HistTag>
+          <HistTag color="#00ff88">LOGISTICS</HistTag>
+        </div>
+        NAFTA fully in effect. Amazon and eBay launch e-commerce. Cross-border trade through El Paso exceeds $20B annually. Logistics technology — EDI, early GPS tracking — begins transforming how goods move across the US-Mexico border.
+      </HistEntry>
+    ),
+  },
+  {
+    title: '2001',
+    content: (
+      <HistEntry>
+        <div style={{ marginBottom: 8 }}>
+          <HistTag color="#ff3b30">SECURITY</HistTag>
+          <HistTag color="#00d4ff">BORDER TECH</HistTag>
+        </div>
+        9/11 reshapes every technology investment priority. DHS is created. Border technology spending surges — optical sensors, vehicle scanners, biometric checkpoints, and drone surveillance are fast-tracked at El Paso crossings. Defense contractors triple their Texas headcount.
+      </HistEntry>
+    ),
+  },
+  {
+    title: '2007',
+    content: (
+      <HistEntry>
+        <div style={{ marginBottom: 8 }}>
+          <HistTag color="#00d4ff">MOBILE</HistTag>
+          <HistTag color="#ffd700">ENERGY</HistTag>
+        </div>
+        The iPhone launches. The shale revolution begins transforming West Texas energy — Permian Basin output starts its historic climb, creating massive demand for logistics and water technology across the Southwest.
+      </HistEntry>
+    ),
+  },
+  {
+    title: '2010',
+    content: (
+      <HistEntry>
+        <div style={{ marginBottom: 8 }}>
+          <HistTag color="#00d4ff">AI/ML</HistTag>
+          <HistTag color="#8b5cf6">CYBERSECURITY</HistTag>
+        </div>
+        Deep learning breaks image recognition records. Stuxnet — the first nation-state cyberweapon — demonstrates software can destroy physical infrastructure. USCYBERCOM is established. Fort Bliss transitions to support autonomous systems training and cyber operations.
+      </HistEntry>
+    ),
+  },
+  {
+    title: '2015',
+    content: (
+      <HistEntry>
+        <div style={{ marginBottom: 8 }}>
+          <HistTag color="#00d4ff">AI/ML</HistTag>
+          <HistTag color="#ffd700">ROBOTICS</HistTag>
+        </div>
+        AlphaGo defeats a human Go champion. Amazon deploys 15,000 Kiva warehouse robots. The Fourth Industrial Revolution is named at Davos — AI, robotics, IoT converge. Smart factory adoption accelerates across the US-Mexico manufacturing corridor.
+      </HistEntry>
+    ),
+  },
+  {
+    title: '2020',
+    content: (
+      <HistEntry>
+        <div style={{ marginBottom: 8 }}>
+          <HistTag color="#00ff88">BIOTECH</HistTag>
+          <HistTag color="#00d4ff">SUPPLY CHAIN</HistTag>
+        </div>
+        COVID-19 collapses global supply chains overnight. mRNA vaccine technology deploys at unprecedented speed. US semiconductor dependence on Taiwan becomes a national security crisis. Supply chain resilience moves to the top of every boardroom agenda.
+      </HistEntry>
+    ),
+  },
+  {
+    title: '2023',
+    content: (
+      <HistEntry>
+        <div style={{ marginBottom: 8 }}>
+          <HistTag color="#00d4ff">AI/ML</HistTag>
+          <HistTag color="#00ff88">SEMICONDUCTORS</HistTag>
+        </div>
+        ChatGPT reaches 100M users in 60 days — fastest technology adoption in history. CHIPS Act allocates $52B to domestic semiconductor manufacturing. Nearshoring to Mexico accelerates — El Paso emerges as a critical US-Mexico logistics and manufacturing hub.
+      </HistEntry>
+    ),
+  },
+  {
+    title: '2025',
+    content: (
+      <HistEntry>
+        <div style={{ marginBottom: 8 }}>
+          <HistTag color="#00d4ff">AI/ML</HistTag>
+          <HistTag color="#ff3b30">AUTONOMOUS SYSTEMS</HistTag>
+          <HistTag color="#ff6600">BORDER TECH</HistTag>
+        </div>
+        Agentic AI systems begin replacing knowledge-worker workflows. Autonomous drone swarms enter active military doctrine. The US-Mexico manufacturing corridor processes over $800B in annual trade. El Paso's technology ecosystem positions the city as the Southwest's emerging intelligence economy hub.
+      </HistEntry>
+    ),
+  },
+  {
+    title: 'NOW →',
+    content: (
+      <HistEntry>
+        <div style={{ marginBottom: 8 }}>
+          <HistTag color="#ff6600">NXT LINK</HistTag>
+          <HistTag color="#00d4ff">INTELLIGENCE</HistTag>
+          <HistTag color="#00ff88">GLOBAL</HistTag>
+        </div>
+        NXT LINK is built for this moment — an impartial technology acquisition platform monitoring every industry, every sector, globally. From defense contracts in Virginia to biotech breakthroughs in Basel to logistics automation in Juárez, NXT LINK surfaces the signals that matter before they become headlines.
+      </HistEntry>
+    ),
+  },
+];
+
+// ─── Page modes ───────────────────────────────────────────────────────────────
+
+type PageMode = 'LIVE' | 'HISTORY';
+
 export default function TimelinePage() {
+  const [pageMode, setPageMode] = useState<PageMode>('LIVE');
   const [statusFilter, setStatusFilter] = useState<TimelineStatus | 'all'>('all');
   const [industryFilter, setIndustryFilter] = useState<string | null>(null);
   const [timeline, setTimeline] = useState<TimelineEntry[]>(TIMELINE_DATA);
@@ -787,12 +1020,34 @@ export default function TimelinePage() {
         ]}
         rightSlot={
           <div className="flex items-center gap-3">
-            {loading && (
+            {/* Mode toggle */}
+            <div className="flex items-center rounded-sm overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.10)' }}>
+              {(['LIVE', 'HISTORY'] as PageMode[]).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setPageMode(m)}
+                  style={{
+                    padding: '3px 10px',
+                    fontSize: 8,
+                    letterSpacing: '0.2em',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    backgroundColor: pageMode === m ? 'rgba(0,212,255,0.15)' : 'transparent',
+                    color: pageMode === m ? '#00d4ff' : 'rgba(255,255,255,0.30)',
+                    borderRight: m === 'LIVE' ? '1px solid rgba(255,255,255,0.10)' : 'none',
+                    cursor: 'pointer',
+                    border: 'none',
+                  }}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+            {pageMode === 'LIVE' && loading && (
               <span className="font-mono text-[8px] tracking-[0.2em] text-[#00d4ff]/40 animate-pulse">
                 FETCHING
               </span>
             )}
-            {!loading && isLive && (
+            {pageMode === 'LIVE' && !loading && isLive && (
               <span className="flex items-center gap-1.5">
                 <span
                   className="relative block w-1.5 h-1.5 rounded-full"
@@ -808,13 +1063,38 @@ export default function TimelinePage() {
                 </span>
               </span>
             )}
-            <span className="font-mono text-[8px] tracking-[0.2em] text-white/20">
-              {timeline.length} EVENTS
-            </span>
+            {pageMode === 'LIVE' && (
+              <span className="font-mono text-[8px] tracking-[0.2em] text-white/20">
+                {timeline.length} EVENTS
+              </span>
+            )}
           </div>
         }
       />
 
+      {/* ── HISTORY view ─────────────────────────────────────────── */}
+      {pageMode === 'HISTORY' && (
+        <div className="flex-1 overflow-y-auto bg-black" style={{ paddingBottom: 48 }}>
+          <div style={{ maxWidth: 960, margin: '0 auto', padding: '24px 16px 0' }}>
+            <p style={{
+              fontSize: 10,
+              lineHeight: 1.9,
+              color: 'rgba(255,255,255,0.35)',
+              letterSpacing: '0.04em',
+              borderLeft: '2px solid #ff6600',
+              paddingLeft: 16,
+              marginBottom: 8,
+              fontFamily: "'JetBrains Mono', monospace",
+            }}>
+              75 years of technology milestones — defense, AI, cybersecurity, manufacturing, logistics, and border technology — that shaped the industries NXT LINK monitors today.
+            </p>
+          </div>
+          <Timeline data={HISTORICAL_TIMELINE} />
+        </div>
+      )}
+
+      {/* ── LIVE view (filters + horizontal timeline) ───────────── */}
+      {pageMode === 'LIVE' && <>
       {/* ── Filters ──────────────────────────────────────────────── */}
       <div className="relative z-10 px-4 sm:px-6 pt-4 pb-2 shrink-0">
         {/* Status toggle */}
@@ -1089,6 +1369,7 @@ export default function TimelinePage() {
           NXT//LINK · TECHNOLOGY TIMELINE · SCROLL TO EXPLORE
         </span>
       </footer>
+      </>}
     </main>
   );
 }

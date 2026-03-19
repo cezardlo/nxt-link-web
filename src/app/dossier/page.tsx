@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Brain } from '@/lib/brain';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const ORANGE = '#ff6600';
@@ -24,6 +25,8 @@ const SUGGESTED = [
 const RECENT_KEY = 'nxt_recent_dossiers';
 const MAX_RECENT = 8;
 
+type TrendSector = { name: string; momentum: string; signal_count: number };
+
 // ─── Bottom nav ───────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
   { label: 'TODAY',   href: '/' },
@@ -34,11 +37,25 @@ const NAV_ITEMS = [
   { label: 'DOSSIER', href: '/dossier', active: true },
 ];
 
+// ─── Mobile hook ──────────────────────────────────────────────────────────────
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+  return isMobile;
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function DossierHomePage() {
   const router  = useRouter();
-  const [query,   setQuery]   = useState('');
-  const [recents, setRecents] = useState<Array<{ label: string; slug: string }>>([]);
+  const isMobile = useIsMobile();
+  const [query,    setQuery]    = useState('');
+  const [recents,  setRecents]  = useState<Array<{ label: string; slug: string }>>([]);
+  const [trending, setTrending] = useState<TrendSector[]>([]);
 
   // Load recent dossiers from localStorage
   useEffect(() => {
@@ -46,6 +63,21 @@ export default function DossierHomePage() {
       const raw = localStorage.getItem(RECENT_KEY);
       if (raw) setRecents(JSON.parse(raw));
     } catch { /* ignore */ }
+  }, []);
+
+  // Fetch live trending sectors
+  useEffect(() => {
+    Brain.industry('all')
+      .then((data) => {
+        const sectors = data.trending_sectors;
+        setTrending(
+          [...sectors]
+            .filter((s) => s.momentum === 'accelerating' || s.signal_count > 3)
+            .sort((a, b) => b.signal_count - a.signal_count)
+            .slice(0, 5)
+        );
+      })
+      .catch(() => {});
   }, []);
 
   const navigate = useCallback((slug: string, label: string) => {
@@ -80,39 +112,41 @@ export default function DossierHomePage() {
       </div>
 
       {/* ── Hero search ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 80, paddingBottom: 48, paddingLeft: 20, paddingRight: 20 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: isMobile ? 40 : 80, paddingBottom: isMobile ? 28 : 48, paddingLeft: 20, paddingRight: 20 }}>
         <div style={{ color: '#333', fontSize: 9, letterSpacing: '0.3em', marginBottom: 12 }}>
           INTELLIGENCE DOSSIER
         </div>
-        <h1 style={{ fontSize: 28, fontWeight: 700, color: '#fff', margin: '0 0 8px', textAlign: 'center', letterSpacing: '-0.01em' }}>
+        <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: '#fff', margin: '0 0 8px', textAlign: 'center', letterSpacing: '-0.01em', lineHeight: 1.3 }}>
           Search Any Industry or Vendor
         </h1>
-        <p style={{ color: '#555', fontSize: 11, marginBottom: 36, textAlign: 'center', maxWidth: 420, lineHeight: 1.6 }}>
+        <p style={{ color: '#555', fontSize: 11, marginBottom: isMobile ? 24 : 36, textAlign: 'center', maxWidth: 420, lineHeight: 1.6 }}>
           Get a plain-English intelligence brief with signals, trajectory, and a clear YES / WAIT / KEEP WATCHING verdict.
         </p>
 
         {/* Search form */}
         <form
           onSubmit={handleSearch}
-          style={{ width: '100%', maxWidth: 560, display: 'flex', gap: 8 }}
+          style={{ width: '100%', maxWidth: 560, display: 'flex', gap: 8, flexWrap: isMobile ? 'wrap' : 'nowrap' }}
         >
           <input
             autoFocus
             type="text"
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="e.g. Defense AI, Booz Allen Hamilton, Cybersecurity…"
+            placeholder="e.g. Defense AI, Booz Allen…"
             style={{
               flex: 1,
+              minWidth: 0,
               background: '#0a0a0a',
               border: `1px solid ${query ? ORANGE : '#222'}`,
               borderRadius: 4,
               color: '#fff',
               fontFamily: FONT,
-              fontSize: 13,
+              fontSize: isMobile ? 12 : 13,
               padding: '10px 14px',
               outline: 'none',
               transition: 'border-color 0.15s',
+              width: isMobile ? '100%' : undefined,
             }}
           />
           <button
@@ -131,6 +165,7 @@ export default function DossierHomePage() {
               cursor: query.trim() ? 'pointer' : 'default',
               transition: 'all 0.15s',
               whiteSpace: 'nowrap',
+              width: isMobile ? '100%' : undefined,
             }}
           >
             OPEN DOSSIER
@@ -171,12 +206,48 @@ export default function DossierHomePage() {
         </section>
       )}
 
+      {/* ── Trending Now (live) ── */}
+      {trending.length > 0 && (
+        <section style={{ maxWidth: 680, margin: '0 auto 32px', padding: '0 20px' }}>
+          <div style={{ color: '#333', fontSize: 9, letterSpacing: '0.25em', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+            TRENDING NOW
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00ff88', display: 'inline-block', boxShadow: '0 0 6px #00ff88' }} />
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {trending.map(s => {
+              const isAccel = s.momentum === 'accelerating';
+              const slug = s.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+              return (
+                <button
+                  key={s.name}
+                  onClick={() => navigate(slug, s.name)}
+                  style={{
+                    background: isAccel ? 'rgba(0,255,136,0.05)' : '#0a0a0a',
+                    border: `1px solid ${isAccel ? 'rgba(0,255,136,0.25)' : '#1a1a1a'}`,
+                    borderRadius: 4, padding: '7px 12px', cursor: 'pointer',
+                    fontFamily: FONT, fontSize: 10, letterSpacing: '0.1em',
+                    color: isAccel ? '#00ff88' : CYAN,
+                    display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = isAccel ? '#00ff88' : CYAN; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = isAccel ? 'rgba(0,255,136,0.25)' : '#1a1a1a'; }}
+                >
+                  <span>{isAccel ? '↑' : '→'}</span>
+                  {s.name.toUpperCase()}
+                  <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)' }}>{s.signal_count}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* ── Suggested dossiers ── */}
       <section style={{ maxWidth: 680, margin: '0 auto', padding: '0 20px' }}>
         <div style={{ color: '#333', fontSize: 9, letterSpacing: '0.25em', marginBottom: 12 }}>
           SUGGESTED
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
           {SUGGESTED.map(s => (
             <button
               key={s.slug}

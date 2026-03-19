@@ -3,6 +3,59 @@
 import { getDb, isSupabaseConfigured } from '../client';
 import { EL_PASO_VENDORS, type VendorRecord } from '@/lib/data/el-paso-vendors';
 
+/** El Paso flagship companies — get an IKER anchor bonus */
+const EP_FLAGSHIP_ANCHORS = ['boeing', 'l3harris', 'amazon', 'prologis', 'schneider', 'toyota', 'fort bliss', 'utep', 'ep electric'];
+
+/**
+ * Algorithmic IKER scoring — runs when DB score is the flat default (70).
+ * Differentiates vendors based on verifiable attributes until Python fix_iker.py
+ * populates real Gemini-scored values.
+ *
+ * Dimensions (each 0-20 pts):
+ *   Website presence   — real domain vs none/example.com
+ *   Evidence density   — how many evidence bullets exist
+ *   Description depth  — character count of description
+ *   Tag specificity    — number of relevant tags
+ *   Confidence signal  — DB confidence field
+ */
+function computeIkerScore(row: Record<string, unknown>): number {
+  const dbScore = row.iker_score as number | null;
+  // Trust Gemini-scored values that deviate from the flat default
+  if (dbScore !== null && dbScore !== undefined && dbScore !== 70) return dbScore;
+
+  let score = 40; // base
+
+  // Website presence (0-20)
+  const website = (row.company_url ?? row.website ?? '') as string;
+  if (website && website.startsWith('http') && !website.includes('example.com')) {
+    score += 20;
+  }
+
+  // Evidence bullets (0-20)
+  const evidence = Array.isArray(row.evidence) ? row.evidence as string[] : [];
+  score += Math.min(20, evidence.length * 4);
+
+  // Description depth (0-15)
+  const desc = (row.description ?? '') as string;
+  if (desc.length > 200) score += 15;
+  else if (desc.length > 80) score += 8;
+  else if (desc.length > 20) score += 3;
+
+  // Tag count (0-10)
+  const tags = Array.isArray(row.tags) ? row.tags as string[] : [];
+  score += Math.min(10, tags.length * 2);
+
+  // DB confidence field (0-10)
+  const confidence = (row.confidence ?? 0) as number;
+  score += Math.round(confidence * 10);
+
+  // Named known anchors get a bump (El Paso flagships)
+  const name = ((row.company_name ?? row.name ?? '') as string).toLowerCase();
+  if (EP_FLAGSHIP_ANCHORS.some(a => name.includes(a))) score += 15;
+
+  return Math.min(99, Math.max(1, score));
+}
+
 export type { VendorRecord };
 
 /** Get all vendors — tries Supabase first, falls back to hardcoded data */
@@ -14,7 +67,7 @@ export async function getVendors(): Promise<Record<string, VendorRecord>> {
     const { data, error } = await db
       .from('vendors')
       .select('*')
-      .eq('status', 'active');
+      .in('status', ['active', 'approved']);
 
     if (error || !data || data.length === 0) return EL_PASO_VENDORS;
 
@@ -30,7 +83,7 @@ export async function getVendors(): Promise<Record<string, VendorRecord>> {
         tags: Array.isArray(row.tags) ? row.tags as string[] : [],
         evidence: Array.isArray(row.evidence) ? row.evidence as string[] : [],
         category: (row.primary_category ?? row.sector ?? '') as string,
-        ikerScore: (row.iker_score ?? 50) as number,
+        ikerScore: computeIkerScore(row as Record<string, unknown>),
         lat: (row.lat ?? 31.76) as number,
         lon: (row.lon ?? -106.49) as number,
         layer: (row.layer ?? 'vendors') as VendorRecord['layer'],
@@ -70,7 +123,7 @@ export async function getVendorById(id: string): Promise<VendorRecord | null> {
       tags: Array.isArray(data.tags) ? data.tags as string[] : [],
       evidence: Array.isArray(data.evidence) ? data.evidence as string[] : [],
       category: (data.primary_category ?? data.sector ?? '') as string,
-      ikerScore: (data.iker_score ?? 50) as number,
+      ikerScore: computeIkerScore(data as Record<string, unknown>),
       lat: (data.lat ?? 31.76) as number,
       lon: (data.lon ?? -106.49) as number,
       layer: (data.layer ?? 'vendors') as VendorRecord['layer'],
