@@ -768,7 +768,7 @@ function TopBar({ now }: { now: Date | null }) {
             fontFamily: 'Space Grotesk, sans-serif', fontSize: 14,
             fontWeight: 700, color: CYAN, letterSpacing: '0.08em',
           }}>
-            NXT<span style={{ color: `${CYAN}44` }}>//</span>LINK
+            NXT<span style={{ color: `${CYAN}44` }}>{'/'}{'/'}​</span>LINK
           </span>
         </Link>
         <span style={{ width: 1, height: 16, background: BORDER, flexShrink: 0 }} />
