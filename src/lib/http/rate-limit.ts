@@ -1,4 +1,4 @@
-type RateLimitConfig = {
+export type RateLimitConfig = {
   key: string;
   maxRequests: number;
   windowMs: number;
@@ -9,7 +9,7 @@ type RateLimitState = {
   resetAt: number;
 };
 
-type RateLimitResult = {
+export type RateLimitResult = {
   allowed: boolean;
   remaining: number;
   retryAfterMs: number;
