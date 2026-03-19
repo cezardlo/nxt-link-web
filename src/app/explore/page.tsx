@@ -1,8 +1,36 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { ExploreGraph } from '@/components/ExploreGraph';
 import type { ExploreNodeData } from '@/components/ExploreGraph';
+
+const ORANGE = '#ff6600';
+const FONT = "'JetBrains Mono', 'Courier New', monospace";
+const NAV_TABS = [
+  { label: 'TODAY', href: '/' }, { label: 'EXPLORE', href: '/explore' },
+  { label: 'WORLD', href: '/world' }, { label: 'FOLLOW', href: '/following' },
+  { label: 'STORE', href: '/store' }, { label: 'DOSSIER', href: '/dossier' },
+];
+function NavBar() {
+  return (
+    <div style={{
+      position: 'fixed', bottom: 0, left: 0, right: 0, height: 48,
+      background: '#0a0a0a', borderTop: `1px solid rgba(255,102,0,0.15)`,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-around',
+      fontFamily: FONT, zIndex: 100,
+    }}>
+      {NAV_TABS.map(t => (
+        <Link key={t.label} href={t.href} style={{
+          color: t.label === 'EXPLORE' ? ORANGE : 'rgba(255,255,255,0.3)',
+          fontSize: 10, fontWeight: 700, letterSpacing: '0.1em',
+          textDecoration: 'none', padding: '8px 12px',
+          borderTop: t.label === 'EXPLORE' ? `2px solid ${ORANGE}` : '2px solid transparent',
+        }}>{t.label}</Link>
+      ))}
+    </div>
+  );
+}
 
 // ── Category config (mirrors ExploreGraph) ────────────────────────────────────
 
@@ -93,7 +121,7 @@ export default function ExplorePage() {
   }, [selectedNode]);
 
   return (
-    <div className="bg-black min-h-screen pl-16 md:pl-16 flex flex-col">
+    <div className="bg-black min-h-screen pl-16 md:pl-16 flex flex-col" style={{ paddingBottom: 48 }}>
       {/* ── Top bar ── */}
       <div className="flex-shrink-0 border-b border-white/[0.06] px-6 py-4 flex items-center gap-4 flex-wrap">
         {/* Title */}
@@ -103,6 +131,17 @@ export default function ExplorePage() {
             Explore Connections
           </h1>
         </div>
+        {/* SURPRISE ME */}
+        <button
+          onClick={() => {
+            const industries = ['cybersecurity', 'ai-ml', 'defense', 'energy', 'healthcare', 'manufacturing'];
+            const pick = industries[Math.floor(Math.random() * industries.length)];
+            window.location.href = `/explore?seed=${pick}`;
+          }}
+          className="font-mono text-[8px] tracking-[0.15em] uppercase px-3 py-1.5 border border-yellow-500/30 text-yellow-500/60 hover:text-yellow-400 rounded-sm transition-colors"
+        >
+          SURPRISE ME ✦
+        </button>
 
         {/* Search */}
         <div className="relative flex-1 max-w-xs">
@@ -280,6 +319,7 @@ export default function ExplorePage() {
           )}
         </div>
       </div>
+      <NavBar />
     </div>
   );
 }
