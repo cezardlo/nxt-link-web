@@ -26,11 +26,11 @@ const MAX_RECENT = 8;
 
 // ─── Bottom nav ───────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
-  { label: 'TODAY',   href: '/dashboard' },
-  { label: 'EXPLORE', href: '/ask' },
-  { label: 'WORLD',   href: '/map' },
-  { label: 'FOLLOW',  href: '/map' },
-  { label: 'STORE',   href: '/' },
+  { label: 'TODAY',   href: '/' },
+  { label: 'EXPLORE', href: '/explore' },
+  { label: 'WORLD',   href: '/world' },
+  { label: 'FOLLOW',  href: '/following' },
+  { label: 'STORE',   href: '/store' },
   { label: 'DOSSIER', href: '/dossier', active: true },
 ];
 

@@ -262,10 +262,12 @@ const STUB_SIGNALS: IntelSignal[] = [
 // ─── Bottom NavBar ────────────────────────────────────────────────────────────
 
 const NAV_TABS = [
-  { id: 'today',   label: 'TODAY',   href: '/',         icon: '◎' },
-  { id: 'explore', label: 'EXPLORE', href: '/industries', icon: '⬡' },
-  { id: 'world',   label: 'WORLD',   href: '/world',    icon: '◉' },
-  { id: 'dossier', label: 'DOSSIER', href: '/vendor',   icon: '◆' },
+  { id: 'today',    label: 'TODAY',   href: '/',          icon: '◎' },
+  { id: 'explore',  label: 'EXPLORE', href: '/explore',   icon: '⬡' },
+  { id: 'world',    label: 'WORLD',   href: '/world',     icon: '◉' },
+  { id: 'follow',   label: 'FOLLOW',  href: '/following', icon: '◈' },
+  { id: 'store',    label: 'STORE',   href: '/store',     icon: '◫' },
+  { id: 'dossier',  label: 'DOSSIER', href: '/dossier',   icon: '◆' },
 ];
 
 function BottomNavBar({ active }: { active: string }) {

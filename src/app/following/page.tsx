@@ -291,12 +291,12 @@ function SectionHeader({ label, count, color }: { label: string; count: number; 
 // ─── Nav items ────────────────────────────────────────────────────────────────
 
 const NAV_ITEMS: { label: string; href: string; key: string }[] = [
-  { label: 'TODAY',   href: '/',        key: 'today'   },
-  { label: 'EXPLORE', href: '/map',     key: 'explore' },
-  { label: 'WORLD',   href: '/map',     key: 'world'   },
+  { label: 'TODAY',   href: '/',          key: 'today'   },
+  { label: 'EXPLORE', href: '/explore',   key: 'explore' },
+  { label: 'WORLD',   href: '/world',     key: 'world'   },
   { label: 'FOLLOW',  href: '/following', key: 'follow'  },
-  { label: 'STORE',   href: '/',        key: 'store'   },
-  { label: 'DOSSIER', href: '/map',     key: 'dossier' },
+  { label: 'STORE',   href: '/store',     key: 'store'   },
+  { label: 'DOSSIER', href: '/dossier',   key: 'dossier' },
 ];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────

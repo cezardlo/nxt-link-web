@@ -295,7 +295,7 @@ function TopBar({ signalCount }: { signalCount: number }) {
         )}
       </div>
       <div style={{ display: 'flex', gap: 16 }}>
-        {[{ label: 'MAP', href: '/map' }, { label: 'DASHBOARD', href: '/dashboard' }, { label: 'SEARCH', href: '/ask' }].map(l => (
+        {[{ label: 'TODAY', href: '/' }, { label: 'WORLD', href: '/world' }, { label: 'DOSSIER', href: '/dossier' }].map(l => (
           <Link key={l.href} href={l.href} style={{
             fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.3)',
             letterSpacing: '0.12em', textDecoration: 'none',
@@ -1076,7 +1076,7 @@ export default function IntelPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: BG, fontFamily: MONO }}>
+    <div style={{ minHeight: '100vh', background: BG, fontFamily: MONO, paddingBottom: 48 }}>
       {/* Scanlines */}
       <div style={{
         position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
@@ -1112,6 +1112,31 @@ export default function IntelPage() {
           )}
         </div>
       </div>
+
+      {/* ── Bottom Nav ── */}
+      <nav style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, height: 48,
+        background: '#050505', borderTop: '1px solid rgba(255,102,0,0.15)',
+        display: 'flex', alignItems: 'stretch', zIndex: 50,
+        fontFamily: MONO,
+      }}>
+        {[
+          { label: 'TODAY',   href: '/' },
+          { label: 'EXPLORE', href: '/explore' },
+          { label: 'WORLD',   href: '/world' },
+          { label: 'FOLLOW',  href: '/following' },
+          { label: 'STORE',   href: '/store' },
+          { label: 'DOSSIER', href: '/dossier' },
+        ].map(tab => (
+          <Link key={tab.label} href={tab.href} style={{
+            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 9, letterSpacing: '0.15em', color: 'rgba(255,255,255,0.3)',
+            textDecoration: 'none', fontFamily: MONO,
+          }}>
+            {tab.label}
+          </Link>
+        ))}
+      </nav>
 
       <style>{`
         @keyframes shimmer {

@@ -1,99 +1,131 @@
-# NXT//LINK — Claude Code Instructions
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Research Rule — ALWAYS follow this before making any change
+Before implementing anything (new package, API, pattern, config change): search the web for the newest official documentation and only proceed if you are 100% certain it will work. Do not guess at API shapes, method signatures, or version compatibility.
 
 ## Project
 El Paso technology intelligence platform. Bloomberg Terminal + Palantir AIP + WorldMonitor aesthetic.
-Non-technical founder. Explain things simply. Build the NXT//LINK vision: impartial tech acquisition middle-man.
+Non-technical founder. Explain things simply. Build the NXT//LINK vision: impartial tech acquisition middle-man covering ALL industries globally — health, manufacturing, energy, logistics, fintech, biotech, agriculture, defense, cybersecurity, AI/ML, supply chain, construction, water, aerospace. El Paso is home base, not the limit.
+
+**Production**: https://www.nxtlinktech.com — deploy with `npx vercel --prod --yes`
+
+## Commands
+```bash
+npm run dev          # start local dev server (port 3000)
+npm run build        # production build
+npm run typecheck    # tsc --noEmit (run after every edit)
+npm run lint         # eslint
+npm run verify       # lint + typecheck + test + build (pre-deploy)
+npm run db:seed      # seed Supabase with vendors/conferences/technologies
+```
+Always run `npm run typecheck` after any file edit before considering work done.
 
 ## Stack
-- Next.js 15, TypeScript strict, Tailwind CSS
-- deck.gl (ScatterplotLayer, TextLayer) + MapLibre GL via react-map-gl
-- Supabase (auth + DB + all persistence), Gemini (LLM enrichment)
-- IBM Plex Mono (monospace UI), Space Grotesk (headings)
+- Next.js 15 App Router, TypeScript strict (`"es2017"` target), Tailwind CSS
+- deck.gl (ScatterplotLayer, TextLayer) + MapLibre GL via `react-map-gl/maplibre`
+- Supabase (auth + DB + all persistence) — access via `getDb()` from `@/db/client`
+- Gemini 2.0 Flash (LLM enrichment), Groq Llama (5 Whys), parallel LLM router at `src/lib/llm/parallel-router.ts`
+- JetBrains Mono (all UI labels on new pages), IBM Plex Mono (map page), Space Grotesk (headings)
 
-## Design System — NEVER deviate from this
-- Background: pure black `#000` / `bg-black`
-- Cyan accent: `#00d4ff` (Palantir)
-- Orange: `#f97316` (crime/intel)
-- Gold: `#ffd700` / `#ffb800` (IKER/flights)
-- Green live: `#00ff88`
-- Red alert: `#ff3b30`
-- All overlays: `absolute`, `z-20`, `bg-black/92`, `border border-white/8`, `backdrop-blur-md`, `rounded-sm`
-- All labels: `font-mono`, tiny sizes (`text-[7px]` to `text-[10px]`), `tracking-wide`
+## Design System — NEVER deviate
+**New pages** (/, /explore, /world, /following, /store, /dossier):
+- Font: `'JetBrains Mono', 'Courier New', monospace` via inline styles
+- Primary accent: `#ff6600` (orange), Data labels: `#00d4ff` (cyan)
+- Positive: `#00ff88`, Warning: `#ffd700`, Critical: `#ff3b30`
+- Bottom nav: fixed 48px, `#050505` bg, `#1a1a1a` border
+
+**Map page** (`/map`) and overlays:
+- Font: IBM Plex Mono via Tailwind `font-mono`
+- Cyan accent `#00d4ff`, Orange `#f97316`, Gold `#ffb800`, Green `#00ff88`, Red `#ff3b30`
+- Overlays: `absolute z-20 bg-black/92 border border-white/8 backdrop-blur-md rounded-sm`
+- Labels: `font-mono text-[7px]–text-[10px] tracking-wide`
 - Glowing dots: `boxShadow: '0 0 6px {color}cc'`
 
-## Key Files
-- `src/app/map/page.tsx` — main platform page, thin composition of hooks
-- `src/hooks/useMapLayers.ts` — LayerState, DEFAULT_LAYERS, toggle logic, URL state sync
-- `src/hooks/useMapData.ts` — all map data fetching (flights, seismic, border, crime, SAM)
-- `src/hooks/useMissionBriefing.ts` — Gemini briefing fetch + state
-- `src/db/` — **data access layer** (all Supabase queries go through here)
-- `src/db/queries/vendors.ts` — vendors with TS fallback
-- `src/db/queries/conferences.ts` — conferences with TS fallback
-- `src/db/queries/technologies.ts` — technologies with TS fallback
-- `src/components/MapCanvas.tsx` — deck.gl layers, pulsing animation, all map rendering
-- `src/components/MapLayerPanel.tsx` — left panel layer toggles (GROUPS array)
-- `src/components/right-panel/RightPanel.tsx` — right panel tabs (BRIEFING/INTEL/VENDOR/PROCURE/OPS)
-- `src/components/CrimeNewsOverlay.tsx` — crime intel panel, Jaccard clustering, severity badges
-- `src/components/LiveTVOverlay.tsx` — YouTube live TV, postMessage mute/pause, idle detection
-- `src/components/BorderCameraOverlay.tsx` — border wait times + camera notice
-- `src/lib/agents/feed-agent.ts` — RSS feed fetching, Gemini enrichment, 5min cache
-- `src/lib/intelligence/signal-engine.ts` — signal detection, sector scoring
+## Architecture
 
-## LayerState (src/hooks/useMapLayers.ts)
-Adding a new layer requires changes in 4 places:
-1. `LayerState` interface in `src/hooks/useMapLayers.ts` — add `myLayer: boolean`
-2. `DEFAULT_LAYERS` in `src/hooks/useMapLayers.ts` — add `myLayer: false`
-3. `MapLayerPanel.tsx` GROUPS array — add `{ key: 'myLayer', label: 'MY LAYER', color: '#hex' }`
-4. `map/page.tsx` JSX — add `{layers.myLayer && <MyOverlay />}` or pass to MapCanvas
+### Six Consumer Screens (bottom nav on every page)
+| Tab | Route | File |
+|-----|-------|------|
+| TODAY | `/` | `src/app/page.tsx` |
+| EXPLORE | `/explore` | `src/app/explore/page.tsx` |
+| WORLD | `/world` | `src/app/world/page.tsx` |
+| FOLLOW | `/following` | `src/app/following/page.tsx` |
+| STORE | `/store` | `src/app/store/page.tsx` |
+| DOSSIER | `/dossier` + `/dossier/[slug]` | `src/app/dossier/` |
 
-## Data Access Layer (`src/db/`)
-All database queries go through `src/db/queries/`. Each module follows the fallback pattern:
-1. Check `isSupabaseConfigured()` — if not, return hardcoded TS data
-2. Query Supabase — if error or empty, return hardcoded TS data
-3. Transform rows to typed records
-Never call `getSupabaseClient()` directly in API routes or components.
+Each page has its own inline `NAV_ITEMS` array — if adding/changing routes, update all six files.
 
-## MapCanvas deck.gl Patterns
-- Always use `as unknown as Layer` cast on new layers
-- Pulsing: use `pulsePhase` state (0–1, 2s loop via requestAnimationFrame)
-- Add new props to `Props` type + function destructuring + `useMemo` dependency array
-- Crime hotspot colors: high=#ff3b30, moderate=#f97316, low=#6b7280
-- All layer data typed as specific types (never `any`)
+### Map Platform (`/map`)
+`src/app/map/page.tsx` — thin composition of three hooks:
+- `useMapLayers.ts` — LayerState, DEFAULT_LAYERS, URL state sync
+- `useMapData.ts` — all live data fetching (flights, seismic, border, crime)
+- `useMissionBriefing.ts` — Gemini briefing
+
+Adding a new layer requires 4 changes: LayerState interface → DEFAULT_LAYERS → MapLayerPanel GROUPS array → map/page.tsx JSX.
+
+### Data Access Layer (`src/db/`)
+All Supabase queries go through `src/db/queries/`. Pattern: check `isSupabaseConfigured()` → query Supabase → fall back to hardcoded TS data if error/empty. Never call `getSupabaseClient()` directly — use `getDb()`.
+
+### Intelligence Engines (`src/lib/engines/`)
+- `ask-engine.ts` — core data assembler for `/api/ask`
+- `signal-connections-engine.ts` — detects causal/temporal/thematic signal connections
+- `prediction-engine.ts` — 30d/90d trajectory forecasts
+- `opportunity-engine.ts` — 9 algorithmic opportunity detectors
+- `industry-profile.ts` — 11-block auto-generated industry pages (works for any keyword)
+
+### LLM Router (`src/lib/llm/parallel-router.ts`)
+```typescript
+const result = await runParallelJsonEnsemble<MyType>({
+  systemPrompt: '...',
+  userPrompt: '...',
+  maxProviders: 1,
+  parse: (content) => JSON.parse(content) as MyType,
+});
+// result.result is MyType
+```
+Always provide algorithmic fallbacks — never depend solely on LLM responses.
+
+### Agent OS (`src/lib/agents/os/`)
+7-layer pipeline: Signal Intake → Knowledge Engine → Reasoning → Prediction → Creation → Publishing → Quality Control. Runs via `/api/agents/cron`. Each layer is independent — failure in one doesn't crash others.
+
+## Key Patterns
+
+### TypeScript
+- `import MapGL from 'react-map-gl/maplibre'` (not `Map` — conflicts with JS Map)
+- `Array.from(map.entries() as Iterable<[K,V]>)` for downlevel iteration
+- `as unknown as Layer` cast for new deck.gl layers
+- Never use `any` — type all API responses explicitly
+
+### iframe / YouTube
+- NEVER use React `key` prop to force iframe reload for mute/play state changes
+- Use `enablejsapi=1` + `postMessage({event:'command', func:'mute', args:[]})` for audio control
+- Channel switch: set `iframeRef.current.src` directly (one reload acceptable)
+
+### localStorage Keys (consumer screens)
+- `nxt_streak` — daily visit streak
+- `nxt_last_query` — last search query
+- `nxt_follows` — followed topics/vendors
+- `nxt_recent_dossiers` — recently viewed dossier slugs
+
+### Supabase Migration
+Migrations live in `supabase/migrations/`. After writing a migration, apply it manually — the codebase handles missing tables gracefully via try/catch.
 
 ## Feed System
-- `FeedCategory` type in feed-agent.ts: `'AI/ML' | 'Cybersecurity' | 'Defense' | 'Enterprise' | 'Supply Chain' | 'Energy' | 'Finance' | 'Crime' | 'General'`
-- `CRIME_SOURCE_IDS` set forces Crime category post-Gemini for crime-specific sources
-- Feed cache TTL: 5 min. POST `/api/feeds` to force refresh
-- Crime sources: ktsm-crime, gn-ep-crime, gn-ep-police, gn-cbp-crime
-
-## TypeScript Rules — Always run `npx tsc --noEmit` after edits
-- `Map` import from react-map-gl: `import MapGL from 'react-map-gl/maplibre'`
-- `Array.from(map.entries() as Iterable<[K,V]>)` to avoid downlevel iteration
-- `tsconfig.json` target: `"es2017"`
-- Never use `any` — always type API responses explicitly
-
-## iframe / YouTube Rules
-- NEVER use React `key` prop to force iframe reload for mute/play state changes
-- Use `enablejsapi=1` in embed URL + `postMessage` for mute/unmute/play/pause
-- Channel switch: set `iframe.src` directly via ref (one reload, acceptable)
-- Always embed with `mute=1` as default; re-apply unmuted state via setTimeout after load
-
-## CrimeNewsOverlay Conventions
-- Severity order: critical → high → moderate → resolved (sort before render)
-- Convergence badge (`◉ CONV`) when 3+ distinct sources cover same story
-- Jaccard threshold: 0.3 for clustering
-- Velocity: spike ≥4 articles in 1h, rising >55% of 3h window in last 1h
+- `FeedCategory`: `'AI/ML'|'Cybersecurity'|'Defense'|'Enterprise'|'Supply Chain'|'Energy'|'Finance'|'Crime'|'General'`
+- Feed cache TTL: 5 min. POST `/api/feeds` to force refresh.
+- Crime sources override Gemini categorization via `CRIME_SOURCE_IDS` set in `feed-agent.ts`
 
 ## Never Do
 - Don't reload iframes to change mute/volume — use postMessage
 - Don't add `any` types
-- Don't create CLAUDE.md, README, or doc files unless asked
 - Don't amend commits — always new commit
 - Don't auto-push to remote
-- Don't paste the full World Monitor doc — use bullet list of specific features wanted
+- Don't call `getSupabaseClient()` directly — use `getDb()`
+- Don't spread API response objects into NextResponse.json if fields could duplicate
 
-## Token Efficiency Tips (for user)
+## Token Efficiency
 - Use `/compact` before starting a new major feature
-- Reference this CLAUDE.md instead of re-explaining stack each session
 - Say "in parallel" when giving 2+ independent tasks
 - Keep feature requests short: "Add X to Y using Z pattern from existing code"

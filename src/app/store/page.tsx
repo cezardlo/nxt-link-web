@@ -39,11 +39,11 @@ const NAV_TABS = ['TODAY', 'EXPLORE', 'WORLD', 'FOLLOW', 'STORE', 'DOSSIER'] as 
 
 const NAV_ROUTES: Record<string, string> = {
   TODAY:   '/',
-  EXPLORE: '/map',
-  WORLD:   '/map',
-  FOLLOW:  '/map',
+  EXPLORE: '/explore',
+  WORLD:   '/world',
+  FOLLOW:  '/following',
   STORE:   '/store',
-  DOSSIER: '/map',
+  DOSSIER: '/dossier',
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

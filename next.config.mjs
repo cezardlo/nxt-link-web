@@ -1,5 +1,13 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  webpack(config) {
+    config.resolve.alias['object-assign'] = path.resolve(__dirname, 'node_modules/object-assign');
+    return config;
+  },
   reactStrictMode: false,
   transpilePackages: ['@excalidraw/excalidraw'],
   typescript: { ignoreBuildErrors: false },
