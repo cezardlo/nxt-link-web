@@ -1,11 +1,3 @@
-# NXT LINK — Agent Pipeline Cron
-# Runs the full intelligence pipeline every 6 hours in 4 phases.
-# Free on GitHub Actions (4x/day = ~12 min/day, well under 2000 min/month limit).
-#
-# Required GitHub Secrets:
-#   SITE_URL       — https://www.nxtlinktech.com
-#   CRON_SECRET    — Matches CRON_SECRET env var in Vercel
-
 name: Agent Pipeline Cron
 
 on:
@@ -20,7 +12,6 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      # ── Phase 1: Discovery (intel, products, patents, startups) ──
       - name: 'Phase 1: Discovery'
         id: phase1
         continue-on-error: true
@@ -40,7 +31,6 @@ jobs:
       - name: Wait 10s before Phase 2
         run: sleep 10
 
-      # ── Phase 2: Processing (curation, graph builder) ──
       - name: 'Phase 2: Processing'
         id: phase2
         continue-on-error: true
@@ -60,7 +50,6 @@ jobs:
       - name: Wait 10s before Phase 3
         run: sleep 10
 
-      # ── Phase 3: Intelligence (Agent OS, insights, country activity) ──
       - name: 'Phase 3: Intelligence'
         id: phase3
         continue-on-error: true
@@ -80,7 +69,6 @@ jobs:
       - name: Wait 10s before Phase 4
         run: sleep 10
 
-      # ── Phase 4: Learning (IKER, CEO briefing, predictions) ──
       - name: 'Phase 4: Learning'
         id: phase4
         continue-on-error: true
@@ -97,7 +85,38 @@ jobs:
           SITE_URL: ${{ secrets.SITE_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
 
-      # ── Post-pipeline: existing refreshes ──
+      - name: Validate phase statuses
+        if: always()
+        run: |
+          PHASE_NAMES=("Phase 1 Discovery" "Phase 2 Processing" "Phase 3 Intelligence" "Phase 4 Learning")
+          PHASE_CODES=(
+            "${{ steps.phase1.outputs.phase1_status }}"
+            "${{ steps.phase2.outputs.phase2_status }}"
+            "${{ steps.phase3.outputs.phase3_status }}"
+            "${{ steps.phase4.outputs.phase4_status }}"
+          )
+
+          FAILED=0
+          for i in "${!PHASE_CODES[@]}"; do
+            CODE="${PHASE_CODES[$i]}"
+            NAME="${PHASE_NAMES[$i]}"
+
+            if [[ -z "$CODE" || ! "$CODE" =~ ^[0-9]{3}$ ]]; then
+              echo "::error::$NAME did not return a valid HTTP status."
+              FAILED=1
+              continue
+            fi
+
+            if [ "$CODE" -ge 400 ]; then
+              echo "::error::$NAME returned HTTP $CODE."
+              FAILED=1
+            fi
+          done
+
+          if [ "$FAILED" -eq 1 ]; then
+            exit 1
+          fi
+
       - name: Trigger insight generation
         run: |
           STATUS=$(curl -s -o /dev/null -w '%{http_code}' \

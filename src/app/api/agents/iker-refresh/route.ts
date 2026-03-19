@@ -9,25 +9,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isSupabaseConfigured } from '@/db/client';
 import { runIkerScoringAgent, type IkerScoringResult } from '@/lib/agents/agents/iker-scoring-agent';
+import { requireCronSecret } from '@/lib/http/cron-auth';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-function isAuthorized(request: NextRequest): boolean {
-  const expected = process.env.CRON_SECRET ?? process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(0, 20);
-  if (!expected) return true; // No secret configured — open (dev mode)
-
-  const provided =
-    request.headers.get('x-cron-secret') ??
-    request.nextUrl.searchParams.get('secret') ??
-    request.headers.get('authorization')?.replace('Bearer ', '');
-
-  return provided === expected;
-}
-
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
+  const auth = requireCronSecret(request.headers);
+  if (!auth.ok) {
+    return NextResponse.json({ ok: false, message: auth.message }, { status: auth.status });
   }
 
   const supabaseReady = isSupabaseConfigured();

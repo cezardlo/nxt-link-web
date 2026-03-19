@@ -5,7 +5,9 @@
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
+import { checkRateLimitDurable } from '@/lib/http/rate-limit-distributed';
 import { getClientIp } from '@/lib/http/request-context';
+import { authorizeAgentMutation } from '@/lib/http/agent-auth';
 import {
   getCachedQualitySources,
   runQualitySourceAgent,
@@ -76,7 +78,12 @@ export async function GET(request: Request): Promise<NextResponse> {
 
 export async function POST(request: Request): Promise<NextResponse> {
   const ip = getClientIp(new Headers(request.headers));
-  const rl = checkRateLimit({
+  const auth = await authorizeAgentMutation(request);
+  if (!auth.ok) {
+    return NextResponse.json({ ok: false, message: auth.message }, { status: auth.status });
+  }
+
+  const rl = await checkRateLimitDurable({
     key: `quality-sources-post:${ip}`,
     maxRequests: 3,
     windowMs: 60_000,

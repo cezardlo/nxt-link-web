@@ -5,6 +5,9 @@
 
 import { NextResponse } from 'next/server';
 import { getDb, isSupabaseConfigured, upsertEntity, getEntityBySlug } from '@/db';
+import { getClientIp } from '@/lib/http/request-context';
+import { checkRateLimitDurable } from '@/lib/http/rate-limit-distributed';
+import { authorizeAgentMutation } from '@/lib/http/agent-auth';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 55;
@@ -54,7 +57,26 @@ function toSlug(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 }
 
-export async function POST() {
+export async function POST(request: Request) {
+  const auth = await authorizeAgentMutation(request);
+  if (!auth.ok) {
+    return NextResponse.json({ ok: false, message: auth.message }, { status: auth.status });
+  }
+
+  const ip = getClientIp(request.headers);
+  const rateLimit = await checkRateLimitDurable({
+    key: `enrich-entity:${ip}`,
+    maxRequests: 2,
+    windowMs: 60_000,
+  });
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { ok: false, message: 'Too many manual triggers. Max 2 per minute.' },
+      { status: 429 },
+    );
+  }
+
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ ok: false, message: 'Supabase not configured' }, { status: 503 });
   }

@@ -5,9 +5,10 @@ import { runAgentSystem } from '@/lib/agents/runner';
 import { saveAgentRun } from '@/lib/agents/store';
 import { agentRunRequestSchema } from '@/lib/agents/types';
 import { getClientIp, getRequestId } from '@/lib/http/request-context';
-import { checkRateLimit } from '@/lib/http/rate-limit';
+import { checkRateLimitDurable } from '@/lib/http/rate-limit-distributed';
 import { logger } from '@/lib/observability/logger';
 import { createClient } from '@/lib/supabase/server';
+import { authorizeAgentMutation } from '@/lib/http/agent-auth';
 
 export const maxDuration = 60;
 
@@ -15,7 +16,15 @@ export async function POST(request: Request) {
   const requestId = getRequestId(request.headers);
   const clientIp = getClientIp(request.headers);
 
-  const rateLimit = checkRateLimit({
+  const auth = await authorizeAgentMutation(request);
+  if (!auth.ok) {
+    return NextResponse.json(
+      { ok: false, message: auth.message },
+      { status: auth.status, headers: { 'x-request-id': requestId } },
+    );
+  }
+
+  const rateLimit = await checkRateLimitDurable({
     key: `agents-run:${clientIp}`,
     maxRequests: 6,
     windowMs: 60_000,

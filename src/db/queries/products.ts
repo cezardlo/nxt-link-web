@@ -1,4 +1,10 @@
 import { getDb, isSupabaseConfigured } from '../client';
+import {
+  PRODUCTS_CATALOG,
+  type CatalogProduct,
+} from '@/lib/data/products-catalog';
+
+export type { CatalogProduct };
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -158,4 +164,85 @@ export async function searchProductsByUseCase(problem: string, limit = 20): Prom
 
   if (error || !data) return [];
   return data as ProductRow[];
+}
+
+// ─── Catalog Queries (static fallback data) ───────────────────────────────────
+
+export type CatalogQueryOptions = {
+  industry?: string;
+  category?: CatalogProduct['category'];
+  maxCost?: number;
+  vendor?: string;
+  search?: string;
+};
+
+/** Get catalog products with optional filters — always returns static data */
+export async function getCatalogProducts(
+  options: CatalogQueryOptions = {}
+): Promise<CatalogProduct[]> {
+  let results = PRODUCTS_CATALOG.slice();
+
+  if (options.industry) {
+    const q = options.industry.toLowerCase();
+    results = results.filter((p) => p.industry.toLowerCase() === q);
+  }
+
+  if (options.category) {
+    results = results.filter((p) => p.category === options.category);
+  }
+
+  if (typeof options.maxCost === 'number') {
+    results = results.filter((p) => p.costRange.min <= options.maxCost!);
+  }
+
+  if (options.vendor) {
+    const q = options.vendor.toLowerCase();
+    results = results.filter(
+      (p) =>
+        p.vendor.toLowerCase().includes(q) ||
+        p.alternateVendors.some((v) => v.toLowerCase().includes(q))
+    );
+  }
+
+  if (options.search) {
+    const q = options.search.toLowerCase();
+    results = results.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.description.toLowerCase().includes(q) ||
+        p.problemSolved.toLowerCase().includes(q) ||
+        p.tags.some((t) => t.toLowerCase().includes(q))
+    );
+  }
+
+  return results;
+}
+
+/** Get a single catalog product by ID */
+export async function getCatalogProductById(
+  id: string
+): Promise<CatalogProduct | null> {
+  return PRODUCTS_CATALOG.find((p) => p.id === id) ?? null;
+}
+
+/** Get catalog products by primary or alternate vendor name (partial match) */
+export async function getCatalogProductsByVendor(
+  vendor: string
+): Promise<CatalogProduct[]> {
+  const q = vendor.toLowerCase();
+  return PRODUCTS_CATALOG.filter(
+    (p) =>
+      p.vendor.toLowerCase().includes(q) ||
+      p.alternateVendors.some((v) => v.toLowerCase().includes(q))
+  );
+}
+
+/** Get catalog products that use a specific technology */
+export async function getCatalogProductsByTechnology(
+  tech: string
+): Promise<CatalogProduct[]> {
+  const q = tech.toLowerCase();
+  return PRODUCTS_CATALOG.filter((p) =>
+    p.relatedTechnologies.some((t) => t.toLowerCase().includes(q))
+  );
 }

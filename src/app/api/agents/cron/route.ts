@@ -1,20 +1,8 @@
 import { NextResponse } from 'next/server';
+import { requireCronSecret } from '@/lib/http/cron-auth';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
-
-// ---------------------------------------------------------------------------
-// Auth helper — reused across all phases
-// ---------------------------------------------------------------------------
-function checkAuth(request: Request): boolean {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) return true; // no secret configured → open
-  const provided =
-    request.headers.get('x-cron-secret') ??
-    new URL(request.url).searchParams.get('secret') ??
-    request.headers.get('authorization')?.replace('Bearer ', '');
-  return provided === expected;
-}
 
 // ---------------------------------------------------------------------------
 // Phase 1 — DISCOVERY
@@ -395,8 +383,9 @@ async function runPhase4() {
 // Route handler
 // ---------------------------------------------------------------------------
 export async function GET(request: Request) {
-  if (!checkAuth(request)) {
-    return new Response('Unauthorized', { status: 401 });
+  const auth = requireCronSecret(request.headers);
+  if (!auth.ok) {
+    return NextResponse.json({ ok: false, message: auth.message }, { status: auth.status });
   }
 
   const { searchParams } = new URL(request.url);

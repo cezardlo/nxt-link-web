@@ -5,11 +5,13 @@
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
+import { checkRateLimitDurable } from '@/lib/http/rate-limit-distributed';
 import { getClientIp } from '@/lib/http/request-context';
 import { swarmMemoryReadRecent } from '@/lib/agents/swarm/memory';
 import { swarmRecentEvents } from '@/lib/agents/swarm/bus';
 import { swarmGetAgentReliability } from '@/lib/agents/swarm/learning';
 import { swarmCoordinator } from '@/lib/agents/swarm/coordinator';
+import { authorizeAgentMutation } from '@/lib/http/agent-auth';
 
 export const dynamic = 'force-dynamic';
 // POST pipeline can take up to ~60 s; this applies to the entire route segment.
@@ -56,7 +58,15 @@ export async function GET(request: Request): Promise<NextResponse> {
 
 export async function POST(request: Request): Promise<NextResponse> {
   const ip = getClientIp(new Headers(request.headers));
-  const rl = checkRateLimit({
+  const auth = await authorizeAgentMutation(request);
+  if (!auth.ok) {
+    return NextResponse.json(
+      { ok: false, message: auth.message },
+      { status: auth.status },
+    );
+  }
+
+  const rl = await checkRateLimitDurable({
     key: `swarm-post:${ip}`,
     maxRequests: 2,
     windowMs: 60_000,

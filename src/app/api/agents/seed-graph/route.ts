@@ -13,6 +13,7 @@ import { isSupabaseConfigured } from '@/db/client';
 import { upsertEntity, addRelationship } from '@/db/queries/knowledge-graph';
 import { TECHNOLOGY_CATALOG, INDUSTRIES } from '@/lib/data/technology-catalog';
 import { EL_PASO_VENDORS } from '@/lib/data/el-paso-vendors';
+import { requireCronSecret } from '@/lib/http/cron-auth';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -33,21 +34,10 @@ const CATEGORY_TO_INDUSTRY_SLUG: Record<string, string> = {
   'Fintech':        'ai-ml',         // closest available — no fintech industry yet
 };
 
-function isAuthorized(request: NextRequest): boolean {
-  const expected = process.env.CRON_SECRET ?? process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(0, 20);
-  if (!expected) return true;
-
-  const provided =
-    request.headers.get('x-cron-secret') ??
-    request.nextUrl.searchParams.get('secret') ??
-    request.headers.get('authorization')?.replace('Bearer ', '');
-
-  return provided === expected;
-}
-
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
+  const auth = requireCronSecret(request.headers);
+  if (!auth.ok) {
+    return NextResponse.json({ ok: false, message: auth.message }, { status: auth.status });
   }
 
   const supabaseReady = isSupabaseConfigured();

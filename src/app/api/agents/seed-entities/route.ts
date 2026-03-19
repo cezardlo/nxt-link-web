@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { NXT_ENTITIES } from '@/lib/intelligence/nxt-entities';
 import { upsertEntity, addRelationship, resolveEntity } from '@/db/queries/knowledge-graph';
 import { isSupabaseConfigured } from '@/db/client';
+import { requireCronSecret } from '@/lib/http/cron-auth';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -40,11 +41,9 @@ const CATEGORY_TO_INDUSTRY: Record<string, string> = {
 };
 
 export async function POST(request: Request): Promise<NextResponse> {
-  // Protect with secret
-  const secret = request.headers.get('x-cron-secret') ?? new URL(request.url).searchParams.get('secret');
-  const expected = process.env.CRON_SECRET ?? process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(0, 20);
-  if (expected && secret !== expected) {
-    return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
+  const auth = requireCronSecret(request.headers);
+  if (!auth.ok) {
+    return NextResponse.json({ ok: false, message: auth.message }, { status: auth.status });
   }
 
   if (!isSupabaseConfigured()) {
