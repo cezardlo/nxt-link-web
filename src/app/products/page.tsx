@@ -1,8 +1,9 @@
 'use client';
 
-import { Suspense, useEffect, useState, useMemo } from 'react';
+import { Suspense, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { PRODUCT_CATALOG, CATEGORY_COLORS, type Product, type ProductCategory } from '@/lib/data/product-catalog';
+import { COLORS } from '@/lib/tokens';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -83,29 +84,14 @@ const PRICE_ORDER: Record<Product['priceEstimate'], number> = {
   enterprise: 4,
 };
 
-// ── Wikipedia image fetch ─────────────────────────────────────────────────────
-
-async function fetchWikiImage(title: string): Promise<string | null> {
-  const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=pageimages&format=json&pithumbsize=400&origin=*`;
-  const res = await fetch(url);
-  const data: {
-    query?: {
-      pages?: Record<string, { thumbnail?: { source?: string } }>;
-    };
-  } = await res.json();
-  const pages = data?.query?.pages ?? {};
-  const page = Object.values(pages)[0];
-  return page?.thumbnail?.source ?? null;
-}
+// ── No image fetching — clean text-only premium cards ────────────────────────
 
 // ── Product Card (Obsidian database view) ────────────────────────────────────
 
 function ProductCard({
   product,
-  imageUrl,
 }: {
   product: Product;
-  imageUrl: string | null;
 }) {
   const color = getCategoryColor(product.category);
   const scoreColor = getScoreColor(product.recommendationScore);
@@ -113,78 +99,47 @@ function ProductCard({
   return (
     <Link
       href={`/products/${product.id}`}
-      className="group flex flex-col rounded-sm overflow-hidden transition-all duration-200"
+      className="group flex flex-col overflow-hidden transition-all duration-300 hover:translate-y-[-2px]"
       style={{
-        background: '#111111',
-        border: '1px solid rgba(255,255,255,0.06)',
+        background: COLORS.card,
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: '20px',
       }}
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(255,255,255,0.15)';
-        (e.currentTarget as HTMLAnchorElement).style.background = '#141414';
+        e.currentTarget.style.borderColor = `${color}30`;
       }}
       onMouseLeave={(e) => {
-        (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(255,255,255,0.06)';
-        (e.currentTarget as HTMLAnchorElement).style.background = '#111111';
+        e.currentTarget.style.borderColor = COLORS.border;
       }}
     >
-      {/* Image / placeholder */}
-      <div
-        className="relative w-full overflow-hidden shrink-0 border-b"
-        style={{ height: '160px', borderColor: 'rgba(255,255,255,0.06)', background: '#1a1a1a' }}
-      >
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={product.name}
-            className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-200"
-          />
-        ) : (
-          <div
-            className="w-full h-full flex items-center justify-center"
-            style={{ background: `${color}0d` }}
-          >
-            <span
-              className="font-bold select-none"
-              style={{
-                fontFamily: 'Space Grotesk, sans-serif',
-                color: `${color}60`,
-                fontSize: '3.5rem',
-                lineHeight: 1,
-              }}
-            >
-              {product.name[0]}
-            </span>
-          </div>
-        )}
 
-        {/* Category badge */}
-        <div className="absolute top-2 right-2">
+      {/* Card body */}
+      <div className="flex flex-col flex-1 p-5 gap-0">
+
+        {/* Category badge + name */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex-1 min-w-0">
+            <div
+              className="font-grotesk text-[14px] font-semibold leading-snug mb-1"
+              style={{ color: `${COLORS.text}e0` }}
+            >
+              {product.name}
+            </div>
+            <div className="font-mono text-[9px] tracking-[0.08em]" style={{ color: `${COLORS.text}35` }}>{product.company}</div>
+          </div>
           <span
-            className="text-[8px] tracking-[0.15em] px-1.5 py-0.5 rounded-sm font-mono uppercase"
+            className="shrink-0 text-[7px] tracking-[0.15em] px-2 py-0.5 rounded-full font-mono uppercase ml-2"
             style={{
-              background: `${color}20`,
-              color,
-              border: `1px solid ${color}35`,
+              background: `${color}10`,
+              color: `${color}cc`,
+              border: `1px solid ${color}25`,
             }}
           >
             {product.category}
           </span>
         </div>
-      </div>
 
-      {/* Card body */}
-      <div className="flex flex-col flex-1 p-3 gap-0">
-
-        {/* Name + company */}
-        <div className="pb-2.5 mb-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-          <div
-            className="font-semibold leading-snug text-white/90 group-hover:text-[#00d4ff] transition-colors duration-150 mb-0.5"
-            style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: '13px' }}
-          >
-            {product.name}
-          </div>
-          <div className="font-mono text-[9px] text-white/35 tracking-wide">{product.company}</div>
-        </div>
+        <div className="h-px mb-3" style={{ background: `${COLORS.text}08` }} />
 
         {/* Property rows — Obsidian style */}
         <div className="space-y-0 flex-1">
@@ -272,29 +227,7 @@ function ProductCatalogInner() {
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>('All');
   const [sortMode, setSortMode] = useState<SortMode>('TOP_RATED');
-  const [imageMap, setImageMap] = useState<Map<string, string>>(new Map());
-
-  useEffect(() => {
-    const productsWithWiki = PRODUCT_CATALOG.filter((p) => p.wikipedia);
-    Promise.allSettled(
-      productsWithWiki.map(async (p) => {
-        try {
-          const url = await fetchWikiImage(p.wikipedia!);
-          return { id: p.id, url };
-        } catch {
-          return { id: p.id, url: null };
-        }
-      })
-    ).then((results) => {
-      const map = new Map<string, string>();
-      for (const result of results) {
-        if (result.status === 'fulfilled' && result.value.url) {
-          map.set(result.value.id, result.value.url);
-        }
-      }
-      setImageMap(map);
-    });
-  }, []);
+  // No image fetching — clean text-only cards
 
   const filtered = useMemo(() => {
     let list = PRODUCT_CATALOG.filter((p) => {
@@ -483,7 +416,6 @@ function ProductCatalogInner() {
               <ProductCard
                 key={product.id}
                 product={product}
-                imageUrl={imageMap.get(product.id) ?? null}
               />
             ))}
           </div>
