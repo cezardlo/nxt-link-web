@@ -142,7 +142,7 @@ export type IntelSignalQueryOptions = {
   limit?: number;
 };
 
-/** Get intel signals, ordered by importance score desc */
+/** Get intel signals — freshest first, then by importance */
 export async function getIntelSignals(
   options: IntelSignalQueryOptions = {},
 ): Promise<IntelSignalRow[]> {
@@ -154,8 +154,8 @@ export async function getIntelSignals(
   let query = db
     .from('intel_signals')
     .select('*')
+    .order('created_at', { ascending: false })
     .order('importance_score', { ascending: false })
-    .order('discovered_at', { ascending: false })
     .limit(limit);
 
   if (options.signal_type) query = query.eq('signal_type', options.signal_type);
