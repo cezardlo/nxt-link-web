@@ -123,6 +123,7 @@ const RAW_CATALOG: RawProduct[] = [
       'The July 2024 faulty content update caused widespread Windows outages — assess change control processes',
       'Heavy cloud dependency means limited offline or air-gapped deployment options',
     ],
+    wikipedia: 'CrowdStrike',
     tags: ['EDR', 'Endpoint Security', 'Threat Hunting', 'Zero Trust', 'CMMC', 'FedRAMP'],
   },
 
@@ -173,6 +174,7 @@ const RAW_CATALOG: RawProduct[] = [
       'Alert volume without proper tuning creates analyst fatigue; plan for 4–6 weeks of baseline tuning',
       'Professional services costs for full deployment often equal first-year license cost',
     ],
+    wikipedia: 'Palo Alto Networks',
     tags: ['CNAPP', 'Cloud Security', 'CSPM', 'DevSecOps', 'Multi-Cloud', 'Compliance'],
   },
 
@@ -223,6 +225,7 @@ const RAW_CATALOG: RawProduct[] = [
       'Multiple critical vulnerabilities disclosed in 2024 — patching discipline is non-negotiable',
       'SD-WAN features lag Cisco Meraki for ease-of-use in branch deployments',
     ],
+    wikipedia: 'Fortinet',
     tags: ['NGFW', 'SD-WAN', 'Zero Trust', 'OT Security', 'Network Security', 'FIPS'],
   },
 
@@ -273,6 +276,7 @@ const RAW_CATALOG: RawProduct[] = [
       'Governance and PAM modules are priced separately and add significant cost to base identity spend',
       'Microsoft Entra ID is a viable and cheaper alternative for Microsoft 365-centric organizations',
     ],
+    wikipedia: 'Okta, Inc.',
     tags: ['IAM', 'SSO', 'MFA', 'Zero Trust', 'CIAM', 'FedRAMP', 'Identity Security'],
   },
 
@@ -323,6 +327,7 @@ const RAW_CATALOG: RawProduct[] = [
       'Purple AI is a premium add-on not included in base Singularity Complete pricing',
       'CrowdStrike has a larger threat intelligence community and broader managed service partner network',
     ],
+    wikipedia: 'SentinelOne',
     tags: ['EDR', 'Autonomous AI', 'Ransomware Protection', 'Endpoint Security', 'MITRE ATT&CK', 'Zero Trust'],
   },
 
@@ -375,6 +380,7 @@ const RAW_CATALOG: RawProduct[] = [
       'API rate limits and service outages can disrupt production workflows — implement retry logic and fallback models',
       'Cost management requires token tracking; uncapped API access has led to unexpected five-figure bills for some organizations',
     ],
+    wikipedia: 'OpenAI',
     tags: ['LLM', 'GPT-4', 'Generative AI', 'API', 'NLP', 'Document AI', 'FedRAMP'],
   },
 
@@ -425,6 +431,7 @@ const RAW_CATALOG: RawProduct[] = [
       'Hardware lead times remain unpredictable; DGX Cloud should be the contingency plan',
       'Total cost of ownership including power, cooling, staffing, and networking often doubles the hardware purchase price',
     ],
+    wikipedia: 'Nvidia DGX',
     tags: ['AI Infrastructure', 'GPU Computing', 'Deep Learning', 'HPC', 'On-Premises AI', 'CUDA'],
   },
 
@@ -475,6 +482,7 @@ const RAW_CATALOG: RawProduct[] = [
       'Steeper learning curve than Snowflake for SQL-centric data teams',
       'Unity Catalog adoption is still maturing — some multi-cloud governance features lag the roadmap',
     ],
+    wikipedia: 'Databricks',
     tags: ['Data Lakehouse', 'MLOps', 'Delta Lake', 'Spark', 'Data Engineering', 'AI Platform'],
   },
 
@@ -525,6 +533,7 @@ const RAW_CATALOG: RawProduct[] = [
       'AutoML pricing is opaque and can exceed custom model training costs for large datasets',
       'Google\'s history of deprecating cloud products raises enterprise stability concerns for long-term programs',
     ],
+    wikipedia: 'Vertex AI',
     tags: ['MLOps', 'AutoML', 'Gemini', 'Google Cloud', 'AI Platform', 'Model Serving'],
   },
 
@@ -575,6 +584,7 @@ const RAW_CATALOG: RawProduct[] = [
       'Model licensing is complex (Llama 3 has commercial terms, some models are research-only)',
       'Inference Endpoints can be more expensive than cloud API for low-volume, high-complexity tasks',
     ],
+    wikipedia: 'Hugging Face',
     tags: ['Open Source', 'LLM', 'Model Hub', 'Transformers', 'Fine-Tuning', 'Data Sovereignty'],
   },
 
@@ -627,6 +637,7 @@ const RAW_CATALOG: RawProduct[] = [
       'Keyence hardware is proprietary — difficult to mix with third-party cameras or lighting',
       'High-humidity or high-vibration environments require enclosure engineering that adds cost and lead time',
     ],
+    wikipedia: 'Keyence',
     tags: ['Machine Vision', 'Quality Control', 'AI Inspection', 'Manufacturing', 'SPC', 'Defect Detection'],
   },
 
@@ -677,6 +688,7 @@ const RAW_CATALOG: RawProduct[] = [
       'Implementation costs frequently exceed license costs for brownfield facilities',
       'Rockwell Automation customers should evaluate FactoryTalk before committing to MindSphere',
     ],
+    wikipedia: 'Siemens',
     tags: ['IIoT', 'Predictive Maintenance', 'Digital Twin', 'Industry 4.0', 'OEE', 'Manufacturing Analytics'],
   },
 
@@ -727,6 +739,7 @@ const RAW_CATALOG: RawProduct[] = [
       'FANUC ecosystem requires FANUC-certified integrators — fewer available than UR partner network',
       'Force sensing accuracy lags industry-leading cobots (Franka Emika) for precision assembly applications',
     ],
+    wikipedia: 'FANUC',
     tags: ['Cobots', 'Collaborative Robots', 'Industrial Automation', 'Assembly', 'Manufacturing', 'Human-Robot'],
   },
 
@@ -777,6 +790,7 @@ const RAW_CATALOG: RawProduct[] = [
       'FactoryTalk licensing model is opaque; engage procurement counsel before signing server/named-user agreements',
       'Plex MES and traditional FactoryTalk are separate products — integration between them still requires middleware',
     ],
+    wikipedia: 'Rockwell Automation',
     tags: ['MES', 'OEE', 'SCADA', 'Manufacturing Execution', 'Industry 4.0', '21 CFR Part 11'],
   },
 
@@ -827,6 +841,7 @@ const RAW_CATALOG: RawProduct[] = [
       'Tag cost ($0.05–$0.25/tag) becomes significant for low-value or consumable items — evaluate cost-per-item-tracked ROI',
       'WMS integration requires custom middleware unless using SAP WM/EWM (native Zebra connector available)',
     ],
+    wikipedia: 'Zebra Technologies',
     tags: ['RFID', 'Inventory Tracking', 'Asset Management', 'Supply Chain Visibility', 'Warehouse', 'IIoT'],
   },
 
@@ -879,6 +894,7 @@ const RAW_CATALOG: RawProduct[] = [
       'Platform dependency risk is real — full migration away from Foundry ontology is a multi-year effort',
       'Success requires sustained organizational commitment; deployments without executive sponsorship consistently underperform',
     ],
+    wikipedia: 'Palantir Technologies',
     tags: ['Data Fusion', 'Defense AI', 'Ontology', 'LLM', 'Multi-Domain', 'C2', 'DoD', 'IL5'],
   },
 
@@ -929,6 +945,7 @@ const RAW_CATALOG: RawProduct[] = [
       'Battery life at full transmit power is 4–8 hours — sustainment logistics planning is critical for extended operations',
       'AN/PRC-163 weight (1.7 lbs without battery) adds load burden; evaluate against mission profile before specifying',
     ],
+    wikipedia: 'L3Harris Technologies',
     tags: ['Tactical Radio', 'C4ISR', 'SATCOM', 'MUOS', 'SDR', 'ITAR', 'NSA Type 1'],
   },
 
@@ -979,6 +996,7 @@ const RAW_CATALOG: RawProduct[] = [
       'Anduril is a Series F startup — acquisition risk is non-zero; evaluate program continuity provisions in contracts',
       'Lattice updates can change autonomous behavior — configuration management and change control protocols are essential',
     ],
+    wikipedia: 'Anduril Industries',
     tags: ['Autonomous Systems', 'CUAS', 'C2', 'Border Security', 'AI', 'Persistent Surveillance', 'Defense Tech'],
   },
 
@@ -1029,6 +1047,7 @@ const RAW_CATALOG: RawProduct[] = [
       'Shield AI is a growth-stage company ($2.8B valuation) — assess balance sheet and cash runway for multi-year programs',
       'Platform-specific integration means Hivemind for F-16 and Hivemind for V-BAT are substantially different engineering efforts',
     ],
+    wikipedia: 'Shield AI',
     tags: ['Autonomous AI', 'UAS', 'GPS-Denied', 'Swarm', 'Manned-Unmanned Teaming', 'Defense AI', 'CCA'],
   },
 
@@ -1079,6 +1098,7 @@ const RAW_CATALOG: RawProduct[] = [
       'IBCS requires all sensors and effectors to have certified plug-and-fight adapters — legacy system integration adds cost',
       'Single-vendor (Northrop Grumman) dependency for core C2 software creates long-term pricing leverage for the prime',
     ],
+    wikipedia: 'Northrop Grumman',
     tags: ['IAMD', 'Air Defense', 'C2', 'Patriot', 'Engage on Remote', 'Multi-Domain', 'NATO', 'Hypersonic Defense'],
   },
 
@@ -1131,6 +1151,7 @@ const RAW_CATALOG: RawProduct[] = [
       'Implementation complexity is underestimated — plan for professional services cost equal to 40–60% of software license',
       'Platform modularity can lead to scope creep — define ROI metrics and module priorities before procurement',
     ],
+    wikipedia: 'Schneider Electric',
     tags: ['Energy Management', 'IIoT', 'Microgrid', 'ESG', 'Building Automation', 'Demand Response', 'Sustainability'],
   },
 
@@ -1181,6 +1202,7 @@ const RAW_CATALOG: RawProduct[] = [
       'Commercial installations require Enphase-certified installers who may have 4–8 week backlogs in high-growth markets',
       'Enphase has faced margin pressure and guidance cuts in 2024 — evaluate financial stability for 25-year warranty provisions',
     ],
+    wikipedia: 'Enphase Energy',
     tags: ['Solar', 'Microinverter', 'Distributed Energy', 'Resilience', 'Clean Energy', 'Backup Power'],
   },
 
@@ -1231,6 +1253,7 @@ const RAW_CATALOG: RawProduct[] = [
       'Siemens Gamesa reported significant project losses in 2023–2024 from legacy contracts; new contracts have improved terms',
       'Jones Act compliance for US offshore installation vessels is an unresolved cost driver adding to US project LCOE',
     ],
+    wikipedia: 'Siemens Gamesa',
     tags: ['Offshore Wind', 'Renewable Energy', 'Utility Scale', 'Clean Energy', 'Direct Drive', 'Energy Transition'],
   },
 
@@ -1281,6 +1304,7 @@ const RAW_CATALOG: RawProduct[] = [
       'BMS protocol diversity (BACnet vs. Modbus vs. proprietary) drives wide variation in integration cost',
       'Honeywell\'s planned corporate separation may affect Forge product roadmap continuity — verify with account team',
     ],
+    wikipedia: 'Honeywell',
     tags: ['Building Automation', 'Energy Optimization', 'ESG', 'Sustainability', 'IIoT', 'Smart Buildings', 'HVAC AI'],
   },
 
@@ -1331,6 +1355,7 @@ const RAW_CATALOG: RawProduct[] = [
       'IRA domestic content requirements for federal procurement may require US-manufactured cells — verify supply chain compliance',
       'O&M cost for utility-scale BESS is frequently underestimated; include 1.5–2% of system cost per year in pro forma',
     ],
+    wikipedia: 'Fluence Energy',
     tags: ['Battery Storage', 'BESS', 'Grid Storage', 'LFP', 'Renewable Firming', 'Microgrid', 'Energy Markets'],
   },
 
@@ -1383,6 +1408,7 @@ const RAW_CATALOG: RawProduct[] = [
       'Intuitive\'s proprietary ecosystem prevents use of competitor instruments — evaluate total instrument cost per specialty',
       'Medtronic Hugo and CMR Surgical Versius offer competitive pricing for gynecology and urology — compare for single-specialty programs',
     ],
+    wikipedia: 'Da Vinci Surgical System',
     tags: ['Robotic Surgery', 'Minimally Invasive', 'Laparoscopic', 'Healthcare AI', 'OR Technology', 'Medical Robotics'],
   },
 
@@ -1433,6 +1459,7 @@ const RAW_CATALOG: RawProduct[] = [
       'Patient privacy framework for de-identification should be reviewed by institutional privacy counsel before data sharing agreements',
       'Lens\'s oncology focus means limited utility outside cancer care — multi-specialty health systems should evaluate specialty-specific ROI',
     ],
+    wikipedia: 'Tempus (company)',
     tags: ['Clinical AI', 'Oncology', 'Genomics', 'Decision Support', 'Precision Medicine', 'EHR Integration', 'Real-World Evidence'],
   },
 
@@ -1483,6 +1510,7 @@ const RAW_CATALOG: RawProduct[] = [
       'Instrument capital cost requires justification at 5,000+ runs/year for full utilization ROI',
       'Illumina\'s sequencing chemistry patents expire progressively through 2025–2028 — Chinese competitor platforms are gaining share on price',
     ],
+    wikipedia: 'Illumina, Inc.',
     tags: ['Genomic Sequencing', 'WGS', 'Clinical Diagnostics', 'Oncology', 'Population Genomics', 'Bioinformatics', 'NGS'],
   },
 
@@ -1533,6 +1561,7 @@ const RAW_CATALOG: RawProduct[] = [
       'Instrument portfolio is narrower than da Vinci Xi for complex procedures — validate procedure coverage for your case mix',
       'Service infrastructure for Hugo in the US is early-stage compared to Intuitive\'s 25-year field service network',
     ],
+    wikipedia: 'Medtronic',
     tags: ['Robotic Surgery', 'Minimally Invasive', 'Medical Robotics', 'Healthcare AI', 'Surgical Analytics', 'OR Technology'],
   },
 
@@ -1583,6 +1612,7 @@ const RAW_CATALOG: RawProduct[] = [
       'Predicted structures require experimental validation before drug design commitments — pLDDT confidence scores guide but do not replace wet lab confirmation',
       'Disordered protein regions and dynamic conformational states are poorly predicted — consult structural biologists for target feasibility assessment',
     ],
+    wikipedia: 'AlphaFold',
     tags: ['Drug Discovery', 'Protein Structure', 'AI/ML', 'Biotech', 'Computational Biology', 'Nobel Prize', 'Structural Biology'],
   },
 

@@ -1,28 +1,11 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Brain, type MorningData, type BrainSignal, type DecisionPayload } from '@/lib/brain';
-
-// ─── Design tokens ────────────────────────────────────────────────────────────
-const ORANGE = '#ff6600';
-const CYAN   = '#00d4ff';
-const GREEN  = '#00ff88';
-const GOLD   = '#ffd700';
-const RED    = '#ff3b30';
-const FONT   = "'JetBrains Mono', 'Courier New', monospace";
+import { Brain, type MorningData, type BrainSignal } from '@/lib/brain';
+import { COLORS } from '@/lib/tokens';
+import { BottomNav, TopBar } from '@/components/ui';
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
-
-function useIsMobile(): boolean {
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 640);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
-  return isMobile;
-}
 
 function useStreak(): number {
   const [streak, setStreak] = useState(0);
@@ -49,266 +32,52 @@ function useStreak(): number {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function toPlainEnglish(signal: BrainSignal): string {
-  const title      = signal.title || '';
-  const industry   = signal.industry || 'technology';
-  const importance = signal.importance || 0;
-
-  if (title.length > 20 && !title.includes('_')) {
-    const snippet = title.slice(0, 90);
-    if (importance >= 0.85) return `${snippet} — needs your attention.`;
-    if (importance >= 0.65) return `${snippet} — worth watching.`;
-    return snippet;
-  }
-  if (importance >= 0.85) return `${industry} is changing fast — urgent for El Paso businesses.`;
-  return `New activity in ${industry} this week.`;
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
 }
 
-function signalIcon(importance: number): { icon: string; color: string } {
-  if (importance >= 0.85) return { icon: '●', color: RED  };
-  if (importance >= 0.65) return { icon: '✦', color: GOLD };
-  return { icon: '·', color: '#444444' };
+// Map signal types to 6-track labels
+function signalIcon(type: string): string {
+  const map: Record<string, string> = {
+    technology: '//TECH',
+    product: '//PROD',
+    discovery: '//DISC',
+    direction: '//DRCT',
+    who: '//WHO',
+    connection: '//CONN',
+  };
+  return map[type] ?? '//--';
 }
 
-function industrySlug(name: string): string {
-  return name.toLowerCase().replace(/\//g, '-').replace(/\s+/g, '-');
-}
-
-function badgeFor(type: DecisionPayload['type']): { label: string; color: string } {
-  switch (type) {
-    case 'ACT_BEFORE_DATE': return { label: 'URGENT', color: RED   };
-    case 'WATCH_THIS':      return { label: 'WATCH',  color: GOLD  };
-    case 'CALL_SOMEONE':    return { label: 'CALL',   color: CYAN  };
-    default:                return { label: 'FYI',    color: '#555555' };
-  }
-}
-
-function buildBars(
-  movement: Array<{ sector: string; momentum: string; signal_count: number }>,
-): Array<{ sector: string; momentum: string; signal_count: number; bars: string; arrow: string; arrowColor: string; countLabel: string }> {
-  const top = movement.slice(0, 6);
-  const max = Math.max(...top.map(m => m.signal_count), 1);
-  return top.map(m => {
-    const filled  = Math.round((m.signal_count / max) * 12);
-    const bars    = '█'.repeat(filled).padEnd(12, ' ');
-    const [arrow, arrowColor] =
-      m.momentum === 'accelerating' ? ['↑', GREEN] :
-      m.momentum === 'declining'    ? ['↓', RED]   :
-                                      ['→', GOLD];
-    const countLabel =
-      m.momentum === 'accelerating' ? `+${m.signal_count} signals` :
-      m.momentum === 'declining'    ? `-${m.signal_count} signals` :
-                                      'steady';
-    return { ...m, bars, arrow, arrowColor, countLabel };
-  });
-}
-
-function formatDate(d: Date): string {
-  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-const NAV_TABS = [
-  { label: 'TODAY',   href: '/'          },
-  { label: 'EXPLORE', href: '/explore'   },
-  { label: 'WORLD',   href: '/world'     },
-  { label: 'FOLLOW',  href: '/following' },
-  { label: 'STORE',   href: '/store'     },
-  { label: 'DOSSIER', href: '/dossier'   },
-];
-
-function BottomNav() {
-  return (
-    <div style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0, height: 48,
-      background: '#0f0f0f', borderTop: '1px solid #222',
-      display: 'flex', alignItems: 'center', justifyContent: 'space-around',
-      fontFamily: FONT, zIndex: 100,
-    }}>
-      {NAV_TABS.map((t, i) => (
-        <Link key={t.label} href={t.href} style={{
-          color: i === 0 ? ORANGE : '#444444',
-          fontSize: 9, fontWeight: 700, letterSpacing: '0.06em',
-          textDecoration: 'none', padding: '8px 4px',
-          borderTop: i === 0 ? `2px solid ${ORANGE}` : '2px solid transparent',
-          flex: 1, textAlign: 'center', display: 'block',
-        }}>
-          {t.label}
-        </Link>
-      ))}
-    </div>
-  );
-}
-
-function ActionCard({ one_thing }: { one_thing: DecisionPayload }) {
-  const badge = badgeFor(one_thing.type);
-  return (
-    <div style={{
-      background: '#161616',
-      border: '1px solid #2a1a0a',
-      borderLeft: `4px solid ${ORANGE}`,
-      borderRadius: 4,
-      padding: 16,
-      marginBottom: 24,
-    }}>
-      {/* header row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <span style={{ fontSize: 9, color: '#555555', letterSpacing: '0.2em', fontFamily: FONT }}>
-          TODAY&apos;S ACTION
-        </span>
-        <span style={{
-          fontSize: 9, fontWeight: 700, letterSpacing: '0.1em',
-          color: badge.color, background: `${badge.color}18`,
-          padding: '2px 7px', borderRadius: 2, fontFamily: FONT,
-        }}>
-          {badge.label}
-        </span>
-      </div>
-
-      {/* headline */}
-      <div style={{ fontSize: 16, fontWeight: 700, color: '#ffffff', marginBottom: 6, lineHeight: 1.3 }}>
-        {one_thing.headline}
-      </div>
-
-      {/* detail */}
-      <div style={{ fontSize: 13, color: '#888888', lineHeight: 1.55, marginBottom: 12 }}>
-        {one_thing.detail}
-      </div>
-
-      {/* vendor */}
-      {one_thing.vendor_name && (
-        <div style={{ fontSize: 12, color: CYAN, fontFamily: FONT, marginBottom: 12 }}>
-          {one_thing.vendor_name}
-        </div>
-      )}
-
-      {/* buttons */}
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button style={{
-          background: ORANGE, color: '#000', border: 'none',
-          padding: '7px 16px', borderRadius: 2, fontSize: 12,
-          fontWeight: 700, fontFamily: FONT, cursor: 'pointer', letterSpacing: '0.05em',
-        }}>
-          ACT NOW ▸
-        </button>
-        <button style={{
-          background: 'transparent', color: '#555555',
-          border: '1px solid #333', padding: '7px 16px',
-          borderRadius: 2, fontSize: 12, fontFamily: FONT, cursor: 'pointer',
-        }}>
-          REMIND ME LATER
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function SignalCard({ signal }: { signal: BrainSignal }) {
-  const { icon, color } = signalIcon(signal.importance);
-  const slug  = industrySlug(signal.industry || 'general');
-  const plain = toPlainEnglish(signal);
-
-  return (
-    <div style={{
-      background: '#161616',
-      border: '1px solid #222',
-      borderRadius: 4,
-      padding: 14,
-      marginBottom: 8,
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      gap: 12,
-    }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <span style={{ fontSize: 10, color, fontFamily: FONT }}>{icon}</span>
-          <span style={{ fontSize: 10, color: '#555555', letterSpacing: '0.15em', fontFamily: FONT }}>
-            {(signal.industry || 'GENERAL').toUpperCase()}
-          </span>
-        </div>
-        <div style={{ fontSize: 13, color: '#aaaaaa', lineHeight: 1.5 }}>
-          {plain}
-        </div>
-      </div>
-      <Link href={`/dossier/${slug}`} style={{ textDecoration: 'none', flexShrink: 0 }}>
-        <span style={{
-          fontSize: 10, color: CYAN, fontFamily: FONT,
-          letterSpacing: '0.05em', whiteSpace: 'nowrap',
-        }}>
-          TELL ME MORE ▸
-        </span>
-      </Link>
-    </div>
-  );
-}
-
-function IndustryBars({ movement }: { movement: MorningData['industry_movement'] }) {
-  const rows = buildBars(movement);
-  if (rows.length === 0) return null;
-
-  return (
-    <div style={{ marginBottom: 24 }}>
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10,
-      }}>
-        <span style={{ fontSize: 10, color: '#555555', letterSpacing: '0.2em', fontFamily: FONT }}>
-          INDUSTRIES THIS WEEK
-        </span>
-      </div>
-      <div style={{ height: 1, background: '#222', marginBottom: 12 }} />
-
-      {rows.map(row => (
-        <div key={row.sector} style={{
-          display: 'grid',
-          gridTemplateColumns: '12px 110px 1fr auto',
-          alignItems: 'center',
-          gap: 10,
-          marginBottom: 7,
-        }}>
-          <span style={{ fontSize: 12, color: row.arrowColor, fontFamily: FONT }}>{row.arrow}</span>
-          <span style={{ fontSize: 12, color: '#aaaaaa', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {row.sector}
-          </span>
-          <span style={{
-            fontSize: 11, color: CYAN, fontFamily: FONT,
-            letterSpacing: '0.02em', overflow: 'hidden',
-          }}>
-            {row.bars}
-          </span>
-          <span style={{ fontSize: 11, color: '#555555', fontFamily: FONT, whiteSpace: 'nowrap' }}>
-            {row.countLabel}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
+function impactLabel(importance: number): { label: string; color: string } {
+  if (importance >= 0.85) return { label: 'HIGH IMPACT', color: COLORS.red };
+  if (importance >= 0.7) return { label: 'NOTABLE', color: COLORS.gold };
+  return { label: 'MONITOR', color: COLORS.dim };
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function TodayPage() {
-  const isMobile = useIsMobile();
-  const streak   = useStreak();
-
-  const [data,    setData]    = useState<MorningData | null>(null);
+  const streak = useStreak();
+  const [data, setData] = useState<MorningData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [now,     setNow]     = useState<Date | null>(null);
+  const [now, setNow] = useState<Date | null>(null);
 
-  // Clock — starts on client only to avoid hydration mismatch
   useEffect(() => {
     setNow(new Date());
-    const id = setInterval(() => setNow(new Date()), 1000);
+    const id = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(id);
   }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
-    try {
-      const d = await Brain.morning();
-      setData(d);
-    } catch { /* silent — fallback already in Brain */ }
+    try { setData(await Brain.morning()); }
+    catch { /* Brain has fallback */ }
     finally { setLoading(false); }
   }, []);
 
@@ -318,127 +87,236 @@ export default function TodayPage() {
     ? now.getHours() < 12 ? 'Good morning'
       : now.getHours() < 17 ? 'Good afternoon'
       : 'Good evening'
-    : 'Good morning';
+    : '';
 
-  const dateLabel = now ? formatDate(now) : '';
-
-  const topSignals = (data?.top_signals ?? []).slice(0, 3);
-  const movement   = data?.industry_movement ?? [];
+  const signals = (data?.top_signals ?? []).slice(0, 3);
+  const movement = data?.industry_movement ?? [];
+  const oneThing = data?.one_thing;
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#0f0f0f',
-      fontFamily: FONT,
-      color: '#ffffff',
-      paddingBottom: 72,
-    }}>
+    <div className="min-h-screen pb-20 overflow-y-auto" style={{ background: COLORS.bg }}>
+      <TopBar />
 
-      {/* ── Header ─────────────────────────────────────────────────── */}
-      <div style={{
-        height: 44,
-        padding: '0 16px',
-        background: '#0f0f0f',
-        borderBottom: '1px solid #222',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}>
-        <span style={{ fontSize: 16, fontWeight: 700, color: ORANGE, letterSpacing: '0.05em' }}>
-          NXT<span style={{ color: 'rgba(255,102,0,0.35)' }}>{'//'}</span>LINK
-        </span>
+      {/* ── Content — single centered column, calm and spacious ── */}
+      <div className="max-w-[620px] mx-auto px-6 sm:px-10">
 
-        <span style={{ fontSize: 10, color: '#555555', letterSpacing: '0.15em' }}>
-          {dateLabel.toUpperCase()}
-        </span>
-
-        <span style={{ fontSize: 10, color: GREEN, letterSpacing: '0.1em', display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{
-            display: 'inline-block', width: 6, height: 6,
-            borderRadius: '50%', background: GREEN,
-            animation: 'pulse 2s infinite',
-          }} />
-          LIVE
-        </span>
-      </div>
-
-      {/* ── Greeting ───────────────────────────────────────────────── */}
-      <div style={{ padding: '12px 16px 0', fontSize: 14, color: '#aaaaaa' }}>
-        {greeting}, Cessar.
-        {streak > 1 && (
-          <span style={{ marginLeft: 10, fontSize: 10, color: GOLD }}>
-            Day {streak} in a row.
+        {/* ── Greeting ─────────────────────────────────────────── */}
+        <div className="pt-14 sm:pt-20 pb-3 flex items-baseline gap-3">
+          <span
+            className="font-grotesk text-[15px] sm:text-[17px] font-light"
+            style={{ color: `${COLORS.text}50` }}
+          >
+            {greeting}
           </span>
-        )}
-      </div>
+          {streak > 1 && (
+            <span
+              className="font-mono text-[8px] tracking-[0.18em] px-2.5 py-1 rounded-full"
+              style={{
+                color: `${COLORS.gold}90`,
+                background: `${COLORS.gold}08`,
+                border: `1px solid ${COLORS.gold}18`,
+              }}
+            >
+              DAY {streak}
+            </span>
+          )}
+        </div>
 
-      {/* ── Body ───────────────────────────────────────────────────── */}
-      <div style={{ padding: isMobile ? '12px 12px 0' : '16px 16px 0' }}>
-
-        {/* TODAY'S ACTION */}
-        {loading && !data ? (
-          <div style={{
-            background: '#161616', border: '1px solid #222',
-            borderLeft: `4px solid ${ORANGE}`, borderRadius: 4,
-            padding: 16, marginBottom: 24,
-            fontSize: 13, color: '#444',
-          }}>
-            Loading intelligence…
+        {/* ── Loading skeleton ──────────────────────────────────── */}
+        {loading && (
+          <div className="pt-8 space-y-6 animate-pulse">
+            <div className="h-10 rounded-nxt-sm w-4/5 shimmer" />
+            <div className="h-5 rounded-nxt-sm w-3/5 shimmer" />
+            <div className="h-4 rounded-nxt-sm w-2/5 shimmer" />
           </div>
-        ) : data?.one_thing ? (
-          <ActionCard one_thing={data.one_thing} />
-        ) : null}
+        )}
 
-        {/* THIS MORNING */}
-        {topSignals.length > 0 && (
-          <div style={{ marginBottom: 24 }}>
-            <div style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10,
-            }}>
-              <span style={{ fontSize: 10, color: '#555555', letterSpacing: '0.2em' }}>
-                THIS MORNING
-              </span>
-              <button
-                onClick={load}
-                style={{
-                  background: 'transparent', border: '1px solid #333',
-                  color: '#444', fontSize: 9, fontFamily: FONT,
-                  padding: '3px 8px', borderRadius: 2, cursor: 'pointer',
-                  letterSpacing: '0.1em',
-                }}
+        {/* ══════════════════════════════════════════════════════════
+            HERO — "One Thing" focal block
+            This is the page's center of gravity. Occupies top third.
+            Large typography, breathing room, subtle accent glow.
+           ══════════════════════════════════════════════════════════ */}
+        {!loading && oneThing && (
+          <div className="pt-6 pb-16 animate-fade-up">
+            {/* Micro label */}
+            <p
+              className="font-mono text-[8px] tracking-[0.35em] uppercase mb-8"
+              style={{ color: `${COLORS.accent}90` }}
+            >
+              TODAY&apos;S INTELLIGENCE
+            </p>
+
+            {/* Headline — large, dominant */}
+            <h1
+              className="font-grotesk text-[28px] sm:text-[36px] lg:text-[42px] font-semibold leading-[1.12] tracking-[-0.01em] mb-6"
+              style={{ color: COLORS.text }}
+            >
+              {oneThing.headline}
+            </h1>
+
+            {/* Explanation — subdued, readable */}
+            <p
+              className="font-grotesk text-[15px] sm:text-[17px] leading-[1.75] font-light mb-10"
+              style={{ color: `${COLORS.text}48` }}
+            >
+              {oneThing.detail}
+            </p>
+
+            {/* CTA + context */}
+            <div className="flex items-center gap-5">
+              <Link
+                href={oneThing.vendor_url
+                  ? oneThing.vendor_url
+                  : `/search?q=${encodeURIComponent(signals[0]?.industry ?? 'technology')}`
+                }
+                {...(oneThing.vendor_url ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
               >
-                REFRESH
-              </button>
+                <button
+                  className="font-mono text-[10px] tracking-[0.14em] font-semibold px-7 py-3.5 cursor-pointer transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
+                  style={{
+                    background: COLORS.accent,
+                    color: COLORS.bg,
+                    borderRadius: '14px',
+                    border: 'none',
+                    boxShadow: `0 0 20px ${COLORS.accent}15`,
+                  }}
+                >
+                  EXPLORE THIS
+                </button>
+              </Link>
+
+              {oneThing.vendor_name && (
+                <span
+                  className="font-mono text-[9px] tracking-[0.06em]"
+                  style={{ color: `${COLORS.text}28` }}
+                >
+                  via {oneThing.vendor_name}
+                </span>
+              )}
             </div>
-            <div style={{ height: 1, background: '#222', marginBottom: 12 }} />
 
-            {topSignals.map((s, i) => (
-              <SignalCard key={`${s.industry}-${i}`} signal={s} />
-            ))}
+            {/* "Why now" micro line */}
+            <p
+              className="font-mono text-[8px] tracking-[0.12em] mt-6"
+              style={{ color: `${COLORS.text}15` }}
+            >
+              Updated {signals[0]?.discovered_at ? timeAgo(signals[0].discovered_at) : 'just now'}
+            </p>
           </div>
         )}
 
-        {/* INDUSTRIES THIS WEEK */}
-        {movement.length > 0 && <IndustryBars movement={movement} />}
+        {/* ══════════════════════════════════════════════════════════
+            OPPORTUNITY STRIP — 3 cards max, horizontal on desktop
+           ══════════════════════════════════════════════════════════ */}
+        {signals.length > 0 && (
+          <div className="pb-14">
+            {/* Section divider */}
+            <div className="divider-glow mb-10" />
 
-        {/* Empty / loading state */}
-        {!loading && !data && (
-          <div style={{ textAlign: 'center', padding: '60px 0', color: '#333', fontSize: 12 }}>
-            No data yet. Try refreshing.
+            <p
+              className="font-mono text-[8px] tracking-[0.35em] uppercase mb-6"
+              style={{ color: `${COLORS.text}20` }}
+            >
+              OPPORTUNITIES
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {signals.map((s: BrainSignal, i: number) => {
+                const impact = impactLabel(s.importance);
+                return (
+                  <Link
+                    key={`${s.industry}-${i}`}
+                    href={`/search?q=${encodeURIComponent(s.title.split(' ').slice(0, 4).join(' '))}`}
+                    className="group flex flex-col p-5 no-underline transition-all duration-300 hover:translate-y-[-2px]"
+                    style={{
+                      background: COLORS.card,
+                      border: `1px solid ${COLORS.border}`,
+                      borderRadius: '20px',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = `${COLORS.accent}25`;
+                      e.currentTarget.style.boxShadow = `0 8px 32px ${COLORS.bg}`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = COLORS.border;
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  >
+                    {/* Signal index */}
+                    <span
+                      className="font-mono text-[9px] tracking-[0.12em] mb-4"
+                      style={{ color: `${COLORS.accent}50` }}
+                    >
+                      {signalIcon(s.signal_type)}
+                    </span>
+
+                    {/* Title */}
+                    <p
+                      className="font-grotesk text-[13px] sm:text-[14px] font-medium leading-snug mb-4 flex-1"
+                      style={{ color: `${COLORS.text}e0` }}
+                    >
+                      {s.title.length > 60 ? s.title.slice(0, 57) + '...' : s.title}
+                    </p>
+
+                    {/* Industry + impact */}
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="font-mono text-[8px] tracking-[0.12em] uppercase"
+                        style={{ color: `${COLORS.text}25` }}
+                      >
+                        {s.industry}
+                      </span>
+                      <span
+                        className="font-mono text-[7px] tracking-[0.15em] px-2 py-0.5 rounded-full"
+                        style={{
+                          color: impact.color,
+                          background: `${impact.color}0c`,
+                          border: `1px solid ${impact.color}18`,
+                        }}
+                      >
+                        {impact.label}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         )}
 
+        {/* ══════════════════════════════════════════════════════════
+            MICRO-TRENDS — subtle signal badges
+           ══════════════════════════════════════════════════════════ */}
+        {movement.length > 0 && (
+          <div className="pb-16">
+            <div className="flex gap-2 flex-wrap">
+              {movement.slice(0, 8).map(m => {
+                const isUp = m.momentum === 'accelerating' || m.momentum === 'rising';
+                const isDown = m.momentum === 'declining';
+                const color = isUp ? COLORS.green : isDown ? COLORS.red : COLORS.dim;
+                const arrow = isUp ? '↑' : isDown ? '↓' : '→';
+                return (
+                  <span
+                    key={m.sector}
+                    className="inline-flex items-center gap-1.5 font-mono text-[8px] tracking-[0.1em] px-3 py-1.5 whitespace-nowrap transition-opacity duration-200 hover:opacity-80"
+                    style={{
+                      color: `${color}c0`,
+                      background: `${color}06`,
+                      border: `1px solid ${color}12`,
+                      borderRadius: '9999px',
+                    }}
+                  >
+                    <span>{arrow}</span>
+                    {m.sector}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       <BottomNav />
-
-      {/* Pulse keyframe injected inline */}
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50%       { opacity: 0.3; }
-        }
-      `}</style>
     </div>
   );
 }

@@ -1,13 +1,39 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import MapGL, { Marker, type MapRef } from 'react-map-gl/maplibre';
+import type maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { IntelSignal, SignalType, Mode } from '../types/intel';
 import { SIGNAL_COLORS } from '../hooks/useSignals';
+import { COLORS } from '@/lib/tokens';
 
-const MAP_STYLE = 'https://tiles.openfreemap.org/styles/dark';
-const C = '#00D4FF';
-const G = '#00FF88';
+// Dark raster tile style — inline spec, no external JSON dependency
+const MAP_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    'carto-dark': {
+      type: 'raster',
+      tiles: [
+        'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+        'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+        'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+      ],
+      tileSize: 256,
+      maxzoom: 19,
+    },
+  },
+  layers: [
+    {
+      id: 'carto-dark-layer',
+      type: 'raster',
+      source: 'carto-dark',
+      minzoom: 0,
+      maxzoom: 20,
+    },
+  ],
+};
+const C = COLORS.cyan;
+const G = COLORS.green;
 
 const VIEWS: Record<string, { longitude: number; latitude: number; zoom: number }> = {
   WORLD:     { longitude:   0,      latitude:  20,     zoom: 1.8 },

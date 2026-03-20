@@ -25,10 +25,34 @@ import { COUNTRY_TECH_MAP } from '@/lib/data/country-tech-map';
 import type { CountryTechProfile } from '@/lib/data/country-tech-map';
 import type { IntelSignalMapPoint } from '@/hooks/useMapData';
 import MapGL from 'react-map-gl/maplibre';
+import type maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-// Dark vector tile style — no API key needed
-const MAP_STYLE = 'https://tiles.openfreemap.org/styles/dark';
+// Dark raster tile style — inline spec, no external JSON dependency, 100% reliable
+const MAP_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    'carto-dark': {
+      type: 'raster',
+      tiles: [
+        'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+        'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+        'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+      ],
+      tileSize: 256,
+      maxzoom: 19,
+    },
+  },
+  layers: [
+    {
+      id: 'carto-dark-layer',
+      type: 'raster',
+      source: 'carto-dark',
+      minzoom: 0,
+      maxzoom: 20,
+    },
+  ],
+};
 
 const INITIAL_VIEW = {
   longitude:  10,

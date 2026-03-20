@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import type { Product } from '@/lib/data/product-catalog';
 import { PRODUCT_CATALOG as _RAW_CATALOG } from '@/lib/data/product-catalog';
-import { Brain } from '@/lib/brain';
+import { BottomNav, TopBar, EmptyState } from '@/components/ui';
+import { COLORS } from '@/lib/tokens';
 
 // ── Product catalog with runtime fallback guard ───────────────────────────────
 const PRODUCT_CATALOG: Product[] = Array.isArray(_RAW_CATALOG) ? _RAW_CATALOG : [];
@@ -17,11 +19,6 @@ const WHAT_IT_DOES = [
   { label: 'Tracks Things',     icon: '◈',   tags: ['tracking', 'monitor', 'sensor', 'asset', 'iot', 'surveillance'] },
   { label: 'Fixes Problems',    icon: '⚙',   tags: ['maintenance', 'predictive', 'repair', 'diagnostic', 'anomaly'] },
   { label: 'Builds Things',     icon: '▣',   tags: ['manufacturing', 'production', 'robotics', 'fabricat', 'construct'] },
-  { label: 'Sells Better',      icon: '▲',   tags: ['ecommerce', 'retail', 'pricing', 'revenue', 'optimization'] },
-  { label: 'Protects Assets',   icon: '⬡',   tags: ['security', 'cybersecurity', 'protection', 'defense', 'compliance'] },
-  { label: 'Moves Things',      icon: '→',   tags: ['logistics', 'supply chain', 'transport', 'delivery', 'fleet'] },
-  { label: 'Connects People',   icon: '⟳',   tags: ['communication', 'collaboration', 'network', 'platform', 'workforce'] },
-  { label: 'Understands Data',  icon: '≋',   tags: ['analytics', 'ai', 'intelligence', 'insight', 'data', 'ml'] },
 ] as const;
 
 const INDUSTRIES = [
@@ -34,57 +31,45 @@ const INDUSTRIES = [
   { label: 'Logistics',         color: '#ffd700' },
   { label: 'Border Tech',       color: '#ff6600' },
   { label: 'Finance',           color: '#10b981' },
-  { label: 'Quantum Computing', color: '#c084fc', emerging: true },
+  { label: 'Quantum Computing', color: '#c084fc' },
 ] as const;
-
-const NAV_TABS = ['TODAY', 'EXPLORE', 'WORLD', 'FOLLOW', 'STORE', 'DOSSIER'] as const;
-
-const NAV_ROUTES: Record<string, string> = {
-  TODAY:   '/',
-  EXPLORE: '/explore',
-  WORLD:   '/world',
-  FOLLOW:  '/following',
-  STORE:   '/store',
-  DOSSIER: '/dossier',
-};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function ikerLabel(score: number): { text: string; color: string } {
-  if (score >= 80) return { text: 'TRUSTED',  color: '#00ff88' };
-  if (score >= 60) return { text: 'RELIABLE', color: '#ffd700' };
-  if (score >= 40) return { text: 'CAUTION',  color: '#ff6600' };
-  return               { text: 'RISK',     color: '#ff3b30' };
+function scoreColor(score: number): string {
+  if (score >= 80) return COLORS.green;
+  if (score >= 60) return COLORS.cyan;
+  if (score >= 40) return COLORS.gold;
+  return COLORS.orange;
+}
+
+function momentumIcon(m: string): string {
+  if (m === 'rising')    return '▲';
+  if (m === 'stable')    return '→';
+  return '▼';
 }
 
 function momentumColor(m: string): string {
-  if (m === 'rising')   return '#00ff88';
-  if (m === 'stable')   return '#ffd700';
-  if (m === 'declining') return '#ff3b30';
-  return '#888';
+  if (m === 'rising')    return COLORS.green;
+  if (m === 'stable')    return COLORS.gold;
+  if (m === 'declining') return COLORS.red;
+  return COLORS.dim;
 }
 
-function recommendationColor(score: number): string {
-  if (score >= 75) return '#00ff88';
-  if (score >= 50) return '#ffd700';
-  return '#ff3b30';
+function priceTier(estimate: string): string {
+  const map: Record<string, string> = { low: '$', medium: '$$', high: '$$$', enterprise: '$$$$' };
+  return map[estimate] ?? '$$';
 }
 
-function recommendationLabel(score: number): string {
-  if (score >= 75) return 'BUY NOW';
-  if (score >= 50) return 'EVALUATE';
-  return 'WAIT';
-}
-
-function priceDisplay(p: Product): string {
-  if (p.priceRange) return p.priceRange;
-  const map: Record<string, string> = {
-    low:        'Under $10k/yr',
-    medium:     '$10k – $100k/yr',
-    high:       '$100k – $500k/yr',
-    enterprise: 'Enterprise pricing',
-  };
-  return map[p.priceEstimate] ?? p.priceEstimate;
+function categoryAccent(cat: string): string {
+  const lc = cat.toLowerCase();
+  if (lc.includes('cyber')) return '#ff3b30';
+  if (lc.includes('ai') || lc.includes('ml')) return '#a855f7';
+  if (lc.includes('manufact')) return '#3b82f6';
+  if (lc.includes('defense')) return '#ff8c00';
+  if (lc.includes('energy')) return '#00ff88';
+  if (lc.includes('health')) return '#00d4ff';
+  return COLORS.cyan;
 }
 
 function matchesQuery(p: Product, q: string): boolean {
@@ -101,12 +86,8 @@ function matchesQuery(p: Product, q: string): boolean {
 
 function matchesWhatItDoes(p: Product, tags: readonly string[]): boolean {
   const haystack = [
-    p.name,
-    p.description,
-    p.category,
-    ...(p.tags ?? []),
-    ...(p.industries ?? []),
-    ...(p.problemsSolved ?? []),
+    p.name, p.description, p.category,
+    ...(p.tags ?? []), ...(p.industries ?? []), ...(p.problemsSolved ?? []),
   ].join(' ').toLowerCase();
   return tags.some(t => haystack.includes(t));
 }
@@ -114,282 +95,218 @@ function matchesWhatItDoes(p: Product, tags: readonly string[]): boolean {
 function matchesIndustry(p: Product, industry: string): boolean {
   const normalised = industry.toLowerCase().replace('/', '').replace(' ', '');
   const haystack = [
-    ...(p.industries ?? []),
-    p.category,
-    ...(p.tags ?? []),
+    ...(p.industries ?? []), p.category, ...(p.tags ?? []),
   ].join(' ').toLowerCase().replace(/[^a-z0-9 ]/g, '');
   return haystack.includes(normalised.replace(/[^a-z0-9]/g, ''));
 }
 
-// ── Product Card ──────────────────────────────────────────────────────────────
+// ── Featured Carousel Card ───────────────────────────────────────────────────
 
-function ProductCard({ product, compact = false }: { product: Product; compact?: boolean }) {
-  const iker = ikerLabel(product.ikerScore);
-  const recColor = recommendationColor(product.recommendationScore);
-  const momColor = momentumColor(product.momentum);
+function FeaturedCard({ product }: { product: Product }) {
+  const accent = categoryAccent(product.category);
+  const recScore = product.recommendationScore;
+  const recLabel = recScore >= 75 ? 'TOP PICK' : recScore >= 50 ? 'RECOMMENDED' : 'EXPLORE';
+  const recColor = recScore >= 75 ? COLORS.green : recScore >= 50 ? COLORS.gold : COLORS.dim;
 
   return (
-    <div
+    <Link
+      href={`/products/${product.id}`}
+      className="group flex-none flex flex-col gap-3 px-6 py-5 transition-all duration-300 hover:translate-y-[-2px]"
       style={{
-        background: '#0a0a0a',
-        border: '1px solid #1a1a1a',
-        borderRadius: 4,
-        padding: compact ? '10px 12px' : '14px 16px',
-        minWidth: compact ? 260 : undefined,
-        maxWidth: compact ? 300 : undefined,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 6,
-        fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-        flex: compact ? '0 0 auto' : undefined,
+        width: 'min(320px, 80vw)',
+        background: COLORS.card,
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: '24px',
       }}
     >
-      {/* Row 1 — category + maturity */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* Recommendation badge */}
+      <div className="flex items-center justify-between">
         <span
-          style={{
-            fontSize: 9,
-            letterSpacing: '0.15em',
-            textTransform: 'uppercase',
-            color: '#00d4ff',
-            background: 'rgba(0,212,255,0.08)',
-            border: '1px solid rgba(0,212,255,0.2)',
-            borderRadius: 2,
-            padding: '1px 6px',
-          }}
+          className="font-mono text-[8px] font-bold tracking-[0.15em] rounded-full px-2.5 py-1"
+          style={{ color: recColor, background: `${recColor}0c`, border: `1px solid ${recColor}20` }}
+        >
+          {recLabel}
+        </span>
+        <span
+          className="font-mono text-[8px] tracking-[0.12em] uppercase rounded-full px-2 py-0.5"
+          style={{ color: accent, background: `${accent}0a`, border: `1px solid ${accent}18` }}
         >
           {product.category}
         </span>
-        <span style={{ fontSize: 9, color: '#666', letterSpacing: '0.1em' }}>
-          {product.maturity?.toUpperCase()}
-        </span>
       </div>
 
-      {/* Row 2 — product name */}
-      <div style={{ fontSize: 13, color: '#fff', fontWeight: 700, lineHeight: 1.3 }}>
+      {/* Product name */}
+      <div
+        className="font-grotesk text-[16px] font-semibold leading-tight group-hover:opacity-80 transition-opacity"
+        style={{ color: COLORS.text }}
+      >
         {product.name}
       </div>
 
-      {/* Row 3 — company */}
-      <div style={{ fontSize: 10, color: '#888' }}>{product.company}</div>
-
-      {/* Row 4 — description */}
+      {/* Value prop */}
       <div
-        style={{
-          fontSize: 10,
-          color: '#aaa',
-          lineHeight: 1.5,
-          overflow: 'hidden',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-        }}
+        className="font-grotesk text-[12px] font-light leading-relaxed line-clamp-2"
+        style={{ color: `${COLORS.text}60` }}
       >
         {product.description}
       </div>
 
-      {/* Row 5 — price + momentum */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
-        <span style={{ fontSize: 10, color: '#ffd700' }}>{priceDisplay(product)}</span>
-        <span style={{ fontSize: 9, color: momColor, letterSpacing: '0.1em' }}>
-          {'█'.repeat(Math.min(4, Math.round(product.recommendationScore / 25)))}
-          {'░'.repeat(Math.max(0, 4 - Math.min(4, Math.round(product.recommendationScore / 25))))}
-          {'  '}{product.momentum?.toUpperCase()}
-        </span>
+      {/* Company */}
+      <div className="font-mono text-[9px] tracking-[0.1em]" style={{ color: `${COLORS.text}35` }}>
+        {product.company}
       </div>
 
-      {/* Row 6 — IKER + recommendation */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          borderTop: '1px solid #1a1a1a',
-          paddingTop: 8,
-          marginTop: 2,
-        }}
-      >
-        <span style={{ fontSize: 10, color: iker.color, letterSpacing: '0.1em' }}>
-          ● {iker.text} ({product.ikerScore})
-        </span>
-        <span
-          style={{
-            fontSize: 9,
-            fontWeight: 700,
-            letterSpacing: '0.15em',
-            color: recColor,
-            background: `${recColor}18`,
-            border: `1px solid ${recColor}40`,
-            borderRadius: 2,
-            padding: '2px 8px',
-          }}
-        >
-          {recommendationLabel(product.recommendationScore)}
-        </span>
-      </div>
-    </div>
+      {/* Bottom accent line */}
+      <div className="h-[2px] rounded-full mt-auto" style={{ background: `linear-gradient(90deg, ${accent}, transparent)` }} />
+    </Link>
   );
 }
 
-// ── Search Results Grid ───────────────────────────────────────────────────────
+// ── Product Grid Card ────────────────────────────────────────────────────────
 
-function SearchResults({ products }: { products: Product[] }) {
-  if (products.length === 0) {
-    return (
-      <div
-        style={{
-          textAlign: 'center',
-          padding: '60px 0',
-          color: '#444',
-          fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-          fontSize: 12,
-          letterSpacing: '0.1em',
-        }}
-      >
-        NO RESULTS — TRY A DIFFERENT KEYWORD
-      </div>
-    );
-  }
+function ProductCard({ product }: { product: Product }) {
+  const accent = categoryAccent(product.category);
+  const sColor = scoreColor(product.recommendationScore);
+  const mColor = momentumColor(product.momentum);
+  const mIcon = momentumIcon(product.momentum);
 
   return (
-    <div
+    <Link
+      href={`/products/${product.id}`}
+      className="group relative flex flex-col gap-2.5 p-5 transition-all duration-300 hover:translate-y-[-2px]"
       style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px, 100%), 1fr))',
-        gap: 12,
-        padding: '0 16px 24px',
+        background: COLORS.card,
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: '20px',
       }}
     >
-      {products.map(p => (
-        <ProductCard key={p.id} product={p} />
-      ))}
-    </div>
+      {/* Category badge — top right */}
+      <span
+        className="absolute top-4 right-4 font-mono text-[7px] tracking-[0.15em] uppercase rounded-full px-2 py-0.5"
+        style={{ color: accent, background: `${accent}0a`, border: `1px solid ${accent}18` }}
+      >
+        {product.category}
+      </span>
+
+      {/* Product name */}
+      <div
+        className="font-grotesk text-[14px] font-semibold leading-tight pr-16 group-hover:opacity-80 transition-opacity"
+        style={{ color: COLORS.text }}
+      >
+        {product.name}
+      </div>
+
+      {/* Company */}
+      <div className="font-mono text-[9px] tracking-[0.08em]" style={{ color: `${COLORS.text}40` }}>
+        {product.company}
+      </div>
+
+      {/* Description */}
+      <div
+        className="font-grotesk text-[12px] font-light leading-relaxed line-clamp-2"
+        style={{ color: `${COLORS.text}50` }}
+      >
+        {product.description}
+      </div>
+
+      {/* Score bar */}
+      <div className="flex items-center gap-2 mt-1">
+        <div className="flex-1 h-[3px] rounded-full" style={{ background: `${COLORS.text}08` }}>
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${product.recommendationScore}%`, background: sColor }}
+          />
+        </div>
+        <span className="font-mono text-[9px] font-bold tabular-nums" style={{ color: sColor }}>
+          {product.recommendationScore}
+        </span>
+      </div>
+
+      {/* Momentum + Price tier */}
+      <div className="flex items-center justify-between mt-0.5">
+        <span className="font-mono text-[9px] tracking-[0.08em]" style={{ color: mColor }}>
+          {mIcon} {product.momentum}
+        </span>
+        <span className="font-mono text-[10px] font-bold tracking-wider" style={{ color: COLORS.gold }}>
+          {priceTier(product.priceEstimate)}
+        </span>
+      </div>
+
+      {/* CTA — visible on hover */}
+      <div
+        className="flex items-center justify-end pt-2 mt-auto opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+        style={{ borderTop: `1px solid ${COLORS.border}` }}
+      >
+        <span className="font-mono text-[9px] tracking-[0.12em]" style={{ color: COLORS.cyan }}>
+          Learn more →
+        </span>
+      </div>
+    </Link>
   );
 }
 
-// ── Section Label ─────────────────────────────────────────────────────────────
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        fontSize: 9,
-        letterSpacing: '0.25em',
-        textTransform: 'uppercase',
-        color: '#ff6600',
-        padding: '0 16px',
-        marginBottom: 10,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-      }}
-    >
-      <span
-        style={{
-          display: 'inline-block',
-          width: 20,
-          height: 1,
-          background: '#ff6600',
-          opacity: 0.6,
-        }}
-      />
-      {children}
-      <span
-        style={{
-          flex: 1,
-          height: 1,
-          background: '#ff6600',
-          opacity: 0.15,
-        }}
-      />
-    </div>
-  );
-}
-
-// ── Inner page (needs useSearchParams) ───────────────────────────────────────
+// ── Inner page ────────────────────────────────────────────────────────────────
 
 function StoreInner() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const [query, setQuery] = useState(searchParams.get('q') ?? '');
   const [filterMode, setFilterMode] = useState<
     | { type: 'what'; label: string; tags: readonly string[] }
     | { type: 'industry'; label: string }
     | null
   >(null);
+  const [isLoading, setIsLoading] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [hotSectors, setHotSectors] = useState<Set<string>>(new Set());
 
-  // Sync URL param on load
   useEffect(() => {
     const q = searchParams.get('q');
     if (q) setQuery(q);
   }, [searchParams]);
 
-  // Fetch live sector momentum
   useEffect(() => {
-    Brain.industry('all')
-      .then((data) => {
-        const accelerating = (data.trending_sectors ?? [])
-          .filter((s) => s.momentum === 'accelerating')
-          .map((s) => s.name.toLowerCase());
-        setHotSectors(new Set(accelerating));
-      })
-      .catch(() => {});
+    if (PRODUCT_CATALOG.length > 0) {
+      const t = setTimeout(() => setIsLoading(false), 400);
+      return () => clearTimeout(t);
+    }
   }, []);
 
-  // Derived data
-  const newThisWeek = useMemo(
-    () =>
-      [...PRODUCT_CATALOG]
-        .sort((a, b) => b.recommendationScore - a.recommendationScore)
-        .slice(0, 6),
+  // Featured — top recommendation scores
+  const featured = useMemo(
+    () => [...PRODUCT_CATALOG].sort((a, b) => b.recommendationScore - a.recommendationScore).slice(0, 6),
     []
   );
 
+  // Trending — top IKER scores
   const trending = useMemo(
-    () =>
-      [...PRODUCT_CATALOG]
-        .sort((a, b) => b.ikerScore - a.ikerScore)
-        .slice(0, 5),
+    () => [...PRODUCT_CATALOG].sort((a, b) => b.ikerScore - a.ikerScore).slice(0, 5),
     []
   );
 
+  // All products sorted for grid
+  const allProducts = useMemo(
+    () => [...PRODUCT_CATALOG].sort((a, b) => b.recommendationScore - a.recommendationScore),
+    []
+  );
+
+  // Search / filter results
   const searchResults = useMemo(() => {
     if (!query && !filterMode) return null;
-
-    let pool = PRODUCT_CATALOG;
-
-    if (filterMode?.type === 'what') {
-      pool = pool.filter(p => matchesWhatItDoes(p, filterMode.tags));
-    }
-    if (filterMode?.type === 'industry') {
-      pool = pool.filter(p => matchesIndustry(p, filterMode.label));
-    }
-    if (query) {
-      pool = pool.filter(p => matchesQuery(p, query));
-    }
-
+    let pool = [...PRODUCT_CATALOG];
+    if (filterMode?.type === 'what') pool = pool.filter(p => matchesWhatItDoes(p, filterMode.tags));
+    if (filterMode?.type === 'industry') pool = pool.filter(p => matchesIndustry(p, filterMode.label));
+    if (query) pool = pool.filter(p => matchesQuery(p, query));
     return pool.sort((a, b) => b.recommendationScore - a.recommendationScore);
   }, [query, filterMode]);
 
   const showBrowse = !searchResults;
 
   function handleWhatClick(item: (typeof WHAT_IT_DOES)[number]) {
-    setFilterMode(prev =>
-      prev?.type === 'what' && prev.label === item.label
-        ? null
-        : { type: 'what', label: item.label, tags: item.tags }
-    );
+    setFilterMode(prev => prev?.type === 'what' && prev.label === item.label ? null : { type: 'what', label: item.label, tags: item.tags });
     setQuery('');
   }
 
   function handleIndustryClick(label: string) {
-    setFilterMode(prev =>
-      prev?.type === 'industry' && prev.label === label
-        ? null
-        : { type: 'industry', label }
-    );
+    setFilterMode(prev => prev?.type === 'industry' && prev.label === label ? null : { type: 'industry', label });
     setQuery('');
   }
 
@@ -400,56 +317,19 @@ function StoreInner() {
   }
 
   return (
-    <div
-      style={{
-        background: '#000',
-        minHeight: '100dvh',
-        display: 'flex',
-        flexDirection: 'column',
-        fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-        color: '#fff',
-      }}
-    >
-      {/* ── Fixed Top Bar ─────────────────────────────────────────────────── */}
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 50,
-          background: '#000',
-          borderBottom: '1px solid #1a1a1a',
-          padding: '10px 16px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-        }}
-      >
-        {/* Platform title row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 10, color: '#ff6600', letterSpacing: '0.3em', fontWeight: 700 }}>
-            NXT//LINK
-          </span>
-          <span style={{ fontSize: 9, color: '#333', letterSpacing: '0.2em' }}>
-            TECH STORE
-          </span>
-          <span style={{ fontSize: 9, color: '#444', letterSpacing: '0.1em' }}>
-            {PRODUCT_CATALOG.length} PRODUCTS
-          </span>
-        </div>
+    <div className="min-h-[100dvh] flex flex-col" style={{ background: COLORS.bg, color: COLORS.text }}>
+      <TopBar />
 
-        {/* Search bar */}
-        <div style={{ position: 'relative' }}>
+      {/* ── Filter Bar ──────────────────────────────────────────────── */}
+      <div
+        className="sticky top-11 z-[80] px-6 py-4"
+        style={{ background: COLORS.bg, borderBottom: `1px solid ${COLORS.border}` }}
+      >
+        {/* Search input */}
+        <div className="relative mb-3">
           <span
-            style={{
-              position: 'absolute',
-              left: 12,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              fontSize: 11,
-              color: '#444',
-            }}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-[13px] opacity-25"
+            style={{ color: COLORS.text }}
           >
             ⌕
           </span>
@@ -457,60 +337,76 @@ function StoreInner() {
             ref={inputRef}
             type="text"
             value={query}
-            onChange={e => {
-              setQuery(e.target.value);
-              setFilterMode(null);
-            }}
+            onChange={e => { setQuery(e.target.value); setFilterMode(null); }}
             placeholder="Search products, companies, problems..."
+            className="w-full font-grotesk text-[14px] font-light placeholder:opacity-20 outline-none min-h-[44px] pl-10 pr-10 py-2"
             style={{
-              width: '100%',
-              background: '#0d0d0d',
-              border: '1px solid #222',
-              borderRadius: 4,
-              padding: '9px 40px 9px 32px',
-              fontSize: 12,
-              color: '#fff',
-              fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-              outline: 'none',
-              boxSizing: 'border-box',
+              background: COLORS.surface,
+              border: `1px solid ${COLORS.border}`,
+              borderRadius: '24px',
+              color: COLORS.text,
             }}
           />
           {(query || filterMode) && (
             <button
               onClick={clearAll}
-              style={{
-                position: 'absolute',
-                right: 10,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                color: '#555',
-                fontSize: 14,
-                cursor: 'pointer',
-                padding: 0,
-                lineHeight: 1,
-              }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-transparent border-none text-sm cursor-pointer p-0 leading-none min-h-[44px] flex items-center"
+              style={{ color: `${COLORS.text}30` }}
             >
               ✕
             </button>
           )}
         </div>
 
-        {/* Active filter pill */}
+        {/* Filter pills row — industry + what-it-does inline */}
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+          {INDUSTRIES.slice(0, 5).map(ind => {
+            const isActive = filterMode?.type === 'industry' && filterMode.label === ind.label;
+            return (
+              <button
+                key={ind.label}
+                onClick={() => handleIndustryClick(ind.label)}
+                className="flex-none font-mono text-[9px] tracking-[0.1em] uppercase rounded-full px-3 py-1.5 cursor-pointer transition-all duration-200 whitespace-nowrap"
+                style={{
+                  background: isActive ? `${ind.color}15` : 'transparent',
+                  color: isActive ? ind.color : `${COLORS.text}40`,
+                  border: `1px solid ${isActive ? `${ind.color}40` : COLORS.border}`,
+                }}
+              >
+                {ind.label}
+              </button>
+            );
+          })}
+
+          {/* Divider */}
+          <div className="w-px h-4 flex-none" style={{ background: COLORS.border }} />
+
+          {WHAT_IT_DOES.slice(0, 3).map(item => {
+            const isActive = filterMode?.type === 'what' && filterMode.label === item.label;
+            return (
+              <button
+                key={item.label}
+                onClick={() => handleWhatClick(item)}
+                className="flex-none font-mono text-[9px] tracking-[0.1em] uppercase rounded-full px-3 py-1.5 cursor-pointer transition-all duration-200 whitespace-nowrap"
+                style={{
+                  background: isActive ? `${COLORS.orange}15` : 'transparent',
+                  color: isActive ? COLORS.orange : `${COLORS.text}40`,
+                  border: `1px solid ${isActive ? `${COLORS.orange}40` : COLORS.border}`,
+                }}
+              >
+                {item.icon} {item.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Active filter indicator */}
         {filterMode && (
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <span style={{ fontSize: 9, color: '#444' }}>FILTER:</span>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="font-mono text-[8px] tracking-[0.15em]" style={{ color: `${COLORS.text}25` }}>SHOWING:</span>
             <span
-              style={{
-                fontSize: 9,
-                letterSpacing: '0.12em',
-                color: '#00d4ff',
-                background: 'rgba(0,212,255,0.1)',
-                border: '1px solid rgba(0,212,255,0.3)',
-                borderRadius: 2,
-                padding: '2px 8px',
-              }}
+              className="font-mono text-[9px] tracking-[0.12em] rounded-full px-2.5 py-0.5"
+              style={{ color: COLORS.cyan, background: `${COLORS.cyan}0a`, border: `1px solid ${COLORS.cyan}25` }}
             >
               {filterMode.label.toUpperCase()}
             </span>
@@ -518,352 +414,225 @@ function StoreInner() {
         )}
       </div>
 
-      {/* ── Scrollable Content ────────────────────────────────────────────── */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          paddingTop: filterMode ? 118 : 96,
-          paddingBottom: 64,
-        }}
-      >
-        {searchResults !== null ? (
-          /* ── Search / Filter Results ─────────────────────────────────── */
+      {/* ── Content ──────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto pb-20">
+        {isLoading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 px-6 pt-6 pb-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-[200px] shimmer" style={{ borderRadius: '20px' }} />
+            ))}
+          </div>
+        ) : searchResults !== null ? (
+          /* ── Search / Filter Results ──────────────────────────── */
           <>
-            <div
-              style={{
-                padding: '0 16px 12px',
-                fontSize: 9,
-                color: '#555',
-                letterSpacing: '0.15em',
-              }}
-            >
+            <div className="px-6 py-4 font-mono text-[9px] tracking-[0.15em]" style={{ color: `${COLORS.text}25` }}>
               {searchResults.length} RESULTS
               {query ? ` FOR "${query.toUpperCase()}"` : ''}
               {filterMode ? ` · ${filterMode.label.toUpperCase()}` : ''}
             </div>
-            <SearchResults products={searchResults} />
+            {searchResults.length === 0 ? (
+              <EmptyState message="NO RESULTS — TRY A DIFFERENT KEYWORD" />
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 px-6 pb-6">
+                {searchResults.map(p => <ProductCard key={p.id} product={p} />)}
+              </div>
+            )}
           </>
         ) : showBrowse ? (
-          /* ── Browse Sections ─────────────────────────────────────────── */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+          /* ── Browse Mode ─────────────────────────────────────── */
+          <div className="flex flex-col gap-0">
 
-            {/* NEW THIS WEEK */}
-            <section>
-              <SectionLabel>
-                <span
-                  style={{
-                    background: '#ffd700',
-                    color: '#000',
-                    fontSize: 8,
-                    fontWeight: 700,
-                    letterSpacing: '0.1em',
-                    padding: '1px 5px',
-                    borderRadius: 2,
-                    marginRight: 4,
-                  }}
-                >
-                  NEW
+            {/* ── Featured Carousel ─────────────────────────────── */}
+            <section className="pt-8 pb-10 animate-fade-up">
+              <div className="flex items-center gap-3 px-6 mb-5">
+                <span className="font-grotesk text-[13px] font-semibold tracking-wide" style={{ color: COLORS.text }}>
+                  Most Relevant
                 </span>
-                THIS WEEK
-              </SectionLabel>
-              <div
-                style={{
-                  display: 'flex',
-                  gap: 10,
-                  overflowX: 'auto',
-                  padding: '0 16px 8px',
-                  scrollbarWidth: 'none',
-                }}
-              >
-                {newThisWeek.map(p => (
-                  <ProductCard key={p.id} product={p} compact />
-                ))}
+                <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${COLORS.border}, transparent)` }} />
+                <span className="font-mono text-[8px] tracking-[0.2em]" style={{ color: `${COLORS.text}20` }}>
+                  {featured.length} PICKS
+                </span>
+              </div>
+              <div className="flex gap-4 overflow-x-auto px-6 pb-2 scrollbar-none">
+                {featured.map(p => <FeaturedCard key={p.id} product={p} />)}
               </div>
             </section>
 
-            {/* BROWSE BY WHAT IT DOES */}
-            <section>
-              <SectionLabel>BROWSE BY WHAT IT DOES</SectionLabel>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-                  gap: 8,
-                  padding: '0 16px',
-                }}
-              >
-                {WHAT_IT_DOES.map(item => (
-                  <button
-                    key={item.label}
-                    onClick={() => handleWhatClick(item)}
-                    style={{
-                      background: '#0a0a0a',
-                      border: '1px solid #1c1c1c',
-                      borderRadius: 4,
-                      padding: '12px 14px',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-                      transition: 'border-color 0.15s',
-                    }}
-                  >
-                    <div style={{ fontSize: 16, marginBottom: 6, color: '#ff6600' }}>
-                      {item.icon}
-                    </div>
-                    <div style={{ fontSize: 10, color: '#ccc', letterSpacing: '0.08em' }}>
-                      {item.label}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </section>
+            {/* ── Divider glow ───────────────────────────────────── */}
+            <div className="mx-6 h-px" style={{ background: `linear-gradient(90deg, transparent, ${COLORS.cyan}20, transparent)` }} />
 
-            {/* BROWSE BY INDUSTRY */}
-            <section>
-              <SectionLabel>BROWSE BY INDUSTRY</SectionLabel>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                  gap: 8,
-                  padding: '0 16px',
-                }}
-              >
-                {INDUSTRIES.map(ind => {
-                  const isHot = hotSectors.has(ind.label.toLowerCase()) || hotSectors.has(ind.label.split('/')[0].trim().toLowerCase());
-                  const isEmerging = 'emerging' in ind && ind.emerging === true;
+            {/* ── Browse Filters — What It Does ─────────────────── */}
+            <section className="pt-10 pb-8 animate-fade-up" style={{ animationDelay: '80ms' }}>
+              <div className="flex items-center gap-3 px-6 mb-5">
+                <span className="font-grotesk text-[13px] font-semibold tracking-wide" style={{ color: COLORS.text }}>
+                  What It Does
+                </span>
+                <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${COLORS.border}, transparent)` }} />
+              </div>
+              <div className="flex gap-2.5 overflow-x-auto px-6 scrollbar-none">
+                {WHAT_IT_DOES.map(item => {
+                  const isActive = filterMode?.type === 'what' && filterMode.label === item.label;
                   return (
                     <button
-                      key={ind.label}
-                      onClick={() => handleIndustryClick(ind.label)}
+                      key={item.label}
+                      onClick={() => handleWhatClick(item)}
+                      className="flex-none flex items-center gap-2 font-mono text-[10px] tracking-[0.06em] cursor-pointer min-h-[40px] px-4 py-2.5 transition-all duration-200 hover:translate-y-[-1px] whitespace-nowrap"
                       style={{
-                        background: isHot ? `${ind.color}08` : isEmerging ? '#c084fc08' : '#0a0a0a',
-                        border: `1px solid ${ind.color}${isHot ? '55' : isEmerging ? '40' : '28'}`,
-                        borderRadius: 4,
-                        padding: '14px 12px',
-                        cursor: 'pointer',
-                        textAlign: 'center',
-                        fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 6,
-                        position: 'relative',
+                        background: isActive ? `${COLORS.orange}12` : COLORS.surface,
+                        border: `1px solid ${isActive ? COLORS.orange : COLORS.border}`,
+                        borderRadius: '20px',
+                        color: isActive ? COLORS.orange : `${COLORS.text}60`,
+                        boxShadow: isActive ? `0 0 16px ${COLORS.orange}10` : 'none',
                       }}
                     >
-                      {isHot && !isEmerging && (
-                        <span style={{
-                          position: 'absolute', top: 4, right: 6,
-                          fontSize: 7, color: '#00ff88', letterSpacing: '0.1em',
-                        }}>↑ HOT</span>
-                      )}
-                      {isEmerging && (
-                        <span style={{
-                          position: 'absolute', top: 4, right: 4,
-                          fontSize: 6, color: '#c084fc', letterSpacing: '0.08em',
-                          border: '1px solid #c084fc44', borderRadius: 2, padding: '1px 3px',
-                        }}>EMERGING</span>
-                      )}
-                      <div
-                        style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: '50%',
-                          background: ind.color,
-                          boxShadow: `0 0 ${isHot ? '10px' : '6px'} ${ind.color}cc`,
-                        }}
-                      />
-                      <div
-                        style={{
-                          fontSize: 9,
-                          color: ind.color,
-                          letterSpacing: '0.12em',
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        {ind.label}
-                      </div>
+                      <span style={{ color: COLORS.orange, fontSize: '13px' }}>{item.icon}</span>
+                      {item.label}
                     </button>
                   );
                 })}
               </div>
             </section>
 
-            {/* TRENDING THIS WEEK */}
-            <section>
-              <SectionLabel>TRENDING THIS WEEK</SectionLabel>
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 0,
-                  padding: '0 16px',
-                  borderTop: '1px solid #111',
-                }}
-              >
-                {trending.map((p, i) => {
-                  const iker = ikerLabel(p.ikerScore);
-                  const momColor = momentumColor(p.momentum);
+            {/* ── Browse Filters — By Industry ──────────────────── */}
+            <section className="pb-8 animate-fade-up" style={{ animationDelay: '120ms' }}>
+              <div className="flex items-center gap-3 px-6 mb-5">
+                <span className="font-grotesk text-[13px] font-semibold tracking-wide" style={{ color: COLORS.text }}>
+                  By Industry
+                </span>
+                <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${COLORS.border}, transparent)` }} />
+              </div>
+              <div className="flex gap-2.5 overflow-x-auto px-6 scrollbar-none">
+                {INDUSTRIES.map(ind => {
+                  const isActive = filterMode?.type === 'industry' && filterMode.label === ind.label;
                   return (
-                    <div
-                      key={p.id}
+                    <button
+                      key={ind.label}
+                      onClick={() => handleIndustryClick(ind.label)}
+                      className="flex-none flex items-center gap-2 font-mono text-[9px] tracking-[0.1em] uppercase cursor-pointer min-h-[40px] px-4 py-2.5 transition-all duration-200 hover:translate-y-[-1px] whitespace-nowrap"
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 14,
-                        padding: '12px 0',
-                        borderBottom: '1px solid #111',
+                        background: isActive ? `${ind.color}10` : COLORS.surface,
+                        border: `1px solid ${isActive ? `${ind.color}40` : COLORS.border}`,
+                        borderRadius: '20px',
+                        color: isActive ? ind.color : `${COLORS.text}50`,
+                        boxShadow: isActive ? `0 0 16px ${ind.color}10` : 'none',
                       }}
                     >
-                      {/* Rank */}
-                      <span
-                        style={{
-                          fontSize: 11,
-                          color: '#333',
-                          width: 18,
-                          textAlign: 'right',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {i + 1}
-                      </span>
-
-                      {/* Signal bar */}
                       <div
-                        style={{
-                          width: 3,
-                          height: 36,
-                          background: `linear-gradient(to top, ${momColor}40, ${momColor})`,
-                          borderRadius: 2,
-                          flexShrink: 0,
-                        }}
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{ background: ind.color, boxShadow: `0 0 6px ${ind.color}80` }}
                       />
-
-                      {/* Content */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontSize: 12,
-                            color: '#fff',
-                            fontWeight: 700,
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                          }}
-                        >
-                          {p.name}
-                        </div>
-                        <div style={{ fontSize: 10, color: '#666', marginTop: 2 }}>
-                          {p.company} · {p.category}
-                        </div>
-                      </div>
-
-                      {/* IKER badge */}
-                      <span
-                        style={{
-                          fontSize: 9,
-                          color: iker.color,
-                          letterSpacing: '0.1em',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {iker.text}
-                      </span>
-
-                      {/* Signal count (proxy via ikerScore) */}
-                      <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                        <div style={{ fontSize: 11, color: '#00d4ff', fontWeight: 700 }}>
-                          {Math.round(p.ikerScore * 1.3)}
-                        </div>
-                        <div style={{ fontSize: 8, color: '#444', letterSpacing: '0.1em' }}>
-                          SIGNALS
-                        </div>
-                      </div>
-                    </div>
+                      {ind.label}
+                    </button>
                   );
                 })}
               </div>
             </section>
 
+            {/* ── Divider glow ───────────────────────────────────── */}
+            <div className="mx-6 h-px" style={{ background: `linear-gradient(90deg, transparent, ${COLORS.cyan}20, transparent)` }} />
+
+            {/* ── Product Grid ──────────────────────────────────── */}
+            <section className="pt-10 pb-10 animate-fade-up" style={{ animationDelay: '160ms' }}>
+              <div className="flex items-center gap-3 px-6 mb-6">
+                <span className="font-grotesk text-[13px] font-semibold tracking-wide" style={{ color: COLORS.text }}>
+                  All Products
+                </span>
+                <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${COLORS.border}, transparent)` }} />
+                <span className="font-mono text-[8px] tracking-[0.2em]" style={{ color: `${COLORS.text}20` }}>
+                  {allProducts.length} ITEMS
+                </span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 px-6">
+                {allProducts.map(p => <ProductCard key={p.id} product={p} />)}
+              </div>
+            </section>
+
+            {/* ── Divider glow ───────────────────────────────────── */}
+            <div className="mx-6 h-px mb-10" style={{ background: `linear-gradient(90deg, transparent, ${COLORS.cyan}20, transparent)` }} />
+
+            {/* ── Trending ──────────────────────────────────────── */}
+            <section className="pb-14 animate-fade-up" style={{ animationDelay: '200ms' }}>
+              <div className="flex items-center gap-3 px-6 mb-5">
+                <span className="font-grotesk text-[13px] font-semibold tracking-wide" style={{ color: COLORS.text }}>
+                  Trending This Week
+                </span>
+                <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${COLORS.border}, transparent)` }} />
+              </div>
+              <div className="flex flex-col mx-6">
+                {trending.map((p, i) => {
+                  const mColor = momentumColor(p.momentum);
+                  const sColor = scoreColor(p.ikerScore);
+                  return (
+                    <Link
+                      key={p.id}
+                      href={`/products/${p.id}`}
+                      className="group flex items-center gap-4 py-4 transition-colors duration-200"
+                      style={{ borderBottom: `1px solid ${COLORS.border}` }}
+                    >
+                      {/* Rank number */}
+                      <span
+                        className="font-mono text-[14px] font-bold w-6 text-right shrink-0 tabular-nums"
+                        style={{ color: `${COLORS.text}15` }}
+                      >
+                        {i + 1}
+                      </span>
+
+                      {/* Momentum bar */}
+                      <div
+                        className="w-[3px] h-10 rounded-full shrink-0"
+                        style={{ background: `linear-gradient(to top, ${mColor}25, ${mColor})` }}
+                      />
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div
+                          className="font-grotesk text-[14px] font-semibold truncate group-hover:opacity-80 transition-opacity"
+                          style={{ color: COLORS.text }}
+                        >
+                          {p.name}
+                        </div>
+                        <div className="font-mono text-[9px] mt-1 tracking-[0.06em]" style={{ color: `${COLORS.text}35` }}>
+                          {p.company} · {p.category}
+                        </div>
+                      </div>
+
+                      {/* Momentum indicator */}
+                      <span className="font-mono text-[10px] shrink-0" style={{ color: mColor }}>
+                        {momentumIcon(p.momentum)}
+                      </span>
+
+                      {/* Score */}
+                      <div className="shrink-0 text-right">
+                        <div className="font-mono text-[12px] font-bold tabular-nums" style={{ color: sColor }}>
+                          {p.ikerScore}
+                        </div>
+                        <div className="font-mono text-[7px] tracking-[0.15em]" style={{ color: `${COLORS.text}20` }}>
+                          IKER
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
           </div>
         ) : null}
       </div>
 
-      {/* ── Fixed Bottom NavBar ───────────────────────────────────────────── */}
-      <nav
-        style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: 48,
-          background: '#000',
-          borderTop: '1px solid #1a1a1a',
-          display: 'flex',
-          alignItems: 'stretch',
-          zIndex: 50,
-        }}
-      >
-        {NAV_TABS.map(tab => {
-          const isActive = tab === 'STORE';
-          return (
-            <button
-              key={tab}
-              onClick={() => {
-                const route = NAV_ROUTES[tab];
-                if (route && route !== '/store') router.push(route);
-              }}
-              style={{
-                flex: 1,
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 3,
-                fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-                borderTop: isActive ? '2px solid #ff6600' : '2px solid transparent',
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 8,
-                  letterSpacing: '0.15em',
-                  color: isActive ? '#ff6600' : '#444',
-                  fontWeight: isActive ? 700 : 400,
-                }}
-              >
-                {tab}
-              </span>
-            </button>
-          );
-        })}
-      </nav>
+      <BottomNav />
     </div>
   );
 }
 
-// ── Page export (wraps inner in Suspense for useSearchParams) ─────────────────
+// ── Page export ───────────────────────────────────────────────────────────────
 
 export default function StorePage() {
   return (
     <Suspense
       fallback={
         <div
-          style={{
-            background: '#000',
-            minHeight: '100dvh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-            fontSize: 10,
-            color: '#444',
-            letterSpacing: '0.2em',
-          }}
+          className="min-h-[100dvh] flex items-center justify-center font-mono text-[10px] tracking-[0.2em]"
+          style={{ background: COLORS.bg, color: COLORS.dim }}
         >
           LOADING...
         </div>

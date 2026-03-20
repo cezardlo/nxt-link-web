@@ -122,8 +122,8 @@ export function FeedBar({ timeRange }: Props) {
       .catch(() => {});
   }, [timeRange]);
 
-  // Cap displayed items to keep ticker readable (max 40 headlines)
-  const displayItems = items.slice(0, 40);
+  // Cap displayed items to keep ticker readable (max 80 headlines)
+  const displayItems = items.slice(0, 80);
   const doubled = [...displayItems, ...displayItems];
   // Scale animation: ~3s per item = comfortable reading speed
   const animDuration = Math.max(60, displayItems.length * 3);

@@ -1,387 +1,417 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import type { KgTechnologyRow } from '@/db/queries/kg-technologies';
-import type { KgCompanyRow } from '@/db/queries/kg-companies';
-import type { KgIndustryRow } from '@/db/queries/kg-industries';
+import { COLORS } from '@/lib/tokens';
+import { Brain } from '@/lib/brain';
+import type { DecideData, IndustryData } from '@/lib/brain';
+import { BottomNav, TopBar, EmptyState } from '@/components/ui';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 
-type SearchResults = {
-  technologies: KgTechnologyRow[];
-  companies: KgCompanyRow[];
-  industries: KgIndustryRow[];
+type SearchState = 'idle' | 'loading' | 'done' | 'error';
+
+const TRACK_LABELS: Record<string, string> = {
+  technology: 'TECHNOLOGY', product: 'PRODUCT', discovery: 'DISCOVERY',
+  direction: 'WHERE HEADING', who: 'WHO IS DOING IT', connection: 'CONNECTION OPP',
+};
+const TRACK_COLORS: Record<string, string> = {
+  technology: COLORS.accent, product: COLORS.green, discovery: '#a855f7',
+  direction: COLORS.gold, who: COLORS.orange, connection: '#10b981',
 };
 
-// ─── Quadrant colors ──────────────────────────────────────────────────────────
+const STORAGE_KEY = 'nxt_recent_searches';
+const MAX_RECENTS = 8;
 
-const QUADRANT_COLORS: Record<string, string> = {
-  adopt: '#00ff88',
-  trial: '#00d4ff',
-  assess: '#ffd700',
-  explore: '#64748b',
-};
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const MATURITY_LABELS: Record<string, string> = {
-  research: 'Research',
-  emerging: 'Emerging',
-  early_adoption: 'Early Adoption',
-  growth: 'Growth',
-  mainstream: 'Mainstream',
-};
-
-// ─── IKER color ───────────────────────────────────────────────────────────────
-
-function ikerColor(score: number | null): string {
-  if (!score) return '#64748b';
-  if (score >= 80) return '#00ff88';
-  if (score >= 50) return '#ffd700';
-  return '#64748b';
+function getRecents(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as string[]).slice(0, MAX_RECENTS) : [];
+  } catch { return []; }
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+function saveRecent(query: string) {
+  if (typeof window === 'undefined' || !query.trim()) return;
+  try {
+    const prev = getRecents().filter((r) => r.toLowerCase() !== query.toLowerCase());
+    const next = [query.trim(), ...prev].slice(0, MAX_RECENTS);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  } catch { /* localStorage full */ }
+}
 
-export default function SearchPage() {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchResults | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [allTechs, setAllTechs] = useState<KgTechnologyRow[]>([]);
-  const [allIndustries, setAllIndustries] = useState<KgIndustryRow[]>([]);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+function removeRecent(query: string) {
+  if (typeof window === 'undefined') return;
+  try {
+    const next = getRecents().filter((r) => r.toLowerCase() !== query.toLowerCase());
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  } catch { /* ignore */ }
+}
 
-  // Load all data on mount for browse mode
-  useEffect(() => {
-    async function loadAll() {
-      try {
-        const [/* techRes */, /* indRes */] = await Promise.all([
-          fetch('/api/search?q=*').then(r => r.json()),
-          fetch('/api/search?q=*').then(r => r.json()),
-        ]);
-        // Also do a direct fetch to get all technologies and industries
-        const allTechRes = await fetch('/api/kg-browse?type=technologies');
-        const allIndRes = await fetch('/api/kg-browse?type=industries');
-        if (allTechRes.ok) setAllTechs(await allTechRes.json());
-        if (allIndRes.ok) setAllIndustries(await allIndRes.json());
-      } catch {
-        // Fallback: will just show search
-      }
-    }
-    loadAll();
-  }, []);
+// ─── Inner Search Component ─────────────────────────────────────────────────
 
-  const search = useCallback(async (q: string) => {
-    if (q.length < 2) {
-      setResults(null);
-      return;
-    }
-    setLoading(true);
+function SearchPageInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const initialQuery = searchParams.get('q') ?? '';
+
+  const [query, setQuery] = useState(initialQuery);
+  const [submitted, setSubmitted] = useState(initialQuery);
+  const [recents, setRecents] = useState<string[]>([]);
+  const [state, setState] = useState<SearchState>(initialQuery ? 'loading' : 'idle');
+  const [error, setError] = useState<string | null>(null);
+
+  const [decision, setDecision] = useState<DecideData | null>(null);
+  const [industry, setIndustry] = useState<IndustryData | null>(null);
+  const [showContent, setShowContent] = useState(false);
+
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setRecents(getRecents()); }, []);
+
+  const executeSearch = useCallback(async (q: string) => {
+    if (!q.trim()) return;
+    setState('loading');
+    setError(null);
+    setShowContent(false);
+    setDecision(null);
+    setIndustry(null);
+    setSubmitted(q.trim());
+    saveRecent(q.trim());
+    setRecents(getRecents());
+
+    const params = new URLSearchParams();
+    params.set('q', q.trim());
+    router.replace(`/search?${params.toString()}`, { scroll: false });
+
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
-      if (res.ok) {
-        setResults(await res.json());
-      }
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
+      const [decideResult, industryResult] = await Promise.all([
+        Brain.decide(q.trim()),
+        Brain.industry(q.trim()),
+      ]);
+      setDecision(decideResult);
+      setIndustry(industryResult);
+      setState('done');
+      setTimeout(() => setShowContent(true), 80);
+    } catch (err) {
+      setState('error');
+      setError(err instanceof Error ? err.message : 'Search failed. Try again.');
     }
+  }, [router]);
+
+  useEffect(() => {
+    if (initialQuery) executeSearch(initialQuery);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleInput = (value: string) => {
-    setQuery(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => search(value), 250);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (query.trim()) executeSearch(query);
   };
 
-  const hasResults = results && (
-    results.technologies.length > 0 ||
-    results.companies.length > 0 ||
-    results.industries.length > 0
-  );
-
-  const showBrowse = !query && (allTechs.length > 0 || allIndustries.length > 0);
+  type R = Record<string, string | number | null>;
+  const signals = (industry?.resources?.intel_signals ?? []).slice(0, 3) as R[];
+  const technologies = (industry?.resources?.technologies ?? []).slice(0, 3) as R[];
+  const products = (industry?.resources?.products ?? []).slice(0, 4) as R[];
+  const vendors = (industry?.resources?.vendors ?? []).slice(0, 6) as R[];
 
   return (
-    <div className="min-h-screen" style={{ background: '#0a0a0f' }}>
-      {/* Header */}
-      <header className="border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="font-mono text-sm tracking-widest" style={{ color: '#00d4ff' }}>
-            NXT//LINK
-          </Link>
-          <nav className="flex gap-6 font-mono text-xs tracking-wide" style={{ color: 'rgba(255,255,255,0.4)' }}>
-            <Link href="/map" className="hover:text-white transition-colors">MAP</Link>
-            <Link href="/search" className="text-white">SEARCH</Link>
-          </nav>
-        </div>
-      </header>
+    <div className="min-h-screen pb-16 overflow-y-auto" style={{ background: COLORS.bg }}>
+      <TopBar />
 
-      {/* Search Hero */}
-      <div className="max-w-4xl mx-auto px-6 pt-24 pb-8">
-        <h1
-          className="text-center text-3xl font-semibold tracking-tight mb-2"
-          style={{ fontFamily: 'var(--font-space-grotesk), sans-serif', color: '#ffffff' }}
-        >
-          Global Technology Intelligence
-        </h1>
-        <p className="text-center font-mono text-xs tracking-wide mb-12" style={{ color: 'rgba(255,255,255,0.4)' }}>
-          Search any industry, technology, or vendor across the global knowledge graph
-        </p>
-
-        {/* Search bar */}
-        <div
-          className="relative rounded-lg overflow-hidden"
-          style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            backdropFilter: 'blur(12px)',
-          }}
-        >
-          <div className="flex items-center px-5 py-4">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2">
+      <main className="max-w-[640px] mx-auto px-6 sm:px-10">
+        {/* ── Search Input ────────────────────────────────────────── */}
+        <form onSubmit={handleSubmit} className="pt-8 sm:pt-12 mb-6">
+          <div
+            className="flex items-center gap-3 px-5 transition-all duration-200 focus-within:border-white/15"
+            style={{
+              background: COLORS.card,
+              border: `1px solid ${COLORS.border}`,
+              borderRadius: '20px',
+              minHeight: '56px',
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={COLORS.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 opacity-40">
               <circle cx="11" cy="11" r="8" />
               <path d="M21 21l-4.35-4.35" />
             </svg>
             <input
+              ref={inputRef}
               type="text"
               value={query}
-              onChange={(e) => handleInput(e.target.value)}
-              placeholder="Search any industry, technology, or vendor..."
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Ask about any industry, technology, or trend..."
               autoFocus
-              className="flex-1 bg-transparent ml-4 text-white text-base outline-none placeholder:text-white/25"
-              style={{ fontFamily: 'var(--font-ibm-plex-mono), monospace' }}
+              className="flex-1 bg-transparent font-grotesk text-[15px] sm:text-[16px] font-light outline-none placeholder:opacity-25 min-h-[44px]"
+              style={{ color: COLORS.text }}
             />
-            {loading && (
-              <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#00d4ff', borderTopColor: 'transparent' }} />
+            {query.trim() && (
+              <button
+                type="submit"
+                className="shrink-0 font-mono text-[10px] tracking-[0.15em] uppercase px-3 min-h-[44px] flex items-center transition-opacity hover:opacity-70"
+                style={{ color: COLORS.accent }}
+              >
+                Go
+              </button>
             )}
           </div>
-        </div>
-      </div>
+        </form>
 
-      {/* Search Results */}
-      {hasResults && (
-        <div className="max-w-7xl mx-auto px-6 pb-24">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Technologies Column */}
-            {results.technologies.length > 0 && (
-              <div>
-                <h2 className="font-mono text-[10px] tracking-widest uppercase mb-4" style={{ color: '#00d4ff' }}>
-                  Technologies ({results.technologies.length})
-                </h2>
-                <div className="space-y-3">
-                  {results.technologies.map(tech => (
-                    <TechnologyCard key={tech.id} tech={tech} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Companies Column */}
-            {results.companies.length > 0 && (
-              <div>
-                <h2 className="font-mono text-[10px] tracking-widest uppercase mb-4" style={{ color: '#00d4ff' }}>
-                  Companies ({results.companies.length})
-                </h2>
-                <div className="space-y-3">
-                  {results.companies.map(company => (
-                    <CompanyCard key={company.id} company={company} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Industries Column */}
-            {results.industries.length > 0 && (
-              <div>
-                <h2 className="font-mono text-[10px] tracking-widest uppercase mb-4" style={{ color: '#00d4ff' }}>
-                  Industries ({results.industries.length})
-                </h2>
-                <div className="space-y-3">
-                  {results.industries.map(industry => (
-                    <IndustryCard key={industry.id} industry={industry} />
-                  ))}
-                </div>
-              </div>
-            )}
+        {/* ── Recent chips ────────────────────────────────────────── */}
+        {recents.length > 0 && state === 'idle' && (
+          <div className="flex flex-wrap gap-2 mb-12">
+            {recents.map((r) => (
+              <button
+                key={r}
+                onClick={() => { setQuery(r); executeSearch(r); }}
+                className="group flex items-center gap-1.5 font-mono text-[10px] tracking-wide px-3.5 py-2 rounded-full transition-all duration-200 hover:border-white/15 min-h-[44px]"
+                style={{ color: COLORS.muted, background: COLORS.card, border: `1px solid ${COLORS.border}` }}
+              >
+                <span>{r}</span>
+                <span
+                  onClick={(e) => { e.stopPropagation(); removeRecent(r); setRecents(getRecents()); }}
+                  className="opacity-0 group-hover:opacity-50 transition-opacity ml-1 cursor-pointer text-[8px]"
+                >
+                  ✕
+                </span>
+              </button>
+            ))}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* No results */}
-      {query.length >= 2 && !loading && results && !hasResults && (
-        <div className="text-center py-12">
-          <p className="font-mono text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-            No results for &ldquo;{query}&rdquo;
-          </p>
-        </div>
-      )}
+        {/* ── Loading ─────────────────────────────────────────────── */}
+        {state === 'loading' && (
+          <div className="pt-8 space-y-6 animate-pulse">
+            <div className="space-y-3">
+              <div className="h-6 rounded-nxt-sm w-3/5 shimmer" />
+              <div className="h-4 rounded-nxt-sm w-full shimmer" />
+              <div className="h-4 rounded-nxt-sm w-4/5 shimmer" />
+            </div>
+            {[1, 2].map(i => (
+              <div key={i} className="space-y-2">
+                <div className="h-2 rounded-nxt-sm w-24 shimmer" />
+                <div className="h-20 rounded-nxt-lg shimmer" />
+              </div>
+            ))}
+          </div>
+        )}
 
-      {/* Browse mode — show all when no query */}
-      {showBrowse && (
-        <div className="max-w-7xl mx-auto px-6 pb-24">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* ── Error ───────────────────────────────────────────────── */}
+        {state === 'error' && (
+          <div className="pt-16 text-center">
+            <EmptyState message={error ?? 'Search failed. Try again.'} />
+            <button
+              onClick={() => executeSearch(submitted)}
+              className="mt-6 font-mono text-[11px] tracking-[0.1em] px-5 py-2.5 rounded-nxt-sm transition-all hover:brightness-110"
+              style={{ background: COLORS.accent, color: COLORS.bg, border: 'none', cursor: 'pointer' }}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {/* ── Results ─────────────────────────────────────────────── */}
+        {state === 'done' && decision && (
+          <div
+            className="space-y-10 transition-all duration-500"
+            style={{ opacity: showContent ? 1 : 0, transform: showContent ? 'translateY(0)' : 'translateY(12px)' }}
+          >
+            {/* AI explanation card */}
+            <section
+              className="p-6 sm:p-8"
+              style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: '24px' }}
+            >
+              <span
+                className="inline-block font-mono text-[9px] tracking-[0.25em] uppercase px-2.5 py-1 rounded-full mb-5"
+                style={{ color: COLORS.accent, background: `${COLORS.accent}0a`, border: `1px solid ${COLORS.accent}20` }}
+              >
+                {decision.decision.type.replace(/_/g, ' ')}
+              </span>
+
+              <h2 className="font-grotesk text-[20px] sm:text-[24px] font-semibold leading-tight mb-4" style={{ color: COLORS.text }}>
+                {decision.decision.headline}
+              </h2>
+
+              <p className="font-grotesk text-[15px] leading-[1.7] font-light" style={{ color: `${COLORS.text}70` }}>
+                {decision.decision.detail}
+              </p>
+
+              {decision.decision.vendor_name && (
+                <div className="mt-5 pt-4 flex items-center justify-between" style={{ borderTop: `1px solid ${COLORS.border}` }}>
+                  <span className="font-mono text-[11px]" style={{ color: COLORS.muted }}>{decision.decision.vendor_name}</span>
+                  {decision.decision.vendor_score != null && (
+                    <span className="font-mono text-[11px]" style={{ color: COLORS.gold }}>Score {decision.decision.vendor_score}</span>
+                  )}
+                </div>
+              )}
+            </section>
+
+            {/* Signals */}
+            {signals.length > 0 && (
+              <section>
+                <p className="font-mono text-[9px] tracking-[0.3em] uppercase mb-4" style={{ color: `${COLORS.text}22` }}>SIGNALS</p>
+                <div className="flex flex-col gap-3">
+                  {signals.map((signal: R, i: number) => (
+                    <div key={i} className="p-5" style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: '20px' }}>
+                      <p className="font-grotesk text-[14px] font-medium leading-snug mb-2" style={{ color: COLORS.text }}>
+                        {String(signal.title ?? signal.name ?? 'Signal')}
+                      </p>
+                      <div className="flex items-center gap-3 font-mono text-[10px]">
+                        {signal.signal_type && (
+                          <span
+                            className="tracking-[0.12em] px-2 py-0.5 rounded-full uppercase"
+                            style={{
+                              color: TRACK_COLORS[String(signal.signal_type)] ?? COLORS.accent,
+                              background: `${TRACK_COLORS[String(signal.signal_type)] ?? COLORS.accent}0a`,
+                              border: `1px solid ${TRACK_COLORS[String(signal.signal_type)] ?? COLORS.accent}20`,
+                              fontSize: '8px',
+                            }}
+                          >
+                            {TRACK_LABELS[String(signal.signal_type)] ?? String(signal.signal_type)}
+                          </span>
+                        )}
+                        {signal.discovered_at && <span style={{ color: `${COLORS.text}25` }}>{String(signal.discovered_at).slice(0, 10)}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
             {/* Technologies */}
-            {allTechs.length > 0 && (
-              <div>
-                <h2 className="font-mono text-[10px] tracking-widest uppercase mb-4" style={{ color: '#00d4ff' }}>
-                  All Technologies ({allTechs.length})
-                </h2>
-                <div className="space-y-3">
-                  {allTechs.map(tech => (
-                    <TechnologyCard key={tech.id} tech={tech} />
+            {technologies.length > 0 && (
+              <section>
+                <p className="font-mono text-[9px] tracking-[0.3em] uppercase mb-4" style={{ color: `${COLORS.text}22` }}>OPPORTUNITIES</p>
+                <div className="flex flex-col gap-3">
+                  {technologies.map((tech: R, i: number) => (
+                    <div key={i} className="p-5" style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: '20px' }}>
+                      <p className="font-grotesk text-[14px] font-medium mb-1" style={{ color: COLORS.text }}>
+                        {String(tech.name ?? tech.title ?? 'Technology')}
+                      </p>
+                      {tech.description && (
+                        <p className="font-grotesk text-[13px] leading-relaxed font-light" style={{ color: `${COLORS.text}50` }}>
+                          {String(tech.description).slice(0, 160)}
+                        </p>
+                      )}
+                      {tech.maturity_stage && (
+                        <span className="inline-block mt-2 font-mono text-[9px] tracking-[0.2em] uppercase px-2 py-0.5 rounded-full"
+                          style={{ color: COLORS.accent, background: `${COLORS.accent}0a` }}
+                        >
+                          {String(tech.maturity_stage)}
+                        </span>
+                      )}
+                    </div>
                   ))}
                 </div>
-              </div>
+              </section>
             )}
 
-            {/* Industries */}
-            {allIndustries.length > 0 && (
-              <div>
-                <h2 className="font-mono text-[10px] tracking-widest uppercase mb-4" style={{ color: '#00d4ff' }}>
-                  All Industries ({allIndustries.length})
-                </h2>
-                <div className="space-y-3">
-                  {allIndustries.map(industry => (
-                    <IndustryCard key={industry.id} industry={industry} />
+            {/* Products */}
+            {products.length > 0 && (
+              <section>
+                <p className="font-mono text-[9px] tracking-[0.3em] uppercase mb-4" style={{ color: `${COLORS.text}22` }}>PRODUCTS</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {products.map((product: R, i: number) => (
+                    <div key={i} className="p-5" style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: '20px' }}>
+                      <p className="font-grotesk text-[13px] font-medium mb-1" style={{ color: COLORS.text }}>
+                        {String(product.name ?? product.title ?? 'Product')}
+                      </p>
+                      {product.vendor_name && (
+                        <p className="font-mono text-[10px] mb-1.5" style={{ color: COLORS.muted }}>by {String(product.vendor_name)}</p>
+                      )}
+                      {product.description && (
+                        <p className="font-grotesk text-[12px] leading-relaxed font-light" style={{ color: `${COLORS.text}45` }}>
+                          {String(product.description).slice(0, 120)}
+                        </p>
+                      )}
+                      {product.score != null && (
+                        <div className="mt-2 flex items-center gap-1.5 font-mono text-[10px]">
+                          <span style={{ color: COLORS.gold }}>{String(product.score)}</span>
+                          <span style={{ color: COLORS.dim }}>score</span>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
-              </div>
+              </section>
+            )}
+
+            {/* Vendors */}
+            {vendors.length > 0 && (
+              <section>
+                <p className="font-mono text-[9px] tracking-[0.3em] uppercase mb-4" style={{ color: `${COLORS.text}22` }}>VENDORS</p>
+                <div className="flex flex-wrap gap-2">
+                  {vendors.map((vendor: R, i: number) => (
+                    <span key={i} className="font-mono text-[11px] px-4 py-2.5 rounded-full flex items-center min-h-[44px]"
+                      style={{ color: COLORS.text, background: COLORS.card, border: `1px solid ${COLORS.border}` }}
+                    >
+                      {String(vendor.name ?? vendor.vendor_name ?? 'Vendor')}
+                      {vendor.score != null && <span className="ml-2 text-[9px]" style={{ color: COLORS.gold }}>{String(vendor.score)}</span>}
+                    </span>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Trajectory link */}
+            <section className="pb-6">
+              <Link
+                href={`/trajectory?topic=${encodeURIComponent(submitted)}`}
+                className="flex items-center justify-between font-mono text-[13px] px-6 min-h-[56px] no-underline transition-all duration-200 hover:translate-x-1"
+                style={{ color: COLORS.accent, background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: '20px' }}
+              >
+                <span>View trajectory for &ldquo;{submitted}&rdquo;</span>
+                <span className="text-[16px]">→</span>
+              </Link>
+            </section>
+
+            {/* Empty fallback */}
+            {signals.length === 0 && technologies.length === 0 && products.length === 0 && vendors.length === 0 && !decision?.decision.detail && (
+              <EmptyState message={`No intelligence found for "${submitted}". Try a broader query.`} />
             )}
           </div>
-        </div>
-      )}
+        )}
+
+        {/* ── Idle empty state ────────────────────────────────────── */}
+        {state === 'idle' && recents.length === 0 && (
+          <div className="pt-24 text-center">
+            <p className="font-grotesk text-[15px] leading-relaxed font-light" style={{ color: `${COLORS.text}35` }}>
+              Search any industry, technology, or trend.
+              <br />
+              The AI will analyze signals and explain what matters.
+            </p>
+          </div>
+        )}
+      </main>
+
+      <BottomNav />
     </div>
   );
 }
 
-// ─── Technology Card ──────────────────────────────────────────────────────────
+// ─── Page Wrapper ────────────────────────────────────────────────────────────
 
-function TechnologyCard({ tech }: { tech: KgTechnologyRow }) {
-  const quadrantColor = QUADRANT_COLORS[tech.radar_quadrant ?? ''] ?? '#64748b';
-  const maturityLabel = MATURITY_LABELS[tech.maturity_stage ?? ''] ?? tech.maturity_stage ?? '—';
-
+export default function SearchPage() {
   return (
-    <Link
-      href={`/search?q=${encodeURIComponent(tech.name)}`}
-      className="block rounded-lg p-4 transition-all hover:scale-[1.01]"
-      style={{
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        backdropFilter: 'blur(12px)',
-      }}
+    <Suspense
+      fallback={
+        <div className="min-h-screen pb-16" style={{ background: COLORS.bg }}>
+          <TopBar />
+          <main className="max-w-[640px] mx-auto px-6 pt-8">
+            <div className="space-y-4 animate-pulse">
+              <div className="h-14 rounded-nxt-lg shimmer" />
+              <div className="h-6 w-3/5 rounded-nxt-sm shimmer" />
+              <div className="h-4 w-full shimmer" />
+            </div>
+          </main>
+          <BottomNav />
+        </div>
+      }
     >
-      <div className="flex items-start justify-between mb-2">
-        <h3 className="text-sm font-medium text-white">{tech.name}</h3>
-        {tech.radar_quadrant && (
-          <span
-            className="font-mono text-[9px] tracking-widest uppercase px-2 py-0.5 rounded"
-            style={{
-              color: quadrantColor,
-              border: `1px solid ${quadrantColor}44`,
-              background: `${quadrantColor}11`,
-            }}
-          >
-            {tech.radar_quadrant}
-          </span>
-        )}
-      </div>
-      <div className="flex items-center gap-3 font-mono text-[10px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
-        <span>{maturityLabel}</span>
-        {tech.iker_score != null && (
-          <span style={{ color: ikerColor(tech.iker_score) }}>
-            IKER {tech.iker_score}
-          </span>
-        )}
-        {tech.signal_velocity != null && tech.signal_velocity > 0 && (
-          <span style={{ color: '#f97316' }}>
-            +{tech.signal_velocity} signals
-          </span>
-        )}
-      </div>
-      {tech.description && (
-        <p className="mt-2 text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.3)' }}>
-          {tech.description.slice(0, 120)}
-        </p>
-      )}
-    </Link>
-  );
-}
-
-// ─── Company Card ─────────────────────────────────────────────────────────────
-
-function CompanyCard({ company }: { company: KgCompanyRow }) {
-  return (
-    <Link
-      href={`/search?q=${encodeURIComponent(company.name)}`}
-      className="block rounded-lg p-4 transition-all hover:scale-[1.01]"
-      style={{
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        backdropFilter: 'blur(12px)',
-      }}
-    >
-      <div className="flex items-start justify-between mb-2">
-        <h3 className="text-sm font-medium text-white">{company.name}</h3>
-        {company.company_type && (
-          <span
-            className="font-mono text-[9px] tracking-widest uppercase px-2 py-0.5 rounded"
-            style={{
-              color: '#00d4ff',
-              border: '1px solid rgba(0,212,255,0.2)',
-              background: 'rgba(0,212,255,0.06)',
-            }}
-          >
-            {company.company_type}
-          </span>
-        )}
-      </div>
-      <div className="flex items-center gap-3 font-mono text-[10px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
-        {company.iker_score != null && (
-          <span style={{ color: ikerColor(company.iker_score) }}>
-            IKER {company.iker_score}
-          </span>
-        )}
-        {company.website && (
-          <span className="truncate max-w-[150px]">{company.website.replace(/^https?:\/\//, '')}</span>
-        )}
-      </div>
-      {company.description && (
-        <p className="mt-2 text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.3)' }}>
-          {company.description.slice(0, 120)}
-        </p>
-      )}
-    </Link>
-  );
-}
-
-// ─── Industry Card ────────────────────────────────────────────────────────────
-
-function IndustryCard({ industry }: { industry: KgIndustryRow }) {
-  return (
-    <Link
-      href={`/industry/${industry.slug}`}
-      className="block rounded-lg p-4 transition-all hover:scale-[1.01]"
-      style={{
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        backdropFilter: 'blur(12px)',
-      }}
-    >
-      <h3 className="text-sm font-medium text-white mb-1">{industry.name}</h3>
-      <div className="flex items-center gap-3 font-mono text-[10px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
-        {industry.iker_score != null && (
-          <span style={{ color: ikerColor(industry.iker_score) }}>
-            IKER {industry.iker_score}
-          </span>
-        )}
-        <span style={{ color: '#00d4ff' }}>View industry &rarr;</span>
-      </div>
-      {industry.description && (
-        <p className="mt-2 text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.3)' }}>
-          {industry.description.slice(0, 120)}
-        </p>
-      )}
-    </Link>
+      <SearchPageInner />
+    </Suspense>
   );
 }

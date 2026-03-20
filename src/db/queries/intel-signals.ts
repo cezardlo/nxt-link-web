@@ -39,6 +39,14 @@ export type IntelSignalInsert = {
 // ─── Importance Scoring ─────────────────────────────────────────────────────────
 
 const TYPE_WEIGHT: Record<string, number> = {
+  // 6-track system (brain departments)
+  technology: 0.85,
+  product: 0.80,
+  discovery: 0.90,
+  direction: 0.75,
+  who: 0.70,
+  connection: 0.65,
+  // Legacy types (kept for backward compatibility with older signals)
   merger_acquisition: 0.95,
   funding_round: 0.90,
   contract_award: 0.85,
