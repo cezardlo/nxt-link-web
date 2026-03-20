@@ -5,18 +5,25 @@
 /* ─── NXT LINK Design System ─────────────────────────────────── */
 /* Inspired by Bloomberg Terminal + Palantir AIP + WorldMonitor   */
 :root {
-  --bg:        #000000;
-  --surface:   #0a0a0a;
-  --border:    #1a1a1a;
-  --text:      #ffffff;
+  --bg:        #0d0f12;
+  --surface:   #131519;
+  --card:      #181b20;
+  --border:    #232730;
+  --text:      #f0f0f0;
   --muted:     #6b7280;
-  --cyan:      #00d4ff;    /* Palantir interactive */
-  --gold:      #ffd700;    /* IKER scores, premium data */
-  --orange:    #f97316;    /* Bloomberg critical / alerts */
-  --green:     #00ff88;    /* Positive signals */
-  --red:       #ff3b30;    /* Risk / danger */
-  --amber:     #ffb800;    /* Warnings */
-  --emerald:   #10b981;    /* Live / online */
+  --dim:       #3a3f4b;
+  --accent:    #00d4ff;
+  --cyan:      #00d4ff;
+  --gold:      #ffd700;
+  --orange:    #ff6600;
+  --green:     #00ff88;
+  --red:       #ff3b30;
+  --amber:     #ffb800;
+  --emerald:   #10b981;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
   --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -26,6 +33,8 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Bloomberg-style tabular numbers */
@@ -310,3 +319,43 @@ body {
   0% { offset-distance: 0%; }
   100% { offset-distance: 100%; }
 }
+
+/* ─── Design System Polish ─────────────────────────────────── */
+
+/* Selection color — cyan accent */
+::selection { background: rgba(0, 212, 255, 0.2); color: inherit; }
+
+/* Smooth page-level scroll */
+html { scroll-behavior: smooth; }
+
+/* Focus ring — accessible, matches design */
+*:focus-visible {
+  outline: 2px solid rgba(0, 212, 255, 0.5);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Links — no underline by default */
+a { text-decoration: none; color: inherit; }
+
+/* Remove button defaults */
+button { background: none; border: none; font: inherit; cursor: pointer; }
+
+/* Smooth image loading */
+img { transition: opacity 0.3s ease; }
+img[src=""] { opacity: 0; }
+
+/* Page transition fade */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-enter { animation: page-enter 0.3s var(--motion-ease) both; }
+
+/* Track color utilities */
+.track-technology  { color: var(--cyan); }
+.track-product     { color: var(--green); }
+.track-discovery   { color: #a855f7; }
+.track-direction   { color: var(--gold); }
+.track-who         { color: var(--orange); }
+.track-connection  { color: var(--emerald); }

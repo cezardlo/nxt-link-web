@@ -37,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body
         className={`${spaceGrotesk.variable} ${ibmPlexMono.variable} font-mono antialiased`}
-        style={{ margin: 0, padding: 0, overflow: 'hidden', background: '#07070F' }}
+        style={{ margin: 0, padding: 0, background: '#0d0f12' }}
       >
         {children}
         <Analytics />
