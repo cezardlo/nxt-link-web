@@ -113,10 +113,10 @@ function SearchPageInner() {
   };
 
   type R = Record<string, string | number | null>;
-  const signals = (industry?.resources?.intel_signals ?? []).slice(0, 3) as R[];
-  const technologies = (industry?.resources?.technologies ?? []).slice(0, 3) as R[];
-  const products = (industry?.resources?.products ?? []).slice(0, 4) as R[];
-  const vendors = (industry?.resources?.vendors ?? []).slice(0, 6) as R[];
+  const signals = (industry?.resources?.intel_signals ?? []).slice(0, 5) as R[];
+  const technologies = (industry?.resources?.technologies ?? []).slice(0, 4) as R[];
+  const products = (industry?.resources?.products ?? []).slice(0, 6) as R[];
+  const vendors = (industry?.resources?.vendors ?? []).slice(0, 8) as R[];
 
   return (
     <div className="min-h-screen pb-16 overflow-y-auto" style={{ background: COLORS.bg }}>
@@ -252,7 +252,7 @@ function SearchPageInner() {
             {/* Signals */}
             {signals.length > 0 && (
               <section>
-                <p className="font-mono text-[9px] tracking-[0.3em] uppercase mb-4" style={{ color: `${COLORS.text}22` }}>SIGNALS</p>
+                <p className="font-mono text-[8px] tracking-[0.35em] uppercase mb-5" style={{ color: `${COLORS.text}20` }}>WHAT&apos;S HAPPENING</p>
                 <div className="flex flex-col gap-3">
                   {signals.map((signal: R, i: number) => (
                     <div key={i} className="p-5" style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: '20px' }}>
@@ -284,7 +284,7 @@ function SearchPageInner() {
             {/* Technologies */}
             {technologies.length > 0 && (
               <section>
-                <p className="font-mono text-[9px] tracking-[0.3em] uppercase mb-4" style={{ color: `${COLORS.text}22` }}>OPPORTUNITIES</p>
+                <p className="font-mono text-[8px] tracking-[0.35em] uppercase mb-5" style={{ color: `${COLORS.text}20` }}>OPPORTUNITIES</p>
                 <div className="flex flex-col gap-3">
                   {technologies.map((tech: R, i: number) => (
                     <div key={i} className="p-5" style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: '20px' }}>
@@ -312,7 +312,7 @@ function SearchPageInner() {
             {/* Products */}
             {products.length > 0 && (
               <section>
-                <p className="font-mono text-[9px] tracking-[0.3em] uppercase mb-4" style={{ color: `${COLORS.text}22` }}>PRODUCTS</p>
+                <p className="font-mono text-[8px] tracking-[0.35em] uppercase mb-5" style={{ color: `${COLORS.text}20` }}>PRODUCTS</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {products.map((product: R, i: number) => (
                     <div key={i} className="p-5" style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: '20px' }}>
@@ -342,7 +342,7 @@ function SearchPageInner() {
             {/* Vendors */}
             {vendors.length > 0 && (
               <section>
-                <p className="font-mono text-[9px] tracking-[0.3em] uppercase mb-4" style={{ color: `${COLORS.text}22` }}>VENDORS</p>
+                <p className="font-mono text-[8px] tracking-[0.35em] uppercase mb-5" style={{ color: `${COLORS.text}20` }}>VENDORS</p>
                 <div className="flex flex-wrap gap-2">
                   {vendors.map((vendor: R, i: number) => (
                     <span key={i} className="font-mono text-[11px] px-4 py-2.5 rounded-full flex items-center min-h-[44px]"
