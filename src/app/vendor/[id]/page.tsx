@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { IKERPanel } from '@/components/IKERPanel';
-import { PageTopBar } from '@/components/PageTopBar';
+import { COLORS } from '@/lib/tokens';
+import { TopBar, BottomNav } from '@/components/ui';
 import { EL_PASO_VENDORS } from '@/lib/data/el-paso-vendors';
 import { supabase } from '@/lib/supabase';
+
+/* ─── Types ───────────────────────────────────────────────────────────── */
 
 type VendorDetail = {
   id?: string;
@@ -34,6 +36,15 @@ type SupabaseVendorRow = {
   created_at: string | null;
 };
 
+type SupabaseSignalRow = {
+  id: number;
+  title: string | null;
+  summary: string | null;
+  source_url: string | null;
+  created_at: string | null;
+  signal_type: string | null;
+};
+
 type DataSource = 'supabase' | 'static' | 'api' | null;
 
 const STUB: VendorDetail = {
@@ -43,7 +54,8 @@ const STUB: VendorDetail = {
   evidence: [],
 };
 
-/** Map a Supabase vendor row to VendorDetail shape */
+/* ─── Helpers ─────────────────────────────────────────────────────────── */
+
 function mapSupabaseRow(row: SupabaseVendorRow): VendorDetail {
   return {
     id: String(row.id),
@@ -59,6 +71,51 @@ function mapSupabaseRow(row: SupabaseVendorRow): VendorDetail {
   };
 }
 
+function scoreColor(score: number): string {
+  if (score >= 80) return COLORS.green;
+  if (score >= 65) return COLORS.accent;
+  if (score >= 50) return COLORS.amber;
+  return COLORS.red;
+}
+
+function stateColor(state: string): string {
+  const s = state.toUpperCase();
+  if (s === 'ACCELERATING') return COLORS.green;
+  if (s === 'EMERGING') return COLORS.accent;
+  if (s === 'STABLE') return COLORS.amber;
+  return COLORS.red;
+}
+
+/* ─── Card wrapper ────────────────────────────────────────────────────── */
+
+function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div
+      className={`p-5 ${className}`}
+      style={{
+        background: COLORS.card,
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: 20,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h2
+      className="font-grotesk text-[13px] font-semibold tracking-[0.04em] uppercase mb-3"
+      style={{ color: `${COLORS.text}90` }}
+    >
+      {children}
+    </h2>
+  );
+}
+
+/* ─── Page ────────────────────────────────────────────────────────────── */
+
 export default function VendorPage() {
   const params = useParams();
   const id = typeof params.id === 'string' ? params.id : Array.isArray(params.id) ? params.id[0] : '';
@@ -68,6 +125,9 @@ export default function VendorPage() {
   const [notFound, setNotFound] = useState(false);
   const [dataSource, setDataSource] = useState<DataSource>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [signals, setSignals] = useState<SupabaseSignalRow[]>([]);
+
+  /* ── Data fetching (preserved) ──────────────────────────────────────── */
 
   useEffect(() => {
     if (!id) return;
@@ -75,10 +135,9 @@ export default function VendorPage() {
     setLoading(true);
 
     async function load() {
-      // ── 1. Try Supabase first ──────────────────────────────────────────
+      // 1. Try Supabase first
       if (supabase) {
         try {
-          // Try numeric id match first, then company_name slug match
           const numericId = Number(id);
           const isNumeric = !isNaN(numericId) && String(numericId) === id;
 
@@ -93,7 +152,6 @@ export default function VendorPage() {
             row = data as SupabaseVendorRow | null;
           }
 
-          // If no numeric match, try matching by company_name (slug-ified)
           if (!row) {
             const { data } = await supabase
               .from('vendors')
@@ -114,6 +172,25 @@ export default function VendorPage() {
             setDataSource('supabase');
             setLastUpdated(row.created_at);
             setLoading(false);
+
+            // Fetch signals mentioning this vendor
+            try {
+              const companyName = row.company_name ?? '';
+              if (companyName) {
+                const { data: sigData } = await supabase
+                  .from('signals')
+                  .select('id, title, summary, source_url, created_at, signal_type')
+                  .ilike('summary', `%${companyName}%`)
+                  .order('created_at', { ascending: false })
+                  .limit(5);
+                if (sigData && !cancelled) {
+                  setSignals(sigData as SupabaseSignalRow[]);
+                }
+              }
+            } catch {
+              // Signals fetch failed silently
+            }
+
             return;
           }
         } catch {
@@ -121,7 +198,7 @@ export default function VendorPage() {
         }
       }
 
-      // ── 2. Try static EL_PASO_VENDORS data ────────────────────────────
+      // 2. Try static EL_PASO_VENDORS data
       const staticVendor = EL_PASO_VENDORS[id];
       if (staticVendor && !cancelled) {
         setVendor({
@@ -140,7 +217,7 @@ export default function VendorPage() {
         return;
       }
 
-      // ── 3. Try API endpoint (original behavior) ───────────────────────
+      // 3. Try API endpoint
       try {
         const r = await fetch(`/api/intel/api/vendors/${id}`);
         if (r.status === 404) {
@@ -167,328 +244,389 @@ export default function VendorPage() {
     return () => { cancelled = true; };
   }, [id]);
 
+  /* ── Render ─────────────────────────────────────────────────────────── */
+
   return (
-    <div className="fixed inset-0 bg-black flex flex-col overflow-hidden dot-grid">
+    <div className="min-h-screen flex flex-col" style={{ background: COLORS.bg }}>
+      <TopBar />
 
-      <PageTopBar
-        backHref="/vendors"
-        backLabel="VENDORS"
-        breadcrumbs={[
-          { label: 'VENDOR REGISTRY', href: '/vendors' },
-          { label: vendor?.name || '···' }
-        ]}
-        showLiveDot={!loading}
-        rightSlot={
-          vendor?.website ? (
-            <a
-              href={vendor.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-mono text-[8px] tracking-[0.2em] text-[#00d4ff]/60 hover:text-[#00d4ff] transition-colors glow-cyan"
-            >
-              WEBSITE ↗
-            </a>
-          ) : null
-        }
-      />
+      <main className="flex-1 w-full max-w-[640px] mx-auto px-4 pt-4 pb-24">
 
-      {/* MAIN CONTENT */}
-      {notFound ? (
-        <div className="flex flex-1 items-center justify-center">
-          <div className="text-center space-y-4">
-            <div className="w-12 h-[1px] bg-[#ff3b30]/40 mx-auto mb-4" />
-            <p className="font-mono text-[#ff3b30] text-sm tracking-[0.3em] uppercase">Vendor Not Found</p>
-            <p className="font-mono text-white/25 text-[9px] tracking-[0.2em]">ID: {id}</p>
+        {/* Breadcrumb */}
+        <Link
+          href="/vendors"
+          className="inline-flex items-center gap-1.5 font-grotesk text-[13px] tracking-[0.01em] mb-5 no-underline transition-colors duration-150"
+          style={{ color: COLORS.muted }}
+        >
+          <span style={{ color: COLORS.accent }}>←</span>
+          <span>Vendors</span>
+          {!loading && vendor.name && (
+            <>
+              <span style={{ color: `${COLORS.text}20` }}>/</span>
+              <span style={{ color: `${COLORS.text}70` }}>{vendor.name}</span>
+            </>
+          )}
+        </Link>
+
+        {/* Not found state */}
+        {notFound ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-12 h-[2px] mb-5" style={{ background: `${COLORS.red}60`, borderRadius: 2 }} />
+            <p className="font-grotesk text-[16px] font-semibold mb-2" style={{ color: COLORS.red }}>Vendor Not Found</p>
+            <p className="font-grotesk text-[13px] mb-4" style={{ color: COLORS.muted }}>ID: {id}</p>
             <Link
-              href="/map"
-              className="inline-block font-mono text-[9px] tracking-[0.2em] text-[#00d4ff]/60 hover:text-[#00d4ff] transition-colors mt-2"
+              href="/vendors"
+              className="font-grotesk text-[13px] no-underline transition-colors duration-150"
+              style={{ color: COLORS.accent }}
             >
-              ← RETURN TO MAP
+              ← Return to Vendors
             </Link>
           </div>
-        </div>
-      ) : (
-        <div className="flex flex-1 min-h-0">
-
-          {/* LEFT — IKER panel */}
-          <div className="hidden md:flex w-64 shrink-0 flex-col border-r border-white/[0.05] overflow-y-auto scrollbar-thin">
-            {/* Left panel header with gold glow */}
-            <div className="px-4 py-3 border-b border-white/[0.05] flex items-center gap-2">
-              <div className="w-[3px] h-3 shrink-0" style={{ background: '#ffd700', boxShadow: '0 0 6px #ffd700cc' }} />
-              <p
-                className="font-mono text-[8px] tracking-[0.3em] uppercase"
-                style={{ color: '#ffd700', textShadow: '0 0 8px rgba(255,215,0,0.4)' }}
-              >
-                IKER INTELLIGENCE
-              </p>
-            </div>
-            <IKERPanel vendorId={id} />
-          </div>
-
-          {/* RIGHT — Dossier detail */}
-          <div className="flex-1 overflow-y-auto scrollbar-thin px-8 py-6">
-
-            {/* Header block */}
-            <div className="border-b border-white/[0.06] pb-6 mb-7">
-              <div className="font-mono text-[8px] tracking-[0.3em] text-white/20 uppercase mb-4">
-                VENDOR DOSSIER
+        ) : (
+          <>
+            {/* ── Company Hero ──────────────────────────────────────── */}
+            {loading ? (
+              <div className="mb-5 space-y-3">
+                <div className="h-7 w-48 rounded-lg" style={{ background: `${COLORS.text}08` }} />
+                <div className="h-4 w-24 rounded-full" style={{ background: `${COLORS.text}06` }} />
+                <div className="h-4 w-72 rounded-lg" style={{ background: `${COLORS.text}05` }} />
               </div>
+            ) : (
+              <div className="mb-5">
+                <h1
+                  className="font-grotesk text-[26px] font-semibold leading-tight mb-2"
+                  style={{ color: COLORS.text }}
+                >
+                  {vendor.name ?? id}
+                </h1>
 
-              {loading ? (
-                <div className="space-y-3">
-                  <div className="h-5 bg-white/[0.05] shimmer w-56 rounded-sm" />
-                  <div className="h-3 bg-white/[0.03] shimmer w-32 mt-1 rounded-sm" />
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-start justify-between gap-4">
-                    <h1 className="font-mono text-[20px] tracking-[0.08em] text-white/90 font-medium leading-tight">
-                      {vendor.name ?? id}
-                    </h1>
-                    {/* Mobile-only IKER score badge */}
-                    {vendor.final_score != null && (
-                      <span
-                        className="md:hidden font-mono text-[10px] font-bold tracking-widest px-2.5 py-1 border shrink-0 rounded-sm"
-                        style={{
-                          color: '#ffd700',
-                          borderColor: 'rgba(255,215,0,0.25)',
-                          background: 'rgba(255,215,0,0.08)',
-                          textShadow: '0 0 8px rgba(255,215,0,0.5)',
-                        }}
-                      >
-                        IKER {vendor.final_score}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-3 mt-3 flex-wrap">
-                    {/* Category badge */}
+                <div className="flex items-center gap-2 flex-wrap mb-3">
+                  {vendor.category && (
                     <span
-                      className="font-mono text-[8px] tracking-[0.2em] uppercase px-2 py-0.5 border"
+                      className="font-grotesk text-[11px] font-medium tracking-[0.03em] px-3 py-1"
                       style={{
-                        color: 'rgba(0,212,255,0.7)',
-                        borderColor: 'rgba(0,212,255,0.18)',
-                        background: 'rgba(0,212,255,0.06)',
+                        color: COLORS.accent,
+                        background: `${COLORS.accent}12`,
+                        borderRadius: 9999,
                       }}
                     >
-                      {vendor.category ?? '—'}
+                      {vendor.category}
                     </span>
-
-                    {/* State badge */}
-                    {vendor.state && (
-                      <span
-                        className="font-mono text-[8px] tracking-[0.2em] px-2.5 py-0.5 border uppercase font-medium"
-                        style={{
-                          color: stateColor(vendor.state),
-                          borderColor: `${stateColor(vendor.state)}35`,
-                          background: `${stateColor(vendor.state)}10`,
-                          textShadow: `0 0 8px ${stateColor(vendor.state)}60`,
-                        }}
-                      >
-                        {vendor.state}
-                      </span>
-                    )}
-
-                    {/* Website link */}
-                    {vendor.website && (
-                      <a
-                        href={vendor.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-mono text-[8px] tracking-[0.15em] text-[#00d4ff]/60 hover:text-[#00d4ff] transition-colors"
-                        style={{ textShadow: 'none' }}
-                      >
-                        ↗ WEBSITE
-                      </a>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* OVERVIEW */}
-            {vendor.description && (
-              <div className="mb-7">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-[3px] h-3 shrink-0 rounded-full" style={{ background: '#00d4ff', boxShadow: '0 0 6px #00d4ffaa' }} />
-                  <div className="font-mono text-[8px] tracking-[0.3em] text-white/30 uppercase">OVERVIEW</div>
+                  )}
+                  {vendor.state && (
+                    <span
+                      className="font-grotesk text-[11px] font-medium tracking-[0.03em] px-3 py-1"
+                      style={{
+                        color: stateColor(vendor.state),
+                        background: `${stateColor(vendor.state)}12`,
+                        borderRadius: 9999,
+                      }}
+                    >
+                      {vendor.state}
+                    </span>
+                  )}
                 </div>
-                <p className="font-mono text-[10px] leading-relaxed text-white/50 pl-[11px]">
-                  {vendor.description}
-                </p>
+
+                {vendor.description && (
+                  <p
+                    className="font-grotesk text-[15px] font-light leading-relaxed"
+                    style={{ color: COLORS.muted }}
+                  >
+                    {vendor.description}
+                  </p>
+                )}
+
+                {vendor.website && (
+                  <a
+                    href={vendor.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 font-grotesk text-[13px] mt-3 no-underline transition-opacity duration-150 hover:opacity-80"
+                    style={{ color: COLORS.accent }}
+                  >
+                    {vendor.website.replace(/^https?:\/\//, '').replace(/\/$/, '')} ↗
+                  </a>
+                )}
               </div>
             )}
 
-            {/* CAPABILITIES */}
-            {vendor.tags && vendor.tags.length > 0 && (
-              <div className="mb-7">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-[3px] h-3 shrink-0 rounded-full" style={{ background: '#f97316', boxShadow: '0 0 6px #f97316aa' }} />
-                  <div className="font-mono text-[8px] tracking-[0.3em] text-white/30 uppercase">CAPABILITIES</div>
+            {/* ── Stats Row ─────────────────────────────────────────── */}
+            {!loading && (
+              <div className="flex gap-3 mb-5">
+                {vendor.final_score != null && (
+                  <div
+                    className="flex-1 flex flex-col items-center py-3"
+                    style={{
+                      background: COLORS.card,
+                      border: `1px solid ${COLORS.border}`,
+                      borderRadius: 20,
+                    }}
+                  >
+                    <span
+                      className="font-grotesk text-[22px] font-bold tabular-nums"
+                      style={{ color: scoreColor(vendor.final_score) }}
+                    >
+                      {vendor.final_score}
+                    </span>
+                    <span className="font-grotesk text-[10px] tracking-[0.06em] mt-0.5" style={{ color: COLORS.muted }}>
+                      IKER Score
+                    </span>
+                  </div>
+                )}
+
+                {vendor.final_score != null && (
+                  <div
+                    className="flex-1 flex flex-col items-center py-3"
+                    style={{
+                      background: COLORS.card,
+                      border: `1px solid ${COLORS.border}`,
+                      borderRadius: 20,
+                    }}
+                  >
+                    <span
+                      className="font-grotesk text-[22px] font-bold tabular-nums"
+                      style={{ color: COLORS.accent }}
+                    >
+                      {vendor.final_score >= 70 ? 'High' : vendor.final_score >= 40 ? 'Med' : 'Low'}
+                    </span>
+                    <span className="font-grotesk text-[10px] tracking-[0.06em] mt-0.5" style={{ color: COLORS.muted }}>
+                      Confidence
+                    </span>
+                  </div>
+                )}
+
+                <div
+                  className="flex-1 flex flex-col items-center py-3"
+                  style={{
+                    background: COLORS.card,
+                    border: `1px solid ${COLORS.border}`,
+                    borderRadius: 20,
+                  }}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span
+                      className="inline-block w-2 h-2 rounded-full"
+                      style={{
+                        background: dataSource === 'supabase' ? COLORS.green : COLORS.amber,
+                        boxShadow: `0 0 6px ${dataSource === 'supabase' ? COLORS.green : COLORS.amber}60`,
+                      }}
+                    />
+                    <span className="font-grotesk text-[14px] font-semibold" style={{ color: COLORS.text }}>
+                      {dataSource === 'supabase' ? 'Live' : dataSource === 'api' ? 'API' : 'Static'}
+                    </span>
+                  </span>
+                  <span className="font-grotesk text-[10px] tracking-[0.06em] mt-0.5" style={{ color: COLORS.muted }}>
+                    Status
+                  </span>
                 </div>
-                <div className="flex flex-wrap gap-1.5 pl-[11px]">
+              </div>
+            )}
+
+            {/* ── About Card ────────────────────────────────────────── */}
+            {vendor.briefing && !loading && (
+              <Card className="mb-4">
+                <SectionTitle>About</SectionTitle>
+                <p
+                  className="font-grotesk text-[14px] font-light leading-relaxed"
+                  style={{ color: `${COLORS.text}80` }}
+                >
+                  {vendor.briefing}
+                </p>
+              </Card>
+            )}
+
+            {/* ── Capabilities Card ─────────────────────────────────── */}
+            {vendor.tags && vendor.tags.length > 0 && !loading && (
+              <Card className="mb-4">
+                <SectionTitle>Capabilities</SectionTitle>
+                <div className="flex flex-wrap gap-2">
                   {vendor.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="font-mono text-[8px] tracking-[0.1em] px-2 py-0.5 border border-white/[0.08] text-white/40 hover:bg-white/[0.04] hover:border-white/[0.15] hover:text-white/60 transition-all duration-150 cursor-default rounded-sm"
+                      className="font-grotesk text-[12px] px-3 py-1"
+                      style={{
+                        color: `${COLORS.text}70`,
+                        background: `${COLORS.text}08`,
+                        borderRadius: 9999,
+                      }}
                     >
                       {tag}
                     </span>
                   ))}
                 </div>
-              </div>
+              </Card>
             )}
 
-            {/* EVIDENCE */}
-            {vendor.evidence && vendor.evidence.length > 0 && (
-              <div className="mb-7">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-[3px] h-3 shrink-0 rounded-full" style={{ background: '#00ff88', boxShadow: '0 0 6px #00ff88aa' }} />
-                  <div className="font-mono text-[8px] tracking-[0.3em] text-white/30 uppercase">
-                    EVIDENCE <span className="text-white/15">({vendor.evidence.length})</span>
-                  </div>
-                </div>
-                <div className="pl-[11px]">
+            {/* ── Evidence Card ─────────────────────────────────────── */}
+            {vendor.evidence && vendor.evidence.length > 0 && !loading && (
+              <Card className="mb-4">
+                <SectionTitle>Evidence ({vendor.evidence.length})</SectionTitle>
+                <div className="space-y-2.5">
                   {vendor.evidence.map((item, i) => (
                     <div
                       key={i}
-                      className="py-2.5 border-b border-white/[0.04] flex items-start gap-2.5 border-l-2 pl-3 mb-0.5"
-                      style={{ borderLeftColor: 'rgba(0,255,136,0.10)' }}
+                      className="flex items-start gap-2.5 py-2 border-b last:border-b-0"
+                      style={{ borderBottomColor: `${COLORS.border}80` }}
                     >
-                      <span className="font-mono text-[9px] text-[#00ff88]/50 mt-0.5 shrink-0">›</span>
-                      <span className="font-mono text-[9px] text-white/45 leading-relaxed">{item}</span>
+                      <span className="mt-0.5 shrink-0" style={{ color: COLORS.accent }}>›</span>
+                      <span
+                        className="font-grotesk text-[13px] font-light leading-relaxed"
+                        style={{ color: `${COLORS.text}70` }}
+                      >
+                        {item}
+                      </span>
                     </div>
                   ))}
                 </div>
-              </div>
+              </Card>
             )}
 
-            {/* Loading skeleton for evidence */}
-            {loading && (
-              <div className="mb-7">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-[3px] h-3 shrink-0 rounded-full bg-[#00ff88]/30" />
-                  <div className="font-mono text-[8px] tracking-[0.3em] text-white/20 uppercase">EVIDENCE</div>
-                </div>
-                <div className="space-y-1.5 pl-[11px]">
-                  {[72, 88, 60, 80].map((w, i) => (
-                    <div key={i} className="py-2.5 border-b border-white/[0.04] flex items-start gap-2.5 border-l-2 pl-3" style={{ borderLeftColor: 'rgba(0,255,136,0.05)' }}>
-                      <span className="font-mono text-[9px] text-white/10 shrink-0">›</span>
-                      <div className="h-2.5 bg-white/[0.05] shimmer rounded-sm" style={{ width: `${w}%` }} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* IKER ANALYSIS */}
-            {vendor.briefing && (
-              <div
-                className="border p-5 mb-7 rounded-sm"
-                style={{
-                  borderColor: 'rgba(255,215,0,0.15)',
-                  background: 'rgba(255,215,0,0.03)',
-                }}
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-[3px] h-3 shrink-0 rounded-full" style={{ background: '#ffd700', boxShadow: '0 0 6px #ffd700aa' }} />
-                  <div
-                    className="font-mono text-[8px] tracking-[0.3em] uppercase"
-                    style={{ color: 'rgba(255,215,0,0.55)' }}
-                  >
-                    IKER ANALYSIS
-                  </div>
-                </div>
-                <p className="font-mono text-[9px] leading-relaxed text-white/40 pl-[11px]">
-                  {vendor.briefing}
-                </p>
-              </div>
-            )}
-
-            {/* RELATED VENDORS */}
-            {vendor && vendor.category && (
-              <div className="pt-5 border-t border-white/[0.05]">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-[3px] h-3 shrink-0 rounded-full" style={{ background: '#00d4ff', boxShadow: '0 0 6px #00d4ffaa' }} />
-                  <div className="font-mono text-[8px] tracking-[0.3em] text-white/30 uppercase">RELATED VENDORS</div>
-                </div>
-                <div className="space-y-0 pl-[11px]">
-                  {Object.values(EL_PASO_VENDORS)
-                    .filter((v) => v.id !== id && v.category === vendor.category)
-                    .slice(0, 4)
-                    .map((related) => {
-                      const score = related.ikerScore;
-                      const scoreColor = score >= 80 ? '#00ff88' : score >= 65 ? '#00d4ff' : score >= 50 ? '#ffb800' : '#ff3b30';
-                      return (
-                        <Link
-                          key={related.id}
-                          href={`/vendor/${related.id}`}
-                          className="group flex items-center justify-between gap-3 border-b border-white/[0.04] hover:bg-white/[0.03] py-3 px-2 transition-all duration-150 rounded-sm"
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <span className="font-mono text-[9px] text-[#00d4ff]/20 group-hover:text-[#00d4ff]/60 transition-colors shrink-0">›</span>
-                            <div className="min-w-0">
-                              <p className="font-mono text-[9px] text-white/50 group-hover:text-white/75 transition-colors truncate">
-                                {related.name}
-                              </p>
-                              <p className="font-mono text-[7px] tracking-[0.2em] text-white/18 mt-0.5 truncate uppercase">
-                                {related.category}
-                              </p>
-                            </div>
-                          </div>
+            {/* ── Signals Card ──────────────────────────────────────── */}
+            {signals.length > 0 && !loading && (
+              <Card className="mb-4">
+                <SectionTitle>Signals</SectionTitle>
+                <div className="space-y-3">
+                  {signals.map((sig) => (
+                    <div
+                      key={sig.id}
+                      className="pb-3 border-b last:border-b-0 last:pb-0"
+                      style={{ borderBottomColor: `${COLORS.border}80` }}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        {sig.signal_type && (
                           <span
-                            className="font-mono text-[11px] font-bold tabular-nums shrink-0"
+                            className="font-grotesk text-[10px] font-medium tracking-[0.03em] px-2 py-0.5"
                             style={{
-                              color: scoreColor,
-                              textShadow: `0 0 8px ${scoreColor}70`,
+                              color: COLORS.gold,
+                              background: `${COLORS.gold}12`,
+                              borderRadius: 9999,
                             }}
                           >
-                            {score}
+                            {sig.signal_type}
                           </span>
-                        </Link>
-                      );
-                    })}
+                        )}
+                        {sig.created_at && (
+                          <span className="font-grotesk text-[10px]" style={{ color: COLORS.dim }}>
+                            {new Date(sig.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                        )}
+                      </div>
+                      {sig.title && (
+                        <p className="font-grotesk text-[13px] font-medium mb-0.5" style={{ color: `${COLORS.text}90` }}>
+                          {sig.title}
+                        </p>
+                      )}
+                      {sig.summary && (
+                        <p className="font-grotesk text-[12px] font-light leading-relaxed" style={{ color: COLORS.muted }}>
+                          {sig.summary.length > 160 ? sig.summary.slice(0, 160) + '...' : sig.summary}
+                        </p>
+                      )}
+                      {sig.source_url && (
+                        <a
+                          href={sig.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-grotesk text-[11px] no-underline mt-1 inline-block transition-opacity hover:opacity-80"
+                          style={{ color: COLORS.accent }}
+                        >
+                          Source ↗
+                        </a>
+                      )}
+                    </div>
+                  ))}
                 </div>
+              </Card>
+            )}
+
+            {/* ── Related Vendors Card ──────────────────────────────── */}
+            {vendor.category && !loading && (
+              <Card className="mb-4">
+                <SectionTitle>Related Vendors</SectionTitle>
+                {(() => {
+                  const related = Object.values(EL_PASO_VENDORS)
+                    .filter((v) => v.id !== id && v.category === vendor.category)
+                    .slice(0, 4);
+
+                  if (related.length === 0) {
+                    return (
+                      <p className="font-grotesk text-[13px]" style={{ color: COLORS.dim }}>
+                        No related vendors found.
+                      </p>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-0">
+                      {related.map((rel) => {
+                        const sc = rel.ikerScore;
+                        return (
+                          <Link
+                            key={rel.id}
+                            href={`/vendor/${rel.id}`}
+                            className="group flex items-center justify-between py-3 border-b last:border-b-0 no-underline transition-colors duration-150"
+                            style={{ borderBottomColor: `${COLORS.border}80` }}
+                          >
+                            <div className="min-w-0">
+                              <p
+                                className="font-grotesk text-[14px] font-medium truncate transition-colors duration-150"
+                                style={{ color: `${COLORS.text}80` }}
+                              >
+                                {rel.name}
+                              </p>
+                              <p className="font-grotesk text-[11px] mt-0.5 truncate" style={{ color: COLORS.dim }}>
+                                {rel.category}
+                              </p>
+                            </div>
+                            <span
+                              className="font-grotesk text-[16px] font-bold tabular-nums shrink-0 ml-3"
+                              style={{ color: scoreColor(sc) }}
+                            >
+                              {sc}
+                            </span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </Card>
+            )}
+
+            {/* ── Footer metadata ───────────────────────────────────── */}
+            {!loading && (
+              <div className="flex items-center justify-between flex-wrap gap-2 pt-3 pb-2">
+                <span className="font-grotesk text-[10px] tracking-[0.04em]" style={{ color: COLORS.dim }}>
+                  Vendor ID: {id}
+                </span>
+                {lastUpdated && (
+                  <span className="font-grotesk text-[10px] tracking-[0.04em]" style={{ color: COLORS.dim }}>
+                    Updated {new Date(lastUpdated).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                )}
               </div>
             )}
 
-            {/* Raw ID footer */}
-            <div className="pt-6 mt-2 border-t border-white/[0.03] flex items-center justify-between flex-wrap gap-2">
-              <p className="font-mono text-[7px] tracking-[0.25em] text-white/12 uppercase">
-                VENDOR ID: {id}
-              </p>
-              {!loading && dataSource && (
-                <div className="flex items-center gap-3">
-                  {lastUpdated && (
-                    <span className="font-mono text-[7px] tracking-[0.15em] text-white/15">
-                      UPDATED {new Date(lastUpdated).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase()}
-                    </span>
-                  )}
-                  <span
-                    className="font-mono text-[7px] tracking-[0.2em] uppercase px-1.5 py-0.5 border rounded-sm"
-                    style={{
-                      color: dataSource === 'supabase' ? '#00ff88' : dataSource === 'api' ? '#00d4ff' : '#ffb800',
-                      borderColor: dataSource === 'supabase' ? 'rgba(0,255,136,0.2)' : dataSource === 'api' ? 'rgba(0,212,255,0.2)' : 'rgba(255,184,0,0.2)',
-                      background: dataSource === 'supabase' ? 'rgba(0,255,136,0.05)' : dataSource === 'api' ? 'rgba(0,212,255,0.05)' : 'rgba(255,184,0,0.05)',
-                    }}
+            {/* Loading skeleton cards */}
+            {loading && (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="p-5 space-y-3"
+                    style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 20 }}
                   >
-                    {dataSource === 'supabase' ? 'LIVE DB' : dataSource === 'api' ? 'API' : 'STATIC'}
-                  </span>
-                </div>
-              )}
-            </div>
+                    <div className="h-3 w-24 rounded-lg" style={{ background: `${COLORS.text}08` }} />
+                    <div className="h-3 w-full rounded-lg" style={{ background: `${COLORS.text}05` }} />
+                    <div className="h-3 w-3/4 rounded-lg" style={{ background: `${COLORS.text}05` }} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </main>
 
-          </div>
-        </div>
-      )}
+      <BottomNav />
     </div>
   );
-}
-
-function stateColor(state: string): string {
-  const s = state.toUpperCase();
-  if (s === 'ACCELERATING') return '#00ff88';
-  if (s === 'EMERGING') return '#00d4ff';
-  if (s === 'STABLE') return '#ffb800';
-  return '#ff3b30';
 }

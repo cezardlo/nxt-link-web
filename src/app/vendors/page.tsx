@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { PageTopBar } from '@/components/PageTopBar';
-
+import { COLORS } from '@/lib/tokens';
+import { TopBar, BottomNav } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 
 type VendorRow = {
@@ -19,39 +19,38 @@ type VendorRow = {
 };
 
 const CATEGORY_COLOR: Record<string, string> = {
-  'Defense':              '#f97316',
-  'Defense IT':           '#f97316',
-  'AI / ML':              '#00d4ff',
-  'Cybersecurity':        '#ff3b30',
-  'Logistics':            '#ffb800',
-  'Border Tech':          '#00d4ff',
-  'Water Tech':           '#00d4ff',
-  'Energy':               '#ffd700',
-  'Health Tech':          '#00ff88',
-  'Manufacturing':        '#6b7280',
-  'FinTech':              '#00d4ff',
+  'Defense':              COLORS.orange,
+  'Defense IT':           COLORS.orange,
+  'AI / ML':              COLORS.accent,
+  'Cybersecurity':        COLORS.red,
+  'Logistics':            COLORS.amber,
+  'Border Tech':          COLORS.accent,
+  'Water Tech':           COLORS.accent,
+  'Energy':               COLORS.gold,
+  'Health Tech':          COLORS.green,
+  'Manufacturing':        COLORS.muted,
+  'FinTech':              COLORS.accent,
   'Analytics':            '#e879f9',
   'Robotics':             '#ec4899',
-  'Consulting':           '#ffb800',
-  'Construction':         '#f59e0b',
-  'Government':           '#00d4ff',
-  'IoT':                  '#14b8a6',
+  'Consulting':           COLORS.amber,
+  'Construction':         COLORS.amber,
+  'Government':           COLORS.accent,
+  'IoT':                  COLORS.emerald,
   'Enterprise IT':        '#3b82f6',
-  'PropTech':             '#a3a3a3',
-  'Economic Development': '#22d3ee',
+  'PropTech':             COLORS.dim,
+  'Economic Development': COLORS.accent,
   'Warehousing':          '#8b5cf6',
   'Trucking':             '#8b5cf6',
-  'Fabrication':          '#f59e0b',
-  'HVAC':                 '#06b6d4',
+  'Fabrication':          COLORS.amber,
+  'HVAC':                 COLORS.accent,
   'Engineering':          '#3b82f6',
-  'Professional':         '#8b8b8b',
-  'Education':            '#22d3ee',
-  'Real Estate':          '#a3a3a3',
-  'Food':                 '#fb923c',
-  'Auto / Fleet':         '#737373',
+  'Professional':         COLORS.muted,
+  'Education':            COLORS.accent,
+  'Real Estate':          COLORS.dim,
+  'Food':                 COLORS.orange,
+  'Auto / Fleet':         COLORS.muted,
 };
 
-// Extract root domain from URL for logo fetching
 function extractDomain(url: string | null): string | null {
   if (!url) return null;
   try {
@@ -62,33 +61,40 @@ function extractDomain(url: string | null): string | null {
   }
 }
 
-// Tiny company logo using Google's favicon service (no API key needed)
 function CompanyLogo({ url, name }: { url: string | null; name: string | null }) {
   const domain = extractDomain(url);
   const initials = (name ?? '?').slice(0, 2).toUpperCase();
 
   if (!domain) {
     return (
-      <div className="w-6 h-6 rounded-sm bg-white/[0.06] border border-white/[0.08] flex items-center justify-center shrink-0">
-        <span className="font-mono text-[7px] text-white/30">{initials}</span>
+      <div
+        className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0"
+        style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}` }}
+      >
+        <span className="font-grotesk text-[10px] font-medium" style={{ color: COLORS.muted }}>
+          {initials}
+        </span>
       </div>
     );
   }
 
   return (
-    <div className="w-6 h-6 rounded-sm bg-white/[0.04] border border-white/[0.06] flex items-center justify-center shrink-0 overflow-hidden">
+    <div
+      className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0 overflow-hidden"
+      style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}` }}
+    >
       <img
         src={`https://www.google.com/s2/favicons?sz=32&domain=${domain}`}
         alt=""
-        width={16}
-        height={16}
-        className="w-4 h-4 object-contain"
+        width={18}
+        height={18}
+        className="w-[18px] h-[18px] object-contain"
         onError={(e) => {
           const target = e.currentTarget as HTMLImageElement;
           target.style.display = 'none';
           const parent = target.parentElement;
           if (parent) {
-            parent.innerHTML = `<span class="font-mono text-[7px] text-white/30">${initials}</span>`;
+            parent.innerHTML = `<span class="font-grotesk text-[10px] font-medium" style="color:${COLORS.muted}">${initials}</span>`;
           }
         }}
       />
@@ -97,57 +103,41 @@ function CompanyLogo({ url, name }: { url: string | null; name: string | null })
 }
 
 function categoryColor(cat: string | null): string {
-  if (!cat) return '#6b7280';
+  if (!cat) return COLORS.muted;
   for (const [key, val] of Object.entries(CATEGORY_COLOR)) {
     if (cat.toLowerCase().includes(key.toLowerCase())) return val;
   }
-  return '#6b7280';
+  return COLORS.muted;
 }
 
-// Compact confidence bar for the table column
-function ConfidenceBar({ conf }: { conf: number | null }) {
-  if (conf === null || conf === undefined) {
-    return (
-      <div className="flex items-center gap-1.5">
-        <div className="w-16 h-[2px] bg-white/[0.06]" />
-        <span className="font-mono text-[9px] text-white/20 tabular-nums w-6 text-right">—</span>
-      </div>
-    );
-  }
+function IkerBadge({ conf }: { conf: number | null }) {
+  if (conf === null || conf === undefined) return null;
   const pct = Math.round(conf * 100);
-  const color = pct >= 80 ? '#00ff88' : pct >= 60 ? '#00d4ff' : pct >= 40 ? '#ffb800' : '#ff3b30';
+  const color = pct >= 80 ? COLORS.green : pct >= 60 ? COLORS.accent : pct >= 40 ? COLORS.amber : COLORS.red;
   return (
-    <div className="flex items-center gap-1.5">
-      <div className="w-16 h-[2px] bg-white/[0.08] overflow-hidden">
-        <div
-          className="h-full transition-all"
-          style={{ width: `${pct}%`, backgroundColor: color, boxShadow: `0 0 4px ${color}99` }}
-        />
-      </div>
-      <span className="font-mono text-[9px] tabular-nums w-6 text-right" style={{ color: `${color}cc` }}>
-        {pct}%
-      </span>
-    </div>
+    <span
+      className="font-mono text-[9px] font-medium tabular-nums px-1.5 py-0.5 rounded-full"
+      style={{ color, background: `${color}15`, border: `1px solid ${color}25` }}
+    >
+      IKER {pct}
+    </span>
   );
 }
 
-// Skeleton row matching the table layout
-function SkeletonRow() {
+function SkeletonCard() {
   return (
-    <div className="flex items-center gap-4 border-b border-white/[0.05] py-4 px-2">
-      {/* dot */}
-      <div className="w-1.5 h-1.5 rounded-full shrink-0 shimmer" />
-      {/* name + desc */}
-      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-        <div className="h-2.5 w-36 rounded-sm shimmer" />
-        <div className="h-2 w-56 rounded-sm shimmer" />
+    <div
+      className="p-4 animate-pulse"
+      style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: '20px' }}
+    >
+      <div className="flex items-start gap-3">
+        <div className="w-9 h-9 rounded-[10px] shimmer" style={{ background: COLORS.surface }} />
+        <div className="flex-1 space-y-2 pt-1">
+          <div className="h-3 w-28 rounded shimmer" style={{ background: COLORS.surface }} />
+          <div className="h-2 w-full rounded shimmer" style={{ background: COLORS.surface }} />
+          <div className="h-2 w-3/4 rounded shimmer" style={{ background: COLORS.surface }} />
+        </div>
       </div>
-      {/* category */}
-      <div className="hidden sm:block w-28 h-2 rounded-sm shimmer" />
-      {/* confidence */}
-      <div className="hidden sm:block w-16 h-[2px] shimmer" />
-      {/* action */}
-      <div className="w-16 h-2 rounded-sm shimmer" />
     </div>
   );
 }
@@ -155,6 +145,7 @@ function SkeletonRow() {
 function VendorsContent() {
   const searchParams = useSearchParams();
   const industryParam = searchParams.get('industry');
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const [vendors, setVendors] = useState<VendorRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -197,7 +188,6 @@ function VendorsContent() {
     return () => { cancelled = true; };
   }, []);
 
-  // Build category list from data
   const categories = ['ALL', ...Array.from(new Set(vendors.map((v) => v.primary_category).filter(Boolean) as string[])).sort()];
 
   const searchFiltered = search.trim()
@@ -223,289 +213,259 @@ function VendorsContent() {
   const hasFilters = search.trim() || activeCategory !== 'ALL' || industryFilter;
 
   return (
-    <div className="fixed inset-0 bg-black flex flex-col overflow-hidden dot-grid">
+    <div className="min-h-screen pb-24 overflow-y-auto" style={{ background: COLORS.bg }}>
+      <TopBar />
 
-      <PageTopBar
-        backHref="/map"
-        backLabel="MAP"
-        breadcrumbs={[{ label: 'VENDOR REGISTRY' }]}
-        showLiveDot={true}
-        rightSlot={
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-[8px] tracking-[0.2em] text-white/30">
-              {vendors.length} VENDORS
-            </span>
-            <a href="/map" className="font-mono text-[8px] tracking-[0.2em] text-[#00d4ff]/50 hover:text-[#00d4ff] transition-colors">
-              MAP ↗
-            </a>
+      <main className="max-w-[720px] mx-auto px-5 sm:px-8">
+        {/* ── Header ─────────────────────────────────────────────── */}
+        <div className="pt-8 sm:pt-12 mb-1">
+          <h1
+            className="font-grotesk text-[28px] sm:text-[34px] font-semibold tracking-tight"
+            style={{ color: COLORS.text }}
+          >
+            Vendors
+          </h1>
+          <p
+            className="font-grotesk text-[14px] font-light mt-1"
+            style={{ color: COLORS.muted }}
+          >
+            El Paso tech ecosystem
+            {!loading && (
+              <span style={{ color: COLORS.dim }}> &middot; {vendors.length} companies</span>
+            )}
+          </p>
+        </div>
+
+        {/* ── Search Bar ─────────────────────────────────────────── */}
+        <div className="mt-6 mb-4">
+          <div
+            className="flex items-center gap-3 px-5 transition-all duration-200 focus-within:border-white/15"
+            style={{
+              background: COLORS.card,
+              border: `1px solid ${COLORS.border}`,
+              borderRadius: '20px',
+              minHeight: '50px',
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={COLORS.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 opacity-40">
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21l-4.35-4.35" />
+            </svg>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search vendors..."
+              className="flex-1 bg-transparent font-grotesk text-[14px] sm:text-[15px] font-light outline-none placeholder:opacity-25 min-h-[44px]"
+              style={{ color: COLORS.text }}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="shrink-0 font-grotesk text-[12px] px-2 min-h-[44px] flex items-center transition-opacity hover:opacity-60"
+                style={{ color: COLORS.muted }}
+                aria-label="Clear search"
+              >
+                Clear
+              </button>
+            )}
           </div>
-        }
-      />
+        </div>
 
-      {/* Main content area */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin">
-        <div className="max-w-6xl mx-auto px-6">
+        {/* ── Category Filter Pills ──────────────────────────────── */}
+        <div className="mb-6 -mx-5 sm:-mx-8 px-5 sm:px-8">
+          <div
+            ref={scrollRef}
+            className="flex gap-2 overflow-x-auto pb-2 scrollbar-none"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
+            {/* Industry filter pill */}
+            {industryFilter && (
+              <button
+                onClick={() => setIndustryFilter(null)}
+                className="shrink-0 flex items-center gap-1.5 font-grotesk text-[11px] font-medium px-4 py-2 transition-all duration-150"
+                style={{
+                  borderRadius: '9999px',
+                  color: COLORS.accent,
+                  background: `${COLORS.accent}15`,
+                  border: `1px solid ${COLORS.accent}40`,
+                }}
+              >
+                {industryFilter}
+                <span className="text-[9px] opacity-60 ml-0.5">x</span>
+              </button>
+            )}
 
-          {/* Header strip */}
-          <div className="flex items-center justify-between py-4 border-b border-white/[0.06]">
-            <div className="flex items-center gap-4">
-              <span className="font-mono text-[14px] tracking-[0.3em] text-white/60 uppercase">
-                VENDOR REGISTRY
-              </span>
-              {!loading && (
-                <span
-                  className="font-mono text-[9px] tracking-[0.15em] text-[#00d4ff] px-3 py-1 border border-[#00d4ff]/20 bg-[#00d4ff]/5"
+            {!loading && categories.map((cat) => {
+              const color = cat === 'ALL' ? COLORS.accent : categoryColor(cat);
+              const isActive = activeCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className="shrink-0 font-grotesk text-[11px] font-medium px-4 py-2 transition-all duration-150 whitespace-nowrap"
+                  style={{
+                    borderRadius: '9999px',
+                    border: `1px solid ${isActive ? `${color}50` : COLORS.border}`,
+                    color: isActive ? color : COLORS.muted,
+                    background: isActive ? `${color}12` : 'transparent',
+                  }}
                 >
-                  {vendors.length}
-                </span>
-              )}
-            </div>
-            <span className="font-mono text-[8px] tracking-[0.15em] text-white/20 uppercase">
-              El Paso Technology Ecosystem
-            </span>
+                  {cat}
+                </button>
+              );
+            })}
           </div>
+        </div>
 
-          {/* Search + filters row */}
-          <div className="py-4 border-b border-white/[0.06]">
+        {/* ── Loading Skeleton ───────────────────────────────────── */}
+        {loading && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {Array.from({ length: 9 }).map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+        )}
 
-            {/* Search input */}
-            <div className="relative">
-              <span className="absolute left-0 top-1/2 -translate-y-1/2 font-mono text-[9px] text-white/25 tracking-[0.25em] pointer-events-none select-none">
-                SRCH
-              </span>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search vendors..."
-                className="w-full bg-transparent font-mono text-[11px] text-white/70 placeholder-white/25
-                           pl-10 pb-2 outline-none border-b border-white/[0.08]
-                           focus:border-[#00d4ff]/40 transition-colors"
+        {/* ── Error State ────────────────────────────────────────── */}
+        {!loading && error && (
+          <div
+            className="p-5 mt-4"
+            style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: '20px' }}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{ background: COLORS.red, boxShadow: `0 0 6px ${COLORS.red}` }}
               />
-              {search && (
-                <button
-                  onClick={() => setSearch('')}
-                  className="absolute right-0 top-1/2 -translate-y-1/2 font-mono text-[9px] text-white/25
-                             hover:text-white/50 transition-colors"
-                  aria-label="Clear search"
-                >
-                  ✕
-                </button>
-              )}
+              <span className="font-grotesk text-[13px] font-medium" style={{ color: COLORS.red }}>
+                Registry Error
+              </span>
             </div>
-
-            {/* Category pills + industry filter */}
-            <div className="flex flex-wrap gap-1.5 mt-3">
-
-              {/* Industry filter pill */}
-              {industryFilter && (
-                <span className="flex items-center gap-1.5 font-mono text-[8px] tracking-[0.15em] px-3 py-1
-                                 border border-[#00d4ff]/40 text-[#00d4ff]/80 uppercase">
-                  {industryFilter}
-                  <button
-                    onClick={() => setIndustryFilter(null)}
-                    className="text-[#00d4ff]/50 hover:text-[#00d4ff] transition-colors"
-                    aria-label="Clear industry filter"
-                  >
-                    ✕
-                  </button>
-                </span>
-              )}
-
-              {/* Category pills */}
-              {!loading && categories.map((cat) => {
-                const color = cat === 'ALL' ? '#00d4ff' : categoryColor(cat);
-                const isActive = activeCategory === cat;
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => setActiveCategory(cat)}
-                    className="font-mono text-[8px] tracking-[0.15em] px-3 py-1 border uppercase transition-all duration-150"
-                    style={{
-                      borderColor: isActive ? `${color}66` : 'rgba(255,255,255,0.07)',
-                      color: isActive ? color : 'rgba(255,255,255,0.30)',
-                      backgroundColor: isActive ? `${color}18` : 'transparent',
-                    }}
-                  >
-                    {cat === 'ALL' ? 'ALL' : cat}
-                  </button>
-                );
-              })}
-            </div>
+            <p className="font-grotesk text-[12px] font-light" style={{ color: COLORS.muted }}>
+              {error}
+            </p>
+            <p className="font-grotesk text-[11px] font-light mt-2" style={{ color: COLORS.dim }}>
+              Configure NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY to load live data.
+            </p>
           </div>
+        )}
 
-          {/* Table header */}
-          {!loading && !error && filtered.length > 0 && (
-            <div className="flex items-center gap-4 py-2.5 border-b border-white/[0.06] bg-white/[0.02]">
-              {/* dot placeholder */}
-              <div className="w-1.5 shrink-0" />
-              {/* vendor / description */}
-              <div className="flex-1 min-w-0 font-mono text-[8px] tracking-[0.2em] text-white/20 uppercase">
-                Vendor / Description
-              </div>
-              {/* category */}
-              <div className="hidden sm:block w-28 font-mono text-[8px] tracking-[0.2em] text-white/20 uppercase text-right">
-                Category
-              </div>
-              {/* confidence */}
-              <div className="hidden sm:block w-24 font-mono text-[8px] tracking-[0.2em] text-white/20 uppercase text-right">
-                Confidence
-              </div>
-              {/* actions */}
-              <div className="w-20 font-mono text-[8px] tracking-[0.2em] text-white/20 uppercase text-right">
-                Actions
-              </div>
-            </div>
-          )}
+        {/* ── Empty State ────────────────────────────────────────── */}
+        {!loading && !error && filtered.length === 0 && (
+          <div className="py-20 text-center">
+            <p className="font-grotesk text-[14px] font-light mb-4" style={{ color: COLORS.muted }}>
+              {hasFilters ? 'No vendors match your filters' : 'No approved vendors found'}
+            </p>
+            {hasFilters && (
+              <button
+                onClick={() => { setSearch(''); setActiveCategory('ALL'); setIndustryFilter(null); }}
+                className="font-grotesk text-[12px] font-medium px-5 py-2.5 transition-all duration-200 hover:opacity-80"
+                style={{
+                  color: COLORS.accent,
+                  background: `${COLORS.accent}12`,
+                  border: `1px solid ${COLORS.accent}30`,
+                  borderRadius: '9999px',
+                }}
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+        )}
 
-          {/* Loading skeleton rows */}
-          {loading && (
-            <div>
-              {Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)}
-            </div>
-          )}
-
-          {/* Error state */}
-          {!loading && error && (
-            <div className="py-10 flex flex-col gap-3">
-              <div className="flex items-center gap-2">
-                <span
-                  className="w-2 h-2 rounded-full shrink-0 bg-[#ff3b30]"
-                  style={{ boxShadow: '0 0 6px #ff3b30cc' }}
-                />
-                <span className="font-mono text-[9px] text-[#ff3b30]/80 tracking-[0.2em] uppercase">
-                  Registry Error
-                </span>
-              </div>
-              <p className="font-mono text-[9px] text-white/40 pl-4">{error}</p>
-              <p className="font-mono text-[8px] text-white/20 pl-4">
-                Configure NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY to load live data.
-              </p>
-            </div>
-          )}
-
-          {/* Empty state */}
-          {!loading && !error && filtered.length === 0 && (
-            <div className="py-16 text-center">
-              <p className="font-mono text-[9px] tracking-[0.2em] text-white/30 uppercase mb-4">
-                {hasFilters ? 'No vendors match your filters' : 'No approved vendors found'}
-              </p>
-              {hasFilters && (
-                <button
-                  onClick={() => { setSearch(''); setActiveCategory('ALL'); setIndustryFilter(null); }}
-                  className="font-mono text-[8px] tracking-[0.2em] text-white/30 hover:text-[#00d4ff]/70
-                             border border-white/[0.08] hover:border-[#00d4ff]/30 px-4 py-2
-                             transition-all uppercase"
+        {/* ── Vendor Grid ────────────────────────────────────────── */}
+        {!loading && !error && filtered.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {filtered.map((vendor) => {
+              const color = categoryColor(vendor.primary_category);
+              return (
+                <Link
+                  key={vendor.id}
+                  href={`/vendor/${vendor.id}`}
+                  className="group block p-4 transition-all duration-200 hover:translate-y-[-2px]"
+                  style={{
+                    background: COLORS.card,
+                    border: `1px solid ${COLORS.border}`,
+                    borderRadius: '20px',
+                  }}
                 >
-                  Clear Filters
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Vendor table rows */}
-          {!loading && !error && filtered.length > 0 && (
-            <div>
-              {filtered.map((vendor) => {
-                const color = categoryColor(vendor.primary_category);
-                return (
-                  <div
-                    key={vendor.id}
-                    className="flex items-center gap-4 border-b border-white/[0.05] py-4 px-2
-                               hover:bg-white/[0.03] transition-colors group"
-                  >
-                    {/* Col 1: category dot */}
-                    <div
-                      className="w-1.5 h-1.5 rounded-full shrink-0"
-                      style={{ backgroundColor: color, boxShadow: `0 0 6px ${color}aa` }}
-                    />
-
-                    {/* Col 1b: company logo */}
+                  {/* Logo + Name */}
+                  <div className="flex items-start gap-2.5 mb-3">
                     <CompanyLogo url={vendor.company_url} name={vendor.company_name} />
-
-                    {/* Col 2: name + description */}
-                    <div className="flex-1 min-w-0">
-                      <div className="font-mono text-[11px] text-white/70 font-medium truncate
-                                      group-hover:text-white/90 transition-colors">
-                        {vendor.company_name ?? 'Unnamed'}
-                      </div>
-                      {vendor.description && (
-                        <div className="font-mono text-[9px] text-white/30 mt-0.5 line-clamp-1
-                                        group-hover:text-white/40 transition-colors">
-                          {vendor.description}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Col 3: category */}
-                    <div className="hidden sm:block w-28 text-right">
-                      {vendor.primary_category && (
-                        <span
-                          className="font-mono text-[7px] tracking-[0.15em] uppercase"
-                          style={{ color: `${color}99` }}
-                        >
-                          {vendor.primary_category}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Col 4: confidence bar */}
-                    <div className="hidden sm:flex w-24 justify-end">
-                      <ConfidenceBar conf={vendor.extraction_confidence} />
-                    </div>
-
-                    {/* Col 5: actions */}
-                    <div className="w-20 flex items-center justify-end gap-2 shrink-0">
-                      {vendor.company_url && (
-                        <a
-                          href={vendor.company_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="font-mono text-[9px] text-white/20 hover:text-white/50
-                                     transition-colors hidden sm:block"
-                        >
-                          WEB
-                        </a>
-                      )}
-                      <Link
-                        href={`/vendor/${vendor.id}`}
-                        className="font-mono text-[9px] text-white/25 group-hover:text-[#00d4ff]
-                                   transition-colors whitespace-nowrap"
+                    <div className="flex-1 min-w-0 pt-0.5">
+                      <p
+                        className="font-grotesk text-[14px] font-semibold truncate group-hover:opacity-90 transition-opacity"
+                        style={{ color: COLORS.text }}
                       >
-                        DOSSIER →
-                      </Link>
+                        {vendor.company_name ?? 'Unnamed'}
+                      </p>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
 
-          {/* Footer */}
-          {!loading && !error && vendors.length > 0 && (
-            <div className="py-3 border-t border-white/[0.05] flex items-center justify-between">
-              <span className="font-mono text-[8px] text-white/15">
-                {vendors.length} vendors · NXT//LINK Registry
-              </span>
-              <Link
-                href="/map"
-                className="font-mono text-[8px] text-white/20 hover:text-[#00d4ff]/60 transition-colors"
-              >
-                VIEW ON MAP →
-              </Link>
-            </div>
-          )}
+                  {/* Category Badge */}
+                  {vendor.primary_category && (
+                    <span
+                      className="inline-block font-grotesk text-[10px] font-medium px-2.5 py-0.5 mb-2"
+                      style={{
+                        borderRadius: '9999px',
+                        color: `${color}`,
+                        background: `${color}15`,
+                        border: `1px solid ${color}25`,
+                      }}
+                    >
+                      {vendor.primary_category}
+                    </span>
+                  )}
 
-        </div>
-      </div>
+                  {/* Description */}
+                  {vendor.description && (
+                    <p
+                      className="font-grotesk text-[12px] font-light leading-[1.5] line-clamp-2 mt-1"
+                      style={{ color: COLORS.muted }}
+                    >
+                      {vendor.description}
+                    </p>
+                  )}
+
+                  {/* IKER Score */}
+                  {vendor.extraction_confidence !== null && vendor.extraction_confidence !== undefined && (
+                    <div className="mt-3">
+                      <IkerBadge conf={vendor.extraction_confidence} />
+                    </div>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── Footer ─────────────────────────────────────────────── */}
+        {!loading && !error && vendors.length > 0 && (
+          <div
+            className="mt-6 py-4 flex items-center justify-between"
+            style={{ borderTop: `1px solid ${COLORS.border}` }}
+          >
+            <span className="font-grotesk text-[11px] font-light" style={{ color: COLORS.dim }}>
+              {vendors.length} vendors &middot; NXT LINK Registry
+            </span>
+            <Link
+              href="/map"
+              className="font-grotesk text-[11px] font-medium transition-opacity hover:opacity-70"
+              style={{ color: COLORS.accent }}
+            >
+              View on Map
+            </Link>
+          </div>
+        )}
+      </main>
+
+      <BottomNav />
     </div>
   );
 }
 
 export default function VendorsPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-black" />}>
+    <Suspense fallback={<div className="min-h-screen" style={{ background: COLORS.bg }} />}>
       <VendorsContent />
     </Suspense>
   );
