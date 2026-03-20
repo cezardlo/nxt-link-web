@@ -91,7 +91,7 @@ export default function IndustriesPage() {
     <div className="min-h-screen pb-16 overflow-y-auto" style={{ background: COLORS.bg }}>
       <TopBar />
 
-      <div className="max-w-[720px] mx-auto px-6 sm:px-10">
+      <div className="max-w-[600px] mx-auto px-6 sm:px-10">
         {/* ── Header ─────────────────────────────────────────────── */}
         <div className="pt-10 sm:pt-14 pb-2">
           <h1 className="font-grotesk text-[24px] sm:text-[30px] font-semibold tracking-tight mb-2" style={{ color: COLORS.text }}>
@@ -126,13 +126,13 @@ export default function IndustriesPage() {
 
         {/* ── Card grid ──────────────────────────────────────────── */}
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="h-[140px] rounded-nxt-xl shimmer" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             {filtered.map((ind, i) => {
               const momentum = getMomentum(ind.id);
               const color = dotColor(momentum);

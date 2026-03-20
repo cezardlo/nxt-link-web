@@ -113,16 +113,16 @@ function SearchPageInner() {
   };
 
   type R = Record<string, string | number | null>;
-  const signals = (industry?.resources?.intel_signals ?? []).slice(0, 5) as R[];
-  const technologies = (industry?.resources?.technologies ?? []).slice(0, 4) as R[];
-  const products = (industry?.resources?.products ?? []).slice(0, 6) as R[];
-  const vendors = (industry?.resources?.vendors ?? []).slice(0, 8) as R[];
+  const signals = (industry?.resources?.intel_signals ?? []).slice(0, 3) as R[];
+  const technologies = (industry?.resources?.technologies ?? []).slice(0, 3) as R[];
+  const products = (industry?.resources?.products ?? []).slice(0, 3) as R[];
+  const vendors = (industry?.resources?.vendors ?? []).slice(0, 5) as R[];
 
   return (
     <div className="min-h-screen pb-16 overflow-y-auto" style={{ background: COLORS.bg }}>
       <TopBar />
 
-      <main className="max-w-[640px] mx-auto px-6 sm:px-10">
+      <main className="max-w-[560px] mx-auto px-6 sm:px-10">
         {/* ── Search Input ────────────────────────────────────────── */}
         <form onSubmit={handleSubmit} className="pt-8 sm:pt-12 mb-6">
           <div
