@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 import { fetchLiveRssFeeds } from '@/lib/rss/live-feeds';
 
 export async function GET() {

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 import { getClientIp } from '@/lib/http/request-context';
 import { checkRateLimit } from '@/lib/http/rate-limit';
 

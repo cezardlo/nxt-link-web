@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 import { orchestrator } from '@/lib/agents/orchestrator';
 import { runAgentSystem } from '@/lib/agents/runner';
 import { saveAgentRun } from '@/lib/agents/store';
