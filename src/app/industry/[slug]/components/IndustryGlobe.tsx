@@ -208,7 +208,6 @@ export function IndustryGlobe({
   // Auto-rotate
   const [rotation, setRotation] = useState({ lat: 20, lon: 0 });
   const [hoveredCode, setHoveredCode] = useState<string | null>(null);
-  const animRef = useRef<number>(0);
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0, lat: 0, lon: 0 });
 
