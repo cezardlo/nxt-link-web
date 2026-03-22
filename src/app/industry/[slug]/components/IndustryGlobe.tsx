@@ -26,97 +26,84 @@ interface IndustryGlobeProps {
   highlightedCodes?: string[];
 }
 
-// ─── Math: Orthographic projection ──────────────────────────────────────────
+// ─── Math ───────────────────────────────────────────────────────────────────
 
 const DEG = Math.PI / 180;
 
 function project(
-  lat: number,
-  lon: number,
-  centerLat: number,
-  centerLon: number,
+  lat: number, lon: number,
+  cLat: number, cLon: number,
   R: number,
-): { x: number; y: number; visible: boolean } {
-  const λ = lon * DEG;
-  const φ = lat * DEG;
-  const λ0 = centerLon * DEG;
-  const φ0 = centerLat * DEG;
-
-  const cosC =
-    Math.sin(φ0) * Math.sin(φ) +
-    Math.cos(φ0) * Math.cos(φ) * Math.cos(λ - λ0);
-
-  if (cosC < 0) return { x: 0, y: 0, visible: false };
-
+): { x: number; y: number; visible: boolean; depth: number } {
+  const λ = lon * DEG, φ = lat * DEG;
+  const λ0 = cLon * DEG, φ0 = cLat * DEG;
+  const cosC = Math.sin(φ0) * Math.sin(φ) + Math.cos(φ0) * Math.cos(φ) * Math.cos(λ - λ0);
+  if (cosC < 0) return { x: 0, y: 0, visible: false, depth: 0 };
   const x = R * Math.cos(φ) * Math.sin(λ - λ0);
   const y = R * (Math.cos(φ0) * Math.sin(φ) - Math.sin(φ0) * Math.cos(φ) * Math.cos(λ - λ0));
-
-  return { x, y, visible: true };
+  return { x, y, visible: true, depth: cosC };
 }
 
-// ─── Arc path between two points on the globe ──────────────────────────────
-
-function arcPath(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number,
-  centerLat: number,
-  centerLon: number,
-  R: number,
-  steps = 24,
+// Great-circle arc (bulges outward properly)
+function greatCircleArc(
+  lat1: number, lon1: number,
+  lat2: number, lon2: number,
+  cLat: number, cLon: number,
+  R: number, steps = 32,
 ): string | null {
-  const points: { x: number; y: number }[] = [];
+  const φ1 = lat1 * DEG, λ1 = lon1 * DEG;
+  const φ2 = lat2 * DEG, λ2 = lon2 * DEG;
 
+  // Convert to cartesian on unit sphere
+  const x1 = Math.cos(φ1) * Math.cos(λ1), y1 = Math.cos(φ1) * Math.sin(λ1), z1 = Math.sin(φ1);
+  const x2 = Math.cos(φ2) * Math.cos(λ2), y2 = Math.cos(φ2) * Math.sin(λ2), z2 = Math.sin(φ2);
+
+  const d = Math.acos(Math.min(1, x1 * x2 + y1 * y2 + z1 * z2));
+  if (d < 0.001) return null;
+
+  const points: { x: number; y: number }[] = [];
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
-    const lat = lat1 + (lat2 - lat1) * t;
-    const lon = lon1 + (lon2 - lon1) * t;
-    const p = project(lat, lon, centerLat, centerLon, R);
-    if (!p.visible) return null; // arc goes behind globe
+    const sinD = Math.sin(d);
+    const a = Math.sin((1 - t) * d) / sinD;
+    const b = Math.sin(t * d) / sinD;
+    const xi = a * x1 + b * x2;
+    const yi = a * y1 + b * y2;
+    const zi = a * z1 + b * z2;
+    const lat = Math.atan2(zi, Math.sqrt(xi * xi + yi * yi)) / DEG;
+    const lon = Math.atan2(yi, xi) / DEG;
+    const p = project(lat, lon, cLat, cLon, R);
+    if (!p.visible) return null;
     points.push(p);
   }
-
   if (points.length < 2) return null;
-  return `M ${points.map((p) => `${p.x},${p.y}`).join(' L ')}`;
+  return `M ${points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L ')}`;
 }
 
-// ─── Graticule (grid lines) ─────────────────────────────────────────────────
+// ─── Graticule ──────────────────────────────────────────────────────────────
 
-function graticulePaths(
-  centerLat: number,
-  centerLon: number,
-  R: number,
-): string[] {
+function graticulePaths(cLat: number, cLon: number, R: number): string[] {
   const paths: string[] = [];
-  const steps = 60;
+  const steps = 80;
 
-  // Latitude lines
-  for (let lat = -60; lat <= 60; lat += 30) {
+  for (let lat = -75; lat <= 75; lat += 15) {
     const pts: string[] = [];
     for (let i = 0; i <= steps; i++) {
       const lon = -180 + (360 * i) / steps;
-      const p = project(lat, lon, centerLat, centerLon, R);
-      if (p.visible) pts.push(`${p.x},${p.y}`);
-      else if (pts.length > 0) {
-        paths.push(`M ${pts.join(' L ')}`);
-        pts.length = 0;
-      }
+      const p = project(lat, lon, cLat, cLon, R);
+      if (p.visible) pts.push(`${p.x.toFixed(1)},${p.y.toFixed(1)}`);
+      else if (pts.length > 1) { paths.push(`M ${pts.join(' L ')}`); pts.length = 0; }
     }
     if (pts.length > 1) paths.push(`M ${pts.join(' L ')}`);
   }
 
-  // Longitude lines
-  for (let lon = -180; lon < 180; lon += 30) {
+  for (let lon = -180; lon < 180; lon += 20) {
     const pts: string[] = [];
     for (let i = 0; i <= steps; i++) {
       const lat = -90 + (180 * i) / steps;
-      const p = project(lat, lon, centerLat, centerLon, R);
-      if (p.visible) pts.push(`${p.x},${p.y}`);
-      else if (pts.length > 0) {
-        paths.push(`M ${pts.join(' L ')}`);
-        pts.length = 0;
-      }
+      const p = project(lat, lon, cLat, cLon, R);
+      if (p.visible) pts.push(`${p.x.toFixed(1)},${p.y.toFixed(1)}`);
+      else if (pts.length > 1) { paths.push(`M ${pts.join(' L ')}`); pts.length = 0; }
     }
     if (pts.length > 1) paths.push(`M ${pts.join(' L ')}`);
   }
@@ -124,70 +111,108 @@ function graticulePaths(
   return paths;
 }
 
-// ─── Continent outlines (simplified) ────────────────────────────────────────
+// ─── Detailed continent outlines ────────────────────────────────────────────
 
-const CONTINENT_PATHS: { coords: [number, number][] }[] = [
-  // North America
-  { coords: [
-    [50, -130], [55, -120], [60, -110], [55, -100], [50, -95], [48, -88],
-    [45, -80], [40, -75], [35, -80], [30, -85], [25, -80], [20, -90],
-    [15, -92], [18, -100], [22, -105], [25, -110], [30, -115], [35, -120],
-    [40, -125], [45, -125], [50, -130],
-  ]},
+const CONTINENT_PATHS: [number, number][][] = [
+  // North America (detailed)
+  [[72,-168],[71,-156],[70,-141],[68,-138],[61,-139],[60,-141],[59,-150],[57,-157],[56,-160],[55,-163],
+   [53,-167],[52,-170],[51,-178],[53,172],[56,163],[59,163],[62,167],[64,170],[67,169],[70,180],[71,180],
+   [72,180],[72,-168]],
+  [[60,-142],[60,-139],[58,-136],[56,-132],[54,-130],[52,-128],[50,-127],[48,-124],[42,-124],[38,-122],
+   [35,-120],[33,-117],[31,-114],[29,-112],[26,-110],[24,-110],[22,-106],[19,-105],[17,-101],[16,-96],
+   [18,-92],[20,-88],[22,-85],[25,-80],[27,-80],[30,-82],[31,-85],[30,-88],[30,-90],[29,-94],[27,-97],
+   [26,-98],[25,-97],[22,-97],[18,-91],[18,-88],[21,-87],[22,-85],[25,-80],[28,-77],[30,-75],[33,-76],
+   [35,-76],[38,-75],[40,-74],[41,-72],[42,-70],[43,-66],[45,-61],[47,-60],[47,-56],[49,-54],[52,-56],
+   [53,-57],[55,-59],[58,-63],[60,-64],[62,-66],[64,-68],[67,-68],[69,-71],[70,-73],[72,-78],[74,-80],
+   [76,-85],[78,-90],[80,-95],[81,-100],[83,-90],[83,-72],[82,-63],[81,-61],[80,-67],[78,-72],[76,-74],
+   [74,-80],[71,-84],[69,-82],[68,-76],[66,-68],[64,-66],[62,-65],[60,-64],[58,-60],[55,-57],[51,-57],
+   [49,-55],[47,-53],[47,-60],[44,-63],[43,-65],[42,-66],[40,-67],[38,-70],[36,-75],[35,-76],[33,-77],
+   [30,-81],[29,-83],[29,-88],[30,-90],[32,-88],[33,-85],[30,-82],[29,-80],[32,-81],[35,-80],[38,-76],
+   [40,-73],[41,-70],[44,-66],[46,-61],[49,-53],[52,-56],[55,-58],[57,-61],[60,-65],[63,-68],[65,-68],
+   [67,-65],[68,-62],[67,-55],[65,-55],[63,-60],[60,-65],[57,-62],[56,-60],[54,-58]],
+  // North America simplified coast
+  [[60,-140],[58,-136],[55,-131],[50,-127],[45,-124],[40,-123],[35,-120],[32,-117],[28,-112],[25,-110],
+   [20,-105],[18,-97],[18,-92],[21,-87],[25,-80],[29,-77],[33,-76],[38,-75],[41,-71],[44,-66],[47,-60],
+   [49,-54],[52,-56],[55,-59],[59,-64],[63,-68],[68,-76],[71,-84],[75,-82],[78,-88],[80,-95],[83,-90],
+   [83,-72],[80,-64],[77,-70],[73,-78],[68,-75],[65,-65],[61,-62],[57,-57],[53,-55],[49,-52],[46,-60],
+   [43,-65],[40,-70],[37,-75],[33,-79],[30,-83],[30,-89],[28,-96],[24,-104],[20,-105]],
   // South America
-  { coords: [
-    [10, -75], [5, -78], [0, -80], [-5, -80], [-10, -77], [-15, -75],
-    [-20, -70], [-25, -65], [-30, -60], [-35, -58], [-40, -65],
-    [-45, -68], [-50, -72], [-55, -68], [-50, -60], [-45, -55],
-    [-35, -50], [-25, -45], [-15, -40], [-10, -37], [-5, -35],
-    [0, -50], [5, -60], [10, -68], [10, -75],
-  ]},
+  [[12,-70],[11,-75],[8,-77],[4,-78],[2,-80],[-1,-80],[-3,-79],[-5,-80],[-8,-79],[-10,-77],
+   [-13,-76],[-15,-75],[-18,-70],[-20,-64],[-22,-60],[-25,-58],[-28,-56],[-30,-52],[-32,-52],
+   [-35,-57],[-38,-60],[-41,-63],[-44,-65],[-47,-66],[-50,-68],[-52,-70],[-54,-69],[-55,-67],
+   [-54,-65],[-52,-62],[-48,-58],[-45,-55],[-42,-52],[-38,-48],[-35,-45],[-32,-43],[-28,-42],
+   [-25,-42],[-22,-41],[-18,-39],[-15,-39],[-12,-38],[-8,-35],[-5,-35],[-2,-40],[0,-48],
+   [2,-52],[4,-55],[5,-58],[7,-60],[8,-62],[10,-65],[11,-68],[12,-70]],
   // Europe
-  { coords: [
-    [38, -10], [40, 0], [43, 5], [46, 8], [48, 15], [52, 14],
-    [55, 20], [58, 25], [60, 30], [65, 25], [70, 30], [70, 20],
-    [68, 15], [62, 10], [58, 5], [55, 0], [50, -5], [45, -8], [38, -10],
-  ]},
+  [[36,-10],[37,-5],[38,-1],[40,0],[42,3],[43,5],[44,8],[46,10],[47,13],[48,15],[49,17],
+   [50,14],[51,12],[52,10],[53,7],[54,9],[55,12],[55,15],[57,17],[58,20],[60,22],[61,24],
+   [62,26],[64,28],[66,28],[68,30],[70,28],[71,26],[70,22],[69,18],[68,15],[67,14],[66,12],
+   [65,10],[64,8],[62,5],[60,5],[58,5],[56,8],[55,9],[54,8],[53,5],[52,4],[51,3],[50,2],
+   [49,0],[48,-2],[47,-3],[46,-2],[45,0],[44,-1],[43,-2],[42,-4],[40,-5],[38,-6],[37,-8],[36,-10]],
   // Africa
-  { coords: [
-    [35, -5], [32, 0], [30, 10], [25, 35], [20, 40], [15, 42],
-    [10, 45], [5, 42], [0, 40], [-5, 38], [-10, 35], [-15, 35],
-    [-20, 30], [-25, 30], [-30, 28], [-35, 20], [-33, 18],
-    [-28, 15], [-20, 12], [-15, 10], [-10, 8], [-5, 5],
-    [0, 5], [5, 0], [10, -5], [15, -15], [20, -15],
-    [25, -12], [30, -8], [35, -5],
-  ]},
+  [[37,-1],[35,0],[33,0],[31,-2],[30,-5],[29,-8],[28,-10],[26,-13],[24,-16],[22,-17],[20,-17],
+   [18,-16],[16,-16],[14,-17],[12,-17],[10,-15],[8,-13],[6,-10],[5,-7],[5,-3],[5,0],[5,2],
+   [4,7],[3,10],[2,10],[0,10],[-2,10],[-4,12],[-6,12],[-8,14],[-10,15],[-12,18],[-14,22],
+   [-16,25],[-18,28],[-20,30],[-22,32],[-24,33],[-26,33],[-28,32],[-30,31],[-32,29],[-34,26],
+   [-35,20],[-34,18],[-33,17],[-30,17],[-27,15],[-22,14],[-18,12],[-14,10],[-10,8],[-6,5],
+   [-3,5],[0,2],[2,1],[4,2],[6,1],[8,0],[10,-5],[12,-8],[14,-12],[16,-16],[18,-16],[20,-17],
+   [22,-17],[24,-16],[26,-15],[28,-13],[30,-10],[32,-5],[33,-1],[35,0],[35,0],[35,2],[35,10],
+   [33,12],[30,32],[28,34],[25,37],[22,38],[20,40],[18,42],[15,44],[12,45],[10,46],[8,48],
+   [5,44],[3,42],[1,42],[-1,42],[-3,40],[-5,38],[-8,36],[-10,35],[-12,35],[-14,34],
+   [-16,32],[-18,30],[-20,28],[-22,32],[-24,33]],
   // Asia
-  { coords: [
-    [30, 35], [35, 40], [40, 45], [45, 50], [50, 55], [55, 65],
-    [60, 70], [65, 80], [68, 90], [70, 100], [65, 110], [60, 120],
-    [55, 130], [50, 135], [45, 140], [40, 135], [35, 130],
-    [30, 120], [25, 110], [20, 105], [15, 100], [10, 100],
-    [15, 80], [20, 70], [25, 60], [28, 50], [30, 35],
-  ]},
+  [[42,28],[40,30],[38,35],[37,40],[35,42],[33,44],[30,48],[28,50],[26,52],[25,56],[24,58],
+   [22,60],[20,63],[18,68],[16,73],[14,78],[12,80],[10,80],[8,78],[6,80],[4,98],[2,104],
+   [1,104],[0,105],[-2,106],[-6,106],[-8,110],[-7,115],[-6,120],[-5,120],[-3,115],[-1,110],
+   [2,108],[5,108],[8,106],[10,108],[12,110],[14,108],[16,108],[18,107],[20,106],[22,108],
+   [24,110],[26,115],[28,118],[30,120],[32,122],[34,126],[36,128],[38,130],[40,132],[42,133],
+   [44,135],[46,138],[48,140],[50,142],[52,143],[54,142],[56,138],[58,137],[60,136],[62,134],
+   [64,136],[66,140],[68,160],[70,170],[72,180],[72,120],[70,100],[68,90],[66,80],[64,72],
+   [62,68],[60,60],[58,55],[56,52],[54,48],[52,44],[50,40],[48,38],[46,36],[44,32],[42,28]],
   // Australia
-  { coords: [
-    [-15, 130], [-12, 135], [-15, 140], [-20, 148], [-25, 150],
-    [-30, 150], [-35, 148], [-38, 145], [-35, 140], [-32, 135],
-    [-28, 130], [-25, 120], [-22, 115], [-18, 120], [-15, 125],
-    [-15, 130],
-  ]},
+  [[-12,130],[-11,132],[-12,136],[-14,136],[-15,140],[-17,146],[-20,149],[-23,150],
+   [-26,153],[-28,153],[-30,153],[-33,152],[-35,150],[-37,150],[-38,148],[-39,146],
+   [-38,144],[-37,140],[-36,137],[-35,135],[-34,132],[-32,128],[-30,125],[-28,122],
+   [-26,119],[-24,115],[-22,114],[-20,113],[-18,118],[-16,122],[-14,126],[-12,130]],
+  // Japan / Korean peninsula
+  [[32,130],[33,131],[35,133],[36,136],[37,137],[38,138],[40,139],[42,140],[44,142],[45,143],
+   [44,145],[42,144],[40,140],[38,139],[36,137],[34,134],[32,131],[32,130]],
+  // UK/Ireland
+  [[50,-6],[51,-5],[52,-4],[53,-3],[54,-3],[55,-2],[56,-3],[57,-5],[58,-5],[59,-3],
+   [58,-2],[57,0],[55,0],[54,-1],[53,-1],[52,-2],[51,-3],[50,-5],[50,-6]],
+  // Indonesia
+  [[-6,106],[-7,108],[-8,112],[-8,115],[-7,118],[-6,120],[-5,122],[-4,125],[-3,128],
+   [-2,130],[-1,132],[0,131],[-1,128],[-2,125],[-3,122],[-4,118],[-5,115],[-6,112],[-6,106]],
 ];
 
-function continentPaths(
-  centerLat: number,
-  centerLon: number,
-  R: number,
-): string[] {
-  return CONTINENT_PATHS.map(({ coords }) => {
-    const pts: { x: number; y: number }[] = [];
-    for (const [lat, lon] of coords) {
-      const p = project(lat, lon, centerLat, centerLon, R);
-      if (p.visible) pts.push(p);
-    }
-    if (pts.length < 3) return '';
-    return `M ${pts.map((p) => `${p.x},${p.y}`).join(' L ')} Z`;
-  }).filter(Boolean);
+function projectContinent(coords: [number, number][], cLat: number, cLon: number, R: number): string {
+  const pts: string[] = [];
+  for (const [lat, lon] of coords) {
+    const p = project(lat, lon, cLat, cLon, R);
+    if (p.visible) pts.push(`${p.x.toFixed(1)},${p.y.toFixed(1)}`);
+  }
+  if (pts.length < 3) return '';
+  return `M ${pts.join(' L ')} Z`;
+}
+
+// ─── Star field ─────────────────────────────────────────────────────────────
+
+function generateStars(count: number, size: number): Array<{ x: number; y: number; r: number; o: number }> {
+  const stars: Array<{ x: number; y: number; r: number; o: number }> = [];
+  // Seeded pseudo-random
+  let seed = 42;
+  const rand = () => { seed = (seed * 16807 + 0) % 2147483647; return seed / 2147483647; };
+  for (let i = 0; i < count; i++) {
+    const angle = rand() * Math.PI * 2;
+    const dist = size * 0.44 + rand() * size * 0.06;
+    stars.push({
+      x: Math.cos(angle) * dist,
+      y: Math.sin(angle) * dist,
+      r: 0.3 + rand() * 0.8,
+      o: 0.1 + rand() * 0.4,
+    });
+  }
+  return stars;
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -200,47 +225,47 @@ export function IndustryGlobe({
   onCountrySelect,
   highlightedCodes = [],
 }: IndustryGlobeProps) {
-  const SIZE = 380;
-  const R = SIZE * 0.42;
+  const SIZE = 420;
+  const R = SIZE * 0.40;
   const CX = SIZE / 2;
   const CY = SIZE / 2;
 
-  // Auto-rotate
   const [rotation, setRotation] = useState({ lat: 20, lon: 0 });
   const [hoveredCode, setHoveredCode] = useState<string | null>(null);
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0, lat: 0, lon: 0 });
+  const [time, setTime] = useState(0);
 
-  // Slow auto-rotation
+  // Animation tick for breathing + particles
   useEffect(() => {
     let frame: number;
-    const animate = () => {
+    let t = 0;
+    const tick = () => {
+      t += 0.016;
+      setTime(t);
       if (!isDragging.current && !selectedCountryCode && !hoveredCode) {
-        setRotation((prev) => ({ ...prev, lon: prev.lon + 0.15 }));
+        setRotation(prev => ({ ...prev, lon: prev.lon + 0.08 }));
       }
-      frame = requestAnimationFrame(animate);
+      frame = requestAnimationFrame(tick);
     };
-    frame = requestAnimationFrame(animate);
+    frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
   }, [selectedCountryCode, hoveredCode]);
 
-  // Snap to selected country
+  // Snap to selected
   useEffect(() => {
     if (selectedCountryCode) {
-      const c = countries.find((c) => c.code === selectedCountryCode);
+      const c = countries.find(c => c.code === selectedCountryCode);
       if (c) setRotation({ lat: c.lat * 0.5, lon: -c.lon });
     }
   }, [selectedCountryCode, countries]);
 
-  // Drag to rotate
-  const onPointerDown = useCallback(
-    (e: React.PointerEvent) => {
-      isDragging.current = true;
-      dragStart.current = { x: e.clientX, y: e.clientY, lat: rotation.lat, lon: rotation.lon };
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    },
-    [rotation],
-  );
+  // Drag
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    isDragging.current = true;
+    dragStart.current = { x: e.clientX, y: e.clientY, lat: rotation.lat, lon: rotation.lon };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [rotation]);
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     if (!isDragging.current) return;
@@ -252,77 +277,72 @@ export function IndustryGlobe({
     });
   }, []);
 
-  const onPointerUp = useCallback(() => {
-    isDragging.current = false;
-  }, []);
+  const onPointerUp = useCallback(() => { isDragging.current = false; }, []);
 
-  // Filter relevant countries (those with sectors matching this industry)
+  // Relevant countries
   const relevantCountries = useMemo(() => {
     const catLower = industryCategory.toLowerCase();
-    return countries.filter((c) =>
-      c.primarySectors.some((s) => s.toLowerCase().includes(catLower) || catLower.includes(s.toLowerCase())),
+    return countries.filter(c =>
+      c.primarySectors.some(s => s.toLowerCase().includes(catLower) || catLower.includes(s.toLowerCase())),
     );
   }, [countries, industryCategory]);
 
-  // Build connection arcs between countries that share sectors
+  // Top 5 by techScore for always-visible labels
+  const top5Codes = useMemo(() => {
+    const relevant = relevantCountries.length > 0 ? relevantCountries : countries;
+    return new Set(relevant.sort((a, b) => b.techScore - a.techScore).slice(0, 5).map(c => c.code));
+  }, [relevantCountries, countries]);
+
+  // Connection arcs
   const connections = useMemo(() => {
     const arcs: { from: CountryTechProfile; to: CountryTechProfile; strength: number }[] = [];
     const relevant = relevantCountries.length > 0 ? relevantCountries : countries.slice(0, 8);
-
     for (let i = 0; i < relevant.length; i++) {
       for (let j = i + 1; j < relevant.length; j++) {
-        const a = relevant[i];
-        const b = relevant[j];
-        const shared = a.primarySectors.filter((s) =>
-          b.primarySectors.some((bs) => bs.toLowerCase() === s.toLowerCase()),
+        const shared = relevant[i].primarySectors.filter(s =>
+          relevant[j].primarySectors.some(bs => bs.toLowerCase() === s.toLowerCase()),
         ).length;
-        if (shared > 0) {
-          arcs.push({ from: a, to: b, strength: shared });
-        }
+        if (shared > 0) arcs.push({ from: relevant[i], to: relevant[j], strength: shared });
       }
     }
-
-    // Keep top connections to avoid visual clutter
-    return arcs.sort((a, b) => b.strength - a.strength).slice(0, 12);
+    return arcs.sort((a, b) => b.strength - a.strength).slice(0, 15);
   }, [relevantCountries, countries]);
 
-  // Projected data
+  // Projected countries
   const projectedCountries = useMemo(() => {
-    return countries.map((c) => {
+    return countries.map(c => {
       const p = project(c.lat, c.lon, rotation.lat, rotation.lon, R);
-      const isRelevant = relevantCountries.some((rc) => rc.code === c.code);
+      const isRelevant = relevantCountries.some(rc => rc.code === c.code);
       const isHighlighted = highlightedCodes.length === 0 || highlightedCodes.includes(c.code);
       return { ...c, ...p, isRelevant, isHighlighted };
     });
   }, [countries, rotation, R, relevantCountries, highlightedCodes]);
 
+  // Projected arcs (great-circle)
   const projectedArcs = useMemo(() => {
-    return connections
-      .map((conn) => {
-        const path = arcPath(
-          conn.from.lat, conn.from.lon,
-          conn.to.lat, conn.to.lon,
-          rotation.lat, rotation.lon,
-          R,
-        );
-        return path ? { ...conn, path } : null;
-      })
-      .filter(Boolean) as { from: CountryTechProfile; to: CountryTechProfile; strength: number; path: string }[];
+    return connections.map(conn => {
+      const path = greatCircleArc(
+        conn.from.lat, conn.from.lon, conn.to.lat, conn.to.lon,
+        rotation.lat, rotation.lon, R,
+      );
+      return path ? { ...conn, path } : null;
+    }).filter(Boolean) as { from: CountryTechProfile; to: CountryTechProfile; strength: number; path: string }[];
   }, [connections, rotation, R]);
 
-  const graticule = useMemo(
-    () => graticulePaths(rotation.lat, rotation.lon, R),
+  const graticule = useMemo(() => graticulePaths(rotation.lat, rotation.lon, R), [rotation, R]);
+
+  const continents = useMemo(() =>
+    CONTINENT_PATHS.map(coords => projectContinent(coords, rotation.lat, rotation.lon, R)).filter(Boolean),
     [rotation, R],
   );
 
-  const continents = useMemo(
-    () => continentPaths(rotation.lat, rotation.lon, R),
-    [rotation, R],
-  );
+  const stars = useMemo(() => generateStars(60, SIZE), [SIZE]);
+
+  // Breathing factor
+  const breath = 1 + Math.sin(time * 1.5) * 0.08;
 
   return (
     <div className="relative flex flex-col items-center">
-      {/* Globe SVG */}
       <svg
         width={SIZE}
         height={SIZE}
@@ -333,88 +353,120 @@ export function IndustryGlobe({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
       >
-        {/* Defs */}
         <defs>
-          <radialGradient id="globe-bg" cx="40%" cy="35%">
-            <stop offset="0%" stopColor="#1a1e28" />
-            <stop offset="100%" stopColor="#0d0f12" />
+          {/* Globe fill */}
+          <radialGradient id="globe-fill" cx="38%" cy="32%">
+            <stop offset="0%" stopColor="#1c2030" />
+            <stop offset="60%" stopColor="#12151c" />
+            <stop offset="100%" stopColor="#0a0c10" />
           </radialGradient>
-          <radialGradient id="globe-glow" cx="50%" cy="50%">
-            <stop offset="80%" stopColor="transparent" />
-            <stop offset="100%" stopColor={`${accentColor}08`} />
+          {/* Atmospheric rim glow */}
+          <radialGradient id="atmo-glow" cx="50%" cy="50%">
+            <stop offset="88%" stopColor="transparent" />
+            <stop offset="94%" stopColor={`${accentColor}12`} />
+            <stop offset="100%" stopColor={`${accentColor}06`} />
+          </radialGradient>
+          {/* Outer halo */}
+          <radialGradient id="outer-halo" cx="50%" cy="50%">
+            <stop offset="85%" stopColor="transparent" />
+            <stop offset="95%" stopColor={`${accentColor}08`} />
+            <stop offset="100%" stopColor="transparent" />
           </radialGradient>
           <filter id="arc-glow">
-            <feGaussianBlur stdDeviation="2" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
+            <feGaussianBlur stdDeviation="2.5" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
           <filter id="dot-glow">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+          <filter id="rim-blur">
+            <feGaussianBlur stdDeviation="6" />
           </filter>
         </defs>
 
-        {/* Globe sphere */}
-        <circle r={R} fill="url(#globe-bg)" stroke={`${COLORS.border}`} strokeWidth={0.5} />
-        <circle r={R} fill="url(#globe-glow)" />
+        {/* ── Stars ──────────────────────────────────────────────────── */}
+        {stars.map((s, i) => (
+          <circle
+            key={`s${i}`}
+            cx={s.x} cy={s.y} r={s.r}
+            fill={COLORS.text}
+            opacity={s.o * (0.6 + Math.sin(time * 0.8 + i) * 0.4)}
+          />
+        ))}
 
-        {/* Graticule */}
+        {/* ── Atmosphere outer ring ──────────────────────────────────── */}
+        <circle r={R + 12} fill="none" stroke={accentColor} strokeWidth={1} opacity={0.04} filter="url(#rim-blur)" />
+        <circle r={R + 6} fill="none" stroke={accentColor} strokeWidth={0.5} opacity={0.08} />
+        <circle r={R + 2} fill="url(#outer-halo)" />
+
+        {/* ── Globe sphere ───────────────────────────────────────────── */}
+        <circle r={R} fill="url(#globe-fill)" stroke={`${accentColor}18`} strokeWidth={0.8} />
+        <circle r={R} fill="url(#atmo-glow)" />
+
+        {/* ── Graticule ──────────────────────────────────────────────── */}
         {graticule.map((d, i) => (
-          <path key={i} d={d} fill="none" stroke={`${COLORS.text}06`} strokeWidth={0.3} />
+          <path key={i} d={d} fill="none" stroke={`${COLORS.text}08`} strokeWidth={0.4} />
         ))}
 
-        {/* Continent outlines */}
+        {/* ── Continents ─────────────────────────────────────────────── */}
         {continents.map((d, i) => (
-          <path key={`c-${i}`} d={d} fill={`${COLORS.text}05`} stroke={`${COLORS.text}12`} strokeWidth={0.5} />
+          <path key={`ct-${i}`} d={d} fill={`${accentColor}06`} stroke={`${COLORS.text}18`} strokeWidth={0.6} />
         ))}
 
-        {/* Connection arcs */}
-        {projectedArcs.map((arc, i) => (
-          <path
-            key={`arc-${i}`}
-            d={arc.path}
-            fill="none"
-            stroke={accentColor}
-            strokeWidth={0.5 + arc.strength * 0.4}
-            strokeOpacity={selectedCountryCode
-              ? (arc.from.code === selectedCountryCode || arc.to.code === selectedCountryCode ? 0.5 : 0.08)
-              : 0.2
-            }
-            filter="url(#arc-glow)"
-            strokeDasharray="3,4"
-          >
-            <animate
-              attributeName="stroke-dashoffset"
-              from="0"
-              to="-14"
-              dur={`${3 + i * 0.5}s`}
-              repeatCount="indefinite"
-            />
-          </path>
-        ))}
+        {/* ── Connection arcs ────────────────────────────────────────── */}
+        {projectedArcs.map((arc, i) => {
+          const isActive = selectedCountryCode
+            ? (arc.from.code === selectedCountryCode || arc.to.code === selectedCountryCode)
+            : true;
+          return (
+            <g key={`arc-${i}`}>
+              {/* Glow layer */}
+              <path
+                d={arc.path}
+                fill="none"
+                stroke={accentColor}
+                strokeWidth={1 + arc.strength * 0.6}
+                strokeOpacity={isActive ? 0.12 : 0.03}
+                filter="url(#arc-glow)"
+              />
+              {/* Main arc */}
+              <path
+                d={arc.path}
+                fill="none"
+                stroke={accentColor}
+                strokeWidth={0.6 + arc.strength * 0.3}
+                strokeOpacity={isActive ? (selectedCountryCode ? 0.6 : 0.25) : 0.05}
+                strokeDasharray="4,6"
+              >
+                <animate
+                  attributeName="stroke-dashoffset"
+                  from="0" to="-20"
+                  dur={`${2 + i * 0.3}s`}
+                  repeatCount="indefinite"
+                />
+              </path>
+            </g>
+          );
+        })}
 
-        {/* Country dots */}
+        {/* ── Country dots ───────────────────────────────────────────── */}
         {projectedCountries
-          .filter((c) => c.visible)
+          .filter(c => c.visible)
           .sort((a, b) => {
-            // Selected/hovered on top
             if (a.code === selectedCountryCode || a.code === hoveredCode) return 1;
             if (b.code === selectedCountryCode || b.code === hoveredCode) return -1;
-            return 0;
+            return a.depth - b.depth;
           })
-          .map((c) => {
+          .map(c => {
             const isSelected = c.code === selectedCountryCode;
             const isHovered = c.code === hoveredCode;
-            const baseR = c.isRelevant ? 4 + (c.techScore / 100) * 4 : 2;
-            const r = isSelected ? baseR * 1.6 : isHovered ? baseR * 1.3 : baseR;
+            const isTop5 = top5Codes.has(c.code);
+            const baseR = c.isRelevant ? 5 + (c.techScore / 100) * 5 : 2.5;
+            const r = isSelected ? baseR * 1.8 : isHovered ? baseR * 1.4 : baseR * (c.isRelevant ? breath : 1);
             const opacity = c.isRelevant
-              ? c.isHighlighted ? 1 : 0.3
-              : 0.15;
+              ? c.isHighlighted ? 0.95 : 0.25
+              : 0.12;
 
             return (
               <g
@@ -426,65 +478,117 @@ export function IndustryGlobe({
               >
                 {/* Pulse ring for selected */}
                 {isSelected && (
-                  <circle cx={c.x} cy={c.y} r={r + 6} fill="none" stroke={accentColor} strokeWidth={0.8}>
-                    <animate attributeName="r" from={r + 2} to={r + 10} dur="2s" repeatCount="indefinite" />
-                    <animate attributeName="opacity" from="0.6" to="0" dur="2s" repeatCount="indefinite" />
-                  </circle>
+                  <>
+                    <circle cx={c.x} cy={c.y} r={r + 8} fill="none" stroke={accentColor} strokeWidth={1}>
+                      <animate attributeName="r" from={r + 3} to={r + 14} dur="2s" repeatCount="indefinite" />
+                      <animate attributeName="opacity" from="0.5" to="0" dur="2s" repeatCount="indefinite" />
+                    </circle>
+                    <circle cx={c.x} cy={c.y} r={r + 5} fill="none" stroke={accentColor} strokeWidth={0.5}>
+                      <animate attributeName="r" from={r + 1} to={r + 10} dur="2s" begin="0.4s" repeatCount="indefinite" />
+                      <animate attributeName="opacity" from="0.3" to="0" dur="2s" begin="0.4s" repeatCount="indefinite" />
+                    </circle>
+                  </>
                 )}
 
-                {/* Glow */}
+                {/* Outer glow */}
                 {c.isRelevant && (
                   <circle
-                    cx={c.x}
-                    cy={c.y}
-                    r={r * 2}
+                    cx={c.x} cy={c.y}
+                    r={r * 2.5}
                     fill={c.color}
-                    opacity={isSelected ? 0.15 : 0.06}
+                    opacity={isSelected ? 0.18 : isHovered ? 0.12 : 0.05}
                     filter="url(#dot-glow)"
+                  />
+                )}
+
+                {/* Inner glow ring */}
+                {c.isRelevant && (isSelected || isHovered || isTop5) && (
+                  <circle
+                    cx={c.x} cy={c.y}
+                    r={r + 2}
+                    fill="none"
+                    stroke={c.color}
+                    strokeWidth={0.6}
+                    opacity={0.3}
                   />
                 )}
 
                 {/* Dot */}
                 <circle
-                  cx={c.x}
-                  cy={c.y}
-                  r={r}
-                  fill={c.isRelevant ? c.color : `${COLORS.text}40`}
+                  cx={c.x} cy={c.y} r={r}
+                  fill={c.isRelevant ? c.color : `${COLORS.text}30`}
                   opacity={opacity}
-                  stroke={isSelected ? accentColor : 'none'}
-                  strokeWidth={isSelected ? 1.5 : 0}
+                  stroke={isSelected ? accentColor : isHovered ? `${c.color}88` : 'none'}
+                  strokeWidth={isSelected ? 2 : isHovered ? 1 : 0}
                 />
 
-                {/* Label */}
-                {(isSelected || isHovered) && (
+                {/* Always-visible label for top 5 */}
+                {c.isRelevant && isTop5 && !isSelected && !isHovered && (
                   <text
-                    x={c.x}
-                    y={c.y - r - 6}
+                    x={c.x} y={c.y - r - 5}
                     textAnchor="middle"
-                    fill={COLORS.text}
-                    fontSize={8}
+                    fill={`${COLORS.text}55`}
+                    fontSize={7}
                     fontFamily="monospace"
-                    opacity={0.9}
                   >
-                    {c.name}
+                    {c.code}
                   </text>
+                )}
+
+                {/* Hover/selected label */}
+                {(isSelected || isHovered) && (
+                  <>
+                    {/* Background pill */}
+                    <rect
+                      x={c.x - 30} y={c.y - r - 18}
+                      width={60} height={14}
+                      rx={4}
+                      fill={`${COLORS.bg}dd`}
+                      stroke={`${c.color}33`}
+                      strokeWidth={0.5}
+                    />
+                    <text
+                      x={c.x} y={c.y - r - 9}
+                      textAnchor="middle"
+                      fill={isSelected ? accentColor : COLORS.text}
+                      fontSize={8}
+                      fontFamily="monospace"
+                      fontWeight={isSelected ? 'bold' : 'normal'}
+                    >
+                      {c.name}
+                    </text>
+                    {/* Score badge */}
+                    <text
+                      x={c.x} y={c.y + r + 12}
+                      textAnchor="middle"
+                      fill={c.color}
+                      fontSize={7}
+                      fontFamily="monospace"
+                    >
+                      {c.techScore}
+                    </text>
+                  </>
                 )}
               </g>
             );
           })}
       </svg>
 
-      {/* Legend */}
-      <div className="flex items-center gap-4 mt-3 font-mono text-[7px] tracking-[0.1em]" style={{ color: `${COLORS.text}40` }}>
+      {/* ── Legend ────────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-5 mt-2 font-mono text-[7px] tracking-[0.12em]" style={{ color: `${COLORS.text}50` }}>
         <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full" style={{ background: accentColor, opacity: 0.8 }} />
-          RELEVANT
+          <span className="w-2.5 h-2.5 rounded-full" style={{ background: accentColor, opacity: 0.9, boxShadow: `0 0 6px ${accentColor}60` }} />
+          ACTIVE
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-2 h-0.5 rounded" style={{ background: accentColor, opacity: 0.4 }} />
-          CONNECTION
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: `${COLORS.text}40` }} />
+          OTHER
         </span>
-        <span style={{ color: `${COLORS.text}25` }}>DRAG TO ROTATE</span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-px rounded" style={{ background: accentColor, opacity: 0.5 }} />
+          ARC
+        </span>
+        <span style={{ color: `${COLORS.text}30` }}>DRAG TO ROTATE</span>
       </div>
     </div>
   );
