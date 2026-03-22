@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 
 const NAV_ITEMS = [
   { href: '/map',              label: 'MAP',     icon: '◎', color: '#00d4ff' },
-  { href: '/industries',       label: 'EXPLORE', icon: '⬡', color: '#ffd700' },
+  { href: '/explore',       label: 'EXPLORE', icon: '⬡', color: '#ffd700' },
   { href: '/intel',            label: 'INTEL',   icon: '◈', color: '#ffb800' },
   { href: '/world',            label: 'WORLD',   icon: '◉', color: '#00d4ff' },
   { href: '/trajectory',       label: 'TRAJ',    icon: '↗', color: '#00ff88' },

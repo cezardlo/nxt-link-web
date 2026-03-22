@@ -428,7 +428,7 @@ export default function IndustryCommandCenter() {
             INDUSTRY NOT FOUND
           </div>
           <Link
-            href="/industries"
+            href="/explore"
             className="font-mono text-[9px] tracking-[0.2em] hover:text-[#00d4ff] transition-colors"
             style={{ color: `${COLORS.accent}80` }}
           >

@@ -16,7 +16,7 @@ export default function IndustrySolvePage() {
       <div className="bg-black min-h-screen flex items-center justify-center">
         <div className="text-center space-y-3">
           <div className="font-mono text-[10px] text-white/30 tracking-[0.3em]">INDUSTRY NOT FOUND</div>
-          <Link href="/industries" className="font-mono text-[9px] text-[#00d4ff]/60 hover:text-[#00d4ff] transition-colors">
+          <Link href="/explore" className="font-mono text-[9px] text-[#00d4ff]/60 hover:text-[#00d4ff] transition-colors">
             ← BACK TO INDUSTRIES
           </Link>
         </div>
@@ -30,7 +30,7 @@ export default function IndustrySolvePage() {
         backHref={`/industry/${slug}`}
         backLabel={industry.label}
         breadcrumbs={[
-          { label: 'INDUSTRIES', href: '/industries' },
+          { label: 'INDUSTRIES', href: '/explore' },
           { label: industry.label, href: `/industry/${slug}` },
           { label: 'PROBLEM SOLVER' }
         ]}

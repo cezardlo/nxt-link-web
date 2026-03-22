@@ -140,7 +140,7 @@ export function MapTopBar({
       </div>
 
       <a
-        href="/industries"
+        href="/explore"
         className="font-mono text-[8px] tracking-[0.2em] text-white/20 hover:text-[#00d4ff]/70 transition-colors hidden md:inline"
       >
         EXPLORE

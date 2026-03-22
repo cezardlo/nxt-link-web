@@ -6,7 +6,7 @@ import { COLORS } from '@/lib/tokens';
 const TABS = [
   { href: '/',            label: 'TODAY',       icon: '◉' },
   { href: '/search',      label: 'SEARCH',      icon: '⌕' },
-  { href: '/industries',  label: 'INDUSTRIES',  icon: '⬡' },
+  { href: '/explore',  label: 'INDUSTRIES',  icon: '⬡' },
   { href: '/world',       label: 'WORLD',       icon: '◎' },
   { href: '/trajectory',  label: 'TRAJECTORY',  icon: '◇' },
   { href: '/marketplace', label: 'MARKET',      icon: '△' },

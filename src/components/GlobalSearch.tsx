@@ -14,7 +14,7 @@ type SearchResult = {
 };
 
 const PAGES: SearchResult[] = [
-  { label: 'Industries', href: '/industries', type: 'page', color: '#00d4ff' },
+  { label: 'Industries', href: '/explore', type: 'page', color: '#00d4ff' },
   { label: 'Companies', href: '/companies', type: 'page', color: '#00ff88' },
   { label: 'Products', href: '/products', type: 'page', color: '#a855f7' },
   { label: 'Problems', href: '/problems', type: 'page', color: '#f97316' },

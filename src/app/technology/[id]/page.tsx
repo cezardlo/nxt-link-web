@@ -125,7 +125,7 @@ export default function TechnologyDetailPage({
         backHref="/industries"
         backLabel="INDUSTRIES"
         breadcrumbs={[
-          { label: 'INDUSTRIES', href: '/industries' },
+          { label: 'INDUSTRIES', href: '/explore' },
           { label: industryLabel.toUpperCase(), href: `/industry/${industrySlug}` },
           { label: tech.name.toUpperCase() },
         ]}
