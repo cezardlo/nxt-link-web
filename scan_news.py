@@ -273,21 +273,26 @@ def save_signal(signal: dict) -> bool:
         "Prefer": "resolution=merge-duplicates",
     }
     
+    # Map to intel_signals schema
+    industry = signal["industries"][0] if signal["industries"] else "general"
+    company = signal["companies_mentioned"][0] if signal["companies_mentioned"] else None
     row = {
         "title": signal["title"],
         "signal_type": signal["signal_type"],
-        "source_name": signal["source_name"],
-        "source_url": signal["source_url"],
-        "summary": signal["summary"],
-        "industries": signal["industries"],
-        "companies_mentioned": signal["companies_mentioned"],
-        "funding_amount": signal["funding_amount"],
-        "detected_at": signal["detected_at"],
+        "industry": industry,
+        "source": signal["source_name"],
+        "url": signal["source_url"],
+        "company": company,
+        "evidence": [signal["summary"][:300]] if signal["summary"] else [],
+        "tags": [signal["source_name"], signal["signal_type"]],
+        "importance_score": 0.65 if signal["signal_type"] != "news" else 0.45,
+        "confidence": 0.6,
+        "discovered_at": signal["detected_at"],
     }
-    
+
     try:
         response = httpx.post(
-            f"{SUPABASE_URL}/rest/v1/signals",
+            f"{SUPABASE_URL}/rest/v1/intel_signals",
             headers=headers,
             json=row,
             timeout=10,
@@ -306,13 +311,13 @@ def save_signal(signal: dict) -> bool:
 def scan_all_feeds():
     """Scan all configured RSS feeds."""
     
-    print("\n📰 SCANNING NEWS FEEDS")
+    print("\n[NEWS] SCANNING NEWS FEEDS")
     print("=" * 50)
     
     all_signals = []
     
     for name, url in FEEDS.items():
-        print(f"\n📡 {name}")
+        print(f"\n[FEED] {name}")
         entries = fetch_feed(name, url)
         print(f"   Found {len(entries)} entries")
         
@@ -330,7 +335,7 @@ def scan_all_feeds():
 def scan_topic(topic: str):
     """Scan Google News for a specific topic."""
     
-    print(f"\n🔍 SCANNING: {topic}")
+    print(f"\n[SCAN] SCANNING: {topic}")
     print("=" * 50)
     
     entries = fetch_google_news(topic)
@@ -351,7 +356,7 @@ def scan_industry(industry: str):
     # Get keywords for this industry
     keywords = INDUSTRY_KEYWORDS.get(industry, [industry])
     
-    print(f"\n🏭 SCANNING INDUSTRY: {industry}")
+    print(f"\n[IND] SCANNING INDUSTRY: {industry}")
     print("=" * 50)
     
     all_signals = []
@@ -373,7 +378,7 @@ def main():
         signals = scan_all_feeds()
         
         print("\n" + "=" * 50)
-        print(f"📊 SUMMARY")
+        print(f"[STATS] SUMMARY")
         print(f"   Total signals: {len(signals)}")
         
         # Count by type
@@ -401,7 +406,7 @@ def main():
         # Treat as topic
         signals = scan_topic(arg)
     
-    print(f"\n📊 Found {len(signals)} signals")
+    print(f"\n[STATS] Found {len(signals)} signals")
 
 
 if __name__ == "__main__":

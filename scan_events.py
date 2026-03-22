@@ -303,7 +303,7 @@ def save_event(event: dict) -> bool:
     """Save event to Supabase."""
     
     if not SUPABASE_URL or not SUPABASE_KEY:
-        print(f"  [LOCAL] 📅 {event.get('name', 'Unknown')} — {event.get('city', '?')}")
+        print(f"  [LOCAL] [EVT] {event.get('name', 'Unknown')} — {event.get('city', '?')}")
         return True
     
     headers = {
@@ -350,7 +350,7 @@ def save_event(event: dict) -> bool:
 def scan_known_events():
     """Save all known major events."""
     
-    print("\n📅 SAVING KNOWN EVENTS")
+    print("\n[EVT] SAVING KNOWN EVENTS")
     print("=" * 50)
     
     for event in KNOWN_EVENTS:
@@ -363,7 +363,7 @@ def scan_known_events():
 def scan_event_sources(industry: str = None):
     """Scrape event listing sites."""
     
-    print("\n🔍 SCRAPING EVENT SITES")
+    print("\n[SCAN] SCRAPING EVENT SITES")
     print("=" * 50)
     
     all_events = []
@@ -400,7 +400,7 @@ def main():
     scraped = scan_event_sources(industry)
     
     print("\n" + "=" * 50)
-    print(f"📊 SUMMARY")
+    print(f"[STATS] SUMMARY")
     print(f"   Known events: {len(known)}")
     print(f"   Scraped events: {len(scraped)}")
     print(f"   Total: {len(known) + len(scraped)}")

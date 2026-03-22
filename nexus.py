@@ -381,7 +381,16 @@ async def main():
     command = sys.argv[1].lower()
 
     if command == "run":
-        await run_news_scan()
+        # Run scan_news.py inline (same process, shared env)
+        try:
+            sys.path.insert(0, os.path.dirname(__file__))
+            from scan_news import scan_all_feeds
+            print("  NEXUS: Running scan_news.py...")
+            signals = scan_all_feeds()
+            print(f"  scan_news: {len(signals)} signals")
+        except Exception as e:
+            print(f"  scan_news failed: {e}, falling back to built-in")
+            await run_news_scan()
         await generate_daily_briefing()
 
     elif command == "scan-news":
