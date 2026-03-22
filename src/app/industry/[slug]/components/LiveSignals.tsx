@@ -31,6 +31,21 @@ function getTypeColor(type: string): string {
   return SIGNAL_TYPE_COLORS[key] ?? SIGNAL_TYPE_COLORS.default;
 }
 
+function relativeTime(ts: string): string {
+  if (!ts) return '';
+  // Already relative (e.g. "2h ago")
+  if (/\d+[mhd]\s*ago/i.test(ts) || /^\d+[mhd]$/.test(ts)) return ts;
+  const diff = Date.now() - new Date(ts).getTime();
+  if (isNaN(diff)) return ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'now';
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d`;
+}
+
 /** Generate mock signals when API returns nothing */
 function generateMockSignals(): SignalData[] {
   return [
@@ -200,18 +215,16 @@ export function LiveSignals({ signals, accentColor }: LiveSignalsProps) {
           {visible.map((signal: SignalData, idx: number) => {
             const type = (signal.type ?? signal.category ?? 'unknown').toUpperCase();
             const typeColor = getTypeColor(type.toLowerCase());
-            const importance = signal.importance ?? signal.severity === 'critical'
-              ? 5
-              : signal.severity === 'high'
-                ? 4
-                : signal.severity === 'medium'
-                  ? 3
-                  : signal.severity === 'low'
-                    ? 2
-                    : typeof signal.importance === 'number'
-                      ? signal.importance
-                      : 3;
-            const timestamp = signal.timestamp ?? '';
+            const rawImp = typeof signal.importance === 'number' ? signal.importance : 3;
+            // Normalize: API returns 0-1, but dots expect 1-5
+            const importance = rawImp <= 1
+              ? Math.round(rawImp * 5)
+              : signal.severity === 'critical' ? 5
+              : signal.severity === 'high' ? 4
+              : signal.severity === 'medium' ? 3
+              : signal.severity === 'low' ? 2
+              : Math.min(5, Math.round(rawImp));
+            const timestamp = relativeTime(signal.timestamp ?? signal.discovered_at ?? '');
             const source = signal.source ?? '';
             const title = signal.title ?? signal.summary ?? '';
 

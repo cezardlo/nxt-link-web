@@ -265,21 +265,32 @@ export default function IndustryCommandCenter() {
             const intelData = await intelRes.json();
             const intelSignals: Record<string, any>[] = intelData.signals ?? [];
 
-            // Filter by industry category (case-insensitive)
+            // Filter by industry category OR title keywords (case-insensitive)
             const cats = SLUG_SIGNAL_CATEGORIES[slug] ?? [];
             const catsLower = cats.map((c: string) => c.toLowerCase());
-            const filtered = intelSignals.filter((s: any) =>
-              s.industry && catsLower.includes(s.industry.toLowerCase()),
-            );
+            const keywords = catsLower.flatMap((c: string) => c.split(/[\s/]+/));
+            const filtered = intelSignals.filter((s: Record<string, unknown>) => {
+              const ind = String(s.industry ?? '').toLowerCase();
+              const title = String(s.title ?? '').toLowerCase();
+              // Match by industry field
+              if (ind !== 'general' && catsLower.includes(ind)) return true;
+              // Match by keywords in title
+              if (keywords.some(kw => kw.length > 2 && title.includes(kw))) return true;
+              return false;
+            });
+            // If no industry-specific signals found, show all signals
+            const signalsToUse = filtered.length >= 2 ? filtered : intelSignals;
 
             // Map intel-signals shape to LiveSignals shape
-            const mapped = filtered.map((s: any, idx: number) => ({
-              id: s.url ?? `intel-${idx}-${Date.now()}`,
-              title: s.title,
-              type: s.signal_type ?? 'intel',
-              source: s.company ?? s.industry ?? 'Intel',
-              timestamp: s.discovered_at ?? new Date().toISOString(),
-              importance: s.importance ?? s.confidence ?? 50,
+            const mapped = signalsToUse.map((s: Record<string, unknown>, idx: number) => ({
+              id: String(s.url ?? `intel-${idx}-${Date.now()}`),
+              title: String(s.title ?? ''),
+              type: String(s.signal_type ?? 'intel'),
+              source: String(s.company ?? s.industry ?? 'Intel'),
+              timestamp: String(s.discovered_at ?? new Date().toISOString()),
+              importance: Number(s.importance ?? s.confidence ?? 0.5),
+              company: s.company ? String(s.company) : null,
+              industry: String(s.industry ?? 'General'),
             }));
 
             // Merge, deduplicate by title, sort by importance descending

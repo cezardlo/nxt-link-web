@@ -34,7 +34,7 @@ interface IndustryMapProps {
   signals?: Record<string, any>[];
 }
 
-// ─── Mercator projection (same as World page) ──────────────────────────────
+// ─── Mercator projection ────────────────────────────────────────────────────
 
 function mercatorX(lon: number, width: number): number {
   return ((lon + 180) / 360) * width;
@@ -45,6 +45,23 @@ function mercatorY(lat: number, height: number): number {
   const mercN = Math.log(Math.tan(Math.PI / 4 + latRad / 2));
   return (height / 2) - (height * mercN) / (2 * Math.PI);
 }
+
+// ─── Simplified continent outlines (lon/lat pairs) ─────────────────────────
+
+const CONTINENTS: [number, number][][] = [
+  // North America
+  [[-130,50],[-120,55],[-110,60],[-100,55],[-95,50],[-88,48],[-80,45],[-75,40],[-80,35],[-85,30],[-80,25],[-90,20],[-92,15],[-100,18],[-105,22],[-110,25],[-115,30],[-120,35],[-125,40],[-125,45],[-130,50]],
+  // South America
+  [[-75,10],[-78,5],[-80,0],[-80,-5],[-77,-10],[-75,-15],[-70,-20],[-65,-25],[-60,-30],[-58,-35],[-65,-40],[-68,-45],[-72,-50],[-68,-55],[-60,-50],[-55,-45],[-50,-35],[-45,-25],[-40,-15],[-37,-10],[-35,-5],[-50,0],[-60,5],[-68,10],[-75,10]],
+  // Europe
+  [[-10,38],[0,40],[5,43],[8,46],[15,48],[14,52],[10,53],[12,55],[15,55],[20,58],[22,60],[24,61],[28,64],[28,66],[30,68],[28,70],[20,70],[15,68],[14,67],[8,64],[5,62],[5,60],[5,58],[9,56],[8,55],[5,54],[4,52],[3,51],[0,49],[-3,48],[-2,46],[0,45],[-1,44],[-2,43],[-4,42],[-5,40],[-8,37],[-10,38]],
+  // Africa
+  [[-5,35],[0,32],[10,30],[35,25],[40,20],[42,15],[45,10],[42,5],[40,0],[38,-5],[35,-10],[35,-15],[30,-20],[30,-25],[28,-30],[20,-35],[18,-33],[15,-28],[12,-20],[10,-15],[8,-10],[5,-5],[5,0],[0,5],[-5,10],[-15,15],[-15,20],[-17,22],[-17,24],[-13,26],[-10,28],[-8,30],[-5,35]],
+  // Asia
+  [[35,30],[40,35],[45,40],[50,45],[55,50],[65,55],[70,60],[80,65],[90,68],[100,70],[110,65],[120,60],[130,55],[135,50],[140,45],[135,40],[130,35],[120,30],[110,25],[105,20],[100,15],[100,10],[80,15],[70,20],[60,25],[50,28],[35,30]],
+  // Australia
+  [[130,-15],[135,-12],[140,-15],[148,-20],[150,-25],[150,-30],[148,-35],[145,-38],[140,-35],[135,-32],[130,-28],[120,-25],[115,-22],[120,-18],[125,-15],[130,-15]],
+];
 
 // ─── Signal color ───────────────────────────────────────────────────────────
 
@@ -70,11 +87,37 @@ export function IndustryMap({
   const [viewBox, setViewBox] = useState({ x: 0, y: 50, w: 1000, h: 500 });
   const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
   const [hoveredSignal, setHoveredSignal] = useState<number | null>(null);
-  const [isPanning, setIsPanning] = useState(false);
-  const panStart = useRef({ x: 0, y: 0, vx: 0, vy: 0 });
+
+  // Pan state — flag-based, no pointer capture
+  const panRef = useRef<{
+    active: boolean;
+    startX: number;
+    startY: number;
+    vx: number;
+    vy: number;
+    moved: boolean;
+  }>({ active: false, startX: 0, startY: 0, vx: 0, vy: 0, moved: false });
+  const [dragging, setDragging] = useState(false);
 
   const W = 1000;
   const H = 560;
+
+  const PAN_THRESHOLD = 3; // px before we consider it a drag (not a click)
+
+  // ── Build continent SVG path strings using mercator projection ──────────
+  const continentPaths = useMemo(() => {
+    return CONTINENTS.map(coords => {
+      const points = coords.map(([lon, lat]) => {
+        const x = mercatorX(lon, W);
+        const y = mercatorY(lat, H);
+        return [x, y] as [number, number];
+      });
+      const d = points
+        .map(([x, y], i) => `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)},${y.toFixed(1)}`)
+        .join(' ') + ' Z';
+      return d;
+    });
+  }, []);
 
   // Relevant countries for this industry
   const relevantCountries = useMemo(() => {
@@ -137,7 +180,6 @@ export function IndustryMap({
       const sigIndustry = String(s.industry ?? s.type ?? '').toLowerCase();
       const catLower = industryCategory.toLowerCase();
 
-      // Find a matching country to place near
       const match = countries.find(c =>
         c.primarySectors.some(sec =>
           sec.toLowerCase().includes(sigIndustry) || sigIndustry.includes(sec.toLowerCase()) ||
@@ -169,7 +211,6 @@ export function IndustryMap({
     setViewBox(prev => {
       const newW = Math.max(200, Math.min(W, prev.w * factor));
       const newH = Math.max(100, Math.min(H, prev.h * factor));
-      // Zoom toward center of current view
       const cx = prev.x + prev.w / 2;
       const cy = prev.y + prev.h / 2;
       return {
@@ -181,29 +222,62 @@ export function IndustryMap({
     });
   }, []);
 
+  // Pointer down on SVG background — start potential pan
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    setIsPanning(true);
-    panStart.current = { x: e.clientX, y: e.clientY, vx: viewBox.x, vy: viewBox.y };
-    (e.target as Element).setPointerCapture(e.pointerId);
-  }, [viewBox]);
+    panRef.current = {
+      active: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      vx: viewBox.x,
+      vy: viewBox.y,
+      moved: false,
+    };
+  }, [viewBox.x, viewBox.y]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!isPanning) return;
+    const pan = panRef.current;
+    if (!pan.active) return;
+
+    const dx = e.clientX - pan.startX;
+    const dy = e.clientY - pan.startY;
+
+    // Only start dragging if moved past threshold
+    if (!pan.moved && Math.abs(dx) < PAN_THRESHOLD && Math.abs(dy) < PAN_THRESHOLD) return;
+
+    if (!pan.moved) {
+      pan.moved = true;
+      setDragging(true);
+    }
+
     const el = containerRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
     const scaleX = viewBox.w / rect.width;
     const scaleY = viewBox.h / rect.height;
-    const dx = (e.clientX - panStart.current.x) * scaleX;
-    const dy = (e.clientY - panStart.current.y) * scaleY;
+
     setViewBox(prev => ({
       ...prev,
-      x: Math.max(0, Math.min(W - prev.w, panStart.current.vx - dx)),
-      y: Math.max(0, Math.min(H - prev.h, panStart.current.vy - dy)),
+      x: Math.max(0, Math.min(W - prev.w, pan.vx - dx * scaleX)),
+      y: Math.max(0, Math.min(H - prev.h, pan.vy - dy * scaleY)),
     }));
-  }, [isPanning, viewBox.w, viewBox.h]);
+  }, [viewBox.w, viewBox.h]);
 
-  const handlePointerUp = useCallback(() => { setIsPanning(false); }, []);
+  const handlePointerUp = useCallback(() => {
+    panRef.current.active = false;
+    panRef.current.moved = false;
+    setDragging(false);
+  }, []);
+
+  // Also cancel pan if pointer leaves window
+  useEffect(() => {
+    const cancel = () => {
+      panRef.current.active = false;
+      panRef.current.moved = false;
+      setDragging(false);
+    };
+    window.addEventListener('pointerup', cancel);
+    return () => window.removeEventListener('pointerup', cancel);
+  }, []);
 
   // Fly-to a country
   const flyTo = useCallback((code: string) => {
@@ -243,9 +317,10 @@ export function IndustryMap({
           background: COLORS.bg,
           borderRadius: 16,
           border: `1px solid ${COLORS.border}`,
-          cursor: isPanning ? 'grabbing' : 'grab',
+          cursor: dragging ? 'grabbing' : 'grab',
           aspectRatio: '2 / 1',
           maxHeight: 400,
+          userSelect: 'none',
         }}
         onWheel={handleWheel}
         onPointerDown={handlePointerDown}
@@ -281,19 +356,31 @@ export function IndustryMap({
           />
         ))}
 
+        {/* ── Continent outlines ──────────────────────────────────────── */}
+        {continentPaths.map((d, i) => (
+          <path
+            key={`continent-${i}`}
+            d={d}
+            fill={`${COLORS.text}08`}
+            stroke={`${COLORS.text}15`}
+            strokeWidth={0.5}
+            strokeLinejoin="round"
+            pointerEvents="none"
+          />
+        ))}
+
         {/* ── Connection arcs ─────────────────────────────────────────── */}
         {arcs.map((arc, i) => {
-          const isActive = !selectedCountryCode || true;
           const mx = (arc.x1 + arc.x2) / 2;
           const my = (arc.y1 + arc.y2) / 2 - 20 - arc.strength * 5;
           return (
-            <g key={`arc-${i}`}>
+            <g key={`arc-${i}`} pointerEvents="none">
               <path
                 d={`M ${arc.x1},${arc.y1} Q ${mx},${my} ${arc.x2},${arc.y2}`}
                 fill="none"
                 stroke={accentColor}
                 strokeWidth={0.4 + arc.strength * 0.3}
-                strokeOpacity={isActive ? 0.15 : 0.04}
+                strokeOpacity={0.15}
                 strokeDasharray="4,6"
                 filter="url(#arc-glow-map)"
               >
@@ -318,22 +405,28 @@ export function IndustryMap({
             <g
               key={c.code}
               className="cursor-pointer"
+              style={{ pointerEvents: 'all' }}
               onClick={(e) => {
                 e.stopPropagation();
+                // Ignore clicks that were actually drags
+                if (panRef.current.moved) return;
                 onCountrySelect(isSelected ? null : c.code);
                 if (!isSelected) flyTo(c.code);
               }}
               onMouseEnter={() => setHoveredCountry(c.code)}
               onMouseLeave={() => setHoveredCountry(null)}
             >
+              {/* Invisible larger hit area */}
+              <circle cx={c.x} cy={c.y} r={Math.max(r * 2, 8)} fill="transparent" />
+
               {/* Glow */}
               {c.isRelevant && (
-                <circle cx={c.x} cy={c.y} r={r * 2.5} fill={c.color} opacity={0.06} filter="url(#map-glow)" />
+                <circle cx={c.x} cy={c.y} r={r * 2.5} fill={c.color} opacity={0.06} filter="url(#map-glow)" pointerEvents="none" />
               )}
 
               {/* Pulse for selected */}
               {isSelected && (
-                <circle cx={c.x} cy={c.y} r={r + 4} fill="none" stroke={accentColor} strokeWidth={1}>
+                <circle cx={c.x} cy={c.y} r={r + 4} fill="none" stroke={accentColor} strokeWidth={1} pointerEvents="none">
                   <animate attributeName="r" from={r} to={r + 12} dur="2s" repeatCount="indefinite" />
                   <animate attributeName="opacity" from="0.5" to="0" dur="2s" repeatCount="indefinite" />
                 </circle>
@@ -346,6 +439,7 @@ export function IndustryMap({
                 opacity={opacity}
                 stroke={isSelected ? accentColor : isHovered ? `${c.color}88` : 'none'}
                 strokeWidth={isSelected ? 1.5 : isHovered ? 1 : 0}
+                pointerEvents="none"
               />
 
               {/* Label — top 5 always visible, others on hover/select */}
@@ -356,6 +450,7 @@ export function IndustryMap({
                     width={48} height={12} rx={3}
                     fill={`${COLORS.bg}dd`}
                     stroke={`${c.color}33`} strokeWidth={0.5}
+                    pointerEvents="none"
                   />
                   <text
                     x={c.x} y={c.y - r - 5.5}
@@ -364,6 +459,7 @@ export function IndustryMap({
                     fontSize={zoomLevel > 1.5 ? 6 : 5}
                     fontFamily="monospace"
                     fontWeight={isSelected ? 'bold' : 'normal'}
+                    pointerEvents="none"
                   >
                     {isSelected || isHovered ? c.name : c.code}
                   </text>
@@ -377,6 +473,7 @@ export function IndustryMap({
                   textAnchor="middle"
                   fill={c.color}
                   fontSize={5} fontFamily="monospace"
+                  pointerEvents="none"
                 >
                   {c.techScore}
                 </text>
@@ -391,12 +488,17 @@ export function IndustryMap({
           return (
             <g
               key={`sig-${s.idx}`}
+              style={{ pointerEvents: 'all' }}
+              onClick={(e) => e.stopPropagation()}
               onMouseEnter={() => setHoveredSignal(s.idx)}
               onMouseLeave={() => setHoveredSignal(null)}
               className="cursor-pointer"
             >
+              {/* Invisible larger hit area */}
+              <circle cx={s.x} cy={s.y} r={Math.max(s.r * 2, 8)} fill="transparent" />
+
               {/* Pulse */}
-              <circle cx={s.x} cy={s.y} r={s.r} fill="none" stroke={s.color} strokeWidth={0.6}>
+              <circle cx={s.x} cy={s.y} r={s.r} fill="none" stroke={s.color} strokeWidth={0.6} pointerEvents="none">
                 <animate attributeName="r" from={s.r} to={s.r + 8} dur="2s" repeatCount="indefinite" />
                 <animate attributeName="opacity" from="0.5" to="0" dur="2s" repeatCount="indefinite" />
               </circle>
@@ -405,6 +507,7 @@ export function IndustryMap({
                 cx={s.x} cy={s.y}
                 r={isHovered ? s.r * 1.5 : s.r}
                 fill={s.color} opacity={isHovered ? 0.95 : 0.75}
+                pointerEvents="none"
               />
               {/* Tooltip */}
               {isHovered && (
@@ -413,11 +516,13 @@ export function IndustryMap({
                     x={s.x - 60} y={s.y - s.r - 18}
                     width={120} height={14} rx={4}
                     fill={`${COLORS.bg}ee`} stroke={`${s.color}44`} strokeWidth={0.5}
+                    pointerEvents="none"
                   />
                   <text
                     x={s.x} y={s.y - s.r - 8}
                     textAnchor="middle" fill={s.color}
                     fontSize={5} fontFamily="monospace"
+                    pointerEvents="none"
                   >
                     {s.title.length > 30 ? s.title.slice(0, 28) + '...' : s.title}
                   </text>
