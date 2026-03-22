@@ -331,7 +331,7 @@ def save_event(event: dict) -> bool:
     
     try:
         response = httpx.post(
-            f"{SUPABASE_URL}/rest/v1/events",
+            f"{SUPABASE_URL}/rest/v1/conferences",
             headers=headers,
             json=row,
             timeout=10,
@@ -355,7 +355,7 @@ def scan_known_events():
     
     for event in KNOWN_EVENTS:
         save_event(event)
-        print(f"  ✓ {event['name']} ({event['city']})")
+        print(f"  [OK] {event['name']} ({event['city']})")
     
     return KNOWN_EVENTS
 
@@ -373,7 +373,7 @@ def scan_event_sources(industry: str = None):
         sources = [s for s in EVENT_SOURCES if s["industry"] == industry]
     
     for source in sources:
-        print(f"\n📡 {source['name']}")
+        print(f"\n[SRC] {source['name']}")
         
         html = fetch_page(source["url"])
         if not html:
