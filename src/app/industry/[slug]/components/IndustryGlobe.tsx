@@ -17,6 +17,13 @@ type CountryTechProfile = {
   lon: number;
 };
 
+type SignalItem = {
+  title: string;
+  industry: string;
+  importance: number;
+  company?: string | null;
+};
+
 interface IndustryGlobeProps {
   countries: CountryTechProfile[];
   accentColor: string;
@@ -24,6 +31,7 @@ interface IndustryGlobeProps {
   selectedCountryCode: string | null;
   onCountrySelect: (code: string | null) => void;
   highlightedCodes?: string[];
+  signals?: SignalItem[];
 }
 
 // ─── Math ───────────────────────────────────────────────────────────────────
@@ -224,41 +232,43 @@ export function IndustryGlobe({
   selectedCountryCode,
   onCountrySelect,
   highlightedCodes = [],
+  signals = [],
 }: IndustryGlobeProps) {
   const SIZE = 420;
   const R = SIZE * 0.40;
   const CX = SIZE / 2;
   const CY = SIZE / 2;
 
-  const [rotation, setRotation] = useState({ lat: 20, lon: 0 });
+  // Static rotation — NO auto-rotate, NO requestAnimationFrame
+  const [rotation, setRotation] = useState({ lat: 20, lon: 10 });
   const [hoveredCode, setHoveredCode] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1.0);
+  const [hoveredSignalIdx, setHoveredSignalIdx] = useState<number | null>(null);
+
+  const effectiveR = R * zoom;
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0, lat: 0, lon: 0 });
-  const [time, setTime] = useState(0);
+  const svgRef = useRef<SVGSVGElement>(null);
 
-  // Animation tick for breathing + particles
-  useEffect(() => {
-    let frame: number;
-    let t = 0;
-    const tick = () => {
-      t += 0.016;
-      setTime(t);
-      if (!isDragging.current && !selectedCountryCode && !hoveredCode) {
-        setRotation(prev => ({ ...prev, lon: prev.lon + 0.08 }));
-      }
-      frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [selectedCountryCode, hoveredCode]);
-
-  // Snap to selected
+  // Snap to selected country
   useEffect(() => {
     if (selectedCountryCode) {
       const c = countries.find(c => c.code === selectedCountryCode);
       if (c) setRotation({ lat: c.lat * 0.5, lon: -c.lon });
     }
   }, [selectedCountryCode, countries]);
+
+  // Scroll-to-zoom (non-passive to preventDefault)
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => {
+      e.preventDefault();
+      setZoom(prev => Math.max(0.6, Math.min(2.5, prev - e.deltaY * 0.002)));
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, []);
 
   // Drag
   const onPointerDown = useCallback((e: React.PointerEvent) => {
@@ -311,39 +321,75 @@ export function IndustryGlobe({
   // Projected countries
   const projectedCountries = useMemo(() => {
     return countries.map(c => {
-      const p = project(c.lat, c.lon, rotation.lat, rotation.lon, R);
+      const p = project(c.lat, c.lon, rotation.lat, rotation.lon, effectiveR);
       const isRelevant = relevantCountries.some(rc => rc.code === c.code);
       const isHighlighted = highlightedCodes.length === 0 || highlightedCodes.includes(c.code);
       return { ...c, ...p, isRelevant, isHighlighted };
     });
-  }, [countries, rotation, R, relevantCountries, highlightedCodes]);
+  }, [countries, rotation, effectiveR, relevantCountries, highlightedCodes]);
 
   // Projected arcs (great-circle)
   const projectedArcs = useMemo(() => {
     return connections.map(conn => {
       const path = greatCircleArc(
         conn.from.lat, conn.from.lon, conn.to.lat, conn.to.lon,
-        rotation.lat, rotation.lon, R,
+        rotation.lat, rotation.lon, effectiveR,
       );
       return path ? { ...conn, path } : null;
     }).filter(Boolean) as { from: CountryTechProfile; to: CountryTechProfile; strength: number; path: string }[];
-  }, [connections, rotation, R]);
+  }, [connections, rotation, effectiveR]);
 
-  const graticule = useMemo(() => graticulePaths(rotation.lat, rotation.lon, R), [rotation, R]);
+  const graticule = useMemo(() => graticulePaths(rotation.lat, rotation.lon, effectiveR), [rotation, effectiveR]);
 
   const continents = useMemo(() =>
-    CONTINENT_PATHS.map(coords => projectContinent(coords, rotation.lat, rotation.lon, R)).filter(Boolean),
-    [rotation, R],
+    CONTINENT_PATHS.map(coords => projectContinent(coords, rotation.lat, rotation.lon, effectiveR)).filter(Boolean),
+    [rotation, effectiveR],
   );
 
-  const stars = useMemo(() => generateStars(60, SIZE), [SIZE]);
+  // Signal disruption dots
+  const projectedSignals = useMemo(() => {
+    if (!signals || signals.length === 0) return [];
+    const limited = signals.slice(0, 15);
+    const catLower = industryCategory.toLowerCase();
 
-  // Breathing factor
-  const breath = 1 + Math.sin(time * 1.5) * 0.08;
+    // Seeded random for deterministic offsets
+    let seed = 137;
+    const rand = () => { seed = (seed * 16807 + 0) % 2147483647; return (seed / 2147483647) - 0.5; };
+
+    return limited.map((sig, idx) => {
+      // Find matching countries for this signal's industry
+      const sigIndustry = sig.industry.toLowerCase();
+      const matchingCountries = countries.filter(c =>
+        c.primarySectors.some(s =>
+          s.toLowerCase().includes(sigIndustry) || sigIndustry.includes(s.toLowerCase()) ||
+          s.toLowerCase().includes(catLower) || catLower.includes(s.toLowerCase()),
+        ),
+      );
+
+      let lat: number, lon: number;
+      if (matchingCountries.length > 0) {
+        const target = matchingCountries[idx % matchingCountries.length];
+        lat = target.lat + rand() * 6;
+        lon = target.lon + rand() * 6;
+      } else {
+        // Default: spread across equator area
+        lat = rand() * 40;
+        lon = rand() * 100;
+      }
+
+      const p = project(lat, lon, rotation.lat, rotation.lon, effectiveR);
+      const color = sig.importance >= 0.8 ? COLORS.orange : sig.importance >= 0.6 ? COLORS.gold : COLORS.dim;
+      const dotR = 2 + sig.importance * 3;
+      return { ...sig, ...p, color, dotR, idx };
+    });
+  }, [signals, countries, industryCategory, rotation, effectiveR]);
+
+  const stars = useMemo(() => generateStars(40, SIZE), [SIZE]);
 
   return (
     <div className="relative flex flex-col items-center">
       <svg
+        ref={svgRef}
         width={SIZE}
         height={SIZE}
         viewBox={`${-CX} ${-CY} ${SIZE} ${SIZE}`}
@@ -391,18 +437,18 @@ export function IndustryGlobe({
             key={`s${i}`}
             cx={s.x} cy={s.y} r={s.r}
             fill={COLORS.text}
-            opacity={s.o * (0.6 + Math.sin(time * 0.8 + i) * 0.4)}
+            opacity={s.o}
           />
         ))}
 
         {/* ── Atmosphere outer ring ──────────────────────────────────── */}
-        <circle r={R + 12} fill="none" stroke={accentColor} strokeWidth={1} opacity={0.04} filter="url(#rim-blur)" />
-        <circle r={R + 6} fill="none" stroke={accentColor} strokeWidth={0.5} opacity={0.08} />
-        <circle r={R + 2} fill="url(#outer-halo)" />
+        <circle r={effectiveR + 12} fill="none" stroke={accentColor} strokeWidth={1} opacity={0.04} filter="url(#rim-blur)" />
+        <circle r={effectiveR + 6} fill="none" stroke={accentColor} strokeWidth={0.5} opacity={0.08} />
+        <circle r={effectiveR + 2} fill="url(#outer-halo)" />
 
         {/* ── Globe sphere ───────────────────────────────────────────── */}
-        <circle r={R} fill="url(#globe-fill)" stroke={`${accentColor}18`} strokeWidth={0.8} />
-        <circle r={R} fill="url(#atmo-glow)" />
+        <circle r={effectiveR} fill="url(#globe-fill)" stroke={`${accentColor}18`} strokeWidth={0.8} />
+        <circle r={effectiveR} fill="url(#atmo-glow)" />
 
         {/* ── Graticule ──────────────────────────────────────────────── */}
         {graticule.map((d, i) => (
@@ -463,7 +509,7 @@ export function IndustryGlobe({
             const isHovered = c.code === hoveredCode;
             const isTop5 = top5Codes.has(c.code);
             const baseR = c.isRelevant ? 5 + (c.techScore / 100) * 5 : 2.5;
-            const r = isSelected ? baseR * 1.8 : isHovered ? baseR * 1.4 : baseR * (c.isRelevant ? breath : 1);
+            const r = isSelected ? baseR * 1.8 : isHovered ? baseR * 1.4 : baseR;
             const opacity = c.isRelevant
               ? c.isHighlighted ? 0.95 : 0.25
               : 0.12;
@@ -516,6 +562,7 @@ export function IndustryGlobe({
                 {/* Dot */}
                 <circle
                   cx={c.x} cy={c.y} r={r}
+                  className={c.isRelevant && !isSelected && !isHovered ? 'globe-dot-relevant' : undefined}
                   fill={c.isRelevant ? c.color : `${COLORS.text}30`}
                   opacity={opacity}
                   stroke={isSelected ? accentColor : isHovered ? `${c.color}88` : 'none'}
@@ -572,7 +619,96 @@ export function IndustryGlobe({
               </g>
             );
           })}
+
+        {/* ── Signal disruption dots ──────────────────────────────────── */}
+        {projectedSignals
+          .filter(s => s.visible)
+          .map(s => {
+            const isHovered = hoveredSignalIdx === s.idx;
+            return (
+              <g
+                key={`sig-${s.idx}`}
+                onMouseEnter={() => setHoveredSignalIdx(s.idx)}
+                onMouseLeave={() => setHoveredSignalIdx(null)}
+                className="cursor-pointer"
+              >
+                {/* Pulse ring */}
+                <circle cx={s.x} cy={s.y} r={s.dotR} fill="none" stroke={s.color} strokeWidth={0.8}>
+                  <animate attributeName="r" from={s.dotR} to={s.dotR + 6} dur="1.8s" repeatCount="indefinite" />
+                  <animate attributeName="opacity" from="0.6" to="0" dur="1.8s" repeatCount="indefinite" />
+                </circle>
+                {/* Core dot */}
+                <circle
+                  cx={s.x} cy={s.y}
+                  r={isHovered ? s.dotR * 1.5 : s.dotR}
+                  fill={s.color}
+                  opacity={isHovered ? 0.95 : 0.8}
+                  stroke={isHovered ? '#fff' : 'none'}
+                  strokeWidth={isHovered ? 1 : 0}
+                />
+                {/* Tooltip on hover */}
+                {isHovered && (
+                  <>
+                    <rect
+                      x={s.x - 50} y={s.y - s.dotR - 20}
+                      width={100} height={16}
+                      rx={4}
+                      fill={`${COLORS.bg}ee`}
+                      stroke={`${s.color}55`}
+                      strokeWidth={0.5}
+                    />
+                    <text
+                      x={s.x} y={s.y - s.dotR - 9}
+                      textAnchor="middle"
+                      fill={s.color}
+                      fontSize={7}
+                      fontFamily="monospace"
+                    >
+                      {s.title.length > 22 ? s.title.slice(0, 20) + '...' : s.title}
+                    </text>
+                  </>
+                )}
+              </g>
+            );
+          })}
       </svg>
+
+      {/* ── Zoom controls ──────────────────────────────────────────────── */}
+      <div className="absolute top-2 right-2 flex flex-col gap-1">
+        <button
+          onClick={() => setZoom(prev => Math.min(2.5, prev + 0.2))}
+          className="w-7 h-7 rounded-md flex items-center justify-center text-[14px] font-bold cursor-pointer transition-colors"
+          style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, color: `${COLORS.text}66` }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = `${accentColor}44`}
+          onMouseLeave={e => e.currentTarget.style.borderColor = COLORS.border}
+        >
+          +
+        </button>
+        <button
+          onClick={() => setZoom(prev => Math.max(0.6, prev - 0.2))}
+          className="w-7 h-7 rounded-md flex items-center justify-center text-[14px] font-bold cursor-pointer transition-colors"
+          style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, color: `${COLORS.text}66` }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = `${accentColor}44`}
+          onMouseLeave={e => e.currentTarget.style.borderColor = COLORS.border}
+        >
+          −
+        </button>
+        {zoom !== 1.0 && (
+          <button
+            onClick={() => setZoom(1.0)}
+            className="w-7 h-7 rounded-md flex items-center justify-center text-[8px] cursor-pointer transition-colors"
+            style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, color: `${COLORS.text}40` }}
+          >
+            1x
+          </button>
+        )}
+      </div>
+
+      {/* ── CSS breathing + pulse (no JS re-renders) ──────────────────── */}
+      <style>{`
+        @keyframes globe-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+        .globe-dot-relevant { animation: globe-breathe 3s ease-in-out infinite; transform-origin: center; }
+      `}</style>
 
       {/* ── Legend ────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-5 mt-2 font-mono text-[7px] tracking-[0.12em]" style={{ color: `${COLORS.text}50` }}>
@@ -588,7 +724,13 @@ export function IndustryGlobe({
           <span className="w-3 h-px rounded" style={{ background: accentColor, opacity: 0.5 }} />
           ARC
         </span>
-        <span style={{ color: `${COLORS.text}30` }}>DRAG TO ROTATE</span>
+        {signals.length > 0 && (
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full" style={{ background: COLORS.orange, opacity: 0.9, boxShadow: `0 0 6px ${COLORS.orange}60` }} />
+            SIGNALS
+          </span>
+        )}
+        <span style={{ color: `${COLORS.text}30` }}>DRAG TO ROTATE · SCROLL TO ZOOM</span>
       </div>
     </div>
   );

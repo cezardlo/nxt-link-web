@@ -356,6 +356,52 @@ export default function IndustryCommandCenter() {
     return () => clearInterval(interval);
   }, [slug, fetchData]);
 
+  // ── Dynamic vendor list from signals ─────────────────────────────────────
+  const dynamicVendors = useMemo(() => {
+    const existing = apiData?.vendors ?? [];
+
+    // Count signal mentions per company
+    const companyMap = new Map<string, { count: number; totalImportance: number; types: Set<string>; industry: string }>();
+    for (const sig of mergedSignals) {
+      const company = sig.company as string | undefined;
+      if (!company || !company.trim()) continue;
+      const name = company.trim();
+      const entry = companyMap.get(name) ?? { count: 0, totalImportance: 0, types: new Set<string>(), industry: '' };
+      entry.count += 1;
+      entry.totalImportance += (sig.importance as number) ?? 0;
+      if (sig.type) entry.types.add(sig.type as string);
+      if (sig.industry) entry.industry = sig.industry as string;
+      companyMap.set(name, entry);
+    }
+
+    // Build vendor objects from signal companies
+    const signalVendors = Array.from(companyMap.entries()).map(([name, info]) => ({
+      id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      name,
+      category: info.industry || slug,
+      ikerScore: Math.round(info.count * 15 + (info.totalImportance / info.count) * 50),
+      tags: Array.from(info.types),
+    }));
+
+    // Merge: existing vendors take priority (deduplicate by lowercase name)
+    const existingNames = new Set(existing.map((v) => v.name.toLowerCase()));
+    const merged = [
+      ...existing.map((v) => ({
+        id: v.id,
+        name: v.name,
+        category: v.category,
+        ikerScore: v.relevance != null ? Math.round(v.relevance) : undefined,
+        description: v.description,
+        website: v.url,
+      })),
+      ...signalVendors.filter((v) => !existingNames.has(v.name.toLowerCase())),
+    ];
+
+    // Sort by ikerScore descending, take top 20
+    merged.sort((a, b) => (b.ikerScore ?? 0) - (a.ikerScore ?? 0));
+    return merged.slice(0, 20);
+  }, [apiData?.vendors, mergedSignals, slug]);
+
   // ── Accent color ─────────────────────────────────────────────────────────
   const accentColor = industry?.color ?? COLORS.accent;
 
@@ -433,6 +479,7 @@ export default function IndustryCommandCenter() {
             accentColor={accentColor}
             highlightedTechIds={highlightedTechIds}
             onCountrySelect={handleCountrySelect}
+            signals={mergedSignals}
           />
         </div>
 
@@ -521,7 +568,7 @@ export default function IndustryCommandCenter() {
 
         {/* Key Players */}
         <div id="players" className="pt-12">
-          <KeyPlayers vendors={apiData?.vendors ?? []} accentColor={accentColor} />
+          <KeyPlayers vendors={dynamicVendors} accentColor={accentColor} />
         </div>
 
         {/* Sweep Radar link */}

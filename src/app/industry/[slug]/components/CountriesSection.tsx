@@ -33,6 +33,8 @@ interface CountriesSectionProps {
   accentColor: string;
   highlightedTechIds?: string[];
   onCountrySelect: (countryCode: string | null) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  signals?: Record<string, any>[];
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -100,6 +102,7 @@ export function CountriesSection({
   accentColor,
   highlightedTechIds = [],
   onCountrySelect,
+  signals = [],
 }: CountriesSectionProps) {
   const [showAll, setShowAll] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<CountryTechProfile | null>(null);
@@ -181,6 +184,12 @@ export function CountriesSection({
           highlightedCodes={
             highlightedCodes.size > 0 ? Array.from(highlightedCodes) : []
           }
+          signals={signals.map(s => ({
+            title: String(s.title ?? ''),
+            industry: String(s.industry ?? s.type ?? ''),
+            importance: Number(s.importance ?? 0.5),
+            company: s.company ? String(s.company) : null,
+          }))}
         />
       </div>
 
