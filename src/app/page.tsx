@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
 
@@ -51,6 +53,29 @@ const INDUSTRY_TREE: IndustryGroup[] = [
 
 // Flat list for lookups
 const ALL_INDUSTRIES = INDUSTRY_TREE.flatMap(g => g.industries);
+
+// ── Strategic industries (deep-dive pages at /industry/[slug]) ───────────────
+
+const STRATEGIC_INDUSTRIES = [
+  { slug: 'defense',        label: 'Defense',        icon: '◆' },
+  { slug: 'ai-ml',          label: 'AI / ML',        icon: '◇' },
+  { slug: 'cybersecurity',  label: 'Cyber',          icon: '◈' },
+  { slug: 'manufacturing',  label: 'Manufacturing',  icon: '▣' },
+  { slug: 'logistics',      label: 'Logistics',      icon: '⬡' },
+  { slug: 'energy',         label: 'Energy',         icon: '◉' },
+  { slug: 'healthcare',     label: 'Healthcare',     icon: '◎' },
+  { slug: 'border-tech',    label: 'Border Tech',    icon: '⊕' },
+];
+
+// Maps DECIDE industry IDs to their strategic industry deep-dive slug
+const INDUSTRY_DEEPDIVE: Record<string, string> = {
+  restaurant:      'manufacturing',   // food production tech
+  construction:    'manufacturing',
+  logistics:       'logistics',
+  warehouse:       'logistics',
+  window_cleaning: 'manufacturing',
+  border_tech:     'border-tech',
+};
 
 // ── Suggestions per industry ─────────────────────────────────────────────────
 
@@ -142,7 +167,19 @@ function relativeTime(iso: string): string {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Home() {
-  const [industry, setIndustry] = useState<string | null>(null);
+  return (
+    <Suspense>
+      <HomeInner />
+    </Suspense>
+  );
+}
+
+function HomeInner() {
+  const searchParams = useSearchParams();
+  const presetIndustry = searchParams.get('industry');
+  const [industry, setIndustry] = useState<string | null>(
+    presetIndustry && ALL_INDUSTRIES.some(i => i.id === presetIndustry) ? presetIndustry : null
+  );
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DecideResponse | null>(null);
@@ -313,6 +350,49 @@ export default function Home() {
               </div>
             </div>
           )}
+
+          {/* ── Explore Intelligence ──────────────────────────────── */}
+          <div className="mt-6">
+            <div className="h-px mb-4" style={{ background: `${C.dim}20` }} />
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-2 h-2 rounded-full" style={{ background: C.gold }} />
+              <span
+                className="text-[8px] tracking-[0.2em] font-bold uppercase"
+                style={{ color: `${C.gold}90` }}
+              >
+                Explore Intelligence
+              </span>
+              <div className="flex-1 h-px" style={{ background: `${C.gold}15` }} />
+            </div>
+            <p className="text-[10px] mb-3" style={{ color: `${C.text}30` }}>
+              Deep-dive into any sector — technologies, players, signals, global map
+            </p>
+            <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
+              {STRATEGIC_INDUSTRIES.map(ind => (
+                <Link
+                  key={ind.slug}
+                  href={`/industry/${ind.slug}`}
+                  className="shrink-0 flex items-center gap-2 px-3 py-2 transition-all hover:translate-y-[-1px]"
+                  style={{
+                    background: C.card,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: '10px',
+                    textDecoration: 'none',
+                    color: C.text,
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = `${C.gold}30`;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = C.border;
+                  }}
+                >
+                  <span className="text-[12px]" style={{ color: C.gold }}>{ind.icon}</span>
+                  <span className="text-[9px] tracking-[0.05em]">{ind.label}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
@@ -597,6 +677,27 @@ export default function Home() {
               {result.next_step}
             </div>
           </Section>
+
+          {/* ── Explore Intelligence Link ─────────────────────────── */}
+          {industry && INDUSTRY_DEEPDIVE[industry] && (
+            <Section title="GO DEEPER" accent={C.gold}>
+              <Link
+                href={`/industry/${INDUSTRY_DEEPDIVE[industry]}`}
+                className="flex items-center justify-between"
+                style={{ textDecoration: 'none', color: C.text }}
+              >
+                <div>
+                  <div className="text-[12px] font-bold">
+                    Explore {STRATEGIC_INDUSTRIES.find(s => s.slug === INDUSTRY_DEEPDIVE[industry!])?.label ?? 'Industry'} Intelligence
+                  </div>
+                  <div className="text-[9px] mt-1" style={{ color: `${C.text}40` }}>
+                    Technologies, global players, live signals, trajectory matrix
+                  </div>
+                </div>
+                <span className="text-[14px]" style={{ color: C.gold }}>→</span>
+              </Link>
+            </Section>
+          )}
 
           {/* ── CTA ────────────────────────────────────────────────── */}
           <div className="mt-6 mb-10 text-center">
