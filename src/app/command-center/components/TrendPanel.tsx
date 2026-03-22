@@ -10,11 +10,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { TrendAnalysis, SectorMomentum } from '../types/intel';
+import { COLORS } from '@/lib/tokens';
 
 // ─── Color constants ───────────────────────────────────────────────────────────
 
-const C    = '#00D4FF';
-const G    = '#10b981';
+const C    = COLORS.cyan;
+const G    = COLORS.emerald;
 const GOLD = '#f59e0b';
 const O    = '#F97316';
 const R    = '#f43f5e';

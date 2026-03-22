@@ -3,25 +3,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { BottomNav } from '@/components/ui';
+import { COLORS } from '@/lib/tokens';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
-const ORANGE = '#ff6600';
-const CYAN   = '#00d4ff';
-const GREEN  = '#00ff88';
-const GOLD   = '#ffd700';
-const RED    = '#ff3b30';
+const CYAN   = COLORS.cyan;
+const GREEN  = COLORS.green;
+const GOLD   = COLORS.gold;
+const RED    = COLORS.red;
 const PURPLE = '#aa66ff';
-const FONT   = "'JetBrains Mono', 'Courier New', monospace";
-
-// ─── Bottom nav ───────────────────────────────────────────────────────────────
-const NAV_ITEMS = [
-  { label: 'TODAY',   href: '/' },
-  { label: 'EXPLORE', href: '/explore' },
-  { label: 'WORLD',   href: '/world' },
-  { label: 'FOLLOW',  href: '/following' },
-  { label: 'STORE',   href: '/store' },
-  { label: 'DOSSIER', href: '/dossier', active: true },
-];
 
 // ─── Static fallback descriptions ────────────────────────────────────────────
 const FALLBACKS: Record<string, string> = {
@@ -187,29 +177,31 @@ function DecisionBadge({ decision }: { decision: Decision }) {
   }[decision];
 
   return (
-    <div style={{
-      background: '#060606',
-      border: `1px solid ${config.color}33`,
-      borderLeft: `4px solid ${config.color}`,
-      borderRadius: 4,
-      padding: '20px 24px',
-      marginBottom: 24,
-    }}>
-      <div style={{ color: '#555', fontSize: 9, letterSpacing: '0.25em', marginBottom: 10 }}>
+    <div
+      className="rounded-[22px] mb-7"
+      style={{
+        background: COLORS.card,
+        border: `1px solid ${config.color}33`,
+        borderLeft: `4px solid ${config.color}`,
+        padding: '22px 26px',
+      }}
+    >
+      <div className="font-mono text-[9px] tracking-[0.25em] mb-3" style={{ color: COLORS.dim }}>
         SHOULD YOU ENGAGE WITH THIS?
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
-        <div style={{
-          width: 12, height: 12, borderRadius: '50%',
-          background: config.color,
-          boxShadow: `0 0 10px ${config.color}`,
-          flexShrink: 0,
-        }} />
-        <span style={{ color: config.color, fontSize: 22, fontWeight: 700, letterSpacing: '0.04em' }}>
+      <div className="flex items-center gap-4 mb-2">
+        <div
+          className="w-3 h-3 rounded-full shrink-0"
+          style={{
+            background: config.color,
+            boxShadow: `0 0 12px ${config.color}`,
+          }}
+        />
+        <span className="font-grotesk text-[22px] font-bold tracking-wide" style={{ color: config.color }}>
           {config.text}
         </span>
       </div>
-      <p style={{ color: '#888', fontSize: 11, margin: 0, lineHeight: 1.6 }}>
+      <p className="font-mono text-[11px] leading-relaxed m-0" style={{ color: COLORS.muted }}>
         {config.sub}
       </p>
     </div>
@@ -219,8 +211,9 @@ function DecisionBadge({ decision }: { decision: Decision }) {
 // ─── Section wrapper ──────────────────────────────────────────────────────────
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div style={{ marginBottom: 28 }}>
-      <div style={{ color: '#333', fontSize: 9, letterSpacing: '0.25em', marginBottom: 12, borderBottom: '1px solid #111', paddingBottom: 6 }}>
+    <div className="mb-8">
+      <div className="divider-glow mb-4" />
+      <div className="font-mono text-[9px] tracking-[0.25em] mb-4" style={{ color: COLORS.dim }}>
         {label}
       </div>
       {children}
@@ -268,7 +261,6 @@ export default function DossierDetailPage() {
         .then(r => r.json() as Promise<IntelResponse>)
         .then(data => {
           const list = data.signals ?? data.findings ?? [];
-          // Filter to this industry (loose match)
           const term = slug.toLowerCase();
           const filtered = list.filter(s =>
             s.industry?.toLowerCase().includes(term.split('-')[0]) ||
@@ -297,7 +289,6 @@ export default function DossierDetailPage() {
         .then(data => {
           if (data?.ok && data.profile?.blocks) {
             setProfile(data.profile.blocks);
-            // Extract IKER score if present
             const ikerBlock = data.profile.blocks.find(b => b.type === 'iker' || b.title?.toLowerCase().includes('iker'));
             if (ikerBlock?.content) {
               const m = ikerBlock.content.match(/(\d+)/);
@@ -314,14 +305,12 @@ export default function DossierDetailPage() {
   const decision = computeDecision(signals);
 
   const getDescription = useCallback((): string => {
-    // Try profile blocks first
     if (profile) {
       const snap = profile.find(b => b.type === 'snapshot' || b.type === 'what_it_is');
       if (snap?.content) return snap.content;
       const first = profile.find(b => b.content && b.content.length > 40);
       if (first?.content) return first.content;
     }
-    // Fallback by exact slug or first slug segment
     if (FALLBACKS[slug]) return FALLBACKS[slug];
     const part = slug.split('-')[0];
     const match = Object.entries(FALLBACKS).find(([k]) => k.startsWith(part));
@@ -364,10 +353,14 @@ export default function DossierDetailPage() {
   // ── No slug guard ─────────────────────────────────────────────────────────
   if (!slug) {
     return (
-      <div style={{ fontFamily: FONT, background: '#000', minHeight: '100vh', color: '#555', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 11, letterSpacing: '0.2em', marginBottom: 16 }}>NO DOSSIER FOUND</div>
-          <button onClick={() => router.push('/dossier')} style={{ color: CYAN, background: 'none', border: 'none', fontFamily: FONT, fontSize: 11, cursor: 'pointer' }}>
+      <div className="min-h-screen flex items-center justify-center font-mono" style={{ background: COLORS.bg, color: COLORS.muted }}>
+        <div className="text-center">
+          <div className="text-[11px] tracking-[0.2em] mb-4">NO DOSSIER FOUND</div>
+          <button
+            onClick={() => router.push('/dossier')}
+            className="font-mono text-[11px] bg-transparent border-none cursor-pointer"
+            style={{ color: CYAN }}
+          >
             ← BACK TO SEARCH
           </button>
         </div>
@@ -376,52 +369,62 @@ export default function DossierDetailPage() {
   }
 
   return (
-    <div style={{ fontFamily: FONT, background: '#000', minHeight: '100vh', color: '#fff', paddingBottom: 72 }}>
+    <div className="min-h-screen font-mono text-white pb-20" style={{ background: COLORS.bg }}>
+
       {/* ── Header ── */}
-      <div style={{ borderBottom: '1px solid #111', padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: '#000', zIndex: 40 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div
+        className="sticky top-0 z-40 flex items-center justify-between px-6 py-3"
+        style={{ background: COLORS.bg, borderBottom: `1px solid ${COLORS.border}` }}
+      >
+        <div className="flex items-center gap-3">
           <button
             onClick={() => router.push('/dossier')}
-            style={{ color: '#444', background: 'none', border: 'none', fontFamily: FONT, fontSize: 11, cursor: 'pointer', padding: 0 }}
+            className="font-mono text-[11px] bg-transparent border-none cursor-pointer p-0"
+            style={{ color: COLORS.muted }}
           >
             ← DOSSIER
           </button>
-          <span style={{ color: '#222' }}>|</span>
-          <span style={{ color: '#666', fontSize: 10, letterSpacing: '0.15em' }}>{slug.toUpperCase()}</span>
+          <span style={{ color: COLORS.dim }}>|</span>
+          <span className="font-mono text-[10px] tracking-[0.15em]" style={{ color: COLORS.muted }}>
+            {slug.toUpperCase()}
+          </span>
         </div>
-        <Link href="/" style={{ color: ORANGE, fontSize: 12, letterSpacing: '0.15em', textDecoration: 'none', fontWeight: 700 }}>
+        <Link href="/" className="font-grotesk text-[12px] tracking-[0.15em] no-underline font-bold" style={{ color: COLORS.orange }}>
           NXT//LINK
         </Link>
       </div>
 
       {/* ── Loading state ── */}
       {loading && (
-        <div style={{ padding: '60px 20px', textAlign: 'center', color: '#333', fontSize: 10, letterSpacing: '0.2em' }}>
-          <div style={{ marginBottom: 16, color: CYAN, fontSize: 12 }}>◌</div>
-          LOADING DOSSIER…
+        <div className="py-16 text-center font-mono text-[10px] tracking-[0.2em]" style={{ color: COLORS.dim }}>
+          <div className="mb-4 text-[12px]" style={{ color: COLORS.accent }}>◌</div>
+          LOADING DOSSIER...
         </div>
       )}
 
       {/* ── Main content ── */}
       {!loading && (
-        <div style={{ maxWidth: 680, margin: '0 auto', padding: '28px 20px' }}>
+        <div className="max-w-[680px] mx-auto px-6 pt-8 pb-4">
 
           {/* Title */}
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ color: '#333', fontSize: 9, letterSpacing: '0.25em', marginBottom: 6 }}>
+          <div className="mb-7">
+            <div className="font-mono text-[9px] tracking-[0.25em] mb-2" style={{ color: COLORS.dim }}>
               INTELLIGENCE DOSSIER
             </div>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 4px', color: '#fff', letterSpacing: '-0.01em' }}>
+            <h1 className="font-grotesk text-[26px] font-bold tracking-tight mb-1" style={{ color: COLORS.text }}>
               {label}
             </h1>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{ color: '#444', fontSize: 9 }}>
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="font-mono text-[9px]" style={{ color: COLORS.dim }}>
                 {signals.length} SIGNAL{signals.length !== 1 ? 'S' : ''} TRACKED
               </span>
               {forecast && (
                 <>
-                  <span style={{ color: '#222' }}>·</span>
-                  <span style={{ color: forecast.direction === 'accelerating' || forecast.direction === 'growing' ? GREEN : '#888', fontSize: 9, letterSpacing: '0.12em' }}>
+                  <span style={{ color: COLORS.dim }}>·</span>
+                  <span
+                    className="font-mono text-[9px] tracking-[0.12em]"
+                    style={{ color: forecast.direction === 'accelerating' || forecast.direction === 'growing' ? GREEN : COLORS.muted }}
+                  >
                     {forecast.direction.toUpperCase()}
                   </span>
                 </>
@@ -431,27 +434,22 @@ export default function DossierDetailPage() {
 
           {/* ── IKER score (vendor dossiers) ── */}
           {ikerScore !== null && (
-            <div style={{
-              background: '#060606',
-              border: `1px solid ${ikerColor(ikerScore)}33`,
-              borderRadius: 4,
-              padding: '14px 18px',
-              marginBottom: 20,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 16,
-            }}>
-              <div style={{
-                width: 48, height: 48, borderRadius: '50%',
-                border: `3px solid ${ikerColor(ikerScore)}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0,
-              }}>
-                <span style={{ color: ikerColor(ikerScore), fontSize: 14, fontWeight: 700 }}>{ikerScore}</span>
+            <div
+              className="rounded-[22px] flex items-center gap-5 mb-6 px-6 py-4"
+              style={{
+                background: COLORS.card,
+                border: `1px solid ${ikerColor(ikerScore)}33`,
+              }}
+            >
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
+                style={{ border: `3px solid ${ikerColor(ikerScore)}` }}
+              >
+                <span className="font-grotesk text-[14px] font-bold" style={{ color: ikerColor(ikerScore) }}>{ikerScore}</span>
               </div>
               <div>
-                <div style={{ color: '#444', fontSize: 9, letterSpacing: '0.2em', marginBottom: 2 }}>TRUST SCORE</div>
-                <div style={{ color: ikerColor(ikerScore), fontSize: 15, fontWeight: 700, letterSpacing: '0.05em' }}>
+                <div className="font-mono text-[9px] tracking-[0.2em] mb-1" style={{ color: COLORS.dim }}>TRUST SCORE</div>
+                <div className="font-grotesk text-[15px] font-bold tracking-wide" style={{ color: ikerColor(ikerScore) }}>
                   {ikerScore}/100 — {ikerLabel(ikerScore)}
                 </div>
               </div>
@@ -463,7 +461,7 @@ export default function DossierDetailPage() {
 
           {/* ── 2. WHAT IS THIS ── */}
           <Section label="WHAT IS THIS">
-            <p style={{ color: '#aaa', fontSize: 12, lineHeight: 1.75, margin: 0 }}>
+            <p className="font-mono text-[12px] leading-[1.8] m-0" style={{ color: COLORS.muted }}>
               {getDescription()}
             </p>
           </Section>
@@ -471,45 +469,46 @@ export default function DossierDetailPage() {
           {/* ── 3. SIGNAL HISTORY ── */}
           <Section label={`SIGNAL HISTORY — LAST 90 DAYS (${signals.length})`}>
             {signals.length === 0 ? (
-              <div style={{ color: '#333', fontSize: 11 }}>No signals found for this topic yet. The platform is still indexing this area.</div>
+              <div className="font-mono text-[11px]" style={{ color: COLORS.dim }}>
+                No signals found for this topic yet. The platform is still indexing this area.
+              </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div className="flex flex-col gap-2.5">
                 {signals.slice(0, 15).map((s, i) => {
                   const icon = SIGNAL_ICONS[s.signal_type] ?? '📡';
                   const imp  = s.importance ?? s.importance_score ?? 0;
                   return (
                     <div
                       key={i}
+                      className="flex items-start gap-3 rounded-[20px] px-4 py-3"
                       style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: 10,
-                        padding: '8px 10px',
-                        background: '#050505',
-                        border: '1px solid #111',
-                        borderRadius: 3,
+                        background: COLORS.card,
+                        border: `1px solid ${COLORS.border}`,
                       }}
                     >
-                      <span style={{ fontSize: 13, flexShrink: 0, marginTop: 1 }}>{icon}</span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                      <span className="text-[13px] shrink-0 mt-0.5">{icon}</span>
+                      <div className="flex-1 min-w-0">
                         {s.url ? (
                           <a
                             href={s.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            style={{ color: CYAN, fontSize: 11, lineHeight: 1.5, textDecoration: 'none', display: 'block' }}
+                            className="font-mono text-[11px] leading-relaxed no-underline block"
+                            style={{ color: COLORS.accent }}
                           >
                             {s.title}
                           </a>
                         ) : (
-                          <span style={{ color: '#ccc', fontSize: 11, lineHeight: 1.5, display: 'block' }}>{s.title}</span>
+                          <span className="font-mono text-[11px] leading-relaxed block" style={{ color: COLORS.text }}>
+                            {s.title}
+                          </span>
                         )}
-                        <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+                        <div className="flex gap-2.5 mt-1.5 flex-wrap">
                           {s.company && (
-                            <span style={{ color: '#555', fontSize: 9 }}>{s.company}</span>
+                            <span className="font-mono text-[9px]" style={{ color: COLORS.muted }}>{s.company}</span>
                           )}
-                          <span style={{ color: '#333', fontSize: 9 }}>{timeAgo(s.discovered_at)}</span>
-                          <span style={{ color: imp > 0.7 ? GREEN : imp > 0.4 ? GOLD : '#555', fontSize: 9 }}>
+                          <span className="font-mono text-[9px]" style={{ color: COLORS.dim }}>{timeAgo(s.discovered_at)}</span>
+                          <span className="font-mono text-[9px]" style={{ color: imp > 0.7 ? GREEN : imp > 0.4 ? GOLD : COLORS.muted }}>
                             IMP {Math.round(imp * 100)}
                           </span>
                         </div>
@@ -525,36 +524,43 @@ export default function DossierDetailPage() {
           <Section label="WHERE IT IS HEADING">
             {forecast ? (
               <div>
-                <p style={{ color: '#aaa', fontSize: 12, lineHeight: 1.75, margin: '0 0 16px' }}>
+                <p className="font-mono text-[12px] leading-[1.8] mb-5 mt-0" style={{ color: COLORS.muted }}>
                   {directionSummary(forecast)}
                 </p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                <div className="grid grid-cols-3 gap-3">
                   {[
-                    { label: 'CURRENT SCORE', value: forecast.current_score.toFixed(0), color: '#fff' },
+                    { label: 'CURRENT SCORE', value: forecast.current_score.toFixed(0), color: COLORS.text },
                     { label: '30D FORECAST',  value: forecast.predicted_score_30d.toFixed(0), color: forecast.predicted_score_30d > forecast.current_score ? GREEN : RED },
                     { label: '90D FORECAST',  value: forecast.predicted_score_90d.toFixed(0), color: forecast.predicted_score_90d > forecast.current_score ? GREEN : RED },
                   ].map(item => (
-                    <div key={item.label} style={{ background: '#060606', border: '1px solid #111', borderRadius: 3, padding: '10px 12px' }}>
-                      <div style={{ color: '#333', fontSize: 8, letterSpacing: '0.2em', marginBottom: 6 }}>{item.label}</div>
-                      <div style={{ color: item.color, fontSize: 20, fontWeight: 700 }}>{item.value}</div>
+                    <div
+                      key={item.label}
+                      className="rounded-[20px] px-4 py-3"
+                      style={{ background: COLORS.card, border: `1px solid ${COLORS.border}` }}
+                    >
+                      <div className="font-mono text-[8px] tracking-[0.2em] mb-2" style={{ color: COLORS.dim }}>{item.label}</div>
+                      <div className="font-grotesk text-[20px] font-bold" style={{ color: item.color }}>{item.value}</div>
                     </div>
                   ))}
                 </div>
-                <div style={{ marginTop: 10, color: '#333', fontSize: 9 }}>
+                <div className="mt-3 font-mono text-[9px]" style={{ color: COLORS.dim }}>
                   CONFIDENCE {Math.round(forecast.confidence * 100)}% · STAGE {forecast.adoption_stage?.toUpperCase() ?? 'UNKNOWN'}
                 </div>
               </div>
             ) : (
               <div>
-                <p style={{ color: '#aaa', fontSize: 12, lineHeight: 1.75, margin: '0 0 14px' }}>
+                <p className="font-mono text-[12px] leading-[1.8] mb-4 mt-0" style={{ color: COLORS.muted }}>
                   {signals.length >= 5
                     ? `${signals.length} signals have been captured in this area. Activity suggests this is an emerging category. Formal trajectory modeling will unlock once 10+ signals are indexed.`
                     : 'Not enough signal data yet to build a trajectory model. As more funding rounds, contracts, and research papers are indexed, a forecast will appear here.'}
                 </p>
                 {signals.length > 0 && (
-                  <div style={{ background: '#060606', border: '1px solid #111', borderRadius: 3, padding: '10px 14px' }}>
-                    <div style={{ color: '#333', fontSize: 9, marginBottom: 6 }}>SIGNAL MOMENTUM</div>
-                    <div style={{ color: signals.length >= 10 ? GREEN : signals.length >= 5 ? GOLD : '#555', fontSize: 13, fontWeight: 700 }}>
+                  <div
+                    className="rounded-[20px] px-5 py-3.5"
+                    style={{ background: COLORS.card, border: `1px solid ${COLORS.border}` }}
+                  >
+                    <div className="font-mono text-[9px] mb-2" style={{ color: COLORS.dim }}>SIGNAL MOMENTUM</div>
+                    <div className="font-grotesk text-[13px] font-bold" style={{ color: signals.length >= 10 ? GREEN : signals.length >= 5 ? GOLD : COLORS.muted }}>
                       {signals.length >= 10 ? 'HIGH' : signals.length >= 5 ? 'MODERATE' : 'LOW'}
                     </div>
                   </div>
@@ -565,29 +571,21 @@ export default function DossierDetailPage() {
 
           {/* ── 5. CONNECTED TO ── */}
           <Section label="CONNECTED TO">
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div className="flex gap-2.5 flex-wrap">
               {connected.map(c => {
                 const connSlug = c.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
                 return (
                   <Link
                     key={c}
                     href={`/dossier/${connSlug}`}
+                    className="rounded-full font-mono text-[10px] tracking-[0.1em] no-underline inline-flex items-center gap-2 px-4 py-2.5 transition-all duration-200 hover:scale-[1.03]"
                     style={{
-                      background: '#080808',
-                      border: `1px solid #1a1a1a`,
-                      borderRadius: 3,
-                      color: CYAN,
-                      fontSize: 10,
-                      letterSpacing: '0.1em',
-                      padding: '6px 12px',
-                      textDecoration: 'none',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      transition: 'border-color 0.15s',
+                      background: COLORS.card,
+                      border: `1px solid ${COLORS.border}`,
+                      color: COLORS.accent,
                     }}
                   >
-                    <span style={{ color: '#333', fontSize: 9 }}>→</span>
+                    <span className="text-[9px]" style={{ color: COLORS.dim }}>→</span>
                     {c}
                   </Link>
                 );
@@ -596,23 +594,15 @@ export default function DossierDetailPage() {
           </Section>
 
           {/* ── 6. ACTION BUTTONS ── */}
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
+          <div className="flex gap-3 flex-wrap mt-4">
             {/* REQUEST INTRO */}
             <a
               href={`mailto:hello@nxtlinktech.com?subject=Intro Request — ${label}&body=I would like to request an introduction for the ${label} dossier (https://www.nxtlinktech.com/dossier/${slug}).`}
+              className="rounded-full font-mono text-[11px] font-bold tracking-[0.15em] no-underline inline-block transition-opacity duration-200 px-6 py-3"
               style={{
-                background: ORANGE,
-                border: `1px solid ${ORANGE}`,
-                borderRadius: 4,
+                background: COLORS.orange,
+                border: `1px solid ${COLORS.orange}`,
                 color: '#000',
-                fontFamily: FONT,
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: '0.15em',
-                padding: '11px 20px',
-                textDecoration: 'none',
-                display: 'inline-block',
-                transition: 'opacity 0.15s',
               }}
             >
               REQUEST INTRO
@@ -621,18 +611,11 @@ export default function DossierDetailPage() {
             {/* FOLLOW */}
             <button
               onClick={handleFollow}
+              className="rounded-full font-mono text-[11px] font-bold tracking-[0.15em] cursor-pointer transition-all duration-200 px-6 py-3"
               style={{
-                background: followed ? `${CYAN}18` : '#080808',
-                border: `1px solid ${followed ? CYAN : '#222'}`,
-                borderRadius: 4,
-                color: followed ? CYAN : '#666',
-                fontFamily: FONT,
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: '0.15em',
-                padding: '11px 20px',
-                cursor: 'pointer',
-                transition: 'all 0.15s',
+                background: followed ? `${CYAN}18` : COLORS.card,
+                border: `1px solid ${followed ? CYAN : COLORS.border}`,
+                color: followed ? CYAN : COLORS.muted,
               }}
             >
               {followed ? '✓ FOLLOWING' : '+ FOLLOW'}
@@ -641,18 +624,11 @@ export default function DossierDetailPage() {
             {/* SHARE */}
             <button
               onClick={handleShare}
+              className="rounded-full font-mono text-[11px] font-bold tracking-[0.15em] cursor-pointer transition-all duration-200 px-6 py-3"
               style={{
-                background: '#080808',
-                border: `1px solid ${copied ? GREEN : '#222'}`,
-                borderRadius: 4,
-                color: copied ? GREEN : '#666',
-                fontFamily: FONT,
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: '0.15em',
-                padding: '11px 20px',
-                cursor: 'pointer',
-                transition: 'all 0.15s',
+                background: COLORS.card,
+                border: `1px solid ${copied ? GREEN : COLORS.border}`,
+                color: copied ? GREEN : COLORS.muted,
               }}
             >
               {copied ? '✓ COPIED' : 'SHARE'}
@@ -660,40 +636,13 @@ export default function DossierDetailPage() {
           </div>
 
           {/* Share URL hint */}
-          <div style={{ color: '#222', fontSize: 9, marginTop: 10, letterSpacing: '0.1em' }}>
+          <div className="font-mono text-[9px] mt-3 tracking-[0.1em]" style={{ color: COLORS.dim }}>
             nxtlinktech.com/dossier/{slug}
           </div>
         </div>
       )}
 
-      {/* ── Bottom nav ── */}
-      <nav style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0,
-        height: 48, background: '#050505',
-        borderTop: '1px solid #1a1a1a',
-        display: 'flex', alignItems: 'stretch',
-        zIndex: 50,
-      }}>
-        {NAV_ITEMS.map(item => (
-          <Link
-            key={item.label}
-            href={item.href}
-            style={{
-              flex: 1,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: FONT,
-              fontSize: 9,
-              letterSpacing: '0.15em',
-              color: item.active ? ORANGE : '#444',
-              textDecoration: 'none',
-              borderTop: item.active ? `2px solid ${ORANGE}` : '2px solid transparent',
-              transition: 'color 0.15s',
-            }}
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
+      <BottomNav />
     </div>
   );
 }

@@ -2,52 +2,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Brain, type BrainSignal } from '@/lib/brain';
-
-// ── Design tokens ─────────────────────────────────────────────────────────────
-const ORANGE = '#ff6600';
-const CYAN   = '#00d4ff';
-const GREEN  = '#00ff88';
-const GOLD   = '#ffd700';
-const RED    = '#ff3b30';
-const FONT   = "'JetBrains Mono', 'Courier New', monospace";
-const BG     = '#0f0f0f';
-const CARD   = '#161616';
-const BORDER = '#222222';
-
-// ── Nav ───────────────────────────────────────────────────────────────────────
-const NAV_TABS = [
-  { label: 'TODAY',   href: '/' },
-  { label: 'EXPLORE', href: '/explore' },
-  { label: 'WORLD',   href: '/world' },
-  { label: 'FOLLOW',  href: '/following' },
-  { label: 'STORE',   href: '/store' },
-  { label: 'DOSSIER', href: '/dossier' },
-];
-
-function NavBar() {
-  return (
-    <nav style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0, height: 48,
-      background: BG, borderTop: `1px solid ${BORDER}`,
-      display: 'flex', alignItems: 'stretch', zIndex: 100, fontFamily: FONT,
-    }}>
-      {NAV_TABS.map(t => {
-        const active = t.label === 'EXPLORE';
-        return (
-          <Link key={t.label} href={t.href} style={{
-            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: active ? ORANGE : '#444', fontSize: 9, fontWeight: 700,
-            letterSpacing: '0.1em', textDecoration: 'none',
-            borderTop: active ? `2px solid ${ORANGE}` : '2px solid transparent',
-          }}>{t.label}</Link>
-        );
-      })}
-    </nav>
-  );
-}
+import { BottomNav, TopBar, CardSkeleton, ErrorState } from '@/components/ui';
+import { COLORS } from '@/lib/tokens';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -57,7 +15,7 @@ type ExploreCard = {
   badgeColor: string;
   headline: string;
   body: string;
-  topic: string;       // slug for dossier link
+  topic: string;
   industry?: string;
   signal?: BrainSignal;
 };
@@ -86,75 +44,54 @@ function displayIndustry(raw: string): string {
 function buildCards(signals: BrainSignal[], movement: Array<{ sector: string; momentum: string; signal_count: number }>): ExploreCard[] {
   const cards: ExploreCard[] = [];
 
-  // URGENT — top P0 signal
   const urgent = signals.find(s => s.importance >= 0.85);
   if (urgent) {
     cards.push({
-      id: 'urgent',
-      badge: 'URGENT',
-      badgeColor: RED,
+      id: 'urgent', badge: 'URGENT', badgeColor: COLORS.red,
       headline: urgent.title.slice(0, 70),
       body: `High-priority activity in ${displayIndustry(urgent.industry)}. This is moving fast.`,
-      topic: toSlug(urgent.industry),
-      industry: urgent.industry,
-      signal: urgent,
+      topic: toSlug(urgent.industry), industry: urgent.industry, signal: urgent,
     });
   }
 
-  // GROWING — top accelerating sector
   const growing = movement.find(m => m.momentum === 'accelerating' || m.momentum === 'up');
   if (growing) {
-    const count = growing.signal_count;
     cards.push({
-      id: 'growing',
-      badge: 'GROWING',
-      badgeColor: GREEN,
+      id: 'growing', badge: 'GROWING', badgeColor: COLORS.green,
       headline: `${displayIndustry(growing.sector)} is accelerating`,
-      body: `${count} signal${count !== 1 ? 's' : ''} this week — more than usual. Good time to look closer.`,
-      topic: toSlug(growing.sector),
-      industry: growing.sector,
+      body: `${growing.signal_count} signal${growing.signal_count !== 1 ? 's' : ''} this week — more than usual.`,
+      topic: toSlug(growing.sector), industry: growing.sector,
     });
   }
 
-  // NEW — a signal from a lesser-known sector or new signal type
   const newSig = signals.find(s =>
-    s.importance >= 0.65 &&
-    s !== urgent &&
+    s.importance >= 0.65 && s !== urgent &&
     (s.signal_type === 'company_detected' || s.signal_type === 'patent' || s.signal_type === 'funding')
   ) ?? signals.find(s => s !== urgent && s.importance >= 0.5);
 
   if (newSig) {
     cards.push({
-      id: 'new',
-      badge: 'NEW',
-      badgeColor: GOLD,
+      id: 'new', badge: 'NEW', badgeColor: COLORS.gold,
       headline: newSig.title.slice(0, 70),
       body: `New development in ${displayIndustry(newSig.industry)}. First time this appeared this week.`,
-      topic: toSlug(newSig.industry),
-      industry: newSig.industry,
-      signal: newSig,
+      topic: toSlug(newSig.industry), industry: newSig.industry, signal: newSig,
     });
   }
 
-  // WATCH — steady sector with recent activity
   const watch = movement.find(m => m.momentum === 'steady' && m.signal_count > 2 && !cards.find(c => c.industry === m.sector));
   if (watch && cards.length < 3) {
     cards.push({
-      id: 'watch',
-      badge: 'WATCH',
-      badgeColor: CYAN,
+      id: 'watch', badge: 'WATCH', badgeColor: COLORS.cyan,
       headline: `${displayIndustry(watch.sector)} — steady but active`,
       body: `${watch.signal_count} signals this week. Not urgent but worth knowing.`,
-      topic: toSlug(watch.sector),
-      industry: watch.sector,
+      topic: toSlug(watch.sector), industry: watch.sector,
     });
   }
 
-  // Pad with fallbacks if we don't have 3 cards
   const fallbacks: ExploreCard[] = [
-    { id: 'fb-defense', badge: 'URGENT', badgeColor: RED, headline: 'Defense contracts moving in Texas', body: 'Military spending is active. Local suppliers see more orders.', topic: 'defense', industry: 'defense' },
-    { id: 'fb-ai', badge: 'GROWING', badgeColor: GREEN, headline: 'AI tools getting cheaper every month', body: 'Costs dropped 40% this year. Now accessible to small businesses.', topic: 'ai-ml', industry: 'ai-ml' },
-    { id: 'fb-border', badge: 'NEW', badgeColor: GOLD, headline: 'Border tech corridor forming in El Paso', body: 'New companies appearing along the border. First time detected this month.', topic: 'border-tech', industry: 'border-tech' },
+    { id: 'fb-defense', badge: 'URGENT', badgeColor: COLORS.red, headline: 'Defense contracts moving in Texas', body: 'Military spending is active. Local suppliers see more orders.', topic: 'defense', industry: 'defense' },
+    { id: 'fb-ai', badge: 'GROWING', badgeColor: COLORS.green, headline: 'AI tools getting cheaper every month', body: 'Costs dropped 40% this year. Now accessible to small businesses.', topic: 'ai-ml', industry: 'ai-ml' },
+    { id: 'fb-border', badge: 'NEW', badgeColor: COLORS.gold, headline: 'Border tech corridor forming in El Paso', body: 'New companies appearing along the border. First time detected this month.', topic: 'border-tech', industry: 'border-tech' },
   ];
 
   while (cards.length < 3) {
@@ -171,101 +108,92 @@ function buildDrillCards(topic: string, industry: string | undefined): DrillCard
   const indDisplay = displayIndustry(ind);
   const slug = toSlug(ind);
   return [
-    {
-      id: 'vendors',
-      label: `Who is doing this in El Paso`,
-      description: `El Paso vendors active in ${indDisplay}. Ranked by trust score.`,
-      href: `/dossier/${slug}`,
-    },
-    {
-      id: 'tech',
-      label: `What technology exists`,
-      description: `Products and tools available right now for ${indDisplay}.`,
-      href: `/store?q=${encodeURIComponent(ind)}`,
-    },
-    {
-      id: 'trends',
-      label: `Where this is heading`,
-      description: `30-day and 90-day outlook for ${indDisplay} in Texas.`,
-      href: `/intel`,
-    },
+    { id: 'vendors', label: `Who is doing this in El Paso`, description: `El Paso vendors active in ${indDisplay}. Ranked by trust score.`, href: `/dossier/${slug}` },
+    { id: 'tech', label: `What technology exists`, description: `Products and tools available right now for ${indDisplay}.`, href: `/store?q=${encodeURIComponent(ind)}` },
+    { id: 'trends', label: `Where this is heading`, description: `30-day and 90-day outlook for ${indDisplay} in Texas.`, href: `/intel` },
   ];
 }
 
 // ── Card components ───────────────────────────────────────────────────────────
 
-function ExploreCardView({ card, onExplore }: { card: ExploreCard; onExplore: (card: ExploreCard) => void }) {
+function ExploreCardView({ card, onExplore, index }: { card: ExploreCard; onExplore: (card: ExploreCard) => void; index: number }) {
   return (
-    <div style={{
-      background: CARD,
-      border: `1px solid ${BORDER}`,
-      borderTop: `3px solid ${card.badgeColor}`,
-      borderRadius: 4,
-      padding: 20,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 12,
-      flex: 1,
-      minWidth: 220,
-    }}>
+    <div
+      className="flex flex-col gap-4 p-6 flex-1 min-w-[260px] animate-fade-up cursor-pointer
+                 transition-all duration-200 hover:scale-[1.02] hover:shadow-lg hover:shadow-black/20"
+      style={{
+        background: COLORS.card,
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: '22px',
+        borderTopColor: card.badgeColor,
+        borderTopWidth: 3,
+        animationDelay: `${index * 120}ms`,
+        animationFillMode: 'both',
+      }}
+      onClick={() => onExplore(card)}
+    >
       {/* Badge */}
-      <span style={{
-        fontSize: 9, fontWeight: 700, letterSpacing: '0.2em',
-        color: card.badgeColor,
-        background: `${card.badgeColor}18`,
-        border: `1px solid ${card.badgeColor}40`,
-        borderRadius: 2, padding: '2px 8px',
-        alignSelf: 'flex-start',
-      }}>{card.badge}</span>
-
-      {/* Headline */}
-      <div style={{ fontSize: 14, fontWeight: 700, color: '#ffffff', lineHeight: 1.4 }}>
-        {card.headline}
-      </div>
-
-      {/* Body */}
-      <div style={{ fontSize: 12, color: '#888888', lineHeight: 1.6, flex: 1 }}>
-        {card.body}
-      </div>
-
-      {/* CTA */}
-      <button
-        onClick={() => onExplore(card)}
+      <span
+        className="font-mono text-[9px] font-bold tracking-[0.2em] self-start px-3 py-1 rounded-full"
         style={{
-          background: ORANGE, color: '#000', border: 'none',
-          borderRadius: 2, padding: '10px 16px',
-          fontSize: 11, fontWeight: 700, letterSpacing: '0.15em',
-          cursor: 'pointer', fontFamily: FONT, textAlign: 'left',
+          color: card.badgeColor,
+          background: `${card.badgeColor}12`,
+          border: `1px solid ${card.badgeColor}25`,
         }}
       >
-        EXPLORE →
-      </button>
+        {card.badge}
+      </span>
+
+      {/* Headline */}
+      <h3 className="font-grotesk text-[15px] font-bold leading-snug" style={{ color: COLORS.text }}>
+        {card.headline}
+      </h3>
+
+      {/* Body */}
+      <p className="font-mono text-[12px] leading-relaxed flex-1" style={{ color: COLORS.muted }}>
+        {card.body}
+      </p>
+
+      {/* CTA */}
+      <span
+        className="font-mono text-[10px] font-semibold tracking-[0.15em] self-start mt-1
+                   transition-colors duration-200 hover:brightness-125"
+        style={{ color: COLORS.accent }}
+      >
+        EXPLORE
+      </span>
     </div>
   );
 }
 
-function DrillCardView({ card }: { card: DrillCard }) {
+function DrillCardView({ card, index }: { card: DrillCard; index: number }) {
   const router = useRouter();
   return (
-    <div
+    <button
       onClick={() => router.push(card.href)}
+      className="flex flex-col gap-3 p-5 flex-1 min-w-[200px] text-left animate-fade-up cursor-pointer
+                 transition-all duration-200 hover:scale-[1.02] hover:shadow-lg hover:shadow-black/20"
       style={{
-        background: CARD, border: `1px solid ${BORDER}`,
-        borderRadius: 4, padding: 18,
-        display: 'flex', flexDirection: 'column', gap: 8,
-        cursor: 'pointer', flex: 1, minWidth: 200,
+        background: COLORS.card,
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: '20px',
+        animationDelay: `${index * 120}ms`,
+        animationFillMode: 'both',
       }}
     >
-      <div style={{ fontSize: 13, fontWeight: 700, color: '#ffffff', lineHeight: 1.4 }}>
+      <span className="font-grotesk text-[13px] font-bold leading-snug" style={{ color: COLORS.text }}>
         {card.label}
-      </div>
-      <div style={{ fontSize: 12, color: '#888888', lineHeight: 1.5, flex: 1 }}>
+      </span>
+      <span className="font-mono text-[12px] leading-relaxed flex-1" style={{ color: COLORS.muted }}>
         {card.description}
-      </div>
-      <div style={{ fontSize: 10, color: CYAN, letterSpacing: '0.1em', marginTop: 4 }}>
-        GO →
-      </div>
-    </div>
+      </span>
+      <span
+        className="font-mono text-[10px] font-semibold tracking-[0.15em] mt-1"
+        style={{ color: COLORS.cyan }}
+      >
+        GO
+      </span>
+    </button>
   );
 }
 
@@ -274,23 +202,25 @@ function DrillCardView({ card }: { card: DrillCard }) {
 export default function ExplorePage() {
   const [cards, setCards] = useState<ExploreCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [selected, setSelected] = useState<ExploreCard | null>(null);
   const [breadcrumb, setBreadcrumb] = useState<string[]>(['EL PASO']);
 
-  useEffect(() => {
+  function load() {
+    setLoading(true);
+    setError(false);
     Brain.morning()
       .then((data) => {
-        const built = buildCards(
+        setCards(buildCards(
           data.top_signals,
           data.industry_movement.map(m => ({ sector: m.sector, momentum: m.momentum, signal_count: m.signal_count }))
-        );
-        setCards(built);
+        ));
       })
-      .catch(() => {
-        setCards(buildCards([], []));
-      })
+      .catch(() => { setCards(buildCards([], [])); setError(true); })
       .finally(() => setLoading(false));
-  }, []);
+  }
+
+  useEffect(() => { load(); }, []);
 
   function handleExplore(card: ExploreCard) {
     setSelected(card);
@@ -302,145 +232,173 @@ export default function ExplorePage() {
     setBreadcrumb(['EL PASO']);
   }
 
-  const drillCards = selected
-    ? buildDrillCards(selected.topic, selected.industry)
-    : [];
+  const drillCards = selected ? buildDrillCards(selected.topic, selected.industry) : [];
 
   return (
-    <div style={{
-      background: BG, minHeight: '100dvh', color: '#fff',
-      fontFamily: FONT, paddingBottom: 64,
-    }}>
-      {/* Header */}
-      <div style={{
-        padding: '12px 20px',
-        borderBottom: `1px solid ${BORDER}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <Link href="/" style={{ color: ORANGE, fontSize: 13, letterSpacing: '0.15em', textDecoration: 'none', fontWeight: 700 }}>
-          NXT{'//'}<span style={{ color: 'rgba(255,102,0,0.4)' }}>LINK</span>
-        </Link>
-        <span style={{ color: '#444', fontSize: 10, letterSpacing: '0.2em' }}>EXPLORE</span>
-      </div>
+    <div className="min-h-screen pb-24" style={{ background: COLORS.bg }}>
+      <TopBar />
 
       {/* Breadcrumb */}
-      <div style={{ padding: '10px 20px 0', display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div className="flex items-center gap-2 px-6 pt-5 pb-2">
         {breadcrumb.map((crumb, i) => (
-          <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {i > 0 && <span style={{ color: '#333', fontSize: 10 }}>→</span>}
-            <span style={{
-              fontSize: 10, letterSpacing: '0.2em',
-              color: i === breadcrumb.length - 1 ? CYAN : '#555',
-              cursor: i < breadcrumb.length - 1 ? 'pointer' : 'default',
-            }}
+          <span key={i} className="flex items-center gap-2">
+            {i > 0 && (
+              <span className="font-mono text-[10px]" style={{ color: COLORS.dim }}>
+                /
+              </span>
+            )}
+            <span
+              className={`font-mono text-[10px] tracking-[0.2em] uppercase ${
+                i < breadcrumb.length - 1 ? 'cursor-pointer transition-colors duration-150' : ''
+              }`}
+              style={{
+                color: i === breadcrumb.length - 1 ? COLORS.accent : COLORS.muted,
+              }}
               onClick={i < breadcrumb.length - 1 ? handleBack : undefined}
-            >{crumb}</span>
+            >
+              {crumb}
+            </span>
           </span>
         ))}
       </div>
 
       {/* Content */}
-      <div style={{ padding: '20px 20px 0' }}>
+      <div className="px-5 sm:px-8 pt-6">
         {!selected ? (
-          /* Level 0 — three intelligence cards */
           <>
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 11, color: '#555', letterSpacing: '0.2em', marginBottom: 4 }}>
+            {/* Header */}
+            <div className="mb-8">
+              <span
+                className="font-mono text-[10px] tracking-[0.2em] uppercase block mb-2"
+                style={{ color: COLORS.dim }}
+              >
                 YOU ARE HERE
-              </div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', lineHeight: 1.3 }}>
+              </span>
+              <h1
+                className="font-grotesk text-[20px] sm:text-[24px] font-bold leading-snug"
+                style={{ color: COLORS.text }}
+              >
                 Three things are happening right now.
-              </div>
-              <div style={{ fontSize: 13, color: '#888', marginTop: 6 }}>
+              </h1>
+              <p className="font-mono text-[12px] mt-2" style={{ color: COLORS.muted }}>
                 Pick one to explore.
-              </div>
+              </p>
             </div>
 
+            {/* Cards */}
             {loading ? (
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                {[0, 1, 2].map(i => (
-                  <div key={i} style={{
-                    flex: 1, minWidth: 220, height: 220,
-                    background: CARD, border: `1px solid ${BORDER}`,
-                    borderRadius: 4, animation: 'pulse 1.5s ease-in-out infinite',
-                  }} />
-                ))}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <CardSkeleton /><CardSkeleton /><CardSkeleton />
               </div>
+            ) : error && cards.length === 0 ? (
+              <ErrorState message="Could not load intelligence." onRetry={load} />
             ) : (
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                {cards.map(card => (
-                  <ExploreCardView key={card.id} card={card} onExplore={handleExplore} />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                {cards.map((card, i) => (
+                  <ExploreCardView key={card.id} card={card} onExplore={handleExplore} index={i} />
                 ))}
               </div>
             )}
           </>
         ) : (
-          /* Level 1 — drill-down into selected topic */
+          /* Drill-down */
           <>
+            {/* Back button */}
             <button
               onClick={handleBack}
+              className="font-mono text-[11px] tracking-[0.1em] mb-6 px-4 py-2 rounded-full
+                         transition-all duration-150 hover:brightness-125"
               style={{
-                background: 'none', border: `1px solid ${BORDER}`,
-                color: '#555', fontSize: 10, letterSpacing: '0.15em',
-                padding: '6px 14px', borderRadius: 2, cursor: 'pointer',
-                fontFamily: FONT, marginBottom: 20,
+                color: COLORS.accent,
+                background: `${COLORS.accent}10`,
+                border: `1px solid ${COLORS.accent}20`,
               }}
             >
-              ← BACK
+              BACK
             </button>
 
             {/* Selected card recap */}
-            <div style={{
-              background: CARD, border: `1px solid ${BORDER}`,
-              borderLeft: `4px solid ${selected.badgeColor}`,
-              borderRadius: 4, padding: 16, marginBottom: 24,
-            }}>
-              <span style={{
-                fontSize: 9, letterSpacing: '0.2em', color: selected.badgeColor,
-                fontWeight: 700, display: 'block', marginBottom: 6,
-              }}>{selected.badge}</span>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 6 }}>
+            <div
+              className="p-6 mb-8 animate-fade-up"
+              style={{
+                background: COLORS.card,
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: '22px',
+                borderLeftColor: selected.badgeColor,
+                borderLeftWidth: 3,
+              }}
+            >
+              {/* Status dot + badge text */}
+              <div className="flex items-center gap-2 mb-3">
+                <span
+                  className="inline-block w-2 h-2 rounded-full"
+                  style={{ background: selected.badgeColor }}
+                />
+                <span
+                  className="font-mono text-[9px] font-bold tracking-[0.2em]"
+                  style={{ color: selected.badgeColor }}
+                >
+                  {selected.badge}
+                </span>
+              </div>
+              <h2 className="font-grotesk text-[15px] font-bold mb-2" style={{ color: COLORS.text }}>
                 {selected.headline}
-              </div>
-              <div style={{ fontSize: 12, color: '#888' }}>{selected.body}</div>
+              </h2>
+              <p className="font-mono text-[12px] leading-relaxed" style={{ color: COLORS.muted }}>
+                {selected.body}
+              </p>
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 11, color: '#555', letterSpacing: '0.2em', marginBottom: 4 }}>
+            {/* Drill cards */}
+            <div className="mb-5">
+              <span
+                className="font-mono text-[10px] tracking-[0.2em] uppercase block mb-2"
+                style={{ color: COLORS.dim }}
+              >
                 WHAT DO YOU WANT TO KNOW?
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>
+              </span>
+              <h2 className="font-grotesk text-[16px] font-bold" style={{ color: COLORS.text }}>
                 Pick your next step.
-              </div>
+              </h2>
             </div>
 
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              {drillCards.map(card => (
-                <DrillCardView key={card.id} card={card} />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+              {drillCards.map((card, i) => (
+                <DrillCardView key={card.id} card={card} index={i} />
               ))}
             </div>
 
-            {/* Signal detail if available */}
+            {/* Signal source */}
             {selected.signal && (
-              <div style={{
-                marginTop: 24, padding: 16,
-                background: '#0a0a0a', border: `1px solid ${BORDER}`,
-                borderRadius: 4,
-              }}>
-                <div style={{ fontSize: 9, color: '#444', letterSpacing: '0.2em', marginBottom: 8 }}>
+              <div
+                className="mt-8 p-6 animate-fade-up"
+                style={{
+                  background: COLORS.surface,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: '20px',
+                  animationDelay: '360ms',
+                  animationFillMode: 'both',
+                }}
+              >
+                <span
+                  className="font-mono text-[10px] tracking-[0.2em] uppercase block mb-3"
+                  style={{ color: COLORS.dim }}
+                >
                   THE SIGNAL THAT TRIGGERED THIS
-                </div>
-                <div style={{ fontSize: 12, color: '#ccc', lineHeight: 1.6 }}>
+                </span>
+                <p className="font-mono text-[12px] leading-relaxed" style={{ color: COLORS.muted }}>
                   {selected.signal.title}
-                </div>
+                </p>
                 {selected.signal.url && (
                   <a
                     href={selected.signal.url}
                     target="_blank"
                     rel="noreferrer"
-                    style={{ fontSize: 10, color: CYAN, display: 'block', marginTop: 8, letterSpacing: '0.1em' }}
+                    className="font-mono text-[10px] font-semibold tracking-[0.15em] mt-3 inline-block
+                               transition-opacity duration-150 hover:opacity-80"
+                    style={{ color: COLORS.cyan }}
                   >
-                    READ SOURCE →
+                    READ SOURCE
                   </a>
                 )}
               </div>
@@ -449,14 +407,7 @@ export default function ExplorePage() {
         )}
       </div>
 
-      <NavBar />
-
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 0.4; }
-          50% { opacity: 0.8; }
-        }
-      `}</style>
+      <BottomNav />
     </div>
   );
 }

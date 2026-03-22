@@ -5,11 +5,12 @@
 
 import { useState } from 'react';
 import type { WatchItem } from '../types/intel';
+import { COLORS } from '@/lib/tokens';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const CYAN  = '#00D4FF';
-const GREEN = '#10b981';
+const CYAN  = COLORS.cyan;
+const GREEN = COLORS.emerald;
 const GOLD  = '#f59e0b';
 const RED   = '#f43f5e';
 const DIM   = 'rgba(0,212,255,0.10)';

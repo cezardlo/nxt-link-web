@@ -141,7 +141,7 @@ export default function IndustriesPage() {
               return (
                 <button
                   key={ind.id}
-                  onClick={() => router.push(`/search?q=${encodeURIComponent(ind.name)}`)}
+                  onClick={() => router.push(`/industry/${ind.id}`)}
                   className="text-left p-6 transition-all duration-300 cursor-pointer group animate-fade-up hover:translate-y-[-2px]"
                   style={{
                     background: COLORS.card,

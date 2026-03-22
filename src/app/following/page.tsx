@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { BottomNav, TopBar } from '@/components/ui';
+import { COLORS } from '@/lib/tokens';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -27,53 +28,17 @@ interface DisplayFollow {
 // ─── Demo data ────────────────────────────────────────────────────────────────
 
 const DEMO_FOLLOWS: DisplayFollow[] = [
-  {
-    id: 'defense-ai',
-    type: 'industry',
-    label: 'Defense AI',
-    lastChange: '2h ago',
-    changeType: 'NEEDS_ATTENTION',
-    summary: 'New $1.5B contract awarded at Fort Bliss — your attention needed',
-    action: 'View Signal',
-  },
-  {
-    id: 'booz-allen',
-    type: 'company',
-    label: 'Booz Allen Hamilton',
-    lastChange: '6h ago',
-    changeType: 'UPDATE',
-    summary: 'Two new contracts detected this week. IKER score unchanged at 84.',
-  },
-  {
-    id: 'cybersecurity',
-    type: 'industry',
-    label: 'Cybersecurity',
-    lastChange: '1d ago',
-    changeType: 'UPDATE',
-    summary: 'Google completed $32B Wiz acquisition. Market consolidating fast.',
-  },
-  {
-    id: 'el-paso-electric',
-    type: 'company',
-    label: 'El Paso Electric',
-    lastChange: '3d ago',
-    changeType: 'QUIET',
-    summary: 'No significant changes in the past 72 hours.',
-  },
-  {
-    id: 'border-tech',
-    type: 'industry',
-    label: 'Border Tech',
-    lastChange: '5d ago',
-    changeType: 'QUIET',
-    summary: 'Steady. No new contracts or funding rounds detected.',
-  },
+  { id: 'defense-ai', type: 'industry', label: 'Defense AI', lastChange: '2h ago', changeType: 'NEEDS_ATTENTION', summary: 'New $1.5B contract awarded at Fort Bliss — your attention needed', action: 'View Signal' },
+  { id: 'booz-allen', type: 'company', label: 'Booz Allen Hamilton', lastChange: '6h ago', changeType: 'UPDATE', summary: 'Two new contracts detected this week. IKER score unchanged at 84.' },
+  { id: 'cybersecurity', type: 'industry', label: 'Cybersecurity', lastChange: '1d ago', changeType: 'UPDATE', summary: 'Google completed $32B Wiz acquisition. Market consolidating fast.' },
+  { id: 'el-paso-electric', type: 'company', label: 'El Paso Electric', lastChange: '3d ago', changeType: 'QUIET', summary: 'No significant changes in the past 72 hours.' },
+  { id: 'border-tech', type: 'industry', label: 'Border Tech', lastChange: '5d ago', changeType: 'QUIET', summary: 'Steady. No new contracts or funding rounds detected.' },
 ];
 
-const SUGGESTED: { id: string; type: 'industry' | 'company' | 'technology'; label: string; hint: string }[] = [
-  { id: 'defense-ai',   type: 'industry', label: 'Defense AI',           hint: 'High signal velocity' },
-  { id: 'booz-allen',   type: 'company',  label: 'Booz Allen Hamilton',   hint: 'Active in El Paso' },
-  { id: 'border-tech',  type: 'industry', label: 'Border Tech',           hint: 'Trending contracts' },
+const SUGGESTED = [
+  { id: 'defense-ai', type: 'industry' as const, label: 'Defense AI', hint: 'High signal velocity' },
+  { id: 'booz-allen', type: 'company' as const, label: 'Booz Allen Hamilton', hint: 'Active in El Paso' },
+  { id: 'border-tech', type: 'industry' as const, label: 'Border Tech', hint: 'Trending contracts' },
 ];
 
 const LS_KEY = 'nxt_follows';
@@ -85,164 +50,92 @@ function loadFollows(): FollowItem[] {
   try {
     const raw = localStorage.getItem(LS_KEY);
     return raw ? (JSON.parse(raw) as FollowItem[]) : [];
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
 function saveFollows(items: FollowItem[]): void {
-  try {
-    localStorage.setItem(LS_KEY, JSON.stringify(items));
-  } catch {
-    // storage unavailable — silently ignore
-  }
+  try { localStorage.setItem(LS_KEY, JSON.stringify(items)); } catch { /* ignore */ }
 }
 
-function typeBadgeColor(type: DisplayFollow['type']): string {
-  if (type === 'industry') return '#00d4ff';
-  if (type === 'company')  return '#ffd700';
-  return '#00ff88';
+function typeColor(type: DisplayFollow['type']): string {
+  if (type === 'industry') return COLORS.cyan;
+  if (type === 'company') return COLORS.gold;
+  return COLORS.green;
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function FollowCard({
-  item,
-  onUnfollow,
-}: {
-  item: DisplayFollow;
-  onUnfollow: (id: string) => void;
-}) {
+function FollowCard({ item, onUnfollow }: { item: DisplayFollow; onUnfollow: (id: string) => void }) {
   const isAttention = item.changeType === 'NEEDS_ATTENTION';
-  const isUpdate    = item.changeType === 'UPDATE';
-  const isQuiet     = item.changeType === 'QUIET';
-
-  const borderColor = isAttention ? '#ff3b30' : isUpdate ? '#00d4ff' : '#444444';
-  const textOpacity = isQuiet ? '0.55' : '1';
+  const isUpdate = item.changeType === 'UPDATE';
+  const isQuiet = item.changeType === 'QUIET';
 
   return (
     <div
+      className={`rounded-[22px] p-5 mb-4 border transition-all ${isQuiet ? 'opacity-60' : ''} ${isAttention ? 'critical-pulse' : ''}`}
       style={{
-        borderLeft: `3px solid ${borderColor}`,
-        borderRight: `1px solid ${isAttention ? 'rgba(255,59,48,0.25)' : isUpdate ? 'rgba(0,212,255,0.15)' : 'rgba(68,68,68,0.3)'}`,
-        borderTop: `1px solid ${isAttention ? 'rgba(255,59,48,0.25)' : isUpdate ? 'rgba(0,212,255,0.15)' : 'rgba(68,68,68,0.3)'}`,
-        borderBottom: `1px solid ${isAttention ? 'rgba(255,59,48,0.25)' : isUpdate ? 'rgba(0,212,255,0.15)' : 'rgba(68,68,68,0.3)'}`,
-        background: isAttention
-          ? 'rgba(255,59,48,0.05)'
-          : isUpdate
-          ? 'rgba(0,212,255,0.04)'
-          : 'transparent',
-        borderRadius: '2px',
-        padding: '12px 14px',
-        marginBottom: '8px',
-        opacity: textOpacity,
-        fontFamily: "'JetBrains Mono', 'Courier New', monospace",
+        background: COLORS.card,
+        borderColor: isAttention ? `${COLORS.red}40` : isUpdate ? `${COLORS.gold}25` : COLORS.border,
+        boxShadow: isAttention ? `0 0 24px ${COLORS.red}10` : 'none',
       }}
     >
       {/* Top row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Type badge */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
           <span
-            style={{
-              fontSize: '8px',
-              fontWeight: 700,
-              letterSpacing: '0.15em',
-              color: typeBadgeColor(item.type),
-              border: `1px solid ${typeBadgeColor(item.type)}44`,
-              padding: '1px 5px',
-              borderRadius: '2px',
-              textTransform: 'uppercase',
-              background: `${typeBadgeColor(item.type)}10`,
-            }}
+            className="font-mono text-[10px] font-bold tracking-[0.12em] uppercase px-2.5 py-1 rounded-full"
+            style={{ color: typeColor(item.type), background: `${typeColor(item.type)}12`, border: `1px solid ${typeColor(item.type)}25` }}
           >
             {item.type}
           </span>
-          {/* Label */}
-          <span
-            style={{
-              fontSize: '12px',
-              fontWeight: 600,
-              color: isQuiet ? '#888888' : '#ffffff',
-              letterSpacing: '0.05em',
-            }}
-          >
+          <span className={`font-grotesk text-[14px] font-semibold ${isQuiet ? 'text-white/40' : 'text-white/90'}`}>
             {item.label}
           </span>
         </div>
-        {/* Timestamp */}
-        <span style={{ fontSize: '9px', color: '#555555', letterSpacing: '0.1em' }}>
-          {item.lastChange}
-        </span>
+        <span className="font-mono text-[10px]" style={{ color: COLORS.dim }}>{item.lastChange}</span>
       </div>
 
       {/* Summary */}
-      <p
-        style={{
-          fontSize: isQuiet ? '10px' : '11px',
-          color: isQuiet ? '#666666' : '#aaaaaa',
-          margin: '0 0 10px 0',
-          lineHeight: 1.5,
-          letterSpacing: '0.02em',
-        }}
-      >
+      <p className={`text-[13px] leading-relaxed mb-4 ${isQuiet ? 'text-white/30' : 'text-white/55'}`}>
         {item.summary}
       </p>
 
       {/* Bottom row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        {/* Change indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <div className="flex items-center justify-between">
+        <div>
           {isAttention && (
-            <span style={{ fontSize: '9px', color: '#ff3b30', letterSpacing: '0.15em', fontWeight: 700 }}>
+            <span className="font-mono text-[10px] tracking-[0.15em] font-bold" style={{ color: COLORS.red }}>
               ▲ HIGH IMPACT
             </span>
           )}
           {isUpdate && (
-            <span style={{ fontSize: '9px', color: '#00d4ff', letterSpacing: '0.15em' }}>
+            <span className="font-mono text-[10px] tracking-[0.15em]" style={{ color: COLORS.gold }}>
               ● CHANGED
             </span>
           )}
           {isQuiet && (
-            <span style={{ fontSize: '9px', color: '#444444', letterSpacing: '0.15em' }}>
+            <span className="font-mono text-[10px] tracking-[0.15em]" style={{ color: COLORS.dim }}>
               — NO CHANGE
             </span>
           )}
         </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Action button (NEEDS_ATTENTION only) */}
+        <div className="flex items-center gap-3">
           {item.action && isAttention && (
             <button
+              className="font-mono text-[10px] font-bold tracking-[0.1em] uppercase px-4 py-2 rounded-full transition-colors min-h-[36px]"
               style={{
-                fontSize: '9px',
-                fontWeight: 700,
-                letterSpacing: '0.15em',
-                color: '#ff3b30',
-                border: '1px solid rgba(255,59,48,0.5)',
-                background: 'rgba(255,59,48,0.1)',
-                padding: '3px 10px',
-                borderRadius: '2px',
-                cursor: 'pointer',
-                fontFamily: "'JetBrains Mono', 'Courier New', monospace",
+                color: COLORS.red,
+                border: `1px solid ${COLORS.red}50`,
+                background: `${COLORS.red}08`,
               }}
             >
               {item.action.toUpperCase()}
             </button>
           )}
-          {/* Unfollow */}
           <button
             onClick={() => onUnfollow(item.id)}
-            style={{
-              fontSize: '9px',
-              color: '#444444',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              letterSpacing: '0.1em',
-              fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-              padding: '3px 6px',
-            }}
+            className="font-mono text-[10px] tracking-[0.1em] hover:text-white/30 transition-colors px-3 py-2 min-w-[44px] min-h-[36px] rounded-full"
+            style={{ color: COLORS.dim }}
           >
             UNFOLLOW
           </button>
@@ -252,52 +145,15 @@ function FollowCard({
   );
 }
 
-function SectionHeader({ label, count, color }: { label: string; count: number; color: string }) {
+function SectionLabel({ label, count, color }: { label: string; count: number; color: string }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-        marginBottom: '10px',
-        marginTop: '24px',
-      }}
-    >
-      <span
-        style={{
-          fontSize: '9px',
-          fontWeight: 700,
-          letterSpacing: '0.2em',
-          color,
-          fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-        }}
-      >
-        {label}
-      </span>
-      <span
-        style={{
-          fontSize: '9px',
-          color: '#333333',
-          fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-        }}
-      >
-        ({count})
-      </span>
-      <div style={{ flex: 1, height: '1px', background: `${color}22` }} />
+    <div className="flex items-center gap-3 mt-8 mb-4">
+      <span className="font-mono text-[10px] font-bold tracking-[0.2em]" style={{ color }}>{label}</span>
+      <span className="font-mono text-[10px]" style={{ color: COLORS.dim }}>({count})</span>
+      <div className="flex-1 h-px" style={{ background: `${color}18` }} />
     </div>
   );
 }
-
-// ─── Nav items ────────────────────────────────────────────────────────────────
-
-const NAV_ITEMS: { label: string; href: string; key: string }[] = [
-  { label: 'TODAY',   href: '/',          key: 'today'   },
-  { label: 'EXPLORE', href: '/explore',   key: 'explore' },
-  { label: 'WORLD',   href: '/world',     key: 'world'   },
-  { label: 'FOLLOW',  href: '/following', key: 'follow'  },
-  { label: 'STORE',   href: '/store',     key: 'store'   },
-  { label: 'DOSSIER', href: '/dossier',   key: 'dossier' },
-];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -310,47 +166,30 @@ export default function FollowingPage() {
     setMounted(true);
   }, []);
 
-  // Merge real follows with DEMO_FOLLOWS for display
-  // If user has no real follows, show DEMO_FOLLOWS
-  // If user has real follows, show them merged with demo data for change info
   const hasRealFollows = follows.length > 0;
 
   const displayItems: DisplayFollow[] = hasRealFollows
     ? follows.map((f) => {
         const demo = DEMO_FOLLOWS.find((d) => d.id === f.id);
         if (demo) return demo;
-        return {
-          id: f.id,
-          type: f.type,
-          label: f.label,
-          lastChange: 'recently',
-          changeType: 'QUIET' as ChangeType,
-          summary: 'No significant changes detected since you started following.',
-        };
+        return { id: f.id, type: f.type, label: f.label, lastChange: 'recently', changeType: 'QUIET' as ChangeType, summary: 'No significant changes detected since you started following.' };
       })
     : DEMO_FOLLOWS;
 
   const attentionItems = displayItems.filter((d) => d.changeType === 'NEEDS_ATTENTION');
-  const updateItems    = displayItems.filter((d) => d.changeType === 'UPDATE');
-  const quietItems     = displayItems.filter((d) => d.changeType === 'QUIET');
+  const updateItems = displayItems.filter((d) => d.changeType === 'UPDATE');
+  const quietItems = displayItems.filter((d) => d.changeType === 'QUIET');
 
   function handleUnfollow(id: string) {
-    if (!hasRealFollows) return; // demo mode — nothing to remove
+    if (!hasRealFollows) return;
     const updated = follows.filter((f) => f.id !== id);
     setFollows(updated);
     saveFollows(updated);
   }
 
   function handleSuggestedFollow(item: typeof SUGGESTED[number]) {
-    const existing = follows.find((f) => f.id === item.id);
-    if (existing) return;
-    const newFollow: FollowItem = {
-      id: item.id,
-      type: item.type,
-      label: item.label,
-      followedAt: new Date().toISOString(),
-    };
-    const updated = [...follows, newFollow];
+    if (follows.find((f) => f.id === item.id)) return;
+    const updated = [...follows, { id: item.id, type: item.type, label: item.label, followedAt: new Date().toISOString() }];
     setFollows(updated);
     saveFollows(updated);
   }
@@ -359,301 +198,139 @@ export default function FollowingPage() {
 
   if (!mounted) {
     return (
-      <div
-        style={{
-          background: '#000000',
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-          color: '#333333',
-          fontSize: '10px',
-          letterSpacing: '0.2em',
-        }}
-      >
+      <div className="min-h-screen flex items-center justify-center font-mono text-[11px] tracking-[0.2em]" style={{ background: COLORS.bg, color: COLORS.dim }}>
         LOADING...
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        background: '#000000',
-        minHeight: '100vh',
-        fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div
-        style={{
-          padding: '20px 20px 0 20px',
-          borderBottom: '1px solid rgba(255,102,0,0.15)',
-          paddingBottom: '14px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
-          <h1
-            style={{
-              fontSize: '18px',
-              fontWeight: 700,
-              color: '#ff6600',
-              letterSpacing: '0.2em',
-              margin: 0,
-              textTransform: 'uppercase',
-            }}
-          >
-            FOLLOWING
+    <div className="min-h-screen font-mono text-white flex flex-col" style={{ background: COLORS.bg }}>
+      <TopBar />
+
+      {/* Header */}
+      <div className="px-6 pt-8 pb-5" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+        <div className="flex items-baseline gap-3">
+          <h1 className="font-grotesk text-[22px] font-bold tracking-tight" style={{ color: COLORS.accent }}>
+            Following
           </h1>
-          {/* Demo mode badge */}
           {!hasRealFollows && (
             <span
-              style={{
-                fontSize: '8px',
-                color: '#555555',
-                letterSpacing: '0.15em',
-                border: '1px solid #333333',
-                padding: '2px 6px',
-                borderRadius: '2px',
-              }}
+              className="font-mono text-[9px] tracking-[0.15em] px-2.5 py-1 rounded-full"
+              style={{ color: COLORS.muted, border: `1px solid ${COLORS.border}`, background: `${COLORS.dim}15` }}
             >
-              DEMO DATA
+              SAMPLE DATA
             </span>
           )}
         </div>
-        <p
-          style={{
-            fontSize: '9px',
-            color: '#555555',
-            letterSpacing: '0.15em',
-            margin: '4px 0 0 0',
-            textTransform: 'uppercase',
-          }}
-        >
+        <p className="font-mono text-[11px] tracking-[0.08em] mt-2" style={{ color: COLORS.muted }}>
           Only what changed since your last visit
         </p>
       </div>
 
-      {/* ── Scrollable body ────────────────────────────────────────────────── */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '0 16px 80px 16px',
-        }}
-      >
-        {/* ── Demo notice ─────────────────────────────────────────────────── */}
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin px-5 pb-24">
+        {/* Demo notice */}
         {!hasRealFollows && (
           <div
-            style={{
-              margin: '16px 0 4px 0',
-              padding: '10px 14px',
-              background: 'rgba(255,102,0,0.06)',
-              border: '1px solid rgba(255,102,0,0.2)',
-              borderRadius: '2px',
-            }}
+            className="mt-6 mb-2 p-5 rounded-[20px]"
+            style={{ background: `${COLORS.accent}06`, border: `1px solid ${COLORS.accent}18` }}
           >
-            <p style={{ margin: 0, fontSize: '10px', color: '#ff6600', letterSpacing: '0.1em' }}>
-              Nothing followed yet.
+            <p className="font-grotesk text-[13px] font-semibold" style={{ color: COLORS.accent }}>
+              Nothing followed yet
             </p>
-            <p style={{ margin: '4px 0 0 0', fontSize: '9px', color: '#666666', letterSpacing: '0.08em', lineHeight: 1.5 }}>
+            <p className="text-[12px] leading-relaxed mt-2" style={{ color: COLORS.muted }}>
               Go to any signal, vendor, or technology and tap{' '}
-              <span style={{ color: '#00d4ff' }}>FOLLOW</span> to track changes here.
-              Showing demo data below.
+              <span className="font-semibold" style={{ color: COLORS.accent }}>FOLLOW</span> to track changes here.
+              Showing sample data below.
             </p>
           </div>
         )}
 
-        {/* ── NEEDS ATTENTION ─────────────────────────────────────────────── */}
         {attentionItems.length > 0 && (
           <>
-            <SectionHeader label="NEEDS ATTENTION" count={attentionItems.length} color="#ff3b30" />
-            {attentionItems.map((item) => (
-              <FollowCard key={item.id} item={item} onUnfollow={handleUnfollow} />
-            ))}
+            <SectionLabel label="NEEDS ATTENTION" count={attentionItems.length} color={COLORS.red} />
+            {attentionItems.map((item) => <FollowCard key={item.id} item={item} onUnfollow={handleUnfollow} />)}
           </>
         )}
 
-        {/* ── UPDATES ─────────────────────────────────────────────────────── */}
         {updateItems.length > 0 && (
           <>
-            <SectionHeader label="UPDATES" count={updateItems.length} color="#00d4ff" />
-            {updateItems.map((item) => (
-              <FollowCard key={item.id} item={item} onUnfollow={handleUnfollow} />
-            ))}
+            <SectionLabel label="UPDATES" count={updateItems.length} color={COLORS.gold} />
+            {updateItems.map((item) => <FollowCard key={item.id} item={item} onUnfollow={handleUnfollow} />)}
           </>
         )}
 
-        {/* ── QUIET ───────────────────────────────────────────────────────── */}
         {quietItems.length > 0 && (
           <>
-            <SectionHeader label="QUIET" count={quietItems.length} color="#444444" />
-            {quietItems.map((item) => (
-              <FollowCard key={item.id} item={item} onUnfollow={handleUnfollow} />
-            ))}
+            <SectionLabel label="QUIET" count={quietItems.length} color={COLORS.dim} />
+            {quietItems.map((item) => <FollowCard key={item.id} item={item} onUnfollow={handleUnfollow} />)}
           </>
         )}
 
-        {/* ── Empty (all unfollowed in real mode) ─────────────────────────── */}
         {hasRealFollows && displayItems.length === 0 && (
-          <div
-            style={{
-              textAlign: 'center',
-              marginTop: '60px',
-              color: '#333333',
-            }}
-          >
-            <p style={{ fontSize: '11px', letterSpacing: '0.15em' }}>NOTHING FOLLOWED YET</p>
-            <p style={{ fontSize: '9px', color: '#444444', marginTop: '8px', letterSpacing: '0.1em' }}>
+          <div className="text-center mt-20">
+            <p className="font-grotesk text-[14px] tracking-wide" style={{ color: COLORS.dim }}>Nothing followed yet</p>
+            <p className="font-mono text-[11px] mt-3" style={{ color: COLORS.muted }}>
               Go to any signal, vendor, or technology and tap FOLLOW.
             </p>
           </div>
         )}
 
-        {/* ── Suggested to follow ─────────────────────────────────────────── */}
-        <div style={{ marginTop: '32px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-            <span
-              style={{
-                fontSize: '9px',
-                fontWeight: 700,
-                letterSpacing: '0.2em',
-                color: '#ffd700',
-              }}
-            >
+        {/* Suggested */}
+        <div className="mt-10 mb-8">
+          <div className="flex items-center gap-3 mb-5">
+            <span className="font-mono text-[10px] font-bold tracking-[0.2em]" style={{ color: COLORS.gold }}>
               SUGGESTED TO FOLLOW
             </span>
-            <div style={{ flex: 1, height: '1px', background: 'rgba(255,215,0,0.12)' }} />
+            <div className="flex-1 h-px" style={{ background: `${COLORS.gold}15` }} />
           </div>
 
-          {SUGGESTED.map((s) => {
-            const followed = isFollowing(s.id);
-            return (
-              <div
-                key={s.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '10px 14px',
-                  border: '1px solid rgba(255,215,0,0.12)',
-                  borderRadius: '2px',
-                  marginBottom: '6px',
-                  background: 'rgba(255,215,0,0.03)',
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span
-                      style={{
-                        fontSize: '8px',
-                        color: typeBadgeColor(s.type),
-                        border: `1px solid ${typeBadgeColor(s.type)}44`,
-                        padding: '1px 5px',
-                        borderRadius: '2px',
-                        letterSpacing: '0.12em',
-                        background: `${typeBadgeColor(s.type)}10`,
-                      }}
-                    >
-                      {s.type.toUpperCase()}
-                    </span>
-                    <span style={{ fontSize: '11px', color: '#ffffff', fontWeight: 600 }}>
-                      {s.label}
-                    </span>
+          <div className="flex flex-col gap-3">
+            {SUGGESTED.map((s) => {
+              const followed = isFollowing(s.id);
+              return (
+                <div
+                  key={s.id}
+                  className="flex items-center justify-between p-5 rounded-[22px] border transition-all"
+                  style={{ borderColor: COLORS.border, background: COLORS.card }}
+                >
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="font-mono text-[9px] tracking-[0.12em] uppercase px-2.5 py-1 rounded-full"
+                        style={{ color: typeColor(s.type), border: `1px solid ${typeColor(s.type)}25`, background: `${typeColor(s.type)}10` }}
+                      >
+                        {s.type}
+                      </span>
+                      <span className="font-grotesk text-[13px] font-semibold text-white/90">{s.label}</span>
+                    </div>
+                    <p className="font-mono text-[10px] mt-2" style={{ color: COLORS.muted }}>{s.hint}</p>
                   </div>
-                  <p
+                  <button
+                    onClick={() => handleSuggestedFollow(s)}
+                    disabled={followed}
+                    className="font-mono text-[10px] font-bold tracking-[0.1em] uppercase px-5 py-2.5 rounded-full transition-all min-h-[36px]"
                     style={{
-                      margin: '4px 0 0 0',
-                      fontSize: '9px',
-                      color: '#555555',
-                      letterSpacing: '0.08em',
+                      color: followed ? COLORS.dim : COLORS.accent,
+                      borderWidth: 1,
+                      borderStyle: 'solid',
+                      borderColor: followed ? 'transparent' : `${COLORS.accent}40`,
+                      background: followed ? 'transparent' : `${COLORS.accent}08`,
+                      opacity: followed ? 0.5 : 1,
+                      cursor: followed ? 'default' : 'pointer',
                     }}
                   >
-                    {s.hint}
-                  </p>
+                    {followed ? 'FOLLOWING' : '+ FOLLOW'}
+                  </button>
                 </div>
-                <button
-                  onClick={() => handleSuggestedFollow(s)}
-                  disabled={followed}
-                  style={{
-                    fontSize: '9px',
-                    fontWeight: 700,
-                    letterSpacing: '0.15em',
-                    color: followed ? '#444444' : '#ff6600',
-                    border: `1px solid ${followed ? '#333333' : 'rgba(255,102,0,0.5)'}`,
-                    background: followed ? 'transparent' : 'rgba(255,102,0,0.08)',
-                    padding: '4px 12px',
-                    borderRadius: '2px',
-                    cursor: followed ? 'default' : 'pointer',
-                    fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-                    opacity: followed ? 0.5 : 1,
-                  }}
-                >
-                  {followed ? 'FOLLOWING' : '+ FOLLOW'}
-                </button>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-
-        {/* ── Last checked ────────────────────────────────────────────────── */}
-        <p
-          style={{
-            fontSize: '8px',
-            color: '#2a2a2a',
-            letterSpacing: '0.15em',
-            textAlign: 'center',
-            marginTop: '28px',
-          }}
-        >
-          LAST CHECKED — {new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}
-        </p>
       </div>
 
-      {/* ── Bottom NavBar ──────────────────────────────────────────────────── */}
-      <nav
-        style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: '48px',
-          background: '#000000',
-          borderTop: '1px solid rgba(255,255,255,0.06)',
-          display: 'flex',
-          alignItems: 'stretch',
-          zIndex: 50,
-        }}
-      >
-        {NAV_ITEMS.map((nav) => {
-          const isActive = nav.key === 'follow';
-          return (
-            <Link
-              key={nav.key}
-              href={nav.href}
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                textDecoration: 'none',
-                fontSize: '8px',
-                fontWeight: isActive ? 700 : 400,
-                letterSpacing: '0.12em',
-                color: isActive ? '#ff6600' : '#444444',
-                borderTop: isActive ? '2px solid #ff6600' : '2px solid transparent',
-                fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-                transition: 'color 0.15s',
-              }}
-            >
-              {nav.label}
-            </Link>
-          );
-        })}
-      </nav>
+      <BottomNav />
     </div>
   );
 }

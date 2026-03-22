@@ -1,25 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import {
   Shield, Brain, Lock, Zap, Truck, Activity,
 } from 'lucide-react';
 import { EL_PASO_VENDORS } from '@/lib/data/el-paso-vendors';
 import type { ConnectionChain } from '@/lib/engines/connection-engine';
 import { Radar, IconContainer } from '@/components/ui/radar-effect';
+import { BottomNav, TopBar, CardSkeleton } from '@/components/ui';
+import { COLORS } from '@/lib/tokens';
 import { Brain as BindingBrain } from '@/lib/brain';
-
-// ─── Colors ───────────────────────────────────────────────────────────────────
-const ORANGE  = '#ff6600';
-const CYAN    = '#00d4ff';
-const GREEN   = '#00ff88';
-const GOLD    = '#ffd700';
-const RED     = '#ff3b30';
-const BG      = '#000000';
-const PANEL   = '#0d0d0d';
-const BORDER  = 'rgba(255,102,0,0.15)';
-const MONO    = "'JetBrains Mono', 'Courier New', monospace";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -119,7 +109,7 @@ function getPriority(importance: number): Priority {
 }
 
 const PRIORITY_COLOR: Record<Priority, string> = {
-  P0: RED, P1: ORANGE, P2: GOLD, P3: CYAN,
+  P0: COLORS.red, P1: COLORS.orange, P2: COLORS.gold, P3: COLORS.cyan,
 };
 
 function timeAgo(iso: string): string {
@@ -254,83 +244,21 @@ function buildWhy5(
 
 // ─── Reusable components ──────────────────────────────────────────────────────
 
-function Skeleton({ w = '100%', h = 12 }: { w?: string | number; h?: number }) {
+function Panel({ children, className = '', style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
   return (
-    <div style={{
-      width: w, height: h, borderRadius: 2,
-      background: 'linear-gradient(90deg, #111 25%, #1a1a1a 50%, #111 75%)',
-      backgroundSize: '200% 100%',
-      animation: 'shimmer 1.5s ease-in-out infinite',
-    }} />
-  );
-}
-
-function Panel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
-  return (
-    <div style={{
-      background: PANEL,
-      border: `1px solid ${BORDER}`,
-      borderRadius: 2,
-      padding: '14px 16px',
-      position: 'relative',
-      overflow: 'hidden',
-      ...style,
-    }}>
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, height: 1,
-        background: `linear-gradient(90deg, transparent, ${ORANGE}33, transparent)`,
-        pointerEvents: 'none',
-      }} />
+    <div
+      className={`relative overflow-hidden rounded-[20px] px-5 py-4 ${className}`}
+      style={{
+        background: COLORS.card,
+        border: `1px solid ${COLORS.border}`,
+        ...style,
+      }}
+    >
+      <div
+        className="absolute top-0 left-0 right-0 h-px pointer-events-none"
+        style={{ background: `linear-gradient(90deg, transparent, ${COLORS.accent}22, transparent)` }}
+      />
       {children}
-    </div>
-  );
-}
-
-// ─── TOP BAR ─────────────────────────────────────────────────────────────────
-
-function TopBar({ signalCount }: { signalCount: number }) {
-  const isMobile = useIsMobile();
-  return (
-    <div style={{
-      height: 40, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '0 12px', background: '#060606',
-      borderBottom: `1px solid ${BORDER}`,
-      position: 'sticky', top: 0, zIndex: 50, flexShrink: 0,
-      overflow: 'hidden',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 16, minWidth: 0, flexShrink: 1 }}>
-        <Link href="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
-          <span style={{ fontFamily: MONO, fontSize: isMobile ? 12 : 14, fontWeight: 700, color: ORANGE, letterSpacing: '0.08em' }}>
-            NXT<span style={{ color: `${ORANGE}44` }}>{'//'}</span>LINK
-          </span>
-        </Link>
-        {!isMobile && <span style={{ width: 1, height: 16, background: BORDER, flexShrink: 0 }} />}
-        <span style={{ fontFamily: MONO, fontSize: 9, color: GREEN, letterSpacing: isMobile ? '0.06em' : '0.12em', whiteSpace: 'nowrap' }}>
-          {isMobile ? '● LIVE' : '● LIVE INTELLIGENCE'}
-        </span>
-        {signalCount > 0 && !isMobile && (
-          <span style={{ fontFamily: MONO, fontSize: 9, color: `${CYAN}88`, letterSpacing: '0.1em' }}>
-            {signalCount.toLocaleString()} SIGNALS
-          </span>
-        )}
-      </div>
-      {!isMobile && (
-        <div style={{ display: 'flex', gap: 16 }}>
-          {[{ label: 'TODAY', href: '/' }, { label: 'WORLD', href: '/world' }, { label: 'DOSSIER', href: '/dossier' }].map(l => (
-            <Link key={l.href} href={l.href} style={{
-              fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.3)',
-              letterSpacing: '0.12em', textDecoration: 'none',
-            }}>
-              {l.label}
-            </Link>
-          ))}
-        </div>
-      )}
-      {isMobile && signalCount > 0 && (
-        <span style={{ fontFamily: MONO, fontSize: 8, color: `${CYAN}88`, letterSpacing: '0.06em', flexShrink: 0 }}>
-          {signalCount} SIG
-        </span>
-      )}
     </div>
   );
 }
@@ -344,15 +272,15 @@ function TabBar({
 }: { active: Tab; onSelect: (t: Tab) => void; hasDrilldown: boolean }) {
   const isMobile = useIsMobile();
   const tabs: Array<{ key: Tab; label: string; short: string }> = [
-    { key: 'signals',   label: '01 — SIGNALS NOW',    short: '01 SIGNALS' },
-    { key: 'heading',   label: '02 — WHERE HEADING',  short: '02 HEADING' },
-    { key: 'drilldown', label: '03 — DRILL DOWN',     short: '03 DRILL' },
+    { key: 'signals',   label: '01 \u2014 SIGNALS NOW',    short: '01 SIGNALS' },
+    { key: 'heading',   label: '02 \u2014 WHERE HEADING',  short: '02 HEADING' },
+    { key: 'drilldown', label: '03 \u2014 DRILL DOWN',     short: '03 DRILL' },
   ];
   return (
-    <div style={{
-      display: 'flex', borderBottom: `1px solid ${BORDER}`,
-      padding: isMobile ? '0 4px' : '0 20px', gap: 0,
-    }}>
+    <div
+      className={`flex ${isMobile ? 'px-2' : 'px-5'}`}
+      style={{ borderBottom: `1px solid ${COLORS.border}` }}
+    >
       {tabs.map(t => {
         const disabled = t.key === 'drilldown' && !hasDrilldown;
         const isActive = active === t.key;
@@ -361,26 +289,28 @@ function TabBar({
             key={t.key}
             disabled={disabled}
             onClick={() => !disabled && onSelect(t.key)}
+            className={`
+              font-mono min-h-[44px] min-w-[44px] bg-transparent border-none whitespace-nowrap
+              transition-colors duration-150 -mb-px border-b-2
+              ${isMobile ? 'flex-1 text-[8px] tracking-[0.04em] px-1 py-2.5' : 'text-[10px] tracking-[0.12em] px-5 py-3'}
+              ${isActive
+                ? 'cursor-pointer'
+                : disabled
+                  ? 'opacity-30 cursor-not-allowed'
+                  : 'cursor-pointer text-white/40 border-transparent hover:text-white/60'
+              }
+            `}
             style={{
-              flex: isMobile ? 1 : undefined,
-              fontFamily: MONO,
-              fontSize: isMobile ? 8 : 10,
-              letterSpacing: isMobile ? '0.04em' : '0.12em',
-              padding: isMobile ? '10px 4px' : '12px 20px',
-              background: 'none', border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
-              color: isActive ? ORANGE : disabled ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.4)',
-              borderBottom: isActive ? `2px solid ${ORANGE}` : '2px solid transparent',
-              marginBottom: -1,
-              transition: 'color 0.15s',
-              whiteSpace: 'nowrap',
+              color: isActive ? COLORS.accent : undefined,
+              borderBottomColor: isActive ? COLORS.accent : 'transparent',
             }}
           >
             {isMobile ? t.short : t.label}
             {t.key === 'drilldown' && hasDrilldown && !isMobile && (
-              <span style={{ marginLeft: 8, fontSize: 7, color: GREEN }}>● ACTIVE</span>
+              <span className="ml-2 text-[7px]" style={{ color: COLORS.green }}>● ACTIVE</span>
             )}
             {t.key === 'drilldown' && hasDrilldown && isMobile && (
-              <span style={{ marginLeft: 4, fontSize: 6, color: GREEN }}>●</span>
+              <span className="ml-1 text-[6px]" style={{ color: COLORS.green }}>●</span>
             )}
           </button>
         );
@@ -392,46 +322,39 @@ function TabBar({
 // ─── RADAR HEADER ────────────────────────────────────────────────────────────
 
 const RADAR_INDUSTRIES = [
-  { icon: <Shield size={20} color="#ff6600" />, text: 'DEFENSE',  delay: 0.1 },
-  { icon: <Brain  size={20} color="#00d4ff" />, text: 'AI/ML',    delay: 0.2 },
-  { icon: <Lock   size={20} color="#00ff88" />, text: 'CYBER',    delay: 0.3 },
-  { icon: <Zap    size={20} color="#ffd700" />, text: 'ENERGY',   delay: 0.4 },
-  { icon: <Truck  size={20} color="#ff6600" />, text: 'LOGISTICS',delay: 0.5 },
-  { icon: <Activity size={20} color="#00d4ff" />, text: 'HEALTH', delay: 0.6 },
+  { icon: <Shield size={20} color={COLORS.accent} />, text: 'DEFENSE',  delay: 0.1 },
+  { icon: <Brain  size={20} color={COLORS.cyan} />,   text: 'AI/ML',    delay: 0.2 },
+  { icon: <Lock   size={20} color={COLORS.green} />,  text: 'CYBER',    delay: 0.3 },
+  { icon: <Zap    size={20} color={COLORS.gold} />,   text: 'ENERGY',   delay: 0.4 },
+  { icon: <Truck  size={20} color={COLORS.accent} />, text: 'LOGISTICS',delay: 0.5 },
+  { icon: <Activity size={20} color={COLORS.cyan} />, text: 'HEALTH',   delay: 0.6 },
 ];
 
 // Positions for 6 icons evenly spaced in a ring around the radar center
 const ICON_POSITIONS = [
-  { top: '0%',   left: '50%',  transform: 'translate(-50%, -50%)' },  // top center
-  { top: '25%',  left: '92%',  transform: 'translate(-50%, -50%)' },  // top right
-  { top: '75%',  left: '92%',  transform: 'translate(-50%, -50%)' },  // bottom right
-  { top: '100%', left: '50%',  transform: 'translate(-50%, -50%)' },  // bottom center
-  { top: '75%',  left: '8%',   transform: 'translate(-50%, -50%)' },  // bottom left
-  { top: '25%',  left: '8%',   transform: 'translate(-50%, -50%)' },  // top left
+  { top: '0%',   left: '50%',  transform: 'translate(-50%, -50%)' },
+  { top: '25%',  left: '92%',  transform: 'translate(-50%, -50%)' },
+  { top: '75%',  left: '92%',  transform: 'translate(-50%, -50%)' },
+  { top: '100%', left: '50%',  transform: 'translate(-50%, -50%)' },
+  { top: '75%',  left: '8%',   transform: 'translate(-50%, -50%)' },
+  { top: '25%',  left: '8%',   transform: 'translate(-50%, -50%)' },
 ];
 
 function RadarHeader() {
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      padding: '28px 0 20px', marginBottom: 8,
-      borderBottom: `1px solid rgba(255,102,0,0.1)`,
-    }}>
+    <div
+      className="flex flex-col items-center pt-8 pb-6 mb-4 rounded-[20px]"
+      style={{ borderBottom: `1px solid ${COLORS.border}` }}
+    >
       {/* Eyebrow label */}
-      <span style={{
-        fontFamily: MONO, fontSize: 8, color: 'rgba(255,102,0,0.5)',
-        letterSpacing: '0.2em', marginBottom: 16,
-      }}>
+      <span className="font-mono text-[8px] tracking-[0.2em] mb-4" style={{ color: `${COLORS.accent}80` }}>
         NXT//LINK SECTOR COVERAGE
       </span>
 
-      {/* Radar + orbiting icons */}
-      <div style={{ position: 'relative', width: 260, height: 260 }}>
+      {/* Radar + orbiting icons — responsive container */}
+      <div className="relative w-full max-w-[260px] aspect-square mx-auto">
         {/* Center radar */}
-        <div style={{
-          position: 'absolute', top: '50%', left: '50%',
-          transform: 'translate(-50%, -50%)',
-        }}>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
           <Radar />
         </div>
 
@@ -439,10 +362,8 @@ function RadarHeader() {
         {RADAR_INDUSTRIES.map((industry, i) => (
           <div
             key={industry.text}
-            style={{
-              position: 'absolute',
-              ...ICON_POSITIONS[i],
-            }}
+            className="absolute"
+            style={ICON_POSITIONS[i]}
           >
             <IconContainer
               icon={industry.icon}
@@ -454,10 +375,7 @@ function RadarHeader() {
       </div>
 
       {/* Subtitle */}
-      <span style={{
-        fontFamily: MONO, fontSize: 9, color: 'rgba(255,255,255,0.25)',
-        letterSpacing: '0.12em', marginTop: 8,
-      }}>
+      <span className="font-mono text-[9px] tracking-[0.12em] mt-2" style={{ color: COLORS.muted }}>
         GLOBAL TECHNOLOGY INTELLIGENCE — LIVE
       </span>
     </div>
@@ -469,12 +387,14 @@ function RadarHeader() {
 function PriorityBadge({ priority }: { priority: Priority }) {
   const color = PRIORITY_COLOR[priority];
   return (
-    <span style={{
-      fontFamily: MONO, fontSize: 8, letterSpacing: '0.1em',
-      color, background: `${color}18`,
-      border: `1px solid ${color}44`,
-      padding: '2px 7px', borderRadius: 2, flexShrink: 0,
-    }}>
+    <span
+      className="font-mono text-[8px] tracking-[0.1em] px-[7px] py-[2px] rounded-full shrink-0"
+      style={{
+        color,
+        background: `${color}18`,
+        border: `1px solid ${color}44`,
+      }}
+    >
       {priority}
     </span>
   );
@@ -491,47 +411,43 @@ function SignalCard({
     <div
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
+      className="px-4 py-3.5 cursor-pointer transition-colors duration-150 rounded-[16px] mb-2"
       style={{
-        padding: '12px 14px',
         borderLeft: `3px solid ${color}`,
-        background: hover ? `${color}06` : 'transparent',
-        borderBottom: `1px solid ${BORDER}`,
-        cursor: 'pointer',
-        transition: 'background 0.12s',
+        background: hover ? `${color}08` : `${COLORS.surface}`,
+        border: `1px solid ${hover ? `${color}33` : COLORS.border}`,
+        borderLeftWidth: '3px',
+        borderLeftColor: color,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
         <PriorityBadge priority={priority} />
-        <span style={{ fontFamily: MONO, fontSize: 8, color: CYAN, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+        <span className="font-mono text-[8px] tracking-[0.1em] uppercase" style={{ color: COLORS.accent }}>
           {signal.industry}
         </span>
-        <span style={{ fontFamily: MONO, fontSize: 7, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.08em' }}>
+        <span className="font-mono text-[7px] tracking-[0.08em]" style={{ color: COLORS.muted }}>
           {signalLabel(signal.signal_type)}
         </span>
-        <span style={{ marginLeft: 'auto', fontFamily: MONO, fontSize: 7, color: 'rgba(255,255,255,0.25)' }}>
+        <span className="ml-auto font-mono text-[7px]" style={{ color: COLORS.muted }}>
           {timeAgo(signal.discovered_at)}
         </span>
       </div>
-      <p style={{
-        fontFamily: MONO, fontSize: 11, color: 'rgba(255,255,255,0.85)',
-        margin: '0 0 6px', lineHeight: 1.5,
-      }}>
+      <p className="font-mono text-[11px] text-white/85 m-0 mb-1.5 leading-relaxed">
         {signal.title}
       </p>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+      <div className="flex items-center justify-between flex-wrap gap-1.5">
         {signal.company && (
-          <span style={{ fontFamily: MONO, fontSize: 8, color: GOLD, letterSpacing: '0.06em' }}>
+          <span className="font-mono text-[8px] tracking-[0.06em]" style={{ color: COLORS.gold }}>
             {signal.company}
           </span>
         )}
         <button
           onClick={() => onDrillDown(signal)}
+          className="ml-auto font-mono text-[8px] tracking-[0.1em] px-2.5 py-[3px] rounded-full cursor-pointer transition-all duration-150 min-h-[44px] min-w-[44px]"
           style={{
-            marginLeft: 'auto', fontFamily: MONO, fontSize: 8,
-            color: ORANGE, background: `${ORANGE}10`,
-            border: `1px solid ${ORANGE}40`,
-            padding: '3px 10px', borderRadius: 2, cursor: 'pointer',
-            letterSpacing: '0.1em', transition: 'all 0.12s',
+            color: COLORS.accent,
+            background: `${COLORS.accent}10`,
+            border: `1px solid ${COLORS.accent}40`,
           }}
         >
           DRILL DOWN →
@@ -563,27 +479,22 @@ function SeverityHeatmap({
   const maxCount = Math.max(1, ...sectorList.flatMap(s => priorities.map(p => counts[s][p])));
 
   return (
-    <Panel style={{ padding: '14px 12px' }}>
-      <div style={{ fontFamily: MONO, fontSize: 8, color: ORANGE, letterSpacing: '0.14em', marginBottom: 12 }}>
+    <Panel className="px-4 py-4">
+      <div className="font-grotesk text-[10px] font-semibold tracking-[0.14em] mb-3" style={{ color: COLORS.accent }}>
         SEVERITY HEATMAP
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '90px repeat(4, 1fr)', gap: 3 }}>
+      <div className="grid gap-[3px]" style={{ gridTemplateColumns: '90px repeat(4, 1fr)' }}>
         {/* Header */}
         <div />
         {priorities.map(p => (
-          <div key={p} style={{ fontFamily: MONO, fontSize: 7, color: PRIORITY_COLOR[p], textAlign: 'center', letterSpacing: '0.08em' }}>
+          <div key={p} className="font-mono text-[7px] text-center tracking-[0.08em]" style={{ color: PRIORITY_COLOR[p] }}>
             {p}
           </div>
         ))}
         {/* Rows */}
         {sectorList.map(sector => (
           <>
-            <div key={`${sector}-label`} style={{
-              fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.5)',
-              letterSpacing: '0.04em', lineHeight: 1.2, paddingRight: 4,
-              display: 'flex', alignItems: 'center',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
+            <div key={`${sector}-label`} className="font-mono text-[8px] tracking-[0.04em] leading-tight pr-1 flex items-center overflow-hidden text-ellipsis whitespace-nowrap" style={{ color: COLORS.muted }}>
               {sector}
             </div>
             {priorities.map(p => {
@@ -594,17 +505,15 @@ function SeverityHeatmap({
                 <div
                   key={`${sector}-${p}`}
                   onClick={() => count > 0 && onFilter(sector, p)}
+                  className="h-[22px] rounded-[8px] flex items-center justify-center transition-colors duration-150 min-h-[44px] min-w-[44px]"
                   style={{
-                    height: 22, borderRadius: 2,
-                    background: count > 0 ? `${color}${Math.round(intensity * 55 + 10).toString(16).padStart(2, '0')}` : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${count > 0 ? `${color}22` : 'transparent'}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: count > 0 ? `${color}${Math.round(intensity * 55 + 10).toString(16).padStart(2, '0')}` : `${COLORS.surface}`,
+                    border: `1px solid ${count > 0 ? `${color}22` : COLORS.border}`,
                     cursor: count > 0 ? 'pointer' : 'default',
-                    transition: 'background 0.15s',
                   }}
                 >
                   {count > 0 && (
-                    <span style={{ fontFamily: MONO, fontSize: 8, color, lineHeight: 1 }}>
+                    <span className="font-mono text-[8px] leading-none" style={{ color }}>
                       {count}
                     </span>
                   )}
@@ -616,11 +525,10 @@ function SeverityHeatmap({
       </div>
       <button
         onClick={() => onFilter(null, null)}
+        className="mt-3 w-full font-mono text-[7px] bg-transparent rounded-full py-1 cursor-pointer tracking-[0.1em] min-h-[44px] min-w-[44px] transition-colors duration-150"
         style={{
-          marginTop: 10, width: '100%', fontFamily: MONO, fontSize: 7,
-          color: 'rgba(255,255,255,0.3)', background: 'none',
-          border: `1px solid rgba(255,255,255,0.08)`, borderRadius: 2,
-          padding: '4px 0', cursor: 'pointer', letterSpacing: '0.1em',
+          color: COLORS.muted,
+          border: `1px solid ${COLORS.border}`,
         }}
       >
         CLEAR FILTER
@@ -659,56 +567,45 @@ function SignalsScreen({
   return (
     <>
       <RadarHeader />
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : '1fr 280px',
-        gap: 16,
-        alignItems: 'start',
-      }}>
-      {/* Signal feed */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 0 10px', marginBottom: 2, flexWrap: 'wrap' }}>
-          <span style={{ fontFamily: MONO, fontSize: 8, color: ORANGE, letterSpacing: '0.14em' }}>
-            SIGNALS NOW
-          </span>
-          {(industryFilter || priorityFilter) && (
-            <span style={{ fontFamily: MONO, fontSize: 8, color: GOLD, letterSpacing: '0.08em' }}>
-              FILTERED: {[industryFilter, priorityFilter].filter(Boolean).join(' + ')}
+      <div className={`grid gap-5 items-start ${isMobile ? 'grid-cols-1' : 'grid-cols-[1fr_280px]'}`}>
+        {/* Signal feed */}
+        <div>
+          <div className="flex items-center gap-3 pb-3 mb-1 flex-wrap">
+            <span className="font-grotesk text-[10px] font-semibold tracking-[0.14em]" style={{ color: COLORS.accent }}>
+              SIGNALS NOW
             </span>
-          )}
-          <span style={{ marginLeft: 'auto', fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.25)' }}>
-            {sorted.length} signals
-          </span>
+            {(industryFilter || priorityFilter) && (
+              <span className="font-mono text-[8px] tracking-[0.08em] rounded-full px-2 py-0.5" style={{ color: COLORS.gold, background: `${COLORS.gold}14` }}>
+                FILTERED: {[industryFilter, priorityFilter].filter(Boolean).join(' + ')}
+              </span>
+            )}
+            <span className="ml-auto font-mono text-[8px]" style={{ color: COLORS.muted }}>
+              {sorted.length} signals
+            </span>
+          </div>
+          <Panel className="!p-3">
+            {loading ? (
+              <div className="p-4 flex flex-col gap-3.5">
+                {[0,1,2,3,4,5].map(i => (
+                  <CardSkeleton key={i} />
+                ))}
+              </div>
+            ) : sorted.length === 0 ? (
+              <div className="p-6 font-mono text-[10px] text-center" style={{ color: COLORS.muted }}>
+                {signals.length === 0 ? 'Warming up signal feed — check back in 30 seconds.' : 'No signals match the current filter.'}
+              </div>
+            ) : (
+              sorted.map((sig, i) => (
+                <SignalCard key={`${sig.title}-${i}`} signal={sig} onDrillDown={onDrillDown} />
+              ))
+            )}
+          </Panel>
         </div>
-        <Panel style={{ padding: 0 }}>
-          {loading ? (
-            <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {[0,1,2,3,4,5].map(i => (
-                <div key={i}>
-                  <Skeleton h={9} w="30%" />
-                  <div style={{ height: 6 }} />
-                  <Skeleton h={11} />
-                  <div style={{ height: 4 }} />
-                  <Skeleton h={11} w="75%" />
-                </div>
-              ))}
-            </div>
-          ) : sorted.length === 0 ? (
-            <div style={{ padding: 24, fontFamily: MONO, fontSize: 10, color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>
-              {signals.length === 0 ? 'Warming up signal feed — check back in 30 seconds.' : 'No signals match the current filter.'}
-            </div>
-          ) : (
-            sorted.map((sig, i) => (
-              <SignalCard key={`${sig.title}-${i}`} signal={sig} onDrillDown={onDrillDown} />
-            ))
-          )}
-        </Panel>
+        {/* Heatmap — inline on mobile (below feed), sticky on desktop */}
+        <div className={isMobile ? '' : 'sticky top-14'}>
+          <SeverityHeatmap signals={signals} onFilter={handleFilter} />
+        </div>
       </div>
-      {/* Heatmap — inline on mobile (below feed), sticky on desktop */}
-      <div style={isMobile ? undefined : { position: 'sticky', top: 56 }}>
-        <SeverityHeatmap signals={signals} onFilter={handleFilter} />
-      </div>
-    </div>
     </>
   );
 }
@@ -716,10 +613,10 @@ function SignalsScreen({
 // ─── SCREEN 2 — WHERE HEADING ─────────────────────────────────────────────────
 
 function plainMomentum(m: string): { label: string; color: string; emoji: string } {
-  if (m === 'accelerating') return { label: 'Growing fast', color: GREEN, emoji: '↑' };
-  if (m === 'slowing')      return { label: 'Slowing down', color: GOLD,  emoji: '↘' };
-  if (m === 'declining')    return { label: 'Shrinking',    color: RED,   emoji: '↓' };
-  return                           { label: 'Holding steady', color: CYAN, emoji: '→' };
+  if (m === 'accelerating') return { label: 'Growing fast', color: COLORS.green, emoji: '\u2191' };
+  if (m === 'slowing')      return { label: 'Slowing down', color: COLORS.gold,  emoji: '\u2198' };
+  if (m === 'declining')    return { label: 'Shrinking',    color: COLORS.red,   emoji: '\u2193' };
+  return                           { label: 'Holding steady', color: COLORS.cyan, emoji: '\u2192' };
 }
 
 // Static plain-English summaries per sector (used when API has no trend data)
@@ -761,7 +658,7 @@ function HeadingScreen({
   return (
     <div>
       {/* Sector pills */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
+      <div className="flex flex-wrap gap-2 mb-6">
         {SECTORS.map(s => {
           const t = trends.find(x => x.name.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(x.name.toLowerCase()));
           const pm = t ? plainMomentum(t.momentum) : null;
@@ -770,71 +667,75 @@ function HeadingScreen({
             <button
               key={s}
               onClick={() => setSector(s)}
+              className="font-mono text-[9px] tracking-[0.08em] px-3.5 py-1.5 rounded-full cursor-pointer transition-all duration-150 min-h-[44px] min-w-[44px]"
               style={{
-                fontFamily: MONO, fontSize: 9, letterSpacing: '0.08em',
-                padding: '6px 14px', borderRadius: 2,
-                background: isActive ? `${ORANGE}18` : 'transparent',
-                border: `1px solid ${isActive ? ORANGE : 'rgba(255,255,255,0.1)'}`,
-                color: isActive ? ORANGE : 'rgba(255,255,255,0.55)',
-                cursor: 'pointer', transition: 'all 0.12s',
+                background: isActive ? `${COLORS.accent}18` : COLORS.surface,
+                border: `1px solid ${isActive ? COLORS.accent : COLORS.border}`,
+                color: isActive ? COLORS.accent : COLORS.muted,
               }}
             >
               {s}
-              {pm && <span style={{ marginLeft: 5, color: pm.color, fontSize: 9 }}>{pm.emoji}</span>}
+              {pm && <span className="ml-1.5 text-[9px]" style={{ color: pm.color }}>{pm.emoji}</span>}
             </button>
           );
         })}
       </div>
 
       {loading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {[0,1,2].map(i => <Panel key={i}><Skeleton h={14} w="60%" /><div style={{ height: 8 }} /><Skeleton h={11} /></Panel>)}
+        <div className="flex flex-col gap-4">
+          {[0,1,2].map(i => <CardSkeleton key={i} />)}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="flex flex-col gap-5">
 
           {/* Big status banner */}
-          <Panel style={{ borderLeft: `4px solid ${momentum?.color ?? ORANGE}` }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-              <span style={{ fontSize: 28, lineHeight: 1 }}>{momentum?.emoji ?? '→'}</span>
+          <Panel className="!border-l-4" style={{ borderLeftColor: momentum?.color ?? COLORS.accent }}>
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-[28px] leading-none">{momentum?.emoji ?? '\u2192'}</span>
               <div>
-                <div style={{ fontFamily: MONO, fontSize: 18, color: momentum?.color ?? ORANGE, lineHeight: 1, letterSpacing: '0.04em' }}>
+                <div className="font-grotesk text-lg leading-none tracking-[0.04em] font-semibold" style={{ color: momentum?.color ?? COLORS.accent }}>
                   {momentum?.label ?? 'Holding steady'}
                 </div>
-                <div style={{ fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.3)', marginTop: 3, letterSpacing: '0.1em' }}>
+                <div className="font-mono text-[8px] mt-[3px] tracking-[0.1em]" style={{ color: COLORS.muted }}>
                   {sector.toUpperCase()} RIGHT NOW
                 </div>
               </div>
               {dir30 && (
-                <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-                  <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(255,255,255,0.5)', lineHeight: 1.5 }}>
-                    In 30 days: <span style={{ color: dir30 === 'more active' ? GREEN : dir30 === 'less active' ? RED : GOLD }}>{dir30}</span>
+                <div className="ml-auto text-right">
+                  <div className="font-mono text-[9px] leading-relaxed" style={{ color: COLORS.muted }}>
+                    In 30 days:{' '}
+                    <span style={{ color: dir30 === 'more active' ? COLORS.green : dir30 === 'less active' ? COLORS.red : COLORS.gold }}>
+                      {dir30}
+                    </span>
                   </div>
                   {dir90 && (
-                    <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(255,255,255,0.5)', lineHeight: 1.5 }}>
-                      In 90 days: <span style={{ color: dir90 === 'more active' ? GREEN : dir90 === 'less active' ? RED : GOLD }}>{dir90}</span>
+                    <div className="font-mono text-[9px] leading-relaxed" style={{ color: COLORS.muted }}>
+                      In 90 days:{' '}
+                      <span style={{ color: dir90 === 'more active' ? COLORS.green : dir90 === 'less active' ? COLORS.red : COLORS.gold }}>
+                        {dir90}
+                      </span>
                     </div>
                   )}
                 </div>
               )}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="flex flex-col gap-3">
               {happening && (
                 <div>
-                  <div style={{ fontFamily: MONO, fontSize: 7, color: `${CYAN}66`, letterSpacing: '0.14em', marginBottom: 4 }}>WHAT IS HAPPENING</div>
-                  <p style={{ fontFamily: MONO, fontSize: 12, color: 'rgba(255,255,255,0.85)', margin: 0, lineHeight: 1.65 }}>{happening}</p>
+                  <div className="font-mono text-[7px] tracking-[0.14em] mb-1" style={{ color: `${COLORS.accent}88` }}>WHAT IS HAPPENING</div>
+                  <p className="font-mono text-xs text-white/85 m-0 leading-relaxed">{happening}</p>
                 </div>
               )}
               {next && (
                 <div>
-                  <div style={{ fontFamily: MONO, fontSize: 7, color: `${GOLD}66`, letterSpacing: '0.14em', marginBottom: 4 }}>WHAT HAPPENS NEXT</div>
-                  <p style={{ fontFamily: MONO, fontSize: 12, color: 'rgba(255,255,255,0.7)', margin: 0, lineHeight: 1.65 }}>{next}</p>
+                  <div className="font-mono text-[7px] tracking-[0.14em] mb-1" style={{ color: `${COLORS.gold}88` }}>WHAT HAPPENS NEXT</div>
+                  <p className="font-mono text-xs text-white/70 m-0 leading-relaxed">{next}</p>
                 </div>
               )}
               {heading && (
                 <div>
-                  <div style={{ fontFamily: MONO, fontSize: 7, color: `${GREEN}66`, letterSpacing: '0.14em', marginBottom: 4 }}>WHERE THIS IS HEADING</div>
-                  <p style={{ fontFamily: MONO, fontSize: 12, color: 'rgba(255,255,255,0.7)', margin: 0, lineHeight: 1.65 }}>{heading}</p>
+                  <div className="font-mono text-[7px] tracking-[0.14em] mb-1" style={{ color: `${COLORS.green}88` }}>WHERE THIS IS HEADING</div>
+                  <p className="font-mono text-xs text-white/70 m-0 leading-relaxed">{heading}</p>
                 </div>
               )}
             </div>
@@ -843,28 +744,33 @@ function HeadingScreen({
           {/* Opportunities */}
           {sectorOpps.length > 0 && (
             <Panel>
-              <div style={{ fontFamily: MONO, fontSize: 8, color: ORANGE, letterSpacing: '0.14em', marginBottom: 12 }}>
+              <div className="font-grotesk text-[10px] font-semibold tracking-[0.14em] mb-3" style={{ color: COLORS.accent }}>
                 OPENINGS DETECTED IN {sector.toUpperCase()}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div className="flex flex-col gap-3">
                 {sectorOpps.map(opp => (
-                  <div key={opp.id} style={{
-                    padding: '12px 14px',
-                    border: `1px solid ${BORDER}`,
-                    borderLeft: `3px solid ${GREEN}`,
-                    borderRadius: 2, background: 'rgba(0,255,136,0.03)',
-                  }}>
-                    <div style={{ fontFamily: MONO, fontSize: 12, color: 'rgba(255,255,255,0.9)', marginBottom: 6, lineHeight: 1.5 }}>
+                  <div
+                    key={opp.id}
+                    className="px-4 py-3.5 rounded-[16px]"
+                    style={{
+                      borderLeft: `3px solid ${COLORS.green}`,
+                      background: `${COLORS.green}06`,
+                      border: `1px solid ${COLORS.green}22`,
+                      borderLeftWidth: '3px',
+                      borderLeftColor: COLORS.green,
+                    }}
+                  >
+                    <div className="font-mono text-xs text-white/90 mb-1.5 leading-relaxed">
                       {opp.title}
                     </div>
-                    <div style={{ fontFamily: MONO, fontSize: 10, color: 'rgba(255,255,255,0.5)', lineHeight: 1.6, marginBottom: 8 }}>
+                    <div className="font-mono text-[10px] text-white/50 leading-relaxed mb-2">
                       {opp.description}
                     </div>
-                    <div style={{ display: 'flex', gap: 12 }}>
-                      <span style={{ fontFamily: MONO, fontSize: 8, color: GOLD }}>
+                    <div className="flex gap-3">
+                      <span className="font-mono text-[8px] rounded-full px-2 py-0.5" style={{ color: COLORS.gold, background: `${COLORS.gold}14` }}>
                         Act: {opp.timing.replace(/_/g, ' ')}
                       </span>
-                      <span style={{ fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.3)' }}>
+                      <span className="font-mono text-[8px]" style={{ color: COLORS.muted }}>
                         Risk: {opp.risk_level}
                       </span>
                     </div>
@@ -876,7 +782,7 @@ function HeadingScreen({
 
           {sectorOpps.length === 0 && !loading && (
             <Panel>
-              <div style={{ fontFamily: MONO, fontSize: 10, color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '10px 0' }}>
+              <div className="font-mono text-[10px] text-center py-3" style={{ color: COLORS.muted }}>
                 No specific openings detected yet for {sector}. Check back after the next intelligence refresh.
               </div>
             </Panel>
@@ -898,24 +804,26 @@ function WhyRow({
   visible: boolean;
   special?: boolean;
 }) {
+  const accentColor = special ? COLORS.green : COLORS.accent;
   return (
-    <div style={{
-      borderLeft: `3px solid ${special ? GREEN : ORANGE}${visible ? 'ff' : '22'}`,
-      paddingLeft: 16, marginBottom: 16,
-      opacity: visible ? 1 : 0.15,
-      transition: 'opacity 0.4s ease',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-        <span style={{ fontFamily: MONO, fontSize: 9, color: special ? GREEN : ORANGE, letterSpacing: '0.16em' }}>
-          WHY {num} {special ? '— WHAT THIS MEANS FOR YOU' : ''}
+    <div
+      className={`pl-5 mb-5 rounded-r-[16px] slide-up slide-up-delay-${num} ${visible ? 'opacity-100' : 'opacity-0'}`}
+      style={{
+        borderLeft: `3px solid ${accentColor}${visible ? 'ff' : '22'}`,
+        transition: 'opacity 0.4s ease',
+      }}
+    >
+      <div className="flex items-center gap-3 mb-2">
+        <span className="font-grotesk text-[9px] tracking-[0.16em] font-semibold" style={{ color: accentColor }}>
+          WHY {num} {special ? '\u2014 WHAT THIS MEANS FOR YOU' : ''}
         </span>
-        <span style={{ fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em' }}>
+        <span className="font-mono text-[8px] tracking-[0.1em]" style={{ color: COLORS.muted }}>
           {label}
         </span>
-        <div style={{ flex: 1, height: 1, background: `${special ? GREEN : ORANGE}22` }} />
+        <div className="flex-1 h-px" style={{ background: `${accentColor}22` }} />
       </div>
       {visible && (
-        <div style={{ fontFamily: MONO, fontSize: 11, color: 'rgba(255,255,255,0.75)', lineHeight: 1.65 }}>
+        <div className="font-mono text-[11px] text-white/75 leading-relaxed">
           {content}
         </div>
       )}
@@ -946,36 +854,30 @@ function DrillDownScreen({
   return (
     <div>
       {/* Signal headline */}
-      <Panel style={{ marginBottom: 20, borderLeft: `3px solid ${PRIORITY_COLOR[priority]}` }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+      <Panel className="mb-6" style={{ borderLeft: `3px solid ${PRIORITY_COLOR[priority]}` }}>
+        <div className="flex items-center gap-2.5 mb-2 flex-wrap">
           <PriorityBadge priority={priority} />
-          <span style={{ fontFamily: MONO, fontSize: 8, color: CYAN, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+          <span className="font-mono text-[8px] tracking-[0.1em] uppercase" style={{ color: COLORS.accent }}>
             {signal.industry}
           </span>
-          <span style={{ fontFamily: MONO, fontSize: 7, color: 'rgba(255,255,255,0.25)', marginLeft: 'auto' }}>
+          <span className="font-mono text-[7px] ml-auto" style={{ color: COLORS.muted }}>
             {timeAgo(signal.discovered_at)}
           </span>
         </div>
-        <h2 style={{ fontFamily: MONO, fontSize: 14, color: '#fff', margin: 0, lineHeight: 1.4, letterSpacing: '-0.01em' }}>
+        <h2 className="font-grotesk text-sm text-white m-0 leading-snug tracking-tight font-semibold">
           {signal.title}
         </h2>
         {signal.company && (
-          <div style={{ marginTop: 6, fontFamily: MONO, fontSize: 9, color: GOLD }}>
+          <div className="mt-1.5 font-mono text-[9px]" style={{ color: COLORS.gold }}>
             {signal.company}
           </div>
         )}
       </Panel>
 
       {loading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="flex flex-col gap-4">
           {[0,1,2,3,4].map(i => (
-            <Panel key={i}>
-              <Skeleton h={8} w="25%" />
-              <div style={{ height: 8 }} />
-              <Skeleton h={11} />
-              <div style={{ height: 4 }} />
-              <Skeleton h={11} w="80%" />
-            </Panel>
+            <CardSkeleton key={i} />
           ))}
         </div>
       ) : fiveWhys ? (
@@ -991,28 +893,30 @@ function DrillDownScreen({
             visible={visible[4]}
             content={
               <div>
-                <p style={{ margin: '0 0 14px', color: 'rgba(255,255,255,0.8)' }}>
+                <p className="m-0 mb-4 text-white/80">
                   {fiveWhys.why5.local_impact}
                 </p>
 
                 {fiveWhys.why5.technologies.length > 0 && (
-                  <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontFamily: MONO, fontSize: 7, color: `${GREEN}88`, letterSpacing: '0.14em', marginBottom: 8 }}>
+                  <div className="mb-5">
+                    <div className="font-mono text-[7px] tracking-[0.14em] mb-2" style={{ color: `${COLORS.green}88` }}>
                       TECHNOLOGY THAT EXISTS TO RESPOND
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div className="flex flex-col gap-2">
                       {fiveWhys.why5.technologies.map((t, i) => (
-                        <div key={i} style={{
-                          display: 'flex', alignItems: 'center', gap: 12,
-                          padding: '8px 10px',
-                          border: `1px solid ${GREEN}22`,
-                          borderRadius: 2, background: `${GREEN}06`,
-                        }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontFamily: MONO, fontSize: 10, color: 'rgba(255,255,255,0.85)' }}>{t.name}</div>
-                            <div style={{ fontFamily: MONO, fontSize: 8, color: `${GREEN}99`, marginTop: 2 }}>{t.costRange}</div>
+                        <div
+                          key={i}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-[12px]"
+                          style={{
+                            border: `1px solid ${COLORS.green}22`,
+                            background: `${COLORS.green}06`,
+                          }}
+                        >
+                          <div className="flex-1">
+                            <div className="font-mono text-[10px] text-white/85">{t.name}</div>
+                            <div className="font-mono text-[8px] mt-0.5" style={{ color: `${COLORS.green}99` }}>{t.costRange}</div>
                           </div>
-                          <span style={{ fontFamily: MONO, fontSize: 7, color: `${CYAN}77`, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                          <span className="font-mono text-[7px] tracking-[0.08em] uppercase rounded-full px-2 py-0.5" style={{ color: `${COLORS.accent}88`, background: `${COLORS.accent}10` }}>
                             {t.maturity}
                           </span>
                         </div>
@@ -1023,39 +927,39 @@ function DrillDownScreen({
 
                 {fiveWhys.why5.vendors.length > 0 && (
                   <div>
-                    <div style={{ fontFamily: MONO, fontSize: 7, color: `${GOLD}88`, letterSpacing: '0.14em', marginBottom: 8 }}>
+                    <div className="font-mono text-[7px] tracking-[0.14em] mb-2" style={{ color: `${COLORS.gold}88` }}>
                       EL PASO VENDORS — RANKED BY IKER SCORE
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div className="flex flex-col gap-2">
                       {fiveWhys.why5.vendors.map((v, i) => (
-                        <div key={v.id} style={{
-                          display: 'flex', alignItems: 'center', gap: 12,
-                          padding: '8px 10px',
-                          border: `1px solid ${GOLD}22`,
-                          borderRadius: 2, background: `${GOLD}06`,
-                        }}>
-                          <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(255,255,255,0.3)', width: 16, flexShrink: 0 }}>
+                        <div
+                          key={v.id}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-[12px]"
+                          style={{
+                            border: `1px solid ${COLORS.gold}22`,
+                            background: `${COLORS.gold}06`,
+                          }}
+                        >
+                          <div className="font-mono text-[9px] w-4 shrink-0" style={{ color: COLORS.muted }}>
                             {i + 1}
                           </div>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontFamily: MONO, fontSize: 10, color: 'rgba(255,255,255,0.85)' }}>{v.name}</div>
-                            <div style={{ fontFamily: MONO, fontSize: 8, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>{v.category}</div>
+                          <div className="flex-1">
+                            <div className="font-mono text-[10px] text-white/85">{v.name}</div>
+                            <div className="font-mono text-[8px] mt-0.5" style={{ color: COLORS.dim }}>{v.category}</div>
                           </div>
-                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                            <div style={{ fontFamily: MONO, fontSize: 14, color: GOLD, lineHeight: 1 }}>{v.ikerScore}</div>
-                            <div style={{ fontFamily: MONO, fontSize: 6, color: `${GOLD}55`, letterSpacing: '0.08em' }}>IKER</div>
+                          <div className="text-right shrink-0">
+                            <div className="font-mono text-sm leading-none" style={{ color: COLORS.gold }}>{v.ikerScore}</div>
+                            <div className="font-mono text-[6px] tracking-[0.08em]" style={{ color: `${COLORS.gold}55` }}>IKER</div>
                           </div>
                           <a
                             href={v.website}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={e => e.stopPropagation()}
+                            className="font-mono text-[7px] tracking-[0.08em] px-2 py-[3px] rounded-full no-underline shrink-0 min-h-[44px] min-w-[44px] flex items-center"
                             style={{
-                              fontFamily: MONO, fontSize: 7, color: ORANGE,
-                              border: `1px solid ${ORANGE}33`,
-                              padding: '3px 8px', borderRadius: 2,
-                              textDecoration: 'none', flexShrink: 0,
-                              letterSpacing: '0.08em',
+                              color: COLORS.accent,
+                              border: `1px solid ${COLORS.accent}33`,
                             }}
                           >
                             VISIT →
@@ -1190,18 +1094,15 @@ export default function IntelPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: BG, fontFamily: MONO, paddingBottom: 48 }}>
-      {/* Scanlines */}
-      <div style={{
-        position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
-        background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,102,0,0.008) 3px, rgba(255,102,0,0.008) 4px)',
-      }} />
+    <div className="min-h-screen font-mono pb-16" style={{ background: COLORS.bg }}>
+      {/* Scanlines — uses CSS class from globals.css instead of fixed overlay */}
+      <div className="scanlines fixed inset-0 z-0 pointer-events-none" />
 
-      <div style={{ position: 'relative', zIndex: 1 }}>
-        <TopBar signalCount={signals.length} />
+      <div className="relative z-[1]">
+        <TopBar />
         <TabBar active={activeTab} onSelect={setActiveTab} hasDrilldown={activeSignal !== null} />
 
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobilePage ? '12px 12px 40px' : '20px 20px 40px' }}>
+        <div className={`max-w-[1200px] mx-auto ${isMobilePage ? 'px-3 pt-4 pb-12' : 'px-6 pt-6 pb-12'}`}>
           {activeTab === 'signals' && (
             <SignalsScreen
               signals={signals}
@@ -1227,37 +1128,7 @@ export default function IntelPage() {
         </div>
       </div>
 
-      {/* ── Bottom Nav ── */}
-      <nav style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, height: 48,
-        background: '#050505', borderTop: '1px solid rgba(255,102,0,0.15)',
-        display: 'flex', alignItems: 'stretch', zIndex: 50,
-        fontFamily: MONO,
-      }}>
-        {[
-          { label: 'TODAY',   href: '/' },
-          { label: 'EXPLORE', href: '/explore' },
-          { label: 'WORLD',   href: '/world' },
-          { label: 'FOLLOW',  href: '/following' },
-          { label: 'STORE',   href: '/store' },
-          { label: 'DOSSIER', href: '/dossier' },
-        ].map(tab => (
-          <Link key={tab.label} href={tab.href} style={{
-            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 9, letterSpacing: '0.15em', color: 'rgba(255,255,255,0.3)',
-            textDecoration: 'none', fontFamily: MONO,
-          }}>
-            {tab.label}
-          </Link>
-        ))}
-      </nav>
-
-      <style>{`
-        @keyframes shimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-      `}</style>
+      <BottomNav />
     </div>
   );
 }

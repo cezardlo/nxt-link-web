@@ -1,9 +1,10 @@
 'use client';
 
 import { Suspense, useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Brain } from '@/lib/brain';
+import { BottomNav, TopBar } from '@/components/ui';
+import { COLORS } from '@/lib/tokens';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -57,40 +58,40 @@ type CategoryFilter = 'TECH' | 'MONEY' | 'POLICY' | 'SCIENCE' | 'ALL';
 // ─── Static country data ──────────────────────────────────────────────────────
 
 const COUNTRIES: Country[] = [
-  { code: 'US', name: 'United States', flag: '🇺🇸', region: 'AMERICAS', scores: { ai: 98, defense: 99, biotech: 95, energy: 88, manufacturing: 82, cybersecurity: 97, robotics: 91, semiconductors: 89 } },
-  { code: 'CN', name: 'China', flag: '🇨🇳', region: 'ASIA-PACIFIC', scores: { ai: 92, defense: 88, biotech: 78, energy: 85, manufacturing: 99, cybersecurity: 82, robotics: 88, semiconductors: 85 } },
-  { code: 'DE', name: 'Germany', flag: '🇩🇪', region: 'EUROPE', scores: { ai: 75, defense: 70, biotech: 80, energy: 82, manufacturing: 95, cybersecurity: 78, robotics: 88, semiconductors: 72 } },
-  { code: 'JP', name: 'Japan', flag: '🇯🇵', region: 'ASIA-PACIFIC', scores: { ai: 78, defense: 65, biotech: 82, energy: 75, manufacturing: 92, cybersecurity: 72, robotics: 96, semiconductors: 90 } },
-  { code: 'KR', name: 'South Korea', flag: '🇰🇷', region: 'ASIA-PACIFIC', scores: { ai: 80, defense: 72, biotech: 75, energy: 70, manufacturing: 90, cybersecurity: 75, robotics: 82, semiconductors: 95 } },
-  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧', region: 'EUROPE', scores: { ai: 85, defense: 82, biotech: 88, energy: 75, manufacturing: 72, cybersecurity: 88, robotics: 75, semiconductors: 68 } },
-  { code: 'IL', name: 'Israel', flag: '🇮🇱', region: 'OTHER', scores: { ai: 88, defense: 92, biotech: 85, energy: 65, manufacturing: 68, cybersecurity: 95, robotics: 78, semiconductors: 72 } },
-  { code: 'FR', name: 'France', flag: '🇫🇷', region: 'EUROPE', scores: { ai: 78, defense: 80, biotech: 82, energy: 85, manufacturing: 78, cybersecurity: 75, robotics: 72, semiconductors: 65 } },
-  { code: 'SE', name: 'Sweden', flag: '🇸🇪', region: 'EUROPE', scores: { ai: 80, defense: 68, biotech: 78, energy: 88, manufacturing: 75, cybersecurity: 82, robotics: 78, semiconductors: 62 } },
-  { code: 'NL', name: 'Netherlands', flag: '🇳🇱', region: 'EUROPE', scores: { ai: 75, defense: 65, biotech: 78, energy: 72, manufacturing: 72, cybersecurity: 78, robotics: 70, semiconductors: 85 } },
-  { code: 'CH', name: 'Switzerland', flag: '🇨🇭', region: 'EUROPE', scores: { ai: 82, defense: 60, biotech: 90, energy: 72, manufacturing: 85, cybersecurity: 80, robotics: 75, semiconductors: 70 } },
-  { code: 'TW', name: 'Taiwan', flag: '🇹🇼', region: 'ASIA-PACIFIC', scores: { ai: 80, defense: 70, biotech: 72, energy: 65, manufacturing: 88, cybersecurity: 75, robotics: 78, semiconductors: 98 } },
-  { code: 'SG', name: 'Singapore', flag: '🇸🇬', region: 'ASIA-PACIFIC', scores: { ai: 82, defense: 65, biotech: 75, energy: 68, manufacturing: 78, cybersecurity: 85, robotics: 72, semiconductors: 80 } },
-  { code: 'IN', name: 'India', flag: '🇮🇳', region: 'ASIA-PACIFIC', scores: { ai: 75, defense: 72, biotech: 68, energy: 70, manufacturing: 72, cybersecurity: 70, robotics: 62, semiconductors: 55 } },
-  { code: 'AU', name: 'Australia', flag: '🇦🇺', region: 'ASIA-PACIFIC', scores: { ai: 72, defense: 70, biotech: 72, energy: 78, manufacturing: 62, cybersecurity: 75, robotics: 65, semiconductors: 55 } },
-  { code: 'CA', name: 'Canada', flag: '🇨🇦', region: 'AMERICAS', scores: { ai: 82, defense: 72, biotech: 80, energy: 82, manufacturing: 68, cybersecurity: 78, robotics: 70, semiconductors: 62 } },
-  { code: 'RU', name: 'Russia', flag: '🇷🇺', region: 'EUROPE', scores: { ai: 72, defense: 85, biotech: 65, energy: 78, manufacturing: 75, cybersecurity: 78, robotics: 65, semiconductors: 55 } },
-  { code: 'BR', name: 'Brazil', flag: '🇧🇷', region: 'AMERICAS', scores: { ai: 58, defense: 60, biotech: 65, energy: 72, manufacturing: 65, cybersecurity: 55, robotics: 50, semiconductors: 40 } },
-  { code: 'MX', name: 'Mexico', flag: '🇲🇽', region: 'AMERICAS', scores: { ai: 52, defense: 55, biotech: 55, energy: 65, manufacturing: 70, cybersecurity: 50, robotics: 48, semiconductors: 38 } },
-  { code: 'AE', name: 'UAE', flag: '🇦🇪', region: 'OTHER', scores: { ai: 72, defense: 75, biotech: 60, energy: 78, manufacturing: 62, cybersecurity: 70, robotics: 65, semiconductors: 50 } },
-  { code: 'SA', name: 'Saudi Arabia', flag: '🇸🇦', region: 'OTHER', scores: { ai: 62, defense: 70, biotech: 55, energy: 82, manufacturing: 58, cybersecurity: 62, robotics: 55, semiconductors: 42 } },
-  { code: 'FI', name: 'Finland', flag: '🇫🇮', region: 'EUROPE', scores: { ai: 78, defense: 65, biotech: 72, energy: 80, manufacturing: 72, cybersecurity: 85, robotics: 72, semiconductors: 60 } },
-  { code: 'DK', name: 'Denmark', flag: '🇩🇰', region: 'EUROPE', scores: { ai: 75, defense: 62, biotech: 80, energy: 88, manufacturing: 68, cybersecurity: 80, robotics: 70, semiconductors: 58 } },
-  { code: 'NO', name: 'Norway', flag: '🇳🇴', region: 'EUROPE', scores: { ai: 72, defense: 65, biotech: 75, energy: 92, manufacturing: 65, cybersecurity: 78, robotics: 68, semiconductors: 55 } },
-  { code: 'EE', name: 'Estonia', flag: '🇪🇪', region: 'EUROPE', scores: { ai: 72, defense: 65, biotech: 58, energy: 65, manufacturing: 58, cybersecurity: 90, robotics: 60, semiconductors: 48 } },
+  { code: 'US', name: 'United States', flag: '\u{1F1FA}\u{1F1F8}', region: 'AMERICAS', scores: { ai: 98, defense: 99, biotech: 95, energy: 88, manufacturing: 82, cybersecurity: 97, robotics: 91, semiconductors: 89 } },
+  { code: 'CN', name: 'China', flag: '\u{1F1E8}\u{1F1F3}', region: 'ASIA-PACIFIC', scores: { ai: 92, defense: 88, biotech: 78, energy: 85, manufacturing: 99, cybersecurity: 82, robotics: 88, semiconductors: 85 } },
+  { code: 'DE', name: 'Germany', flag: '\u{1F1E9}\u{1F1EA}', region: 'EUROPE', scores: { ai: 75, defense: 70, biotech: 80, energy: 82, manufacturing: 95, cybersecurity: 78, robotics: 88, semiconductors: 72 } },
+  { code: 'JP', name: 'Japan', flag: '\u{1F1EF}\u{1F1F5}', region: 'ASIA-PACIFIC', scores: { ai: 78, defense: 65, biotech: 82, energy: 75, manufacturing: 92, cybersecurity: 72, robotics: 96, semiconductors: 90 } },
+  { code: 'KR', name: 'South Korea', flag: '\u{1F1F0}\u{1F1F7}', region: 'ASIA-PACIFIC', scores: { ai: 80, defense: 72, biotech: 75, energy: 70, manufacturing: 90, cybersecurity: 75, robotics: 82, semiconductors: 95 } },
+  { code: 'GB', name: 'United Kingdom', flag: '\u{1F1EC}\u{1F1E7}', region: 'EUROPE', scores: { ai: 85, defense: 82, biotech: 88, energy: 75, manufacturing: 72, cybersecurity: 88, robotics: 75, semiconductors: 68 } },
+  { code: 'IL', name: 'Israel', flag: '\u{1F1EE}\u{1F1F1}', region: 'OTHER', scores: { ai: 88, defense: 92, biotech: 85, energy: 65, manufacturing: 68, cybersecurity: 95, robotics: 78, semiconductors: 72 } },
+  { code: 'FR', name: 'France', flag: '\u{1F1EB}\u{1F1F7}', region: 'EUROPE', scores: { ai: 78, defense: 80, biotech: 82, energy: 85, manufacturing: 78, cybersecurity: 75, robotics: 72, semiconductors: 65 } },
+  { code: 'SE', name: 'Sweden', flag: '\u{1F1F8}\u{1F1EA}', region: 'EUROPE', scores: { ai: 80, defense: 68, biotech: 78, energy: 88, manufacturing: 75, cybersecurity: 82, robotics: 78, semiconductors: 62 } },
+  { code: 'NL', name: 'Netherlands', flag: '\u{1F1F3}\u{1F1F1}', region: 'EUROPE', scores: { ai: 75, defense: 65, biotech: 78, energy: 72, manufacturing: 72, cybersecurity: 78, robotics: 70, semiconductors: 85 } },
+  { code: 'CH', name: 'Switzerland', flag: '\u{1F1E8}\u{1F1ED}', region: 'EUROPE', scores: { ai: 82, defense: 60, biotech: 90, energy: 72, manufacturing: 85, cybersecurity: 80, robotics: 75, semiconductors: 70 } },
+  { code: 'TW', name: 'Taiwan', flag: '\u{1F1F9}\u{1F1FC}', region: 'ASIA-PACIFIC', scores: { ai: 80, defense: 70, biotech: 72, energy: 65, manufacturing: 88, cybersecurity: 75, robotics: 78, semiconductors: 98 } },
+  { code: 'SG', name: 'Singapore', flag: '\u{1F1F8}\u{1F1EC}', region: 'ASIA-PACIFIC', scores: { ai: 82, defense: 65, biotech: 75, energy: 68, manufacturing: 78, cybersecurity: 85, robotics: 72, semiconductors: 80 } },
+  { code: 'IN', name: 'India', flag: '\u{1F1EE}\u{1F1F3}', region: 'ASIA-PACIFIC', scores: { ai: 75, defense: 72, biotech: 68, energy: 70, manufacturing: 72, cybersecurity: 70, robotics: 62, semiconductors: 55 } },
+  { code: 'AU', name: 'Australia', flag: '\u{1F1E6}\u{1F1FA}', region: 'ASIA-PACIFIC', scores: { ai: 72, defense: 70, biotech: 72, energy: 78, manufacturing: 62, cybersecurity: 75, robotics: 65, semiconductors: 55 } },
+  { code: 'CA', name: 'Canada', flag: '\u{1F1E8}\u{1F1E6}', region: 'AMERICAS', scores: { ai: 82, defense: 72, biotech: 80, energy: 82, manufacturing: 68, cybersecurity: 78, robotics: 70, semiconductors: 62 } },
+  { code: 'RU', name: 'Russia', flag: '\u{1F1F7}\u{1F1FA}', region: 'EUROPE', scores: { ai: 72, defense: 85, biotech: 65, energy: 78, manufacturing: 75, cybersecurity: 78, robotics: 65, semiconductors: 55 } },
+  { code: 'BR', name: 'Brazil', flag: '\u{1F1E7}\u{1F1F7}', region: 'AMERICAS', scores: { ai: 58, defense: 60, biotech: 65, energy: 72, manufacturing: 65, cybersecurity: 55, robotics: 50, semiconductors: 40 } },
+  { code: 'MX', name: 'Mexico', flag: '\u{1F1F2}\u{1F1FD}', region: 'AMERICAS', scores: { ai: 52, defense: 55, biotech: 55, energy: 65, manufacturing: 70, cybersecurity: 50, robotics: 48, semiconductors: 38 } },
+  { code: 'AE', name: 'UAE', flag: '\u{1F1E6}\u{1F1EA}', region: 'OTHER', scores: { ai: 72, defense: 75, biotech: 60, energy: 78, manufacturing: 62, cybersecurity: 70, robotics: 65, semiconductors: 50 } },
+  { code: 'SA', name: 'Saudi Arabia', flag: '\u{1F1F8}\u{1F1E6}', region: 'OTHER', scores: { ai: 62, defense: 70, biotech: 55, energy: 82, manufacturing: 58, cybersecurity: 62, robotics: 55, semiconductors: 42 } },
+  { code: 'FI', name: 'Finland', flag: '\u{1F1EB}\u{1F1EE}', region: 'EUROPE', scores: { ai: 78, defense: 65, biotech: 72, energy: 80, manufacturing: 72, cybersecurity: 85, robotics: 72, semiconductors: 60 } },
+  { code: 'DK', name: 'Denmark', flag: '\u{1F1E9}\u{1F1F0}', region: 'EUROPE', scores: { ai: 75, defense: 62, biotech: 80, energy: 88, manufacturing: 68, cybersecurity: 80, robotics: 70, semiconductors: 58 } },
+  { code: 'NO', name: 'Norway', flag: '\u{1F1F3}\u{1F1F4}', region: 'EUROPE', scores: { ai: 72, defense: 65, biotech: 75, energy: 92, manufacturing: 65, cybersecurity: 78, robotics: 68, semiconductors: 55 } },
+  { code: 'EE', name: 'Estonia', flag: '\u{1F1EA}\u{1F1EA}', region: 'EUROPE', scores: { ai: 72, defense: 65, biotech: 58, energy: 65, manufacturing: 58, cybersecurity: 90, robotics: 60, semiconductors: 48 } },
 ];
 
 // ─── Scoreboard config ────────────────────────────────────────────────────────
 
 const TECH_DIMS: { key: TechKey; label: string; color: string }[] = [
-  { key: 'ai',             label: 'AI',            color: '#00d4ff' },
-  { key: 'defense',        label: 'DEFENSE',       color: '#ff3b30' },
-  { key: 'biotech',        label: 'BIOTECH',       color: '#00ff88' },
-  { key: 'energy',         label: 'ENERGY',        color: '#ffb800' },
+  { key: 'ai',             label: 'AI',            color: COLORS.cyan },
+  { key: 'defense',        label: 'DEFENSE',       color: COLORS.red },
+  { key: 'biotech',        label: 'BIOTECH',       color: COLORS.green },
+  { key: 'energy',         label: 'ENERGY',        color: COLORS.amber },
   { key: 'manufacturing',  label: 'MANUFACTURING', color: '#f97316' },
   { key: 'cybersecurity',  label: 'CYBERSECURITY', color: '#8b5cf6' },
   { key: 'robotics',       label: 'ROBOTICS',      color: '#06b6d4' },
@@ -194,13 +195,13 @@ function tierToDotSize(tier: 'P0' | 'P1' | 'P2'): number {
 function industryToColor(industry: string, signalType: string): string {
   const i = industry.toLowerCase();
   const s = signalType.toLowerCase();
-  if (i.includes('ai') || i.includes('tech') || i.includes('cyber') || i.includes('semi') || i.includes('robot')) return '#00d4ff';
-  if (i.includes('fund') || i.includes('financ') || i.includes('invest') || s.includes('funding')) return '#00ff88';
-  if (i.includes('defense') || i.includes('military') || i.includes('alert') || s.includes('risk')) return '#ff3b30';
-  if (i.includes('energy') || i.includes('oil') || i.includes('gas')) return '#ffd700';
+  if (i.includes('ai') || i.includes('tech') || i.includes('cyber') || i.includes('semi') || i.includes('robot')) return COLORS.cyan;
+  if (i.includes('fund') || i.includes('financ') || i.includes('invest') || s.includes('funding')) return COLORS.green;
+  if (i.includes('defense') || i.includes('military') || i.includes('alert') || s.includes('risk')) return COLORS.red;
+  if (i.includes('energy') || i.includes('oil') || i.includes('gas')) return COLORS.gold;
   if (i.includes('health') || i.includes('bio') || i.includes('pharma') || s.includes('research')) return '#8b5cf6';
   if (i.includes('policy') || i.includes('govern') || i.includes('regulat')) return '#ff8c00';
-  return '#00d4ff'; // default cyan
+  return COLORS.cyan; // default cyan
 }
 
 function categoryMatchesSignal(cat: CategoryFilter, signal: IntelSignal): boolean {
@@ -216,15 +217,15 @@ function categoryMatchesSignal(cat: CategoryFilter, signal: IntelSignal): boolea
 
 function geoMatchesSignal(geo: GeoFilter, lat: number, lon: number): boolean {
   if (geo === 'GLOBAL') return true;
-  // USA bounding box: roughly lat 24–49, lon -125 to -66
+  // USA bounding box: roughly lat 24-49, lon -125 to -66
   if (geo === 'USA') return lat >= 24 && lat <= 49 && lon >= -125 && lon <= -66;
-  // Texas: lat 26–36.5, lon -107 to -93
+  // Texas: lat 26-36.5, lon -107 to -93
   if (geo === 'TEXAS') return lat >= 26 && lat <= 36.5 && lon >= -107 && lon <= -93;
   return true;
 }
 
-// Simple Mercator projection onto 0–100 viewport
-// Using bounds: lon -180..180 → x 0..100, lat clamp -70..80 → y 0..100
+// Simple Mercator projection onto 0-100 viewport
+// Using bounds: lon -180..180 -> x 0..100, lat clamp -70..80 -> y 0..100
 function mercatorProject(lat: number, lon: number): [number, number] {
   const x = ((lon + 180) / 360) * 100;
   const latRad = (lat * Math.PI) / 180;
@@ -260,70 +261,6 @@ const STUB_SIGNALS: IntelSignal[] = [
   { title: "Israel's cybersecurity startup ecosystem reaches $12B valuation", signal_type: 'funding', industry: 'Cybersecurity', company: null, importance: 0.83, discovered_at: new Date(Date.now() - 18000000).toISOString() },
 ];
 
-// ─── Bottom NavBar ────────────────────────────────────────────────────────────
-
-const NAV_TABS = [
-  { id: 'today',    label: 'TODAY',   href: '/',          icon: '◎' },
-  { id: 'explore',  label: 'EXPLORE', href: '/explore',   icon: '⬡' },
-  { id: 'world',    label: 'WORLD',   href: '/world',     icon: '◉' },
-  { id: 'follow',   label: 'FOLLOW',  href: '/following', icon: '◈' },
-  { id: 'store',    label: 'STORE',   href: '/store',     icon: '◫' },
-  { id: 'dossier',  label: 'DOSSIER', href: '/dossier',   icon: '◆' },
-];
-
-function BottomNavBar({ active }: { active: string }) {
-  return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 z-40 flex items-stretch"
-      style={{
-        height: '48px',
-        backgroundColor: '#000000',
-        borderTop: '1px solid rgba(255,255,255,0.08)',
-        fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-      }}
-    >
-      {NAV_TABS.map((tab) => {
-        const isActive = tab.id === active;
-        return (
-          <Link
-            key={tab.id}
-            href={tab.href}
-            className="flex-1 flex flex-col items-center justify-center gap-0.5 relative"
-            style={{ textDecoration: 'none' }}
-          >
-            {isActive && (
-              <div
-                className="absolute top-0 left-1/2 -translate-x-1/2"
-                style={{ width: '24px', height: '2px', backgroundColor: '#ff6600', borderRadius: '0 0 2px 2px' }}
-              />
-            )}
-            <span
-              style={{
-                fontSize: '14px',
-                color: isActive ? '#ff6600' : 'rgba(255,255,255,0.25)',
-                textShadow: isActive ? '0 0 8px #ff660066' : 'none',
-                lineHeight: 1,
-              }}
-            >
-              {tab.icon}
-            </span>
-            <span
-              style={{
-                fontSize: '7px',
-                letterSpacing: '0.15em',
-                color: isActive ? '#ff6600' : 'rgba(255,255,255,0.22)',
-                fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-              }}
-            >
-              {tab.label}
-            </span>
-          </Link>
-        );
-      })}
-    </nav>
-  );
-}
-
 // ─── Filter pills ──────────────────────────────────────────────────────────────
 
 function FilterPills({
@@ -342,63 +279,58 @@ function FilterPills({
   const geoOpts: GeoFilter[] = ['TEXAS', 'USA', 'GLOBAL'];
   const catOpts: CategoryFilter[] = ['ALL', 'TECH', 'MONEY', 'POLICY', 'SCIENCE'];
 
+  const catColors: Record<CategoryFilter, string> = {
+    ALL: COLORS.cyan, TECH: COLORS.cyan, MONEY: COLORS.green, POLICY: '#ff8c00', SCIENCE: '#8b5cf6',
+  };
+
   return (
-    <div
-      className="absolute top-0 left-0 right-0 z-20 flex flex-col gap-2 p-3"
-      style={{ fontFamily: "'JetBrains Mono', 'Courier New', monospace" }}
-    >
-      <div className="flex items-center gap-2">
+    <div className="absolute top-0 left-0 right-0 z-20 flex flex-col gap-2 p-3 font-mono">
+      <div className="flex items-center gap-2 flex-wrap">
         {/* Geo pills */}
-        <div className="flex items-center gap-1">
-          {geoOpts.map((g) => (
-            <button
-              key={g}
-              onClick={() => onGeo(g)}
-              style={{
-                padding: '3px 10px',
-                fontSize: '8px',
-                letterSpacing: '0.2em',
-                fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-                border: `1px solid ${geo === g ? '#00d4ff' : 'rgba(255,255,255,0.12)'}`,
-                backgroundColor: geo === g ? 'rgba(0,212,255,0.15)' : 'rgba(0,0,0,0.70)',
-                color: geo === g ? '#00d4ff' : 'rgba(255,255,255,0.40)',
-                borderRadius: '2px',
-                cursor: 'pointer',
-                backdropFilter: 'blur(8px)',
-                transition: 'all 0.15s',
-              }}
-            >
-              {g}
-            </button>
-          ))}
+        <div className="flex items-center gap-1.5">
+          {geoOpts.map((g) => {
+            const isActive = geo === g;
+            return (
+              <button
+                key={g}
+                onClick={() => onGeo(g)}
+                className="min-h-[44px] sm:min-h-0 px-3 py-1.5 text-[8px] tracking-[0.2em] font-mono rounded-full backdrop-blur-md cursor-pointer transition-all duration-200 border"
+                style={isActive ? {
+                  borderColor: COLORS.cyan,
+                  backgroundColor: `${COLORS.cyan}22`,
+                  color: COLORS.cyan,
+                } : {
+                  borderColor: COLORS.border,
+                  backgroundColor: `${COLORS.surface}cc`,
+                  color: COLORS.muted,
+                }}
+              >
+                {g}
+              </button>
+            );
+          })}
         </div>
 
-        <div style={{ width: '1px', height: '14px', backgroundColor: 'rgba(255,255,255,0.08)' }} />
+        <div className="w-px h-3.5" style={{ backgroundColor: COLORS.border }} />
 
         {/* Category pills */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           {catOpts.map((c) => {
-            const catColors: Record<CategoryFilter, string> = {
-              ALL: '#00d4ff', TECH: '#00d4ff', MONEY: '#00ff88', POLICY: '#ff8c00', SCIENCE: '#8b5cf6',
-            };
             const col = catColors[c];
             const isActive = category === c;
             return (
               <button
                 key={c}
                 onClick={() => onCategory(c)}
-                style={{
-                  padding: '3px 10px',
-                  fontSize: '8px',
-                  letterSpacing: '0.2em',
-                  fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-                  border: `1px solid ${isActive ? col : 'rgba(255,255,255,0.12)'}`,
-                  backgroundColor: isActive ? `${col}22` : 'rgba(0,0,0,0.70)',
-                  color: isActive ? col : 'rgba(255,255,255,0.40)',
-                  borderRadius: '2px',
-                  cursor: 'pointer',
-                  backdropFilter: 'blur(8px)',
-                  transition: 'all 0.15s',
+                className="min-h-[44px] sm:min-h-0 px-3 py-1.5 text-[8px] tracking-[0.2em] font-mono rounded-full backdrop-blur-md cursor-pointer transition-all duration-200 border"
+                style={isActive ? {
+                  borderColor: col,
+                  backgroundColor: `${col}22`,
+                  color: col,
+                } : {
+                  borderColor: COLORS.border,
+                  backgroundColor: `${COLORS.surface}cc`,
+                  color: COLORS.muted,
                 }}
               >
                 {c}
@@ -411,16 +343,11 @@ function FilterPills({
 
         {/* Signal count badge */}
         <div
+          className="px-3 py-1.5 text-[8px] tracking-[0.15em] font-mono rounded-full backdrop-blur-md"
           style={{
-            padding: '3px 10px',
-            fontSize: '8px',
-            letterSpacing: '0.15em',
-            fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-            border: '1px solid rgba(0,255,136,0.25)',
-            backgroundColor: 'rgba(0,255,136,0.08)',
-            color: '#00ff88',
-            borderRadius: '2px',
-            backdropFilter: 'blur(8px)',
+            border: `1px solid ${COLORS.green}40`,
+            backgroundColor: `${COLORS.green}14`,
+            color: COLORS.green,
           }}
         >
           {dotCount} LIVE
@@ -447,141 +374,131 @@ function SignalBottomSheet({
       {/* Backdrop */}
       <div
         className="fixed inset-0 z-30"
-        style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
+        style={{ backgroundColor: `${COLORS.bg}dd` }}
         onClick={onClose}
       />
 
       {/* Sheet */}
       <div
-        className="fixed left-0 right-0 z-40"
+        className="fixed left-0 right-0 z-40 bottom-12 font-mono max-h-[55vh] overflow-hidden flex flex-col"
         style={{
-          bottom: '48px', // above nav bar
-          backgroundColor: '#000000',
-          border: '1px solid rgba(255,255,255,0.10)',
+          backgroundColor: COLORS.surface,
+          border: `1px solid ${COLORS.border}`,
           borderBottom: 'none',
-          borderRadius: '8px 8px 0 0',
-          fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-          maxHeight: '55vh',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
+          borderRadius: '24px 24px 0 0',
         }}
       >
         {/* Drag handle */}
-        <div className="flex justify-center pt-2.5 pb-1">
-          <div style={{ width: '32px', height: '3px', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: '2px' }} />
+        <div className="flex justify-center pt-3 pb-1.5">
+          <div className="w-10 h-[3px] rounded-full" style={{ backgroundColor: COLORS.dim }} />
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-5 pb-5 pt-2" style={{ maxHeight: 'calc(55vh - 80px)' }}>
+        <div className="flex-1 overflow-y-auto px-6 pb-6 pt-2 max-h-[calc(55vh-80px)]">
 
           {/* Tier + color indicator */}
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2.5 mb-4">
             <div
+              className="rounded-full shrink-0"
               style={{
                 width: tierToDotSize(dot.tier),
                 height: tierToDotSize(dot.tier),
-                borderRadius: '50%',
                 backgroundColor: dot.color,
                 boxShadow: `0 0 ${tierToDotSize(dot.tier)}px ${dot.color}88`,
-                flexShrink: 0,
               }}
             />
-            <span style={{ fontSize: '9px', letterSpacing: '0.2em', color: dot.color }}>{dot.tier}</span>
-            <div style={{ flex: 1 }} />
-            <span style={{ fontSize: '8px', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.30)' }}>
+            <span className="text-[9px] tracking-[0.2em] font-mono" style={{ color: dot.color }}>{dot.tier}</span>
+            <div className="flex-1" />
+            <span className="text-[8px] tracking-[0.1em] font-mono" style={{ color: COLORS.muted }}>
               {timeAgo(sig.discovered_at)}
             </span>
             <button
               onClick={onClose}
-              style={{ fontSize: '14px', color: 'rgba(255,255,255,0.30)', cursor: 'pointer', background: 'none', border: 'none', padding: '0 0 0 8px' }}
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center text-sm cursor-pointer bg-transparent border-none pl-2"
+              style={{ color: COLORS.muted }}
             >
-              ✕
+              &#x2715;
             </button>
           </div>
 
           {/* Title */}
-          <div
-            style={{
-              fontSize: '12px',
-              lineHeight: '1.55',
-              color: 'rgba(255,255,255,0.90)',
-              marginBottom: '14px',
-              letterSpacing: '0.02em',
-            }}
-          >
+          <div className="text-sm leading-relaxed mb-4 tracking-[0.02em] font-grotesk" style={{ color: COLORS.text }}>
             {sig.title}
           </div>
 
           {/* Meta row */}
-          <div className="flex flex-wrap gap-2 mb-4">
+          <div className="flex flex-wrap gap-2 mb-5">
             {sig.industry && (
-              <span style={{
-                fontSize: '8px', letterSpacing: '0.15em', padding: '2px 8px',
-                border: `1px solid ${dot.color}40`, backgroundColor: `${dot.color}12`,
-                color: dot.color, borderRadius: '2px',
-              }}>
+              <span
+                className="text-[8px] tracking-[0.15em] px-2.5 py-1 rounded-full font-mono"
+                style={{
+                  border: `1px solid ${dot.color}40`,
+                  backgroundColor: `${dot.color}12`,
+                  color: dot.color,
+                }}
+              >
                 {sig.industry.toUpperCase()}
               </span>
             )}
             {sig.signal_type && (
-              <span style={{
-                fontSize: '8px', letterSpacing: '0.15em', padding: '2px 8px',
-                border: '1px solid rgba(255,255,255,0.10)', backgroundColor: 'rgba(255,255,255,0.04)',
-                color: 'rgba(255,255,255,0.45)', borderRadius: '2px',
-              }}>
+              <span
+                className="text-[8px] tracking-[0.15em] px-2.5 py-1 rounded-full font-mono"
+                style={{
+                  border: `1px solid ${COLORS.border}`,
+                  backgroundColor: `${COLORS.card}`,
+                  color: COLORS.muted,
+                }}
+              >
                 {sig.signal_type.toUpperCase()}
               </span>
             )}
             {sig.company && (
-              <span style={{
-                fontSize: '8px', letterSpacing: '0.15em', padding: '2px 8px',
-                border: '1px solid rgba(255,215,0,0.30)', backgroundColor: 'rgba(255,215,0,0.08)',
-                color: '#ffd700', borderRadius: '2px',
-              }}>
+              <span
+                className="text-[8px] tracking-[0.15em] px-2.5 py-1 rounded-full font-mono"
+                style={{
+                  border: `1px solid ${COLORS.gold}4D`,
+                  backgroundColor: `${COLORS.gold}14`,
+                  color: COLORS.gold,
+                }}
+              >
                 {sig.company}
               </span>
             )}
           </div>
 
           {/* Importance bar */}
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-1">
-              <span style={{ fontSize: '8px', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.25)' }}>IMPORTANCE</span>
-              <span style={{ fontSize: '9px', color: dot.color, fontWeight: 700 }}>
+          <div className="mb-5">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[8px] tracking-[0.2em] font-mono" style={{ color: COLORS.dim }}>IMPORTANCE</span>
+              <span className="text-[9px] font-bold font-mono" style={{ color: dot.color }}>
                 {Math.round(sig.importance * 100)}%
               </span>
             </div>
-            <div style={{ width: '100%', height: '3px', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: '2px' }}>
-              <div style={{
-                height: '100%',
-                width: `${sig.importance * 100}%`,
-                backgroundColor: dot.color,
-                borderRadius: '2px',
-                boxShadow: `0 0 6px ${dot.color}66`,
-              }} />
+            <div className="w-full h-[3px] rounded-full" style={{ backgroundColor: `${COLORS.border}` }}>
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${sig.importance * 100}%`,
+                  backgroundColor: dot.color,
+                  boxShadow: `0 0 6px ${dot.color}66`,
+                }}
+              />
             </div>
           </div>
 
           {/* Drill down button */}
           <button
             onClick={() => router.push('/map?tab=intel')}
+            className="w-full min-h-[44px] text-[9px] tracking-[0.25em] font-bold font-mono cursor-pointer transition-all duration-200 hover:brightness-110"
             style={{
-              width: '100%',
-              padding: '10px',
-              fontSize: '9px',
-              letterSpacing: '0.25em',
-              fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-              border: '1px solid #ff6600',
-              backgroundColor: 'rgba(255,102,0,0.12)',
-              color: '#ff6600',
-              borderRadius: '3px',
-              cursor: 'pointer',
-              transition: 'all 0.15s',
-              fontWeight: 700,
+              border: `1px solid ${COLORS.orange}`,
+              backgroundColor: `${COLORS.orange}1F`,
+              color: COLORS.orange,
+              borderRadius: '20px',
+              background: `linear-gradient(135deg, ${COLORS.orange}1F, ${COLORS.orange}0A)`,
             }}
           >
-            DRILL DOWN →
+            DRILL DOWN &rarr;
           </button>
         </div>
       </div>
@@ -648,7 +565,7 @@ function WorldMapSVG({
       viewBox="0 0 100 100"
       preserveAspectRatio="xMidYMid meet"
       className="absolute inset-0 w-full h-full"
-      style={{ backgroundColor: '#000000' }}
+      style={{ backgroundColor: COLORS.bg }}
     >
       {/* Dot-grid texture via SVG pattern */}
       <defs>
@@ -665,7 +582,7 @@ function WorldMapSVG({
         </filter>
         <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
           <stop offset="0%" stopColor="transparent" />
-          <stop offset="100%" stopColor="rgba(0,0,0,0.6)" />
+          <stop offset="100%" stopColor={`${COLORS.bg}99`} />
         </radialGradient>
       </defs>
 
@@ -691,7 +608,7 @@ function WorldMapSVG({
         <line
           key={pct}
           x1="0" y1={pct} x2="100" y2={pct}
-          stroke="rgba(0,212,255,0.06)"
+          stroke={`${COLORS.cyan}0F`}
           strokeWidth="0.2"
           strokeDasharray="0.5,1.5"
         />
@@ -702,7 +619,7 @@ function WorldMapSVG({
         <line
           key={pct}
           x1={pct} y1="0" x2={pct} y2="100"
-          stroke="rgba(0,212,255,0.06)"
+          stroke={`${COLORS.cyan}0F`}
           strokeWidth="0.2"
           strokeDasharray="0.5,1.5"
         />
@@ -723,7 +640,7 @@ function WorldMapSVG({
         return (
           <g
             key={dot.id}
-            style={{ cursor: 'pointer' }}
+            className="cursor-pointer"
             onClick={() => onDotClick(dot)}
           >
             {/* Pulse ring */}
@@ -844,13 +761,15 @@ function MapView() {
   const handleCloseSheet = useCallback(() => setSelectedDot(null), []);
 
   return (
-    <div className="flex-1 relative overflow-hidden" style={{ backgroundColor: '#000000' }}>
-      {/* Map */}
-      <WorldMapSVG
-        dots={filteredDots}
-        onDotClick={handleDotClick}
-        selectedId={selectedDot?.id ?? null}
-      />
+    <div className="flex-1 relative overflow-hidden" style={{ backgroundColor: COLORS.bg }}>
+      {/* Map — overflow-x-auto with min-width for scroll on mobile */}
+      <div className="overflow-x-auto w-full h-full min-w-[480px]">
+        <WorldMapSVG
+          dots={filteredDots}
+          onDotClick={handleDotClick}
+          selectedId={selectedDot?.id ?? null}
+        />
+      </div>
 
       {/* Filter pills (top overlay) */}
       <FilterPills
@@ -864,55 +783,53 @@ function MapView() {
       {/* Loading indicator */}
       {loading && (
         <div
-          className="absolute top-10 right-3 z-20"
+          className="absolute top-10 right-3 z-20 text-[8px] tracking-[0.2em] font-mono px-3 py-1.5 rounded-full backdrop-blur-md"
           style={{
-            fontSize: '8px',
-            letterSpacing: '0.2em',
-            fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-            color: '#00d4ff',
-            backgroundColor: 'rgba(0,0,0,0.70)',
-            padding: '3px 8px',
-            border: '1px solid rgba(0,212,255,0.25)',
-            borderRadius: '2px',
+            color: COLORS.cyan,
+            backgroundColor: `${COLORS.surface}ee`,
+            border: `1px solid ${COLORS.cyan}40`,
           }}
         >
           LOADING SIGNALS...
         </div>
       )}
 
-      {/* Legend (bottom-left, above nav) */}
+      {/* Legend — relative on mobile, absolute on desktop */}
       <div
-        className="absolute bottom-2 left-3 z-20 flex flex-col gap-1"
+        className="static sm:absolute sm:bottom-4 sm:left-4 z-20 flex flex-col gap-1.5 font-mono backdrop-blur-md mx-3 mt-2 sm:mx-0 sm:mt-0 p-3 px-3.5"
         style={{
-          fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-          backgroundColor: 'rgba(0,0,0,0.72)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: '3px',
-          padding: '6px 10px',
-          backdropFilter: 'blur(8px)',
+          backgroundColor: `${COLORS.surface}cc`,
+          border: `1px solid ${COLORS.border}`,
+          borderRadius: '24px',
         }}
       >
         {[
-          { color: '#00d4ff', label: 'TECH / AI' },
-          { color: '#00ff88', label: 'FUNDING' },
-          { color: '#ff3b30', label: 'DEFENSE / ALERT' },
-          { color: '#ffd700', label: 'ENERGY' },
+          { color: COLORS.cyan, label: 'TECH / AI' },
+          { color: COLORS.green, label: 'FUNDING' },
+          { color: COLORS.red, label: 'DEFENSE / ALERT' },
+          { color: COLORS.gold, label: 'ENERGY' },
           { color: '#8b5cf6', label: 'SCIENCE' },
         ].map(({ color, label }) => (
           <div key={label} className="flex items-center gap-2">
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: color, boxShadow: `0 0 4px ${color}88`, flexShrink: 0 }} />
-            <span style={{ fontSize: '7px', letterSpacing: '0.15em', color: 'rgba(255,255,255,0.35)' }}>{label}</span>
+            <div
+              className="w-1.5 h-1.5 rounded-full shrink-0"
+              style={{ backgroundColor: color, boxShadow: `0 0 4px ${color}88` }}
+            />
+            <span className="text-[7px] tracking-[0.15em]" style={{ color: COLORS.muted }}>{label}</span>
           </div>
         ))}
-        <div style={{ height: '1px', backgroundColor: 'rgba(255,255,255,0.07)', margin: '2px 0' }} />
+        <div className="h-px my-0.5" style={{ backgroundColor: COLORS.border }} />
         {[
           { size: 8, label: 'P0 CRITICAL' },
           { size: 5, label: 'P1 HIGH' },
           { size: 3, label: 'P2 NORMAL' },
         ].map(({ size, label }) => (
           <div key={label} className="flex items-center gap-2">
-            <div style={{ width: `${size}px`, height: `${size}px`, borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.4)', flexShrink: 0 }} />
-            <span style={{ fontSize: '7px', letterSpacing: '0.15em', color: 'rgba(255,255,255,0.25)' }}>{label}</span>
+            <div
+              className="rounded-full shrink-0"
+              style={{ width: `${size}px`, height: `${size}px`, backgroundColor: COLORS.dim }}
+            />
+            <span className="text-[7px] tracking-[0.15em]" style={{ color: COLORS.dim }}>{label}</span>
           </div>
         ))}
       </div>
@@ -928,22 +845,22 @@ function MapView() {
 // ─── Scoreboard primitives ────────────────────────────────────────────────────
 
 function scoreBarColor(score: number): string {
-  if (score >= 90) return '#00ff88';
-  if (score >= 75) return '#00d4ff';
-  if (score >= 60) return '#ffb800';
+  if (score >= 90) return COLORS.green;
+  if (score >= 75) return COLORS.cyan;
+  if (score >= 60) return COLORS.amber;
   return '#f97316';
 }
 
 function rankBadgeStyle(rank: number): { bg: string; text: string; border: string } {
-  if (rank === 1) return { bg: 'rgba(255,184,0,0.12)',  text: '#ffb800', border: 'rgba(255,184,0,0.35)' };
-  if (rank === 2) return { bg: 'rgba(0,212,255,0.10)', text: '#00d4ff', border: 'rgba(0,212,255,0.28)' };
-  if (rank === 3) return { bg: 'rgba(0,255,136,0.10)', text: '#00ff88', border: 'rgba(0,255,136,0.28)' };
-  return { bg: 'transparent', text: 'rgba(255,255,255,0.35)', border: 'rgba(255,255,255,0.10)' };
+  if (rank === 1) return { bg: `${COLORS.amber}1F`, text: COLORS.amber, border: `${COLORS.amber}59` };
+  if (rank === 2) return { bg: `${COLORS.cyan}1A`, text: COLORS.cyan, border: `${COLORS.cyan}47` };
+  if (rank === 3) return { bg: `${COLORS.green}1A`, text: COLORS.green, border: `${COLORS.green}47` };
+  return { bg: 'transparent', text: COLORS.dim, border: COLORS.border };
 }
 
 function ScoreBar({ score, color, height = 'h-1' }: { score: number; color: string; height?: string }) {
   return (
-    <div className={`w-full ${height} bg-white/[0.06] rounded-full overflow-hidden`}>
+    <div className={`w-full ${height} rounded-full overflow-hidden`} style={{ backgroundColor: `${COLORS.border}` }}>
       <div
         className="h-full rounded-full transition-all duration-500"
         style={{ width: `${score}%`, backgroundColor: color, boxShadow: `0 0 6px ${color}55` }}
@@ -956,24 +873,31 @@ function ScoreBar({ score, color, height = 'h-1' }: { score: number; color: stri
 
 function TechFilterPanel({ active, onToggle }: { active: TechKey; onToggle: (k: TechKey) => void }) {
   return (
-    <div className="w-56 shrink-0 flex flex-col border-r border-white/[0.06] bg-black overflow-hidden">
-      <div className="px-4 py-3 border-b border-white/[0.06]">
-        <div className="font-mono text-[8px] tracking-[0.3em] text-white/30 mb-0.5">TECH DIMENSION</div>
-        <div className="font-mono text-[10px] tracking-[0.15em] text-white/60">SELECT FOCUS SECTOR</div>
+    <div
+      className="w-56 shrink-0 flex flex-col overflow-hidden"
+      style={{
+        borderRight: `1px solid ${COLORS.border}`,
+        backgroundColor: COLORS.bg,
+      }}
+    >
+      <div className="px-4 py-3" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+        <div className="font-mono text-[8px] tracking-[0.3em] mb-0.5" style={{ color: COLORS.dim }}>TECH DIMENSION</div>
+        <div className="font-grotesk text-[10px] tracking-[0.15em]" style={{ color: COLORS.muted }}>Select Focus Sector</div>
       </div>
-      <div className="p-3 flex flex-col gap-1.5">
+      <div className="p-3 flex flex-col gap-2">
         {TECH_DIMS.map((dim) => {
           const isActive = active === dim.key;
           return (
             <button
               key={dim.key}
               onClick={() => onToggle(dim.key)}
-              className="flex items-center gap-3 px-3 py-2 rounded-sm border transition-all duration-150 text-left"
-              style={
-                isActive
-                  ? { backgroundColor: `${dim.color}18`, borderColor: `${dim.color}50`, boxShadow: `0 0 12px ${dim.color}22` }
-                  : { backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,0.07)' }
-              }
+              className="flex items-center gap-3 px-3 py-2.5 transition-all duration-200 text-left min-h-[44px]"
+              style={{
+                borderRadius: '16px',
+                border: `1px solid ${isActive ? `${dim.color}50` : COLORS.border}`,
+                backgroundColor: isActive ? `${dim.color}18` : 'transparent',
+                boxShadow: isActive ? `0 0 12px ${dim.color}22` : 'none',
+              }}
             >
               <span
                 className="w-2 h-2 rounded-full shrink-0"
@@ -985,13 +909,13 @@ function TechFilterPanel({ active, onToggle }: { active: TechKey; onToggle: (k: 
               />
               <span
                 className="font-mono text-[9px] tracking-[0.12em] flex-1"
-                style={{ color: isActive ? dim.color : 'rgba(255,255,255,0.45)' }}
+                style={{ color: isActive ? dim.color : COLORS.muted }}
               >
                 {dim.label}
               </span>
               {isActive && (
                 <span
-                  className="font-mono text-[7px] tracking-[0.1em] px-1.5 py-0.5 rounded-sm"
+                  className="font-mono text-[7px] tracking-[0.1em] px-2 py-0.5 rounded-full"
                   style={{ color: dim.color, backgroundColor: `${dim.color}20`, border: `1px solid ${dim.color}30` }}
                 >
                   ACTIVE
@@ -1001,17 +925,17 @@ function TechFilterPanel({ active, onToggle }: { active: TechKey; onToggle: (k: 
           );
         })}
       </div>
-      <div className="mt-auto px-4 pb-4 border-t border-white/[0.06] pt-3">
-        <div className="font-mono text-[7px] tracking-[0.2em] text-white/20 mb-2">SCORE SCALE</div>
+      <div className="mt-auto px-4 pb-4 pt-3" style={{ borderTop: `1px solid ${COLORS.border}` }}>
+        <div className="font-mono text-[7px] tracking-[0.2em] mb-2" style={{ color: COLORS.dim }}>SCORE SCALE</div>
         {[
-          { label: '90+  ELITE',       color: '#00ff88' },
-          { label: '75+  STRONG',      color: '#00d4ff' },
-          { label: '60+  SOLID',       color: '#ffb800' },
+          { label: '90+  ELITE',       color: COLORS.green },
+          { label: '75+  STRONG',      color: COLORS.cyan },
+          { label: '60+  SOLID',       color: COLORS.amber },
           { label: '<60  DEVELOPING',  color: '#f97316' },
         ].map(({ label, color }) => (
           <div key={label} className="flex items-center gap-2 mb-1">
             <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-            <span className="font-mono text-[8px] text-white/30">{label}</span>
+            <span className="font-mono text-[8px]" style={{ color: COLORS.dim }}>{label}</span>
           </div>
         ))}
       </div>
@@ -1030,25 +954,26 @@ function CountryCard({
   return (
     <button
       onClick={onClick}
-      className="flex flex-col gap-1.5 p-2.5 rounded-sm border transition-all duration-150 text-left"
-      style={
-        isSelected
-          ? { backgroundColor: `${techColor}15`, borderColor: `${techColor}45`, boxShadow: `0 0 10px ${techColor}20` }
-          : { backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }
-      }
+      className="flex flex-col gap-2 p-3 transition-all duration-200 text-left min-h-[44px] hover:shadow-lg"
+      style={{
+        borderRadius: '20px',
+        border: `1px solid ${isSelected ? `${techColor}45` : COLORS.border}`,
+        backgroundColor: isSelected ? `${techColor}15` : COLORS.card,
+        boxShadow: isSelected ? `0 0 10px ${techColor}20` : 'none',
+      }}
     >
       <div className="flex items-center gap-2">
         <span className="text-base leading-none shrink-0">{country.flag}</span>
-        <span className="font-mono text-[9px] tracking-[0.1em] flex-1 min-w-0 truncate"
-          style={{ color: isSelected ? techColor : 'rgba(255,255,255,0.7)' }}>
+        <span className="font-grotesk text-[9px] sm:text-[10px] tracking-[0.1em] flex-1 min-w-0 truncate"
+          style={{ color: isSelected ? techColor : COLORS.text }}>
           {country.name}
         </span>
         <span
-          className="font-mono text-[8px] tabular-nums px-1 py-0.5 rounded-sm border shrink-0"
+          className="font-mono text-[8px] tabular-nums px-1.5 py-0.5 rounded-full border shrink-0"
           style={
             rank <= 3
               ? { color: rankBadgeStyle(rank).text, borderColor: rankBadgeStyle(rank).border, backgroundColor: rankBadgeStyle(rank).bg }
-              : { color: 'rgba(255,255,255,0.25)', borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent' }
+              : { color: COLORS.dim, borderColor: COLORS.border, backgroundColor: 'transparent' }
           }
         >
           #{rank}
@@ -1056,8 +981,8 @@ function CountryCard({
       </div>
       <ScoreBar score={score} color={color} />
       <div className="flex items-center justify-between">
-        <span className="font-mono text-[8px] text-white/25 tracking-widest">{country.code}</span>
-        <span className="font-mono text-[10px] tabular-nums font-bold" style={{ color }}>{score}</span>
+        <span className="font-mono text-[8px] tracking-widest" style={{ color: COLORS.dim }}>{country.code}</span>
+        <span className="font-mono text-[10px] sm:text-xs tabular-nums font-bold" style={{ color }}>{score}</span>
       </div>
     </button>
   );
@@ -1090,28 +1015,28 @@ function WorldScoreboard({
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
       <div
-        className="shrink-0 px-5 py-2.5 border-b border-white/[0.06] flex items-center gap-3"
-        style={{ backgroundColor: `${techDim.color}08` }}
+        className="shrink-0 px-5 py-3 flex items-center gap-3"
+        style={{ backgroundColor: `${techDim.color}08`, borderBottom: `1px solid ${COLORS.border}` }}
       >
-        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: techDim.color, boxShadow: `0 0 8px ${techDim.color}` }} />
-        <span className="font-mono text-[10px] tracking-[0.2em]" style={{ color: techDim.color }}>GLOBAL TECH INTELLIGENCE</span>
-        <span className="font-mono text-[10px] text-white/30 tracking-[0.1em]">—</span>
-        <span className="font-mono text-[10px] tracking-[0.15em] font-bold" style={{ color: techDim.color, textShadow: `0 0 10px ${techDim.color}66` }}>{techDim.label}</span>
+        <span className="w-2 h-2 rounded-full shrink-0 live-pulse" style={{ backgroundColor: techDim.color, boxShadow: `0 0 8px ${techDim.color}` }} />
+        <span className="font-grotesk text-[10px] tracking-[0.2em]" style={{ color: techDim.color }}>GLOBAL TECH INTELLIGENCE</span>
+        <span className="font-mono text-[10px] tracking-[0.1em]" style={{ color: COLORS.dim }}>&mdash;</span>
+        <span className="font-grotesk text-[10px] tracking-[0.15em] font-bold" style={{ color: techDim.color, textShadow: `0 0 10px ${techDim.color}66` }}>{techDim.label}</span>
         <div className="flex-1" />
-        <span className="font-mono text-[8px] text-white/25 tracking-widest">{COUNTRIES.length} COUNTRIES</span>
+        <span className="font-mono text-[8px] tracking-widest" style={{ color: COLORS.dim }}>{COUNTRIES.length} COUNTRIES</span>
       </div>
-      <div className="flex-1 overflow-y-auto scrollbar-thin px-4 py-3 flex flex-col gap-5">
+      <div className="flex-1 overflow-y-auto scrollbar-thin px-4 py-4 flex flex-col gap-6">
         {REGIONS.map((region) => {
           const list = byRegion[region];
           if (!list) return null;
           return (
             <div key={region}>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="font-mono text-[8px] tracking-[0.3em] text-white/25">{region}</span>
-                <div className="flex-1 h-px bg-white/[0.05]" />
-                <span className="font-mono text-[8px] text-white/15">{list.length}</span>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="font-grotesk text-[8px] tracking-[0.3em]" style={{ color: COLORS.dim }}>{region}</span>
+                <div className="flex-1 h-px" style={{ backgroundColor: COLORS.border }} />
+                <span className="font-mono text-[8px]" style={{ color: COLORS.dim }}>{list.length}</span>
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                 {list.map((country) => (
                   <CountryCard
                     key={country.code}
@@ -1134,37 +1059,55 @@ function WorldScoreboard({
 function CountryDetailPanel({ country, tech }: { country: Country | null; tech: TechKey }) {
   if (!country) {
     return (
-      <div className="w-72 shrink-0 border-l border-white/[0.06] bg-black flex flex-col items-center justify-center p-6">
-        <div className="w-12 h-12 rounded-full border border-white/[0.08] flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(0,212,255,0.05)' }}>
-          <span className="font-mono text-[10px] text-white/20">◎</span>
+      <div
+        className="w-72 shrink-0 flex flex-col items-center justify-center p-6"
+        style={{
+          borderLeft: `1px solid ${COLORS.border}`,
+          backgroundColor: COLORS.bg,
+        }}
+      >
+        <div
+          className="w-12 h-12 rounded-full flex items-center justify-center mb-4"
+          style={{ border: `1px solid ${COLORS.border}`, backgroundColor: `${COLORS.cyan}0D` }}
+        >
+          <span className="font-mono text-[10px]" style={{ color: COLORS.dim }}>&#x25CE;</span>
         </div>
-        <div className="font-mono text-[8px] tracking-[0.25em] text-white/20 text-center leading-6">
+        <div className="font-grotesk text-[8px] tracking-[0.25em] text-center leading-6" style={{ color: COLORS.dim }}>
           SELECT A COUNTRY<br />TO VIEW INTEL
         </div>
-        <div className="mt-3 font-mono text-[8px] text-white/10 text-center">{COUNTRIES.length} COUNTRIES · 8 TECH DIMENSIONS</div>
+        <div className="mt-3 font-mono text-[8px] text-center" style={{ color: COLORS.dim }}>{COUNTRIES.length} COUNTRIES &middot; 8 TECH DIMENSIONS</div>
       </div>
     );
   }
 
   const techDim = TECH_DIMS.find((d) => d.key === tech)!;
   return (
-    <div className="w-72 shrink-0 border-l border-white/[0.06] bg-black flex flex-col overflow-hidden">
-      <div className="px-4 py-4 border-b border-white/[0.06]" style={{ backgroundColor: `${techDim.color}08` }}>
+    <div
+      className="w-72 shrink-0 flex flex-col overflow-hidden"
+      style={{
+        borderLeft: `1px solid ${COLORS.border}`,
+        backgroundColor: COLORS.bg,
+      }}
+    >
+      <div className="px-4 py-4" style={{ borderBottom: `1px solid ${COLORS.border}`, backgroundColor: `${techDim.color}08` }}>
         <div className="flex items-center gap-3 mb-3">
           <span className="text-3xl leading-none">{country.flag}</span>
           <div className="flex-1 min-w-0">
-            <div className="font-mono text-[11px] tracking-[0.15em] text-white/90 truncate">{country.name.toUpperCase()}</div>
-            <div className="font-mono text-[8px] tracking-[0.2em] text-white/30 mt-0.5">{country.code} · {country.region}</div>
+            <div className="font-grotesk text-[11px] tracking-[0.15em] truncate" style={{ color: COLORS.text }}>{country.name.toUpperCase()}</div>
+            <div className="font-mono text-[8px] tracking-[0.2em] mt-0.5" style={{ color: COLORS.dim }}>{country.code} &middot; {country.region}</div>
           </div>
         </div>
-        <div className="flex items-center gap-3 px-3 py-2 rounded-sm border" style={{ borderColor: `${techDim.color}30`, backgroundColor: `${techDim.color}10` }}>
+        <div
+          className="flex items-center gap-3 px-3 py-2.5"
+          style={{ borderRadius: '16px', border: `1px solid ${techDim.color}30`, backgroundColor: `${techDim.color}10` }}
+        >
           <span className="font-mono text-[8px] tracking-[0.15em]" style={{ color: techDim.color }}>{techDim.label}</span>
           <div className="flex-1"><ScoreBar score={country.scores[tech]} color={techDim.color} /></div>
           <span className="font-mono text-sm font-bold tabular-nums" style={{ color: techDim.color, textShadow: `0 0 10px ${techDim.color}66` }}>{country.scores[tech]}</span>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto scrollbar-thin px-4 py-3 flex flex-col gap-3">
-        <div className="font-mono text-[8px] tracking-[0.3em] text-white/25 mb-1">8 TECH DIMENSIONS</div>
+      <div className="flex-1 overflow-y-auto scrollbar-thin px-4 py-4 flex flex-col gap-3">
+        <div className="font-mono text-[8px] tracking-[0.3em] mb-1" style={{ color: COLORS.dim }}>8 TECH DIMENSIONS</div>
         {TECH_DIMS.map((dim) => {
           const s = country.scores[dim.key];
           const barColor = scoreBarColor(s);
@@ -1172,11 +1115,15 @@ function CountryDetailPanel({ country, tech }: { country: Country | null; tech: 
           return (
             <div
               key={dim.key}
-              className="rounded-sm px-2 py-1.5 transition-all"
-              style={isActive ? { backgroundColor: `${dim.color}10`, border: `1px solid ${dim.color}25` } : { border: '1px solid transparent' }}
+              className="px-2.5 py-2 transition-all"
+              style={{
+                borderRadius: '14px',
+                backgroundColor: isActive ? `${dim.color}10` : 'transparent',
+                border: isActive ? `1px solid ${dim.color}25` : '1px solid transparent',
+              }}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="font-mono text-[8px] tracking-[0.1em]" style={{ color: isActive ? dim.color : 'rgba(255,255,255,0.4)' }}>{dim.label}</span>
+                <span className="font-mono text-[8px] tracking-[0.1em]" style={{ color: isActive ? dim.color : COLORS.muted }}>{dim.label}</span>
                 <span className="font-mono text-[9px] tabular-nums" style={{ color: barColor }}>{s}</span>
               </div>
               <ScoreBar score={s} color={barColor} />
@@ -1201,69 +1148,46 @@ function ScoreboardView() {
   );
 }
 
-// ─── Header bar ───────────────────────────────────────────────────────────────
+// ─── View mode toggle bar ─────────────────────────────────────────────────────
 
-function HeaderBar({ viewMode, onToggleView }: { viewMode: ViewMode; onToggleView: (v: ViewMode) => void }) {
+function ViewModeBar({ viewMode, onToggleView }: { viewMode: ViewMode; onToggleView: (v: ViewMode) => void }) {
+  const views: { id: ViewMode; label: string }[] = [
+    { id: 'MAP',        label: 'SIGNALS' },
+    { id: 'SCOREBOARD', label: 'RANKINGS' },
+    { id: 'OPS',        label: 'LIVE OPS' },
+  ];
+
   return (
     <div
-      className="shrink-0 flex items-center px-4 gap-3 border-b border-white/[0.06] bg-black"
-      style={{ height: '44px', fontFamily: "'JetBrains Mono', 'Courier New', monospace" }}
+      className="shrink-0 flex items-center justify-end px-4 py-2 font-mono"
+      style={{ borderBottom: `1px solid ${COLORS.border}`, backgroundColor: COLORS.bg }}
     >
-      {/* Brand */}
-      <div className="flex items-center gap-2 shrink-0">
-        <span style={{ fontSize: '10px', letterSpacing: '0.25em', fontWeight: 700, color: '#ff6600', textShadow: '0 0 10px #ff660066' }}>
-          ◉ NXT LINK
-        </span>
-        <span style={{ fontSize: '8px', letterSpacing: '0.15em', color: 'rgba(255,255,255,0.20)' }}>
-          WORLD INTEL
-        </span>
-      </div>
-
-      <div style={{ width: '1px', height: '18px', backgroundColor: 'rgba(255,255,255,0.07)' }} />
-
-      {/* Live indicator */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        <div style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#00ff88', boxShadow: '0 0 6px #00ff88' }} />
-        <span style={{ fontSize: '8px', letterSpacing: '0.15em', color: '#00ff88' }}>LIVE</span>
-      </div>
-
-      <div className="flex-1" />
-
-      {/* View mode toggle */}
       <div
-        className="flex items-center rounded-sm overflow-hidden shrink-0"
-        style={{ border: '1px solid rgba(255,255,255,0.10)' }}
+        className="flex items-center overflow-hidden p-1 gap-1"
+        style={{
+          borderRadius: '9999px',
+          backgroundColor: COLORS.surface,
+          border: `1px solid ${COLORS.border}`,
+        }}
       >
-        {([
-          { id: 'MAP',        label: 'SIGNALS' },
-          { id: 'SCOREBOARD', label: 'RANKINGS' },
-          { id: 'OPS',        label: 'LIVE OPS' },
-        ] as { id: ViewMode; label: string }[]).map((v, i, arr) => (
-          <button
-            key={v.id}
-            onClick={() => onToggleView(v.id)}
-            style={{
-              padding: '3px 12px',
-              fontSize: '8px',
-              letterSpacing: '0.2em',
-              fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-              backgroundColor: viewMode === v.id
-                ? v.id === 'OPS' ? 'rgba(255,102,0,0.15)' : 'rgba(0,212,255,0.15)'
-                : 'transparent',
-              color: viewMode === v.id
-                ? v.id === 'OPS' ? '#ff6600' : '#00d4ff'
-                : 'rgba(255,255,255,0.30)',
-              borderTop: 'none',
-              borderBottom: 'none',
-              borderLeft: 'none',
-              borderRight: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.10)' : 'none',
-              cursor: 'pointer',
-              transition: 'all 0.15s',
-            }}
-          >
-            {v.label}
-          </button>
-        ))}
+        {views.map((v) => {
+          const isActive = viewMode === v.id;
+          const activeColor = v.id === 'OPS' ? COLORS.orange : COLORS.cyan;
+          return (
+            <button
+              key={v.id}
+              onClick={() => onToggleView(v.id)}
+              className="min-h-[36px] px-4 py-1.5 text-[8px] tracking-[0.2em] font-mono cursor-pointer transition-all duration-200 border-none"
+              style={{
+                borderRadius: '9999px',
+                backgroundColor: isActive ? `${activeColor}26` : 'transparent',
+                color: isActive ? activeColor : COLORS.muted,
+              }}
+            >
+              {v.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -1275,17 +1199,14 @@ function WorldApp() {
   const [viewMode, setViewMode] = useState<ViewMode>('MAP');
 
   return (
-    <div
-      className="flex flex-col overflow-hidden"
-      style={{ height: '100dvh', backgroundColor: '#000000', fontFamily: "'JetBrains Mono', 'Courier New', monospace" }}
-    >
-      <HeaderBar viewMode={viewMode} onToggleView={setViewMode} />
+    <div className="flex flex-col overflow-hidden h-dvh font-mono" style={{ background: COLORS.bg }}>
+      <TopBar />
+      <ViewModeBar viewMode={viewMode} onToggleView={setViewMode} />
 
-      {/* Content area — padded bottom for nav bar (except OPS which is full iframe) */}
+      {/* Content area — pb-16 for bottom nav */}
       <div
-        className="flex flex-1 min-h-0 flex-col"
+        className={`flex flex-1 min-h-0 flex-col ${viewMode === 'OPS' ? '' : 'pb-16'}`}
         style={{
-          paddingBottom: viewMode === 'OPS' ? 0 : '48px',
           overflowY: viewMode === 'SCOREBOARD' ? 'auto' : 'hidden',
         }}
       >
@@ -1295,13 +1216,13 @@ function WorldApp() {
           <iframe
             src="/map"
             title="Live Operations Platform"
-            style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+            className="w-full h-full border-none block"
             allow="fullscreen"
           />
         )}
       </div>
 
-      <BottomNavBar active="world" />
+      <BottomNav />
     </div>
   );
 }
@@ -1312,11 +1233,8 @@ export default function WorldPage() {
   return (
     <Suspense
       fallback={
-        <div
-          className="flex h-screen items-center justify-center"
-          style={{ backgroundColor: '#000000', fontFamily: "'JetBrains Mono', 'Courier New', monospace" }}
-        >
-          <span style={{ fontSize: '10px', letterSpacing: '0.3em', color: 'rgba(255,255,255,0.20)' }}>
+        <div className="flex h-screen items-center justify-center font-mono" style={{ background: COLORS.bg }}>
+          <span className="text-[10px] tracking-[0.3em]" style={{ color: COLORS.dim }}>
             LOADING WORLD INTEL...
           </span>
         </div>

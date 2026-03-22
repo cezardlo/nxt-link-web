@@ -1,11 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 import type { Mode, IntelSignal, Alert } from '../types/intel';
+import { COLORS } from '@/lib/tokens';
 
-const C = '#00D4FF';
-const G = '#00FF88';
-const GOLD = '#FFD700';
-const R = '#FF3B30';
+const C = COLORS.cyan;
+const G = COLORS.green;
+const GOLD = COLORS.gold;
+const R = COLORS.red;
 const P = '#A855F7';
 
 const MODES: Mode[] = ['MORNING', 'WORLD', 'EL PASO', 'RESEARCH', 'CONTRACTS', 'TRENDS'];

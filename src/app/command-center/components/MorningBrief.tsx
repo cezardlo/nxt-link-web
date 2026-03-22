@@ -3,11 +3,12 @@
 // Left panel — executive summary, priority items, cross-cutting themes.
 
 import type { BriefItem, BriefPriority } from '../types/intel';
+import { COLORS } from '@/lib/tokens';
 
-const CYAN  = '#00D4FF';
-const GREEN = '#00FF88';
-const GOLD  = '#FFD700';
-const RED   = '#FF3B30';
+const CYAN  = COLORS.cyan;
+const GREEN = COLORS.green;
+const GOLD  = COLORS.gold;
+const RED   = COLORS.red;
 const DIM   = 'rgba(0,212,255,0.09)';
 
 const PRIORITY_META: Record<BriefPriority, { label: string; color: string }> = {

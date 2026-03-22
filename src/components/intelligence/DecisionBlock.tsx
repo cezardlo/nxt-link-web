@@ -1,10 +1,11 @@
 import type { DecisionPayload } from '@/lib/brain';
+import { COLORS } from '@/lib/tokens';
 
 type Props = {
   data: DecisionPayload;
 };
 
-const COLOR = '#ff6600';
+const COLOR = COLORS.orange;
 
 export function DecisionBlock({ data }: Props) {
   return (

@@ -5,6 +5,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { PageTopBar } from '@/components/PageTopBar';
 import { supabase } from '@/lib/supabase';
+import { COLORS } from '@/lib/tokens';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -64,7 +65,7 @@ function categoryColor(cat: string | null): string {
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
-const CYAN = '#00d4ff';
+const CYAN = COLORS.cyan;
 const DEFAULT_VISIBLE = 9;
 
 // ─── IKER Score Bar ────────────────────────────────────────────────────────────

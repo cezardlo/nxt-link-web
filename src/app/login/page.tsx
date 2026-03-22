@@ -2,10 +2,11 @@
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { COLORS } from '@/lib/tokens';
 
-const C = '#00D4FF';
-const G = '#00FF88';
-const R = '#FF3B30';
+const C = COLORS.cyan;
+const G = COLORS.green;
+const R = COLORS.red;
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');

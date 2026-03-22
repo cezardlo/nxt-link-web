@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react';
 import type { IntelSignal, SectorScore, TrajectoryReport } from '../types/intel';
 
-const C = '#00D4FF'; const G = '#10b981'; const GOLD = '#f59e0b';
+import { COLORS } from '@/lib/tokens';
+const C = COLORS.cyan; const G = COLORS.emerald; const GOLD = '#f59e0b';
 const R = '#f43f5e'; const P = '#A855F7'; const DIM = 'rgba(0,212,255,0.09)';
 
 const TYPE_COLOR: Record<string, string> = {

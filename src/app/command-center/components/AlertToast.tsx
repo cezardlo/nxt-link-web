@@ -6,12 +6,14 @@
 import { useEffect, useState } from 'react';
 import type { Alert, SignalType } from '../types/intel';
 
+import { COLORS } from '@/lib/tokens';
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const RED    = '#f43f5e';
 const GOLD   = '#f59e0b';
-const CYAN   = '#00D4FF';
-const GREEN  = '#10b981';
+const CYAN   = COLORS.cyan;
+const GREEN  = COLORS.emerald;
 const PURPLE = '#A855F7';
 
 const TYPE_COLOR: Record<SignalType, string> = {
