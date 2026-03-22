@@ -54,10 +54,11 @@
 
 ## What's Real vs Hardcoded
 - **Real (Supabase)**: DECIDE queries, industry profiles (if DB populated), intel signals
+- **Real (API pipeline)**: TODAY shows live signals, Industry pages fetch from intel-signals with fallback, WORLD maps signal dots
 - **Hardcoded**: El Paso vendors (178KB), technology catalog (80 techs), country-tech map, conferences (86), industry stories
-- **nxt-brain scans**: Writes to intel_signals in Supabase but most pages don't read them yet
+- **nxt-brain scans**: Writes to intel_signals in Supabase → consumed by TODAY, Industry, WORLD pages
 
 ## Next Priorities
-1. Wire nxt-brain signals into TODAY, Industry, WORLD pages
-2. Unify DECIDE + Industry into one user flow
-3. Connect /signals page to real nxt-brain output
+1. Connect /signals page to real nxt-brain output (full signal browser)
+2. Add user preferences / personalization (saved industries, followed signals)
+3. Deploy and verify production data flow end-to-end

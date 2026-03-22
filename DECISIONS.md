@@ -44,3 +44,23 @@
 **Data**: Mix of static (technology catalog, country-tech map, conferences) and API (signals, vendors, profile from Supabase). SessionStorage caching with 5-min TTL.
 
 **8 industries**: ai-ml, cybersecurity, defense, border-tech, manufacturing, energy, healthcare, logistics
+
+## 2026-03-22 — Signal pipeline wired to frontend
+
+**Decision**: TODAY, Industry, and WORLD pages now consume real signals from /api/intel-signals.
+
+**Pipeline**: nxt-brain scan → Supabase intel_signals → /api/intel-signals → Brain.morning()/Brain.map()/direct fetch → UI
+
+**TODAY**: Fetches top 5 signals on mount, shows "LIVE INTELLIGENCE" ticker. Graceful degradation if empty.
+**Industry**: LiveSignals falls back to /api/intel-signals filtered by category when industry API returns <3 signals.
+**WORLD**: Already wired via Brain.map() → /api/intel-signals. STUB_SIGNALS only activates on zero results.
+
+## 2026-03-22 — Unified DECIDE + Industry flow
+
+**Decision**: Home page bridges to Industry deep-dive pages. Results link back via "GO DEEPER" section.
+
+**How**: Home shows "Explore Intelligence" row with 8 strategic industry pills → /industry/[slug]. DECIDE results include "GO DEEPER" link to the matching industry command center. Home accepts ?industry= query param for deep-linking.
+
+**Mapping**: restaurant/construction/cleaning → manufacturing, logistics/warehouse → logistics, border_tech → border-tech.
+
+**Why**: Users need one coherent loop: pick industry → describe problem → get recommendation → explore deeper intelligence → come back with more context.
