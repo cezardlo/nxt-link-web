@@ -118,6 +118,19 @@ function setCache<T>(key: string, data: T): void {
   }
 }
 
+// ─── Slug → intel-signal industry categories mapping ──────────────────────────
+
+const SLUG_SIGNAL_CATEGORIES: Record<string, string[]> = {
+  'logistics':      ['Logistics', 'Supply Chain'],
+  'defense':        ['Defense'],
+  'ai-ml':          ['AI/ML'],
+  'cybersecurity':  ['Cybersecurity'],
+  'manufacturing':  ['Manufacturing'],
+  'energy':         ['Energy'],
+  'healthcare':     ['Healthcare'],
+  'border-tech':    ['Border Tech', 'Supply Chain'],
+};
+
 // ─── Slug → conference categories mapping ────────────────────────────────────
 
 const SLUG_CONFERENCE_CATEGORIES: Record<string, string[]> = {
@@ -159,6 +172,7 @@ export default function IndustryCommandCenter() {
 
   // ── API data state ───────────────────────────────────────────────────────
   const [apiData, setApiData] = useState<IndustryApiData | null>(null);
+  const [mergedSignals, setMergedSignals] = useState<Record<string, any>[]>([]);
   const [, setProfile] = useState<IndustryProfile | null>(null);
   const [, setCountryActivity] = useState<CountryActivity | null>(null);
   const [, setLoading] = useState(true);
@@ -234,11 +248,61 @@ export default function IndustryCommandCenter() {
         fetch(`/api/country-activity`),
       ]);
 
+      let industrySignals: Record<string, any>[] = [];
+
       if (industryRes.status === 'fulfilled' && industryRes.value.ok) {
         const data = await industryRes.value.json();
         setApiData(data);
         setCache(`nxtlink-cache-${slug}-industry`, data);
+        industrySignals = data.signals ?? [];
       }
+
+      // Fallback: if industry API returned fewer than 3 signals, fetch from intel-signals
+      if (industrySignals.length < 3) {
+        try {
+          const intelRes = await fetch(`/api/intel-signals?limit=15`);
+          if (intelRes.ok) {
+            const intelData = await intelRes.json();
+            const intelSignals: Record<string, any>[] = intelData.signals ?? [];
+
+            // Filter by industry category (case-insensitive)
+            const cats = SLUG_SIGNAL_CATEGORIES[slug] ?? [];
+            const catsLower = cats.map((c: string) => c.toLowerCase());
+            const filtered = intelSignals.filter((s: any) =>
+              s.industry && catsLower.includes(s.industry.toLowerCase()),
+            );
+
+            // Map intel-signals shape to LiveSignals shape
+            const mapped = filtered.map((s: any, idx: number) => ({
+              id: s.url ?? `intel-${idx}-${Date.now()}`,
+              title: s.title,
+              type: s.signal_type ?? 'intel',
+              source: s.company ?? s.industry ?? 'Intel',
+              timestamp: s.discovered_at ?? new Date().toISOString(),
+              importance: s.importance ?? s.confidence ?? 50,
+            }));
+
+            // Merge, deduplicate by title, sort by importance descending
+            const allSignals = [...industrySignals, ...mapped];
+            const seen = new Set<string>();
+            const deduped = allSignals.filter((s) => {
+              const key = (s.title ?? '').toLowerCase();
+              if (seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            });
+            deduped.sort((a, b) => (b.importance ?? 0) - (a.importance ?? 0));
+
+            setMergedSignals(deduped);
+            return; // skip the default setMergedSignals below
+          }
+        } catch (err) {
+          console.error('[IndustryCommandCenter] intel-signals fallback error:', err);
+        }
+      }
+
+      // Default: use industry signals as-is
+      setMergedSignals(industrySignals);
 
       if (profileRes.status === 'fulfilled' && profileRes.value.ok) {
         const data = await profileRes.value.json();
@@ -412,7 +476,7 @@ export default function IndustryCommandCenter() {
             industry={industry}
             technologies={technologies}
             countries={COUNTRY_TECH_MAP}
-            signals={apiData?.signals ?? []}
+            signals={mergedSignals}
             accentColor={accentColor}
           />
         </div>
@@ -452,7 +516,7 @@ export default function IndustryCommandCenter() {
 
         {/* Live Signals */}
         <div id="signals" className="pt-12">
-          <LiveSignals signals={apiData?.signals ?? []} accentColor={accentColor} />
+          <LiveSignals signals={mergedSignals} accentColor={accentColor} />
         </div>
 
         {/* Key Players */}

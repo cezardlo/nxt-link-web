@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
 
@@ -103,6 +103,42 @@ type DecideResponse = {
   error?: string;
 };
 
+// ── Signal helpers ───────────────────────────────────────────────────────────
+
+type IntelSignal = {
+  signal_type: string;
+  title: string;
+  discovered_at: string;
+};
+
+const SIGNAL_COLORS: Record<string, string> = {
+  contracts: C.green, product: C.green,
+  patents: C.cyan, technology: C.cyan,
+  funding: C.gold,
+  policy: C.orange, direction: C.orange,
+  research: C.dim, discovery: C.dim,
+  who: C.dim, connection: C.dim,
+};
+
+function signalColor(type: string): string {
+  const key = type.toLowerCase();
+  for (const [k, v] of Object.entries(SIGNAL_COLORS)) {
+    if (key.includes(k)) return v;
+  }
+  return C.dim;
+}
+
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'now';
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d`;
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -111,6 +147,17 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DecideResponse | null>(null);
   const [error, setError] = useState('');
+  const [signals, setSignals] = useState<IntelSignal[]>([]);
+
+  useEffect(() => {
+    fetch('/api/intel-signals?limit=5')
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) setSignals(data);
+        else if (data?.signals && data.signals.length > 0) setSignals(data.signals);
+      })
+      .catch(() => {});
+  }, []);
 
   async function solve(text: string) {
     const q = text.trim();
@@ -230,6 +277,42 @@ export default function Home() {
               </div>
             ))}
           </div>
+
+          {/* ── Live Intelligence Signals ─────────────────────────── */}
+          {signals.length > 0 && (
+            <div className="mt-8">
+              <div className="h-px mb-4" style={{ background: `${C.dim}30` }} />
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 rounded-full" style={{ background: C.cyan }} />
+                <span
+                  className="text-[8px] tracking-[0.2em] font-bold uppercase"
+                  style={{ color: `${C.cyan}90` }}
+                >
+                  Live Intelligence
+                </span>
+                <div className="flex-1 h-px" style={{ background: `${C.cyan}15` }} />
+              </div>
+              <div className="flex flex-col gap-1">
+                {signals.map((sig, i) => (
+                  <div key={i} className="flex items-center gap-2 py-1">
+                    <span className="text-[9px] shrink-0 w-6 text-right" style={{ color: `${C.text}30` }}>
+                      {relativeTime(sig.discovered_at)}
+                    </span>
+                    <span
+                      className="w-1.5 h-1.5 rounded-full shrink-0"
+                      style={{ background: signalColor(sig.signal_type) }}
+                    />
+                    <span
+                      className="text-[10px] truncate"
+                      style={{ color: `${C.text}40` }}
+                    >
+                      {sig.title.length > 60 ? sig.title.slice(0, 60) + '...' : sig.title}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
