@@ -42,7 +42,11 @@ PAGES_TO_SCRAPE = [
 
 def fetch_page(url: str) -> Optional[str]:
     try:
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
         response = httpx.get(url, headers=headers, timeout=15, follow_redirects=True)
         if response.status_code != 200:
             return None
@@ -130,24 +134,33 @@ def save_vendor(vendor: dict, website: str) -> bool:
         print("  [LOCAL] Would save:", json.dumps(vendor, indent=2)[:500])
         return True
 
-    headers = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates"}
+    headers = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Content-Type": "application/json", "Prefer": "return=minimal"}
+    # Map to vendors table schema
+    # Generate a deterministic ID from the company name
+    import hashlib as _h
+    id_num = int(_h.md5(vendor.get("name", "x").encode()).hexdigest()[:8], 16) % 900000 + 100000
+    slug = vendor.get("name", "x").lower().replace(" ", "-").replace(".", "")[:50]
     row = {
-        "name": vendor.get("name", "Unknown"),
-        "description": vendor.get("description") or vendor.get("tagline"),
-        "website": website,
-        "industry": vendor.get("industry"),
-        "hq_city": vendor.get("hq_city"),
-        "hq_country": vendor.get("hq_country"),
-        "technologies": vendor.get("technologies", []),
-        "target_customers": vendor.get("target_customers", []),
-        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "id": f"disc-{slug}",
+        "ID": id_num,
+        "company_name": vendor.get("name", "Unknown")[:200],
+        "primary_category": vendor.get("industry", "Technology"),
+        "sector": vendor.get("industry", "Technology"),
+        "description": (vendor.get("description") or vendor.get("tagline") or "")[:500],
+        "company_url": website,
+        "tags": vendor.get("technologies", [])[:10],
+        "status": "discovered",
+        "layer": "vendor",
+        "extraction_confidence": 0.6,
+        "weight": 0.5,
+        "confidence": 0.6,
     }
     try:
         resp = httpx.post(f"{SUPABASE_URL}/rest/v1/vendors", headers=headers, json=row, timeout=10)
         if resp.status_code in (200, 201):
             print(f"  Saved: {vendor.get('name')}")
             return True
-        print(f"  [ERROR] Save failed: {resp.status_code}")
+        print(f"  [ERROR] Save failed: {resp.status_code} {resp.text[:200]}")
         return False
     except Exception as e:
         print(f"  [ERROR] {e}")
