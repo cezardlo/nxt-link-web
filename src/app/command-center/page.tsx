@@ -9,6 +9,7 @@ import IntelCard    from './components/IntelCard';
 import TrendPanel   from './components/TrendPanel';
 import LiveFeed     from './components/LiveFeed';
 import AlertToast   from './components/AlertToast';
+import DepartmentStrip from './components/DepartmentStrip';
 import { useSignals }   from './hooks/useSignals';
 import { useBriefing }  from './hooks/useBriefing';
 import { useWatchList } from './hooks/useWatchList';
@@ -150,6 +151,7 @@ export default function CommandCenterPage() {
         )}
       </div>
 
+      <DepartmentStrip />
       <LiveFeed rawItems={feedForLiveFeed} onItemClick={handleFeedItemClick} />
 
       <AlertToast
