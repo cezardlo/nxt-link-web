@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { COLORS } from '@/lib/tokens';
 import { CountryDrawer } from './CountryDrawer';
-import { IndustryGlobe } from './IndustryGlobe';
+import { IndustryMap } from './IndustryMap';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -166,9 +166,9 @@ export function CountriesSection({
         What the world is building in {industry.label}
       </p>
 
-      {/* ── Globe ──────────────────────────────────────────────────────── */}
+      {/* ── Map ──────────────────────────────────────────────────────── */}
       <div className="mb-8">
-        <IndustryGlobe
+        <IndustryMap
           countries={countries}
           accentColor={accentColor}
           industryCategory={industry.category}
@@ -184,12 +184,7 @@ export function CountriesSection({
           highlightedCodes={
             highlightedCodes.size > 0 ? Array.from(highlightedCodes) : []
           }
-          signals={signals.map(s => ({
-            title: String(s.title ?? ''),
-            industry: String(s.industry ?? s.type ?? ''),
-            importance: Number(s.importance ?? 0.5),
-            company: s.company ? String(s.company) : null,
-          }))}
+          signals={signals}
         />
       </div>
 
