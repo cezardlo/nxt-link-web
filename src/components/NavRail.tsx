@@ -7,19 +7,17 @@ import { useRouter } from 'next/navigation';
 const NAV_ITEMS = [
   { href: '/map',              label: 'MAP',     icon: '◎', color: '#00d4ff' },
   { href: '/industries',       label: 'EXPLORE', icon: '⬡', color: '#ffd700' },
-  { href: '/signals',          label: 'SIGNALS', icon: '◈', color: '#ffb800' },
-  { href: '/iker',             label: 'IKER',    icon: '◈', color: '#ffd700' },
-  { href: '/vendors',          label: 'VENDORS', icon: '◆', color: '#f97316' },
-  { href: '/opportunities',    label: 'OPPS',    icon: '△', color: '#00ff88' },
-  { href: '/command',          label: 'COMMAND', icon: '⬡', color: '#a855f7' },
-  // ── New intelligence tools ──
-  { href: '/ask',              label: 'ASK',     icon: '⬢', color: '#00d4ff' },
+  { href: '/intel',            label: 'INTEL',   icon: '◈', color: '#ffb800' },
+  { href: '/world',            label: 'WORLD',   icon: '◉', color: '#00d4ff' },
   { href: '/trajectory',       label: 'TRAJ',    icon: '↗', color: '#00ff88' },
-  { href: '/products/compare', label: 'COMPARE', icon: '⧉', color: '#a855f7' },
+  { href: '/vendors',          label: 'VENDORS', icon: '◆', color: '#f97316' },
   { href: '/products',         label: 'PRODS',   icon: '◫', color: '#00ff88' },
-  { href: '/rfp',              label: 'RFP',     icon: '🏛', color: '#ffd700' },
-  { href: '/report/defense',       label: 'REPORT', icon: '📄', color: '#f97316' },
-  { href: '/world',            label: 'WORLD',   icon: '🌐', color: '#00d4ff' },
+  { href: '/sweep',            label: 'SWEEP',   icon: '⊞', color: '#ff6600' },
+  { href: '/opportunities',    label: 'OPPS',    icon: '△', color: '#00ff88' },
+  { href: '/iker',             label: 'IKER',    icon: '◈', color: '#ffd700' },
+  { href: '/rfp',              label: 'RFP',     icon: '⬢', color: '#ffd700' },
+  { href: '/command-center',   label: 'OPS',     icon: '⬡', color: '#a855f7' },
+  { href: '/platform/status',  label: 'STATUS',  icon: '◇', color: '#6b7280' },
 ];
 
 const SHORTCUT_COUNT = 7;
@@ -109,7 +107,7 @@ export function NavRail() {
       <div className="mt-auto flex flex-col items-center gap-2">
         <div className="w-5 h-px bg-white/[0.06]" />
         <Link
-          href="/status"
+          href="/platform/status"
           className="w-10 h-10 flex flex-col items-center justify-center rounded-md transition-all group hover:bg-white/[0.04]"
           title="System Status"
         >
