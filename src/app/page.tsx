@@ -391,6 +391,26 @@ function HomeInner() {
                   <span className="text-[9px] tracking-[0.05em]">{ind.label}</span>
                 </Link>
               ))}
+              <Link
+                href="/sweep"
+                className="shrink-0 flex items-center gap-2 px-3 py-2 transition-all hover:translate-y-[-1px]"
+                style={{
+                  background: `${C.orange}15`,
+                  border: `1px solid ${C.orange}40`,
+                  borderRadius: '10px',
+                  textDecoration: 'none',
+                  color: C.orange,
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = `${C.orange}60`;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = `${C.orange}40`;
+                }}
+              >
+                <span className="text-[12px]">⊞</span>
+                <span className="text-[9px] tracking-[0.05em] font-bold">Sweep Radar</span>
+              </Link>
             </div>
           </div>
         </div>

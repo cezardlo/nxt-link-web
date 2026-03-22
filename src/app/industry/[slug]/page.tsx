@@ -523,6 +523,26 @@ export default function IndustryCommandCenter() {
         <div id="players" className="pt-12">
           <KeyPlayers vendors={apiData?.vendors ?? []} accentColor={accentColor} />
         </div>
+
+        {/* Sweep Radar link */}
+        <div className="pt-12 text-center">
+          <Link
+            href="/sweep"
+            className="inline-block px-8 py-4 rounded-xl transition-all hover:translate-y-[-2px]"
+            style={{
+              background: COLORS.card,
+              border: `1px solid ${COLORS.border}`,
+              textDecoration: 'none',
+            }}
+          >
+            <div className="font-mono text-[11px] tracking-[0.15em] font-bold" style={{ color: '#ff6600' }}>
+              ⊞ SWEEP RADAR
+            </div>
+            <div className="font-mono text-[9px] mt-1" style={{ color: `${COLORS.text}40` }}>
+              Discover companies across 40 cells
+            </div>
+          </Link>
+        </div>
       </main>
 
       {/* ── Bottom nav ───────────────────────────────────────────────────── */}
