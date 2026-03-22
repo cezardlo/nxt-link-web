@@ -64,3 +64,15 @@
 **Mapping**: restaurant/construction/cleaning → manufacturing, logistics/warehouse → logistics, border_tech → border-tech.
 
 **Why**: Users need one coherent loop: pick industry → describe problem → get recommendation → explore deeper intelligence → come back with more context.
+
+## 2026-03-22 — Sweep Radar
+
+**Decision**: Built a company discovery grid at /sweep — 10 logistics categories × 4 global regions (40 cells).
+
+**How**: Each cell triggers POST /api/sweep which searches Google News RSS per country, extracts company names via regex, detects signals (funding, acquisition, launch, expansion), and returns structured hits. Results persist in sessionStorage. No API keys required.
+
+**Categories**: TMS, WMS, Last-Mile, Fleet, Freight Brokerage, Cold Chain, Customs/Trade, Yard Mgmt, Visibility, Returns/Reverse
+
+**Regions**: Americas (6 countries), EMEA (7), APAC (6), Emerging (4) = 23 countries total
+
+**Future**: Persist to Supabase kg_companies table, add LLM enrichment via runParallelJsonEnsemble, connect to existing vendor-discovery and intel-discovery agents for deeper scans.

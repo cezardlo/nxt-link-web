@@ -25,6 +25,11 @@
 | Industry deep-dive | `/industry/[slug]` | WORKING — 10-section command center |
 | Industry solve | `/industry/[slug]/solve` | WORKING — per-industry problem solver |
 
+### Discovery
+| Page | Route | Status |
+|------|-------|--------|
+| Sweep Radar | `/sweep` | WORKING — 10 categories × 4 regions, Google News sweep |
+
 ### Reference Pages
 | Page | Route | Status |
 |------|-------|--------|
@@ -59,6 +64,7 @@
 - **nxt-brain scans**: Writes to intel_signals in Supabase → consumed by TODAY, Industry, WORLD pages
 
 ## Next Priorities
-1. Connect /signals page to real nxt-brain output (full signal browser)
-2. Add user preferences / personalization (saved industries, followed signals)
-3. Deploy and verify production data flow end-to-end
+1. Deploy and verify production data flow end-to-end
+2. Connect /signals page to real nxt-brain output (full signal browser)
+3. Add user preferences / personalization (saved industries, followed signals)
+4. Upgrade sweep to persist discoveries to Supabase (kg_companies table)
