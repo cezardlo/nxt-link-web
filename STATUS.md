@@ -4,7 +4,7 @@
 - **Production**: https://www.nxtlinktech.com (Vercel)
 - **Backend**: nxt-brain on Railway (Python/FastAPI, port 8000)
 
-## Route Map (31 pages)
+## Route Map (30 pages)
 
 ### Core Consumer Flow
 | Page | Route | Status |
@@ -67,7 +67,8 @@ MAP → EXPLORE → INTEL → WORLD → TRAJ → VENDORS → PRODS → SWEEP →
 ## Pruning History
 - Session 1 (2026-03-22): Deleted 14 routes (auth, command, dashboard, enter, innovation, marketplace, notes, ops, problems, product, radar, simulate, timeline, universe)
 - Session 2 (2026-03-22): Deleted 7 routes (signals→intel, solve→industry/solve, store→products, compare, companies, status→platform/status, ask)
-- Total: 21 routes deleted, 31 remain
+- Session 3 (2026-03-22): Deleted /industries (→/explore)
+- Total: 22 routes deleted, 30 remain
 
 ## Next Priorities
 1. Deploy and verify production data flow end-to-end
