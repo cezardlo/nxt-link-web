@@ -16,13 +16,6 @@ type CountryTechProfile = {
   lon: number;
 };
 
-type SignalItem = {
-  title: string;
-  industry: string;
-  importance: number;
-  company?: string | null;
-};
-
 interface IndustryMapProps {
   countries: CountryTechProfile[];
   accentColor: string;

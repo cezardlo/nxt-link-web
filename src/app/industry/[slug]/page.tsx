@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useParams } from 'next/navigation';
@@ -172,6 +173,7 @@ export default function IndustryCommandCenter() {
 
   // ── API data state ───────────────────────────────────────────────────────
   const [apiData, setApiData] = useState<IndustryApiData | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [mergedSignals, setMergedSignals] = useState<Record<string, any>[]>([]);
   const [, setProfile] = useState<IndustryProfile | null>(null);
   const [, setCountryActivity] = useState<CountryActivity | null>(null);
@@ -269,7 +271,7 @@ export default function IndustryCommandCenter() {
             const cats = SLUG_SIGNAL_CATEGORIES[slug] ?? [];
             const catsLower = cats.map((c: string) => c.toLowerCase());
             const keywords = catsLower.flatMap((c: string) => c.split(/[\s/]+/));
-            const filtered = intelSignals.filter((s: Record<string, unknown>) => {
+            const filtered = intelSignals.filter((s: Record<string, any>) => {
               const ind = String(s.industry ?? '').toLowerCase();
               const title = String(s.title ?? '').toLowerCase();
               // Match by industry field
@@ -282,7 +284,7 @@ export default function IndustryCommandCenter() {
             const signalsToUse = filtered.length >= 2 ? filtered : intelSignals;
 
             // Map intel-signals shape to LiveSignals shape
-            const mapped = signalsToUse.map((s: Record<string, unknown>, idx: number) => ({
+            const mapped = signalsToUse.map((s: Record<string, any>, idx: number) => ({
               id: String(s.url ?? `intel-${idx}-${Date.now()}`),
               title: String(s.title ?? ''),
               type: String(s.signal_type ?? 'intel'),
