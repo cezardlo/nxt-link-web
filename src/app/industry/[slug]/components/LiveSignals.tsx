@@ -13,7 +13,7 @@ interface LiveSignalsProps {
   accentColor: string;
 }
 
-type SignalType = 'ALL' | 'CONTRACTS' | 'PATENTS' | 'FUNDING' | 'POLICY' | 'RESEARCH';
+type SignalType = 'ALL' | 'P0' | 'P1' | 'CONTRACTS' | 'PATENTS' | 'FUNDING' | 'POLICY' | 'RESEARCH';
 
 const SIGNAL_TYPE_COLORS: Record<string, string> = {
   contracts: COLORS.green,
@@ -130,6 +130,15 @@ export function LiveSignals({ signals, accentColor }: LiveSignalsProps) {
 
   const filtered = useMemo(() => {
     if (filter === 'ALL') return allSignals;
+    // Tier filters
+    if (filter === 'P0') return allSignals.filter((s: SignalData) => {
+      const imp = typeof s.importance === 'number' ? (s.importance <= 1 ? s.importance * 5 : s.importance) : 3;
+      return imp >= 5;
+    });
+    if (filter === 'P1') return allSignals.filter((s: SignalData) => {
+      const imp = typeof s.importance === 'number' ? (s.importance <= 1 ? s.importance * 5 : s.importance) : 3;
+      return imp >= 4;
+    });
     return allSignals.filter((s: SignalData) => {
       const sType = (s.type ?? s.category ?? '').toUpperCase();
       return sType.includes(filter) || filter.startsWith(sType);
@@ -139,7 +148,7 @@ export function LiveSignals({ signals, accentColor }: LiveSignalsProps) {
   const visible = filtered.slice(0, visibleCount);
 
   const filterOptions: SignalType[] = [
-    'ALL', 'CONTRACTS', 'PATENTS', 'FUNDING', 'POLICY', 'RESEARCH',
+    'ALL', 'P0', 'P1', 'CONTRACTS', 'FUNDING', 'PATENTS', 'POLICY', 'RESEARCH',
   ];
 
   return (
@@ -228,22 +237,38 @@ export function LiveSignals({ signals, accentColor }: LiveSignalsProps) {
             const source = signal.source ?? '';
             const title = signal.title ?? signal.summary ?? '';
 
+            // Severity tier
+            const tier = importance >= 5 ? 'P0' : importance >= 4 ? 'P1' : importance >= 3 ? 'P2' : 'P3';
+            const tierColor = tier === 'P0' ? COLORS.red : tier === 'P1' ? COLORS.orange : tier === 'P2' ? COLORS.cyan : COLORS.dim;
+            const tierBg = tier === 'P0' ? `${COLORS.red}08` : tier === 'P1' ? `${COLORS.orange}05` : 'transparent';
+
             return (
               <div
                 key={signal.id ?? idx}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg font-mono transition-colors"
-                style={{ background: 'transparent' }}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg font-mono transition-colors${tier === 'P0' ? ' animate-pulse' : ''}`}
+                style={{
+                  background: tierBg,
+                  borderLeft: `2px solid ${tierColor}`,
+                }}
                 onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = `${COLORS.text}06`)
+                  (e.currentTarget.style.background = `${tierColor}12`)
                 }
                 onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = 'transparent')
+                  (e.currentTarget.style.background = tierBg)
                 }
               >
+                {/* Tier badge */}
+                <span
+                  className="text-[7px] font-bold shrink-0 w-5 text-center"
+                  style={{ color: tierColor }}
+                >
+                  {tier}
+                </span>
+
                 {/* Timestamp */}
                 <span
                   className="text-[8px] tabular-nums shrink-0"
-                  style={{ color: `${COLORS.text}26`, minWidth: 40 }}
+                  style={{ color: `${COLORS.text}26`, minWidth: 28 }}
                 >
                   {timestamp}
                 </span>
@@ -251,7 +276,7 @@ export function LiveSignals({ signals, accentColor }: LiveSignalsProps) {
                 {/* Title */}
                 <span
                   className="text-[10px] truncate flex-1 min-w-0"
-                  style={{ color: `${COLORS.text}99` }}
+                  style={{ color: tier === 'P0' ? `${COLORS.text}dd` : tier === 'P1' ? `${COLORS.text}bb` : `${COLORS.text}88` }}
                 >
                   {title}
                 </span>
