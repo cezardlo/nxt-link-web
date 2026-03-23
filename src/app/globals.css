@@ -4,6 +4,18 @@
 
 /* ─── NXT LINK Design System ─────────────────────────────────── */
 /* Inspired by Bloomberg Terminal + Palantir AIP + WorldMonitor   */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #232730; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3a3f4b; }
+
 :root {
   --bg:        #0d0f12;
   --surface:   #131519;

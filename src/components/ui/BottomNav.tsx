@@ -4,12 +4,11 @@ import { usePathname } from 'next/navigation';
 import { COLORS } from '@/lib/tokens';
 
 const TABS = [
-  { href: '/',            label: 'TODAY',       icon: '◉' },
-  { href: '/search',      label: 'SEARCH',      icon: '⌕' },
-  { href: '/explore',  label: 'INDUSTRIES',  icon: '⬡' },
-  { href: '/world',       label: 'WORLD',       icon: '◎' },
-  { href: '/trajectory',  label: 'TRAJECTORY',  icon: '◇' },
-  { href: '/marketplace', label: 'MARKET',      icon: '△' },
+  { href: '/',            label: 'TODAY',    icon: '◉' },
+  { href: '/explore',     label: 'EXPLORE',  icon: '⬡' },
+  { href: '/intel',       label: 'INTEL',    icon: '◈' },
+  { href: '/world',       label: 'WORLD',    icon: '◎' },
+  { href: '/sweep',       label: 'SWEEP',    icon: '⊞' },
 ];
 
 function isActive(pathname: string, href: string): boolean {
