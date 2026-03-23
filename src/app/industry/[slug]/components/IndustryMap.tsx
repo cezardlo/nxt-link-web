@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useState, useMemo, useCallback } from 'react';
+import { useRef, useEffect, useState, useMemo } from 'react';
 import { COLORS } from '@/lib/tokens';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
