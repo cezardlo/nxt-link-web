@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { PageTopBar } from '@/components/PageTopBar';
+import { EmptyState } from '@/components/ui';
 import { CONFERENCES } from '@/lib/data/conference-intel';
 import type { ConferenceRecord } from '@/lib/data/conference-intel';
 import { CONFERENCE_CATEGORY_HEX } from '@/lib/utils/design-tokens';
@@ -435,21 +436,10 @@ export default function ConferencesPage() {
           </div>
 
           {visible.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-28 gap-4">
-              <span className="font-mono text-[40px] text-white/15">◎</span>
-              <p className="font-mono text-[10px] text-white/30 tracking-[0.25em]">NO CONFERENCES MATCH FILTERS</p>
-              <button
-                onClick={() => {
-                  setActiveCategory('ALL');
-                  setActiveMonth('ALL');
-                  setSearch('');
-                  setCurrentPage(1);
-                }}
-                className="mt-2 font-mono text-[8px] tracking-[0.15em] text-white/30 hover:text-white/55 transition-colors border border-white/[0.08] hover:border-white/15 px-4 py-2"
-              >
-                CLEAR FILTERS
-              </button>
-            </div>
+            <EmptyState
+              title="No conferences found"
+              message="No conferences match your current filters. Try adjusting category, month, or search terms."
+            />
           ) : (
             <>
               {visible.map(conf => (

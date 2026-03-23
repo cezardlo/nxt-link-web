@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { PageTopBar } from '@/components/PageTopBar';
+import { EmptyState } from '@/components/ui';
 
 type IkerEntry = {
   id: string;
@@ -206,8 +207,13 @@ export default function IkerLeaderboardPage() {
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center font-mono text-[8px] text-white/20">
-                    NO ENTITIES FOUND
+                  <td colSpan={7}>
+                    <EmptyState
+                      title="No scoring data"
+                      message="No entities match your current filters. Try adjusting the category or search term."
+                      linkHref="/map"
+                      linkLabel="Back to map"
+                    />
                   </td>
                 </tr>
               )}

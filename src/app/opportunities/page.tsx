@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { PageTopBar } from '@/components/PageTopBar';
 import type { DiscoveredOpportunity } from '@/lib/engines/opportunity-engine';
+import { EmptyState } from '@/components/ui';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -370,8 +371,7 @@ export default function OpportunitiesPage() {
       </div>
 
       {/* AI-DISCOVERED OPPORTUNITIES */}
-      {(liveOpps.length > 0 || liveLoading) && (
-        <div className="max-w-6xl mx-auto px-6 py-6">
+      <div className="max-w-6xl mx-auto px-6 py-6">
           <div className="border border-[#00ff88]/20 rounded-sm p-5 bg-[#00ff88]/[0.02]">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -384,6 +384,13 @@ export default function OpportunitiesPage() {
               <div className="py-4 text-center">
                 <span className="font-mono text-[9px] text-white/20 animate-pulse">Scanning signals...</span>
               </div>
+            ) : liveOpps.length === 0 ? (
+              <EmptyState
+                title="No opportunities yet"
+                message="The AI scanner has not discovered new opportunities. Check back soon."
+                linkHref="/industries"
+                linkLabel="Explore industries"
+              />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {liveOpps.slice(0, 9).map((opp) => {
@@ -421,8 +428,7 @@ export default function OpportunitiesPage() {
               </div>
             )}
           </div>
-        </div>
-      )}
+      </div>
 
       {/* SIGNAL STRENGTH RADAR — horizontal bar chart */}
       <div className="max-w-6xl mx-auto px-6 py-6">

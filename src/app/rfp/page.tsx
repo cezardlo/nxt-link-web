@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { EL_PASO_VENDORS, type VendorRecord } from '@/lib/data/el-paso-vendors';
 import type { FederalContract, GrantResult } from '@/lib/engines/live-search-engine';
 import type { AskResponse } from '@/lib/engines/ask-engine';
+import { EmptyState } from '@/components/ui';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -435,9 +436,10 @@ export default function RFPPage() {
             <div className="border border-white/[0.06] rounded-sm bg-black p-5">
               <SectionHeader title="Contract Awards" count={contracts.length} />
               {contracts.length === 0 ? (
-                <p className="text-[10px] font-mono text-white/30 py-4">
-                  No contracts found. Try a broader query.
-                </p>
+                <EmptyState
+                  title="No contracts found"
+                  message="Try a broader query or adjust your filters to find matching procurement data."
+                />
               ) : (
                 <div className="overflow-x-auto scrollbar-thin">
                   <table className="w-full">
@@ -469,9 +471,10 @@ export default function RFPPage() {
             <div className="border border-white/[0.06] rounded-sm bg-black p-5">
               <SectionHeader title="Grant Opportunities" count={grants.length} />
               {grants.length === 0 ? (
-                <p className="text-[10px] font-mono text-white/30 py-4">
-                  No grants found for this query.
-                </p>
+                <EmptyState
+                  title="No grants found"
+                  message="No grant opportunities matched this query. Try different keywords."
+                />
               ) : (
                 <div className="overflow-x-auto scrollbar-thin">
                   <table className="w-full">
@@ -506,9 +509,10 @@ export default function RFPPage() {
                 count={vendorMatches.length}
               />
               {vendorMatches.length === 0 ? (
-                <p className="text-[10px] font-mono text-white/30 py-4">
-                  No local vendors matched this query.
-                </p>
+                <EmptyState
+                  title="No vendors matched"
+                  message="No local vendors matched this query. Try broadening your search terms."
+                />
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {vendorMatches.map((v) => (

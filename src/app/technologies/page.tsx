@@ -5,6 +5,7 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { TECHNOLOGY_CATALOG, type Technology, type TechCategory } from '@/lib/data/technology-catalog';
 import { PageTopBar } from '@/components/PageTopBar';
+import { EmptyState } from '@/components/ui';
 
 const CATEGORIES: TechCategory[] = [
   'AI/ML', 'Cybersecurity', 'Defense', 'Border Tech',
@@ -196,19 +197,10 @@ export default function TechnologiesPage() {
 
           {/* Empty state */}
           {filtered.length === 0 && (
-            <div className="py-16 text-center">
-              <svg className="w-8 h-8 mx-auto mb-4 text-white/10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-              </svg>
-              <p className="font-mono text-[11px] text-white/30 tracking-wide mb-4">No technologies match your filters</p>
-              <button
-                onClick={() => { setSearch(''); setActiveCategory('ALL'); setActiveMaturity(null); }}
-                className="font-mono text-[10px] tracking-widest text-white/30 hover:text-[#00d4ff]/70
-                           border border-white/[0.08] hover:border-[#00d4ff]/30 px-4 py-2 transition-all uppercase rounded-sm"
-              >
-                Clear Filters
-              </button>
-            </div>
+            <EmptyState
+              title="No technologies found"
+              message="No technologies match your current filters. Try adjusting your search or clearing filters."
+            />
           )}
 
           {/* Card grid */}

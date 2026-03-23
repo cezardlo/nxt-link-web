@@ -323,20 +323,26 @@ body {
 /* ─── Design System Polish ─────────────────────────────────── */
 
 /* Selection color — cyan accent */
-::selection { background: rgba(0, 212, 255, 0.2); color: inherit; }
+::selection {
+  background: rgba(0, 212, 255, 0.25);
+  color: #f0f0f0;
+}
 
 /* Smooth page-level scroll */
 html { scroll-behavior: smooth; }
 
 /* Focus ring — accessible, matches design */
-*:focus-visible {
-  outline: 2px solid rgba(0, 212, 255, 0.5);
+button:focus-visible, a:focus-visible {
+  outline: 2px solid #00d4ff;
   outline-offset: 2px;
   border-radius: 4px;
 }
 
 /* Links — no underline by default */
 a { text-decoration: none; color: inherit; }
+
+/* Global interactive improvements */
+a:not([class]):hover { opacity: 0.8; }
 
 /* Remove button defaults */
 button { background: none; border: none; font: inherit; cursor: pointer; }
