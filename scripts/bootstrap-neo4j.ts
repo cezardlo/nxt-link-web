@@ -7,29 +7,46 @@
 //   Supabase configured with signal data
 //   (Optional) Qdrant for vector similarity connections
 
-import 'dotenv/config';
+import { config } from 'dotenv';
+config({ path: '.env.local' });
+config(); // also load .env as fallback
 
 const NEO4J_URI = process.env.NEO4J_URI;
 const NEO4J_USER = process.env.NEO4J_USER ?? 'neo4j';
 const NEO4J_PASSWORD = process.env.NEO4J_PASSWORD;
+const NEO4J_DATABASE = process.env.NEO4J_DATABASE ?? NEO4J_USER;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+function getHttpBase(): string {
+  if (!NEO4J_URI) return '';
+  return NEO4J_URI.replace('neo4j+s://', 'https://').replace('neo4j://', 'http://');
+}
+
 async function neo4jQuery(cypher: string, params: Record<string, unknown> = {}) {
   if (!NEO4J_URI || !NEO4J_PASSWORD) throw new Error('Neo4j not configured');
-  const res = await fetch(`${NEO4J_URI}/db/neo4j/tx/commit`, {
+  const httpBase = getHttpBase();
+  const res = await fetch(`${httpBase}/db/${NEO4J_DATABASE}/query/v2`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Basic ${Buffer.from(`${NEO4J_USER}:${NEO4J_PASSWORD}`).toString('base64')}`,
     },
-    body: JSON.stringify({ statements: [{ statement: cypher, parameters: params }] }),
+    body: JSON.stringify({ statement: cypher, parameters: params }),
   });
   const data = await res.json();
   if (data.errors?.length) {
-    throw new Error(data.errors[0].message);
+    throw new Error(JSON.stringify(data.errors[0]));
   }
-  return data.results?.[0]?.data ?? [];
+  // Query API v2 returns { data: { fields: [...], values: [[...], ...] } }
+  const fields = data.data?.fields as string[] | undefined;
+  const values = data.data?.values as unknown[][] | undefined;
+  if (!fields || !values) return [];
+  return values.map(row => {
+    const obj: Record<string, unknown> = {};
+    fields.forEach((f, i) => { obj[f] = row[i]; });
+    return { row: Object.values(obj) };
+  });
 }
 
 async function main() {

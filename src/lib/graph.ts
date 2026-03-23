@@ -9,6 +9,16 @@ const NEO4J_URI = process.env.NEO4J_URI;
 const NEO4J_USER = process.env.NEO4J_USER ?? 'neo4j';
 const NEO4J_PASSWORD = process.env.NEO4J_PASSWORD;
 
+// Neo4j Aura uses the Query API v2. The database name defaults to the user ID.
+const NEO4J_DATABASE = process.env.NEO4J_DATABASE ?? NEO4J_USER;
+
+/** Derive the HTTPS base URL from the bolt URI */
+function getHttpBase(): string {
+  if (!NEO4J_URI) return '';
+  // neo4j+s://xxx.databases.neo4j.io → https://xxx.databases.neo4j.io
+  return NEO4J_URI.replace('neo4j+s://', 'https://').replace('neo4j://', 'http://');
+}
+
 export type GraphNode = {
   id: string;
   label: string;  // Signal, Company, Technology, Industry, Geography
@@ -49,15 +59,17 @@ export async function graphQuery(
   }
 
   try {
-    // Use Neo4j HTTP API (no driver dependency required)
-    const res = await fetch(`${NEO4J_URI}/db/neo4j/tx/commit`, {
+    // Use Neo4j Aura Query API v2 (works on free tier)
+    const httpBase = getHttpBase();
+    const res = await fetch(`${httpBase}/db/${NEO4J_DATABASE}/query/v2`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Basic ${Buffer.from(`${NEO4J_USER}:${NEO4J_PASSWORD}`).toString('base64')}`,
       },
       body: JSON.stringify({
-        statements: [{ statement: cypher, parameters: params }],
+        statement: cypher,
+        parameters: params,
       }),
     });
 
@@ -67,13 +79,13 @@ export async function graphQuery(
     }
 
     const data = await res.json();
-    const result = data.results?.[0];
-    if (!result?.data?.length) return [];
+    const fields = data.data?.fields as string[] | undefined;
+    const values = data.data?.values as unknown[][] | undefined;
+    if (!fields?.length || !values?.length) return [];
 
-    const columns = result.columns as string[];
-    return result.data.map((row: { row: unknown[] }) => {
+    return values.map((row: unknown[]) => {
       const obj: Record<string, unknown> = {};
-      columns.forEach((col, i) => { obj[col] = row.row[i]; });
+      fields.forEach((col, i) => { obj[col] = row[i]; });
       return obj;
     });
   } catch (err) {
