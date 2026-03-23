@@ -396,9 +396,17 @@ export default function DossierDetailPage() {
 
       {/* ── Loading state ── */}
       {loading && (
-        <div className="py-16 text-center font-mono text-[10px] tracking-[0.2em]" style={{ color: COLORS.dim }}>
-          <div className="mb-4 text-[12px]" style={{ color: COLORS.accent }}>◌</div>
-          LOADING DOSSIER...
+        <div className="max-w-[680px] mx-auto px-6 pt-8 space-y-4 animate-fade-in">
+          <div className="h-3 w-28 rounded animate-pulse" style={{ background: COLORS.card }} />
+          <div className="h-8 w-48 rounded-lg animate-pulse" style={{ background: COLORS.card }} />
+          <div className="h-4 w-64 rounded animate-pulse" style={{ background: COLORS.card }} />
+          <div className="h-24 rounded-[22px] animate-pulse mt-6" style={{ background: COLORS.card }} />
+          <div className="h-24 rounded-[22px] animate-pulse" style={{ background: COLORS.card }} />
+          <div className="space-y-3 mt-6">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="h-16 rounded-[20px] animate-pulse" style={{ background: COLORS.card }} />
+            ))}
+          </div>
         </div>
       )}
 

@@ -287,9 +287,9 @@ export default function VendorPage() {
             {/* ── Company Hero ──────────────────────────────────────── */}
             {loading ? (
               <div className="mb-5 space-y-3">
-                <div className="h-7 w-48 rounded-lg" style={{ background: `${COLORS.text}08` }} />
-                <div className="h-4 w-24 rounded-full" style={{ background: `${COLORS.text}06` }} />
-                <div className="h-4 w-72 rounded-lg" style={{ background: `${COLORS.text}05` }} />
+                <div className="h-7 w-48 rounded-lg animate-pulse" style={{ background: `${COLORS.text}08` }} />
+                <div className="h-4 w-24 rounded-full animate-pulse" style={{ background: `${COLORS.text}06` }} />
+                <div className="h-4 w-72 rounded-lg animate-pulse" style={{ background: `${COLORS.text}05` }} />
               </div>
             ) : (
               <div className="mb-5">
@@ -615,9 +615,9 @@ export default function VendorPage() {
                     className="p-5 space-y-3"
                     style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 20 }}
                   >
-                    <div className="h-3 w-24 rounded-lg" style={{ background: `${COLORS.text}08` }} />
-                    <div className="h-3 w-full rounded-lg" style={{ background: `${COLORS.text}05` }} />
-                    <div className="h-3 w-3/4 rounded-lg" style={{ background: `${COLORS.text}05` }} />
+                    <div className="h-3 w-24 rounded-lg animate-pulse" style={{ background: `${COLORS.text}08` }} />
+                    <div className="h-3 w-full rounded-lg animate-pulse" style={{ background: `${COLORS.text}05` }} />
+                    <div className="h-3 w-3/4 rounded-lg animate-pulse" style={{ background: `${COLORS.text}05` }} />
                   </div>
                 ))}
               </div>
