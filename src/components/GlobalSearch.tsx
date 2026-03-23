@@ -15,15 +15,10 @@ type SearchResult = {
 
 const PAGES: SearchResult[] = [
   { label: 'Industries', href: '/explore', type: 'page', color: '#00d4ff' },
-  { label: 'Companies', href: '/companies', type: 'page', color: '#00ff88' },
   { label: 'Products', href: '/products', type: 'page', color: '#a855f7' },
-  { label: 'Problems', href: '/problems', type: 'page', color: '#f97316' },
   { label: 'Technologies', href: '/technologies', type: 'page', color: '#00d4ff' },
-  { label: 'Radar', href: '/radar', type: 'page', color: '#ffb800' },
-  { label: 'Timeline', href: '/timeline', type: 'page', color: '#00d4ff' },
   { label: 'Map', href: '/map', type: 'page', color: '#00d4ff' },
   { label: 'Opportunities', href: '/opportunities', type: 'page', color: '#00ff88' },
-  { label: 'Signals', href: '/signals', type: 'page', color: '#f97316' },
 ];
 
 function buildIndex(): SearchResult[] {
@@ -121,7 +116,7 @@ export function GlobalSearch() {
       >
         {/* Input */}
         <div className="flex items-center border-b border-white/[0.06] px-4">
-          <svg className="w-4 h-4 text-white/20 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <svg className="w-4 h-4 text-white/20 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-label="Search">
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
           </svg>
           <input

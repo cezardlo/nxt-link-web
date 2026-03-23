@@ -1,6 +1,7 @@
 import { PageTopBar } from '@/components/PageTopBar';
 import { SystemDashboard } from '@/components/SystemDashboard';
 import AgentControlRoom from '@/components/AgentControlRoom';
+import { BottomNav } from '@/components/ui';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,7 @@ export default function PlatformStatusPage() {
           <AgentControlRoom />
         </div>
       </main>
+      <BottomNav />
     </div>
   );
 }

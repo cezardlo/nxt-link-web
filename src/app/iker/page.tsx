@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { PageTopBar } from '@/components/PageTopBar';
-import { EmptyState } from '@/components/ui';
+import { EmptyState, BottomNav } from '@/components/ui';
 import { COLORS } from '@/lib/tokens';
 
 type IkerEntry = {
@@ -88,8 +88,11 @@ export default function IkerLeaderboardPage() {
       {/* Header */}
       <div className="px-6 py-4 border-b border-white/[0.06] shrink-0">
         <h1 className="font-mono text-[10px] tracking-[0.3em] mb-1" style={{ color: COLORS.gold }}>IKER INTELLIGENCE SCORE LEADERBOARD</h1>
+        <p className="font-mono text-[7px] tracking-[0.15em] mb-1" style={{ color: `${COLORS.gold}80` }}>
+          Intelligence &middot; Knowledge &middot; Evidence &middot; Reliability
+        </p>
         <p className="font-mono text-[8px] text-white/30 tracking-wide">
-          Intelligence · Knowledge · Evidence · Reliability — updated every 6h by the learning agent
+          Updated every 6h by the learning agent
         </p>
 
         {/* Filters */}
@@ -222,6 +225,7 @@ export default function IkerLeaderboardPage() {
           </table>
         )}
       </div>
+      <BottomNav />
     </div>
   );
 }

@@ -9,14 +9,14 @@ const NAV_ITEMS = [
   { href: '/explore',       label: 'EXPLORE', icon: '⬡', color: '#ffd700' },
   { href: '/intel',            label: 'INTEL',   icon: '◈', color: '#ffb800' },
   { href: '/world',            label: 'WORLD',   icon: '◉', color: '#00d4ff' },
-  { href: '/trajectory',       label: 'TRAJ',    icon: '↗', color: '#00ff88' },
+  { href: '/trajectory',       label: 'TRENDS',    icon: '↗', color: '#00ff88' },
   { href: '/vendors',          label: 'VENDORS', icon: '◆', color: '#f97316' },
-  { href: '/products',         label: 'PRODS',   icon: '◫', color: '#00ff88' },
+  { href: '/products',         label: 'PRODUCTS',   icon: '◫', color: '#00ff88' },
   { href: '/sweep',            label: 'SWEEP',   icon: '⊞', color: '#ff6600' },
   { href: '/opportunities',    label: 'OPPS',    icon: '△', color: '#00ff88' },
   { href: '/iker',             label: 'IKER',    icon: '◈', color: '#ffd700' },
   { href: '/rfp',              label: 'RFP',     icon: '⬢', color: '#ffd700' },
-  { href: '/command-center',   label: 'OPS',     icon: '⬡', color: '#a855f7' },
+  { href: '/command-center',   label: 'DASHBOARD',     icon: '⬡', color: '#a855f7' },
   { href: '/platform/status',  label: 'STATUS',  icon: '◇', color: '#6b7280' },
 ];
 
@@ -46,6 +46,7 @@ export function NavRail() {
         href="/"
         className="mb-4 flex items-center justify-center w-8 h-8 rounded-full border border-[#00d4ff]/20 hover:border-[#00d4ff]/50 transition-all duration-300 group"
         title="NXT//LINK"
+        aria-label="Home"
       >
         <span
           className="font-mono text-[11px] font-bold text-[#00d4ff]/60 group-hover:text-[#00d4ff] transition-colors"
@@ -71,6 +72,7 @@ export function NavRail() {
               backgroundColor: isActive ? `${item.color}10` : undefined,
             }}
             title={`${item.label}${shortcutLabel}`}
+            aria-label={item.label}
           >
             {/* Active indicator */}
             {isActive && (
@@ -110,6 +112,7 @@ export function NavRail() {
           href="/platform/status"
           className="w-10 h-10 flex flex-col items-center justify-center rounded-md transition-all group hover:bg-white/[0.04]"
           title="System Status"
+          aria-label="System Status"
         >
           <div className="relative">
             <div

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { BottomNav } from '@/components/ui';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -556,6 +557,7 @@ export default function ReportPage() {
           </div>
         </div>
       </div>
+      <BottomNav />
     </div>
   );
 }

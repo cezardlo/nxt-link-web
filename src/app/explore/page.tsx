@@ -109,7 +109,7 @@ function buildDrillCards(topic: string, industry: string | undefined): DrillCard
   const slug = toSlug(ind);
   return [
     { id: 'vendors', label: `Who is doing this in El Paso`, description: `El Paso vendors active in ${indDisplay}. Ranked by trust score.`, href: `/dossier/${slug}` },
-    { id: 'tech', label: `What technology exists`, description: `Products and tools available right now for ${indDisplay}.`, href: `/store?q=${encodeURIComponent(ind)}` },
+    { id: 'tech', label: `What technology exists`, description: `Products and tools available right now for ${indDisplay}.`, href: `/products?q=${encodeURIComponent(ind)}` },
     { id: 'trends', label: `Where this is heading`, description: `30-day and 90-day outlook for ${indDisplay} in Texas.`, href: `/intel` },
   ];
 }

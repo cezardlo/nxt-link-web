@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import { EL_PASO_VENDORS, type VendorRecord } from '@/lib/data/el-paso-vendors';
 import type { FederalContract, GrantResult } from '@/lib/engines/live-search-engine';
 import type { AskResponse } from '@/lib/engines/ask-engine';
-import { EmptyState } from '@/components/ui';
+import { EmptyState, BottomNav } from '@/components/ui';
 import { COLORS } from '@/lib/tokens';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -608,6 +608,7 @@ export default function RFPPage() {
           </div>
         )}
       </div>
+      <BottomNav />
     </div>
   );
 }

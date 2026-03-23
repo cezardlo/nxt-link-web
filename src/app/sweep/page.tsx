@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { COLORS } from '@/lib/tokens';
+import { BottomNav } from '@/components/ui';
 
 // ─── Grid Data ──────────────────────────────────────────────────────────────
 
@@ -555,6 +556,7 @@ export default function SweepRadar() {
           100% { transform: translateX(100%); }
         }
       `}</style>
+      <BottomNav />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PRODUCT_CATALOG, type Product } from '@/lib/data/product-catalog';
+import { BottomNav } from '@/components/ui';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -669,6 +670,7 @@ function ProductCompareInner() {
           </div>
         )}
       </div>
+      <BottomNav />
     </div>
   );
 }

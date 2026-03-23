@@ -94,7 +94,7 @@ export default function EntityProfilePage() {
     <div className="fixed inset-0 bg-black flex flex-col overflow-hidden" style={{ fontFamily: 'var(--font-ibm-plex-mono)' }}>
       <PageTopBar
         backHref="/iker"
-        backLabel="IKER"
+        backLabel="LEADERBOARD"
         breadcrumbs={[{ label: 'ENTITY', href: '/iker' }, { label: entity?.name ?? id.toUpperCase() }]}
         showLiveDot
       />
