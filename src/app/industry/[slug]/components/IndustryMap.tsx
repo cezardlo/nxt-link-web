@@ -307,12 +307,13 @@ export function IndustryMap({
         width="100%"
         viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
         style={{
-          background: COLORS.bg,
+          background: `linear-gradient(180deg, #080a10 0%, ${COLORS.bg} 40%, #080a10 100%)`,
           borderRadius: 16,
-          border: `1px solid ${COLORS.border}`,
+          border: `1px solid ${accentColor}12`,
+          boxShadow: `inset 0 0 60px ${accentColor}04, 0 0 30px ${COLORS.bg}`,
           cursor: dragging ? 'grabbing' : 'grab',
           aspectRatio: '2 / 1',
-          maxHeight: 400,
+          maxHeight: 420,
           userSelect: 'none',
         }}
         onWheel={handleWheel}
@@ -322,63 +323,122 @@ export function IndustryMap({
       >
         <defs>
           <filter id="map-glow">
-            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feGaussianBlur stdDeviation="4" result="blur" />
             <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
           <filter id="arc-glow-map">
-            <feGaussianBlur stdDeviation="2" result="blur" />
+            <feGaussianBlur stdDeviation="3" result="blur" />
             <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
+          <filter id="land-shadow">
+            <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor={accentColor} floodOpacity="0.06" />
+          </filter>
+          {/* Vignette gradient */}
+          <radialGradient id="map-vignette" cx="50%" cy="50%">
+            <stop offset="0%" stopColor="transparent" />
+            <stop offset="70%" stopColor="transparent" />
+            <stop offset="100%" stopColor="#0d0f12" stopOpacity="0.7" />
+          </radialGradient>
+          {/* Ambient light gradient on land */}
+          <linearGradient id="land-ambient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={accentColor} stopOpacity="0.04" />
+            <stop offset="50%" stopColor={`${COLORS.text}`} stopOpacity="0.06" />
+            <stop offset="100%" stopColor={accentColor} stopOpacity="0.02" />
+          </linearGradient>
         </defs>
 
-        {/* ── Grid lines ──────────────────────────────────────────────── */}
-        {[-60, -30, 0, 30, 60].map(lat => (
+        {/* ── Ocean texture — subtle grid ───────────────────────────────── */}
+        {Array.from({ length: 13 }, (_, i) => -90 + i * 15).map(lat => (
           <line
             key={`lat${lat}`}
             x1={0} y1={mercatorY(lat, H)}
             x2={W} y2={mercatorY(lat, H)}
-            stroke={`${COLORS.text}06`} strokeWidth={0.5}
+            stroke={`${COLORS.text}04`} strokeWidth={0.4}
+            pointerEvents="none"
           />
         ))}
-        {[-120, -60, 0, 60, 120].map(lon => (
+        {Array.from({ length: 25 }, (_, i) => -180 + i * 15).map(lon => (
           <line
             key={`lon${lon}`}
             x1={mercatorX(lon, W)} y1={0}
             x2={mercatorX(lon, W)} y2={H}
-            stroke={`${COLORS.text}06`} strokeWidth={0.5}
+            stroke={`${COLORS.text}04`} strokeWidth={0.4}
+            pointerEvents="none"
           />
         ))}
+        {/* Equator + prime meridian — slightly brighter */}
+        <line x1={0} y1={mercatorY(0, H)} x2={W} y2={mercatorY(0, H)} stroke={`${COLORS.text}08`} strokeWidth={0.6} pointerEvents="none" />
+        <line x1={mercatorX(0, W)} y1={0} x2={mercatorX(0, W)} y2={H} stroke={`${COLORS.text}08`} strokeWidth={0.6} pointerEvents="none" />
 
-        {/* ── Continent outlines ──────────────────────────────────────── */}
+        {/* ── Continent fills ──────────────────────────────────────────── */}
         {continentPaths.map((d, i) => (
           <path
-            key={`continent-${i}`}
+            key={`continent-fill-${i}`}
             d={d}
-            fill={`${COLORS.text}08`}
-            stroke={`${COLORS.text}15`}
-            strokeWidth={0.5}
+            fill="url(#land-ambient)"
+            stroke="none"
+            pointerEvents="none"
+            filter="url(#land-shadow)"
+          />
+        ))}
+        {/* Continent borders — accent-tinted */}
+        {continentPaths.map((d, i) => (
+          <path
+            key={`continent-border-${i}`}
+            d={d}
+            fill="none"
+            stroke={`${accentColor}18`}
+            strokeWidth={0.8}
+            strokeLinejoin="round"
+            pointerEvents="none"
+          />
+        ))}
+        {/* Continent inner glow */}
+        {continentPaths.map((d, i) => (
+          <path
+            key={`continent-glow-${i}`}
+            d={d}
+            fill="none"
+            stroke={`${COLORS.text}06`}
+            strokeWidth={2}
             strokeLinejoin="round"
             pointerEvents="none"
           />
         ))}
 
+        {/* ── Vignette overlay ──────────────────────────────────────────── */}
+        <rect x={0} y={0} width={W} height={H} fill="url(#map-vignette)" pointerEvents="none" />
+
         {/* ── Connection arcs ─────────────────────────────────────────── */}
         {arcs.map((arc, i) => {
           const mx = (arc.x1 + arc.x2) / 2;
-          const my = (arc.y1 + arc.y2) / 2 - 20 - arc.strength * 5;
+          const my = (arc.y1 + arc.y2) / 2 - 25 - arc.strength * 8;
           return (
             <g key={`arc-${i}`} pointerEvents="none">
+              {/* Wide glow underneath */}
               <path
                 d={`M ${arc.x1},${arc.y1} Q ${mx},${my} ${arc.x2},${arc.y2}`}
                 fill="none"
                 stroke={accentColor}
-                strokeWidth={0.4 + arc.strength * 0.3}
-                strokeOpacity={0.15}
-                strokeDasharray="4,6"
+                strokeWidth={2 + arc.strength * 0.8}
+                strokeOpacity={0.06}
                 filter="url(#arc-glow-map)"
+              />
+              {/* Main arc */}
+              <path
+                d={`M ${arc.x1},${arc.y1} Q ${mx},${my} ${arc.x2},${arc.y2}`}
+                fill="none"
+                stroke={accentColor}
+                strokeWidth={0.6 + arc.strength * 0.3}
+                strokeOpacity={0.25}
+                strokeDasharray="5,7"
+                strokeLinecap="round"
               >
-                <animate attributeName="stroke-dashoffset" from="0" to="-20" dur={`${3 + i * 0.5}s`} repeatCount="indefinite" />
+                <animate attributeName="stroke-dashoffset" from="0" to="-24" dur={`${2.5 + i * 0.3}s`} repeatCount="indefinite" />
               </path>
+              {/* Bright endpoints */}
+              <circle cx={arc.x1} cy={arc.y1} r={1.5} fill={accentColor} opacity={0.2} />
+              <circle cx={arc.x2} cy={arc.y2} r={1.5} fill={accentColor} opacity={0.2} />
             </g>
           );
         })}
@@ -412,28 +472,43 @@ export function IndustryMap({
               {/* Invisible larger hit area */}
               <circle cx={c.x} cy={c.y} r={Math.max(r * 2, 8)} fill="transparent" />
 
-              {/* Glow */}
+              {/* Large ambient glow */}
               {c.isRelevant && (
-                <circle cx={c.x} cy={c.y} r={r * 2.5} fill={c.color} opacity={0.06} filter="url(#map-glow)" pointerEvents="none" />
+                <circle cx={c.x} cy={c.y} r={r * 3.5} fill={c.color} opacity={isSelected ? 0.1 : isHovered ? 0.08 : 0.04} filter="url(#map-glow)" pointerEvents="none" />
               )}
 
-              {/* Pulse for selected */}
+              {/* Pulse rings for selected */}
               {isSelected && (
-                <circle cx={c.x} cy={c.y} r={r + 4} fill="none" stroke={accentColor} strokeWidth={1} pointerEvents="none">
-                  <animate attributeName="r" from={r} to={r + 12} dur="2s" repeatCount="indefinite" />
-                  <animate attributeName="opacity" from="0.5" to="0" dur="2s" repeatCount="indefinite" />
-                </circle>
+                <>
+                  <circle cx={c.x} cy={c.y} r={r + 4} fill="none" stroke={accentColor} strokeWidth={1} pointerEvents="none">
+                    <animate attributeName="r" from={r} to={r + 16} dur="2.5s" repeatCount="indefinite" />
+                    <animate attributeName="opacity" from="0.5" to="0" dur="2.5s" repeatCount="indefinite" />
+                  </circle>
+                  <circle cx={c.x} cy={c.y} r={r + 2} fill="none" stroke={accentColor} strokeWidth={0.6} pointerEvents="none">
+                    <animate attributeName="r" from={r} to={r + 12} dur="2.5s" begin="0.5s" repeatCount="indefinite" />
+                    <animate attributeName="opacity" from="0.3" to="0" dur="2.5s" begin="0.5s" repeatCount="indefinite" />
+                  </circle>
+                </>
               )}
 
-              {/* Dot */}
+              {/* Outer ring for relevant countries */}
+              {c.isRelevant && !isSelected && (
+                <circle cx={c.x} cy={c.y} r={r + 2} fill="none" stroke={c.color} strokeWidth={0.5} opacity={isHovered ? 0.5 : 0.2} pointerEvents="none" />
+              )}
+
+              {/* Core dot */}
               <circle
                 cx={c.x} cy={c.y} r={r}
-                fill={c.isRelevant ? c.color : `${COLORS.text}25`}
+                fill={c.isRelevant ? c.color : `${COLORS.text}20`}
                 opacity={opacity}
-                stroke={isSelected ? accentColor : isHovered ? `${c.color}88` : 'none'}
-                strokeWidth={isSelected ? 1.5 : isHovered ? 1 : 0}
+                stroke={isSelected ? accentColor : isHovered ? `${c.color}99` : 'none'}
+                strokeWidth={isSelected ? 2 : isHovered ? 1 : 0}
                 pointerEvents="none"
               />
+              {/* Inner bright center */}
+              {c.isRelevant && (
+                <circle cx={c.x} cy={c.y} r={r * 0.4} fill="#fff" opacity={isSelected ? 0.5 : isHovered ? 0.35 : 0.15} pointerEvents="none" />
+              )}
 
               {/* Label — top 5 always visible, others on hover/select */}
               {(isSelected || isHovered || (isTop && c.isRelevant && zoomLevel < 2)) && (
@@ -527,35 +602,46 @@ export function IndustryMap({
       </svg>
 
       {/* ── Controls ──────────────────────────────────────────────────── */}
-      <div className="absolute top-3 right-3 flex flex-col gap-1">
+      <div className="absolute top-3 right-3 flex flex-col gap-1" style={{ zIndex: 10 }}>
         <button
           onClick={() => setViewBox(prev => {
-            const f = 0.8;
+            const f = 0.75;
             const newW = Math.max(200, prev.w * f);
             const newH = Math.max(100, prev.h * f);
             return { x: prev.x + (prev.w - newW) / 2, y: prev.y + (prev.h - newH) / 2, w: newW, h: newH };
           })}
-          className="w-7 h-7 rounded-md flex items-center justify-center text-[14px] font-bold cursor-pointer"
-          style={{ background: `${COLORS.card}ee`, border: `1px solid ${COLORS.border}`, color: `${COLORS.text}66` }}
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-[14px] font-bold cursor-pointer transition-all"
+          style={{ background: `${COLORS.card}dd`, border: `1px solid ${accentColor}20`, color: `${COLORS.text}88`, backdropFilter: 'blur(8px)' }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = `${accentColor}50`; e.currentTarget.style.color = accentColor; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = `${accentColor}20`; e.currentTarget.style.color = `${COLORS.text}88`; }}
         >+</button>
         <button
           onClick={() => setViewBox(prev => {
-            const f = 1.25;
+            const f = 1.35;
             const newW = Math.min(W, prev.w * f);
             const newH = Math.min(H, prev.h * f);
             return { x: Math.max(0, prev.x - (newW - prev.w) / 2), y: Math.max(0, prev.y - (newH - prev.h) / 2), w: newW, h: newH };
           })}
-          className="w-7 h-7 rounded-md flex items-center justify-center text-[14px] font-bold cursor-pointer"
-          style={{ background: `${COLORS.card}ee`, border: `1px solid ${COLORS.border}`, color: `${COLORS.text}66` }}
-        >−</button>
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-[14px] font-bold cursor-pointer transition-all"
+          style={{ background: `${COLORS.card}dd`, border: `1px solid ${accentColor}20`, color: `${COLORS.text}88`, backdropFilter: 'blur(8px)' }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = `${accentColor}50`; e.currentTarget.style.color = accentColor; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = `${accentColor}20`; e.currentTarget.style.color = `${COLORS.text}88`; }}
+        >-</button>
         {zoomLevel > 1.1 && (
           <button
             onClick={resetZoom}
-            className="w-7 h-7 rounded-md flex items-center justify-center text-[7px] cursor-pointer"
-            style={{ background: `${COLORS.card}ee`, border: `1px solid ${COLORS.border}`, color: `${COLORS.text}40` }}
-          >1x</button>
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-[8px] tracking-wider cursor-pointer transition-all"
+            style={{ background: `${COLORS.card}dd`, border: `1px solid ${accentColor}20`, color: `${COLORS.text}55`, backdropFilter: 'blur(8px)' }}
+          >1:1</button>
         )}
       </div>
+
+      {/* ── Zoom indicator ──────────────────────────────────────────── */}
+      {zoomLevel > 1.1 && (
+        <div className="absolute top-3 left-3 font-mono text-[8px] px-2 py-1 rounded-md" style={{ background: `${COLORS.card}cc`, border: `1px solid ${accentColor}15`, color: `${accentColor}88`, backdropFilter: 'blur(8px)' }}>
+          {zoomLevel.toFixed(1)}x
+        </div>
+      )}
 
       {/* ── Legend ─────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-4 mt-2 font-mono text-[7px] tracking-[0.1em]" style={{ color: `${COLORS.text}45` }}>
