@@ -102,8 +102,9 @@ export function CountriesSection({
   accentColor,
   highlightedTechIds = [],
   onCountrySelect,
-  signals = [],
+  signals: _signals = [],
 }: CountriesSectionProps) {
+  void _signals; // consumed by globe markers, kept for future use
   const [showAll, setShowAll] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<CountryTechProfile | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
