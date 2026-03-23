@@ -263,7 +263,7 @@ export default function ExplorePage() {
       </div>
 
       {/* Content */}
-      <div className="px-5 sm:px-8 pt-6">
+      <div className="px-5 sm:px-8 pt-6 animate-fade-up">
         {!selected ? (
           <>
             {/* Header */}

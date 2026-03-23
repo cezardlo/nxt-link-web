@@ -45,8 +45,16 @@ const config: Config = {
           '100%': { transform: 'translateX(200%)' },
         },
         'fade-up': {
-          from: { opacity: '0', transform: 'translateY(8px)' },
-          to: { opacity: '1', transform: 'translateY(0)' },
+          '0%': { opacity: '0', transform: 'translateY(12px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        'slide-in': {
+          '0%': { opacity: '0', transform: 'translateX(-12px)' },
+          '100%': { opacity: '1', transform: 'translateX(0)' },
         },
         'slide-up': {
           from: { opacity: '0', transform: 'translateY(16px)' },
@@ -59,7 +67,9 @@ const config: Config = {
       },
       animation: {
         scan: 'scan 1.5s ease-in-out infinite',
-        'fade-up': 'fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both',
+        'fade-up': 'fade-up 0.5s ease-out forwards',
+        'fade-in': 'fade-in 0.3s ease-out forwards',
+        'slide-in': 'slide-in 0.4s ease-out forwards',
         'slide-up': 'slide-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both',
         'pulse-soft': 'pulse-soft 2.5s ease-in-out infinite',
       },

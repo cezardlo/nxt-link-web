@@ -253,7 +253,7 @@ function HomeInner() {
 
       {/* ── STEP 1: Pick Industry (Tree Map) ─────────────────────── */}
       {!industry && !result && !loading && (
-        <div className="flex-1 flex flex-col justify-center px-6 pb-20">
+        <div className="flex-1 flex flex-col justify-center px-6 pb-20 animate-fade-up">
           <h1
             className="text-[22px] sm:text-[28px] font-bold leading-tight mb-2"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}

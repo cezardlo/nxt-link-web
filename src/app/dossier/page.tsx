@@ -71,7 +71,7 @@ export default function DossierHomePage() {
       <TopBar />
 
       {/* Hero search */}
-      <div className="flex flex-col items-center pt-14 sm:pt-24 pb-10 sm:pb-14 px-6">
+      <div className="flex flex-col items-center pt-14 sm:pt-24 pb-10 sm:pb-14 px-6 animate-fade-up">
         <span className="font-mono text-[9px] tracking-[0.3em] uppercase mb-4" style={{ color: COLORS.dim }}>
           INTELLIGENCE DOSSIER
         </span>

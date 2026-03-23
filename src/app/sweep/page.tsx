@@ -239,7 +239,7 @@ export default function SweepRadar() {
         </div>
       </header>
 
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 animate-fade-up">
         {/* ── Matrix Grid ──────────────────────────────────────────────── */}
         <div className="overflow-x-auto pb-4">
           <table className="w-full border-collapse" style={{ minWidth: 700 }}>

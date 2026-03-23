@@ -359,3 +359,12 @@ img[src=""] { opacity: 0; }
 .track-direction   { color: var(--gold); }
 .track-who         { color: var(--orange); }
 .track-connection  { color: var(--emerald); }
+
+/* ─── Reduced motion ───────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
