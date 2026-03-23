@@ -171,7 +171,7 @@ export function CountriesSection({
       <div className="mb-8 flex justify-center">
         <InteractiveGlobe
           size={400}
-          dotColor={`rgba(100, 180, 255, ALPHA)`}
+          dotColor="rgba(100, 180, 255, 0.4)"
           arcColor={`${accentColor}80`}
           markerColor={accentColor}
           markers={countries.filter(c => {

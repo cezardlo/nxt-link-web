@@ -156,9 +156,21 @@ export function KeyPlayers({ vendors, accentColor }: KeyPlayersProps) {
                         }}
                       >
                         <div className="flex items-start gap-3">
-                          {/* Initial circle */}
+                          {/* Company logo (favicon) or initial */}
+                          {v.website ? (
+                            <img
+                              src={`https://www.google.com/s2/favicons?domain=${new URL(v.website.startsWith('http') ? v.website : `https://${v.website}`).hostname}&sz=32`}
+                              alt=""
+                              className="w-9 h-9 rounded-full shrink-0 object-cover"
+                              style={{ background: `${accentColor}1a` }}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                                (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                              }}
+                            />
+                          ) : null}
                           <div
-                            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-[13px]"
+                            className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-[13px] ${v.website ? 'hidden' : ''}`}
                             style={{
                               background: `${accentColor}1a`,
                               color: accentColor,

@@ -720,18 +720,23 @@ function MapView() {
 
   useEffect(() => {
     let cancelled = false;
+    // Safety timeout — stop loading after 5s even if fetch hangs
+    const timeout = setTimeout(() => {
+      if (!cancelled) { setSignals(STUB_SIGNALS); setLoading(false); }
+    }, 5000);
     Brain.map()
       .then((data) => {
         if (cancelled) return;
+        clearTimeout(timeout);
         setSignals(data.signals.length > 0 ? (data.signals as IntelSignal[]) : STUB_SIGNALS);
       })
       .catch(() => {
-        if (!cancelled) setSignals(STUB_SIGNALS);
+        if (!cancelled) { clearTimeout(timeout); setSignals(STUB_SIGNALS); }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    return () => { cancelled = true; };
+    return () => { cancelled = true; clearTimeout(timeout); };
   }, []);
 
   const allDots = useMemo<SignalDot[]>(() => {
