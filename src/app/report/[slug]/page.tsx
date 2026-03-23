@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { BottomNav } from '@/components/ui';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -228,7 +229,12 @@ export default function ReportPage() {
       {/* ── Top bar ─────────────────────────────────────────────────────────── */}
       <div className="sticky top-0 z-20 bg-black border-b border-white/[0.06] px-6 py-3 flex items-center justify-between no-print">
         <div className="flex items-center gap-4">
-          <span className="font-mono text-[9px] tracking-[0.4em] text-white/20">NXT//LINK</span>
+          <Link
+            href="/explore"
+            className="font-mono text-[9px] tracking-[0.15em] text-white/40 hover:text-[#00d4ff] transition-colors"
+          >
+            ← EXPLORE
+          </Link>
           <span className="text-white/10">|</span>
           <span className="font-mono text-[9px] tracking-[0.2em] text-white/50">INTELLIGENCE ACQUISITION REPORT</span>
           <span className="font-mono text-[10px] tracking-[0.15em] font-bold" style={{ color: '#ffd700' }}>
