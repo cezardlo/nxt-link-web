@@ -216,7 +216,7 @@ export default function FollowingPage() {
   }
 
   return (
-    <div className="min-h-screen font-mono text-white flex flex-col" style={{ background: COLORS.bg }}>
+    <div className="min-h-screen font-mono text-white flex flex-col animate-fade-up" style={{ background: COLORS.bg }}>
       <TopBar />
 
       {/* Header */}

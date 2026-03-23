@@ -213,7 +213,7 @@ function VendorsContent() {
   const hasFilters = search.trim() || activeCategory !== 'ALL' || industryFilter;
 
   return (
-    <div className="min-h-screen pb-24 overflow-y-auto" style={{ background: COLORS.bg }}>
+    <div className="min-h-screen pb-24 overflow-y-auto animate-fade-up" style={{ background: COLORS.bg }}>
       <TopBar />
 
       <main className="max-w-[720px] mx-auto px-5 sm:px-8">

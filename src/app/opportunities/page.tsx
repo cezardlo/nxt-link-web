@@ -344,7 +344,7 @@ export default function OpportunitiesPage() {
   );
 
   return (
-    <div className="bg-black min-h-screen font-mono">
+    <div className="bg-black min-h-screen font-mono animate-fade-up">
       {/* TOP BAR */}
       <PageTopBar
         backHref="/industries"

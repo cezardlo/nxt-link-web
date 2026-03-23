@@ -1236,7 +1236,7 @@ function WorldApp() {
   const [viewMode, setViewMode] = useState<ViewMode>('MAP');
 
   return (
-    <div className="flex flex-col overflow-hidden h-dvh font-mono" style={{ background: COLORS.bg }}>
+    <div className="flex flex-col overflow-hidden h-dvh font-mono animate-fade-up" style={{ background: COLORS.bg }}>
       <TopBar />
       <ViewModeBar viewMode={viewMode} onToggleView={setViewMode} />
 

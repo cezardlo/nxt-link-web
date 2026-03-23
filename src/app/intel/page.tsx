@@ -1094,7 +1094,7 @@ export default function IntelPage() {
   }
 
   return (
-    <div className="min-h-screen font-mono pb-16" style={{ background: COLORS.bg }}>
+    <div className="min-h-screen font-mono pb-16 animate-fade-up" style={{ background: COLORS.bg }}>
       {/* Scanlines — uses CSS class from globals.css instead of fixed overlay */}
       <div className="scanlines fixed inset-0 z-0 pointer-events-none" />
 

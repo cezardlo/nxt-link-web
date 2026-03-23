@@ -291,7 +291,7 @@ export default function RFPPage() {
   );
 
   return (
-    <div className="min-h-screen bg-black text-white font-mono">
+    <div className="min-h-screen bg-black text-white font-mono animate-fade-up">
       {/* ── Top navigation bar ─────────────────────────────────────── */}
       <div className="h-10 border-b border-white/[0.06] flex items-center px-6 gap-4">
         <a

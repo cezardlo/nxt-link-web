@@ -246,7 +246,7 @@ export default function ConferencesPage() {
   }, [totalPages, safePage]);
 
   return (
-    <div className="bg-black min-h-screen grid-pattern">
+    <div className="bg-black min-h-screen grid-pattern animate-fade-up">
 
       <PageTopBar
         backHref="/industries"

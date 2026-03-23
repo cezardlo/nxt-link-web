@@ -70,7 +70,7 @@ export default function IkerLeaderboardPage() {
   );
 
   return (
-    <div className="fixed inset-0 bg-black flex flex-col overflow-hidden" style={{ fontFamily: 'var(--font-ibm-plex-mono)' }}>
+    <div className="fixed inset-0 bg-black flex flex-col overflow-hidden animate-fade-up" style={{ fontFamily: 'var(--font-ibm-plex-mono)' }}>
       <PageTopBar
         backHref="/map"
         backLabel="MAP"
