@@ -40,7 +40,7 @@ export function PageTopBar({
                     {crumb.href ? (
                       <Link
                         href={crumb.href}
-                        className="font-mono text-[9px] tracking-[0.15em] text-white/70 hover:text-[#00d4ff] transition-colors truncate"
+                        className="font-mono text-[9px] tracking-[0.15em] text-white/70 hover:text-[#00d4ff] hover:underline transition-colors truncate"
                       >
                         {crumb.label}
                       </Link>

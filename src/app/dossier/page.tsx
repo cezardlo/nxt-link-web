@@ -99,13 +99,13 @@ export default function DossierHomePage() {
           />
           <button
             type="submit"
-            disabled={!query.trim()}
+            disabled={query.trim().length < 2}
             className="font-mono text-[11px] tracking-[0.15em] font-semibold px-6 py-3.5 cursor-pointer transition-all duration-200 hover:brightness-110 disabled:opacity-30 disabled:cursor-not-allowed"
             style={{
-              background: query.trim() ? COLORS.accent : COLORS.card,
-              color: query.trim() ? COLORS.bg : COLORS.muted,
+              background: query.trim().length >= 2 ? COLORS.accent : COLORS.card,
+              color: query.trim().length >= 2 ? COLORS.bg : COLORS.muted,
               borderRadius: '24px',
-              border: query.trim() ? 'none' : `1px solid ${COLORS.border}`,
+              border: query.trim().length >= 2 ? 'none' : `1px solid ${COLORS.border}`,
             }}
           >
             OPEN DOSSIER

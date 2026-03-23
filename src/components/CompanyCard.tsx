@@ -95,7 +95,7 @@ export function CompanyCard({
         >
           {ikerScore}
         </span>
-        <span className="font-mono text-[5px] tracking-[0.3em] text-white/15">IKER</span>
+        <span className="font-mono text-[7px] tracking-[0.3em] text-white/15">IKER</span>
       </div>
 
       {/* Arrow */}

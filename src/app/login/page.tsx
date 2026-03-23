@@ -84,7 +84,7 @@ export default function LoginPage() {
             </label>
             <input
               type="email" value={email} onChange={e => setEmail(e.target.value)}
-              required autoFocus
+              required autoFocus autoComplete="email"
               style={{
                 width: '100%', height: 36, background: 'rgba(0,212,255,0.03)',
                 border: '1px solid rgba(0,212,255,0.1)', borderRadius: 2,
@@ -100,7 +100,7 @@ export default function LoginPage() {
             </label>
             <input
               type="password" value={password} onChange={e => setPassword(e.target.value)}
-              required minLength={6}
+              required minLength={6} autoComplete="current-password"
               style={{
                 width: '100%', height: 36, background: 'rgba(0,212,255,0.03)',
                 border: '1px solid rgba(0,212,255,0.1)', borderRadius: 2,

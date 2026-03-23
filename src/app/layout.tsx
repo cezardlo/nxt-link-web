@@ -23,7 +23,7 @@ export const viewport = {
 
 export const metadata: Metadata = {
   title: 'NXT//LINK — Intelligence Command Center',
-  description: 'Personal technology intelligence command center for El Paso, TX.',
+  description: 'Technology intelligence platform — signals, vendors, and opportunities across every industry.',
   robots: { index: false, follow: false },
   appleWebApp: {
     capable: true,

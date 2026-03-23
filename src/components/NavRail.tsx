@@ -95,8 +95,8 @@ export function NavRail() {
 
             {/* Label */}
             <span
-              className="font-mono text-[5px] tracking-[0.2em] uppercase mt-0.5 transition-colors duration-200"
-              style={{ color: isActive ? `${item.color}90` : 'rgba(255,255,255,0.12)' }}
+              className="font-mono text-[7px] tracking-[0.2em] uppercase mt-0.5 transition-colors duration-200"
+              style={{ color: isActive ? `${item.color}90` : 'rgba(255,255,255,0.22)' }}
             >
               {item.label}
             </span>
@@ -124,7 +124,7 @@ export function NavRail() {
               style={{ backgroundColor: '#00ff88', opacity: 0.3 }}
             />
           </div>
-          <span className="font-mono text-[5px] tracking-[0.2em] text-white/12 mt-1 group-hover:text-white/25 transition-colors">SYS</span>
+          <span className="font-mono text-[7px] tracking-[0.2em] text-white/22 mt-1 group-hover:text-white/25 transition-colors">SYS</span>
         </Link>
       </div>
     </nav>

@@ -51,7 +51,7 @@ export function SectionNav({ sections, accentColor = '#00d4ff' }: SectionNavProp
             <button
               key={section.id}
               onClick={() => scrollTo(section.id)}
-              className="font-mono text-[8px] tracking-[0.2em] uppercase whitespace-nowrap px-3 py-1 rounded-sm transition-colors shrink-0"
+              className={`font-mono text-[8px] tracking-[0.2em] uppercase whitespace-nowrap px-3 py-1 rounded-sm transition-colors shrink-0${!isActive ? ' hover:bg-white/[0.04]' : ''}`}
               style={{
                 color: isActive ? accentColor : 'rgba(255,255,255,0.25)',
                 backgroundColor: isActive ? `${accentColor}10` : 'transparent',

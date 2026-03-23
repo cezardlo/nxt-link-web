@@ -62,7 +62,7 @@ export function CompanyTooltip({ name, website, category, ikerScore, tags, child
             {ikerScore !== undefined && (
               <div className="shrink-0 text-center">
                 <span className="font-mono text-[12px] font-bold" style={{ color: ikerColor }}>{ikerScore}</span>
-                <div className="font-mono text-[5px] tracking-[0.2em] text-white/15">IKER</div>
+                <div className="font-mono text-[7px] tracking-[0.2em] text-white/15">IKER</div>
               </div>
             )}
           </div>
