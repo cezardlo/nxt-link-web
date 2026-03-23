@@ -330,6 +330,18 @@ const SORTS: { value: SortField; label: string }[] = [
   { value: 'budget', label: 'Budget' },
 ];
 
+const MATURITY_BORDER_COLOR: Record<TechMaturity, string> = {
+  mature: COLORS.green,
+  growing: COLORS.cyan,
+  emerging: COLORS.amber,
+};
+
+const MATURITY_PROGRESS: Record<TechMaturity, number> = {
+  emerging: 0.2,
+  growing: 0.55,
+  mature: 0.9,
+};
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export function TechnologyCatalog({ technologies, accentColor }: Props) {
@@ -359,8 +371,24 @@ export function TechnologyCatalog({ technologies, accentColor }: Props) {
 
   return (
     <section>
+      {/* Inline keyframes for catalog */}
+      <style>{`
+        @keyframes tc-border-shimmer {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+      `}</style>
+
       {/* Section header */}
-      <div className="flex items-center gap-3 mb-5">
+      <div
+        className="flex items-center gap-3 mb-5 px-4 py-3 rounded-xl"
+        style={{
+          background: `linear-gradient(135deg, ${accentColor}08, transparent)`,
+          border: '1px solid rgba(255,255,255,0.04)',
+          backgroundSize: '200% 200%',
+        }}
+      >
         <div
           className="w-[2px] h-3 rounded-full"
           style={{ background: accentColor }}
@@ -368,6 +396,24 @@ export function TechnologyCatalog({ technologies, accentColor }: Props) {
         <span className="font-mono text-[8px] tracking-[0.3em] uppercase" style={{ color: 'rgba(255,255,255,0.15)' }}>
           TECHNOLOGY CATALOG
         </span>
+        <span
+          className="font-mono text-[8px] tracking-[0.1em] px-2 py-0.5 rounded-full ml-2"
+          style={{
+            background: `${accentColor}15`,
+            border: `1px solid ${accentColor}30`,
+            color: accentColor,
+          }}
+        >
+          {technologies.length}
+        </span>
+        <div
+          className="ml-auto h-[1px] flex-1 max-w-[120px] rounded-full"
+          style={{
+            background: `linear-gradient(90deg, transparent, ${accentColor}30, transparent)`,
+            backgroundSize: '200% 100%',
+            animation: 'tc-border-shimmer 4s ease infinite',
+          }}
+        />
       </div>
 
       {/* Filter bar */}
@@ -429,10 +475,20 @@ export function TechnologyCatalog({ technologies, accentColor }: Props) {
             <button
               key={tech.id}
               onClick={() => setSelectedTech(tech)}
-              className="text-left rounded-2xl p-5 transition-all duration-150 hover:scale-[1.01] group"
+              className="text-left rounded-2xl p-5 transition-all duration-200 hover:scale-[1.02] hover:-translate-y-1 group"
               style={{
                 background: COLORS.card,
                 border: '1px solid rgba(255,255,255,0.04)',
+                borderLeft: `3px solid ${MATURITY_BORDER_COLOR[tech.maturityLevel]}40`,
+                boxShadow: 'none',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.borderLeftColor = MATURITY_BORDER_COLOR[tech.maturityLevel];
+                (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 24px rgba(0,0,0,0.3), 0 0 0 1px ${MATURITY_BORDER_COLOR[tech.maturityLevel]}20`;
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.borderLeftColor = `${MATURITY_BORDER_COLOR[tech.maturityLevel]}40`;
+                (e.currentTarget as HTMLElement).style.boxShadow = 'none';
               }}
             >
               {/* Name */}
@@ -440,21 +496,52 @@ export function TechnologyCatalog({ technologies, accentColor }: Props) {
                 {tech.name}
               </div>
 
-              {/* Maturity badge */}
-              <div className="flex items-center gap-1.5 mb-3">
+              {/* Maturity badge + progress bar */}
+              <div className="flex items-center gap-1.5 mb-1.5">
                 <div className="w-1.5 h-1.5 rounded-full" style={{ background: maturityColor }} />
                 <span className="font-mono text-[8px] uppercase tracking-[0.1em]" style={{ color: `${maturityColor}99` }}>
                   {MATURITY_LABEL[tech.maturityLevel]}
                 </span>
               </div>
+              {/* Maturity progress bar */}
+              <div className="mb-3 w-full h-[3px] rounded-full" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${MATURITY_PROGRESS[tech.maturityLevel] * 100}%`,
+                    background: `linear-gradient(90deg, ${COLORS.amber}, ${COLORS.cyan}, ${COLORS.green})`,
+                    opacity: 0.6,
+                  }}
+                />
+              </div>
 
               {/* Description (3-line clamp) */}
               <p
-                className="font-mono text-[9px] leading-relaxed mb-4 line-clamp-3"
+                className="font-mono text-[9px] leading-relaxed mb-3 line-clamp-3"
                 style={{ color: 'rgba(255,255,255,0.3)' }}
               >
                 {tech.description}
               </p>
+
+              {/* Relevance indicator bar */}
+              <div className="flex items-center gap-2 mb-3">
+                <span className="font-mono text-[6px] tracking-[0.15em] uppercase" style={{ color: 'rgba(255,255,255,0.15)' }}>
+                  RELEVANCE
+                </span>
+                <div className="flex-1 h-[2px] rounded-full" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: tech.elPasoRelevance === 'high' ? '100%' : tech.elPasoRelevance === 'medium' ? '60%' : '25%',
+                      background: relevanceColor,
+                      opacity: 0.6,
+                    }}
+                  />
+                </div>
+                <span className="font-mono text-[6px] uppercase" style={{ color: `${relevanceColor}aa` }}>
+                  {tech.elPasoRelevance}
+                </span>
+              </div>
 
               {/* Stats row */}
               <div

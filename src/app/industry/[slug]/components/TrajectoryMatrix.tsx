@@ -216,6 +216,17 @@ export default function TrajectoryMatrix({
     return new Set(technologies.map((t) => t.id));
   }, [highlightedCountries, technologies]);
 
+  // ── Signal counts per arm ─────────────────────────────────────────────
+  const armCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const arm of INDUSTRY_ARM_CONFIG) counts[arm.slug] = 0;
+    for (const tech of technologies) {
+      const slug = CATEGORY_TO_SLUG[tech.category];
+      if (slug && counts[slug] !== undefined) counts[slug]++;
+    }
+    return counts;
+  }, [technologies]);
+
   // ── Render ───────────────────────────────────────────────────────────────
 
   const isFocused = focusedIndustry !== null;
@@ -256,6 +267,14 @@ export default function TrajectoryMatrix({
         @keyframes tm-flare {
           0%, 100% { filter: brightness(1); }
           50% { filter: brightness(2.2); }
+        }
+        @keyframes tm-scanline {
+          0% { transform: translateY(-400px); }
+          100% { transform: translateY(400px); }
+        }
+        @keyframes tm-center-ring-pulse {
+          0%, 100% { r: 36; opacity: 0.15; }
+          50% { r: 42; opacity: 0.06; }
         }
       `}</style>
 
@@ -314,10 +333,25 @@ export default function TrajectoryMatrix({
               <stop offset="100%" stopColor="#00d4ff" stopOpacity="0" />
             </radialGradient>
 
+            {/* Radial depth gradient for SVG background */}
+            <radialGradient id="tm-bg-depth" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="rgba(0,20,30,0.4)" />
+              <stop offset="100%" stopColor="transparent" />
+            </radialGradient>
+
+            {/* Ring glow filter */}
+            <filter id="tm-ring-glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="2" result="glow" />
+              <feMerge>
+                <feMergeNode in="glow" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+
             {/* Sweep afterglow gradient */}
             <linearGradient id="tm-sweep-trail" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0%" stopColor="#00d4ff" stopOpacity="0" />
-              <stop offset="100%" stopColor="#00d4ff" stopOpacity="0.06" />
+              <stop offset="100%" stopColor="#00d4ff" stopOpacity="0.12" />
             </linearGradient>
 
             {/* Dot glow gradients per industry */}
@@ -338,6 +372,24 @@ export default function TrajectoryMatrix({
             </filter>
           </defs>
 
+          {/* ── Background depth gradient ──────────────────────────────────── */}
+          <circle cx={CX} cy={CY} r={380} fill="url(#tm-bg-depth)" />
+
+          {/* ── Scanline effect ──────────────────────────────────────────────── */}
+          <g style={{ clipPath: `circle(380px at ${CX}px ${CY}px)` }}>
+            <rect
+              x={0}
+              y={0}
+              width={800}
+              height={40}
+              fill="url(#tm-sweep-trail)"
+              opacity={0.15}
+              style={{
+                animation: 'tm-scanline 8s linear infinite',
+              }}
+            />
+          </g>
+
           {/* ── Concentric rings ───────────────────────────────────────────── */}
           {([
             { key: 'mature',   r: RING_RADII.mature,   label: 'MAINSTREAM',    strokeOpacity: 0.06, dash: 'none', delay: 0 },
@@ -345,15 +397,44 @@ export default function TrajectoryMatrix({
             { key: 'emerging', r: RING_RADII.emerging,  label: 'EXPERIMENTAL',  strokeOpacity: 0.03, dash: '6 4', delay: 0.4 },
           ] as const).map((ring) => {
             const circumference = 2 * Math.PI * ring.r;
+            // Tick marks every 45 degrees
+            const ticks = Array.from({ length: 8 }, (_, i) => {
+              const angleDeg = i * 45;
+              const inner = polarToXY(angleDeg, ring.r - 4);
+              const outer = polarToXY(angleDeg, ring.r + 4);
+              return { x1: inner.x, y1: inner.y, x2: outer.x, y2: outer.y };
+            });
             return (
               <g key={ring.key}>
+                {/* Glow ring (behind) */}
                 <circle
                   cx={CX}
                   cy={CY}
                   r={ring.r}
                   fill="none"
-                  stroke="white"
-                  strokeOpacity={ring.strokeOpacity}
+                  stroke={accentColor}
+                  strokeOpacity={ring.strokeOpacity * 1.5}
+                  strokeWidth={3}
+                  filter="url(#tm-ring-glow)"
+                  style={
+                    firstLoad
+                      ? {
+                          ['--ring-circumference' as string]: circumference,
+                          strokeDasharray: `${circumference}`,
+                          strokeDashoffset: circumference,
+                          animation: `tm-ring-draw 800ms ease-out ${ring.delay}s forwards`,
+                        }
+                      : undefined
+                  }
+                />
+                {/* Main ring */}
+                <circle
+                  cx={CX}
+                  cy={CY}
+                  r={ring.r}
+                  fill="none"
+                  stroke={accentColor}
+                  strokeOpacity={ring.strokeOpacity * 2}
                   strokeWidth={1}
                   strokeDasharray={ring.dash === 'none' ? `${circumference}` : ring.dash}
                   style={
@@ -369,6 +450,19 @@ export default function TrajectoryMatrix({
                         : undefined
                   }
                 />
+                {/* Tick marks */}
+                {ticks.map((tick, i) => (
+                  <line
+                    key={i}
+                    x1={tick.x1}
+                    y1={tick.y1}
+                    x2={tick.x2}
+                    y2={tick.y2}
+                    stroke={accentColor}
+                    strokeOpacity={0.08}
+                    strokeWidth={0.5}
+                  />
+                ))}
                 {/* Ring label */}
                 <text
                   x={CX}
@@ -436,7 +530,7 @@ export default function TrajectoryMatrix({
                     setFocusedIndustry(focusedIndustry === arm.slug ? null : arm.slug);
                   }}
                 >
-                  {arm.label}
+                  {arm.label}{armCounts[arm.slug] > 0 ? ` (${armCounts[arm.slug]})` : ''}
                 </text>
               </g>
             );
@@ -485,6 +579,32 @@ export default function TrajectoryMatrix({
             r={50}
             fill="url(#tm-center-glow)"
             style={{ animation: 'tm-center-pulse 4s ease-in-out infinite' }}
+          />
+          {/* Pulsing outer ring */}
+          <circle
+            cx={CX}
+            cy={CY}
+            r={36}
+            fill="none"
+            stroke={accentColor}
+            strokeOpacity={0.15}
+            strokeWidth={1.5}
+            style={{
+              animation: 'tm-center-ring-pulse 3s ease-in-out infinite',
+            }}
+          />
+          {/* Second pulsing ring, offset timing */}
+          <circle
+            cx={CX}
+            cy={CY}
+            r={44}
+            fill="none"
+            stroke={accentColor}
+            strokeOpacity={0.06}
+            strokeWidth={0.8}
+            style={{
+              animation: 'tm-center-ring-pulse 3s ease-in-out 1.5s infinite',
+            }}
           />
           <circle
             cx={CX}
