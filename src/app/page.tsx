@@ -7,71 +7,32 @@ import { COLORS } from '@/lib/tokens';
 
 // ── Industry Tree ────────────────────────────────────────────────────────────
 
-type Industry = { id: string; label: string; icon: string };
-type IndustryGroup = { group: string; color: string; industries: Industry[] };
+type Industry = { id: string; label: string; icon: string; color: string; desc: string };
 
-const INDUSTRY_TREE: IndustryGroup[] = [
-  {
-    group: 'Food & Service',
-    color: COLORS.orange,
-    industries: [
-      { id: 'restaurant',      label: 'Restaurant',  icon: '◉' },
-      { id: 'window_cleaning', label: 'Cleaning',    icon: '◇' },
-    ],
-  },
-  {
-    group: 'Industrial',
-    color: COLORS.cyan,
-    industries: [
-      { id: 'construction', label: 'Construction', icon: '▣' },
-      { id: 'warehouse',    label: 'Warehouse',    icon: '⬡' },
-    ],
-  },
-  {
-    group: 'Trade & Logistics',
-    color: COLORS.green,
-    industries: [
-      { id: 'logistics',   label: 'Logistics',    icon: '◈' },
-      { id: 'border_tech', label: 'Border Trade', icon: '◎' },
-    ],
-  },
+const INDUSTRIES: Industry[] = [
+  { id: 'defense',        label: 'Defense',        icon: '◆', color: COLORS.orange, desc: 'Military, government, Fort Bliss' },
+  { id: 'ai-ml',          label: 'AI / ML',        icon: '◇', color: COLORS.cyan,   desc: 'Machine learning, automation, LLMs' },
+  { id: 'cybersecurity',  label: 'Cybersecurity',  icon: '◈', color: COLORS.cyan,   desc: 'Network security, compliance' },
+  { id: 'manufacturing',  label: 'Manufacturing',  icon: '▣', color: COLORS.green,  desc: 'Production, robotics, 3D printing' },
+  { id: 'logistics',      label: 'Logistics',      icon: '⬡', color: COLORS.gold,   desc: 'Supply chain, freight, warehousing' },
+  { id: 'energy',         label: 'Energy',         icon: '◉', color: COLORS.gold,   desc: 'Solar, grid, EV, utilities' },
+  { id: 'healthcare',     label: 'Healthcare',     icon: '◎', color: COLORS.green,  desc: 'Medical devices, biotech, pharma' },
+  { id: 'border-tech',    label: 'Border Tech',    icon: '⊕', color: COLORS.orange, desc: 'Cross-border, customs, trade' },
 ];
 
-// Flat list for lookups
-const ALL_INDUSTRIES = INDUSTRY_TREE.flatMap(g => g.industries);
-
-// ── Strategic industries (deep-dive pages at /industry/[slug]) ───────────────
-
-const STRATEGIC_INDUSTRIES = [
-  { slug: 'defense',        label: 'Defense',        icon: '◆' },
-  { slug: 'ai-ml',          label: 'AI / ML',        icon: '◇' },
-  { slug: 'cybersecurity',  label: 'Cyber',          icon: '◈' },
-  { slug: 'manufacturing',  label: 'Manufacturing',  icon: '▣' },
-  { slug: 'logistics',      label: 'Logistics',      icon: '⬡' },
-  { slug: 'energy',         label: 'Energy',         icon: '◉' },
-  { slug: 'healthcare',     label: 'Healthcare',     icon: '◎' },
-  { slug: 'border-tech',    label: 'Border Tech',    icon: '⊕' },
-];
-
-// Maps DECIDE industry IDs to their strategic industry deep-dive slug
-const INDUSTRY_DEEPDIVE: Record<string, string> = {
-  restaurant:      'manufacturing',   // food production tech
-  construction:    'manufacturing',
-  logistics:       'logistics',
-  warehouse:       'logistics',
-  window_cleaning: 'manufacturing',
-  border_tech:     'border-tech',
-};
+const ALL_INDUSTRIES = INDUSTRIES;
 
 // ── Suggestions per industry ─────────────────────────────────────────────────
 
 const SUGGESTIONS: Record<string, string[]> = {
-  restaurant:      ['Reduce labor cost', 'Get more customers', 'Improve inventory', 'Modernize billing', 'Improve scheduling'],
-  construction:    ['Reduce labor cost', 'Improve scheduling', 'Automate operations', 'Improve compliance', 'Improve security'],
-  logistics:       ['Speed up warehouse', 'Automate operations', 'Improve inventory', 'Speed up customs', 'Reduce labor cost'],
-  warehouse:       ['Speed up warehouse', 'Reduce labor cost', 'Improve inventory', 'Automate operations', 'Improve security'],
-  window_cleaning: ['Get more customers', 'Improve scheduling', 'Modernize billing', 'Reduce labor cost', 'Improve marketing'],
-  border_tech:     ['Speed up customs', 'Automate operations', 'Improve compliance', 'Improve security', 'Reduce labor cost'],
+  'defense':       ['Find defense contractors', 'Track government contracts', 'Monitor Fort Bliss activity', 'Find SBIR opportunities'],
+  'ai-ml':         ['Automate operations with AI', 'Find ML vendors', 'Track AI funding rounds', 'Compare AI platforms'],
+  'cybersecurity': ['Improve security posture', 'Find compliance solutions', 'Track cyber threats', 'Compare SIEM vendors'],
+  'manufacturing': ['Reduce production cost', 'Automate factory floor', 'Find robotics vendors', 'Track industry 4.0 trends'],
+  'logistics':     ['Speed up warehouse', 'Optimize fleet routes', 'Track shipments', 'Find last-mile solutions'],
+  'energy':        ['Find solar vendors', 'Track grid modernization', 'Compare EV charging', 'Monitor energy policy'],
+  'healthcare':    ['Find medical device vendors', 'Track FDA approvals', 'Compare telehealth platforms', 'Monitor biotech funding'],
+  'border-tech':   ['Speed up customs', 'Track CBP technology', 'Find cross-border solutions', 'Monitor trade policy'],
 };
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -244,60 +205,45 @@ function HomeInner() {
             className="text-[22px] sm:text-[28px] font-bold leading-tight mb-2"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
-            What kind of business<br />do you run?
+            What are you looking for?
           </h1>
-          <p className="text-[11px] mb-8" style={{ color: `${COLORS.text}40` }}>
-            Pick your industry. Then describe your problem.
+          <p className="text-[12px] mb-8" style={{ color: `${COLORS.text}70` }}>
+            Pick an industry. We find technology, vendors, and opportunities.
           </p>
 
-          <div className="flex flex-col gap-4">
-            {INDUSTRY_TREE.map(grp => (
-              <div key={grp.group}>
-                {/* Group label */}
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-2 h-2 rounded-full" style={{ background: grp.color }} />
-                  <span
-                    className="text-[8px] tracking-[0.2em] font-bold uppercase"
-                    style={{ color: `${grp.color}90` }}
-                  >
-                    {grp.group}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {INDUSTRIES.map((ind, i) => (
+              <button
+                key={ind.id}
+                onClick={() => setIndustry(ind.id)}
+                className="flex flex-col gap-2 p-4 text-left transition-all hover:translate-y-[-2px] animate-fade-up opacity-0"
+                style={{
+                  background: COLORS.card,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: '14px',
+                  cursor: 'pointer',
+                  color: COLORS.text,
+                  animationDelay: `${i * 0.05}s`,
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = `${ind.color}40`;
+                  e.currentTarget.style.boxShadow = `0 0 20px ${ind.color}10`;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = COLORS.border;
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                <span className="text-[18px]" style={{ color: ind.color }}>{ind.icon}</span>
+                <div>
+                  <span className="text-[12px] font-bold block" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    {ind.label}
                   </span>
-                  <div className="flex-1 h-px" style={{ background: `${grp.color}15` }} />
+                  <span className="text-[8px] block mt-0.5" style={{ color: `${COLORS.text}55` }}>
+                    {ind.desc}
+                  </span>
                 </div>
-                {/* Industry tiles */}
-                <div className="grid grid-cols-2 gap-2">
-                  {grp.industries.map(ind => (
-                    <button
-                      key={ind.id}
-                      onClick={() => setIndustry(ind.id)}
-                      className="flex items-center gap-3 p-4 text-left transition-all hover:translate-y-[-2px]"
-                      style={{
-                        background: COLORS.card,
-                        border: `1px solid ${COLORS.border}`,
-                        borderRadius: '14px',
-                        cursor: 'pointer',
-                        color: COLORS.text,
-                      }}
-                      onMouseEnter={e => {
-                        (e.currentTarget as HTMLElement).style.borderColor = `${grp.color}40`;
-                        (e.currentTarget as HTMLElement).style.boxShadow = `0 0 20px ${grp.color}08`;
-                      }}
-                      onMouseLeave={e => {
-                        (e.currentTarget as HTMLElement).style.borderColor = COLORS.border;
-                        (e.currentTarget as HTMLElement).style.boxShadow = 'none';
-                      }}
-                    >
-                      <span className="text-[18px]" style={{ color: grp.color }}>{ind.icon}</span>
-                      <span
-                        className="text-[13px] font-bold"
-                        style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                      >
-                        {ind.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              </button>
             ))}
           </div>
 
@@ -337,67 +283,20 @@ function HomeInner() {
             </div>
           )}
 
-          {/* ── Explore Intelligence ──────────────────────────────── */}
-          <div className="mt-6">
-            <div className="h-px mb-4" style={{ background: `${COLORS.dim}20` }} />
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-2 h-2 rounded-full" style={{ background: COLORS.gold }} />
-              <span
-                className="text-[8px] tracking-[0.2em] font-bold uppercase"
-                style={{ color: `${COLORS.gold}90` }}
-              >
-                Explore Intelligence
-              </span>
-              <div className="flex-1 h-px" style={{ background: `${COLORS.gold}15` }} />
-            </div>
-            <p className="text-[10px] mb-3" style={{ color: `${COLORS.text}30` }}>
-              Deep-dive into any sector — technologies, players, signals, global map
-            </p>
-            <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
-              {STRATEGIC_INDUSTRIES.map(ind => (
-                <Link
-                  key={ind.slug}
-                  href={`/industry/${ind.slug}`}
-                  className="shrink-0 flex items-center gap-2 px-3 py-2 transition-all hover:translate-y-[-1px]"
-                  style={{
-                    background: COLORS.card,
-                    border: `1px solid ${COLORS.border}`,
-                    borderRadius: '10px',
-                    textDecoration: 'none',
-                    color: COLORS.text,
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.borderColor = `${COLORS.gold}30`;
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.borderColor = COLORS.border;
-                  }}
-                >
-                  <span className="text-[12px]" style={{ color: COLORS.gold }}>{ind.icon}</span>
-                  <span className="text-[9px] tracking-[0.05em]">{ind.label}</span>
-                </Link>
-              ))}
-              <Link
-                href="/sweep"
-                className="shrink-0 flex items-center gap-2 px-3 py-2 transition-all hover:translate-y-[-1px]"
-                style={{
-                  background: `${COLORS.orange}15`,
-                  border: `1px solid ${COLORS.orange}40`,
-                  borderRadius: '10px',
-                  textDecoration: 'none',
-                  color: COLORS.orange,
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = `${COLORS.orange}60`;
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.borderColor = `${COLORS.orange}40`;
-                }}
-              >
-                <span className="text-[12px]">⊞</span>
-                <span className="text-[9px] tracking-[0.05em] font-bold">Sweep Radar</span>
-              </Link>
-            </div>
+          {/* ── Quick links ──────────────────────────────────────── */}
+          <div className="mt-6 flex gap-2 flex-wrap">
+            <Link href="/sweep" className="flex items-center gap-2 px-3 py-2 rounded-[10px] transition-all hover:translate-y-[-1px]"
+              style={{ background: `${COLORS.orange}10`, border: `1px solid ${COLORS.orange}25`, textDecoration: 'none', color: COLORS.orange, fontSize: 9 }}>
+              ⊞ Sweep Radar
+            </Link>
+            <Link href="/intel" className="flex items-center gap-2 px-3 py-2 rounded-[10px] transition-all hover:translate-y-[-1px]"
+              style={{ background: `${COLORS.cyan}10`, border: `1px solid ${COLORS.cyan}25`, textDecoration: 'none', color: COLORS.cyan, fontSize: 9 }}>
+              ◈ Intel Dashboard
+            </Link>
+            <Link href="/world" className="flex items-center gap-2 px-3 py-2 rounded-[10px] transition-all hover:translate-y-[-1px]"
+              style={{ background: `${COLORS.green}10`, border: `1px solid ${COLORS.green}25`, textDecoration: 'none', color: COLORS.green, fontSize: 9 }}>
+              ◎ World Map
+            </Link>
           </div>
         </div>
       )}
@@ -685,19 +584,19 @@ function HomeInner() {
           </Section>
 
           {/* ── Explore Intelligence Link ─────────────────────────── */}
-          {industry && INDUSTRY_DEEPDIVE[industry] && (
+          {industry && (
             <Section title="GO DEEPER" accent={COLORS.gold}>
               <Link
-                href={`/industry/${INDUSTRY_DEEPDIVE[industry]}`}
+                href={`/industry/${industry}`}
                 className="flex items-center justify-between"
                 style={{ textDecoration: 'none', color: COLORS.text }}
               >
                 <div>
                   <div className="text-[12px] font-bold">
-                    Explore {STRATEGIC_INDUSTRIES.find(s => s.slug === INDUSTRY_DEEPDIVE[industry!])?.label ?? 'Industry'} Intelligence
+                    Explore {INDUSTRIES.find(i => i.id === industry)?.label ?? 'Industry'} Intelligence
                   </div>
                   <div className="text-[9px] mt-1" style={{ color: `${COLORS.text}40` }}>
-                    Technologies, global players, live signals, trajectory matrix
+                    Technologies, players, signals, global map
                   </div>
                 </div>
                 <span className="text-[14px]" style={{ color: COLORS.gold }}>→</span>

@@ -399,13 +399,14 @@ export default function IndustryCommandCenter() {
     // Merge: existing vendors take priority (deduplicate by lowercase name)
     const existingNames = new Set(existing.map((v) => v.name.toLowerCase()));
     const merged = [
-      ...existing.map((v) => ({
-        id: v.id,
-        name: v.name,
-        category: v.category,
-        ikerScore: v.relevance != null ? Math.round(v.relevance) : undefined,
-        description: v.description,
-        website: v.url,
+      ...existing.map((v: Record<string, any>) => ({
+        id: v.id ?? v.ID ?? '',
+        name: v.name ?? v.company_name ?? '',
+        category: v.category ?? v.primary_category ?? '',
+        ikerScore: v.ikerScore ?? v.iker_score ?? v.relevance ?? undefined,
+        description: v.description ?? '',
+        website: v.website ?? v.company_url ?? v.url ?? '',
+        tags: v.tags ?? [],
       })),
       ...signalVendors.filter((v) => !existingNames.has(v.name.toLowerCase())),
     ];
