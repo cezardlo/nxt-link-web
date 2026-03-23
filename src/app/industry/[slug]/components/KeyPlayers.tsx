@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import Link from 'next/link';
 import { COLORS } from '@/lib/tokens';
+import { IkerBadge } from '@/components/IkerBadge';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -193,22 +194,9 @@ export function KeyPlayers({ vendors, accentColor }: KeyPlayersProps) {
                             )}
                           </div>
 
-                          {/* IKER Score badge */}
+                          {/* IKER Score badge — progressive disclosure */}
                           {score > 0 && (
-                            <div
-                              className="shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded-md"
-                              style={{
-                                background: `${sColor}14`,
-                                border: `1px solid ${sColor}33`,
-                              }}
-                            >
-                              <span
-                                className="text-[9px] tabular-nums font-semibold"
-                                style={{ color: sColor }}
-                              >
-                                {score}
-                              </span>
-                            </div>
+                            <IkerBadge score={score} size="sm" />
                           )}
                         </div>
 
