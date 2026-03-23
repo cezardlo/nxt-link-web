@@ -21,8 +21,6 @@ export function useRealtimeSignals() {
 
   useEffect(() => {
     // Dynamic import to avoid SSR issues
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let channel: any = null;
     let cleanup = false;
 
     async function subscribe() {
@@ -63,7 +61,7 @@ export function useRealtimeSignals() {
             if (!cleanup) setConnected(status === 'SUBSCRIBED');
           });
 
-        channel = ch;
+        void ch; // keep reference alive
       } catch {
         // Supabase not available — fail silently
       }

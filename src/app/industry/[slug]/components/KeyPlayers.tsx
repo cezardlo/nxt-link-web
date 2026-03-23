@@ -142,8 +142,6 @@ export function KeyPlayers({ vendors, accentColor }: KeyPlayersProps) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   {vendors.map((v) => {
                     const score = v.ikerScore ?? 0;
-                    const sColor = scoreColor(score);
-
                     return (
                       <Link
                         key={v.id}
