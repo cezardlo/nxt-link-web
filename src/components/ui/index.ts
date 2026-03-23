@@ -1,10 +1,10 @@
-export { Card } from './Card';
+export { Card } from './nxt-card';
 export { Badge } from './Badge';
 export { SectionHeader } from './SectionHeader';
 export { ScoreGauge } from './ScoreGauge';
 export { BottomNav } from './BottomNav';
 export { TopBar } from './TopBar';
-export { Button } from './Button';
+export { Button } from './nxt-button';
 export { Skeleton, CardSkeleton } from './Skeleton';
 export { ErrorState, EmptyState } from './ErrorState';
 export { default as ErrorToast, showError } from './ErrorToast';

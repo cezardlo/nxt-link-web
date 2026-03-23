@@ -1,5 +1,5 @@
 'use client';
-import { Button } from './Button';
+import { Button } from './nxt-button';
 import { COLORS } from '@/lib/tokens';
 import Link from 'next/link';
 
