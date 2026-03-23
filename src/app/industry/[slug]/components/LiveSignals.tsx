@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { COLORS } from '@/lib/tokens';
+import { getSignalSeverity, getSeverityColor, SEVERITY_CONFIG } from '@/lib/signal-severity';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -399,8 +400,8 @@ export function LiveSignals({ signals, accentColor }: LiveSignalsProps) {
                       : Math.min(5, Math.round(rawImp));
                     const timestamp = relativeTime(signal.timestamp ?? signal.discovered_at ?? '');
                     const title = signal.title ?? signal.summary ?? '';
-                    const tier = importance >= 5 ? 'P0' : importance >= 4 ? 'P1' : importance >= 3 ? 'P2' : 'P3';
-                    const tierColor = tier === 'P0' ? COLORS.red : tier === 'P1' ? COLORS.orange : tier === 'P2' ? COLORS.cyan : COLORS.dim;
+                    const tier = getSignalSeverity(String(signal.type ?? signal.signal_type ?? ''), rawImp <= 1 ? rawImp : rawImp / 5);
+                    const tierColor = getSeverityColor(tier);
                     const tierBg = tier === 'P0' ? `${COLORS.red}08` : tier === 'P1' ? `${COLORS.orange}05` : 'transparent';
 
                     return (
