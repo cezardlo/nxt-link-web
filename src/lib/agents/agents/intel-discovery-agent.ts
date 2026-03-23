@@ -754,7 +754,7 @@ async function doRun(): Promise<IntelDiscoveryStore> {
           agent: 'intel-discovery',
         }).catch(() => null),
       ),
-    ).catch(() => {});
+    ).catch((err) => console.warn('[IntelDiscoveryAgent] batch upsert failed:', err));
   }
 
   return store;
