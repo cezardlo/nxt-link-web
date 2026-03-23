@@ -1,21 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-
-type MobileTab = {
-  href: string;
-  label: string;
-  icon: string;
-  color: string;
-};
-
-const MOBILE_TABS: MobileTab[] = [
-  { href: '/map',            label: 'MAP',      icon: '◎', color: '#00d4ff' },
-  { href: '/explore',        label: 'EXPLORE',  icon: '⬡', color: '#ffd700' },
-  { href: '/opportunities',  label: 'OPPS',     icon: '△', color: '#00ff88' },
-  { href: '/vendors',        label: 'VENDORS',  icon: '◆', color: '#f97316' },
-  { href: '/intel',          label: 'INTEL',    icon: '◈', color: '#ffb800' },
-];
+import { NAV_ITEMS } from '@/lib/data/nav';
 
 function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(href + '/');
@@ -28,8 +14,10 @@ export function MobileNav() {
     <nav
       className="fixed bottom-0 left-0 right-0 z-30 bg-black/85 backdrop-blur-xl border-t border-white/[0.06] flex items-center justify-around md:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 8px)', paddingTop: '8px', minHeight: '56px' }}
+      role="navigation"
+      aria-label="Main navigation"
     >
-      {MOBILE_TABS.map(tab => {
+      {NAV_ITEMS.map(tab => {
         const active = isActive(pathname, tab.href);
         return (
           <Link

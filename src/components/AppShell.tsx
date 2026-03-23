@@ -5,9 +5,10 @@ import { MobileNav } from './MobileNav';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isLanding = pathname === '/';
-  const isMap = pathname === '/map';
-  const showNav = !isLanding && !isMap;
+  // Full-screen pages: /world (map) and /login (auth)
+  const isFullscreen = pathname === '/world' || pathname.startsWith('/world/');
+  const isAuth = pathname === '/login';
+  const showNav = !isFullscreen && !isAuth;
 
   return (
     <>

@@ -1,12 +1,38 @@
 'use client';
 
-import { Suspense, useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { Brain } from '@/lib/brain';
-import { BottomNav, TopBar } from '@/components/ui';
+import { Suspense, useState, useEffect, useMemo, useCallback } from 'react';
+import Link from 'next/link';
 import { COLORS } from '@/lib/tokens';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ── Map-mode imports (from /map/page.tsx) ───────────────────────────────────
+import type { SignalFinding, SectorScore } from '@/lib/intelligence/signal-engine';
+import type { ConferenceRecord } from '@/lib/data/conference-intel';
+import type { ConferenceCluster } from '@/lib/utils/conference-clusters';
+
+import { FeedBar } from '@/components/FeedBar';
+import { MapCanvas } from '@/components/MapCanvas';
+import type { FlyToTarget, MapPoint } from '@/components/MapCanvas';
+import type { FilterMode } from '@/components/MapFilterPanel';
+import { MapFilterPanel } from '@/components/MapFilterPanel';
+import { MapLayerPanel } from '@/components/MapLayerPanel';
+import { RightPanel } from '@/components/right-panel/RightPanel';
+import type { SelectedPoint } from '@/components/right-panel/RightPanel';
+import { MapTopBar } from '@/components/MapTopBar';
+import { CmdK } from '@/components/CmdK';
+import { BorderCameraOverlay } from '@/components/BorderCameraOverlay';
+import { CrimeNewsOverlay } from '@/components/CrimeNewsOverlay';
+import { LiveTVOverlay } from '@/components/LiveTVOverlay';
+import { ALL_DISRUPTIONS } from '@/lib/data/innovation-dashboard-data';
+
+import { useMapLayers } from '@/hooks/useMapLayers';
+import type { LayerState } from '@/hooks/useMapLayers';
+import { useMapData } from '@/hooks/useMapData';
+import { useMissionBriefing } from '@/hooks/useMissionBriefing';
+
+// Re-export types consumed by other components
+export type { TimeRange, Mode, LayerState } from '@/hooks/useMapLayers';
+
+// ─── Scoreboard types ────────────────────────────────────────────────────────
 
 type TechKey =
   | 'ai'
@@ -28,34 +54,9 @@ type Country = {
   scores: Record<TechKey, number>;
 };
 
-type IntelSignal = {
-  title: string;
-  signal_type: string;
-  industry: string;
-  company: string | null;
-  importance: number;
-  discovered_at: string;
-  url?: string;
-  confidence?: number;
-};
+type ViewMode = 'MAP' | 'SCOREBOARD';
 
-type SignalDot = {
-  id: string;
-  signal: IntelSignal;
-  lat: number;
-  lon: number;
-  tier: 'P0' | 'P1' | 'P2';
-  color: string;
-  x: number; // SVG viewport x (0-100)
-  y: number; // SVG viewport y (0-100)
-};
-
-type ViewMode = 'MAP' | 'SCOREBOARD' | 'OPS';
-
-type GeoFilter = 'TEXAS' | 'USA' | 'GLOBAL';
-type CategoryFilter = 'TECH' | 'MONEY' | 'POLICY' | 'SCIENCE' | 'ALL';
-
-// ─── Static country data ──────────────────────────────────────────────────────
+// ─── Static country data ─────────────────────────────────────────────────────
 
 const COUNTRIES: Country[] = [
   { code: 'US', name: 'United States', flag: '\u{1F1FA}\u{1F1F8}', region: 'AMERICAS', scores: { ai: 98, defense: 99, biotech: 95, energy: 88, manufacturing: 82, cybersecurity: 97, robotics: 91, semiconductors: 89 } },
@@ -85,7 +86,7 @@ const COUNTRIES: Country[] = [
   { code: 'EE', name: 'Estonia', flag: '\u{1F1EA}\u{1F1EA}', region: 'EUROPE', scores: { ai: 72, defense: 65, biotech: 58, energy: 65, manufacturing: 58, cybersecurity: 90, robotics: 60, semiconductors: 48 } },
 ];
 
-// ─── Scoreboard config ────────────────────────────────────────────────────────
+// ─── Scoreboard config ───────────────────────────────────────────────────────
 
 const TECH_DIMS: { key: TechKey; label: string; color: string }[] = [
   { key: 'ai',             label: 'AI',            color: COLORS.cyan },
@@ -104,760 +105,7 @@ const TECH_COLOR: Record<TechKey, string> = Object.fromEntries(
 
 const REGIONS: Region[] = ['AMERICAS', 'EUROPE', 'ASIA-PACIFIC', 'OTHER'];
 
-// ─── Signal dot helpers ───────────────────────────────────────────────────────
-
-// Approximate lat/lon per industry keyword
-const INDUSTRY_COORDS: Record<string, [number, number]> = {
-  defense:        [31.7,  -106.4],
-  military:       [31.7,  -106.4],
-  'ai-ml':        [37.4,  -122.0],
-  ai:             [37.4,  -122.0],
-  'artificial intelligence': [37.4, -122.0],
-  energy:         [31.8,  -102.0],
-  oil:            [29.8,   -95.4],
-  cybersecurity:  [38.9,   -77.0],
-  cyber:          [38.9,   -77.0],
-  healthcare:     [29.7,   -95.4],
-  health:         [29.7,   -95.4],
-  biotech:        [42.3,   -71.1],
-  logistics:      [32.8,  -117.1],
-  'supply chain': [41.8,   -87.6],
-  manufacturing:  [42.4,   -83.0],
-  finance:        [40.7,   -74.0],
-  fintech:        [40.7,   -74.0],
-  semiconductors: [37.4,  -122.0],
-  robotics:       [37.8,  -122.4],
-  aerospace:      [34.0,  -118.4],
-  agriculture:    [39.8,   -98.5],
-  water:          [33.4,  -112.0],
-  construction:   [29.4,   -98.5],
-  general:        [39.8,   -98.5],
-  enterprise:     [37.7,  -122.4],
-};
-
-// Global coords for non-US industries
-const GLOBAL_COORDS: Record<string, [number, number]> = {
-  europe:   [51.5,   -0.1],
-  asia:     [35.7,  139.7],
-  china:    [39.9,  116.4],
-  germany:  [52.5,   13.4],
-  japan:    [35.7,  139.7],
-  israel:   [31.8,   35.2],
-  uk:       [51.5,   -0.1],
-  india:    [28.6,   77.2],
-  taiwan:   [25.0,  121.5],
-};
-
-// Seeded pseudo-random jitter so dots don't stack but remain consistent
-function seededJitter(seed: string, range: number): number {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) {
-    h = (Math.imul(31, h) + seed.charCodeAt(i)) | 0;
-  }
-  return ((h & 0xffff) / 0xffff - 0.5) * range * 2;
-}
-
-function industryToCoords(industry: string, id: string): [number, number] {
-  const key = industry.toLowerCase();
-  for (const [k, v] of Object.entries(INDUSTRY_COORDS)) {
-    if (key.includes(k)) {
-      const jLat = seededJitter(id + 'lat', 0.8);
-      const jLon = seededJitter(id + 'lon', 0.8);
-      return [v[0] + jLat, v[1] + jLon];
-    }
-  }
-  for (const [k, v] of Object.entries(GLOBAL_COORDS)) {
-    if (key.includes(k)) {
-      const jLat = seededJitter(id + 'lat', 1.2);
-      const jLon = seededJitter(id + 'lon', 1.2);
-      return [v[0] + jLat, v[1] + jLon];
-    }
-  }
-  // default: scattered across US
-  return [
-    39.8 + seededJitter(id + 'lat', 4),
-    -98.5 + seededJitter(id + 'lon', 10),
-  ];
-}
-
-function importanceToTier(importance: number): 'P0' | 'P1' | 'P2' {
-  if (importance >= 0.85) return 'P0';
-  if (importance >= 0.65) return 'P1';
-  return 'P2';
-}
-
-function tierToDotSize(tier: 'P0' | 'P1' | 'P2'): number {
-  if (tier === 'P0') return 16;
-  if (tier === 'P1') return 10;
-  return 6;
-}
-
-function industryToColor(industry: string, signalType: string): string {
-  const i = industry.toLowerCase();
-  const s = signalType.toLowerCase();
-  if (i.includes('ai') || i.includes('tech') || i.includes('cyber') || i.includes('semi') || i.includes('robot')) return COLORS.cyan;
-  if (i.includes('fund') || i.includes('financ') || i.includes('invest') || s.includes('funding')) return COLORS.green;
-  if (i.includes('defense') || i.includes('military') || i.includes('alert') || s.includes('risk')) return COLORS.red;
-  if (i.includes('energy') || i.includes('oil') || i.includes('gas')) return COLORS.gold;
-  if (i.includes('health') || i.includes('bio') || i.includes('pharma') || s.includes('research')) return '#8b5cf6';
-  if (i.includes('policy') || i.includes('govern') || i.includes('regulat')) return '#ff8c00';
-  return COLORS.cyan; // default cyan
-}
-
-function categoryMatchesSignal(cat: CategoryFilter, signal: IntelSignal): boolean {
-  if (cat === 'ALL') return true;
-  const i = signal.industry.toLowerCase();
-  const s = signal.signal_type.toLowerCase();
-  if (cat === 'TECH') return i.includes('ai') || i.includes('tech') || i.includes('cyber') || i.includes('robot') || i.includes('semi') || i.includes('software');
-  if (cat === 'MONEY') return i.includes('fund') || i.includes('financ') || i.includes('invest') || i.includes('capital') || s.includes('funding');
-  if (cat === 'POLICY') return i.includes('policy') || i.includes('govern') || i.includes('regulat') || i.includes('defense') || i.includes('military');
-  if (cat === 'SCIENCE') return i.includes('bio') || i.includes('health') || i.includes('pharma') || i.includes('research') || i.includes('energy');
-  return true;
-}
-
-function geoMatchesSignal(geo: GeoFilter, lat: number, lon: number): boolean {
-  if (geo === 'GLOBAL') return true;
-  // USA bounding box: roughly lat 24-49, lon -125 to -66
-  if (geo === 'USA') return lat >= 24 && lat <= 49 && lon >= -125 && lon <= -66;
-  // Texas: lat 26-36.5, lon -107 to -93
-  if (geo === 'TEXAS') return lat >= 26 && lat <= 36.5 && lon >= -107 && lon <= -93;
-  return true;
-}
-
-// Simple Mercator projection onto 0-100 viewport
-// Using bounds: lon -180..180 -> x 0..100, lat clamp -70..80 -> y 0..100
-function mercatorProject(lat: number, lon: number): [number, number] {
-  const x = ((lon + 180) / 360) * 100;
-  const latRad = (lat * Math.PI) / 180;
-  const mercN = Math.log(Math.tan(Math.PI / 4 + latRad / 2));
-  const maxMerc = Math.log(Math.tan(Math.PI / 4 + (80 * Math.PI) / 360));
-  const minMerc = Math.log(Math.tan(Math.PI / 4 + (-70 * Math.PI) / 360));
-  const y = ((maxMerc - mercN) / (maxMerc - minMerc)) * 100;
-  return [Math.max(0, Math.min(100, x)), Math.max(0, Math.min(100, y))];
-}
-
-function timeAgo(dateStr: string): string {
-  if (!dateStr) return 'recently';
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-}
-
-// Stub signals for cold-start / fallback
-const STUB_SIGNALS: IntelSignal[] = [
-  { title: 'NVIDIA Blackwell GPU cluster deployment at Texas data centers', signal_type: 'tech', industry: 'AI', company: 'NVIDIA', importance: 0.92, discovered_at: new Date(Date.now() - 3600000).toISOString() },
-  { title: 'DoD issues $1.2B contract for next-gen autonomous systems', signal_type: 'contract', industry: 'Defense', company: 'Lockheed Martin', importance: 0.88, discovered_at: new Date(Date.now() - 7200000).toISOString() },
-  { title: 'OpenAI raises $6.6B Series F at $157B valuation', signal_type: 'funding', industry: 'AI', company: 'OpenAI', importance: 0.95, discovered_at: new Date(Date.now() - 1800000).toISOString() },
-  { title: 'TSMC Arizona fab begins 3nm production ahead of schedule', signal_type: 'manufacturing', industry: 'Semiconductors', company: 'TSMC', importance: 0.87, discovered_at: new Date(Date.now() - 5400000).toISOString() },
-  { title: 'CBP deploys AI surveillance along El Paso border corridor', signal_type: 'policy', industry: 'Cybersecurity', company: null, importance: 0.79, discovered_at: new Date(Date.now() - 900000).toISOString() },
-  { title: 'MIT researchers publish autonomous swarm robotics framework', signal_type: 'research', industry: 'Robotics', company: null, importance: 0.71, discovered_at: new Date(Date.now() - 10800000).toISOString() },
-  { title: 'Saudi Aramco acquires clean hydrogen startup for $820M', signal_type: 'funding', industry: 'Energy', company: 'Saudi Aramco', importance: 0.82, discovered_at: new Date(Date.now() - 14400000).toISOString() },
-  { title: 'EU AI Act enforcement begins across member states', signal_type: 'policy', industry: 'Policy', company: null, importance: 0.76, discovered_at: new Date(Date.now() - 21600000).toISOString() },
-  { title: 'Fort Bliss expands drone defense program with $340M allocation', signal_type: 'contract', industry: 'Defense', company: null, importance: 0.91, discovered_at: new Date(Date.now() - 2700000).toISOString() },
-  { title: "Israel's cybersecurity startup ecosystem reaches $12B valuation", signal_type: 'funding', industry: 'Cybersecurity', company: null, importance: 0.83, discovered_at: new Date(Date.now() - 18000000).toISOString() },
-];
-
-// ─── Filter pills ──────────────────────────────────────────────────────────────
-
-function FilterPills({
-  geo,
-  category,
-  onGeo,
-  onCategory,
-  dotCount,
-}: {
-  geo: GeoFilter;
-  category: CategoryFilter;
-  onGeo: (g: GeoFilter) => void;
-  onCategory: (c: CategoryFilter) => void;
-  dotCount: number;
-}) {
-  const geoOpts: GeoFilter[] = ['TEXAS', 'USA', 'GLOBAL'];
-  const catOpts: CategoryFilter[] = ['ALL', 'TECH', 'MONEY', 'POLICY', 'SCIENCE'];
-
-  const catColors: Record<CategoryFilter, string> = {
-    ALL: COLORS.cyan, TECH: COLORS.cyan, MONEY: COLORS.green, POLICY: '#ff8c00', SCIENCE: '#8b5cf6',
-  };
-
-  return (
-    <div className="absolute top-0 left-0 right-0 z-20 flex flex-col gap-2 p-3 font-mono">
-      <div className="flex items-center gap-2 flex-wrap">
-        {/* Geo pills */}
-        <div className="flex items-center gap-1.5">
-          {geoOpts.map((g) => {
-            const isActive = geo === g;
-            return (
-              <button
-                key={g}
-                onClick={() => onGeo(g)}
-                className="min-h-[44px] sm:min-h-0 px-3 py-1.5 text-[8px] tracking-[0.2em] font-mono rounded-full backdrop-blur-md cursor-pointer transition-all duration-200 border"
-                style={isActive ? {
-                  borderColor: COLORS.cyan,
-                  backgroundColor: `${COLORS.cyan}22`,
-                  color: COLORS.cyan,
-                } : {
-                  borderColor: COLORS.border,
-                  backgroundColor: `${COLORS.surface}cc`,
-                  color: COLORS.muted,
-                }}
-              >
-                {g}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="w-px h-3.5" style={{ backgroundColor: COLORS.border }} />
-
-        {/* Category pills */}
-        <div className="flex items-center gap-1.5">
-          {catOpts.map((c) => {
-            const col = catColors[c];
-            const isActive = category === c;
-            return (
-              <button
-                key={c}
-                onClick={() => onCategory(c)}
-                className="min-h-[44px] sm:min-h-0 px-3 py-1.5 text-[8px] tracking-[0.2em] font-mono rounded-full backdrop-blur-md cursor-pointer transition-all duration-200 border"
-                style={isActive ? {
-                  borderColor: col,
-                  backgroundColor: `${col}22`,
-                  color: col,
-                } : {
-                  borderColor: COLORS.border,
-                  backgroundColor: `${COLORS.surface}cc`,
-                  color: COLORS.muted,
-                }}
-              >
-                {c}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="flex-1" />
-
-        {/* Signal count badge */}
-        <div
-          className="px-3 py-1.5 text-[8px] tracking-[0.15em] font-mono rounded-full backdrop-blur-md"
-          style={{
-            border: `1px solid ${COLORS.green}40`,
-            backgroundColor: `${COLORS.green}14`,
-            color: COLORS.green,
-          }}
-        >
-          {dotCount} LIVE
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Signal bottom sheet ───────────────────────────────────────────────────────
-
-function SignalBottomSheet({
-  dot,
-  onClose,
-}: {
-  dot: SignalDot;
-  onClose: () => void;
-}) {
-  const router = useRouter();
-  const sig = dot.signal;
-
-  return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-30"
-        style={{ backgroundColor: `${COLORS.bg}dd` }}
-        onClick={onClose}
-      />
-
-      {/* Sheet */}
-      <div
-        className="fixed left-0 right-0 z-40 bottom-12 font-mono max-h-[55vh] overflow-hidden flex flex-col"
-        style={{
-          backgroundColor: COLORS.surface,
-          border: `1px solid ${COLORS.border}`,
-          borderBottom: 'none',
-          borderRadius: '24px 24px 0 0',
-        }}
-      >
-        {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1.5">
-          <div className="w-10 h-[3px] rounded-full" style={{ backgroundColor: COLORS.dim }} />
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 pb-6 pt-2 max-h-[calc(55vh-80px)]">
-
-          {/* Tier + color indicator */}
-          <div className="flex items-center gap-2.5 mb-4">
-            <div
-              className="rounded-full shrink-0"
-              style={{
-                width: tierToDotSize(dot.tier),
-                height: tierToDotSize(dot.tier),
-                backgroundColor: dot.color,
-                boxShadow: `0 0 ${tierToDotSize(dot.tier)}px ${dot.color}88`,
-              }}
-            />
-            <span className="text-[9px] tracking-[0.2em] font-mono" style={{ color: dot.color }}>{dot.tier}</span>
-            <div className="flex-1" />
-            <span className="text-[8px] tracking-[0.1em] font-mono" style={{ color: COLORS.muted }}>
-              {timeAgo(sig.discovered_at)}
-            </span>
-            <button
-              onClick={onClose}
-              className="min-h-[44px] min-w-[44px] flex items-center justify-center text-sm cursor-pointer bg-transparent border-none pl-2"
-              style={{ color: COLORS.muted }}
-            >
-              &#x2715;
-            </button>
-          </div>
-
-          {/* Title */}
-          <div className="text-sm leading-relaxed mb-4 tracking-[0.02em] font-grotesk" style={{ color: COLORS.text }}>
-            {sig.title}
-          </div>
-
-          {/* Meta row */}
-          <div className="flex flex-wrap gap-2 mb-5">
-            {sig.industry && (
-              <span
-                className="text-[8px] tracking-[0.15em] px-2.5 py-1 rounded-full font-mono"
-                style={{
-                  border: `1px solid ${dot.color}40`,
-                  backgroundColor: `${dot.color}12`,
-                  color: dot.color,
-                }}
-              >
-                {sig.industry.toUpperCase()}
-              </span>
-            )}
-            {sig.signal_type && (
-              <span
-                className="text-[8px] tracking-[0.15em] px-2.5 py-1 rounded-full font-mono"
-                style={{
-                  border: `1px solid ${COLORS.border}`,
-                  backgroundColor: `${COLORS.card}`,
-                  color: COLORS.muted,
-                }}
-              >
-                {sig.signal_type.toUpperCase()}
-              </span>
-            )}
-            {sig.company && (
-              <span
-                className="text-[8px] tracking-[0.15em] px-2.5 py-1 rounded-full font-mono"
-                style={{
-                  border: `1px solid ${COLORS.gold}4D`,
-                  backgroundColor: `${COLORS.gold}14`,
-                  color: COLORS.gold,
-                }}
-              >
-                {sig.company}
-              </span>
-            )}
-          </div>
-
-          {/* Importance bar */}
-          <div className="mb-5">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[8px] tracking-[0.2em] font-mono" style={{ color: COLORS.dim }}>IMPORTANCE</span>
-              <span className="text-[9px] font-bold font-mono" style={{ color: dot.color }}>
-                {Math.round(sig.importance * 100)}%
-              </span>
-            </div>
-            <div className="w-full h-[3px] rounded-full" style={{ backgroundColor: `${COLORS.border}` }}>
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${sig.importance * 100}%`,
-                  backgroundColor: dot.color,
-                  boxShadow: `0 0 6px ${dot.color}66`,
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Drill down button */}
-          <button
-            onClick={() => router.push('/map?tab=intel')}
-            className="w-full min-h-[44px] text-[9px] tracking-[0.25em] font-bold font-mono cursor-pointer transition-all duration-200 hover:brightness-110"
-            style={{
-              border: `1px solid ${COLORS.orange}`,
-              backgroundColor: `${COLORS.orange}1F`,
-              color: COLORS.orange,
-              borderRadius: '20px',
-              background: `linear-gradient(135deg, ${COLORS.orange}1F, ${COLORS.orange}0A)`,
-            }}
-          >
-            DRILL DOWN &rarr;
-          </button>
-        </div>
-      </div>
-    </>
-  );
-}
-
-// ─── World map (SVG Mercator + signal dots) ───────────────────────────────────
-
-// Simplified world outline paths (approximated continents, Mercator-projected 0-100)
-// These paths trace continent outlines as rough polygons for a dark map aesthetic
-const CONTINENT_PATHS = [
-  // North America
-  `M 14,18 L 18,16 L 22,14 L 26,15 L 28,18 L 30,22 L 32,28 L 30,32 L 28,36 L 26,38 L 24,42 L 22,45 L 20,48 L 18,44 L 16,40 L 14,35 L 12,30 L 12,24 Z`,
-  // Central America / Caribbean (small)
-  `M 22,45 L 24,47 L 23,50 L 21,49 Z`,
-  // South America
-  `M 22,45 L 26,44 L 30,46 L 33,50 L 35,54 L 34,60 L 32,66 L 30,70 L 27,72 L 24,70 L 22,66 L 21,60 L 20,54 L 20,48 Z`,
-  // Europe
-  `M 45,14 L 50,12 L 55,13 L 58,16 L 60,20 L 58,23 L 55,24 L 52,25 L 48,24 L 45,22 L 43,19 Z`,
-  // Africa
-  `M 46,24 L 52,22 L 58,23 L 62,28 L 63,35 L 62,42 L 60,50 L 57,56 L 54,58 L 50,57 L 46,55 L 44,50 L 43,44 L 43,38 L 44,30 Z`,
-  // Asia (large)
-  `M 58,10 L 68,9 L 78,10 L 85,12 L 88,16 L 86,20 L 82,22 L 78,24 L 72,26 L 68,30 L 65,28 L 62,25 L 60,22 L 58,18 Z`,
-  // South/SE Asia
-  `M 68,28 L 75,28 L 80,32 L 82,38 L 78,40 L 72,38 L 68,34 Z`,
-  // Australia
-  `M 74,56 L 80,54 L 86,55 L 89,60 L 88,66 L 84,68 L 78,68 L 74,65 L 72,60 Z`,
-  // Japan/Korea (tiny)
-  `M 80,22 L 83,21 L 84,23 L 82,24 Z`,
-  // UK (tiny)
-  `M 46,17 L 48,16 L 49,18 L 47,19 Z`,
-  // Greenland
-  `M 30,8 L 36,7 L 40,9 L 38,13 L 34,14 L 30,12 Z`,
-  // Iceland
-  `M 40,12 L 43,11 L 44,13 L 41,14 Z`,
-];
-
-function WorldMapSVG({
-  dots,
-  onDotClick,
-  selectedId,
-}: {
-  dots: SignalDot[];
-  onDotClick: (dot: SignalDot) => void;
-  selectedId: string | null;
-}) {
-  const [pulsePhase, setPulsePhase] = useState(0);
-  const rafRef = useRef<number>(0);
-  const startRef = useRef<number>(0);
-
-  useEffect(() => {
-    const animate = (ts: number) => {
-      if (!startRef.current) startRef.current = ts;
-      setPulsePhase(((ts - startRef.current) % 2000) / 2000);
-      rafRef.current = requestAnimationFrame(animate);
-    };
-    rafRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, []);
-
-  return (
-    <svg
-      viewBox="0 0 100 100"
-      preserveAspectRatio="xMidYMid meet"
-      className="absolute inset-0 w-full h-full"
-      style={{ backgroundColor: COLORS.bg }}
-    >
-      {/* Dot-grid texture via SVG pattern */}
-      <defs>
-        <pattern id="dotgrid" x="0" y="0" width="2" height="2" patternUnits="userSpaceOnUse">
-          <circle cx="0.5" cy="0.5" r="0.15" fill="rgba(255,255,255,0.06)" />
-        </pattern>
-        <filter id="glow-cyan">
-          <feGaussianBlur stdDeviation="0.4" result="blur" />
-          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-        <filter id="glow-strong">
-          <feGaussianBlur stdDeviation="0.8" result="blur" />
-          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-        <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
-          <stop offset="0%" stopColor="transparent" />
-          <stop offset="100%" stopColor={`${COLORS.bg}99`} />
-        </radialGradient>
-      </defs>
-
-      {/* Background */}
-      <rect x="0" y="0" width="100" height="100" fill="url(#dotgrid)" />
-
-      {/* Ocean tint */}
-      <rect x="0" y="0" width="100" height="100" fill="rgba(0,30,50,0.18)" />
-
-      {/* Continent fills */}
-      {CONTINENT_PATHS.map((d, i) => (
-        <path
-          key={i}
-          d={d}
-          fill="rgba(255,255,255,0.035)"
-          stroke="rgba(255,255,255,0.10)"
-          strokeWidth="0.15"
-        />
-      ))}
-
-      {/* Latitude lines */}
-      {[20, 40, 60, 80].map((pct) => (
-        <line
-          key={pct}
-          x1="0" y1={pct} x2="100" y2={pct}
-          stroke={`${COLORS.cyan}0F`}
-          strokeWidth="0.2"
-          strokeDasharray="0.5,1.5"
-        />
-      ))}
-
-      {/* Longitude lines */}
-      {[20, 40, 60, 80].map((pct) => (
-        <line
-          key={pct}
-          x1={pct} y1="0" x2={pct} y2="100"
-          stroke={`${COLORS.cyan}0F`}
-          strokeWidth="0.2"
-          strokeDasharray="0.5,1.5"
-        />
-      ))}
-
-      {/* Vignette overlay */}
-      <rect x="0" y="0" width="100" height="100" fill="url(#vignette)" />
-
-      {/* Signal dots */}
-      {dots.map((dot) => {
-        const size = tierToDotSize(dot.tier);
-        const r = size / 2 / 10; // scale to SVG units (100-wide viewport)
-        const isSelected = dot.id === selectedId;
-        // Pulse ring radius expands with pulsePhase
-        const pulseR = r * (1.5 + pulsePhase * 2.5);
-        const pulseOpacity = (1 - pulsePhase) * 0.5;
-
-        return (
-          <g
-            key={dot.id}
-            className="cursor-pointer"
-            onClick={() => onDotClick(dot)}
-          >
-            {/* Pulse ring */}
-            {(dot.tier === 'P0' || dot.tier === 'P1' || isSelected) && (
-              <circle
-                cx={dot.x}
-                cy={dot.y}
-                r={pulseR}
-                fill="none"
-                stroke={dot.color}
-                strokeWidth="0.15"
-                opacity={isSelected ? pulseOpacity * 1.5 : pulseOpacity}
-              />
-            )}
-
-            {/* Second pulse ring offset */}
-            {dot.tier === 'P0' && (
-              <circle
-                cx={dot.x}
-                cy={dot.y}
-                r={r * (1 + ((pulsePhase + 0.5) % 1) * 2.5)}
-                fill="none"
-                stroke={dot.color}
-                strokeWidth="0.1"
-                opacity={(1 - ((pulsePhase + 0.5) % 1)) * 0.3}
-              />
-            )}
-
-            {/* Selection ring */}
-            {isSelected && (
-              <circle
-                cx={dot.x}
-                cy={dot.y}
-                r={r + 0.4}
-                fill="none"
-                stroke={dot.color}
-                strokeWidth="0.2"
-                opacity={0.9}
-              />
-            )}
-
-            {/* Main dot */}
-            <circle
-              cx={dot.x}
-              cy={dot.y}
-              r={r}
-              fill={dot.color}
-              opacity={isSelected ? 1 : 0.85}
-              filter={dot.tier === 'P0' ? 'url(#glow-strong)' : 'url(#glow-cyan)'}
-            />
-
-            {/* Inner bright core for P0 */}
-            {dot.tier === 'P0' && (
-              <circle
-                cx={dot.x}
-                cy={dot.y}
-                r={r * 0.4}
-                fill="white"
-                opacity={0.7}
-              />
-            )}
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
-// ─── Map view ────────────────────────────────────────────────────────────────
-
-function MapView() {
-  const [signals, setSignals] = useState<IntelSignal[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [geo, setGeo] = useState<GeoFilter>('USA');
-  const [category, setCategory] = useState<CategoryFilter>('ALL');
-  const [selectedDot, setSelectedDot] = useState<SignalDot | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    // Safety timeout — stop loading after 5s even if fetch hangs
-    const timeout = setTimeout(() => {
-      if (!cancelled) { setSignals(STUB_SIGNALS); setLoading(false); }
-    }, 5000);
-    Brain.map()
-      .then((data) => {
-        if (cancelled) return;
-        clearTimeout(timeout);
-        setSignals(data.signals.length > 0 ? (data.signals as IntelSignal[]) : STUB_SIGNALS);
-      })
-      .catch(() => {
-        if (!cancelled) { clearTimeout(timeout); setSignals(STUB_SIGNALS); }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; clearTimeout(timeout); };
-  }, []);
-
-  const allDots = useMemo<SignalDot[]>(() => {
-    const src = signals.length > 0 ? signals : STUB_SIGNALS;
-    return src.map((sig, idx) => {
-      const id = `${sig.industry}-${idx}`;
-      const [lat, lon] = industryToCoords(sig.industry, id);
-      const [x, y] = mercatorProject(lat, lon);
-      const tier = importanceToTier(sig.importance);
-      const color = industryToColor(sig.industry, sig.signal_type);
-      return { id, signal: sig, lat, lon, tier, color, x, y };
-    });
-  }, [signals]);
-
-  const filteredDots = useMemo<SignalDot[]>(() => {
-    return allDots.filter((dot) => {
-      if (!categoryMatchesSignal(category, dot.signal)) return false;
-      if (!geoMatchesSignal(geo, dot.lat, dot.lon)) return false;
-      return true;
-    });
-  }, [allDots, geo, category]);
-
-  const handleDotClick = useCallback((dot: SignalDot) => {
-    setSelectedDot((prev) => (prev?.id === dot.id ? null : dot));
-  }, []);
-
-  const handleCloseSheet = useCallback(() => setSelectedDot(null), []);
-
-  return (
-    <div className="flex-1 relative overflow-hidden" style={{ backgroundColor: COLORS.bg }}>
-      {/* Map — overflow-x-auto with min-width for scroll on mobile */}
-      <div className="overflow-x-auto w-full h-full min-w-[480px]">
-        <WorldMapSVG
-          dots={filteredDots}
-          onDotClick={handleDotClick}
-          selectedId={selectedDot?.id ?? null}
-        />
-      </div>
-
-      {/* Filter pills (top overlay) */}
-      <FilterPills
-        geo={geo}
-        category={category}
-        onGeo={setGeo}
-        onCategory={setCategory}
-        dotCount={filteredDots.length}
-      />
-
-      {/* Loading indicator */}
-      {loading && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
-          <div
-            className="flex flex-col items-center gap-3 px-6 py-5 rounded-[20px] backdrop-blur-md"
-            style={{
-              backgroundColor: `${COLORS.surface}dd`,
-              border: `1px solid ${COLORS.cyan}30`,
-            }}
-          >
-            <div
-              className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin"
-              style={{ borderColor: `${COLORS.cyan}60`, borderTopColor: 'transparent' }}
-            />
-            <span
-              className="font-mono text-[9px] tracking-[0.2em]"
-              style={{ color: COLORS.cyan }}
-            >
-              LOADING WORLD DATA...
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Legend — relative on mobile, absolute on desktop */}
-      <div
-        className="static sm:absolute sm:bottom-4 sm:left-4 z-20 flex flex-col gap-1.5 font-mono backdrop-blur-md mx-3 mt-2 sm:mx-0 sm:mt-0 p-3 px-3.5"
-        style={{
-          backgroundColor: `${COLORS.surface}cc`,
-          border: `1px solid ${COLORS.border}`,
-          borderRadius: '24px',
-        }}
-      >
-        {[
-          { color: COLORS.cyan, label: 'TECH / AI' },
-          { color: COLORS.green, label: 'FUNDING' },
-          { color: COLORS.red, label: 'DEFENSE / ALERT' },
-          { color: COLORS.gold, label: 'ENERGY' },
-          { color: '#8b5cf6', label: 'SCIENCE' },
-        ].map(({ color, label }) => (
-          <div key={label} className="flex items-center gap-2">
-            <div
-              className="w-1.5 h-1.5 rounded-full shrink-0"
-              style={{ backgroundColor: color, boxShadow: `0 0 4px ${color}88` }}
-            />
-            <span className="text-[7px] tracking-[0.15em]" style={{ color: COLORS.muted }}>{label}</span>
-          </div>
-        ))}
-        <div className="h-px my-0.5" style={{ backgroundColor: COLORS.border }} />
-        {[
-          { size: 8, label: 'P0 CRITICAL' },
-          { size: 5, label: 'P1 HIGH' },
-          { size: 3, label: 'P2 NORMAL' },
-        ].map(({ size, label }) => (
-          <div key={label} className="flex items-center gap-2">
-            <div
-              className="rounded-full shrink-0"
-              style={{ width: `${size}px`, height: `${size}px`, backgroundColor: COLORS.dim }}
-            />
-            <span className="text-[7px] tracking-[0.15em]" style={{ color: COLORS.dim }}>{label}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Signal bottom sheet */}
-      {selectedDot && (
-        <SignalBottomSheet dot={selectedDot} onClose={handleCloseSheet} />
-      )}
-    </div>
-  );
-}
-
-// ─── Scoreboard primitives ────────────────────────────────────────────────────
+// ─── Scoreboard primitives ───────────────────────────────────────────────────
 
 function scoreBarColor(score: number): string {
   if (score >= 90) return COLORS.green;
@@ -884,7 +132,7 @@ function ScoreBar({ score, color, height = 'h-1' }: { score: number; color: stri
   );
 }
 
-// ─── Scoreboard components ────────────────────────────────────────────────────
+// ─── Scoreboard components ───────────────────────────────────────────────────
 
 function TechFilterPanel({ active, onToggle }: { active: TechKey; onToggle: (k: TechKey) => void }) {
   return (
@@ -1190,40 +438,344 @@ function ScoreboardView() {
   );
 }
 
-// ─── View mode toggle bar ─────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAP VIEW — Full deck.gl map experience (from /map/page.tsx)
+// ═══════════════════════════════════════════════════════════════════════════════
 
-function ViewModeBar({ viewMode, onToggleView }: { viewMode: ViewMode; onToggleView: (v: ViewMode) => void }) {
+// CSS filter class + overlay per visual mode
+const FILTER_CONFIG: Record<FilterMode, { mapClass: string; overlayClass: string }> = {
+  STANDARD: { mapClass: '',           overlayClass: '' },
+  CRT:      { mapClass: 'filter-crt', overlayClass: 'scanlines' },
+  NVG:      { mapClass: 'filter-nvg', overlayClass: 'nvg-vignette' },
+  FLIR:     { mapClass: 'filter-flir', overlayClass: 'flir-vignette' },
+};
+
+function FullMapView() {
+  // ── Core layer + time state ────────────────────────────────────────────
+  const {
+    layers, setLayers, toggleLayer,
+    timeRange, setTimeRange,
+    activeLayers, initialViewState,
+  } = useMapLayers();
+
+  // ── Data fetching ──────────────────────────────────────────────────────
+  const {
+    flights, seismicEvents, borderCrossings, borderWaitTimes,
+    crimeArticles, crimeHotspots,
+    contracts, samBusinesses,
+    disruptionPoints,
+    countrySignalCounts,
+    intelSignalPoints,
+    dataFreshness, fetchErrors,
+  } = useMapData(layers);
+
+  // ── Mission briefing ───────────────────────────────────────────────────
+  const { missionBriefing, briefingLoading, handleMissionSubmit } =
+    useMissionBriefing(timeRange, activeLayers);
+
+  // ── UI-only state ──────────────────────────────────────────────────────
+  const [mode, setMode] = useState<'operator' | 'executive'>('operator');
+  const [filterMode, setFilterMode] = useState<FilterMode>('STANDARD');
+  const [mobileLayerOpen, setMobileLayerOpen] = useState(false);
+  const [mobileRightOpen, setMobileRightOpen] = useState(false);
+  const [selectedPoint, setSelectedPoint] = useState<SelectedPoint | null>(null);
+  const [selectedConference, setSelectedConference] = useState<ConferenceRecord | null>(null);
+  const [selectedCluster, setSelectedCluster] = useState<ConferenceCluster | null>(null);
+  const [pointCount, setPointCount] = useState(0);
+  const [flyTo, setFlyTo] = useState<FlyToTarget | undefined>(undefined);
+  const [cmdkOpen, setCmdkOpen] = useState(false);
+  const [sectorScores, setSectorScores] = useState<SectorScore[]>([]);
+  const [activeVendorIds, setActiveVendorIds] = useState<string[]>([]);
+
+  // — Global Cmd+K / Ctrl+K shortcut —
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCmdkOpen((prev) => !prev);
+      }
+      if (e.key === 'Escape') setCmdkOpen(false);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  const handleViewStateChange = useCallback((vs: { longitude: number; latitude: number; zoom: number }) => {
+    const params = new URLSearchParams(window.location.search);
+    params.set('lat', String(vs.latitude));
+    params.set('lon', String(vs.longitude));
+    params.set('z', String(vs.zoom));
+    window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+  }, []);
+
+  const handleLayerPreset = useCallback((presetLayers: string[]) => {
+    setLayers((prev) => {
+      const next = { ...prev };
+      (Object.keys(next) as (keyof LayerState)[]).forEach((k) => { next[k] = false; });
+      presetLayers.forEach((l) => {
+        if (l in next) next[l as keyof LayerState] = true;
+      });
+      return next;
+    });
+  }, [setLayers]);
+
+  const handleSignalsLoaded = useCallback(
+    (_signals: SignalFinding[], scores: SectorScore[], vendorIds: string[]) => {
+      setSectorScores(scores);
+      setActiveVendorIds(vendorIds);
+    },
+    [],
+  );
+
+  const handleVendorSelect = useCallback((point: MapPoint | null) => {
+    if (!point) { setSelectedPoint(null); return; }
+    setSelectedPoint({
+      id: point.id,
+      label: point.label,
+      category: point.category,
+      entity_id: point.entity_id,
+      layer: point.layer,
+    });
+  }, []);
+
+  const { mapClass, overlayClass } = FILTER_CONFIG[filterMode];
+
+  // Derive data status for the freshness indicator
+  const criticalKeys = ['flights', 'borderTrade', 'borderWait'];
+  const criticalFailed = criticalKeys.some((k) => fetchErrors[k]);
+  const anyFailed = Object.values(fetchErrors).some(Boolean);
+  const dataStatusColor = criticalFailed ? '#ff3b30' : anyFailed ? '#ffb800' : '#00ff88';
+  const dataStatusLabel = criticalFailed ? 'DATA: ERR' : anyFailed ? 'DATA: PARTIAL' : 'DATA: OK';
+  const hasAnyFreshness = Object.keys(dataFreshness).length > 0;
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      {/* TOP BAR */}
+      <MapTopBar
+        timeRange={timeRange}
+        onTimeRangeChange={setTimeRange}
+        onMissionSubmit={handleMissionSubmit}
+        loading={briefingLoading}
+        activeLayerCount={activeLayers.size}
+        pointCount={pointCount}
+        mode={mode}
+        onModeChange={setMode}
+        onFlyTo={setFlyTo}
+        onCmdK={() => setCmdkOpen(true)}
+        onSignalsLoaded={handleSignalsLoaded}
+        onMobileLayerToggle={() => setMobileLayerOpen((v) => !v)}
+        onMobileRightToggle={() => setMobileRightOpen((v) => !v)}
+      />
+
+      {/* MAIN AREA — 3-column on desktop, full-screen map on mobile */}
+      <div className="flex flex-1 min-h-0 relative">
+
+        {/* LEFT — LAYER PANEL: normal column on md+, slide-out drawer on mobile */}
+        <div className={`
+          md:relative md:flex md:w-40 md:shrink-0
+          fixed inset-y-0 left-0 z-30 w-40
+          transition-transform duration-200
+          ${mobileLayerOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        `}>
+          <MapLayerPanel
+            layers={layers}
+            onToggleLayer={(key) => { toggleLayer(key); }}
+            dataFreshness={dataFreshness}
+          />
+        </div>
+
+        {/* Mobile backdrop — tap outside layer panel to close */}
+        {mobileLayerOpen && (
+          <div
+            className="fixed inset-0 z-20 bg-black/50 md:hidden"
+            onClick={() => setMobileLayerOpen(false)}
+          />
+        )}
+
+        {/* CENTER — MAP with visual filter mode */}
+        <div className={`flex-1 relative min-w-0 ${mapClass}`}>
+          <MapCanvas
+            activeLayers={activeLayers}
+            timeRange={timeRange}
+            onVendorSelect={(point) => { handleVendorSelect(point); setMobileRightOpen(true); }}
+            onConferenceSelect={(conf) => { setSelectedConference(conf); setMobileRightOpen(true); }}
+            onClusterSelect={(cluster) => { setSelectedCluster(cluster); setMobileRightOpen(true); }}
+            onPointCountChange={setPointCount}
+            flyTo={flyTo}
+            initialViewState={initialViewState}
+            onViewStateChange={handleViewStateChange}
+            flights={flights}
+            seismicEvents={seismicEvents}
+            activeVendorIds={activeVendorIds}
+            borderCrossings={borderCrossings}
+            borderWaitTimes={borderWaitTimes}
+            crimeHotspots={crimeHotspots}
+            disruptionPoints={disruptionPoints}
+            contracts={contracts}
+            samBusinesses={samBusinesses}
+            countrySignalCounts={countrySignalCounts}
+            intelSignalPoints={intelSignalPoints}
+          />
+
+          {/* Mode overlay (scanlines / vignette) */}
+          {overlayClass && (
+            <div className={`absolute inset-0 pointer-events-none z-10 ${overlayClass}`} />
+          )}
+
+          {/* Filter mode switcher */}
+          <MapFilterPanel mode={filterMode} onChange={setFilterMode} />
+
+          {/* Border wait times + camera overlay */}
+          {layers.borderTrade && <BorderCameraOverlay />}
+
+          {/* Crime news overlay */}
+          {layers.crimeNews && <CrimeNewsOverlay articles={crimeArticles} />}
+
+          {/* Disruptions overlay */}
+          {layers.disruptions && disruptionPoints.length > 0 && (
+            <div className="absolute top-12 left-1 z-20 w-[280px] max-h-[400px] bg-black/92 border border-white/[0.08] backdrop-blur-md rounded-sm overflow-hidden flex flex-col">
+              <div className="px-3 py-2 border-b border-white/[0.06] flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#a855f7]" style={{ boxShadow: '0 0 6px #a855f7cc' }} />
+                  <span className="font-mono text-[8px] tracking-[0.2em] text-[#a855f7]">DISRUPTIONS</span>
+                </div>
+                <span className="font-mono text-[7px] tabular-nums text-white/20">{disruptionPoints.length}</span>
+              </div>
+              <div className="overflow-y-auto scrollbar-thin flex-1">
+                {ALL_DISRUPTIONS.map((d) => {
+                  const catColors: Record<string, string> = { breakthrough: '#a855f7', funding: '#f97316', policy: '#ffb800', acquisition: '#00d4ff', deployment: '#00ff88' };
+                  const impColors: Record<string, string> = { high: '#ff3b30', medium: '#f97316', low: '#6b7280' };
+                  const cc = catColors[d.category] ?? '#a855f7';
+                  const ic = impColors[d.impact] ?? '#6b7280';
+                  return (
+                    <div key={d.id} className="px-3 py-1.5 border-b border-white/[0.03] last:border-0">
+                      <div className="flex items-start gap-1.5">
+                        <span className="w-1 h-1 rounded-full mt-1 shrink-0" style={{ backgroundColor: ic, boxShadow: `0 0 4px ${ic}88` }} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[7px] text-white/45 leading-snug line-clamp-1">{d.title}</div>
+                          <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                            <span className="text-[5px] tracking-[0.12em] uppercase px-1 py-0.5 rounded-sm border" style={{ color: cc, borderColor: `${cc}30`, backgroundColor: `${cc}08` }}>{d.category}</span>
+                            <span className="text-[5px] tracking-[0.12em] uppercase px-1 py-0.5 rounded-sm border" style={{ color: ic, borderColor: `${ic}30`, backgroundColor: `${ic}08` }}>{d.impact}</span>
+                            <span className="text-[5px] text-white/15 tabular-nums">{d.date.slice(0, 10)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Live TV overlay */}
+          {layers.liveTV && <LiveTVOverlay />}
+
+          {/* Data freshness indicator — bottom-right corner, non-intrusive */}
+          {hasAnyFreshness && (
+            <div className="absolute bottom-2 right-2 z-20 flex items-center gap-1.5 px-2 py-1 bg-black/80 border border-white/8 rounded-sm backdrop-blur-sm pointer-events-none">
+              <span
+                className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
+                style={{ backgroundColor: dataStatusColor, boxShadow: `0 0 4px ${dataStatusColor}` }}
+              />
+              <span
+                className="font-mono tracking-widest"
+                style={{ fontSize: '7px', color: dataStatusColor }}
+              >
+                {dataStatusLabel}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT — INTELLIGENCE PANEL: normal column on md+, slide-out drawer on mobile */}
+        <div className={`
+          md:relative md:flex md:w-72 md:shrink-0
+          fixed inset-y-0 right-0 z-30 w-full max-w-sm
+          transition-transform duration-200
+          ${mobileRightOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
+        `}>
+          <RightPanel
+            selectedPoint={selectedPoint}
+            missionBriefing={missionBriefing as Parameters<typeof RightPanel>[0]['missionBriefing']}
+            briefingLoading={briefingLoading}
+            sectorScores={sectorScores}
+            flights={flights}
+            selectedConference={selectedConference}
+            onConferenceSelect={setSelectedConference}
+            selectedCluster={selectedCluster}
+            onClusterSelect={setSelectedCluster}
+            onMobileClose={() => setMobileRightOpen(false)}
+          />
+        </div>
+
+        {/* Mobile backdrop — tap outside right panel to close */}
+        {mobileRightOpen && (
+          <div
+            className="fixed inset-0 z-20 bg-black/50 md:hidden"
+            onClick={() => setMobileRightOpen(false)}
+          />
+        )}
+
+      </div>
+
+      {/* BOTTOM — LIVE FEED BAR */}
+      <FeedBar timeRange={timeRange} />
+
+      {/* Cmd+K VENDOR SEARCH MODAL */}
+      <CmdK
+        context="map"
+        open={cmdkOpen}
+        onClose={() => setCmdkOpen(false)}
+        timeRange={timeRange}
+        onVendorSelect={(point) => { handleVendorSelect(point); setCmdkOpen(false); setMobileRightOpen(true); }}
+        onLayerPreset={handleLayerPreset}
+        onFlyTo={setFlyTo}
+        contracts={contracts}
+        samBusinesses={samBusinesses}
+        crimeArticles={crimeArticles}
+      />
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VIEW TOGGLE — floating pill in the top-right
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function ViewToggle({
+  viewMode,
+  onChange,
+}: {
+  viewMode: ViewMode;
+  onChange: (v: ViewMode) => void;
+}) {
   const views: { id: ViewMode; label: string }[] = [
-    { id: 'MAP',        label: 'SIGNALS' },
-    { id: 'SCOREBOARD', label: 'RANKINGS' },
-    { id: 'OPS',        label: 'LIVE OPS' },
+    { id: 'MAP',        label: 'MAP' },
+    { id: 'SCOREBOARD', label: 'SCORES' },
   ];
 
   return (
-    <div
-      className="shrink-0 flex items-center justify-end px-4 py-2 font-mono"
-      style={{ borderBottom: `1px solid ${COLORS.border}`, backgroundColor: COLORS.bg }}
-    >
+    <div className="absolute top-3 right-3 z-50 flex items-center">
       <div
-        className="flex items-center overflow-hidden p-1 gap-1"
+        className="flex items-center overflow-hidden p-0.5 gap-0.5 backdrop-blur-md"
         style={{
           borderRadius: '9999px',
-          backgroundColor: COLORS.surface,
+          backgroundColor: 'rgba(0,0,0,0.75)',
           border: `1px solid ${COLORS.border}`,
+          boxShadow: '0 2px 12px rgba(0,0,0,0.5)',
         }}
       >
         {views.map((v) => {
           const isActive = viewMode === v.id;
-          const activeColor = v.id === 'OPS' ? COLORS.orange : COLORS.cyan;
           return (
             <button
               key={v.id}
-              onClick={() => onToggleView(v.id)}
-              className="min-h-[36px] px-4 py-1.5 text-[8px] tracking-[0.2em] font-mono cursor-pointer transition-all duration-200 border-none"
+              onClick={() => onChange(v.id)}
+              className="px-3.5 py-1.5 text-[8px] tracking-[0.2em] font-mono cursor-pointer transition-all duration-200 border-none"
               style={{
                 borderRadius: '9999px',
-                backgroundColor: isActive ? `${activeColor}26` : 'transparent',
-                color: isActive ? activeColor : COLORS.muted,
+                backgroundColor: isActive ? `${COLORS.cyan}26` : 'transparent',
+                color: isActive ? COLORS.cyan : COLORS.muted,
               }}
             >
               {v.label}
@@ -1235,41 +787,67 @@ function ViewModeBar({ viewMode, onToggleView }: { viewMode: ViewMode; onToggleV
   );
 }
 
-// ─── Main app ─────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// BACK BUTTON — top-left, since no NavRail
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function BackButton() {
+  return (
+    <Link
+      href="/solve"
+      className="absolute top-3 left-3 z-50 flex items-center gap-1.5 px-3 py-1.5 font-mono text-[8px] tracking-[0.15em] backdrop-blur-md transition-all duration-200 hover:brightness-125 no-underline"
+      style={{
+        borderRadius: '9999px',
+        backgroundColor: 'rgba(0,0,0,0.75)',
+        border: `1px solid ${COLORS.border}`,
+        color: COLORS.muted,
+        boxShadow: '0 2px 12px rgba(0,0,0,0.5)',
+      }}
+    >
+      <span style={{ fontSize: '10px' }}>&larr;</span>
+      NAV
+    </Link>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN PAGE
+// ═══════════════════════════════════════════════════════════════════════════════
 
 function WorldApp() {
   const [viewMode, setViewMode] = useState<ViewMode>('MAP');
 
   return (
-    <div className="flex flex-col overflow-hidden h-dvh font-mono animate-fade-up" style={{ background: COLORS.bg }}>
-      <TopBar />
-      <ViewModeBar viewMode={viewMode} onToggleView={setViewMode} />
+    <div className="fixed inset-0 bg-black flex flex-col overflow-hidden font-mono animate-fade-up">
+      {/* Floating controls */}
+      <BackButton />
+      <ViewToggle viewMode={viewMode} onChange={setViewMode} />
 
-      {/* Content area — pb-16 for bottom nav */}
-      <div
-        className={`flex flex-1 min-h-0 flex-col ${viewMode === 'OPS' ? '' : 'pb-16'}`}
-        style={{
-          overflowY: viewMode === 'SCOREBOARD' ? 'auto' : 'hidden',
-        }}
-      >
-        {viewMode === 'MAP' && <MapView />}
-        {viewMode === 'SCOREBOARD' && <ScoreboardView />}
-        {viewMode === 'OPS' && (
-          <iframe
-            src="/map"
-            title="Live Operations Platform"
-            className="w-full h-full border-none block"
-            allow="fullscreen"
-          />
-        )}
-      </div>
+      {/* Content */}
+      {viewMode === 'MAP' && <FullMapView />}
+      {viewMode === 'SCOREBOARD' && (
+        <div className="flex flex-col h-full overflow-hidden" style={{ background: COLORS.bg }}>
+          {/* Scoreboard header bar */}
+          <div
+            className="shrink-0 flex items-center px-5 py-3 font-mono"
+            style={{ borderBottom: `1px solid ${COLORS.border}`, backgroundColor: COLORS.bg }}
+          >
+            <span className="text-[9px] tracking-[0.3em]" style={{ color: COLORS.dim }}>WORLD</span>
+            <span className="mx-2 text-[8px]" style={{ color: COLORS.border }}>/</span>
+            <span className="text-[9px] tracking-[0.2em] font-bold" style={{ color: COLORS.cyan }}>TECH RANKINGS</span>
+            <div className="flex-1" />
+            <span className="text-[8px] tracking-widest" style={{ color: COLORS.dim }}>{COUNTRIES.length} NATIONS</span>
+          </div>
 
-      <BottomNav />
+          {/* Scoreboard content */}
+          <ScoreboardView />
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── Page export ──────────────────────────────────────────────────────────────
+// ─── Page export ─────────────────────────────────────────────────────────────
 
 export default function WorldPage() {
   return (

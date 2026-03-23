@@ -3,24 +3,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { NAV_ITEMS } from '@/lib/data/nav';
 
-const NAV_ITEMS = [
-  { href: '/map',              label: 'MAP',     icon: '◎', color: '#00d4ff' },
-  { href: '/explore',       label: 'EXPLORE', icon: '⬡', color: '#ffd700' },
-  { href: '/intel',            label: 'INTEL',   icon: '◈', color: '#ffb800' },
-  { href: '/world',            label: 'WORLD',   icon: '◉', color: '#00d4ff' },
-  { href: '/trajectory',       label: 'TRENDS',    icon: '↗', color: '#00ff88' },
-  { href: '/vendors',          label: 'VENDORS', icon: '◆', color: '#f97316' },
-  { href: '/products',         label: 'PRODUCTS',   icon: '◫', color: '#00ff88' },
-  { href: '/sweep',            label: 'SWEEP',   icon: '⊞', color: '#ff6600' },
-  { href: '/opportunities',    label: 'OPPS',    icon: '△', color: '#00ff88' },
-  { href: '/iker',             label: 'IKER',    icon: '◈', color: '#ffd700' },
-  { href: '/rfp',              label: 'RFP',     icon: '⬢', color: '#ffd700' },
-  { href: '/command-center',   label: 'DASHBOARD',     icon: '⬡', color: '#a855f7' },
-  { href: '/platform/status',  label: 'STATUS',  icon: '◇', color: '#6b7280' },
-];
-
-const SHORTCUT_COUNT = 7;
+const SHORTCUT_COUNT = NAV_ITEMS.length; // all 5
 
 export function NavRail() {
   const pathname = usePathname();
@@ -40,17 +25,15 @@ export function NavRail() {
   }, [router]);
 
   return (
-    <nav className="fixed left-0 top-0 bottom-0 z-20 w-14 bg-black/80 backdrop-blur-xl border-r border-white/[0.06] hidden md:flex flex-col items-center py-4 gap-1">
+    <nav className="fixed left-0 top-0 bottom-0 z-20 w-14 bg-black/80 backdrop-blur-xl border-r border-white/[0.06] hidden md:flex flex-col items-center py-4 gap-1" role="navigation" aria-label="Main navigation">
       {/* Logo */}
       <Link
-        href="/"
+        href="/solve"
         className="mb-4 flex items-center justify-center w-8 h-8 rounded-full border border-[#00d4ff]/20 hover:border-[#00d4ff]/50 transition-all duration-300 group cursor-pointer"
         title="NXT//LINK"
         aria-label="Home"
       >
-        <span
-          className="font-mono text-[11px] font-bold text-[#00d4ff]/60 group-hover:text-[#00d4ff] transition-colors"
-        >
+        <span className="font-mono text-[11px] font-bold text-[#00d4ff]/60 group-hover:text-[#00d4ff] transition-colors">
           N
         </span>
       </Link>
@@ -58,20 +41,18 @@ export function NavRail() {
       {/* Divider */}
       <div className="w-5 h-px bg-white/[0.08] mb-2" />
 
-      {/* Nav items */}
+      {/* 5 Core Pages */}
       {NAV_ITEMS.map((item, i) => {
         const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-        const shortcutLabel = i < SHORTCUT_COUNT ? ` (Ctrl+${i + 1})` : '';
         return (
-          <div key={item.href} className="flex flex-col items-center w-full">
-            {i === 7 && <div className="w-5 h-px bg-white/[0.06] my-1" />}
-            <Link
+          <Link
+            key={item.href}
             href={item.href}
             className="relative w-10 h-10 flex flex-col items-center justify-center rounded-md transition-all duration-200 group hover:bg-white/[0.04] cursor-pointer"
             style={{
               backgroundColor: isActive ? `${item.color}10` : undefined,
             }}
-            title={`${item.label}${shortcutLabel}`}
+            title={`${item.label} (Ctrl+${i + 1})`}
             aria-label={item.label}
           >
             {/* Active indicator */}
@@ -101,7 +82,6 @@ export function NavRail() {
               {item.label}
             </span>
           </Link>
-          </div>
         );
       })}
 

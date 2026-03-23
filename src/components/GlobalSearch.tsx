@@ -14,11 +14,11 @@ type SearchResult = {
 };
 
 const PAGES: SearchResult[] = [
-  { label: 'Industries', href: '/explore', type: 'page', color: '#00d4ff' },
-  { label: 'Products', href: '/products', type: 'page', color: '#a855f7' },
-  { label: 'Technologies', href: '/technologies', type: 'page', color: '#00d4ff' },
-  { label: 'Map', href: '/map', type: 'page', color: '#00d4ff' },
-  { label: 'Opportunities', href: '/opportunities', type: 'page', color: '#00ff88' },
+  { label: 'Solve a Problem', href: '/solve', type: 'page', color: '#ff6600' },
+  { label: 'World Map', href: '/world', type: 'page', color: '#00d4ff' },
+  { label: 'Industries', href: '/industry', type: 'page', color: '#ffd700' },
+  { label: 'Store', href: '/store', type: 'page', color: '#00ff88' },
+  { label: 'Command', href: '/command', type: 'page', color: '#a855f7' },
 ];
 
 function buildIndex(): SearchResult[] {
@@ -113,6 +113,9 @@ export function GlobalSearch() {
       <div
         className="relative w-full max-w-lg mx-4 bg-black border border-white/[0.10] rounded-sm shadow-2xl"
         onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-label="Global search"
+        aria-modal="true"
       >
         {/* Input */}
         <div className="flex items-center border-b border-white/[0.06] px-4">
@@ -126,6 +129,7 @@ export function GlobalSearch() {
             onChange={e => { setQuery(e.target.value); setSelected(0); }}
             onKeyDown={handleKeyDown}
             placeholder="Search industries, vendors, technologies, products..."
+            aria-label="Search"
             className="flex-1 bg-transparent font-mono text-[13px] text-white/70 placeholder-white/20
                        py-4 px-3 outline-none"
           />
