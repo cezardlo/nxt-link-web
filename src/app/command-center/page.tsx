@@ -216,21 +216,28 @@ export default function CommandCenterPage() {
         }
         @media (max-width: 1200px) {
           .cc-grid { grid-template-columns: 220px 1fr 220px; }
+          .cc-grid-trends { grid-template-columns: 220px 1fr 300px; }
         }
         @media (max-width: 900px) {
-          .cc-grid {
+          .cc-grid, .cc-grid-trends {
             grid-template-columns: 1fr;
             grid-template-rows: auto 1fr auto;
             gap: 2px; padding: 2px;
           }
-          .cc-left { max-height: 35vh; }
+          .cc-left { max-height: 35vh; overflow-y: auto; }
         }
         @media (max-width: 600px) {
-          .cc-grid {
+          .cc-grid, .cc-grid-trends {
             grid-template-columns: 1fr;
             grid-template-rows: auto 1fr;
           }
           .cc-left { max-height: 30vh; }
+          /* Hide right panel (IntelCard / TrendPanel) on small screens */
+          .cc-grid > :nth-child(3),
+          .cc-grid-trends > :nth-child(3) { display: none; }
+          /* Ensure map has usable height */
+          .cc-grid > :nth-child(2),
+          .cc-grid-trends > :nth-child(2) { min-height: 250px; }
         }
       `}</style>
     </div>

@@ -782,15 +782,25 @@ function MapView() {
 
       {/* Loading indicator */}
       {loading && (
-        <div
-          className="absolute top-10 right-3 z-20 text-[8px] tracking-[0.2em] font-mono px-3 py-1.5 rounded-full backdrop-blur-md"
-          style={{
-            color: COLORS.cyan,
-            backgroundColor: `${COLORS.surface}ee`,
-            border: `1px solid ${COLORS.cyan}40`,
-          }}
-        >
-          LOADING SIGNALS...
+        <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+          <div
+            className="flex flex-col items-center gap-3 px-6 py-5 rounded-[20px] backdrop-blur-md"
+            style={{
+              backgroundColor: `${COLORS.surface}dd`,
+              border: `1px solid ${COLORS.cyan}30`,
+            }}
+          >
+            <div
+              className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin"
+              style={{ borderColor: `${COLORS.cyan}60`, borderTopColor: 'transparent' }}
+            />
+            <span
+              className="font-mono text-[9px] tracking-[0.2em]"
+              style={{ color: COLORS.cyan }}
+            >
+              LOADING WORLD DATA...
+            </span>
+          </div>
         </div>
       )}
 
@@ -1140,10 +1150,37 @@ function ScoreboardView() {
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
 
   return (
-    <div className="flex flex-1 min-h-0 overflow-hidden">
-      <TechFilterPanel active={activeTech} onToggle={(k) => { setActiveTech(k); setSelectedCountry(null); }} />
+    <div className="flex flex-col sm:flex-row flex-1 min-h-0 overflow-hidden">
+      {/* Tech filter: horizontal scroll on mobile, sidebar on desktop */}
+      <div className="sm:hidden shrink-0 overflow-x-auto" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+        <div className="flex gap-1.5 p-2 min-w-max">
+          {TECH_DIMS.map((dim) => {
+            const isActive = activeTech === dim.key;
+            return (
+              <button
+                key={dim.key}
+                onClick={() => { setActiveTech(dim.key); setSelectedCountry(null); }}
+                className="px-3 py-2 text-[8px] tracking-[0.15em] font-mono rounded-full whitespace-nowrap transition-all duration-200"
+                style={{
+                  border: `1px solid ${isActive ? `${dim.color}50` : COLORS.border}`,
+                  backgroundColor: isActive ? `${dim.color}18` : 'transparent',
+                  color: isActive ? dim.color : COLORS.muted,
+                }}
+              >
+                {dim.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="hidden sm:flex">
+        <TechFilterPanel active={activeTech} onToggle={(k) => { setActiveTech(k); setSelectedCountry(null); }} />
+      </div>
       <WorldScoreboard tech={activeTech} selectedCountry={selectedCountry} onSelect={(c) => setSelectedCountry((prev) => prev?.code === c.code ? null : c)} />
-      <CountryDetailPanel country={selectedCountry} tech={activeTech} />
+      {/* Country detail: hidden on mobile, visible on lg+ */}
+      <div className="hidden lg:flex">
+        <CountryDetailPanel country={selectedCountry} tech={activeTech} />
+      </div>
     </div>
   );
 }

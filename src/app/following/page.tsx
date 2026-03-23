@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { BottomNav, TopBar } from '@/components/ui';
 import { COLORS } from '@/lib/tokens';
 
@@ -198,8 +199,18 @@ export default function FollowingPage() {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen flex items-center justify-center font-mono text-[11px] tracking-[0.2em]" style={{ background: COLORS.bg, color: COLORS.dim }}>
-        LOADING...
+      <div className="min-h-screen font-mono text-white flex flex-col" style={{ background: COLORS.bg }}>
+        <TopBar />
+        <div className="px-6 pt-8 pb-5" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+          <div className="h-6 w-32 rounded animate-pulse" style={{ background: COLORS.surface }} />
+          <div className="h-3 w-48 rounded animate-pulse mt-3" style={{ background: COLORS.surface }} />
+        </div>
+        <div className="flex-1 px-5 pt-6 space-y-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-32 rounded-[22px] animate-pulse" style={{ background: COLORS.card, border: `1px solid ${COLORS.border}` }} />
+          ))}
+        </div>
+        <BottomNav />
       </div>
     );
   }
@@ -237,11 +248,14 @@ export default function FollowingPage() {
             style={{ background: `${COLORS.accent}06`, border: `1px solid ${COLORS.accent}18` }}
           >
             <p className="font-grotesk text-[13px] font-semibold" style={{ color: COLORS.accent }}>
-              Nothing followed yet
+              You&apos;re not following anything yet.
             </p>
             <p className="text-[12px] leading-relaxed mt-2" style={{ color: COLORS.muted }}>
-              Go to any signal, vendor, or technology and tap{' '}
-              <span className="font-semibold" style={{ color: COLORS.accent }}>FOLLOW</span> to track changes here.
+              Visit{' '}
+              <Link href="/explore" className="underline underline-offset-2 font-semibold transition-colors hover:opacity-80" style={{ color: COLORS.accent }}>
+                Explore
+              </Link>{' '}
+              or an Industry page to start following topics.
               Showing sample data below.
             </p>
           </div>
@@ -270,9 +284,15 @@ export default function FollowingPage() {
 
         {hasRealFollows && displayItems.length === 0 && (
           <div className="text-center mt-20">
-            <p className="font-grotesk text-[14px] tracking-wide" style={{ color: COLORS.dim }}>Nothing followed yet</p>
-            <p className="font-mono text-[11px] mt-3" style={{ color: COLORS.muted }}>
-              Go to any signal, vendor, or technology and tap FOLLOW.
+            <p className="font-grotesk text-[16px] font-semibold tracking-wide" style={{ color: COLORS.dim }}>
+              You&apos;re not following anything yet.
+            </p>
+            <p className="font-mono text-[11px] mt-3 leading-relaxed" style={{ color: COLORS.muted }}>
+              Visit{' '}
+              <Link href="/explore" className="underline underline-offset-2 transition-colors hover:opacity-80" style={{ color: COLORS.accent }}>
+                Explore
+              </Link>{' '}
+              or an Industry page to start following topics.
             </p>
           </div>
         )}

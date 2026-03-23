@@ -261,7 +261,7 @@ function ProductCatalogInner() {
 
       {/* Header bar */}
       <div
-        className="px-6 py-4"
+        className="px-4 sm:px-6 py-4"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#0a0a0a' }}
       >
         <div className="flex flex-wrap items-start justify-between gap-4 max-w-screen-2xl mx-auto">
@@ -313,7 +313,7 @@ function ProductCatalogInner() {
 
       {/* Filter row */}
       <div
-        className="px-6 py-3 space-y-3 max-w-screen-2xl mx-auto"
+        className="px-4 sm:px-6 py-3 space-y-3 max-w-screen-2xl mx-auto"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
       >
         <div className="flex flex-wrap gap-3 items-center">
@@ -323,7 +323,7 @@ function ProductCatalogInner() {
             placeholder="Search products, companies, tags..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="flex-1 min-w-[200px] max-w-sm rounded-sm px-3 py-1.5 font-mono text-[11px] text-white/80 placeholder-white/20 outline-none transition-colors"
+            className="flex-1 min-w-[160px] sm:min-w-[200px] max-w-sm rounded-sm px-3 py-1.5 font-mono text-[11px] text-white/80 placeholder-white/20 outline-none transition-colors"
             style={{
               background: '#111111',
               border: '1px solid rgba(255,255,255,0.10)',
@@ -397,7 +397,7 @@ function ProductCatalogInner() {
       </div>
 
       {/* Product grid */}
-      <div className="px-6 py-5 max-w-screen-2xl mx-auto">
+      <div className="px-4 sm:px-6 py-5 max-w-screen-2xl mx-auto">
         {filtered.length === 0 ? (
           <div
             className="rounded-sm p-12 text-center"
