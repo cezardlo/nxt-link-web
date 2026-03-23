@@ -41,12 +41,7 @@ function getInitial(name: string): string {
   return name.charAt(0).toUpperCase();
 }
 
-function scoreColor(score: number): string {
-  if (score >= 80) return COLORS.gold;
-  if (score >= 60) return COLORS.green;
-  if (score >= 40) return COLORS.cyan;
-  return COLORS.muted;
-}
+
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
