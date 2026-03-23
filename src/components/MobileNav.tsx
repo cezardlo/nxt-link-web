@@ -35,7 +35,7 @@ export function MobileNav() {
           <Link
             key={tab.href}
             href={tab.href}
-            className="relative flex flex-col items-center gap-0.5 py-1 px-3 min-w-[44px]"
+            className="relative flex flex-col items-center gap-0.5 py-1 px-3 min-w-[44px] cursor-pointer"
           >
             {/* Icon */}
             <span

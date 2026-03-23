@@ -227,7 +227,7 @@ function HomeInner() {
 
   return (
     <div
-      className="min-h-[100dvh] flex flex-col"
+      className="min-h-[100dvh] flex flex-col pb-24"
       style={{ background: COLORS.bg, color: COLORS.text, fontFamily: "'IBM Plex Mono', 'JetBrains Mono', monospace" }}
     >
       {/* ── Header ─────────────────────────────────────────────────── */}

@@ -219,7 +219,7 @@ export default function SweepRadar() {
   const [selCat, selRegion] = selectedCell?.split('::') ?? ['', ''];
 
   return (
-    <div className="min-h-screen" style={{ background: COLORS.bg, color: COLORS.text, fontFamily: "'IBM Plex Mono', 'JetBrains Mono', monospace" }}>
+    <div className="min-h-screen pb-24" style={{ background: COLORS.bg, color: COLORS.text, fontFamily: "'IBM Plex Mono', 'JetBrains Mono', monospace" }}>
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <header className="px-6 pt-6 pb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">

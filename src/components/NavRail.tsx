@@ -44,7 +44,7 @@ export function NavRail() {
       {/* Logo */}
       <Link
         href="/"
-        className="mb-4 flex items-center justify-center w-8 h-8 rounded-full border border-[#00d4ff]/20 hover:border-[#00d4ff]/50 transition-all duration-300 group"
+        className="mb-4 flex items-center justify-center w-8 h-8 rounded-full border border-[#00d4ff]/20 hover:border-[#00d4ff]/50 transition-all duration-300 group cursor-pointer"
         title="NXT//LINK"
         aria-label="Home"
       >
@@ -67,7 +67,7 @@ export function NavRail() {
             {i === 7 && <div className="w-5 h-px bg-white/[0.06] my-1" />}
             <Link
             href={item.href}
-            className="relative w-10 h-10 flex flex-col items-center justify-center rounded-md transition-all duration-200 group hover:bg-white/[0.04]"
+            className="relative w-10 h-10 flex flex-col items-center justify-center rounded-md transition-all duration-200 group hover:bg-white/[0.04] cursor-pointer"
             style={{
               backgroundColor: isActive ? `${item.color}10` : undefined,
             }}
@@ -110,7 +110,7 @@ export function NavRail() {
         <div className="w-5 h-px bg-white/[0.06]" />
         <Link
           href="/platform/status"
-          className="w-10 h-10 flex flex-col items-center justify-center rounded-md transition-all group hover:bg-white/[0.04]"
+          className="w-10 h-10 flex flex-col items-center justify-center rounded-md transition-all group hover:bg-white/[0.04] cursor-pointer"
           title="System Status"
           aria-label="System Status"
         >

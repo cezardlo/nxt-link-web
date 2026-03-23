@@ -447,7 +447,7 @@ export default function TrajectoryGraphPage() {
   const liveCount = nodes.filter((n) => n.pulsing).length;
 
   return (
-    <div className="min-h-screen animate-fade-up" style={{ background: COLORS.bg, color: COLORS.text }}>
+    <div className="min-h-screen animate-fade-up pb-24" style={{ background: COLORS.bg, color: COLORS.text }}>
       <style dangerouslySetInnerHTML={{ __html: GRAPH_CSS }} />
       <TopBar />
 

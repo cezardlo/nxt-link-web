@@ -119,7 +119,7 @@ function SearchPageInner() {
   const vendors = (industry?.resources?.vendors ?? []).slice(0, 5) as R[];
 
   return (
-    <div className="min-h-screen pb-16 overflow-y-auto" style={{ background: COLORS.bg }}>
+    <div className="min-h-screen pb-24 overflow-y-auto" style={{ background: COLORS.bg }}>
       <TopBar />
 
       <main className="max-w-[560px] mx-auto px-6 sm:px-10 animate-fade-up">
