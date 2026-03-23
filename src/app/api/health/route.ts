@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 
 import { isSupabaseConfigured, getSupabaseClient } from '@/lib/supabase/client';
+import { isVectorEnabled } from '@/lib/vector';
+import { isGraphEnabled } from '@/lib/graph';
+import { isEmbeddingEnabled } from '@/lib/embeddings';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +25,13 @@ const ENV_KEYS = [
   'INTEL_API_URL',
   'NEXT_PUBLIC_SITE_URL',
   'VERCEL_URL',
+  'QDRANT_URL',
+  'QDRANT_API_KEY',
+  'NEO4J_URI',
+  'NEO4J_PASSWORD',
+  'OPENAI_API_KEY',
+  'PIPELINE_API_KEY',
+  'MCP_API_KEY',
 ] as const;
 
 type EnvKey = (typeof ENV_KEYS)[number];
@@ -85,6 +95,16 @@ export async function GET(): Promise<NextResponse> {
     }
   }
 
+  // ── 1b. Intelligence layer services ──────────────────────────────────────
+  const intelligence = {
+    qdrant: isVectorEnabled(),
+    neo4j: isGraphEnabled(),
+    openai: isEmbeddingEnabled(),
+    hybridSearch: isVectorEnabled() && isEmbeddingEnabled(),
+    connectionEngine: isGraphEnabled(),
+    pipeline: isEmbeddingEnabled(), // at minimum needs embeddings
+  };
+
   // ── 2. Feed cache note (in-memory cache is per-instance; no cross-check) ──
   const feeds: HealthReport['feeds'] = {
     note: 'Feed cache is in-memory per serverless instance. POST /api/feeds to warm, or rely on the cron pipeline.',
@@ -116,11 +136,12 @@ export async function GET(): Promise<NextResponse> {
   else if (criticalOk && optionalMissing.length <= 6) grade = 'C';
   else if (criticalOk) grade = 'D';
 
-  const report: HealthReport = {
+  const report = {
     ok: grade !== 'F',
     timestamp: new Date().toISOString(),
     overall_grade: grade,
     supabase,
+    intelligence,
     feeds,
     env,
     summary:
