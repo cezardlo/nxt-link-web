@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import type { TimeRange } from '@/hooks/useMapLayers';
+import { FEED_CATEGORY_COLORS, SENTIMENT_COLORS } from '@/lib/utils/design-tokens';
 
 type FeedItem = {
   title: string;
@@ -28,18 +29,6 @@ const STUB_ITEMS: FeedItem[] = [
   { title: 'OpenAI releases GPT-5o with real-time sensor data integration',   link: '#', source: 'TechCrunch', pubDate: '', sentiment: 'positive', category: 'AI/ML'        },
   { title: 'EU industrial AI regulation enters enforcement phase',            link: '#', source: 'Reuters',    pubDate: '', sentiment: 'negative', category: 'Cybersecurity' },
 ];
-
-const CATEGORY_COLORS: Record<string, string> = {
-  'AI/ML':        '#00d4ff',
-  'Cybersecurity':'#ff3b30',
-  'Defense':      '#f97316',
-  'Enterprise':   '#00ff88',
-  'Supply Chain': '#ffb800',
-  'Energy':       '#ffd700',
-  'Finance':      '#00d4ff',
-  'Crime':        '#f97316',
-  'General':      '#6b7280',
-};
 
 const CATEGORY_ABBREV: Record<string, string> = {
   'AI/ML':        'AI',
@@ -90,12 +79,6 @@ function detectSentiment(title: string): 'positive' | 'negative' | 'neutral' {
   return 'neutral';
 }
 
-const SENTIMENT_COLOR: Record<string, string> = {
-  positive: '#00ff88',
-  negative: '#ff3b30',
-  neutral:  'rgba(255,255,255,0.15)',
-};
-
 const SENTIMENT_SYMBOL: Record<string, string> = {
   positive: '▲',
   negative: '▼',
@@ -119,7 +102,7 @@ export function FeedBar({ timeRange }: Props) {
           setItems(enriched);
         }
       })
-      .catch(() => {});
+      .catch((err) => console.warn('[FeedBar] feeds fetch failed:', err));
   }, [timeRange]);
 
   // Cap displayed items to keep ticker readable (max 80 headlines)
@@ -149,9 +132,9 @@ export function FeedBar({ timeRange }: Props) {
         <div className="feed-scroll flex items-center whitespace-nowrap" style={{ animationDuration: `${animDuration}s` }}>
           {doubled.map((item, i) => {
             const sentiment = item.sentiment ?? detectSentiment(item.title);
-            const catColor  = item.category ? (CATEGORY_COLORS[item.category] ?? CATEGORY_COLORS.General) : undefined;
+            const catColor  = item.category ? (FEED_CATEGORY_COLORS[item.category] ?? FEED_CATEGORY_COLORS.General) : undefined;
             const srcColor  = SOURCE_COLORS[item.source] ?? SOURCE_COLORS.default;
-            const sentColor = SENTIMENT_COLOR[sentiment];
+            const sentColor = SENTIMENT_COLORS[sentiment];
             const sentSym   = SENTIMENT_SYMBOL[sentiment];
             const isHigh    = (item.score ?? 0) >= 7;
 

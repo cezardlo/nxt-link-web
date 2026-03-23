@@ -43,14 +43,35 @@ export const CONFERENCE_CATEGORY_HEX: Record<string, string> = {
   Workforce:      '#ffb800',
 };
 
-/** Signal type → hex color (SignalsFeed) */
+/** Signal type → hex color (SignalsFeed, SignalBadge) */
 export const SIGNAL_TYPE_COLORS: Record<string, string> = {
-  patent_filing:  '#ffb800',
-  funding:        '#ffb800',
-  contract_award: '#00ff88',
-  partnership:    '#00d4ff',
-  expansion:      '#00d4ff',
-  risk:           '#ff3b30',
+  patent_filing:      '#ffb800',
+  funding:            '#ffb800',
+  contract_award:     '#00ff88',
+  partnership:        '#00d4ff',
+  expansion:          '#00d4ff',
+  risk:               '#ff3b30',
+};
+
+/** Extended signal badge colors — covers all known signal_type values from nxt-brain */
+export const SIGNAL_BADGE_COLORS: Record<string, string> = {
+  patent:             '#a855f7',
+  funding:            '#00ff88',
+  hiring:             '#00d4ff',
+  contract:           '#ffd700',
+  research:           '#f97316',
+  regulatory:         '#ff3b30',
+  partnership:        '#00d4ff',
+  product_launch:     '#00ff88',
+  patent_filing:      '#a855f7',
+  funding_round:      '#00ff88',
+  hiring_signal:      '#00d4ff',
+  contract_award:     '#ffd700',
+  research_paper:     '#f97316',
+  regulatory_action:  '#ff3b30',
+  merger_acquisition: '#f97316',
+  facility_expansion: '#00ff88',
+  case_study:         '#ffb800',
 };
 
 /** Flight category → hex color */

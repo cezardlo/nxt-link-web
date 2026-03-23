@@ -25,7 +25,7 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   // Background refresh if requested
   if (refresh) {
-    updateCountryActivity().catch(() => {});
+    updateCountryActivity().catch((err) => console.warn('[CountryActivity] background refresh failed:', err));
   }
 
   try {
@@ -42,7 +42,7 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     // If empty (table not populated yet), trigger background fill
     if (Object.keys(counts).length === 0) {
-      updateCountryActivity().catch(() => {});
+      updateCountryActivity().catch((err) => console.warn('[CountryActivity] background fill failed:', err));
     }
 
     return NextResponse.json(

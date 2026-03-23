@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { SignalFinding, SectorScore } from '@/lib/intelligence/signal-engine';
+import { REFRESH_INTERVAL } from '@/lib/constants';
 
 type ApiResponse = {
   ok: boolean;
@@ -68,7 +69,7 @@ export function IntelBadge({ onSignalsLoaded }: Props) {
 
   useEffect(() => {
     fetchSignals();
-    intervalRef.current = setInterval(fetchSignals, 5 * 60 * 1000); // every 5 min
+    intervalRef.current = setInterval(fetchSignals, REFRESH_INTERVAL.SIGNALS);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [fetchSignals]);
 
@@ -102,6 +103,8 @@ export function IntelBadge({ onSignalsLoaded }: Props) {
           color: signals.length > 0 ? badgeColor : 'rgba(255,255,255,0.3)',
         }}
         title="Intelligence Findings"
+        aria-label="Intelligence findings"
+        aria-expanded={open}
       >
         <span style={{ fontSize: 11 }}>⚡</span>
         {loading ? (
@@ -122,6 +125,8 @@ export function IntelBadge({ onSignalsLoaded }: Props) {
         <div
           className="absolute right-0 top-full mt-1 z-50 w-[380px] max-h-[70vh] overflow-y-auto rounded-sm flex flex-col"
           style={{ background: 'rgba(0,0,0,0.96)', border: '1px solid rgba(255,255,255,0.12)' }}
+          role="dialog"
+          aria-label="Intelligence findings panel"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-3 py-2 border-b border-white/[0.08]">

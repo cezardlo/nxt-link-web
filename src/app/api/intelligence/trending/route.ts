@@ -37,7 +37,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     const limit = isNaN(rawLimit) || rawLimit < 1 ? 20 : Math.min(rawLimit, 50);
 
     const store = getStoredFeedItems();
-    if (!store) runFeedAgent().catch(() => {});
+    if (!store) runFeedAgent().catch((err) => console.warn('[Trending] runFeedAgent failed:', err));
 
     const result = getTrending(store?.items ?? null, window);
 

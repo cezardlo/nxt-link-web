@@ -5,19 +5,7 @@ import { getClientIp } from '@/lib/http/request-context';
 
 export const dynamic = 'force-dynamic';
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
-
-type MapPoint = {
-  id: string;
-  lat: number;
-  lon: number;
-  label: string;
-  category: string;
-  layer: string;
-  weight: number;
-  confidence: number;
-  entity_id?: string;
-};
+import type { MapPoint } from '@/types/map';
 
 type OpportunitySignal = {
   id: string;

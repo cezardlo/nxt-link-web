@@ -16,6 +16,7 @@ export function AccordionSection({ title, defaultOpen = false, count, accentColo
     <div className="border-b border-white/[0.04]">
       <button
         onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
         className="w-full flex items-center gap-2 px-3 py-2 hover:bg-white/[0.02] transition-colors"
       >
         <span

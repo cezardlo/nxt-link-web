@@ -67,7 +67,7 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     if (!store) {
       // Warm the cache for the next request — fire-and-forget
-      runFeedAgent().catch(() => {});
+      runFeedAgent().catch((err) => console.warn('[Convergence] runFeedAgent failed:', err));
     }
 
     // ── Run convergence engine (mock fallback included) ─────────────────────

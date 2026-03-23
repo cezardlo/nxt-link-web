@@ -58,7 +58,7 @@ export async function GET(request: Request): Promise<NextResponse> {
         if (isStale) {
           import('@/lib/agents/agents/intel-discovery-agent')
             .then(({ runIntelDiscoveryAgent }) => runIntelDiscoveryAgent())
-            .catch(() => {});
+            .catch((err) => console.warn('[IntelSignals] runIntelDiscoveryAgent failed:', err));
         }
 
         const signals = dbSignals.map(s => ({
@@ -93,7 +93,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     // 2. Fall back to in-memory feed cache
     const store = getStoredFeedItems();
     if (!store) {
-      runFeedAgent().catch(() => {});
+      runFeedAgent().catch((err) => console.warn('[IntelSignals] runFeedAgent failed:', err));
       // Return seed signals so the homepage always has content during warm-up
       return NextResponse.json(
         {

@@ -140,23 +140,9 @@ function getNaicsSectorLabel(primaryNaics: string): string {
   return NAICS_SECTORS[prefix2]?.label ?? 'OTHER';
 }
 
-export type MapPoint = {
-  id: string;
-  lat: number;
-  lon: number;
-  label: string;
-  category: string;
-  layer: string;
-  weight: number;
-  confidence: number;
-  entity_id?: string;
-};
-
-type LayerApiResponse = {
-  ok?: boolean;
-  offline?: boolean;
-  points?: MapPoint[];
-};
+// Re-export shared types for backward compatibility
+export type { MapPoint, LayerApiResponse } from '@/types/map';
+import type { MapPoint, LayerApiResponse } from '@/types/map';
 
 type Landmark = { id: string; lat: number; lon: number; label: string };
 

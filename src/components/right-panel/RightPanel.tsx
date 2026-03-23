@@ -76,7 +76,7 @@ export function RightPanel({
   }, [selectedConference, selectedCluster]);
 
   return (
-    <div className="w-full md:w-72 flex flex-col bg-black/96 md:bg-black/80 border-l border-white/[0.05] backdrop-blur-md h-full pt-11 md:pt-0">
+    <div className="w-full md:w-72 flex flex-col bg-black/96 md:bg-black/80 border-l border-white/[0.05] backdrop-blur-md h-full pt-11 md:pt-0" role="complementary" aria-label="Intelligence panel">
       {/* Mobile drag handle + close */}
       {onMobileClose && (
         <>
@@ -87,6 +87,7 @@ export function RightPanel({
             <span className="font-mono text-[8px] tracking-[0.3em] text-white/20 uppercase">Intel Panel</span>
             <button
               onClick={onMobileClose}
+              aria-label="Close intelligence panel"
               className="font-mono text-[10px] text-white/25 hover:text-white/60 transition-colors px-2 py-1"
             >
               ✕
@@ -96,7 +97,7 @@ export function RightPanel({
       )}
 
       {/* 5-tab bar */}
-      <div className="flex border-b border-white/[0.05] shrink-0 bg-black/40">
+      <div role="tablist" aria-label="Intelligence panel tabs" className="flex border-b border-white/[0.05] shrink-0 bg-black/40">
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
           // Indicator dots
@@ -108,6 +109,8 @@ export function RightPanel({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              role="tab"
+              aria-selected={isActive}
               className={`flex-1 py-2.5 font-mono text-[9px] tracking-[0.15em] transition-all duration-150 relative ${
                 isActive ? 'font-bold' : 'text-white/18 hover:text-white/40'
               }`}

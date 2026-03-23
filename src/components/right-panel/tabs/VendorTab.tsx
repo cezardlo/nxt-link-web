@@ -10,15 +10,9 @@ import { formatUsd } from '@/lib/utils/format';
 import { GRADE_COLORS, CONTRACT_TYPE_COLORS } from '@/lib/utils/design-tokens';
 import { NXT_ENTITIES } from '@/lib/intelligence/nxt-entities';
 
-// ─── Exported types (other files import SelectedPoint from here) ──────────────
-
-export type SelectedPoint = {
-  id: string;
-  label: string;
-  category: string;
-  entity_id?: string;
-  layer?: string;
-};
+// Re-export shared type for backward compatibility
+export type { SelectedPoint } from '@/types/map';
+import type { SelectedPoint } from '@/types/map';
 
 // ─── Local types ──────────────────────────────────────────────────────────────
 

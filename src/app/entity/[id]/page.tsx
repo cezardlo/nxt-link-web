@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { PageTopBar } from '@/components/PageTopBar';
+import { SIGNAL_BADGE_COLORS } from '@/lib/utils/design-tokens';
 
 type EntityData = {
   id: string;
@@ -33,15 +34,8 @@ type Relationship = {
   strength: number;
 };
 
-const SIGNAL_COLORS: Record<string, string> = {
-  contract_award: '#ffd700',
-  funding_round: '#00ff88',
-  product_launch: '#00d4ff',
-  hiring_signal: '#a855f7',
-  patent_filing: '#ffb800',
-  merger_acquisition: '#f97316',
-  regulatory_action: '#ff3b30',
-};
+// Uses SIGNAL_BADGE_COLORS from design-tokens
+const SIGNAL_COLORS = SIGNAL_BADGE_COLORS;
 
 export default function EntityProfilePage() {
   const params = useParams();

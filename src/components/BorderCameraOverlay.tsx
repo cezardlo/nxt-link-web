@@ -41,14 +41,14 @@ export function BorderCameraOverlay() {
     fetch('/api/live/border-wait')
       .then((r) => r.json())
       .then((d: WaitApiResponse) => { if (d.ports) setPorts(d.ports); })
-      .catch(() => {})
+      .catch((err) => console.warn('[BorderCameraOverlay] border-wait fetch failed:', err))
       .finally(() => setLoadingWait(false));
 
     // Camera thumbnails (best-effort)
     fetch('/api/live/border-cameras')
       .then((r) => r.json())
       .then((d: CameraApiResponse) => { if (d.cameras) setCameras(d.cameras); })
-      .catch(() => {});
+      .catch((err) => console.warn('[BorderCameraOverlay] border-cameras fetch failed:', err));
   }, []);
 
   const visibleCameras = cameras.filter((c) => !hiddenCams.has(c.id));

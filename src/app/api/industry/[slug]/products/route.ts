@@ -51,7 +51,7 @@ export async function GET(request: Request, context: RouteContext): Promise<Next
   const cached = scanCache.get(slug);
   if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
     // Bump popularity in background (fire-and-forget)
-    bumpIndustryPopularity(slug).catch(() => {});
+    bumpIndustryPopularity(slug).catch((err) => console.warn('[IndustryProducts] bumpIndustryPopularity failed:', err));
 
     return NextResponse.json(
       {

@@ -101,7 +101,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       const store = getStoredFeedItems();
       if (!store) {
         // Trigger warm-up in the background; return empty with warming flag
-        runFeedAgent().catch(() => {});
+        runFeedAgent().catch((err) => console.warn('[EnrichedSignals] runFeedAgent failed:', err));
         return NextResponse.json(
           {
             ok: true,

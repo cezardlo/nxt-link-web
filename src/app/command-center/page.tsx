@@ -27,16 +27,16 @@ function useRawFeed() {
     fetch('/api/feeds').then(r => r.json()).then(json => {
       if (json?.all?.length > 0) setItems(json.all.slice(0, 60));
       else {
-        fetch('/api/feeds', { method: 'POST' }).catch(() => {});
+        fetch('/api/feeds', { method: 'POST' }).catch((err) => console.warn('[CommandCenter] feeds POST failed:', err));
         setTimeout(() => {
           fetch('/api/feeds').then(r => r.json())
-            .then(j => { if (j?.all?.length > 0) setItems(j.all.slice(0, 60)); }).catch(() => {});
+            .then(j => { if (j?.all?.length > 0) setItems(j.all.slice(0, 60)); }).catch((err) => console.warn('[CommandCenter] feeds retry failed:', err));
         }, 8000);
       }
-    }).catch(() => {});
+    }).catch((err) => console.warn('[CommandCenter] feeds fetch failed:', err));
     const id = setInterval(() => {
       fetch('/api/feeds').then(r => r.json())
-        .then(json => { if (json?.all) setItems(json.all.slice(0, 60)); }).catch(() => {});
+        .then(json => { if (json?.all) setItems(json.all.slice(0, 60)); }).catch((err) => console.warn('[CommandCenter] feeds poll failed:', err));
     }, 5 * 60 * 1000);
     return () => clearInterval(id);
   }, []);

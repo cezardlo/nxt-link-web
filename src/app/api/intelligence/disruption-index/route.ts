@@ -45,7 +45,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     const feedItems = store?.items ?? null;
 
     if (!store) {
-      runFeedAgent().catch(() => {});
+      runFeedAgent().catch((err) => console.warn('[DisruptionIndex] runFeedAgent failed:', err));
     }
 
     // Compute (or return cached) IDI

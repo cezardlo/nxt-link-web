@@ -1,24 +1,6 @@
 'use client';
 
-const SIGNAL_COLORS: Record<string, string> = {
-  patent: '#a855f7',
-  funding: '#00ff88',
-  hiring: '#00d4ff',
-  contract: '#ffd700',
-  research: '#f97316',
-  regulatory: '#ff3b30',
-  partnership: '#00d4ff',
-  product_launch: '#00ff88',
-  patent_filing: '#a855f7',
-  funding_round: '#00ff88',
-  hiring_signal: '#00d4ff',
-  contract_award: '#ffd700',
-  research_paper: '#f97316',
-  regulatory_action: '#ff3b30',
-  merger_acquisition: '#f97316',
-  facility_expansion: '#00ff88',
-  case_study: '#ffb800',
-};
+import { SIGNAL_BADGE_COLORS } from '@/lib/utils/design-tokens';
 
 type SignalBadgeProps = {
   type: string;
@@ -26,7 +8,7 @@ type SignalBadgeProps = {
 };
 
 export function SignalBadge({ type, size = 'md' }: SignalBadgeProps) {
-  const color = SIGNAL_COLORS[type] ?? '#6b7280';
+  const color = SIGNAL_BADGE_COLORS[type] ?? '#6b7280';
   const label = type.replace(/_/g, ' ').toUpperCase();
 
   const sizeClasses = size === 'sm'

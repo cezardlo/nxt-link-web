@@ -6,8 +6,6 @@
 /* Inspired by Bloomberg Terminal + Palantir AIP + WorldMonitor   */
 html {
   scroll-behavior: smooth;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Smooth scrollbar */
@@ -45,8 +43,6 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Bloomberg-style tabular numbers */
@@ -184,9 +180,6 @@ body {
 }
 .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
 .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
-
-/* ─── Map panel hover utility (3% white bg) ────────────────────── */
-.hover\:bg-white\/3:hover { background: rgba(255,255,255,0.03); }
 
 /* ─── Subtle fade-up entry animation ─────────────────────────── */
 @keyframes fade-up {
@@ -340,9 +333,6 @@ body {
   color: #f0f0f0;
 }
 
-/* Smooth page-level scroll */
-html { scroll-behavior: smooth; }
-
 /* Focus ring — accessible, matches design */
 button:focus-visible, a:focus-visible {
   outline: 2px solid #00d4ff;
@@ -393,15 +383,11 @@ button:active:not(:disabled) {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
-/* Shimmer loading animation */
-@keyframes shimmer-load {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
+/* Shimmer loading — reuses shimmer keyframes */
 .animate-shimmer {
   background: linear-gradient(90deg, transparent 25%, rgba(255,255,255,0.04) 50%, transparent 75%);
   background-size: 200% 100%;
-  animation: shimmer-load 1.5s ease-in-out infinite;
+  animation: shimmer 1.5s ease-in-out infinite;
 }
 
 /* ─── Reduced motion ───────────────────────────────────────── */

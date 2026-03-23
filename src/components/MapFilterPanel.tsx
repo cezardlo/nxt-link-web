@@ -39,6 +39,8 @@ export function MapFilterPanel({ mode, onChange }: Props) {
 
   return (
     <div
+      role="group"
+      aria-label="Map view mode"
       className="absolute bottom-9 left-2 md:left-44 z-20 flex items-center gap-1 select-none px-2 py-1.5 rounded-sm"
       style={{ background: 'rgba(0,0,0,0.75)', border: '1px solid rgba(255,255,255,0.08)' }}
     >
@@ -52,6 +54,8 @@ export function MapFilterPanel({ mode, onChange }: Props) {
           <button
             key={m.id}
             onClick={() => onChange(m.id)}
+            aria-pressed={active}
+            aria-label={`${m.description} view mode`}
             title={`${m.description}  [${m.key}]`}
             className="flex items-center gap-0.5 px-2.5 py-1 md:px-2 md:py-0.5 font-mono text-[9px] tracking-wider rounded-sm transition-all duration-150"
             style={{

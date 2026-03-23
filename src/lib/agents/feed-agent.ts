@@ -707,7 +707,7 @@ async function doRunFeedAgent(): Promise<FeedStore> {
     return store;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    logAgentRun('feed-agent', 'failed', 0, 0, message).catch(() => {});
+    logAgentRun('feed-agent', 'failed', 0, 0, message).catch((err) => console.warn('[FeedAgent] logAgentRun failed:', err));
     throw err;
   }
 }

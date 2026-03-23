@@ -69,7 +69,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     if (signals.length < 5) {
       const store = getStoredFeedItems();
       if (!store) {
-        runFeedAgent().catch(() => {});
+        runFeedAgent().catch((err) => console.warn('[CrossSector] runFeedAgent failed:', err));
       } else {
         const engine = runSignalEngine(store.items);
         const feedSignals: CrossIntelSignalInput[] = engine.signals.map((s) => ({

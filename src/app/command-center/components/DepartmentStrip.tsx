@@ -29,7 +29,7 @@ export default function DepartmentStrip() {
       .then(data => {
         if (data?.departments) setDepts(data.departments);
       })
-      .catch(() => {})
+      .catch((err) => console.warn('[DepartmentStrip] fetch departments failed:', err))
       .finally(() => setLoading(false));
   }, []);
 
@@ -48,7 +48,7 @@ export default function DepartmentStrip() {
         return fetch('/api/brain/departments').then(r => r.json());
       })
       .then(data => { if (data?.departments) setDepts(data.departments); })
-      .catch(() => {})
+      .catch((err) => console.warn('[DepartmentStrip] run pipeline failed:', err))
       .finally(() => setRunning(false));
   }
 

@@ -73,7 +73,7 @@ export type Props = {
   crimeArticles?: CrimeFeedItem[];
 };
 
-type LayerApiResponse = { ok?: boolean; offline?: boolean; points?: MapPoint[] };
+import type { LayerApiResponse } from '@/types/map';
 type ResultItem =
   | { kind: 'vendor'; point: MapPoint }
   | { kind: 'preset'; preset: LayerPreset }
@@ -146,7 +146,7 @@ export function CmdK({
         }
         setPoints(all);
       })
-      .catch(() => {})
+      .catch((err) => console.warn('[CmdK] intel-signals fetch failed:', err))
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [open, timeRange]);
@@ -278,6 +278,9 @@ export function CmdK({
       <div
         className="relative w-full max-w-md mx-4 bg-black border border-white/10 rounded-sm shadow-2xl"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-label="Command palette"
+        aria-modal="true"
       >
         <div className="flex items-center justify-between px-3 py-2 border-b border-white/8">
           <span className="font-mono text-[9px] tracking-[0.2em] text-white/25">⌘K COMMAND PALETTE</span>
@@ -294,6 +297,7 @@ export function CmdK({
             onKeyDown={handleKeyDown}
             placeholder={isMap ? 'search vendors, contracts, businesses, articles, conferences...' : 'search pages, industries, vendors, conferences, technologies...'}
             className="flex-1 bg-transparent font-mono text-xs text-white/70 placeholder-white/15 outline-none"
+            aria-label="Search commands"
           />
           {loading && <span className="w-1.5 h-1.5 rounded-full animate-pulse shrink-0" style={{ backgroundColor: '#00ff88' }} />}
         </div>

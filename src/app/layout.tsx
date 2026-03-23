@@ -36,13 +36,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body
-        className={`${spaceGrotesk.variable} ${ibmPlexMono.variable} font-mono antialiased`}
-        style={{ margin: 0, padding: 0, background: '#0d0f12' }}
+        className={`${spaceGrotesk.variable} ${ibmPlexMono.variable} font-mono antialiased m-0 p-0 bg-nxt-bg`}
       >
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[999] focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm"
-          style={{ background: '#181b20', color: '#00d4ff', border: '1px solid #232730' }}
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[999] focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:bg-nxt-card focus:text-nxt-cyan focus:border focus:border-nxt-border"
         >
           Skip to content
         </a>

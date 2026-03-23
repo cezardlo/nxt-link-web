@@ -21,7 +21,7 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   try {
     const store = getStoredFeedItems();
-    if (!store) runFeedAgent().catch(() => {});
+    if (!store) runFeedAgent().catch((err) => console.warn('[DailyBrief] runFeedAgent failed:', err));
 
     const brief = generateDailyBrief(store?.items ?? null, 'today');
 

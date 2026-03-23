@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 
 import type { LayerState } from '@/hooks/useMapLayers';
 
@@ -96,12 +96,12 @@ type Props = {
 };
 
 export function MapLayerPanel({ layers, onToggleLayer, dataFreshness }: Props) {
-  const [, setTick] = useState(0);
+  const [, forceRender] = useReducer((x: number) => x + 1, 0);
   const [lastToggled, setLastToggled] = useState<keyof LayerState | null>(null);
 
   useEffect(() => {
     if (!dataFreshness || Object.keys(dataFreshness).length === 0) return;
-    const id = setInterval(() => setTick((t) => t + 1), 5000);
+    const id = setInterval(forceRender, 5000);
     return () => clearInterval(id);
   }, [dataFreshness]);
 
