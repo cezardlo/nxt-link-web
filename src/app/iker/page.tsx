@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { PageTopBar } from '@/components/PageTopBar';
 import { EmptyState } from '@/components/ui';
+import { COLORS } from '@/lib/tokens';
 
 type IkerEntry = {
   id: string;
@@ -16,23 +17,23 @@ type IkerEntry = {
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
-  'Defense Tech':          '#00d4ff',
-  'Global Defense':        '#00d4ff',
+  'Defense Tech':          COLORS.accent,
+  'Global Defense':        COLORS.accent,
   'Global AI':             '#a855f7',
   'AI / R&D':              '#a855f7',
-  'Global Cybersecurity':  '#ff3b30',
-  'Global Robotics':       '#00ff88',
-  'Robotics & Automation': '#00ff88',
-  'Semiconductor':         '#ffd700',
+  'Global Cybersecurity':  COLORS.red,
+  'Global Robotics':       COLORS.green,
+  'Robotics & Automation': COLORS.green,
+  'Semiconductor':         COLORS.gold,
   'Industrial Automation': '#f97316',
-  'Drone & Autonomy':      '#ffb800',
-  'Border Tech':           '#00d4ff',
+  'Drone & Autonomy':      COLORS.amber,
+  'Border Tech':           COLORS.accent,
   'Logistics':             '#a855f7',
-  'Energy Tech':           '#ffd700',
+  'Energy Tech':           COLORS.gold,
 };
 
 function trendColor(t: string) {
-  return t === 'rising' ? '#00ff88' : t === 'falling' ? '#ff3b30' : '#6b7280';
+  return t === 'rising' ? COLORS.green : t === 'falling' ? COLORS.red : COLORS.muted;
 }
 function trendIcon(t: string) {
   return t === 'rising' ? '▲' : t === 'falling' ? '▼' : '▶';
@@ -86,7 +87,7 @@ export default function IkerLeaderboardPage() {
 
       {/* Header */}
       <div className="px-6 py-4 border-b border-white/[0.06] shrink-0">
-        <h1 className="font-mono text-[10px] tracking-[0.3em] text-[#ffd700] mb-1">IKER INTELLIGENCE SCORE LEADERBOARD</h1>
+        <h1 className="font-mono text-[10px] tracking-[0.3em] mb-1" style={{ color: COLORS.gold }}>IKER INTELLIGENCE SCORE LEADERBOARD</h1>
         <p className="font-mono text-[8px] text-white/30 tracking-wide">
           Intelligence · Knowledge · Evidence · Reliability — updated every 6h by the learning agent
         </p>
@@ -106,9 +107,9 @@ export default function IkerLeaderboardPage() {
                 onClick={() => setCategory(cat)}
                 className="font-mono text-[7px] tracking-[0.1em] px-2 py-0.5 rounded-sm border transition-colors"
                 style={{
-                  borderColor: category === cat ? '#ffd700' : 'rgba(255,255,255,0.08)',
-                  color: category === cat ? '#ffd700' : 'rgba(255,255,255,0.3)',
-                  backgroundColor: category === cat ? 'rgba(255,215,0,0.06)' : 'transparent',
+                  borderColor: category === cat ? COLORS.gold : 'rgba(255,255,255,0.08)',
+                  color: category === cat ? COLORS.gold : 'rgba(255,255,255,0.3)',
+                  backgroundColor: category === cat ? `${COLORS.gold}10` : 'transparent',
                 }}
               >
                 {cat}
@@ -139,7 +140,7 @@ export default function IkerLeaderboardPage() {
             </thead>
             <tbody>
               {filtered.map((entry, i) => {
-                const color = CATEGORY_COLORS[entry.category] ?? '#00d4ff';
+                const color = CATEGORY_COLORS[entry.category] ?? COLORS.accent;
                 return (
                   <tr
                     key={entry.id}
@@ -187,7 +188,7 @@ export default function IkerLeaderboardPage() {
                     <td className="px-2 py-2">
                       <span
                         className="font-mono text-[8px] tabular-nums"
-                        style={{ color: entry.delta > 0 ? '#00ff88' : entry.delta < 0 ? '#ff3b30' : '#6b7280' }}
+                        style={{ color: entry.delta > 0 ? COLORS.green : entry.delta < 0 ? COLORS.red : COLORS.muted }}
                       >
                         {entry.delta > 0 ? `+${entry.delta.toFixed(1)}` : entry.delta !== 0 ? entry.delta.toFixed(1) : '—'}
                       </span>

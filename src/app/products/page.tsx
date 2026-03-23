@@ -412,11 +412,12 @@ function ProductCatalogInner() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {filtered.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-              />
+            {filtered.map((product, i) => (
+              <div key={product.id} className="animate-fade-up opacity-0" style={{ animationDelay: `${i * 0.08}s` }}>
+                <ProductCard
+                  product={product}
+                />
+              </div>
             ))}
           </div>
         )}

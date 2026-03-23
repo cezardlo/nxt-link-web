@@ -5,6 +5,7 @@ import { EL_PASO_VENDORS, type VendorRecord } from '@/lib/data/el-paso-vendors';
 import type { FederalContract, GrantResult } from '@/lib/engines/live-search-engine';
 import type { AskResponse } from '@/lib/engines/ask-engine';
 import { EmptyState } from '@/components/ui';
+import { COLORS } from '@/lib/tokens';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -563,17 +564,17 @@ export default function RFPPage() {
                 {
                   label: 'Total Contracts Found',
                   value: contracts.length,
-                  color: '#00d4ff',
+                  color: COLORS.accent,
                 },
                 {
                   label: 'Total Grants Found',
                   value: grants.length,
-                  color: '#00ff88',
+                  color: COLORS.green,
                 },
                 {
                   label: 'Local Vendors Eligible',
                   value: vendorMatches.length,
-                  color: '#ffd700',
+                  color: COLORS.gold,
                 },
               ].map((stat) => (
                 <div

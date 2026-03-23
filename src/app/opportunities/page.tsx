@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { PageTopBar } from '@/components/PageTopBar';
 import type { DiscoveredOpportunity } from '@/lib/engines/opportunity-engine';
 import { EmptyState } from '@/components/ui';
+import { COLORS } from '@/lib/tokens';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -262,9 +263,9 @@ const OPPORTUNITY_CLUSTERS: OpportunityCluster[] = [
 
 const SIGNAL_KEYS: Array<{ key: keyof OpportunityCluster['signals']; label: string; color: string }> = [
   { key: 'research', label: 'RESEARCH', color: '#a855f7' },
-  { key: 'funding', label: 'FUNDING', color: '#00ff88' },
-  { key: 'patents', label: 'PATENTS', color: '#ffd700' },
-  { key: 'adoption', label: 'ADOPTION', color: '#00d4ff' },
+  { key: 'funding', label: 'FUNDING', color: COLORS.green },
+  { key: 'patents', label: 'PATENTS', color: COLORS.gold },
+  { key: 'adoption', label: 'ADOPTION', color: COLORS.accent },
   { key: 'conferences', label: 'CONFERENCES', color: '#f97316' },
 ];
 
@@ -272,17 +273,17 @@ const TREND_CONFIG: Record<
   OpportunityCluster['trend'],
   { label: string; color: string; pulse: boolean }
 > = {
-  accelerating: { label: 'ACCELERATING', color: '#00ff88', pulse: true },
-  emerging: { label: 'EMERGING', color: '#00d4ff', pulse: false },
+  accelerating: { label: 'ACCELERATING', color: COLORS.green, pulse: true },
+  emerging: { label: 'EMERGING', color: COLORS.accent, pulse: false },
   stable: { label: 'STABLE', color: 'rgba(255,255,255,0.3)', pulse: false },
-  cooling: { label: 'COOLING', color: '#ff3b30', pulse: false },
+  cooling: { label: 'COOLING', color: COLORS.red, pulse: false },
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function getScoreColor(score: number): string {
-  if (score >= 80) return '#00ff88';
-  if (score >= 60) return '#ffd700';
+  if (score >= 80) return COLORS.green;
+  if (score >= 60) return COLORS.gold;
   return 'rgba(255,255,255,0.3)';
 }
 
@@ -293,8 +294,8 @@ function getScoreBg(score: number): string {
 }
 
 function getBarColor(score: number): string {
-  if (score >= 80) return '#00ff88';
-  if (score >= 60) return '#ffd700';
+  if (score >= 80) return COLORS.green;
+  if (score >= 60) return COLORS.gold;
   return 'rgba(255,255,255,0.3)';
 }
 
@@ -395,14 +396,14 @@ export default function OpportunitiesPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {liveOpps.slice(0, 9).map((opp) => {
                   const typeColor =
-                    opp.type === 'underserved_market' ? '#00ff88' :
-                    opp.type === 'early_mover' ? '#00d4ff' :
-                    opp.type === 'funding_surge' ? '#ffb800' :
+                    opp.type === 'underserved_market' ? COLORS.green :
+                    opp.type === 'early_mover' ? COLORS.accent :
+                    opp.type === 'funding_surge' ? COLORS.amber :
                     opp.type === 'patent_gap' ? '#a855f7' :
                     opp.type === 'convergence_play' ? '#f97316' :
-                    opp.type === 'policy_tailwind' ? '#00d4ff' :
-                    opp.type === 'supply_chain_gap' ? '#ff3b30' :
-                    opp.type === 'talent_arbitrage' ? '#ffd700' : '#ffffff';
+                    opp.type === 'policy_tailwind' ? COLORS.accent :
+                    opp.type === 'supply_chain_gap' ? COLORS.red :
+                    opp.type === 'talent_arbitrage' ? COLORS.gold : '#ffffff';
                   return (
                     <div key={opp.id} className="border border-white/[0.06] rounded-sm p-3 bg-black/40 hover:border-white/[0.12] transition-colors">
                       <div className="flex items-center justify-between mb-1.5">
@@ -415,7 +416,7 @@ export default function OpportunitiesPage() {
                       <p className="font-mono text-[9px] text-white/45 mb-1.5 line-clamp-2">{opp.title}</p>
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-[7px] text-white/20">{opp.timing.replace(/_/g, ' ')}</span>
-                        <span className="font-mono text-[7px]" style={{ color: opp.risk_level === 'high' ? '#ff3b30' : opp.risk_level === 'medium' ? '#f97316' : '#00ff88' }}>{opp.risk_level}</span>
+                        <span className="font-mono text-[7px]" style={{ color: opp.risk_level === 'high' ? COLORS.red : opp.risk_level === 'medium' ? '#f97316' : COLORS.green }}>{opp.risk_level}</span>
                         {opp.industries.length > 0 && (
                           <Link href={`/industry/${opp.industries[0]}`} className="font-mono text-[7px] text-[#00d4ff]/40 hover:text-[#00d4ff] transition-colors">
                             {opp.industries[0]}
@@ -442,9 +443,9 @@ export default function OpportunitiesPage() {
                 onClick={() => setSortBy('score')}
                 className="text-[8px] tracking-[0.15em] uppercase px-2 py-0.5 rounded-sm border transition-colors"
                 style={{
-                  borderColor: sortBy === 'score' ? '#00d4ff40' : 'rgba(255,255,255,0.08)',
-                  color: sortBy === 'score' ? '#00d4ff' : 'rgba(255,255,255,0.3)',
-                  backgroundColor: sortBy === 'score' ? 'rgba(0,212,255,0.08)' : 'transparent',
+                  borderColor: sortBy === 'score' ? `${COLORS.accent}40` : 'rgba(255,255,255,0.08)',
+                  color: sortBy === 'score' ? COLORS.accent : 'rgba(255,255,255,0.3)',
+                  backgroundColor: sortBy === 'score' ? `${COLORS.accent}14` : 'transparent',
                 }}
               >
                 BY SCORE
@@ -453,9 +454,9 @@ export default function OpportunitiesPage() {
                 onClick={() => setSortBy('trend')}
                 className="text-[8px] tracking-[0.15em] uppercase px-2 py-0.5 rounded-sm border transition-colors"
                 style={{
-                  borderColor: sortBy === 'trend' ? '#00d4ff40' : 'rgba(255,255,255,0.08)',
-                  color: sortBy === 'trend' ? '#00d4ff' : 'rgba(255,255,255,0.3)',
-                  backgroundColor: sortBy === 'trend' ? 'rgba(0,212,255,0.08)' : 'transparent',
+                  borderColor: sortBy === 'trend' ? `${COLORS.accent}40` : 'rgba(255,255,255,0.08)',
+                  color: sortBy === 'trend' ? COLORS.accent : 'rgba(255,255,255,0.3)',
+                  backgroundColor: sortBy === 'trend' ? `${COLORS.accent}14` : 'transparent',
                 }}
               >
                 BY TREND
@@ -479,7 +480,7 @@ export default function OpportunitiesPage() {
                     className="text-[9px] tracking-wide text-right shrink-0 truncate transition-colors"
                     style={{
                       width: '180px',
-                      color: isSelected ? '#00d4ff' : 'rgba(255,255,255,0.45)',
+                      color: isSelected ? COLORS.accent : 'rgba(255,255,255,0.45)',
                     }}
                   >
                     {cluster.name}
@@ -546,8 +547,8 @@ export default function OpportunitiesPage() {
                   onClick={() => setSelected(cluster.id)}
                   className="w-full text-left border rounded-sm p-4 transition-all duration-200"
                   style={{
-                    borderColor: isSelected ? '#00d4ff40' : 'rgba(255,255,255,0.08)',
-                    backgroundColor: isSelected ? 'rgba(0,212,255,0.04)' : 'transparent',
+                    borderColor: isSelected ? `${COLORS.accent}40` : 'rgba(255,255,255,0.08)',
+                    backgroundColor: isSelected ? `${COLORS.accent}0a` : 'transparent',
                   }}
                 >
                   <div className="flex items-start gap-3">
@@ -571,7 +572,7 @@ export default function OpportunitiesPage() {
                         <div className="flex items-center gap-2">
                           <span
                             className="text-[11px] tracking-wide uppercase truncate"
-                            style={{ color: isSelected ? '#00d4ff' : 'rgba(255,255,255,0.7)' }}
+                            style={{ color: isSelected ? COLORS.accent : 'rgba(255,255,255,0.7)' }}
                           >
                             {cluster.name}
                           </span>

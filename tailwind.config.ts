@@ -68,6 +68,12 @@ const config: Config = {
       animation: {
         scan: 'scan 1.5s ease-in-out infinite',
         'fade-up': 'fade-up 0.5s ease-out forwards',
+        'fade-up-1': 'fade-up 0.5s ease-out 0.05s forwards',
+        'fade-up-2': 'fade-up 0.5s ease-out 0.1s forwards',
+        'fade-up-3': 'fade-up 0.5s ease-out 0.15s forwards',
+        'fade-up-4': 'fade-up 0.5s ease-out 0.2s forwards',
+        'fade-up-5': 'fade-up 0.5s ease-out 0.25s forwards',
+        'fade-up-6': 'fade-up 0.5s ease-out 0.3s forwards',
         'fade-in': 'fade-in 0.3s ease-out forwards',
         'slide-in': 'slide-in 0.4s ease-out forwards',
         'slide-up': 'slide-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both',

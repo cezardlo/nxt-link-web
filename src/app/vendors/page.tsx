@@ -375,14 +375,15 @@ function VendorsContent() {
         {/* ── Vendor Grid ────────────────────────────────────────── */}
         {!loading && !error && filtered.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {filtered.map((vendor) => {
+            {filtered.map((vendor, i) => {
               const color = categoryColor(vendor.primary_category);
               return (
                 <Link
                   key={vendor.id}
                   href={`/vendor/${vendor.id}`}
-                  className="group block p-4 transition-all duration-200 hover:translate-y-[-2px]"
+                  className="group block p-4 transition-all duration-200 hover:translate-y-[-2px] animate-fade-up opacity-0"
                   style={{
+                    animationDelay: `${i * 0.08}s`,
                     background: COLORS.card,
                     border: `1px solid ${COLORS.border}`,
                     borderRadius: '20px',

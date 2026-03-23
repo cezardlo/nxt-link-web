@@ -144,15 +144,16 @@ export default function DossierHomePage() {
             <span className="w-1.5 h-1.5 rounded-full live-pulse" style={{ background: COLORS.green, boxShadow: `0 0 6px ${COLORS.green}` }} />
           </div>
           <div className="flex gap-2.5 flex-wrap">
-            {trending.map(s => {
+            {trending.map((s, i) => {
               const isAccel = s.momentum === 'accelerating';
               const slug = s.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
               return (
                 <button
                   key={s.name}
                   onClick={() => navigate(slug, s.name)}
-                  className="flex items-center gap-2 rounded-full px-4 py-2.5 font-mono text-[10px] tracking-[0.1em] cursor-pointer transition-all duration-200 hover:translate-y-[-1px] min-h-[38px]"
+                  className="flex items-center gap-2 rounded-full px-4 py-2.5 font-mono text-[10px] tracking-[0.1em] cursor-pointer transition-all duration-200 hover:translate-y-[-1px] min-h-[38px] animate-fade-up opacity-0"
                   style={{
+                    animationDelay: `${i * 0.08}s`,
                     background: isAccel ? `${COLORS.green}06` : COLORS.card,
                     border: `1px solid ${isAccel ? `${COLORS.green}18` : COLORS.border}`,
                     color: isAccel ? COLORS.green : COLORS.accent,
@@ -176,12 +177,12 @@ export default function DossierHomePage() {
           SUGGESTED
         </span>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {SUGGESTED.map(s => (
+          {SUGGESTED.map((s, i) => (
             <button
               key={s.slug}
               onClick={() => navigate(s.slug, s.label)}
-              className="font-grotesk text-[12px] font-medium px-4 py-4 text-left flex items-center gap-2.5 cursor-pointer transition-all duration-200 hover:translate-y-[-1px] min-h-[48px]"
-              style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: '20px', color: COLORS.text }}
+              className="font-grotesk text-[12px] font-medium px-4 py-4 text-left flex items-center gap-2.5 cursor-pointer transition-all duration-200 hover:translate-y-[-1px] min-h-[48px] animate-fade-up opacity-0"
+              style={{ animationDelay: `${i * 0.08}s`, background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: '20px', color: COLORS.text }}
             >
               <span style={{ color: COLORS.accent }} className="text-[10px]">▶</span>
               {s.label}
