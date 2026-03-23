@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { COLORS } from '@/lib/tokens';
 import { CountryDrawer } from './CountryDrawer';
-import { IndustryMap } from './IndustryMap';
+import { Component as InteractiveGlobe } from '@/components/ui/interactive-globe';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -166,25 +166,34 @@ export function CountriesSection({
         What the world is building in {industry.label}
       </p>
 
-      {/* ── Map ──────────────────────────────────────────────────────── */}
-      <div className="mb-8">
-        <IndustryMap
-          countries={countries}
-          accentColor={accentColor}
-          industryCategory={industry.category}
-          selectedCountryCode={selectedCountry?.code ?? null}
-          onCountrySelect={(code) => {
-            if (code) {
-              const c = countries.find((cc) => cc.code === code);
-              if (c) openDrawer(c);
-            } else {
-              closeDrawer();
+      {/* ── Globe ─────────────────────────────────────────────────────── */}
+      <div className="mb-8 flex justify-center">
+        <InteractiveGlobe
+          size={400}
+          dotColor={`rgba(100, 180, 255, ALPHA)`}
+          arcColor={`${accentColor}80`}
+          markerColor={accentColor}
+          markers={countries.filter(c => {
+            const catLower = industry.category.toLowerCase();
+            return c.primarySectors.some(s => s.toLowerCase().includes(catLower) || catLower.includes(s.toLowerCase()));
+          }).map(c => ({
+            lat: c.lat,
+            lng: c.lon,
+            label: c.name,
+          }))}
+          connections={(() => {
+            const relevant = countries.filter(c => {
+              const catLower = industry.category.toLowerCase();
+              return c.primarySectors.some(s => s.toLowerCase().includes(catLower) || catLower.includes(s.toLowerCase()));
+            });
+            const conns: [number, number][] = [];
+            for (let i = 0; i < Math.min(relevant.length, 6); i++) {
+              for (let j = i + 1; j < Math.min(relevant.length, 6); j++) {
+                conns.push([i, j]);
+              }
             }
-          }}
-          highlightedCodes={
-            highlightedCodes.size > 0 ? Array.from(highlightedCodes) : []
-          }
-          signals={signals}
+            return conns;
+          })()}
         />
       </div>
 
