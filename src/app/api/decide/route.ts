@@ -3,12 +3,14 @@ import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
-// ── Supabase client ──────────────────────────────────────────────────────────
+// ── Supabase client (lazy — avoids build-time crash when env vars aren't set) ─
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+}
 
 // ── STEP 1: Problem aliases → normalized problem ─────────────────────────────
 // "mini AI" — maps fuzzy user input to a canonical problem
@@ -325,7 +327,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   // STEP 4: Query best_sources from Supabase
   let sources: Array<Record<string, unknown>> = [];
   if (techNeeds.length > 0) {
-    const { data } = await supabase
+    const { data } = await getSupabase()
       .from('best_sources')
       .select('*')
       .in('technology_need', techNeeds)
@@ -336,7 +338,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   // If no matches, broaden to all needs for the industry
   if (sources.length === 0) {
-    const { data } = await supabase
+    const { data } = await getSupabase()
       .from('best_sources')
       .select('*')
       .in('industry', industries)
@@ -345,7 +347,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   // STEP 5: Query vendors from Supabase
-  const { data: vendorData } = await supabase
+  const { data: vendorData } = await getSupabase()
     .from('vendors')
     .select('company_name,sector,iker_score,company_url,description')
     .order('iker_score', { ascending: false })
