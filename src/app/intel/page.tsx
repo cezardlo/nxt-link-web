@@ -10,27 +10,57 @@ import { relativeTime } from '@/lib/utils';
 type Signal = {
   id: string;
   title: string;
-  summary: string | null;
+  evidence: string | null;
   source: string | null;
   industry: string | null;
   importance_score: number | null;
-  created_at: string;
+  discovered_at: string;
   url: string | null;
   signal_type: string | null;
+  company: string | null;
 };
 
 type Tab = 'all' | 'high' | 'trending';
 
-/* ─── Industry filter list ─── */
+/* ─── Industry filter list (matching actual DB values) ─── */
 const INDUSTRIES = [
-  'ALL', 'DEFENSE', 'AI / ML', 'CYBERSECURITY', 'ENERGY',
-  'BORDER SECURITY', 'MANUFACTURING', 'HEALTHCARE', 'LOGISTICS',
+  'ALL', 'defense', 'ai-ml', 'cybersecurity', 'energy',
+  'border-tech', 'manufacturing', 'healthcare', 'logistics',
+  'government', 'education', 'general',
 ];
 
-/* ─── Score ring style ─── */
-function scoreClass(score: number): { color: string; borderColor: string } {
-  if (score >= 75) return { color: COLORS.accent, borderColor: `${COLORS.accent}66` };
-  if (score >= 50) return { color: '#eab308', borderColor: 'rgba(234,179,8,0.3)' };
+/* ─── Extract source display name from URL ─── */
+function sourceName(source: string | null): string {
+  if (!source) return '';
+  try {
+    const hostname = new URL(source).hostname.replace('www.', '');
+    // Map common domains to short names
+    const map: Record<string, string> = {
+      'news.google.com': 'GOOGLE NEWS',
+      'sam.gov': 'SAM.GOV',
+      'grants.gov': 'GRANTS.GOV',
+      'news.ycombinator.com': 'HACKER NEWS',
+      'arxiv.org': 'ARXIV',
+      'patentsview.org': 'PATENTS',
+      'federalregister.gov': 'FED REGISTER',
+    };
+    return map[hostname] || hostname.split('.')[0].toUpperCase();
+  } catch {
+    // source is not a URL, use it as-is
+    return source.toUpperCase().slice(0, 20);
+  }
+}
+
+/* ─── Score display (0-1 scale → 0-100 display) ─── */
+function displayScore(score: number | null): number {
+  if (!score) return 0;
+  // importance_score is 0-1 in DB
+  return Math.round(score <= 1 ? score * 100 : score);
+}
+
+function scoreClass(display: number): { color: string; borderColor: string } {
+  if (display >= 75) return { color: COLORS.accent, borderColor: `${COLORS.accent}66` };
+  if (display >= 50) return { color: '#eab308', borderColor: 'rgba(234,179,8,0.3)' };
   return { color: COLORS.dim, borderColor: COLORS.border };
 }
 
@@ -50,20 +80,20 @@ export default function IntelPage() {
 
     let query = supabase
       .from('intel_signals')
-      .select('id, title, summary, source, industry, importance_score, created_at, url, signal_type', { count: 'exact' })
-      .order('created_at', { ascending: false })
+      .select('id, title, evidence, source, industry, importance_score, discovered_at, url, signal_type, company', { count: 'exact' })
+      .order('discovered_at', { ascending: false })
       .range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
 
-    // Tab filters
+    // Tab filters (importance_score is 0-1 scale)
     if (tab === 'high') {
-      query = query.gte('importance_score', 75);
+      query = query.gte('importance_score', 0.75);
     } else if (tab === 'trending') {
-      query = query.gte('importance_score', 50).order('importance_score', { ascending: false });
+      query = query.gte('importance_score', 0.5).order('importance_score', { ascending: false });
     }
 
     // Industry filter
     if (industry !== 'ALL') {
-      query = query.ilike('industry', `%${industry.toLowerCase()}%`);
+      query = query.eq('industry', industry);
     }
 
     const { data, count } = await query;
@@ -84,7 +114,7 @@ export default function IntelPage() {
     supabase.from('intel_signals').select('*', { count: 'exact', head: true }).then(({ count }) => {
       if (count) setTotalCount(count);
     });
-    supabase.from('intel_signals').select('*', { count: 'exact', head: true }).gte('importance_score', 75).then(({ count }) => {
+    supabase.from('intel_signals').select('*', { count: 'exact', head: true }).gte('importance_score', 0.75).then(({ count }) => {
       if (count) setHighCount(count);
     });
   }, []);
@@ -127,6 +157,9 @@ export default function IntelPage() {
             <span className="w-[5px] h-[5px] rounded-full bg-green-500 animate-pulse-soft" />
             LIVE
           </span>
+          <span className="font-mono text-[10px]" style={{ color: COLORS.dim }}>
+            {totalCount.toLocaleString()} signals
+          </span>
         </div>
       </header>
 
@@ -138,7 +171,7 @@ export default function IntelPage() {
             LIVE <span style={{ color: COLORS.accent }}>SIGNALS</span>
           </h1>
           <p className="text-sm leading-relaxed" style={{ color: COLORS.muted }}>
-            Real-time intelligence feed from 9 sources — ranked by importance score, filtered by industry.
+            Real-time intelligence feed — ranked by importance score, filtered by industry.
           </p>
         </div>
 
@@ -152,10 +185,9 @@ export default function IntelPage() {
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className="font-mono text-xs font-medium tracking-wide px-5 py-3 border-b-2 transition-colors"
+              className="font-mono text-xs font-medium tracking-wide px-5 py-3 transition-colors"
               style={{
                 color: tab === t.key ? COLORS.accent : COLORS.dim,
-                borderBottomColor: tab === t.key ? COLORS.accent : 'transparent',
                 background: 'none',
                 border: 'none',
                 borderBottom: `2px solid ${tab === t.key ? COLORS.accent : 'transparent'}`,
@@ -185,7 +217,7 @@ export default function IntelPage() {
                 color: industry === ind ? COLORS.accent : COLORS.muted,
               }}
             >
-              {ind}
+              {ind === 'ALL' ? 'ALL' : ind.replace(/-/g, ' ').toUpperCase()}
             </button>
           ))}
         </div>
@@ -206,7 +238,7 @@ export default function IntelPage() {
             </div>
           ) : (
             signals.map((signal) => {
-              const score = signal.importance_score ?? 0;
+              const score = displayScore(signal.importance_score);
               const sc = scoreClass(score);
               return (
                 <a
@@ -239,39 +271,47 @@ export default function IntelPage() {
                           className="font-mono text-[9px] font-semibold tracking-[0.1em] uppercase px-2 py-0.5 rounded"
                           style={{ color: COLORS.accent, background: `${COLORS.accent}0f` }}
                         >
-                          {signal.industry}
+                          {signal.industry.replace(/-/g, ' ')}
                         </span>
                       )}
                       {signal.source && (
                         <span className="font-mono text-[9px] tracking-wide" style={{ color: COLORS.border }}>
-                          {signal.source.toUpperCase()}
+                          {sourceName(signal.source)}
                         </span>
                       )}
                       <span className="font-mono text-[9px] ml-auto" style={{ color: COLORS.dim }}>
-                        {relativeTime(signal.created_at)}
+                        {relativeTime(signal.discovered_at)}
                       </span>
                     </div>
                     <div className="text-[15px] font-medium leading-[1.45] mb-1.5 text-zinc-300 group-hover:text-white transition-colors">
                       {signal.title}
                     </div>
-                    {signal.summary && (
+                    {signal.evidence && (
                       <div
                         className="text-[13px] leading-relaxed line-clamp-2"
                         style={{ color: COLORS.muted }}
                       >
-                        {signal.summary}
+                        {signal.evidence}
                       </div>
                     )}
-                    {signal.signal_type && (
-                      <div className="flex gap-1.5 mt-2">
+                    <div className="flex gap-1.5 mt-2 flex-wrap">
+                      {signal.signal_type && (
                         <span
                           className="font-mono text-[9px] px-2 py-0.5 rounded"
                           style={{ color: COLORS.dim, background: 'rgba(255,255,255,0.02)' }}
                         >
-                          {signal.signal_type}
+                          {signal.signal_type.replace(/_/g, ' ')}
                         </span>
-                      </div>
-                    )}
+                      )}
+                      {signal.company && (
+                        <span
+                          className="font-mono text-[9px] px-2 py-0.5 rounded"
+                          style={{ color: COLORS.cyan, background: `${COLORS.cyan}08` }}
+                        >
+                          {signal.company}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </a>
               );
