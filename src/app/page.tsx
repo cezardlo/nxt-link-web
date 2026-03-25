@@ -67,6 +67,18 @@ const MODULES = [
       </svg>
     ),
   },
+  {
+    href: '/conferences',
+    name: 'Conferences',
+    desc: '1,000+ industry conferences — defense, tech, border security, manufacturing events worldwide.',
+    meta: '1,005 events',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-9 h-9">
+        <rect x={3} y={4} width={18} height={18} rx={2} /><path d="M16 2v4" /><path d="M8 2v4" /><path d="M3 10h18" />
+        <path d="M8 14h.01" /><path d="M12 14h.01" /><path d="M16 14h.01" /><path d="M8 18h.01" /><path d="M12 18h.01" />
+      </svg>
+    ),
+  },
 ];
 
 const FEATURES = [
@@ -230,7 +242,7 @@ export default function LandingPage() {
           Modules
         </p>
         <div
-          className="grid grid-cols-5 gap-px rounded-xl overflow-hidden"
+          className="grid grid-cols-3 md:grid-cols-6 gap-px rounded-xl overflow-hidden"
           style={{ background: `${COLORS.border}60` }}
         >
           {MODULES.map((mod) => (
