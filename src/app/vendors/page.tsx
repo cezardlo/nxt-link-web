@@ -1,2 +1,2 @@
 import { redirect } from 'next/navigation';
-export default function VendorsRedirect() { redirect('/store?tab=vendors'); }
+export default function VendorsRedirect() { redirect('/industry'); }
