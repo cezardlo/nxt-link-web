@@ -3,6 +3,10 @@
     {
       "path": "/api/agents/cron?phase=1",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/assembly/run",
+      "schedule": "*/30 * * * *"
     }
   ]
 }
