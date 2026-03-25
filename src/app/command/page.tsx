@@ -2,6 +2,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { COLORS } from '@/lib/tokens';
+import { ClusterBriefings } from '@/components/ClusterBriefings';
 
 // ─── Import existing command-center components & hooks ───────────────────────
 import type { IntelSignal, Mode, Alert, FeedItem } from '@/app/command-center/types/intel';
@@ -127,6 +128,9 @@ export default function CommandPage() {
           <span className="cmd-brand-sub">COMMAND</span>
           <span className="cmd-brand-line" />
         </div>
+
+        {/* ── Cluster Briefings (assembled intelligence) ─────────────────── */}
+        <ClusterBriefings />
 
         {/* ── TopBar with mode switcher ───────────────────────────────────── */}
         <TopBar
