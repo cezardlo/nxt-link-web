@@ -1,2 +1,301 @@
-import { redirect } from 'next/navigation';
-export default function IntelRedirect() { redirect('/command'); }
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { COLORS } from '@/lib/tokens';
+import { createClient } from '@/lib/supabase/client';
+import { relativeTime } from '@/lib/utils';
+
+/* ─── Types ─── */
+type Signal = {
+  id: string;
+  title: string;
+  summary: string | null;
+  source: string | null;
+  industry: string | null;
+  importance_score: number | null;
+  created_at: string;
+  url: string | null;
+  signal_type: string | null;
+};
+
+type Tab = 'all' | 'high' | 'trending';
+
+/* ─── Industry filter list ─── */
+const INDUSTRIES = [
+  'ALL', 'DEFENSE', 'AI / ML', 'CYBERSECURITY', 'ENERGY',
+  'BORDER SECURITY', 'MANUFACTURING', 'HEALTHCARE', 'LOGISTICS',
+];
+
+/* ─── Score ring style ─── */
+function scoreClass(score: number): { color: string; borderColor: string } {
+  if (score >= 75) return { color: COLORS.accent, borderColor: `${COLORS.accent}66` };
+  if (score >= 50) return { color: '#eab308', borderColor: 'rgba(234,179,8,0.3)' };
+  return { color: COLORS.dim, borderColor: COLORS.border };
+}
+
+export default function IntelPage() {
+  const [signals, setSignals] = useState<Signal[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [highCount, setHighCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<Tab>('all');
+  const [industry, setIndustry] = useState('ALL');
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 25;
+
+  const fetchSignals = useCallback(async (reset = false) => {
+    const supabase = createClient();
+    const currentPage = reset ? 0 : page;
+
+    let query = supabase
+      .from('intel_signals')
+      .select('id, title, summary, source, industry, importance_score, created_at, url, signal_type', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
+
+    // Tab filters
+    if (tab === 'high') {
+      query = query.gte('importance_score', 75);
+    } else if (tab === 'trending') {
+      query = query.gte('importance_score', 50).order('importance_score', { ascending: false });
+    }
+
+    // Industry filter
+    if (industry !== 'ALL') {
+      query = query.ilike('industry', `%${industry.toLowerCase()}%`);
+    }
+
+    const { data, count } = await query;
+    if (data) {
+      if (reset || currentPage === 0) {
+        setSignals(data);
+      } else {
+        setSignals((prev) => [...prev, ...data]);
+      }
+    }
+    if (count !== null) setTotalCount(count);
+    setLoading(false);
+  }, [tab, industry, page]);
+
+  // Fetch counts on mount
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.from('intel_signals').select('*', { count: 'exact', head: true }).then(({ count }) => {
+      if (count) setTotalCount(count);
+    });
+    supabase.from('intel_signals').select('*', { count: 'exact', head: true }).gte('importance_score', 75).then(({ count }) => {
+      if (count) setHighCount(count);
+    });
+  }, []);
+
+  // Re-fetch when tab/industry changes
+  useEffect(() => {
+    setPage(0);
+    setLoading(true);
+    fetchSignals(true);
+  }, [tab, industry]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch more when page changes (but not on reset)
+  useEffect(() => {
+    if (page > 0) fetchSignals();
+  }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div className="min-h-screen" style={{ background: COLORS.bg }}>
+      {/* ─── Top Bar ─── */}
+      <header
+        className="fixed top-0 left-0 right-0 h-[52px] flex items-center justify-between px-6 z-[100]"
+        style={{
+          background: `${COLORS.bg}bf`,
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderBottom: `1px solid ${COLORS.accent}0f`,
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <Link href="/" className="font-mono text-[15px] font-semibold tracking-[0.12em] text-white">
+            NXT<span style={{ color: COLORS.accent }}>{'//'}
+            </span>LINK
+          </Link>
+          <span className="font-mono text-[11px] font-medium tracking-[0.12em] uppercase" style={{ color: COLORS.dim }}>
+            Intel Feed
+          </span>
+        </div>
+        <div className="flex items-center gap-3.5">
+          <span className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.1em]" style={{ color: '#22c55e' }}>
+            <span className="w-[5px] h-[5px] rounded-full bg-green-500 animate-pulse-soft" />
+            LIVE
+          </span>
+        </div>
+      </header>
+
+      {/* ─── Main Content ─── */}
+      <main className="pt-[72px] pb-[100px] px-6 max-w-[900px] mx-auto">
+        {/* Page Header */}
+        <div className="mb-8">
+          <h1 className="font-mono text-[28px] font-bold tracking-wide text-white mb-1.5">
+            LIVE <span style={{ color: COLORS.accent }}>SIGNALS</span>
+          </h1>
+          <p className="text-sm leading-relaxed" style={{ color: COLORS.muted }}>
+            Real-time intelligence feed from 9 sources — ranked by importance score, filtered by industry.
+          </p>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex items-center gap-0 mb-6" style={{ borderBottom: `1px solid ${COLORS.accent}0f` }}>
+          {([
+            { key: 'all' as Tab, label: 'ALL SIGNALS', count: totalCount },
+            { key: 'high' as Tab, label: 'HIGH PRIORITY', count: highCount },
+            { key: 'trending' as Tab, label: 'TRENDING', count: null },
+          ]).map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className="font-mono text-xs font-medium tracking-wide px-5 py-3 border-b-2 transition-colors"
+              style={{
+                color: tab === t.key ? COLORS.accent : COLORS.dim,
+                borderBottomColor: tab === t.key ? COLORS.accent : 'transparent',
+                background: 'none',
+                border: 'none',
+                borderBottom: `2px solid ${tab === t.key ? COLORS.accent : 'transparent'}`,
+                cursor: 'pointer',
+              }}
+            >
+              {t.label}
+              {t.count !== null && (
+                <span className="ml-1.5 text-[10px]" style={{ color: COLORS.border }}>
+                  {t.count.toLocaleString()}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Industry Filter Pills */}
+        <div className="flex items-center gap-2 mb-5 flex-wrap">
+          {INDUSTRIES.map((ind) => (
+            <button
+              key={ind}
+              onClick={() => setIndustry(ind)}
+              className="font-mono text-[10px] font-medium tracking-wide px-3.5 py-1.5 rounded-[20px] transition-colors cursor-pointer"
+              style={{
+                border: `1px solid ${industry === ind ? `${COLORS.accent}4d` : `${COLORS.accent}1a`}`,
+                background: industry === ind ? `${COLORS.accent}14` : 'transparent',
+                color: industry === ind ? COLORS.accent : COLORS.muted,
+              }}
+            >
+              {ind}
+            </button>
+          ))}
+        </div>
+
+        {/* Signal Feed */}
+        <div className="flex flex-col gap-2">
+          {loading && signals.length === 0 ? (
+            <div className="flex items-center justify-center py-20">
+              <span className="font-mono text-xs tracking-wider animate-pulse-soft" style={{ color: COLORS.dim }}>
+                LOADING SIGNALS...
+              </span>
+            </div>
+          ) : signals.length === 0 ? (
+            <div className="flex items-center justify-center py-20">
+              <span className="font-mono text-xs tracking-wider" style={{ color: COLORS.dim }}>
+                NO SIGNALS FOUND
+              </span>
+            </div>
+          ) : (
+            signals.map((signal) => {
+              const score = signal.importance_score ?? 0;
+              const sc = scoreClass(score);
+              return (
+                <a
+                  key={signal.id}
+                  href={signal.url ?? '#'}
+                  target={signal.url ? '_blank' : undefined}
+                  rel="noopener noreferrer"
+                  className="flex gap-4 p-4 rounded-[14px] transition-all duration-200 group"
+                  style={{
+                    background: 'rgba(8, 12, 20, 0.4)',
+                    border: `1px solid ${COLORS.accent}0a`,
+                  }}
+                >
+                  {/* Score ring */}
+                  <div className="flex flex-col items-center gap-1 min-w-[44px]">
+                    <div
+                      className="w-11 h-11 rounded-full flex items-center justify-center font-mono text-sm font-semibold"
+                      style={{ color: sc.color, border: `2px solid ${sc.borderColor}` }}
+                    >
+                      {score}
+                    </div>
+                    <span className="font-mono text-[8px] tracking-wide" style={{ color: COLORS.border }}>SCORE</span>
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                      {signal.industry && (
+                        <span
+                          className="font-mono text-[9px] font-semibold tracking-[0.1em] uppercase px-2 py-0.5 rounded"
+                          style={{ color: COLORS.accent, background: `${COLORS.accent}0f` }}
+                        >
+                          {signal.industry}
+                        </span>
+                      )}
+                      {signal.source && (
+                        <span className="font-mono text-[9px] tracking-wide" style={{ color: COLORS.border }}>
+                          {signal.source.toUpperCase()}
+                        </span>
+                      )}
+                      <span className="font-mono text-[9px] ml-auto" style={{ color: COLORS.dim }}>
+                        {relativeTime(signal.created_at)}
+                      </span>
+                    </div>
+                    <div className="text-[15px] font-medium leading-[1.45] mb-1.5 text-zinc-300 group-hover:text-white transition-colors">
+                      {signal.title}
+                    </div>
+                    {signal.summary && (
+                      <div
+                        className="text-[13px] leading-relaxed line-clamp-2"
+                        style={{ color: COLORS.muted }}
+                      >
+                        {signal.summary}
+                      </div>
+                    )}
+                    {signal.signal_type && (
+                      <div className="flex gap-1.5 mt-2">
+                        <span
+                          className="font-mono text-[9px] px-2 py-0.5 rounded"
+                          style={{ color: COLORS.dim, background: 'rgba(255,255,255,0.02)' }}
+                        >
+                          {signal.signal_type}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </a>
+              );
+            })
+          )}
+        </div>
+
+        {/* Load More */}
+        {signals.length > 0 && signals.length < totalCount && (
+          <div className="flex justify-center mt-6">
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              className="font-mono text-[11px] font-medium tracking-[0.1em] px-8 py-2.5 rounded-[10px] cursor-pointer transition-colors"
+              style={{
+                border: `1px solid ${COLORS.accent}26`,
+                background: 'transparent',
+                color: COLORS.accent,
+              }}
+            >
+              LOAD MORE SIGNALS
+            </button>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}

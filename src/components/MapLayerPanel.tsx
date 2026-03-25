@@ -22,32 +22,16 @@ const GROUPS: Group[] = [
     label: 'GLOBAL',
     accent: '#00d4ff',
     layers: [
-      { key: 'globalHubs',  label: 'TECH HUBS',   color: '#00d4ff' },
-      { key: 'globalTech',   label: 'COUNTRY TECH',   color: '#00ff88', subtitle: 'live heat map' },
-      { key: 'intelSignals', label: 'INTEL SIGNALS',  color: '#f97316', subtitle: 'live signal events' },
-      { key: 'conferences', label: 'CONFERENCES', color: '#ffb800' },
-    ],
-  },
-  {
-    label: 'LIVE',
-    accent: '#00ff88',
-    layers: [
-      { key: 'flights',      label: 'FLIGHTS',     color: '#ffb800' },
-      { key: 'military',     label: 'MILITARY',    color: '#f97316' },
-      { key: 'seismic',      label: 'SEISMIC',     color: '#ff3b30' },
-      { key: 'borderTrade',  label: 'BORDER',      color: '#00d4ff' },
-      { key: 'crimeNews',    label: 'CRIME NEWS',  color: '#f97316' },
-      { key: 'samContracts', label: 'CONTRACTS',   color: '#00ff88' },
-      { key: 'liveTV',       label: 'LIVE TV',     color: '#ff3b30' },
+      { key: 'globalHubs', label: 'TECH HUBS',    color: '#00d4ff' },
+      { key: 'globalTech', label: 'COUNTRY TECH', color: '#00ff88', subtitle: 'live heat map' },
     ],
   },
   {
     label: 'VENDORS',
     accent: '#00d4ff',
     layers: [
-      { key: 'vendors',       label: 'VENDORS',      color: '#00d4ff' },
-      { key: 'products',      label: 'PRODUCTS',     color: '#00a8cc' },
-      { key: 'samBusinesses', label: 'SAM ENTITIES', color: '#00d4ff' },
+      { key: 'vendors',  label: 'VENDORS',  color: '#00d4ff' },
+      { key: 'products', label: 'PRODUCTS', color: '#00a8cc' },
     ],
   },
   {
@@ -55,18 +39,6 @@ const GROUPS: Group[] = [
     accent: '#00ff88',
     layers: [
       { key: 'momentum', label: 'MOMENTUM', color: '#00ff88' },
-      { key: 'adoption', label: 'ADOPTION', color: '#00cc6a' },
-    ],
-  },
-  {
-    label: 'INTEL',
-    accent: '#ffb800',
-    layers: [
-      { key: 'funding', label: 'FUNDING',     color: '#ffb800', subtitle: 'investment signals' },
-      { key: 'patents', label: 'PATENTS',     color: '#ffb800', subtitle: 'USPTO filings' },
-      { key: 'hiring',      label: 'HIRING',      color: '#f97316', subtitle: 'job openings' },
-      { key: 'news',        label: 'NEWS',        color: '#00d4ff', subtitle: 'local coverage' },
-      { key: 'disruptions', label: 'DISRUPTIONS', color: '#a855f7' },
     ],
   },
   {
@@ -74,7 +46,6 @@ const GROUPS: Group[] = [
     accent: '#ffd700',
     layers: [
       { key: 'ikerScores', label: 'HEALTH SCORE', color: '#ffd700' },
-      { key: 'ikerRisk',   label: 'RISK',         color: '#ff3b30' },
     ],
   },
 ];
@@ -145,17 +116,6 @@ export function MapLayerPanel({ layers, onToggleLayer, dataFreshness }: Props) {
               className="flex items-center gap-2 px-3 pt-2.5 pb-1"
               style={{ borderLeft: `2px solid ${isGroupActive ? group.accent + '55' : group.accent + '18'}` }}
             >
-              {/* Live dot for LIVE group */}
-              {group.label === 'LIVE' && (
-                <span
-                  className="w-1 h-1 rounded-full shrink-0"
-                  style={{
-                    backgroundColor: isGroupActive ? '#00ff88' : 'transparent',
-                    border: isGroupActive ? 'none' : '1px solid rgba(255,255,255,0.15)',
-                    boxShadow: isGroupActive ? '0 0 6px #00ff88cc' : 'none',
-                  }}
-                />
-              )}
               <span
                 className="font-mono text-[8px] tracking-[0.3em] font-bold flex-1"
                 style={{ color: isGroupActive ? group.accent : 'rgba(255,255,255,0.18)' }}

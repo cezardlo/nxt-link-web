@@ -225,7 +225,7 @@ export function SectorMomentumBoard({ scores, vendors }: Props) {
       {/* Footer link */}
       <div className="px-3 py-2 border-t border-white/[0.04]">
         <Link
-          href="/explore"
+          href="/industry"
           className="font-mono text-[8px] tracking-wider text-white/25 hover:text-[#00d4ff]/70 transition-colors"
         >
           VIEW FULL DASHBOARD →

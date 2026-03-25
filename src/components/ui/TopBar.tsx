@@ -27,7 +27,7 @@ export function TopBar() {
       </Link>
 
       <Link
-        href="/search"
+        href="/solve"
         className="hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full font-mono text-[10px] tracking-[0.1em] transition-all duration-200 hover:border-white/15"
         style={{ color: `${COLORS.text}28`, background: COLORS.surface, border: `1px solid ${COLORS.border}` }}
       >

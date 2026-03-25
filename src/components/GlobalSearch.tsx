@@ -15,9 +15,9 @@ type SearchResult = {
 
 const PAGES: SearchResult[] = [
   { label: 'Solve a Problem', href: '/solve', type: 'page', color: '#ff6600' },
-  { label: 'World Map', href: '/world', type: 'page', color: '#00d4ff' },
+  { label: 'World Map', href: '/map', type: 'page', color: '#00d4ff' },
   { label: 'Industries', href: '/industry', type: 'page', color: '#ffd700' },
-  { label: 'Store', href: '/store', type: 'page', color: '#00ff88' },
+  { label: 'Industries', href: '/industry', type: 'page', color: '#00ff88' },
   { label: 'Command', href: '/command', type: 'page', color: '#a855f7' },
 ];
 

@@ -55,9 +55,9 @@ const MAP_STYLE: maplibregl.StyleSpecification = {
 };
 
 const INITIAL_VIEW = {
-  longitude:  10,
-  latitude:   25,
-  zoom:       3,
+  longitude:  -106.44,
+  latitude:   31.77,
+  zoom:       4,
   pitch:      30,
   bearing:     0,
 };

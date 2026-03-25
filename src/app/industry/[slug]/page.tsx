@@ -431,7 +431,7 @@ export default function IndustryCommandCenter() {
             INDUSTRY NOT FOUND
           </div>
           <Link
-            href="/explore"
+            href="/industry"
             className="font-mono text-[9px] tracking-[0.2em] hover:text-[#00d4ff] transition-colors"
             style={{ color: `${COLORS.accent}80` }}
           >
@@ -588,7 +588,7 @@ export default function IndustryCommandCenter() {
         {/* Sweep Radar link */}
         <div className="pt-12 text-center">
           <Link
-            href="/sweep"
+            href="/command"
             className="inline-block px-8 py-4 rounded-xl transition-all hover:translate-y-[-2px]"
             style={{
               background: COLORS.card,

@@ -27,7 +27,7 @@ const LAYER_PRESETS: LayerPreset[] = [
 ];
 
 const PAGE_ITEMS = [
-  { label: 'INDUSTRIES', href: '/explore', description: 'Explore 8 industry sectors', color: '#00d4ff' },
+  { label: 'INDUSTRIES', href: '/industry', description: 'Explore 8 industry sectors', color: '#00d4ff' },
   { label: 'VENDORS',    href: '/vendors',    description: '98+ El Paso technology vendors', color: '#ffb800' },
   { label: 'MAP',        href: '/map',        description: 'Intelligence map platform', color: '#00d4ff' },
   { label: 'OPS',        href: '/ops',        description: 'Operations center — procurement & alerts', color: '#f97316' },

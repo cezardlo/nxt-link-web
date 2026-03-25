@@ -3,6 +3,7 @@ import { IBM_Plex_Mono, Space_Grotesk } from 'next/font/google';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './globals.css';
 import { Analytics } from '@vercel/analytics/react';
+import { DockNav } from '@/components/DockNav';
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main id="main-content">
           {children}
         </main>
+        <DockNav />
         <Analytics />
       </body>
     </html>

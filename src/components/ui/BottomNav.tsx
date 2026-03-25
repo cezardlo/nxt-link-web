@@ -5,10 +5,10 @@ import { COLORS } from '@/lib/tokens';
 
 const TABS = [
   { href: '/',            label: 'TODAY',    icon: '◉' },
-  { href: '/explore',     label: 'EXPLORE',  icon: '⬡' },
+  { href: '/industry',    label: 'EXPLORE',  icon: '⬡' },
   { href: '/intel',       label: 'INTEL',    icon: '◈' },
-  { href: '/world',       label: 'WORLD',    icon: '◎' },
-  { href: '/sweep',       label: 'SWEEP',    icon: '⊞' },
+  { href: '/map',         label: 'WORLD',    icon: '◎' },
+  { href: '/command',     label: 'SWEEP',    icon: '⊞' },
 ];
 
 function isActive(pathname: string, href: string): boolean {

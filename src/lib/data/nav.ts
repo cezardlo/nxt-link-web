@@ -9,10 +9,10 @@ export type NavItem = {
 };
 
 export const NAV_ITEMS: NavItem[] = [
-  { href: '/world',    label: 'WORLD',    icon: '◎', color: '#00d4ff', description: 'Global intelligence map' },
+  { href: '/map',      label: 'WORLD',    icon: '◎', color: '#00d4ff', description: 'Global intelligence map' },
   { href: '/industry', label: 'INDUSTRY', icon: '◇', color: '#ffd700', description: 'Deep sector intelligence' },
   { href: '/solve',    label: 'SOLVE',    icon: '◆', color: '#ff6600', description: 'Problem → solution engine' },
-  { href: '/store',    label: 'STORE',    icon: '◫', color: '#00ff88', description: 'Technology marketplace' },
+  { href: '/industry', label: 'INDUSTRY', icon: '◫', color: '#00ff88', description: 'Deep sector intelligence' },
   { href: '/command',  label: 'COMMAND',  icon: '⬡', color: '#a855f7', description: 'Executive dashboard' },
 ];
 

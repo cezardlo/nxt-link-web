@@ -361,14 +361,14 @@ function SolveInner() {
           {/* ── Quick Nav ──────────────────────────────────────────── */}
           <div className="mt-8 mb-6 flex gap-2 flex-wrap justify-center">
             <Link
-              href="/world"
+              href="/map"
               className="flex items-center gap-2 px-3 py-2 rounded-[10px] transition-all hover:translate-y-[-1px]"
               style={{ background: `${COLORS.cyan}08`, border: `1px solid ${COLORS.cyan}18`, textDecoration: 'none', color: `${COLORS.cyan}90`, fontSize: 9 }}
             >
               ◎ World Map
             </Link>
             <Link
-              href="/store"
+              href="/industry"
               className="flex items-center gap-2 px-3 py-2 rounded-[10px] transition-all hover:translate-y-[-1px]"
               style={{ background: `${COLORS.green}08`, border: `1px solid ${COLORS.green}18`, textDecoration: 'none', color: `${COLORS.green}90`, fontSize: 9 }}
             >
@@ -607,7 +607,7 @@ function SolveInner() {
               )}
               {industry && <div className="h-px" style={{ background: COLORS.border }} />}
               <Link
-                href="/store"
+                href="/industry"
                 className="flex items-center justify-between"
                 style={{ textDecoration: 'none', color: COLORS.text }}
               >

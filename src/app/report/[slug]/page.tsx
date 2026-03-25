@@ -230,10 +230,10 @@ export default function ReportPage() {
       <div className="sticky top-0 z-20 bg-black border-b border-white/[0.06] px-6 py-3 flex items-center justify-between no-print">
         <div className="flex items-center gap-4">
           <Link
-            href="/explore"
+            href="/industry"
             className="font-mono text-[9px] tracking-[0.15em] text-white/40 hover:text-[#00d4ff] transition-colors"
           >
-            ← EXPLORE
+            ← INDUSTRY
           </Link>
           <span className="text-white/10">|</span>
           <span className="font-mono text-[9px] tracking-[0.2em] text-white/50">INTELLIGENCE ACQUISITION REPORT</span>

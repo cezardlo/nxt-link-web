@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { Mode, TimeRange } from '@/hooks/useMapLayers';
 import type { FlyToTarget } from '@/components/MapCanvas';
@@ -54,22 +54,13 @@ function Separator() {
 export function MapTopBar({
   timeRange,
   onTimeRangeChange,
-  onMissionSubmit,
-  loading,
   activeLayerCount,
   pointCount,
-  mode,
-  onModeChange,
   onFlyTo,
-  onCmdK,
   onSignalsLoaded,
   onMobileLayerToggle,
   onMobileRightToggle,
 }: Props) {
-  const [mission, setMission] = useState('');
-  const [copied, setCopied] = useState(false);
-  const [inputFocused, setInputFocused] = useState(false);
-
   const prevPointCount = useRef(pointCount);
   const prevLayerCount = useRef(activeLayerCount);
   const [pointFlash, setPointFlash] = useState(false);
@@ -92,24 +83,6 @@ export function MapTopBar({
       return () => clearTimeout(id);
     }
   }, [activeLayerCount]);
-
-  const handleSubmit = useCallback(() => {
-    const text = mission.trim();
-    if (!text) return;
-    onMissionSubmit(text);
-  }, [mission, onMissionSubmit]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => { if (e.key === 'Enter') handleSubmit(); },
-    [handleSubmit],
-  );
-
-  const handleShare = useCallback(() => {
-    navigator.clipboard.writeText(window.location.href).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }, []);
 
   return (
     <div className="shrink-0 h-11 flex items-center gap-2 md:gap-2.5 px-2 md:px-3 bg-black border-b border-white/[0.05]">
@@ -137,51 +110,6 @@ export function MapTopBar({
         >
           NXT<span className="text-[#00d4ff]">{'//'}</span>LINK
         </a>
-      </div>
-
-      <a
-        href="/explore"
-        className="font-mono text-[8px] tracking-[0.2em] text-white/20 hover:text-[#00d4ff]/70 transition-colors hidden md:inline"
-      >
-        EXPLORE
-      </a>
-
-      <Separator />
-
-      {/* Mission input — wider, better styled */}
-      <div
-        className="flex-1 flex items-center gap-2 min-w-0 transition-all duration-150"
-        style={{
-          background: inputFocused ? 'rgba(0,212,255,0.04)' : 'transparent',
-          borderBottom: inputFocused ? '1px solid rgba(0,212,255,0.2)' : '1px solid transparent',
-        }}
-      >
-        <span className="font-mono text-[8px] text-white/15 shrink-0 tracking-[0.3em] hidden sm:inline">MISSION</span>
-        <span className="text-white/20 text-[9px] hidden sm:inline">›</span>
-        <input
-          type="text"
-          value={mission}
-          onChange={(e) => setMission(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onFocus={() => setInputFocused(true)}
-          onBlur={() => setInputFocused(false)}
-          placeholder="find top AI vendors, route optimization, water tech..."
-          className="flex-1 min-w-0 bg-transparent text-[10px] text-white/60 placeholder-white/10 outline-none font-mono py-1"
-        />
-        {loading && (
-          <span className="loading-dots shrink-0 flex gap-0.5 text-[#00d4ff]">
-            <span /><span /><span />
-          </span>
-        )}
-        {!loading && mission.trim() && (
-          <button
-            onClick={handleSubmit}
-            className="shrink-0 px-2 py-0.5 font-mono text-[8px] text-[#00ff88] border border-[#00ff88]/25
-                       hover:bg-[#00ff88]/10 hover:border-[#00ff88]/50 transition-all rounded-sm tracking-widest"
-          >
-            RUN ▸
-          </button>
-        )}
       </div>
 
       <Separator />
@@ -251,45 +179,6 @@ export function MapTopBar({
 
       <div className="hidden md:block"><Separator /></div>
 
-      {/* ⌘K */}
-      <button
-        onClick={onCmdK}
-        title="Command palette (⌘K)"
-        className="shrink-0 px-2 py-0.5 font-mono text-[8px] text-white/22
-                   border border-white/[0.07] hover:border-[#00d4ff]/30 hover:text-[#00d4ff]/65
-                   rounded-sm transition-all duration-150"
-      >
-        ⌘K
-      </button>
-
-      <Separator />
-
-      {/* Mode toggle — desktop: segmented, mobile: cycle button */}
-      <div className="hidden md:flex items-center rounded-sm overflow-hidden border border-white/[0.07] shrink-0">
-        {(['operator', 'executive'] as Mode[]).map((m, idx) => (
-          <button
-            key={m}
-            onClick={() => onModeChange(m)}
-            className={`px-2 py-0.5 font-mono text-[8px] transition-all duration-150 ${
-              mode === m
-                ? 'bg-white/10 text-white/75 font-bold'
-                : 'text-white/18 hover:text-white/40 hover:bg-white/[0.03]'
-            } ${idx === 0 ? 'border-r border-white/[0.07]' : ''}`}
-          >
-            {m === 'operator' ? 'OPR' : 'EXC'}
-          </button>
-        ))}
-      </div>
-      <button
-        onClick={() => onModeChange(mode === 'operator' ? 'executive' : 'operator')}
-        className="md:hidden shrink-0 px-1.5 py-0.5 font-mono text-[8px] rounded-sm border border-white/[0.07]
-                   text-white/40 transition-all duration-150"
-      >
-        {mode === 'operator' ? 'OPR' : 'EXC'}
-      </button>
-
-      <div className="hidden md:block"><Separator /></div>
-
       {/* Live stats — visible on all screens */}
       <div className="flex items-center gap-2 md:gap-3 shrink-0">
         <div className="flex items-center gap-1 md:gap-1.5 font-mono text-[7px] md:text-[8px]">
@@ -326,15 +215,6 @@ export function MapTopBar({
       <IntelBadge onSignalsLoaded={onSignalsLoaded} />
 
       <Separator />
-
-      {/* Share — desktop: text, mobile: icon */}
-      <button
-        onClick={handleShare}
-        className="shrink-0 font-mono text-[8px] text-white/15 hover:text-white/40 transition-colors tracking-widest"
-      >
-        {copied ? '✓' : <span className="hidden md:inline">SHARE</span>}
-        {!copied && <span className="md:hidden">↗</span>}
-      </button>
 
       {/* Mobile: right panel toggle */}
       <button
