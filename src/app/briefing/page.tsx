@@ -261,6 +261,7 @@ export default function BriefingPage() {
   const [data, setData] = useState<BriefingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedRegion, setSelectedRegion] = useState<RegionData | null>(null);
 
   useEffect(() => {
     const fetchBriefing = async () => {
@@ -296,7 +297,6 @@ export default function BriefingPage() {
 
   const briefing = data.briefing;
   const sectionColors = [COLORS.cyan, COLORS.gold, COLORS.green];
-  const [selectedRegion, setSelectedRegion] = useState<RegionData | null>(null);
 
   // Transform API regions into globe format
   const REGION_GEO: Record<string, { lat: number; lng: number; continent: string }> = {

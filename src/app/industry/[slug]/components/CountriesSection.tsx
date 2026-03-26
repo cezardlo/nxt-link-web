@@ -171,30 +171,6 @@ export function CountriesSection({
       <div className="mb-8 flex justify-center">
         <InteractiveGlobe
           size={400}
-          dotColor="rgba(100, 180, 255, 0.4)"
-          arcColor={`${accentColor}80`}
-          markerColor={accentColor}
-          markers={countries.filter(c => {
-            const catLower = industry.category.toLowerCase();
-            return c.primarySectors.some(s => s.toLowerCase().includes(catLower) || catLower.includes(s.toLowerCase()));
-          }).map(c => ({
-            lat: c.lat,
-            lng: c.lon,
-            label: c.name,
-          }))}
-          connections={(() => {
-            const relevant = countries.filter(c => {
-              const catLower = industry.category.toLowerCase();
-              return c.primarySectors.some(s => s.toLowerCase().includes(catLower) || catLower.includes(s.toLowerCase()));
-            });
-            const conns: [number, number][] = [];
-            for (let i = 0; i < Math.min(relevant.length, 6); i++) {
-              for (let j = i + 1; j < Math.min(relevant.length, 6); j++) {
-                conns.push([i, j]);
-              }
-            }
-            return conns;
-          })()}
         />
       </div>
 

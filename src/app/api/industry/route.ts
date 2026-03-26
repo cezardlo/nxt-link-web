@@ -1,14 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://yvykselwehxjwsqercjg.supabase.co',
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-);
+import { createClient } from '@/lib/supabase/client';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
+  const supabase = createClient();
   const { searchParams } = new URL(req.url);
   const industry = searchParams.get('industry') || 'manufacturing';
 

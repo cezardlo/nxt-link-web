@@ -15,14 +15,7 @@ interface Signal {
   company: string | null;
 }
 
-interface Region {
-  name: string;
-  total_signals: number;
-  risk_level: string;
-  opportunity_score: number;
-  industries: string[];
-  total_investment_usd: number;
-}
+
 
 const REGION_GEO: Record<string, { lat: number; lng: number; continent: string }> = {
   'United States': { lat: 39.8, lng: -98.5, continent: 'North America' },

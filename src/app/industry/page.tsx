@@ -310,7 +310,7 @@ export default function IndustryPage() {
               ACTIVE CLUSTERS
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-              {data.clusters.map((c, i) => {
+              {data.clusters.map((c) => {
                 const trendPoints = data.tendency.filter(t => t.cluster_id === c.id);
                 const latestTrend = trendPoints.length > 0 ? trendPoints[trendPoints.length - 1] : null;
                 const trendColor = latestTrend?.trend_label === 'spiking' ? COLORS.red
