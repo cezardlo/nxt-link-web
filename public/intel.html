@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NXT LINK Supply Chain Intelligence</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-panel: #111827;
+            --border: #1e293b;
+            --text-primary: #e2e8f0;
+            --text-dim: #64748b;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            letter-spacing: -0.5px;
+        }
+
+        .badge {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+
+        .stat-label {
+            color: var(--text-dim);
+            font-size: 0.8rem;
+        }
+
+        /* Main Layout */
+        .container {
+            display: flex;
+            height: calc(100vh - 70px);
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 200px;
+            background: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            padding: 2rem 0;
+            overflow-y: auto;
+        }
+
+        .nav-tabs {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav-tab {
+            padding: 0;
+            border: none;
+            background: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            padding: 0.75rem 1.5rem;
+            text-align: left;
+            font-size: 0.95rem;
+            font-weight: 500;
+            border-left: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .nav-tab:hover {
+            color: var(--text-primary);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .nav-tab.active {
+            color: var(--accent-blue);
+            border-left-color: var(--accent-blue);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        /* Content Area */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        /* Insights View */
+        .insights-grid {
+            display: grid;
+            gap: 2rem;
+        }
+
+        .insight-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2rem;
+            transition: all 0.3s;
+        }
+
+        .insight-card:hover {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
+        }
+
+        .rank-badge {
+            display: inline-block;
+            width: 36px;
+            height: 36px;
+            background: var(--accent-blue);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .insight-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .insight-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .insight-section-title {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .insight-section-text {
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+
+        .insight-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .insight-meta-item {
+            color: var(--text-dim);
+        }
+
+        .score-badge {
+            background: var(--accent-green);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        /* Related Events */
+        .related-events {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .related-events-title {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .related-events-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .related-event-item {
+            background: rgba(59, 130, 246, 0.05);
+            padding: 0.75rem;
+            border-radius: 4px;
+            border-left: 3px solid var(--accent-blue);
+            font-size: 0.9rem;
+        }
+
+        .related-event-title {
+            color: var(--text-primary);
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .related-event-meta {
+            color: var(--text-dim);
+            font-size: 0.8rem;
+        }
+
+        /* Map View */
+        .regions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .region-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .region-card:hover {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
+        }
+
+        .region-card.active {
+            border-color: var(--accent-blue);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .region-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .region-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .region-stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .region-stat-label {
+            color: var(--text-dim);
+        }
+
+        .region-stat-value {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .risk-high {
+            color: var(--accent-red);
+        }
+
+        .risk-medium {
+            color: var(--accent-amber);
+        }
+
+        .risk-low {
+            color: var(--accent-green);
+        }
+
+        .opportunity-high {
+            color: var(--accent-green);
+        }
+
+        /* Region Signals */
+        .region-signals {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .region-signals-title {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .signals-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .signal-item {
+            background: rgba(59, 130, 246, 0.05);
+            padding: 1rem;
+            border-radius: 6px;
+            border-left: 3px solid var(--accent-blue);
+        }
+
+        .signal-item-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .signal-item-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            flex-wrap: wrap;
+        }
+
+        /* Signals View */
+        .signals-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+        }
+
+        .filter-btn.active {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            color: white;
+        }
+
+        .signals-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .signal-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1.25rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .signal-card:hover {
+            border-color: var(--accent-blue);
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .signal-card-content {
+            flex: 1;
+        }
+
+        .signal-card-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .signal-card-badges {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .badge-small {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--accent-blue);
+            border-radius: 3px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .badge-small.manufacturing {
+            background: rgba(139, 92, 246, 0.2);
+            color: var(--accent-purple);
+        }
+
+        .badge-small.logistics {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent-green);
+        }
+
+        .signal-card-meta {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        .signal-card-score {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.5rem;
+        }
+
+        .score-large {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-green);
+        }
+
+        .score-label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        /* Connection Panel */
+        .connection-panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .connection-panel-title {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .connection-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .connection-item {
+            background: rgba(139, 92, 246, 0.05);
+            padding: 1rem;
+            border-radius: 6px;
+            border-left: 3px solid var(--accent-purple);
+        }
+
+        .connection-item-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+            font-size: 0.95rem;
+        }
+
+        .connection-reason {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-top: 0.5rem;
+        }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-dim);
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                padding: 0;
+            }
+
+            .nav-tabs {
+                flex-direction: row;
+                overflow-x: auto;
+            }
+
+            .nav-tab {
+                white-space: nowrap;
+                border-left: none;
+                border-bottom: 3px solid transparent;
+                border-radius: 0;
+                padding: 0.75rem 1rem;
+            }
+
+            .nav-tab.active {
+                border-bottom-color: var(--accent-blue);
+                border-left: none;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .stats-bar {
+                width: 100%;
+                justify-content: center;
+                gap: 1rem;
+            }
+
+            .regions-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .insights-grid {
+                gap: 1rem;
+            }
+
+            .insight-card {
+                padding: 1.5rem;
+            }
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-dim);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="logo-section">
+            <div>
+                <div class="logo">NXT LINK</div>
+                <div class="badge">Supply Chain Intelligence</div>
+            </div>
+        </div>
+        <div class="stats-bar">
+            <div class="stat-item">
+                <div class="stat-value" id="stat-signals">0</div>
+                <div class="stat-label">Signals</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="stat-clusters">0</div>
+                <div class="stat-label">Clusters</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="stat-regions">0</div>
+                <div class="stat-label">Regions</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Sidebar Navigation -->
+        <div class="sidebar">
+            <ul class="nav-tabs">
+                <li><button class="nav-tab active" data-view="insights">Insights</button></li>
+                <li><button class="nav-tab" data-view="map">Map</button></li>
+                <li><button class="nav-tab" data-view="signals">Signals</button></li>
+            </ul>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content">
+            <!-- Insights View -->
+            <div class="view active" id="view-insights">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <div>Loading insights...</div>
+                </div>
+            </div>
+
+            <!-- Map View -->
+            <div class="view" id="view-map">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <div>Loading map...</div>
+                </div>
+            </div>
+
+            <!-- Signals View -->
+            <div class="view" id="view-signals">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <div>Loading signals...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            supabaseUrl: 'https://yvykselwehxjwsqercjg.supabase.co',
+            supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2eWtzZWx3ZWhxanpzcWVyY2pnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM2MDUzMzUsImV4cCI6MjA1OTE4MTMzNX0.aqG-PETR-RJMmb3CH8GTrOp_2pFPGbl-bfGcPHINzlQ'
+        };
+
+        // Global State
+        let appState = {
+            insights: [],
+            signals: [],
+            clusters: [],
+            regions: [],
+            selectedRegion: null,
+            signalFilter: 'all',
+            selectedSignal: null
+        };
+
+        // Utility Functions
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        function formatScore(score) {
+            return (score * 100).toFixed(0);
+        }
+
+        async function fetchFromSupabase(table) {
+            const url = `${CONFIG.supabaseUrl}/rest/v1/${table}?select=*`;
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${CONFIG.supabaseKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            } catch (error) {
+                console.error(`Error fetching ${table}:`, error);
+                return [];
+            }
+        }
+
+        async function loadAllData() {
+            try {
+                const [insights, signals, clusters, regions] = await Promise.all([
+                    fetchFromSupabase('top_insights'),
+                    fetchFromSupabase('intel_signals'),
+                    fetchFromSupabase('signal_clusters'),
+                    fetchFromSupabase('region_intelligence')
+                ]);
+
+                appState.insights = insights.sort((a, b) => a.rank - b.rank);
+                appState.signals = signals.sort((a, b) => b.relevance_score - a.relevance_score || new Date(b.discovered_at) - new Date(a.discovered_at));
+                appState.clusters = clusters;
+                appState.regions = regions;
+
+                // Update stats
+                document.getElementById('stat-signals').textContent = signals.length;
+                document.getElementById('stat-clusters').textContent = clusters.length;
+                document.getElementById('stat-regions').textContent = regions.length;
+
+                // Render views
+                renderInsightsView();
+                renderMapView();
+                renderSignalsView();
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+
+        function renderInsightsView() {
+            const container = document.getElementById('view-insights');
+            const topInsights = appState.insights.slice(0, 3);
+
+            if (topInsights.length === 0) {
+                container.innerHTML = '<div class="loading">No insights available</div>';
+                return;
+            }
+
+            const html = topInsights.map(insight => {
+                const relatedSignals = getRelatedSignals(insight.related_signal_ids, 5);
+                return `
+                    <div class="insight-card">
+                        <div class="rank-badge">${insight.rank}</div>
+                        <div class="insight-title">${escapeHtml(insight.title)}</div>
+
+                        <div class="insight-section">
+                            <div class="insight-section-title">What is Happening</div>
+                            <div class="insight-section-text">${escapeHtml(insight.what_is_happening)}</div>
+                        </div>
+
+                        <div class="insight-section">
+                            <div class="insight-section-title">Why It Matters</div>
+                            <div class="insight-section-text">${escapeHtml(insight.why_it_matters)}</div>
+                        </div>
+
+                        <div class="insight-section">
+                            <div class="insight-section-title">Where It's Going</div>
+                            <div class="insight-section-text">${escapeHtml(insight.where_its_going)}</div>
+                        </div>
+
+                        <div class="insight-meta">
+                            <div class="insight-meta-item">
+                                <strong>${insight.signal_count}</strong> signals
+                            </div>
+                            <div class="score-badge">${formatScore(insight.avg_score)}% relevance</div>
+                        </div>
+
+                        <div class="related-events">
+                            <div class="related-events-title">Related Events</div>
+                            <ul class="related-events-list">
+                                ${relatedSignals.map(signal => `
+                                    <li class="related-event-item">
+                                        <div class="related-event-title">${escapeHtml(signal.title)}</div>
+                                        <div class="related-event-meta">${escapeHtml(signal.source)} • ${formatDate(signal.discovered_at)}</div>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = `<div class="insights-grid">${html}</div>`;
+        }
+
+        function renderMapView() {
+            const container = document.getElementById('view-map');
+
+            if (appState.regions.length === 0) {
+                container.innerHTML = '<div class="loading">No region data available</div>';
+                return;
+            }
+
+            const regionsByName = groupBy(appState.regions, 'region');
+            const regionOrder = ['USA', 'China', 'Europe', 'Japan & Korea', 'Mexico', 'Southeast Asia', 'India'];
+            const sortedRegions = regionOrder.filter(r => regionsByName[r]).map(r => ({
+                name: r,
+                data: regionsByName[r]
+            }));
+
+            let html = `<div class="regions-grid">`;
+            sortedRegions.forEach(region => {
+                const regionData = region.data[0];
+                const riskClass = getRiskClass(regionData.risk_level);
+                html += `
+                    <div class="region-card" data-region="${region.name}">
+                        <div class="region-name">${region.name}</div>
+                        <div class="region-stats">
+                            <div class="region-stat">
+                                <span class="region-stat-label">Signals</span>
+                                <span class="region-stat-value">${regionData.signal_count}</span>
+                            </div>
+                            <div class="region-stat">
+                                <span class="region-stat-label">Risk Level</span>
+                                <span class="region-stat-value ${riskClass}">${regionData.risk_level}</span>
+                            </div>
+                            <div class="region-stat">
+                                <span class="region-stat-label">Opportunity Score</span>
+                                <span class="region-stat-value opportunity-high">${(regionData.opportunity_score * 100).toFixed(0)}%</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            html += `<div id="region-signals-container"></div>`;
+
+            container.innerHTML = html;
+
+            // Add event listeners
+            document.querySelectorAll('.region-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    document.querySelectorAll('.region-card').forEach(c => c.classList.remove('active'));
+                    card.classList.add('active');
+                    const regionName = card.dataset.region;
+                    appState.selectedRegion = regionName;
+                    renderRegionSignals(regionName);
+                });
+            });
+        }
+
+        function renderRegionSignals(regionName) {
+            const regionSignals = appState.signals.filter(s =>
+                s.source_domain && s.source_domain.toLowerCase().includes(regionName.toLowerCase())
+            ).slice(0, 5);
+
+            const container = document.getElementById('region-signals-container');
+            if (regionSignals.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const html = `
+                <div class="region-signals">
+                    <div class="region-signals-title">Top Signals - ${regionName}</div>
+                    <ul class="signals-list">
+                        ${regionSignals.map(signal => `
+                            <li class="signal-item">
+                                <div class="signal-item-title">${escapeHtml(signal.title)}</div>
+                                <div class="signal-item-meta">
+                                    <span>${escapeHtml(signal.signal_type)}</span>
+                                    <span>${escapeHtml(signal.industry)}</span>
+                                    <span>${formatDate(signal.discovered_at)}</span>
+                                </div>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `;
+            container.innerHTML = html;
+        }
+
+        function renderSignalsView() {
+            const container = document.getElementById('view-signals');
+
+            if (appState.signals.length === 0) {
+                container.innerHTML = '<div class="loading">No signals available</div>';
+                return;
+            }
+
+            let html = `
+                <div class="signals-controls">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="Manufacturing">Manufacturing</button>
+                    <button class="filter-btn" data-filter="Logistics">Logistics</button>
+                </div>
+                <div class="signals-grid" id="signals-grid"></div>
+                <div id="signal-connection-panel"></div>
+            `;
+            container.innerHTML = html;
+
+            // Add filter listeners
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    appState.signalFilter = btn.dataset.filter;
+                    renderSignalsList();
+                });
+            });
+
+            renderSignalsList();
+        }
+
+        function renderSignalsList() {
+            const filteredSignals = appState.signalFilter === 'all'
+                ? appState.signals
+                : appState.signals.filter(s => s.signal_type === appState.signalFilter);
+
+            const container = document.getElementById('signals-grid');
+            const html = filteredSignals.map(signal => {
+                const badgeClass = signal.signal_type === 'Manufacturing' ? 'manufacturing' : 'logistics';
+                return `
+                    <div class="signal-card" data-signal-id="${signal.id}">
+                        <div class="signal-card-content">
+                            <div class="signal-card-title">${escapeHtml(signal.title)}</div>
+                            <div class="signal-card-badges">
+                                <span class="badge-small ${badgeClass}">${escapeHtml(signal.signal_type)}</span>
+                                <span class="badge-small">${escapeHtml(signal.industry)}</span>
+                            </div>
+                            <div class="signal-card-meta">
+                                ${escapeHtml(signal.source)} • ${formatDate(signal.discovered_at)}
+                            </div>
+                        </div>
+                        <div class="signal-card-score">
+                            <div class="score-large">${formatScore(signal.relevance_score)}</div>
+                            <div class="score-label">Relevance</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+
+            // Add click listeners
+            document.querySelectorAll('.signal-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const signalId = card.dataset.signalId;
+                    const signal = appState.signals.find(s => s.id === signalId);
+                    renderConnectionPanel(signal);
+                });
+            });
+        }
+
+        function renderConnectionPanel(signal) {
+            const relatedSignals = findRelatedSignals(signal, 5);
+
+            const html = `
+                <div class="connection-panel">
+                    <div class="connection-panel-title">What This Connects To</div>
+                    <ul class="connection-list">
+                        ${relatedSignals.map(related => {
+                            let reason = 'Related signal';
+                            if (related.company === signal.company) reason = 'Same company';
+                            if (related.signal_type === signal.signal_type && related.industry === signal.industry) {
+                                reason = 'Same type & industry';
+                            }
+                            return `
+                                <li class="connection-item">
+                                    <div class="connection-item-title">${escapeHtml(related.title)}</div>
+                                    <div class="connection-reason">${reason}</div>
+                                </li>
+                            `;
+                        }).join('')}
+                    </ul>
+                </div>
+            `;
+
+            document.getElementById('signal-connection-panel').innerHTML = html;
+        }
+
+        function getRelatedSignals(relatedIds, limit) {
+            if (!relatedIds || !Array.isArray(relatedIds)) return [];
+            return relatedIds.slice(0, limit).map(id =>
+                appState.signals.find(s => s.id === id)
+            ).filter(Boolean);
+        }
+
+        function findRelatedSignals(signal, limit) {
+            const related = appState.signals
+                .filter(s => s.id !== signal.id && (
+                    s.company === signal.company ||
+                    (s.signal_type === signal.signal_type && s.industry === signal.industry) ||
+                    s.industry === signal.industry
+                ))
+                .slice(0, limit);
+            return related;
+        }
+
+        function groupBy(arr, key) {
+            return arr.reduce((acc, item) => {
+                (acc[item[key]] = acc[item[key]] || []).push(item);
+                return acc;
+            }, {});
+        }
+
+        function getRiskClass(riskLevel) {
+            if (riskLevel === 'High') return 'risk-high';
+            if (riskLevel === 'Medium') return 'risk-medium';
+            return 'risk-low';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Navigation
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                tab.classList.add('active');
+                const viewId = `view-${tab.dataset.view}`;
+                document.getElementById(viewId).classList.add('active');
+            });
+        });
+
+        // Initialize
+        window.addEventListener('DOMContentLoaded', loadAllData);
+    </script>
+</body>
+</html>
