@@ -136,8 +136,8 @@ function TendencyDetection({ trends }: { trends: { snapshot: TrendSnapshot[]; ti
     const gh = h - pad.top - pad.bottom;
 
     // Find data bounds
-    let allScores: number[] = [];
-    let allDates: string[] = [];
+    const allScores: number[] = [];
+    const allDates: string[] = [];
     for (const s of series) {
       for (const p of s.points) {
         allScores.push(p.score);
@@ -342,21 +342,6 @@ export default function BriefingPage() {
   }
 
   const briefing = data.briefing;
-  const byType = briefing.signal_stats.by_type || {};
-  const totalByType = Object.values(byType).reduce((a, b) => a + b, 0);
-  const typeEntries = Object.entries(byType).sort(([, a], [, b]) => b - a);
-
-  const typeColors: Record<string, string> = {
-    regulatory: COLORS.red,
-    supply_chain: COLORS.amber,
-    market: COLORS.green,
-    technology: COLORS.cyan,
-    geopolitical: COLORS.gold,
-    default: COLORS.dim,
-  };
-
-  const getTypeColor = (type: string): string =>
-    typeColors[type.toLowerCase().replace(/\s+/g, '_')] || typeColors.default;
 
   return (
     <div style={{ background: COLORS.bg, color: COLORS.text, minHeight: '100vh' }}>
@@ -585,7 +570,7 @@ export default function BriefingPage() {
                     fontWeight: 500,
                   }}
                 >
-                  WHERE IT'S GOING
+                  WHERE IT&apos;S GOING
                 </div>
                 <div style={{ fontSize: '13px', lineHeight: '1.5', color: COLORS.text }}>
                   {insight.where_its_going}
