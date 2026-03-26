@@ -1,5 +1,5 @@
 /**
- * GET /api/briefing — Top 3 supply chain intelligence insights
+ * GET /api/briefing â Top 3 supply chain intelligence insights
  *
  * Returns:
  *   - top_insights (3 cards with what/why/where + related signals)
@@ -25,6 +25,8 @@ export async function GET() {
     { data: regions },
     { count: totalSignals },
     { data: trendMetrics },
+    { data: latestBriefing },
+    { count: signals24h },
   ] = await Promise.all([
     supabase.from('top_insights').select('*').order('rank', { ascending: true }).limit(3),
     supabase.from('intel_signals').select('id, title, signal_type, industry, company, relevance_score, discovered_at, source, source_domain').order('relevance_score', { ascending: false }).limit(50),
@@ -32,6 +34,8 @@ export async function GET() {
     supabase.from('region_intelligence').select('*').order('signal_count', { ascending: false }),
     supabase.from('intel_signals').select('*', { count: 'exact', head: true }),
     supabase.from('cluster_metrics').select('cluster_id, date, signal_count, rolling_avg, velocity, acceleration, trend_score, trend_label').order('date', { ascending: true }),
+    supabase.from('daily_briefings').select('generated_at, briefing_date').order('briefing_date', { ascending: false }).limit(1),
+    supabase.from('intel_signals').select('*', { count: 'exact', head: true }).gte('discovered_at', new Date(Date.now() - 24 * 3600 * 1000).toISOString()),
   ]);
 
   // Build signal stats
@@ -94,10 +98,20 @@ export async function GET() {
     }
   }
 
+  // Compute trend distribution from snapshot
+  const trendDistribution: Record<string, number> = { spiking: 0, growing: 0, stable: 0, declining: 0 };
+  for (const t of trendSnapshot) {
+    const label = t.trend_label as string;
+    if (label in trendDistribution) trendDistribution[label]++;
+  }
+
   return NextResponse.json({
     briefing: {
       generated_at: new Date().toISOString(),
       total_signals: totalSignals || 0,
+      signals_24h: signals24h || 0,
+      last_pipeline_run: latestBriefing?.[0]?.generated_at || null,
+      trend_distribution: trendDistribution,
       top_insights: enrichedInsights,
       signal_stats: { by_type: typeCount, by_industry: industryCount },
       clusters: (clusters || []).slice(0, 5),
