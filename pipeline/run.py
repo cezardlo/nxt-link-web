@@ -19,16 +19,18 @@ from pipeline.agents.classification import ClassificationAgent
 from pipeline.agents.tracking import TrackingAgent
 from pipeline.agents.connection import ConnectionAgent
 from pipeline.agents.insight import InsightAgent
+from pipeline.agents.economic import EconomicAgent
 
 ALL_AGENTS = {
     "ingestion": IngestionAgent,
     "classification": ClassificationAgent,
+    "economic": EconomicAgent,
     "tracking": TrackingAgent,
     "connection": ConnectionAgent,
     "insight": InsightAgent,
 }
 
-PIPELINE_ORDER = ["ingestion", "classification", "tracking", "connection", "insight"]
+PIPELINE_ORDER = ["ingestion", "classification", "economic", "tracking", "connection", "insight"]
 
 
 async def run_pipeline(agent_names: list[str] | None = None):

@@ -1,4 +1,7 @@
-"""Agent 2: Classification — classify signals by industry, type, region, importance."""
+"""Agent 2: Classification — classify signals by industry, type, region, importance.
+
+Uses rules first (fast, covers 70%+), then spaCy NER for the rest.
+"""
 
 import re
 import logging
@@ -11,6 +14,22 @@ from pipeline.config import (
 from pipeline.utils.db import get_db
 
 logger = logging.getLogger("pipeline.classification")
+
+# Lazy-load spaCy model
+_nlp = None
+
+
+def _get_nlp():
+    global _nlp
+    if _nlp is None:
+        try:
+            import spacy
+            _nlp = spacy.load("en_core_web_sm")
+            logger.info("spaCy en_core_web_sm loaded")
+        except Exception as e:
+            logger.warning(f"spaCy unavailable, using regex only: {e}")
+    return _nlp
+
 
 # Pre-compile company patterns for fast matching
 _COMPANY_PATTERNS = [(c, re.compile(r"\b" + re.escape(c) + r"\b", re.IGNORECASE)) for c in KNOWN_COMPANIES]
@@ -67,6 +86,32 @@ class ClassificationAgent:
             if amount:
                 updates["amount_usd"] = amount
                 quality_flags.append("has_amount")
+
+            # ── spaCy NER fallback (fills gaps rules missed) ──
+            nlp = _get_nlp()
+            if nlp and (not company or not amount or not region):
+                doc = nlp(text[:1000])  # cap for speed
+                if not company:
+                    orgs = [ent.text for ent in doc.ents if ent.label_ == "ORG"]
+                    if orgs:
+                        updates["company"] = orgs[0]
+                        company = orgs[0]
+                if not amount:
+                    money = [ent.text for ent in doc.ents if ent.label_ == "MONEY"]
+                    if money:
+                        parsed = self._parse_money(money[0])
+                        if parsed:
+                            updates["amount_usd"] = parsed
+                            amount = parsed
+                            quality_flags.append("has_amount")
+                if not region:
+                    gpes = [ent.text for ent in doc.ents if ent.label_ == "GPE"]
+                    for gpe in gpes:
+                        r = self._extract_region(gpe.lower())
+                        if r:
+                            region = r
+                            quality_flags.append(r)
+                            break
 
             # ── Importance score ──
             importance = self._score_importance(
@@ -163,6 +208,10 @@ class ClassificationAgent:
                 else:
                     return val
         return None
+
+    def _parse_money(self, text: str) -> float | None:
+        """Parse a spaCy MONEY entity like '$2.5 billion' into a float."""
+        return self._extract_amount(text)
 
     def _score_importance(
         self,
