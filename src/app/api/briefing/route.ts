@@ -1,14 +1,8 @@
 /**
- * GET /api/briefing — Executive briefing: Top 3 things that matter right now
+ * GET /api/briefing — Top 3 things happening in supply chain today
  *
- * Pulls from:
- *   - intel_clusters (assembled clusters with narratives)
- *   - intel_trends (velocity/patterns)
- *   - vendors (matched to cluster industries)
- *   - products (matched to cluster technologies)
- *   - intel_signals (latest high-importance signals for fallback)
- *
- * Returns a structured decision-ready briefing.
+ * Pulls from v_cluster_briefings filtered to supply chain / logistics / manufacturing.
+ * Falls back to top scored signals if no clusters exist yet.
  */
 
 import { NextResponse } from 'next/server';
@@ -16,117 +10,69 @@ import { createClient } from '@/lib/supabase/client';
 
 export const dynamic = 'force-dynamic';
 
+const SC_INDUSTRIES = ['supply-chain', 'logistics', 'manufacturing', 'supply_chain', 'border-tech'];
+
 interface BriefingCluster {
   id: string;
   title: string;
   strength: number;
   signal_count: number;
-  companies: string[];
   industries: string[];
-  technologies: string[];
   what_is_happening: string | null;
   why_it_matters: string | null;
   what_happens_next: string | null;
-  actions: string[] | null;
   vendors: { company_name: string; sector: string; iker_score: number; company_url: string | null }[];
-  products: { product_name: string; company: string; category: string | null; description: string | null }[];
+  products: { product_name: string; company: string; category: string | null }[];
 }
 
 export async function GET() {
   const supabase = createClient();
 
   // ── 1. Get top clusters with narratives ──
-  const { data: clusters } = await supabase
+  const { data: allClusters } = await supabase
     .from('v_cluster_briefings')
     .select('*')
-    .gte('strength', 30)
-    .limit(10);
+    .gte('strength', 25)
+    .order('strength', { ascending: false })
+    .limit(20);
 
-  // ── 2. Get active trends ──
-  const { data: trends } = await supabase
-    .from('intel_trends')
-    .select('*')
-    .gte('created_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString())
-    .order('confidence', { ascending: false })
-    .limit(5);
+  // Filter to supply chain related industries
+  const scClusters = (allClusters || []).filter((c) => {
+    const industries = (c.industries || []) as string[];
+    return industries.some((ind) => SC_INDUSTRIES.some((sc) => ind.toLowerCase().includes(sc)))
+      || (c.title || '').toLowerCase().match(/supply|logistics|manufactur|warehouse|freight|shipping|trade|tariff|nearshore|port|cargo/);
+  });
 
-  // ── 3. Get signal velocity for context ──
-  const { data: velocity } = await supabase
-    .from('v_signal_velocity')
-    .select('*')
-    .gt('velocity_ratio', 1.5)
-    .limit(5);
+  // Take top 3
+  const top3 = scClusters.slice(0, 3);
 
-  // ── 4. For each top cluster, match vendors and products ──
+  // ── 2. For each cluster, match vendors and products ──
   const briefingClusters: BriefingCluster[] = [];
 
-  const topClusters = (clusters || []).slice(0, 5);
-
-  for (const c of topClusters) {
+  for (const c of top3) {
     const industries = (c.industries || []) as string[];
-    const technologies = (c.technologies || []) as string[];
-    const companies = (c.companies || []) as string[];
 
-    // Match vendors by industry
+    // Match vendors
     let vendors: BriefingCluster['vendors'] = [];
     if (industries.length > 0) {
       const { data: v } = await supabase
         .from('vendors')
         .select('company_name, sector, iker_score, company_url')
-        .overlaps('industries', industries)
         .order('iker_score', { ascending: false })
-        .limit(5);
+        .limit(3);
       if (v) vendors = v;
     }
 
-    // Also match vendors by company name if cluster has companies
-    if (vendors.length < 3 && companies.length > 0) {
-      for (const name of companies.slice(0, 3)) {
-        const { data: v } = await supabase
-          .from('vendors')
-          .select('company_name, sector, iker_score, company_url')
-          .ilike('company_name', `%${name}%`)
-          .limit(2);
-        if (v) {
-          for (const vendor of v) {
-            if (!vendors.some(existing => existing.company_name === vendor.company_name)) {
-              vendors.push(vendor);
-            }
-          }
-        }
-      }
-    }
-
-    // Match products by industry or technology
+    // Match products
     let products: BriefingCluster['products'] = [];
     if (industries.length > 0) {
       const { data: p } = await supabase
         .from('products')
-        .select('product_name, company, category, description')
+        .select('product_name, company, category')
         .in('industry', industries)
-        .not('product_name', 'ilike', '%start making%')
-        .not('product_name', 'ilike', '%slew of%')
         .order('confidence', { ascending: false })
-        .limit(5);
+        .limit(3);
       if (p) products = p;
-    }
-
-    // Also match by technology keywords
-    if (products.length < 3 && technologies.length > 0) {
-      for (const tech of technologies.slice(0, 2)) {
-        const { data: p } = await supabase
-          .from('products')
-          .select('product_name, company, category, description')
-          .or(`product_name.ilike.%${tech}%,category.ilike.%${tech}%`)
-          .limit(3);
-        if (p) {
-          for (const prod of p) {
-            if (!products.some(existing => existing.product_name === prod.product_name)) {
-              products.push(prod);
-            }
-          }
-        }
-      }
     }
 
     briefingClusters.push({
@@ -134,31 +80,52 @@ export async function GET() {
       title: c.title,
       strength: c.strength,
       signal_count: c.signal_count,
-      companies: c.companies || [],
-      industries: c.industries || [],
-      technologies: c.technologies || [],
+      industries,
       what_is_happening: c.what_is_happening,
       why_it_matters: c.why_it_matters,
       what_happens_next: c.what_happens_next,
-      actions: c.actions,
-      vendors: vendors.slice(0, 5),
-      products: products.slice(0, 5),
+      vendors: vendors.slice(0, 3),
+      products: products.slice(0, 3),
     });
   }
 
-  // ── 5. Fallback: if no clusters, use top signals directly ──
-  let topSignals: unknown[] = [];
+  // ── 3. Fallback: if no SC clusters, use top signals ──
+  let fallbackSignals: { id: string; title: string; industry: string; score: number }[] = [];
   if (briefingClusters.length === 0) {
-    const { data: signals } = await supabase
-      .from('intel_signals')
-      .select('id, title, industry, importance_score, signal_type, company, discovered_at')
-      .gte('importance_score', 0.6)
-      .order('discovered_at', { ascending: false })
-      .limit(10);
-    topSignals = signals || [];
+    // Try all clusters if no SC-specific ones
+    const anyClusters = (allClusters || []).slice(0, 3);
+    if (anyClusters.length > 0) {
+      for (const c of anyClusters) {
+        briefingClusters.push({
+          id: c.id,
+          title: c.title,
+          strength: c.strength,
+          signal_count: c.signal_count,
+          industries: c.industries || [],
+          what_is_happening: c.what_is_happening,
+          why_it_matters: c.why_it_matters,
+          what_happens_next: c.what_happens_next,
+          vendors: [],
+          products: [],
+        });
+      }
+    } else {
+      // No clusters at all — fall back to raw signals
+      const { data: signals } = await supabase
+        .from('intel_signals')
+        .select('id, title, industry, importance_score')
+        .order('importance_score', { ascending: false })
+        .limit(3);
+      fallbackSignals = (signals || []).map((s) => ({
+        id: s.id,
+        title: s.title,
+        industry: s.industry,
+        score: Math.round((s.importance_score || 0) * 100),
+      }));
+    }
   }
 
-  // ── 6. Total signal count for context ──
+  // ── 4. Signal count ──
   const { count: totalSignals } = await supabase
     .from('intel_signals')
     .select('*', { count: 'exact', head: true });
@@ -167,10 +134,8 @@ export async function GET() {
     briefing: {
       generated_at: new Date().toISOString(),
       total_signals: totalSignals || 0,
-      top_clusters: briefingClusters,
-      trends: trends || [],
-      velocity: velocity || [],
-      fallback_signals: topSignals,
+      top_3: briefingClusters,
+      fallback_signals: fallbackSignals,
     },
   });
 }

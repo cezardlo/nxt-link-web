@@ -15,7 +15,6 @@ interface Product {
   product_name: string;
   company: string;
   category: string | null;
-  description: string | null;
 }
 
 interface Cluster {
@@ -23,39 +22,26 @@ interface Cluster {
   title: string;
   strength: number;
   signal_count: number;
-  companies: string[];
   industries: string[];
-  technologies: string[];
   what_is_happening: string | null;
   why_it_matters: string | null;
   what_happens_next: string | null;
-  actions: string[] | null;
   vendors: Vendor[];
   products: Product[];
-}
-
-interface Trend {
-  name: string;
-  trend_type: string;
-  velocity: number;
-  direction: string;
-  confidence: number;
 }
 
 interface Briefing {
   generated_at: string;
   total_signals: number;
-  top_clusters: Cluster[];
-  trends: Trend[];
-  velocity: { industry: string; signals_7d: number; velocity_ratio: number }[];
-  fallback_signals: { id: string; title: string; industry: string; importance_score: number }[];
+  top_3: Cluster[];
+  fallback_signals: { id: string; title: string; industry: string; score: number }[];
 }
 
-function strengthLabel(s: number): { text: string; color: string } {
-  if (s >= 70) return { text: 'CRITICAL', color: '#ef4444' };
-  if (s >= 50) return { text: 'HIGH', color: COLORS.amber };
-  return { text: 'MODERATE', color: COLORS.cyan };
-}
+const SECTION_COLORS = {
+  happening: '#00d4ff',
+  matters: '#ffb800',
+  next: '#00ff88',
+};
 
 export default function BriefingPage() {
   const [briefing, setBriefing] = useState<Briefing | null>(null);
@@ -63,8 +49,8 @@ export default function BriefingPage() {
 
   useEffect(() => {
     fetch('/api/briefing')
-      .then(r => r.json())
-      .then(data => setBriefing(data.briefing))
+      .then((r) => r.json())
+      .then((data) => setBriefing(data.briefing))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -72,9 +58,15 @@ export default function BriefingPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: COLORS.bg }}>
-        <span className="font-mono text-sm tracking-wider animate-pulse-soft" style={{ color: COLORS.dim }}>
-          ASSEMBLING BRIEFING...
-        </span>
+        <div className="flex flex-col items-center gap-3">
+          <div
+            className="w-6 h-6 border-2 rounded-full animate-spin"
+            style={{ borderColor: `${COLORS.accent}30`, borderTopColor: COLORS.accent }}
+          />
+          <span className="font-mono text-xs tracking-widest" style={{ color: COLORS.dim }}>
+            LOADING BRIEFING
+          </span>
+        </div>
       </div>
     );
   }
@@ -82,280 +74,231 @@ export default function BriefingPage() {
   if (!briefing) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: COLORS.bg }}>
-        <span className="font-mono text-sm" style={{ color: COLORS.dim }}>BRIEFING UNAVAILABLE</span>
+        <span className="font-mono text-sm" style={{ color: COLORS.dim }}>
+          BRIEFING UNAVAILABLE
+        </span>
       </div>
     );
   }
 
-  const clusters = briefing.top_clusters;
-  const hasClusters = clusters.length > 0;
+  const clusters = briefing.top_3;
+  const today = new Date(briefing.generated_at).toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
 
   return (
-    <div className="min-h-screen" style={{ background: COLORS.bg }}>
-      {/* ─── Top Bar ─── */}
-      <header
-        className="fixed top-0 left-0 right-0 h-[52px] flex items-center justify-between px-6 z-[100]"
-        style={{
-          background: `${COLORS.bg}bf`,
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          borderBottom: `1px solid ${COLORS.accent}0f`,
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <Link href="/" className="font-mono text-[15px] font-semibold tracking-[0.12em] text-white">
-            NXT<span style={{ color: COLORS.accent }}>{'//'}
-            </span>LINK
-          </Link>
-          <span
-            className="font-mono text-[10px] font-semibold tracking-[0.15em] uppercase px-2 py-0.5 rounded"
-            style={{ color: COLORS.gold, background: `${COLORS.gold}12`, border: `1px solid ${COLORS.gold}25` }}
+    <div className="min-h-screen pb-24" style={{ background: COLORS.bg }}>
+      {/* ─── Header ─── */}
+      <header className="px-5 sm:px-8 pt-8 pb-6 max-w-[720px] mx-auto">
+        <div className="flex items-center gap-3 mb-6">
+          <Link
+            href="/"
+            className="font-mono text-[14px] font-bold tracking-[0.15em]"
+            style={{ color: COLORS.text }}
           >
-            EXECUTIVE BRIEFING
-          </span>
+            NXT<span style={{ color: COLORS.accent }}>{'//'}</span>LINK
+          </Link>
         </div>
-        <div className="font-mono text-[10px]" style={{ color: COLORS.dim }}>
-          {briefing.total_signals.toLocaleString()} signals analyzed
-        </div>
+
+        <h1
+          className="text-[28px] sm:text-[36px] font-bold leading-[1.15] tracking-tight mb-2"
+          style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.text }}
+        >
+          Top 3 in Supply Chain
+        </h1>
+        <p className="text-[14px]" style={{ color: COLORS.muted }}>
+          {today} &middot; {briefing.total_signals.toLocaleString()} signals analyzed
+        </p>
       </header>
 
-      {/* ─── Main ─── */}
-      <main className="pt-[72px] pb-[100px] px-6 max-w-[900px] mx-auto">
-
-        {/* Header */}
-        <div className="mb-10">
-          <h1 className="font-mono text-[32px] font-bold tracking-wide text-white mb-2">
-            TOP <span style={{ color: COLORS.accent }}>{hasClusters ? clusters.length : '—'}</span> THINGS THAT MATTER
-          </h1>
-          <p className="text-sm" style={{ color: COLORS.muted }}>
-            {new Date(briefing.generated_at).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-            {' · '}{briefing.total_signals.toLocaleString()} signals across {briefing.velocity?.length || 0} active industries
-          </p>
-        </div>
-
-        {/* Velocity bar */}
-        {briefing.velocity && briefing.velocity.length > 0 && (
-          <div className="flex gap-2 mb-8 flex-wrap">
-            {briefing.velocity.map((v, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-[10px]"
-                style={{
-                  background: `${COLORS.cyan}0a`,
-                  border: `1px solid ${COLORS.cyan}15`,
-                  color: COLORS.cyan,
-                }}
+      {/* ─── Top 3 Cards ─── */}
+      <main className="px-5 sm:px-8 max-w-[720px] mx-auto">
+        {clusters.length > 0 ? (
+          <div className="flex flex-col gap-5">
+            {clusters.map((c, i) => (
+              <article
+                key={c.id}
+                className="rounded-xl overflow-hidden"
+                style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}` }}
               >
-                <span className="font-bold">{v.velocity_ratio}x</span>
-                {v.industry?.replace(/-/g, ' ').toUpperCase()}
-                <span style={{ color: COLORS.dim }}>{v.signals_7d} / 7d</span>
-              </span>
+                {/* Card number + title */}
+                <div className="px-5 sm:px-6 pt-5 pb-4">
+                  <div className="flex items-start gap-3">
+                    <span
+                      className="font-mono text-[32px] font-bold leading-none"
+                      style={{ color: `${COLORS.accent}30` }}
+                    >
+                      {i + 1}
+                    </span>
+                    <h2
+                      className="text-[18px] sm:text-[20px] font-semibold leading-tight pt-1"
+                      style={{ color: COLORS.text }}
+                    >
+                      {c.title}
+                    </h2>
+                  </div>
+                </div>
+
+                {/* Intelligence sections */}
+                <div className="px-5 sm:px-6 pb-5 space-y-4">
+                  {c.what_is_happening && (
+                    <Section label="WHAT IS HAPPENING" color={SECTION_COLORS.happening}>
+                      {c.what_is_happening}
+                    </Section>
+                  )}
+                  {c.why_it_matters && (
+                    <Section label="WHY IT MATTERS" color={SECTION_COLORS.matters}>
+                      {c.why_it_matters}
+                    </Section>
+                  )}
+                  {c.what_happens_next && (
+                    <Section label="WHERE IT'S GOING" color={SECTION_COLORS.next}>
+                      {c.what_happens_next}
+                    </Section>
+                  )}
+                </div>
+
+                {/* Tools / Vendors (optional) */}
+                {(c.vendors.length > 0 || c.products.length > 0) && (
+                  <div
+                    className="px-5 sm:px-6 py-4"
+                    style={{ borderTop: `1px solid ${COLORS.border}`, background: `${COLORS.card}60` }}
+                  >
+                    <div
+                      className="font-mono text-[9px] font-bold tracking-[0.2em] mb-3"
+                      style={{ color: COLORS.dim }}
+                    >
+                      WHAT EXISTS
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {c.vendors.map((v, vi) => (
+                        <span
+                          key={`v-${vi}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-[11px]"
+                          style={{
+                            background: COLORS.surface,
+                            border: `1px solid ${COLORS.border}`,
+                            color: COLORS.text,
+                          }}
+                        >
+                          {v.company_name}
+                          <span style={{ color: COLORS.dim }}>&middot; {v.sector}</span>
+                        </span>
+                      ))}
+                      {c.products.map((p, pi) => (
+                        <span
+                          key={`p-${pi}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-[11px]"
+                          style={{
+                            background: COLORS.surface,
+                            border: `1px solid ${COLORS.border}`,
+                            color: COLORS.muted,
+                          }}
+                        >
+                          {p.product_name}
+                          {p.company && <span style={{ color: COLORS.dim }}>&middot; {p.company}</span>}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </article>
             ))}
           </div>
-        )}
-
-        {/* ─── Cluster Cards ─── */}
-        {hasClusters ? (
-          <div className="flex flex-col gap-6">
-            {clusters.map((c, index) => {
-              const priority = strengthLabel(c.strength);
-              return (
-                <div
-                  key={c.id}
-                  className="rounded-2xl overflow-hidden"
-                  style={{
-                    background: COLORS.surface,
-                    border: `1px solid ${COLORS.border}`,
-                  }}
-                >
-                  {/* Card header */}
-                  <div className="px-6 py-4" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-                    <div className="flex items-center gap-3 mb-2">
-                      <span
-                        className="font-mono text-[28px] font-bold"
-                        style={{ color: `${COLORS.accent}40` }}
-                      >
-                        {String(index + 1).padStart(2, '0')}
-                      </span>
-                      <div className="flex-1">
-                        <h2 className="text-[18px] font-semibold text-white leading-tight">{c.title}</h2>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span
-                            className="font-mono text-[9px] font-bold tracking-wider px-2 py-0.5 rounded"
-                            style={{ color: priority.color, background: `${priority.color}15`, border: `1px solid ${priority.color}30` }}
-                          >
-                            {priority.text}
-                          </span>
-                          <span className="font-mono text-[9px]" style={{ color: COLORS.dim }}>
-                            {c.signal_count} signals · strength {c.strength}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Intelligence */}
-                  {c.what_is_happening && (
-                    <div className="px-6 py-4 space-y-4">
-                      <div>
-                        <div className="font-mono text-[9px] font-bold tracking-[0.2em] mb-1.5" style={{ color: COLORS.cyan }}>
-                          WHAT IS HAPPENING
-                        </div>
-                        <p className="text-[14px] leading-relaxed text-white">{c.what_is_happening}</p>
-                      </div>
-                      {c.why_it_matters && (
-                        <div>
-                          <div className="font-mono text-[9px] font-bold tracking-[0.2em] mb-1.5" style={{ color: COLORS.amber }}>
-                            WHY IT MATTERS
-                          </div>
-                          <p className="text-[14px] leading-relaxed" style={{ color: `${COLORS.text}cc` }}>{c.why_it_matters}</p>
-                        </div>
-                      )}
-                      {c.what_happens_next && (
-                        <div>
-                          <div className="font-mono text-[9px] font-bold tracking-[0.2em] mb-1.5" style={{ color: COLORS.green }}>
-                            WHAT HAPPENS NEXT
-                          </div>
-                          <p className="text-[14px] leading-relaxed" style={{ color: `${COLORS.text}cc` }}>{c.what_happens_next}</p>
-                        </div>
-                      )}
-                      {c.actions && c.actions.length > 0 && (
-                        <div>
-                          <div className="font-mono text-[9px] font-bold tracking-[0.2em] mb-2" style={{ color: COLORS.gold }}>
-                            RECOMMENDED ACTIONS
-                          </div>
-                          <div className="space-y-1.5">
-                            {c.actions.map((a, i) => (
-                              <div key={i} className="flex items-start gap-2">
-                                <span className="font-mono text-[11px] font-bold mt-0.5" style={{ color: COLORS.gold }}>
-                                  {i + 1}.
-                                </span>
-                                <span className="text-[13px]" style={{ color: COLORS.text }}>{a}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Solutions: Vendors + Products */}
-                  {(c.vendors.length > 0 || c.products.length > 0) && (
-                    <div className="px-6 py-4" style={{ borderTop: `1px solid ${COLORS.border}`, background: `${COLORS.card}80` }}>
-                      <div className="font-mono text-[9px] font-bold tracking-[0.2em] mb-3" style={{ color: COLORS.emerald }}>
-                        RELEVANT SOLUTIONS
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {/* Vendors */}
-                        {c.vendors.slice(0, 3).map((v, i) => (
-                          <div
-                            key={`v-${i}`}
-                            className="flex items-center gap-3 p-3 rounded-lg"
-                            style={{ background: `${COLORS.surface}`, border: `1px solid ${COLORS.border}` }}
-                          >
-                            <div className="flex-1 min-w-0">
-                              <div className="text-[13px] font-medium text-white truncate">{v.company_name}</div>
-                              <div className="font-mono text-[9px] mt-0.5" style={{ color: COLORS.dim }}>
-                                {v.sector} · IKER {v.iker_score}
-                              </div>
-                            </div>
-                            {v.company_url && (
-                              <a
-                                href={v.company_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="font-mono text-[8px] px-2 py-1 rounded shrink-0"
-                                style={{ color: COLORS.accent, border: `1px solid ${COLORS.accent}20` }}
-                              >
-                                VISIT
-                              </a>
-                            )}
-                          </div>
-                        ))}
-                        {/* Products */}
-                        {c.products.slice(0, 3).map((p, i) => (
-                          <div
-                            key={`p-${i}`}
-                            className="flex items-center gap-3 p-3 rounded-lg"
-                            style={{ background: `${COLORS.surface}`, border: `1px solid ${COLORS.border}` }}
-                          >
-                            <div className="flex-1 min-w-0">
-                              <div className="text-[13px] font-medium text-white truncate">{p.product_name}</div>
-                              <div className="font-mono text-[9px] mt-0.5" style={{ color: COLORS.dim }}>
-                                {p.company}{p.category ? ` · ${p.category}` : ''}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          /* Fallback: show top signals if no clusters yet */
+        ) : briefing.fallback_signals.length > 0 ? (
+          /* Fallback: top signals */
           <div>
-            <p className="font-mono text-[11px] mb-4" style={{ color: COLORS.dim }}>
-              Assembly layer has not run yet. Showing top signals:
+            <p className="text-[13px] mb-4" style={{ color: COLORS.muted }}>
+              Clusters are still assembling. Here are today&apos;s top signals:
             </p>
-            <div className="flex flex-col gap-2">
-              {briefing.fallback_signals.map((s: { id: string; title: string; industry: string; importance_score: number }) => (
+            <div className="flex flex-col gap-3">
+              {briefing.fallback_signals.map((s, i) => (
                 <div
                   key={s.id}
-                  className="px-4 py-3 rounded-lg"
+                  className="flex items-start gap-3 px-5 py-4 rounded-xl"
                   style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}` }}
                 >
-                  <div className="text-[14px] text-white">{s.title}</div>
-                  <div className="font-mono text-[9px] mt-1" style={{ color: COLORS.dim }}>
-                    {s.industry} · score {Math.round((s.importance_score || 0) * 100)}
+                  <span
+                    className="font-mono text-[24px] font-bold leading-none"
+                    style={{ color: `${COLORS.accent}30` }}
+                  >
+                    {i + 1}
+                  </span>
+                  <div>
+                    <div className="text-[15px] font-medium" style={{ color: COLORS.text }}>
+                      {s.title}
+                    </div>
+                    <div className="font-mono text-[10px] mt-1" style={{ color: COLORS.dim }}>
+                      {s.industry} &middot; score {s.score}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
+          </div>
+        ) : (
+          <div className="text-center py-20">
+            <p className="text-[14px]" style={{ color: COLORS.muted }}>
+              No intelligence available yet. Ingestion needs to run first.
+            </p>
           </div>
         )}
 
-        {/* Trends */}
-        {briefing.trends.length > 0 && (
-          <div className="mt-10">
-            <h2 className="font-mono text-[13px] font-bold tracking-[0.15em] mb-4" style={{ color: COLORS.dim }}>
-              ACTIVE TRENDS
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {briefing.trends.map((t, i) => (
-                <div
-                  key={i}
-                  className="px-4 py-3 rounded-lg"
-                  style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}` }}
-                >
-                  <div className="text-[13px] font-medium text-white">{t.name}</div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span
-                      className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded"
-                      style={{
-                        color: t.direction === 'accelerating' ? COLORS.green : COLORS.amber,
-                        background: `${t.direction === 'accelerating' ? COLORS.green : COLORS.amber}12`,
-                      }}
-                    >
-                      {t.trend_type.toUpperCase()}
-                    </span>
-                    {t.velocity > 0 && (
-                      <span className="font-mono text-[9px]" style={{ color: COLORS.dim }}>
-                        {t.velocity}x velocity
-                      </span>
-                    )}
-                    <span className="font-mono text-[9px]" style={{ color: COLORS.dim }}>
-                      {t.confidence}% confidence
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Footer link */}
+        <div className="mt-10 text-center">
+          <Link
+            href="/intel"
+            className="inline-flex items-center gap-2 font-mono text-[11px] tracking-wider px-5 py-2.5 rounded-lg transition-colors"
+            style={{
+              color: COLORS.accent,
+              border: `1px solid ${COLORS.accent}25`,
+              background: `${COLORS.accent}08`,
+            }}
+          >
+            VIEW ALL SIGNALS
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-3.5 h-3.5"
+            >
+              <path d="m5 12h14" />
+              <path d="m12 5 7 7-7 7" />
+            </svg>
+          </Link>
+        </div>
       </main>
+    </div>
+  );
+}
+
+/* ─── Reusable section block ─── */
+function Section({
+  label,
+  color,
+  children,
+}: {
+  label: string;
+  color: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div
+        className="font-mono text-[9px] font-bold tracking-[0.2em] mb-1.5"
+        style={{ color }}
+      >
+        {label}
+      </div>
+      <p className="text-[14px] leading-relaxed" style={{ color: `${COLORS.text}dd` }}>
+        {children}
+      </p>
     </div>
   );
 }
