@@ -54,12 +54,13 @@ export async function GET() {
   });
 
   // Group regions by name (combine manufacturing + logistics)
-  const regionMap: Record<string, { name: string; total_signals: number; risk_level: string; opportunity_score: number; industries: string[] }> = {};
+  const regionMap: Record<string, { name: string; total_signals: number; risk_level: string; opportunity_score: number; industries: string[]; total_investment_usd: number }> = {};
   for (const r of (regions || [])) {
     if (!regionMap[r.region]) {
-      regionMap[r.region] = { name: r.region, total_signals: 0, risk_level: r.risk_level, opportunity_score: r.opportunity_score, industries: [] };
+      regionMap[r.region] = { name: r.region, total_signals: 0, risk_level: r.risk_level, opportunity_score: r.opportunity_score, industries: [], total_investment_usd: 0 };
     }
     regionMap[r.region].total_signals += r.signal_count;
+    regionMap[r.region].total_investment_usd += (r.total_investment_usd || 0);
     regionMap[r.region].industries.push(r.industry);
     // Use the higher risk level
     if (r.risk_level === 'high' || r.risk_level === 'critical') regionMap[r.region].risk_level = r.risk_level;

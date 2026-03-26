@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Component as Globe } from '@/components/ui/interactive-globe';
+import { Component as Globe, RegionData } from '@/components/ui/interactive-globe';
 import { COLORS, FONT } from '@/lib/tokens';
 
 interface RelatedSignal {
@@ -32,6 +32,7 @@ interface Region {
   risk_level: string;
   opportunity_score: number;
   industries: string[];
+  total_investment_usd: number;
 }
 
 interface RecentSignal {
@@ -295,6 +296,48 @@ export default function BriefingPage() {
 
   const briefing = data.briefing;
   const sectionColors = [COLORS.cyan, COLORS.gold, COLORS.green];
+  const [selectedRegion, setSelectedRegion] = useState<RegionData | null>(null);
+
+  // Transform API regions into globe format
+  const REGION_GEO: Record<string, { lat: number; lng: number; continent: string }> = {
+    'United States': { lat: 39.8, lng: -98.5, continent: 'North America' },
+    'China': { lat: 35.9, lng: 104.2, continent: 'Asia' },
+    'Japan & Korea': { lat: 36.2, lng: 133.0, continent: 'Asia' },
+    'Europe': { lat: 50.0, lng: 10.0, continent: 'Europe' },
+    'Mexico': { lat: 23.6, lng: -102.6, continent: 'North America' },
+    'Southeast Asia': { lat: 5.0, lng: 110.0, continent: 'Asia' },
+    'India': { lat: 20.6, lng: 78.9, continent: 'Asia' },
+  };
+
+  // Merge API regions (multiple industries per region → single region entry)
+  const regionMap: Record<string, RegionData> = {};
+  for (const r of briefing.regions) {
+    const geo = REGION_GEO[r.name];
+    if (!geo) continue;
+    if (!regionMap[r.name]) {
+      regionMap[r.name] = {
+        id: r.name.toLowerCase().replace(/[^a-z]/g, '_'),
+        name: r.name,
+        lat: geo.lat,
+        lng: geo.lng,
+        continent: geo.continent,
+        signal_count: 0,
+        risk_level: r.risk_level || 'low',
+        opportunity_score: r.opportunity_score || 0,
+        industries: [],
+        top_themes: [],
+        total_investment_usd: 0,
+      };
+    }
+    regionMap[r.name].signal_count += r.total_signals;
+    for (const ind of (r.industries || [])) {
+      if (!regionMap[r.name].industries.includes(ind)) regionMap[r.name].industries.push(ind);
+    }
+    if (r.risk_level === 'high' || r.risk_level === 'critical') regionMap[r.name].risk_level = r.risk_level;
+  }
+  const globeRegions = Object.values(regionMap);
+
+  const riskColorMap: Record<string, string> = { critical: '#ff4444', high: '#ff8800', elevated: '#ffb800', moderate: '#ffd700', low: '#00ff88' };
 
   return (
     <div style={{ background: COLORS.bg, color: COLORS.text, minHeight: '100vh' }}>
@@ -317,23 +360,134 @@ export default function BriefingPage() {
       {/* Main content */}
       <div style={{ paddingTop: '72px', paddingLeft: '24px', paddingRight: '24px', paddingBottom: '64px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
-        {/* Hero: Globe + Quick intel summary */}
-        <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '32px', marginBottom: '40px', alignItems: 'center' }}>
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <Globe size={320} />
-          </div>
-          <div>
-            <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.cyan, letterSpacing: '0.12em', marginBottom: '12px' }}>
-              TODAY&apos;S BRIEFING — {briefing.top_insights.length} INTELLIGENCE ITEMS
+        {/* ─── GLOBE SECTION ─── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '24px', marginBottom: '32px', alignItems: 'start' }}>
+          {/* Interactive Globe */}
+          <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '8px', paddingLeft: '8px', paddingRight: '8px' }}>
+              <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.cyan, letterSpacing: '0.1em' }}>GLOBAL SUPPLY CHAIN MAP</div>
+              <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.dim }}>DRAG TO ROTATE · CLICK REGION</div>
             </div>
-            {briefing.top_insights.slice(0, 3).map((insight, i) => (
-              <div key={insight.rank} style={{ display: 'flex', gap: '12px', alignItems: 'baseline', marginBottom: '10px' }}>
-                <div style={{ fontSize: '20px', fontWeight: 700, color: sectionColors[i], minWidth: '24px', fontFamily: FONT }}>{insight.rank}</div>
-                <div style={{ fontSize: '14px', color: COLORS.text, lineHeight: '1.5' }}>
-                  {insight.what_is_happening.split('.')[0]}.
+            <Globe
+              size={500}
+              regions={globeRegions}
+              onRegionSelect={(r) => setSelectedRegion(r)}
+              selectedRegion={selectedRegion?.id || null}
+            />
+            {/* Continent legend */}
+            <div style={{ display: 'flex', gap: '14px', marginTop: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {[
+                { name: 'N. America', color: '#00d4ff' },
+                { name: 'Europe', color: '#ffd700' },
+                { name: 'Asia', color: '#a78bfa' },
+                { name: 'S. America', color: '#00ff88' },
+                { name: 'Africa', color: '#ff8800' },
+              ].map((c) => (
+                <div key={c.name} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: c.color + '80' }} />
+                  <span style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.dim }}>{c.name}</span>
                 </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right panel: selected region detail OR summary */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {selectedRegion ? (
+              /* ── Selected Region Detail ── */
+              <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: '16px', padding: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 600, color: COLORS.text }}>{selectedRegion.name}</div>
+                  <div
+                    style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.dim, cursor: 'pointer' }}
+                    onClick={() => setSelectedRegion(null)}
+                  >
+                    CLOSE ×
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{ background: COLORS.card, borderRadius: '10px', padding: '12px' }}>
+                    <div style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.dim, letterSpacing: '0.08em', marginBottom: '4px' }}>SIGNALS</div>
+                    <div style={{ fontSize: '22px', fontWeight: 700, color: COLORS.cyan, fontFamily: FONT }}>{selectedRegion.signal_count}</div>
+                  </div>
+                  <div style={{ background: COLORS.card, borderRadius: '10px', padding: '12px' }}>
+                    <div style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.dim, letterSpacing: '0.08em', marginBottom: '4px' }}>RISK LEVEL</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: riskColorMap[selectedRegion.risk_level] || COLORS.green, fontFamily: FONT, textTransform: 'uppercase' }}>
+                      {selectedRegion.risk_level}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '14px' }}>
+                  <div style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.dim, letterSpacing: '0.08em', marginBottom: '6px' }}>CONTINENT</div>
+                  <div style={{ fontSize: '12px', color: COLORS.text }}>{selectedRegion.continent}</div>
+                </div>
+
+                <div style={{ marginBottom: '14px' }}>
+                  <div style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.dim, letterSpacing: '0.08em', marginBottom: '6px' }}>INDUSTRIES</div>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {selectedRegion.industries.map((ind) => (
+                      <span key={ind} style={{ fontSize: '11px', fontFamily: FONT, color: COLORS.text, background: COLORS.card, borderRadius: '4px', padding: '3px 8px' }}>
+                        {ind}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {selectedRegion.total_investment_usd > 0 && (
+                  <div style={{ marginBottom: '14px' }}>
+                    <div style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.dim, letterSpacing: '0.08em', marginBottom: '6px' }}>TRACKED INVESTMENT</div>
+                    <div style={{ fontSize: '16px', fontWeight: 600, color: COLORS.gold, fontFamily: FONT }}>
+                      {selectedRegion.total_investment_usd >= 1e12 ? `$${(selectedRegion.total_investment_usd / 1e12).toFixed(1)}T` :
+                       selectedRegion.total_investment_usd >= 1e9 ? `$${(selectedRegion.total_investment_usd / 1e9).toFixed(1)}B` :
+                       `$${(selectedRegion.total_investment_usd / 1e6).toFixed(0)}M`}
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
+            ) : (
+              /* ── Quick intel summary (default) ── */
+              <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: '16px', padding: '20px' }}>
+                <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.cyan, letterSpacing: '0.12em', marginBottom: '14px' }}>
+                  TODAY&apos;S BRIEFING
+                </div>
+                {briefing.top_insights.slice(0, 3).map((insight, i) => (
+                  <div key={insight.rank} style={{ display: 'flex', gap: '10px', alignItems: 'baseline', marginBottom: '12px' }}>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: sectionColors[i], minWidth: '20px', fontFamily: FONT }}>{insight.rank}</div>
+                    <div style={{ fontSize: '13px', color: COLORS.text, lineHeight: '1.5' }}>
+                      {insight.what_is_happening.split('.')[0]}.
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Region status list */}
+            <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: '16px', padding: '16px' }}>
+              <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.dim, letterSpacing: '0.08em', marginBottom: '10px' }}>REGION STATUS</div>
+              {globeRegions.sort((a, b) => b.signal_count - a.signal_count).map((r) => (
+                <div
+                  key={r.id}
+                  onClick={() => setSelectedRegion(selectedRegion?.id === r.id ? null : r)}
+                  style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '8px 10px', borderRadius: '8px', marginBottom: '4px', cursor: 'pointer',
+                    background: selectedRegion?.id === r.id ? COLORS.card : 'transparent',
+                    transition: 'background 0.15s',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: riskColorMap[r.risk_level] || COLORS.green }} />
+                    <span style={{ fontSize: '12px', color: COLORS.text }}>{r.name}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '11px', fontFamily: FONT, color: COLORS.muted }}>{r.signal_count}</span>
+                    <span style={{ fontSize: '9px', fontFamily: FONT, color: riskColorMap[r.risk_level] || COLORS.green, fontWeight: 600, textTransform: 'uppercase' }}>{r.risk_level}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
