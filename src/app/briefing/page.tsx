@@ -67,6 +67,9 @@ interface BriefingData {
   briefing: {
     generated_at: string;
     total_signals: number;
+    signals_24h?: number;
+    last_pipeline_run?: string | null;
+    trend_distribution?: Record<string, number>;
     top_insights: TopInsight[];
     signal_stats: { by_type: Record<string, number>; by_industry: Record<string, number> };
     regions: Region[];
@@ -350,11 +353,40 @@ export default function BriefingPage() {
           paddingLeft: '24px', paddingRight: '24px', zIndex: 100, fontFamily: FONT,
         }}
       >
-        <div style={{ fontSize: '16px', fontWeight: 600, letterSpacing: '0.05em' }}>NXT//LINK</div>
-        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', fontSize: '11px', letterSpacing: '0.1em', color: COLORS.cyan }}>
-          SUPPLY CHAIN INTELLIGENCE
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ fontSize: '16px', fontWeight: 600, letterSpacing: '0.05em' }}>NXT//LINK</div>
+          {briefing.last_pipeline_run && (
+            <div style={{ fontSize: '9px', color: COLORS.emerald, letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: COLORS.emerald, animation: 'pulse 2s infinite' }} />
+              LIVE · {formatDate(briefing.last_pipeline_run)}
+            </div>
+          )}
         </div>
-        <div style={{ fontSize: '13px', color: COLORS.muted, letterSpacing: '0.05em' }}>{briefing.total_signals} signals</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {briefing.trend_distribution && (
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {briefing.trend_distribution.spiking > 0 && (
+                <span style={{ fontSize: '9px', background: COLORS.red + '20', color: COLORS.red, padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                  {briefing.trend_distribution.spiking} SPIKING
+                </span>
+              )}
+              {briefing.trend_distribution.growing > 0 && (
+                <span style={{ fontSize: '9px', background: COLORS.green + '20', color: COLORS.green, padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                  {briefing.trend_distribution.growing} GROWING
+                </span>
+              )}
+              {briefing.trend_distribution.declining > 0 && (
+                <span style={{ fontSize: '9px', background: COLORS.amber + '20', color: COLORS.amber, padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                  {briefing.trend_distribution.declining} DECLINING
+                </span>
+              )}
+            </div>
+          )}
+          <div style={{ fontSize: '11px', color: COLORS.muted, letterSpacing: '0.05em' }}>
+            {briefing.total_signals} signals
+            {briefing.signals_24h ? <span style={{ color: COLORS.cyan, marginLeft: '6px' }}>+{briefing.signals_24h} 24h</span> : null}
+          </div>
+        </div>
       </div>
 
       {/* Main content */}
