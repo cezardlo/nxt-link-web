@@ -749,6 +749,7 @@
                 const response = await fetch(url, {
                     headers: {
                         'Authorization': `Bearer ${CONFIG.supabaseKey}`,
+                        'apikey': CONFIG.supabaseKey,
                         'Content-Type': 'application/json'
                     }
                 });
