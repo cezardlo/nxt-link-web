@@ -56,6 +56,20 @@ function computeIkerScore(row: Record<string, unknown>): number {
   return Math.min(99, Math.max(1, score));
 }
 
+/** Normalize tags to consistent lowercase, trimmed, deduplicated */
+function normalizeTags(tags: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const tag of tags) {
+    const normalized = tag.toLowerCase().trim().replace(/\s*\/\s*/g, '/').replace(/\s+/g, ' ');
+    if (normalized && !seen.has(normalized)) {
+      seen.add(normalized);
+      result.push(normalized);
+    }
+  }
+  return result;
+}
+
 export type { VendorRecord };
 
 /** Get all vendors — tries Supabase first, falls back to hardcoded data */
@@ -80,7 +94,7 @@ export async function getVendors(): Promise<Record<string, VendorRecord>> {
         name: (row.company_name ?? row.name ?? '') as string,
         description: (row.description ?? '') as string,
         website: (row.company_url ?? row.website ?? '') as string,
-        tags: Array.isArray(row.tags) ? row.tags as string[] : [],
+        tags: normalizeTags(Array.isArray(row.tags) ? row.tags as string[] : []),
         evidence: Array.isArray(row.evidence) ? row.evidence as string[] : [],
         category: (row.primary_category ?? row.sector ?? '') as string,
         ikerScore: computeIkerScore(row as Record<string, unknown>),

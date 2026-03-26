@@ -54,6 +54,26 @@ function scoreColor(score: number): string {
   return COLORS.dim;
 }
 
+function formatDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch {
+    return dateStr;
+  }
+}
+
+function isPastEvent(conf: Conference): boolean {
+  const dateStr = conf.end_date ?? conf.start_date;
+  if (!dateStr) return false;
+  try {
+    const d = new Date(dateStr + 'T23:59:59');
+    return d.getTime() < Date.now();
+  } catch {
+    return false;
+  }
+}
+
 export default function ConferencesPage() {
   const [conferences, setConferences] = useState<Conference[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -70,6 +90,7 @@ export default function ConferencesPage() {
     let query = supabase
       .from('conferences')
       .select('*', { count: 'exact' })
+      .order('start_date', { ascending: true, nullsFirst: false })
       .order('relevance_score', { ascending: false })
       .range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
 
@@ -192,24 +213,26 @@ export default function ConferencesPage() {
             {conferences.map((conf) => {
               const hasValidUrl = isValidUrl(conf.website);
               const score = conf.relevance_score ?? 0;
+              const past = isPastEvent(conf);
 
               return (
                 <div
                   key={conf.id}
                   className="flex flex-col rounded-xl p-4 transition-all duration-200 group"
                   style={{
-                    background: `${COLORS.surface}`,
-                    border: `1px solid ${COLORS.border}`,
+                    background: past ? `${COLORS.surface}80` : COLORS.surface,
+                    border: `1px solid ${past ? `${COLORS.border}60` : COLORS.border}`,
+                    opacity: past ? 0.6 : 1,
                   }}
                 >
                   {/* Header */}
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className="text-[14px] font-medium text-white leading-tight flex-1">
+                    <h3 className={`text-[14px] font-medium leading-tight flex-1 ${past ? '' : 'text-white'}`} style={past ? { color: COLORS.muted } : undefined}>
                       {conf.name}
                     </h3>
                     <span
                       className="font-mono text-[11px] font-bold tabular-nums shrink-0"
-                      style={{ color: scoreColor(score) }}
+                      style={{ color: past ? COLORS.dim : scoreColor(score) }}
                     >
                       {score}
                     </span>
@@ -220,7 +243,10 @@ export default function ConferencesPage() {
                     {conf.category && (
                       <span
                         className="font-mono text-[9px] font-semibold tracking-[0.08em] uppercase px-2 py-0.5 rounded"
-                        style={{ color: COLORS.accent, background: `${COLORS.accent}0f` }}
+                        style={{
+                          color: past ? COLORS.dim : COLORS.accent,
+                          background: past ? `${COLORS.dim}15` : `${COLORS.accent}0f`,
+                        }}
                       >
                         {conf.category}
                       </span>
@@ -234,8 +260,37 @@ export default function ConferencesPage() {
 
                   {/* Dates */}
                   {conf.start_date && (
-                    <div className="font-mono text-[10px] mb-2" style={{ color: COLORS.muted }}>
-                      {conf.start_date}{conf.end_date ? ` — ${conf.end_date}` : ''}
+                    <div className="flex items-center gap-2 mb-2">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3 shrink-0" style={{ color: past ? COLORS.dim : COLORS.muted }}>
+                        <rect x={3} y={4} width={18} height={18} rx={2} /><path d="M16 2v4" /><path d="M8 2v4" /><path d="M3 10h18" />
+                      </svg>
+                      <span
+                        className="font-mono text-[11px] font-medium"
+                        style={{ color: past ? COLORS.dim : COLORS.text }}
+                      >
+                        {formatDate(conf.start_date)}
+                        {conf.end_date && conf.end_date !== conf.start_date
+                          ? ` — ${formatDate(conf.end_date)}`
+                          : ''}
+                      </span>
+                      {past && (
+                        <span
+                          className="font-mono text-[8px] font-semibold tracking-[0.1em] uppercase px-1.5 py-0.5 rounded"
+                          style={{ color: COLORS.dim, background: `${COLORS.dim}20` }}
+                        >
+                          PAST
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {!conf.start_date && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3 shrink-0" style={{ color: COLORS.dim }}>
+                        <rect x={3} y={4} width={18} height={18} rx={2} /><path d="M16 2v4" /><path d="M8 2v4" /><path d="M3 10h18" />
+                      </svg>
+                      <span className="font-mono text-[10px]" style={{ color: COLORS.dim }}>
+                        Date TBD
+                      </span>
                     </div>
                   )}
 
@@ -266,9 +321,9 @@ export default function ConferencesPage() {
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 font-mono text-[10px] font-medium tracking-wide px-3 py-1.5 rounded-lg transition-colors mt-auto self-start"
                       style={{
-                        border: `1px solid ${COLORS.accent}26`,
-                        color: COLORS.accent,
-                        background: `${COLORS.accent}08`,
+                        border: `1px solid ${past ? `${COLORS.dim}30` : `${COLORS.accent}26`}`,
+                        color: past ? COLORS.dim : COLORS.accent,
+                        background: past ? 'transparent' : `${COLORS.accent}08`,
                       }}
                       onClick={(e) => e.stopPropagation()}
                     >

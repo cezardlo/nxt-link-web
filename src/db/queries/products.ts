@@ -57,15 +57,31 @@ export type ProductInsert = {
 
 // ─── Persistence ────────────────────────────────────────────────────────────────
 
-/** Upsert products in batches of 100 */
+/** Deduplicate products by normalized name+company, keeping highest confidence */
+function deduplicateProducts(products: ProductInsert[]): ProductInsert[] {
+  const best = new Map<string, ProductInsert>();
+
+  for (const p of products) {
+    const key = `${p.product_name.toLowerCase().trim()}::${(p.company ?? '').toLowerCase().trim()}`;
+    const existing = best.get(key);
+    if (!existing || (p.confidence ?? 0) > (existing.confidence ?? 0)) {
+      best.set(key, p);
+    }
+  }
+
+  return Array.from(best.values());
+}
+
+/** Upsert products in batches of 100 (deduplicates first) */
 export async function upsertProducts(products: ProductInsert[]): Promise<number> {
   if (!isSupabaseConfigured() || products.length === 0) return 0;
 
+  const deduped = deduplicateProducts(products);
   const db = getDb({ admin: true });
   let persisted = 0;
 
-  for (let i = 0; i < products.length; i += 100) {
-    const batch = products.slice(i, i + 100);
+  for (let i = 0; i < deduped.length; i += 100) {
+    const batch = deduped.slice(i, i + 100);
     const { error } = await db
       .from('products')
       .upsert(batch, { onConflict: 'id', ignoreDuplicates: false });

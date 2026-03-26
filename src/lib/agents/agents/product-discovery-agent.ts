@@ -51,6 +51,33 @@ const INDUSTRY_FROM_CATEGORY: Record<string, string> = {
   'Building Systems': 'construction',
 };
 
+// ─── False Positive Filter ──────────────────────────────────────────────────────
+
+const FALSE_POSITIVES = new Set([
+  'the', 'new', 'first', 'next', 'last', 'best', 'top', 'more', 'other',
+  'united states', 'new york', 'los angeles', 'san francisco', 'el paso',
+  'white house', 'supreme court', 'state department', 'justice department',
+  'pentagon', 'congress', 'senate', 'house', 'federal', 'national',
+  'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+  'january', 'february', 'march', 'april', 'may', 'june', 'july',
+  'august', 'september', 'october', 'november', 'december',
+  'according', 'reuters', 'associated press', 'bloomberg', 'cnbc',
+]);
+
+/** Minimum confidence to persist — filters out low-quality extractions */
+const MIN_CONFIDENCE = 0.25;
+
+function isValidProductName(name: string | undefined): name is string {
+  if (!name || name.length < 3 || name.length > 80) return false;
+  const lower = name.toLowerCase();
+  if (FALSE_POSITIVES.has(lower)) return false;
+  // Must contain at least one letter
+  if (!/[a-zA-Z]/.test(name)) return false;
+  // Skip single common words shorter than 5 chars
+  if (name.split(/\s+/).length === 1 && lower.length < 5) return false;
+  return true;
+}
+
 // ─── Signal-to-Product Extraction ───────────────────────────────────────────────
 
 function extractProductsFromSignals(signals: IntelSignalRow[]): ProductInsert[] {
@@ -63,6 +90,9 @@ function extractProductsFromSignals(signals: IntelSignalRow[]): ProductInsert[] 
       continue;
     }
 
+    const confidence = signal.confidence * 0.8;
+    if (confidence < MIN_CONFIDENCE) continue;
+
     const text = `${signal.title} ${signal.evidence ?? ''}`;
 
     for (const { re, type } of PRODUCT_PATTERNS) {
@@ -70,13 +100,15 @@ function extractProductsFromSignals(signals: IntelSignalRow[]): ProductInsert[] 
       let match: RegExpExecArray | null;
       while ((match = re.exec(text)) !== null) {
         const name = match[1]?.trim();
-        if (!name || name.length < 3 || name.length > 80) continue;
+        if (!isValidProductName(name)) continue;
 
-        const key = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        // Deduplicate by normalized name+company
+        const company = signal.company ?? '';
+        const key = `${name.toLowerCase().replace(/[^a-z0-9]/g, '')}::${company.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
         if (seen.has(key)) continue;
         seen.add(key);
 
-        const id = `prod-sig-${hashCode(name + signal.source)}`;
+        const id = `prod-sig-${hashCode(name + company + signal.source)}`;
 
         products.push({
           id,
@@ -88,7 +120,7 @@ function extractProductsFromSignals(signals: IntelSignalRow[]): ProductInsert[] 
           product_type: type,
           description: signal.title,
           use_cases: [],
-          confidence: signal.confidence * 0.8,
+          confidence,
           source: `intel-signal:${signal.signal_type}`,
           source_url: signal.url ?? null,
           tags: signal.tags,

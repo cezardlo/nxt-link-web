@@ -3,14 +3,14 @@
 // Dark gray (not true black), single electric accent, generous spacing
 
 export const COLORS = {
-  // Surfaces — dark gray, not true black
-  bg:      '#0d0f12',
-  surface: '#131519',
-  card:    '#181b20',
-  border:  '#232730',
-  text:    '#f0f0f0',
-  muted:   '#6b7280',
-  dim:     '#3a3f4b',
+  // Surfaces — brighter dark theme
+  bg:      '#12151a',
+  surface: '#1a1e25',
+  card:    '#21262e',
+  border:  '#2e3440',
+  text:    '#f5f5f5',
+  muted:   '#8b919a',
+  dim:     '#505868',
 
   // Primary accent — electric cyan
   accent:  '#00d4ff',

@@ -161,25 +161,37 @@ export default function LandingPage() {
         />
 
         {/* Globe */}
-        <div className="absolute right-[-80px] top-1/2 -translate-y-1/2 z-0 opacity-50">
+        <div className="absolute right-[-80px] top-1/2 -translate-y-1/2 z-0 opacity-70">
           <Globe
             size={720}
-            dotCount={1000}
-            dotSize={1.2}
-            dotColor="rgba(255, 255, 255, 0.4)"
+            dotCount={1200}
+            dotSize={1}
+            dotColor="rgba(255, 255, 255, 0.35)"
             arcColor="rgba(0, 212, 255, 0.6)"
             markerColor="rgba(0, 212, 255, 1)"
-            rotationSpeed={0.002}
+            rotationSpeed={0.0015}
             markers={[
-              { lat: 31.77, lng: -106.44, label: 'EL PASO' },
-              { lat: 38.91, lng: -77.04, label: 'DC' },
+              { lat: 31.77, lng: -106.44, label: 'EL PASO', type: 'hub' },
+              { lat: 38.91, lng: -77.04, label: 'DC', type: 'signal' },
               { lat: 40.71, lng: -74.01, label: 'NYC' },
-              { lat: 37.77, lng: -122.42, label: 'SF' },
+              { lat: 37.39, lng: -122.08, label: 'SF', type: 'hub' },
               { lat: 51.51, lng: -0.13, label: 'London' },
-              { lat: 19.43, lng: -99.13, label: 'CDMX' },
+              { lat: 19.43, lng: -99.13, label: 'CDMX', type: 'signal' },
               { lat: 35.68, lng: 139.69, label: 'Tokyo' },
+              { lat: 22.54, lng: 114.06, label: 'Shenzhen', type: 'signal' },
+              { lat: 32.08, lng: 34.78, label: 'Tel Aviv', type: 'signal' },
+              { lat: 25.20, lng: 55.27, label: 'Dubai' },
+              { lat: 1.35, lng: 103.82, label: 'Singapore' },
+              { lat: -23.55, lng: -46.63, label: 'São Paulo' },
             ]}
-            connections={[[0, 1], [0, 2], [0, 3], [0, 5], [1, 4], [3, 6]]}
+            connections={[
+              [0, 1], [0, 2], [0, 3], [0, 5],
+              [1, 4], [1, 8],
+              [3, 6], [3, 7],
+              [4, 6], [6, 10],
+              [7, 10], [10, 9],
+              [5, 11],
+            ]}
           />
         </div>
 
