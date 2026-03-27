@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { ShaderAnimation } from "@/components/ui/shader-lines";
 import {
   Cpu,
   Signal,
@@ -171,7 +172,12 @@ export function BackgroundPaths({
       ref={containerRef}
       className="relative min-h-[calc(100vh-80px)] w-full flex items-center justify-center overflow-hidden bg-nxt-bg"
     >
-      {/* Animated supply-chain route lines */}
+      {/* WebGL shader background — deepest layer */}
+      <div className="absolute inset-0 opacity-60">
+        <ShaderAnimation />
+      </div>
+
+      {/* Animated supply-chain route lines — on top of shader */}
       <div className="absolute inset-0">
         <FloatingPaths position={1} />
         <FloatingPaths position={-1} />
