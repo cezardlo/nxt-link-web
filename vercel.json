@@ -1,12 +1,16 @@
 {
   "crons": [
     {
-      "path": "/api/agents/cron?phase=1",
-      "schedule": "0 6 * * *"
+      "path": "/api/agents/cron-step?agent=intel-discovery",
+      "schedule": "0 */4 * * *"
+    },
+    {
+      "path": "/api/agents/cron-step?agent=persist-kg",
+      "schedule": "15 */4 * * *"
     },
     {
       "path": "/api/assembly/run",
-      "schedule": "0 8 * * *"
+      "schedule": "30 */4 * * *"
     }
   ]
 }

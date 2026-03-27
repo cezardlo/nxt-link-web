@@ -5,168 +5,290 @@ on:
     # Every 6 hours: midnight, 6am, noon, 6pm UTC
     - cron: '0 0,6,12,18 * * *'
   workflow_dispatch:
+    inputs:
+      phase:
+        description: 'Which phase to run (all, 1, 2, 3, 4)'
+        required: false
+        default: 'all'
+
+env:
+  SITE_URL: ${{ secrets.SITE_URL }}
+  CRON_SECRET: ${{ secrets.CRON_SECRET }}
 
 jobs:
-  run-agents:
+  # ── Phase 1: Discovery ───────────────────────────────────────────────
+  # Each agent gets its own 60s window (no more timeouts)
+  phase1-discovery:
+    if: >-
+      github.event_name == 'schedule'
+      || github.event.inputs.phase == 'all'
+      || github.event.inputs.phase == '1'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
+    timeout-minutes: 12
     steps:
-      - name: 'Phase 1: Discovery'
-        id: phase1
+      - name: 'Agent: orchestrator'
         continue-on-error: true
         run: |
-          STATUS=$(curl -s -o /tmp/phase1.txt -w '%{http_code}' \
-            --max-time 90 \
-            "$SITE_URL/api/agents/cron?phase=1" \
-            -H "x-cron-secret: $CRON_SECRET" \
-            -H "User-Agent: NXTLink-GitHubActions/1.0")
-          echo "phase1_status=$STATUS" >> "$GITHUB_OUTPUT"
-          echo "Phase 1 Discovery: HTTP $STATUS"
-          head -c 200 /tmp/phase1.txt; echo
-        env:
-          SITE_URL: ${{ secrets.SITE_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 55 \
+            "$SITE_URL/api/agents/cron-step?agent=orchestrator" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "orchestrator: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::orchestrator HTTP $STATUS"; fi
 
-      - name: Wait 10s before Phase 2
-        run: sleep 10
-
-      - name: 'Phase 2: Processing'
-        id: phase2
+      - name: 'Agent: intel-discovery'
         continue-on-error: true
         run: |
-          STATUS=$(curl -s -o /tmp/phase2.txt -w '%{http_code}' \
-            --max-time 90 \
-            "$SITE_URL/api/agents/cron?phase=2" \
-            -H "x-cron-secret: $CRON_SECRET" \
-            -H "User-Agent: NXTLink-GitHubActions/1.0")
-          echo "phase2_status=$STATUS" >> "$GITHUB_OUTPUT"
-          echo "Phase 2 Processing: HTTP $STATUS"
-          head -c 200 /tmp/phase2.txt; echo
-        env:
-          SITE_URL: ${{ secrets.SITE_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          STATUS=$(curl -s -o /tmp/intel.txt -w '%{http_code}' --max-time 55 \
+            "$SITE_URL/api/agents/cron-step?agent=intel-discovery" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "intel-discovery: HTTP $STATUS"
+          head -c 200 /tmp/intel.txt; echo
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::intel-discovery HTTP $STATUS"; fi
 
-      - name: Wait 10s before Phase 3
-        run: sleep 10
-
-      - name: 'Phase 3: Intelligence'
-        id: phase3
+      - name: 'Agent: product-discovery'
         continue-on-error: true
         run: |
-          STATUS=$(curl -s -o /tmp/phase3.txt -w '%{http_code}' \
-            --max-time 90 \
-            "$SITE_URL/api/agents/cron?phase=3" \
-            -H "x-cron-secret: $CRON_SECRET" \
-            -H "User-Agent: NXTLink-GitHubActions/1.0")
-          echo "phase3_status=$STATUS" >> "$GITHUB_OUTPUT"
-          echo "Phase 3 Intelligence: HTTP $STATUS"
-          head -c 200 /tmp/phase3.txt; echo
-        env:
-          SITE_URL: ${{ secrets.SITE_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 55 \
+            "$SITE_URL/api/agents/cron-step?agent=product-discovery" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "product-discovery: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::product-discovery HTTP $STATUS"; fi
 
-      - name: Wait 10s before Phase 4
-        run: sleep 10
-
-      - name: 'Phase 4: Learning'
-        id: phase4
+      - name: 'Agent: conference-intel'
         continue-on-error: true
         run: |
-          STATUS=$(curl -s -o /tmp/phase4.txt -w '%{http_code}' \
-            --max-time 90 \
-            "$SITE_URL/api/agents/cron?phase=4" \
-            -H "x-cron-secret: $CRON_SECRET" \
-            -H "User-Agent: NXTLink-GitHubActions/1.0")
-          echo "phase4_status=$STATUS" >> "$GITHUB_OUTPUT"
-          echo "Phase 4 Learning: HTTP $STATUS"
-          head -c 200 /tmp/phase4.txt; echo
-        env:
-          SITE_URL: ${{ secrets.SITE_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 55 \
+            "$SITE_URL/api/agents/cron-step?agent=conference-intel" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "conference-intel: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::conference-intel HTTP $STATUS"; fi
 
-      - name: Validate phase statuses
-        if: always()
+      - name: 'Agent: entity'
+        continue-on-error: true
         run: |
-          PHASE_NAMES=("Phase 1 Discovery" "Phase 2 Processing" "Phase 3 Intelligence" "Phase 4 Learning")
-          PHASE_CODES=(
-            "${{ steps.phase1.outputs.phase1_status }}"
-            "${{ steps.phase2.outputs.phase2_status }}"
-            "${{ steps.phase3.outputs.phase3_status }}"
-            "${{ steps.phase4.outputs.phase4_status }}"
-          )
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 55 \
+            "$SITE_URL/api/agents/cron-step?agent=entity" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "entity: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::entity HTTP $STATUS"; fi
 
-          FAILED=0
-          for i in "${!PHASE_CODES[@]}"; do
-            CODE="${PHASE_CODES[$i]}"
-            NAME="${PHASE_NAMES[$i]}"
-
-            if [[ -z "$CODE" || ! "$CODE" =~ ^[0-9]{3}$ ]]; then
-              echo "::error::$NAME did not return a valid HTTP status."
-              FAILED=1
-              continue
-            fi
-
-            if [ "$CODE" -ge 400 ]; then
-              echo "::error::$NAME returned HTTP $CODE."
-              FAILED=1
-            fi
-          done
-
-          if [ "$FAILED" -eq 1 ]; then
-            exit 1
-          fi
-
-      - name: Trigger insight generation
+      - name: 'Agent: patent-discovery'
+        continue-on-error: true
         run: |
-          STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
-            "$SITE_URL/api/insights" \
-            -H "User-Agent: NXTLink-GitHubActions/1.0")
-          echo "Insights: HTTP $STATUS"
-          if [ "$STATUS" -ge 400 ]; then echo "::warning::Insight generation returned HTTP $STATUS"; fi
-        env:
-          SITE_URL: ${{ secrets.SITE_URL }}
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 55 \
+            "$SITE_URL/api/agents/cron-step?agent=patent-discovery" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "patent-discovery: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::patent-discovery HTTP $STATUS"; fi
 
+      - name: 'Agent: startup-discovery'
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 55 \
+            "$SITE_URL/api/agents/cron-step?agent=startup-discovery" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "startup-discovery: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::startup-discovery HTTP $STATUS"; fi
+
+      - name: 'Agent: research-discovery'
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 55 \
+            "$SITE_URL/api/agents/cron-step?agent=research-discovery" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "research-discovery: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::research-discovery HTTP $STATUS"; fi
+
+      - name: 'Agent: supply-chain'
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 55 \
+            "$SITE_URL/api/agents/cron-step?agent=supply-chain" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "supply-chain: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::supply-chain HTTP $STATUS"; fi
+
+      - name: 'Agent: disruption-monitor'
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 55 \
+            "$SITE_URL/api/agents/cron-step?agent=disruption-monitor" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "disruption-monitor: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::disruption-monitor HTTP $STATUS"; fi
+
+      - name: 'Agent: persist-kg'
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /tmp/persist.txt -w '%{http_code}' --max-time 55 \
+            "$SITE_URL/api/agents/cron-step?agent=persist-kg" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "persist-kg: HTTP $STATUS"
+          head -c 200 /tmp/persist.txt; echo
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::persist-kg HTTP $STATUS"; fi
+
+  # ── Phase 2: Processing ──────────────────────────────────────────────
+  phase2-processing:
+    needs: phase1-discovery
+    if: >-
+      always() && (
+        github.event_name == 'schedule'
+        || github.event.inputs.phase == 'all'
+        || github.event.inputs.phase == '2'
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: 'Agent: intel-curation'
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 55 \
+            "$SITE_URL/api/agents/cron-step?agent=intel-curation" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "intel-curation: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::intel-curation HTTP $STATUS"; fi
+
+      - name: 'Agent: auto-discovery'
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 55 \
+            "$SITE_URL/api/agents/cron-step?agent=auto-discovery" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "auto-discovery: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::auto-discovery HTTP $STATUS"; fi
+
+      - name: 'Agent: graph-builder'
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 55 \
+            "$SITE_URL/api/agents/cron-step?agent=graph-builder" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "graph-builder: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::graph-builder HTTP $STATUS"; fi
+
+  # ── Phase 3: Intelligence ────────────────────────────────────────────
+  phase3-intelligence:
+    needs: phase2-processing
+    if: >-
+      always() && (
+        github.event_name == 'schedule'
+        || github.event.inputs.phase == 'all'
+        || github.event.inputs.phase == '3'
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: 'Agent: intelligence-loop'
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 55 \
+            "$SITE_URL/api/agents/cron-step?agent=intelligence-loop" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "intelligence-loop: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::intelligence-loop HTTP $STATUS"; fi
+
+      - name: 'Agent: insight'
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 55 \
+            "$SITE_URL/api/agents/cron-step?agent=insight" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "insight: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::insight HTTP $STATUS"; fi
+
+      - name: 'Agent: country-activity'
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 55 \
+            "$SITE_URL/api/agents/cron-step?agent=country-activity" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "country-activity: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::country-activity HTTP $STATUS"; fi
+
+      - name: 'Agent: continent-intel'
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 55 \
+            "$SITE_URL/api/agents/cron-step?agent=continent-intel" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "continent-intel: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::continent-intel HTTP $STATUS"; fi
+
+  # ── Phase 4: Learning ────────────────────────────────────────────────
+  phase4-learning:
+    needs: phase3-intelligence
+    if: >-
+      always() && (
+        github.event_name == 'schedule'
+        || github.event.inputs.phase == 'all'
+        || github.event.inputs.phase == '4'
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: 'Agent: iker-learn'
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 55 \
+            "$SITE_URL/api/agents/cron-step?agent=iker-learn" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "iker-learn: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::iker-learn HTTP $STATUS"; fi
+
+      - name: 'Agent: ceo-briefing'
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 55 \
+            "$SITE_URL/api/agents/cron-step?agent=ceo-briefing" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "ceo-briefing: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::ceo-briefing HTTP $STATUS"; fi
+
+      - name: 'Agent: prediction-outcomes'
+        continue-on-error: true
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 55 \
+            "$SITE_URL/api/agents/cron-step?agent=prediction-outcomes" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "prediction-outcomes: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::prediction-outcomes HTTP $STATUS"; fi
+
+  # ── Post-pipeline tasks ──────────────────────────────────────────────
+  post-pipeline:
+    needs: phase4-learning
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
       - name: Warm RSS feeds
         run: |
-          STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
-            -X POST "$SITE_URL/api/feeds" \
-            -H "User-Agent: NXTLink-GitHubActions/1.0")
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$SITE_URL/api/feeds")
           echo "Feed warmup: HTTP $STATUS"
-        env:
-          SITE_URL: ${{ secrets.SITE_URL }}
 
       - name: Refresh intel signals
         run: |
-          STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
-            "$SITE_URL/api/intel-signals" \
-            -H "User-Agent: NXTLink-GitHubActions/1.0")
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$SITE_URL/api/intel-signals")
           echo "Intel signals: HTTP $STATUS"
-        env:
-          SITE_URL: ${{ secrets.SITE_URL }}
+
+      - name: Run assembly pipeline
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 55 \
+            "$SITE_URL/api/assembly/run" \
+            -H "authorization: Bearer $CRON_SECRET")
+          echo "Assembly: HTTP $STATUS"
 
       - name: Refresh IKER scores
-        id: iker
         run: |
-          STATUS=$(curl -s -o /tmp/iker_response.txt -w '%{http_code}' \
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 55 \
             -X POST "$SITE_URL/api/agents/iker-refresh" \
-            -H "x-cron-secret: $CRON_SECRET" \
-            -H "User-Agent: NXTLink-GitHubActions/1.0")
-          echo "iker_status=$STATUS" >> "$GITHUB_OUTPUT"
+            -H "x-cron-secret: $CRON_SECRET")
           echo "IKER refresh: HTTP $STATUS"
-          head -c 200 /tmp/iker_response.txt; echo
-          if [ "$STATUS" -ge 400 ]; then echo "::warning::IKER refresh returned HTTP $STATUS"; fi
-        env:
-          SITE_URL: ${{ secrets.SITE_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::IKER refresh HTTP $STATUS"; fi
 
       - name: Print summary
         if: always()
         run: |
           echo "### NXT LINK Agent Pipeline" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Run time: $(date -u)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Phase 1 (Discovery): ${{ steps.phase1.outputs.phase1_status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Phase 2 (Processing): ${{ steps.phase2.outputs.phase2_status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Phase 3 (Intelligence): ${{ steps.phase3.outputs.phase3_status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Phase 4 (Learning): ${{ steps.phase4.outputs.phase4_status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- IKER status: ${{ steps.iker.outputs.iker_status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Run: $(date -u)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Architecture: individual agent calls (60s each)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Phases: 1 (Discovery) → 2 (Processing) → 3 (Intelligence) → 4 (Learning) → Post" >> "$GITHUB_STEP_SUMMARY"
