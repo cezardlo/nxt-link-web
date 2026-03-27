@@ -54,7 +54,7 @@ export default function MapPage() {
   const [globeSize, setGlobeSize] = useState(600);
 
   useEffect(() => {
-    const updateSize = () => setGlobeSize(Math.min(window.innerHeight - 60, window.innerWidth - 440, 700));
+    const updateSize = () => setGlobeSize(Math.max(280, Math.min(window.innerHeight - 60, window.innerWidth - 440, 700)));
     updateSize();
     window.addEventListener('resize', updateSize);
     return () => window.removeEventListener('resize', updateSize);
@@ -127,7 +127,6 @@ export default function MapPage() {
           selectedRegion={selectedRegion?.id || null}
         />
 
-        {/* Selected region overlay */}
         {selectedRegion && (
           <div style={{
             position: 'absolute', bottom: '24px', left: '24px', zIndex: 20,
@@ -158,7 +157,6 @@ export default function MapPage() {
           </div>
         )}
 
-        {/* Bottom region bar */}
         <div style={{
           position: 'absolute', bottom: '16px', left: selectedRegion ? '320px' : '24px', right: '24px',
           display: 'flex', gap: '20px', justifyContent: 'center', zIndex: 10,
@@ -177,7 +175,6 @@ export default function MapPage() {
         </div>
       </div>
 
-      {/* Signal Feed Sidebar */}
       <div style={{ width: '400px', borderLeft: `1px solid ${COLORS.border}`, background: COLORS.surface, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: `1px solid ${COLORS.border}` }}>
           <div style={{ fontSize: '13px', fontWeight: 600, color: COLORS.text, marginBottom: '10px' }}>Live Signal Feed</div>
