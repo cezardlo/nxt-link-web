@@ -15,8 +15,6 @@ interface Signal {
   company: string | null;
 }
 
-
-
 const REGION_GEO: Record<string, { lat: number; lng: number; continent: string }> = {
   'United States': { lat: 39.8, lng: -98.5, continent: 'North America' },
   'China': { lat: 35.9, lng: 104.2, continent: 'Asia' },
@@ -54,7 +52,7 @@ export default function MapPage() {
   const [globeSize, setGlobeSize] = useState(600);
 
   useEffect(() => {
-    const updateSize = () => setGlobeSize(Math.max(280, Math.min(window.innerHeight - 60, window.innerWidth - 440, 700)));
+    const updateSize = () => setGlobeSize(Math.min(window.innerHeight - 60, window.innerWidth - 440, 700));
     updateSize();
     window.addEventListener('resize', updateSize);
     return () => window.removeEventListener('resize', updateSize);
@@ -117,6 +115,8 @@ export default function MapPage() {
             <a href="/briefing" style={{ fontSize: '11px', color: COLORS.muted, textDecoration: 'none', letterSpacing: '0.05em' }}>BRIEFING</a>
             <a href="/map" style={{ fontSize: '11px', color: COLORS.cyan, textDecoration: 'none', letterSpacing: '0.05em' }}>MAP</a>
             <a href="/conferences" style={{ fontSize: '11px', color: COLORS.muted, textDecoration: 'none', letterSpacing: '0.05em' }}>EVENTS</a>
+            <a href="/industry" style={{ fontSize: '11px', color: COLORS.muted, textDecoration: 'none', letterSpacing: '0.05em' }}>INDUSTRY</a>
+            <a href="/vendors" style={{ fontSize: '11px', color: COLORS.muted, textDecoration: 'none', letterSpacing: '0.05em' }}>VENDORS</a>
           </div>
         </div>
 
@@ -127,6 +127,7 @@ export default function MapPage() {
           selectedRegion={selectedRegion?.id || null}
         />
 
+        {/* Selected region overlay */}
         {selectedRegion && (
           <div style={{
             position: 'absolute', bottom: '24px', left: '24px', zIndex: 20,
@@ -136,7 +137,7 @@ export default function MapPage() {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
               <div style={{ fontSize: '16px', fontWeight: 600 }}>{selectedRegion.name}</div>
-              <div onClick={() => setSelectedRegion(null)} style={{ cursor: 'pointer', color: COLORS.dim, fontSize: '18px' }}>×</div>
+              <div onClick={() => setSelectedRegion(null)} style={{ cursor: 'pointer', color: COLORS.dim, fontSize: '18px' }}>Ã</div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
               <div style={{ background: COLORS.card, borderRadius: '8px', padding: '10px' }}>
@@ -148,7 +149,7 @@ export default function MapPage() {
                 <div style={{ fontSize: '14px', fontWeight: 700, color: RISK_COLORS[selectedRegion.risk_level] || COLORS.green, fontFamily: FONT, textTransform: 'uppercase' }}>{selectedRegion.risk_level}</div>
               </div>
             </div>
-            <div style={{ fontSize: '11px', color: COLORS.muted, fontFamily: FONT }}>{selectedRegion.continent} · {selectedRegion.industries.join(', ')}</div>
+            <div style={{ fontSize: '11px', color: COLORS.muted, fontFamily: FONT }}>{selectedRegion.continent} Â· {selectedRegion.industries.join(', ')}</div>
             {selectedRegion.total_investment_usd > 0 && (
               <div style={{ fontSize: '12px', color: COLORS.gold, fontFamily: FONT, marginTop: '8px' }}>
                 {selectedRegion.total_investment_usd >= 1e9 ? `$${(selectedRegion.total_investment_usd / 1e9).toFixed(1)}B` : `$${(selectedRegion.total_investment_usd / 1e6).toFixed(0)}M`} tracked
@@ -157,6 +158,7 @@ export default function MapPage() {
           </div>
         )}
 
+        {/* Bottom region bar */}
         <div style={{
           position: 'absolute', bottom: '16px', left: selectedRegion ? '320px' : '24px', right: '24px',
           display: 'flex', gap: '20px', justifyContent: 'center', zIndex: 10,
@@ -175,6 +177,7 @@ export default function MapPage() {
         </div>
       </div>
 
+      {/* Signal Feed Sidebar */}
       <div style={{ width: '400px', borderLeft: `1px solid ${COLORS.border}`, background: COLORS.surface, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: `1px solid ${COLORS.border}` }}>
           <div style={{ fontSize: '13px', fontWeight: 600, color: COLORS.text, marginBottom: '10px' }}>Live Signal Feed</div>
@@ -195,7 +198,7 @@ export default function MapPage() {
               </div>
               <div style={{ fontSize: '12px', color: COLORS.text, lineHeight: '1.4', marginBottom: '3px' }}>{s.title}</div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.dim }}>{s.source} · {s.industry}</span>
+                <span style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.dim }}>{s.source} Â· {s.industry}</span>
                 <span style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.gold, fontWeight: 600 }}>{(s.relevance_score * 100).toFixed(0)}</span>
               </div>
             </div>
