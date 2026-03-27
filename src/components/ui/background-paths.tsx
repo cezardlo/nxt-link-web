@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { ShaderAnimation } from "@/components/ui/shader-lines";
@@ -15,6 +15,115 @@ import {
   Zap,
   Container,
 } from "lucide-react";
+
+// ── Glitch hacked title ──────────────────────────────────────────────────────
+const GLITCH_CHARS = "!@#$%^&*()_+-=[]{}|;:,.<>?/~`01";
+
+function GlitchTitle({ text }: { text: string }) {
+  const [display, setDisplay] = useState(text);
+  const [isGlitching, setIsGlitching] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const glitch = useCallback(() => {
+    setIsGlitching(true);
+    let ticks = 0;
+    const maxTicks = 8 + Math.floor(Math.random() * 6);
+
+    intervalRef.current = setInterval(() => {
+      setDisplay(
+        text
+          .split("")
+          .map((ch) =>
+            Math.random() < 0.4
+              ? GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)]
+              : ch,
+          )
+          .join(""),
+      );
+      ticks++;
+      if (ticks >= maxTicks) {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        setDisplay(text);
+        setIsGlitching(false);
+      }
+    }, 50);
+  }, [text]);
+
+  useEffect(() => {
+    // Initial glitch on mount
+    const initTimeout = setTimeout(glitch, 800);
+
+    // Random glitches every 2-5 seconds
+    const loop = setInterval(() => {
+      if (!isGlitching) glitch();
+    }, 2000 + Math.random() * 3000);
+
+    return () => {
+      clearTimeout(initTimeout);
+      clearInterval(loop);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [glitch]);
+
+  return (
+    <h1 className="text-5xl sm:text-7xl md:text-8xl font-bold mb-4 tracking-tighter font-mono relative select-none">
+      {/* Main text */}
+      <span
+        className="relative inline-block text-transparent bg-clip-text
+          bg-gradient-to-r from-[#00d4ff] via-white to-[#ff6600]"
+        style={{
+          textShadow: isGlitching
+            ? "2px 0 #ff0040, -2px 0 #00d4ff, 0 0 8px rgba(0,212,255,0.5)"
+            : "none",
+          WebkitTextStroke: isGlitching ? "0.5px rgba(255,0,64,0.3)" : "none",
+        }}
+      >
+        {display}
+      </span>
+
+      {/* Red offset clone — only during glitch */}
+      {isGlitching && (
+        <span
+          className="absolute inset-0 text-[#ff0040] opacity-60 pointer-events-none"
+          style={{
+            clipPath: `inset(${Math.random() * 40}% 0 ${Math.random() * 40}% 0)`,
+            transform: `translate(${Math.random() * 6 - 3}px, ${Math.random() * 4 - 2}px)`,
+          }}
+          aria-hidden
+        >
+          {display}
+        </span>
+      )}
+
+      {/* Cyan offset clone — only during glitch */}
+      {isGlitching && (
+        <span
+          className="absolute inset-0 text-[#00d4ff] opacity-40 pointer-events-none"
+          style={{
+            clipPath: `inset(${Math.random() * 40}% 0 ${Math.random() * 40}% 0)`,
+            transform: `translate(${Math.random() * -6 + 3}px, ${Math.random() * 4 - 2}px)`,
+          }}
+          aria-hidden
+        >
+          {display}
+        </span>
+      )}
+
+      {/* Scanline flicker */}
+      {isGlitching && (
+        <span
+          className="absolute inset-0 pointer-events-none opacity-20"
+          style={{
+            background:
+              "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,212,255,0.1) 2px, rgba(0,212,255,0.1) 4px)",
+          }}
+          aria-hidden
+        />
+      )}
+    </h1>
+  );
+}
 
 // ── Animated SVG supply-chain route lines ────────────────────────────────────
 function FloatingPaths({ position }: { position: number }) {
@@ -207,33 +316,8 @@ export function BackgroundPaths({
           transition={{ duration: 2 }}
           className="max-w-4xl mx-auto"
         >
-          {/* Title — letter-by-letter spring animation */}
-          <h1 className="text-5xl sm:text-7xl md:text-8xl font-bold mb-4 tracking-tighter font-mono">
-            {words.map((word, wordIndex) => (
-              <span
-                key={wordIndex}
-                className="inline-block mr-4 last:mr-0"
-              >
-                {word.split("").map((letter, letterIndex) => (
-                  <motion.span
-                    key={`${wordIndex}-${letterIndex}`}
-                    initial={{ y: 100, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{
-                      delay: wordIndex * 0.1 + letterIndex * 0.03,
-                      type: "spring",
-                      stiffness: 150,
-                      damping: 25,
-                    }}
-                    className="inline-block text-transparent bg-clip-text
-                      bg-gradient-to-r from-[#00d4ff] via-white to-[#ff6600]"
-                  >
-                    {letter}
-                  </motion.span>
-                ))}
-              </span>
-            ))}
-          </h1>
+          {/* Title — glitchy hacked effect */}
+          <GlitchTitle text={title} />
 
           {/* Subtitle */}
           <motion.p
