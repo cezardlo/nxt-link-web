@@ -16,6 +16,33 @@ const DOCK_ITEMS = [
     ),
   },
   {
+    href: '/map',
+    label: 'Map',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+        <circle cx={12} cy={12} r={10} /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" />
+      </svg>
+    ),
+  },
+  {
+    href: '/conferences',
+    label: 'Events',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+        <rect x={3} y={4} width={18} height={18} rx={2} /><path d="M16 2v4" /><path d="M8 2v4" /><path d="M3 10h18" />
+      </svg>
+    ),
+  },
+  {
+    href: '/industry',
+    label: 'Industry',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2 20h20" /><path d="M5 20V8l5 4V8l5 4V4h3v16" />
+      </svg>
+    ),
+  },
+  {
     href: '/intel',
     label: 'Intel',
     icon: (
