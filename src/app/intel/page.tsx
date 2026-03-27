@@ -3,10 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { COLORS } from '@/lib/tokens';
-import { createClient } from '@/lib/supabase/client';
-import { relativeTime } from '@/lib/utils';
 
-/* ─── Types ─── */
+/* \u2500\u2500\u2500 Types \u2500\u2500\u2500 */
 type Signal = {
   id: string;
   title: string;
@@ -22,19 +20,18 @@ type Signal = {
 
 type Tab = 'all' | 'high' | 'trending';
 
-/* ─── Industry filter list (matching actual DB values) ─── */
+/* \u2500\u2500\u2500 Industry filter list \u2500\u2500\u2500 */
 const INDUSTRIES = [
-  'ALL', 'defense', 'ai-ml', 'cybersecurity', 'energy',
-  'border-tech', 'manufacturing', 'healthcare', 'logistics',
+  'ALL', 'manufacturing', 'logistics', 'cybersecurity', 'defense',
+  'ai-ml', 'energy', 'border-tech', 'healthcare',
   'government', 'education', 'general',
 ];
 
-/* ─── Extract source display name from URL ─── */
+/* \u2500\u2500\u2500 Extract source display name \u2500\u2500\u2500 */
 function sourceName(source: string | null): string {
   if (!source) return '';
   try {
     const hostname = new URL(source).hostname.replace('www.', '');
-    // Map common domains to short names
     const map: Record<string, string> = {
       'news.google.com': 'GOOGLE NEWS',
       'sam.gov': 'SAM.GOV',
@@ -46,15 +43,13 @@ function sourceName(source: string | null): string {
     };
     return map[hostname] || hostname.split('.')[0].toUpperCase();
   } catch {
-    // source is not a URL, use it as-is
     return source.toUpperCase().slice(0, 20);
   }
 }
 
-/* ─── Score display (0-1 scale → 0-100 display) ─── */
+/* \u2500\u2500\u2500 Score display (handles both 0-1 and 0-100 scales) \u2500\u2500\u2500 */
 function displayScore(score: number | null): number {
   if (!score) return 0;
-  // importance_score is 0-1 in DB
   return Math.round(score <= 1 ? score * 100 : score);
 }
 
@@ -64,60 +59,63 @@ function scoreClass(display: number): { color: string; borderColor: string } {
   return { color: COLORS.dim, borderColor: COLORS.border };
 }
 
+/* \u2500\u2500\u2500 Relative time helper \u2500\u2500\u2500 */
+function relTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
 export default function IntelPage() {
   const [signals, setSignals] = useState<Signal[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [highCount, setHighCount] = useState(0);
+  const [filteredCount, setFilteredCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('all');
   const [industry, setIndustry] = useState('ALL');
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 25;
 
   const fetchSignals = useCallback(async (reset = false) => {
-    const supabase = createClient();
     const currentPage = reset ? 0 : page;
+    setError(null);
 
-    let query = supabase
-      .from('intel_signals')
-      .select('id, title, evidence, source, industry, importance_score, discovered_at, url, signal_type, company', { count: 'exact' })
-      .order('discovered_at', { ascending: false })
-      .range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
+    try {
+      const params = new URLSearchParams({
+        tab,
+        industry,
+        page: String(currentPage),
+        page_size: String(PAGE_SIZE),
+      });
 
-    // Tab filters (importance_score is 0-1 scale)
-    if (tab === 'high') {
-      query = query.gte('importance_score', 0.75);
-    } else if (tab === 'trending') {
-      query = query.gte('importance_score', 0.5).order('importance_score', { ascending: false });
-    }
+      const res = await fetch(`/api/intel/feed?${params}`);
+      if (!res.ok) throw new Error(`API returned ${res.status}`);
 
-    // Industry filter
-    if (industry !== 'ALL') {
-      query = query.eq('industry', industry);
-    }
+      const json = await res.json();
 
-    const { data, count } = await query;
-    if (data) {
       if (reset || currentPage === 0) {
-        setSignals(data);
+        setSignals(json.signals ?? []);
       } else {
-        setSignals((prev) => [...prev, ...data]);
+        setSignals((prev) => [...prev, ...(json.signals ?? [])]);
       }
-    }
-    if (count !== null) setTotalCount(count);
-    setLoading(false);
-  }, [tab, industry, page]);
 
-  // Fetch counts on mount
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.from('intel_signals').select('*', { count: 'exact', head: true }).then(({ count }) => {
-      if (count) setTotalCount(count);
-    });
-    supabase.from('intel_signals').select('*', { count: 'exact', head: true }).gte('importance_score', 0.75).then(({ count }) => {
-      if (count) setHighCount(count);
-    });
-  }, []);
+      setTotalCount(json.totalCount ?? 0);
+      setHighCount(json.highCount ?? 0);
+      setFilteredCount(json.filteredCount ?? 0);
+    } catch (err) {
+      console.error('[intel] fetch error:', err);
+      setError('Failed to load signals. Tap to retry.');
+    } finally {
+      setLoading(false);
+    }
+  }, [tab, industry, page]);
 
   // Re-fetch when tab/industry changes
   useEffect(() => {
@@ -133,7 +131,7 @@ export default function IntelPage() {
 
   return (
     <div className="min-h-screen" style={{ background: COLORS.bg }}>
-      {/* ─── Top Bar ─── */}
+      {/* Top Bar */}
       <header
         className="fixed top-0 left-0 right-0 h-[52px] flex items-center justify-between px-6 z-[100]"
         style={{
@@ -154,7 +152,7 @@ export default function IntelPage() {
         </div>
         <div className="flex items-center gap-3.5">
           <span className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.1em]" style={{ color: '#22c55e' }}>
-            <span className="w-[5px] h-[5px] rounded-full bg-green-500 animate-pulse-soft" />
+            <span className="w-[5px] h-[5px] rounded-full bg-green-500 animate-pulse" />
             LIVE
           </span>
           <span className="font-mono text-[10px]" style={{ color: COLORS.dim }}>
@@ -163,9 +161,8 @@ export default function IntelPage() {
         </div>
       </header>
 
-      {/* ─── Main Content ─── */}
+      {/* Main Content */}
       <main className="pt-[72px] pb-[100px] px-6 max-w-[900px] mx-auto">
-        {/* Page Header */}
         <div className="mb-8">
           <h1 className="font-mono text-[28px] font-bold tracking-wide text-white mb-1.5">
             LIVE <span style={{ color: COLORS.accent }}>SIGNALS</span>
@@ -226,9 +223,26 @@ export default function IntelPage() {
         <div className="flex flex-col gap-2">
           {loading && signals.length === 0 ? (
             <div className="flex items-center justify-center py-20">
-              <span className="font-mono text-xs tracking-wider animate-pulse-soft" style={{ color: COLORS.dim }}>
+              <span className="font-mono text-xs tracking-wider animate-pulse" style={{ color: COLORS.dim }}>
                 LOADING SIGNALS...
               </span>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3">
+              <span className="font-mono text-xs tracking-wider" style={{ color: COLORS.red }}>
+                {error}
+              </span>
+              <button
+                onClick={() => { setLoading(true); fetchSignals(true); }}
+                className="font-mono text-[11px] tracking-[0.1em] px-6 py-2 rounded-[10px] cursor-pointer transition-colors"
+                style={{
+                  border: `1px solid ${COLORS.accent}26`,
+                  background: 'transparent',
+                  color: COLORS.accent,
+                }}
+              >
+                RETRY
+              </button>
             </div>
           ) : signals.length === 0 ? (
             <div className="flex items-center justify-center py-20">
@@ -274,44 +288,41 @@ export default function IntelPage() {
                           {signal.industry.replace(/-/g, ' ')}
                         </span>
                       )}
+                      {signal.signal_type && (
+                        <span
+                          className="font-mono text-[9px] px-2 py-0.5 rounded"
+                          style={{ color: COLORS.dim, background: 'rgba(255,255,255,0.03)' }}
+                        >
+                          {signal.signal_type.replace(/_/g, ' ')}
+                        </span>
+                      )}
                       {signal.source && (
                         <span className="font-mono text-[9px] tracking-wide" style={{ color: COLORS.border }}>
                           {sourceName(signal.source)}
                         </span>
                       )}
                       <span className="font-mono text-[9px] ml-auto" style={{ color: COLORS.dim }}>
-                        {relativeTime(signal.discovered_at)}
+                        {relTime(signal.discovered_at)}
                       </span>
                     </div>
                     <div className="text-[15px] font-medium leading-[1.45] mb-1.5 text-zinc-300 group-hover:text-white transition-colors">
                       {signal.title}
                     </div>
                     {signal.evidence && (
-                      <div
-                        className="text-[13px] leading-relaxed line-clamp-2"
-                        style={{ color: COLORS.muted }}
-                      >
+                      <div className="text-[13px] leading-relaxed line-clamp-2" style={{ color: COLORS.muted }}>
                         {signal.evidence}
                       </div>
                     )}
-                    <div className="flex gap-1.5 mt-2 flex-wrap">
-                      {signal.signal_type && (
+                    {signal.company && (
+                      <div className="mt-2">
                         <span
                           className="font-mono text-[9px] px-2 py-0.5 rounded"
-                          style={{ color: COLORS.dim, background: 'rgba(255,255,255,0.02)' }}
-                        >
-                          {signal.signal_type.replace(/_/g, ' ')}
-                        </span>
-                      )}
-                      {signal.company && (
-                        <span
-                          className="font-mono text-[9px] px-2 py-0.5 rounded"
-                          style={{ color: COLORS.cyan, background: `${COLORS.cyan}08` }}
+                          style={{ color: COLORS.accent, background: `${COLORS.accent}08` }}
                         >
                           {signal.company}
                         </span>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </a>
               );
@@ -320,22 +331,23 @@ export default function IntelPage() {
         </div>
 
         {/* Load More */}
-        {signals.length > 0 && signals.length < totalCount && (
+        {signals.length > 0 && signals.length < filteredCount && (
           <div className="flex justify-center mt-6">
             <button
               onClick={() => setPage((p) => p + 1)}
+              disabled={loading}
               className="font-mono text-[11px] font-medium tracking-[0.1em] px-8 py-2.5 rounded-[10px] cursor-pointer transition-colors"
               style={{
                 border: `1px solid ${COLORS.accent}26`,
                 background: 'transparent',
-                color: COLORS.accent,
+                color: loading ? COLORS.dim : COLORS.accent,
               }}
             >
-              LOAD MORE SIGNALS
+              {loading ? 'LOADING...' : 'LOAD MORE SIGNALS'}
             </button>
           </div>
         )}
       </main>
     </div>
   );
-}
+                          }
