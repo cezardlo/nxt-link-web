@@ -30,6 +30,7 @@ export async function GET() {
   }
 
   const now = new Date().toISOString().split('T')[0];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const items = conferences.map((c: any) => ({
     ...c,
     status: !c.start_date ? 'unknown' : c.end_date && c.end_date < now ? 'past' : c.start_date <= now && (!c.end_date || c.end_date >= now) ? 'live' : 'upcoming',
