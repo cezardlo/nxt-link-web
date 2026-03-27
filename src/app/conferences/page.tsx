@@ -55,11 +55,11 @@ const ROLE_LABELS: Record<string, { label: string; color: string }> = {
 };
 
 const SIGNAL_ICONS: Record<string, string> = {
-  product_launch: '🚀',
-  product_demo: '🔧',
-  keynote: '🎤',
-  panel: '💬',
-  technical_session: '⚙️',
+  product_launch: 'ð',
+  product_demo: 'ð§',
+  keynote: 'ð¤',
+  panel: 'ð¬',
+  technical_session: 'âï¸',
 };
 
 function formatDateRange(start: string, end: string | null): string {
@@ -67,8 +67,8 @@ function formatDateRange(start: string, end: string | null): string {
   const sm = s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   if (!end) return sm;
   const e = new Date(end + 'T00:00:00');
-  if (s.getMonth() === e.getMonth()) return `${sm}–${e.getDate()}, ${e.getFullYear()}`;
-  return `${sm} – ${e.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${e.getFullYear()}`;
+  if (s.getMonth() === e.getMonth()) return `${sm}â${e.getDate()}, ${e.getFullYear()}`;
+  return `${sm} â ${e.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${e.getFullYear()}`;
 }
 
 function daysUntil(date: string): string {
@@ -145,6 +145,8 @@ export default function ConferencesPage() {
           <a href="/briefing" style={{ fontSize: '11px', color: COLORS.muted, textDecoration: 'none', letterSpacing: '0.05em' }}>BRIEFING</a>
           <a href="/map" style={{ fontSize: '11px', color: COLORS.muted, textDecoration: 'none', letterSpacing: '0.05em' }}>MAP</a>
           <a href="/conferences" style={{ fontSize: '11px', color: COLORS.cyan, textDecoration: 'none', letterSpacing: '0.05em' }}>EVENTS</a>
+          <a href="/industry" style={{ fontSize: '11px', color: COLORS.muted, textDecoration: 'none', letterSpacing: '0.05em' }}>INDUSTRY</a>
+          <a href="/vendors" style={{ fontSize: '11px', color: COLORS.muted, textDecoration: 'none', letterSpacing: '0.05em' }}>VENDORS</a>
         </div>
       </div>
 
@@ -196,7 +198,7 @@ export default function ConferencesPage() {
         {upcoming.length > 0 && (
           <div style={{ marginBottom: '32px' }}>
             <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.cyan, letterSpacing: '0.12em', marginBottom: '12px' }}>
-              UPCOMING — {upcoming.length} EVENTS
+              UPCOMING â {upcoming.length} EVENTS
             </div>
             {upcoming.map(c => <ConferenceCard key={c.id} conference={c} />)}
           </div>
@@ -281,7 +283,7 @@ function ConferenceCard({ conference: c, isPast = false }: { conference: Confere
               cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px',
             }}
           >
-            <span style={{ transform: expanded ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform 0.2s', display: 'inline-block' }}>▶</span>
+            <span style={{ transform: expanded ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform 0.2s', display: 'inline-block' }}>â¶</span>
             {expanded ? 'HIDE' : 'SHOW'} EXHIBITOR INTEL ({c.exhibitor_count})
           </button>
 
@@ -300,7 +302,7 @@ function ConferenceCard({ conference: c, isPast = false }: { conference: Confere
 
 function ExhibitorRow({ exhibitor: ex }: { exhibitor: Exhibitor }) {
   const roleInfo = ROLE_LABELS[ex.role] || { label: ex.role.toUpperCase(), color: COLORS.muted };
-  const icon = SIGNAL_ICONS[ex.signal_type] || '📋';
+  const icon = SIGNAL_ICONS[ex.signal_type] || 'ð';
 
   return (
     <div style={{
