@@ -260,7 +260,8 @@ export default function VendorsPage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
           <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px' }}>
-            NXT<span style={{ color: '#3b82f6' }}>//</span>LINK
+            NXT<span style={{ color: '#3b82f6' }}>{'//'}
+            </span>LINK
           </span>
           <span style={{
             fontSize: 10, padding: '2px 8px', borderRadius: 4,
