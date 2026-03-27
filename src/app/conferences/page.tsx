@@ -3,6 +3,18 @@
 import { useState, useEffect } from 'react';
 import { COLORS, FONT } from '@/lib/tokens';
 
+interface Exhibitor {
+  id: string;
+  conference_id: string;
+  company_name: string;
+  role: string;
+  signal_type: string;
+  title: string;
+  description: string;
+  technology_cluster: string;
+  importance_score: number;
+}
+
 interface Conference {
   id: string;
   name: string;
@@ -14,7 +26,11 @@ interface Conference {
   website: string;
   description: string;
   relevance_score: number;
+  estimated_exhibitors: number | null;
+  sector_tags: string[] | null;
   status: 'past' | 'live' | 'upcoming' | 'unknown';
+  exhibitors: Exhibitor[];
+  exhibitor_count: number;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -24,6 +40,26 @@ const CATEGORY_COLORS: Record<string, string> = {
   Robotics: '#a78bfa',
   Technology: COLORS.amber,
   Trade: COLORS.orange,
+  Trucking: '#00d4ff',
+  'Trucking Technology': '#00d4ff',
+  'Logistics Technology': COLORS.cyan,
+  'Clean Transportation': COLORS.green,
+  Transportation: COLORS.gold,
+};
+
+const ROLE_LABELS: Record<string, { label: string; color: string }> = {
+  exhibitor: { label: 'EXHIBITOR', color: COLORS.cyan },
+  speaker: { label: 'SPEAKER', color: COLORS.gold },
+  host: { label: 'HOST', color: COLORS.green },
+  sponsor: { label: 'SPONSOR', color: COLORS.amber },
+};
+
+const SIGNAL_ICONS: Record<string, string> = {
+  product_launch: '🚀',
+  product_demo: '🔧',
+  keynote: '🎤',
+  panel: '💬',
+  technical_session: '⚙️',
 };
 
 function formatDateRange(start: string, end: string | null): string {
@@ -48,15 +84,23 @@ function daysUntil(date: string): string {
 export default function ConferencesPage() {
   const [conferences, setConferences] = useState<Conference[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('all');
   const [view, setView] = useState<'upcoming' | 'all'>('upcoming');
 
-  useEffect(() => {
-    fetch('/api/conferences').then(r => r.json()).then(data => {
-      setConferences(data.conferences || []);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, []);
+  function fetchConferences() {
+    setLoading(true);
+    setError(null);
+    fetch('/api/conferences')
+      .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); })
+      .then(data => {
+        setConferences(data.conferences || []);
+        setLoading(false);
+      })
+      .catch(e => { setError(e.message); setLoading(false); });
+  }
+
+  useEffect(() => { fetchConferences(); }, []);
 
   const categories = [...new Set(conferences.map(c => c.category))].sort();
   const filtered = conferences
@@ -67,10 +111,21 @@ export default function ConferencesPage() {
   const upcoming = filtered.filter(c => c.status === 'upcoming');
   const past = filtered.filter(c => c.status === 'past');
 
+  const totalExhibitors = conferences.reduce((sum, c) => sum + c.exhibitor_count, 0);
+
   if (loading) {
     return (
       <div style={{ background: COLORS.bg, color: COLORS.text, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ fontFamily: FONT, fontSize: '14px', color: COLORS.muted }}>loading events</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ background: COLORS.bg, color: COLORS.text, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ fontFamily: FONT, fontSize: '14px', color: COLORS.red }}>failed to load events</div>
+        <button onClick={fetchConferences} style={{ fontFamily: FONT, fontSize: '11px', padding: '8px 20px', borderRadius: '6px', border: `1px solid ${COLORS.cyan}40`, background: 'transparent', color: COLORS.cyan, cursor: 'pointer', letterSpacing: '0.08em' }}>RETRY</button>
       </div>
     );
   }
@@ -93,7 +148,25 @@ export default function ConferencesPage() {
         </div>
       </div>
 
-      <div style={{ paddingTop: '80px', paddingLeft: '32px', paddingRight: '32px', paddingBottom: '64px', maxWidth: '1100px', margin: '0 auto', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      <div style={{ paddingTop: '80px', paddingLeft: '32px', paddingRight: '32px', paddingBottom: '100px', maxWidth: '1100px', margin: '0 auto', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+
+        {/* Stats bar */}
+        <div style={{ display: 'flex', gap: '24px', marginBottom: '20px', flexWrap: 'wrap' }}>
+          <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.muted, letterSpacing: '0.08em' }}>
+            {conferences.length} EVENTS
+          </div>
+          {totalExhibitors > 0 && (
+            <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.cyan, letterSpacing: '0.08em' }}>
+              {totalExhibitors} EXHIBITOR INTEL TRACKED
+            </div>
+          )}
+          {live.length > 0 && (
+            <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.green, letterSpacing: '0.08em' }}>
+              {live.length} LIVE NOW
+            </div>
+          )}
+        </div>
+
         {/* Filters */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -146,15 +219,17 @@ export default function ConferencesPage() {
 }
 
 function ConferenceCard({ conference: c, isPast = false }: { conference: Conference; isPast?: boolean }) {
+  const [expanded, setExpanded] = useState(false);
   const catColor = CATEGORY_COLORS[c.category] || COLORS.cyan;
   const countdown = !isPast ? daysUntil(c.start_date) : '';
+  const hasExhibitors = c.exhibitors && c.exhibitors.length > 0;
 
   return (
     <div style={{
       background: COLORS.surface, border: `1px solid ${COLORS.border}`,
       borderLeft: `3px solid ${isPast ? COLORS.dim : catColor}`,
       borderRadius: '12px', padding: '20px 24px', marginBottom: '10px',
-      opacity: isPast ? 0.5 : 1, transition: 'opacity 0.2s',
+      opacity: isPast ? 0.5 : 1, transition: 'all 0.2s',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
         <div style={{ flex: 1 }}>
@@ -162,6 +237,11 @@ function ConferenceCard({ conference: c, isPast = false }: { conference: Confere
             <span style={{ fontSize: '9px', fontFamily: FONT, color: catColor, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600 }}>{c.category}</span>
             {c.status === 'live' && <span style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.green, fontWeight: 700 }}>LIVE NOW</span>}
             {isPast && <span style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.dim }}>PAST</span>}
+            {hasExhibitors && (
+              <span style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.gold, letterSpacing: '0.05em' }}>
+                {c.exhibitor_count} EXHIBITOR{c.exhibitor_count > 1 ? 'S' : ''} TRACKED
+              </span>
+            )}
           </div>
           <div style={{ fontSize: '15px', fontWeight: 600, color: COLORS.text, marginBottom: '6px' }}>
             {c.website ? <a href={c.website} target="_blank" rel="noopener noreferrer" style={{ color: COLORS.text, textDecoration: 'none' }}>{c.name}</a> : c.name}
@@ -175,11 +255,74 @@ function ConferenceCard({ conference: c, isPast = false }: { conference: Confere
               {formatDateRange(c.start_date, c.end_date)}
             </span>
             {countdown && <span style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.cyan }}>{countdown}</span>}
+            {c.sector_tags && c.sector_tags.length > 0 && (
+              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                {c.sector_tags.slice(0, 4).map(tag => (
+                  <span key={tag} style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.dim, background: COLORS.card, padding: '2px 6px', borderRadius: '4px' }}>{tag}</span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
           <div style={{ fontSize: '20px', fontWeight: 700, color: COLORS.gold, fontFamily: FONT }}>{c.relevance_score}</div>
           <div style={{ fontSize: '8px', fontFamily: FONT, color: COLORS.dim, letterSpacing: '0.08em' }}>RELEVANCE</div>
+        </div>
+      </div>
+
+      {/* Exhibitor toggle */}
+      {hasExhibitors && (
+        <div style={{ marginTop: '12px', borderTop: `1px solid ${COLORS.border}`, paddingTop: '12px' }}>
+          <button
+            onClick={() => setExpanded(!expanded)}
+            style={{
+              fontSize: '10px', fontFamily: FONT, letterSpacing: '0.08em',
+              color: COLORS.cyan, background: 'transparent', border: 'none',
+              cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px',
+            }}
+          >
+            <span style={{ transform: expanded ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform 0.2s', display: 'inline-block' }}>▶</span>
+            {expanded ? 'HIDE' : 'SHOW'} EXHIBITOR INTEL ({c.exhibitor_count})
+          </button>
+
+          {expanded && (
+            <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {c.exhibitors.map(ex => (
+                <ExhibitorRow key={ex.id} exhibitor={ex} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ExhibitorRow({ exhibitor: ex }: { exhibitor: Exhibitor }) {
+  const roleInfo = ROLE_LABELS[ex.role] || { label: ex.role.toUpperCase(), color: COLORS.muted };
+  const icon = SIGNAL_ICONS[ex.signal_type] || '📋';
+
+  return (
+    <div style={{
+      background: COLORS.card, border: `1px solid ${COLORS.border}`,
+      borderRadius: '8px', padding: '12px 16px',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <span style={{ fontSize: '13px' }}>{icon}</span>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: COLORS.text }}>{ex.company_name}</span>
+            <span style={{ fontSize: '8px', fontFamily: FONT, color: roleInfo.color, letterSpacing: '0.08em', background: roleInfo.color + '15', padding: '2px 6px', borderRadius: '4px' }}>{roleInfo.label}</span>
+            {ex.technology_cluster && (
+              <span style={{ fontSize: '8px', fontFamily: FONT, color: COLORS.cyan, letterSpacing: '0.05em', background: COLORS.cyan + '10', padding: '2px 6px', borderRadius: '4px' }}>{ex.technology_cluster}</span>
+            )}
+          </div>
+          <div style={{ fontSize: '12px', fontWeight: 500, color: COLORS.text, marginBottom: '2px' }}>{ex.title}</div>
+          <div style={{ fontSize: '11px', color: COLORS.muted, lineHeight: '1.5' }}>{ex.description}</div>
+        </div>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div style={{ fontSize: '16px', fontWeight: 700, color: COLORS.accent, fontFamily: FONT }}>{ex.importance_score}</div>
+          <div style={{ fontSize: '7px', fontFamily: FONT, color: COLORS.dim, letterSpacing: '0.06em' }}>SCORE</div>
         </div>
       </div>
     </div>
