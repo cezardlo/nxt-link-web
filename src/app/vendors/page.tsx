@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 
 /* âââ types âââ */
 interface Vendor {
@@ -188,7 +189,7 @@ function VendorCard({ v }: { v: Vendor }) {
             fontSize: 11, marginTop: 8, padding: 0, fontWeight: 600,
           }}
         >
-          {expanded ? 'á¶² LESS' : 'â¼ MORE'}
+          {expanded ? 'â² LESS' : 'â¼ MORE'}
         </button>
       )}
     </div>
@@ -252,6 +253,33 @@ export default function VendorsPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#030712', color: '#f9fafb' }}>
+      {/* Nav */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '12px 24px', borderBottom: '1px solid #1f2937',
+        background: 'rgba(3,7,18,0.85)', backdropFilter: 'blur(12px)',
+        position: 'sticky', top: 0, zIndex: 50,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <Link href="/briefing" style={{ color: '#6b7280', fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>
+            â BRIEFING
+          </Link>
+          <Link href="/map" style={{ color: '#6b7280', fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>
+            â MAP
+          </Link>
+          <Link href="/conferences" style={{ color: '#6b7280', fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>
+            â EVENTS
+          </Link>
+          <Link href="/industry" style={{ color: '#6b7280', fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>
+            â« INDUSTRY
+          </Link>
+          <span style={{ color: '#3b82f6', fontSize: 11, letterSpacing: 1, borderBottom: '1px solid #3b82f6' }}>
+            â¦ VENDORS
+          </span>
+        </div>
+        <span style={{ color: '#6b7280', fontSize: 10, letterSpacing: 2 }}>{'NXT'} {'//'}  {'LINK'}</span>
+      </div>
+
       {/* Header */}
       <div style={{
         padding: '32px 24px 24px',
