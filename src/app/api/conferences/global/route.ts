@@ -15,8 +15,12 @@ export async function GET() {
   const now = new Date().toISOString().split('T')[0];
 
   // Build continent summaries
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const continentMap: Record<string, any> = {};
+  const continentMap: Record<string, {
+    conferences: number;
+    countries: Set<string>;
+    upcoming: number;
+    topCategories: Record<string, number>;
+  }> = {};
 
   for (const c of all) {
     const cont = c.continent || 'Other';
@@ -33,7 +37,7 @@ export async function GET() {
     countries: data.countries.size,
     upcoming: data.upcoming,
     top_categories: Object.entries(data.topCategories)
-      .sort((a: [string, number], b: [string, number]) => (b[1] as number) - (a[1] as number))
+      .sort((a, b) => Number(b[1]) - Number(a[1]))
       .slice(0, 5)
       .map(([cat, count]) => ({ name: cat, count })),
   })).sort((a, b) => b.total_conferences - a.total_conferences);
