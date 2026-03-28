@@ -432,10 +432,10 @@ export function useMapData(layers: LayerState): UseMapDataReturn {
 
           const base = countryCoords[code];
           if (!base) return;
-          // Deterministic jitter from index
+          // Deterministic jitter from index (±0.5 deg lat, ±0.7 deg lon ≈ ~50-80km spread)
           const seed = idx * 2654435761;
-          const jLat = (((seed & 0xff) / 255) - 0.5) * 10;
-          const jLon = ((((seed >> 8) & 0xff) / 255) - 0.5) * 14;
+          const jLat = (((seed & 0xff) / 255) - 0.5) * 1;
+          const jLon = ((((seed >> 8) & 0xff) / 255) - 0.5) * 1.4;
           sigPoints.push({
             id: `sig-${idx}`,
             lat: base[0] + jLat,

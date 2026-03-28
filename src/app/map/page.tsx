@@ -18,6 +18,7 @@ interface Signal {
 
 
 const REGION_GEO: Record<string, { lat: number; lng: number; continent: string }> = {
+  // Core regions (original)
   'United States': { lat: 39.8, lng: -98.5, continent: 'North America' },
   'China': { lat: 35.9, lng: 104.2, continent: 'Asia' },
   'Japan & Korea': { lat: 36.2, lng: 133.0, continent: 'Asia' },
@@ -25,6 +26,71 @@ const REGION_GEO: Record<string, { lat: number; lng: number; continent: string }
   'Mexico': { lat: 23.6, lng: -102.6, continent: 'North America' },
   'Southeast Asia': { lat: 5.0, lng: 110.0, continent: 'Asia' },
   'India': { lat: 20.6, lng: 78.9, continent: 'Asia' },
+  // Asia-Pacific
+  'Japan': { lat: 35.7, lng: 139.7, continent: 'Asia' },
+  'South Korea': { lat: 37.6, lng: 127.0, continent: 'Asia' },
+  'Taiwan': { lat: 25.0, lng: 121.5, continent: 'Asia' },
+  'Singapore': { lat: 1.3, lng: 103.8, continent: 'Asia' },
+  'Australia': { lat: -35.3, lng: 149.1, continent: 'Oceania' },
+  'Indonesia': { lat: -6.2, lng: 106.8, continent: 'Asia' },
+  'Vietnam': { lat: 21.0, lng: 105.8, continent: 'Asia' },
+  'Thailand': { lat: 13.8, lng: 100.5, continent: 'Asia' },
+  'Philippines': { lat: 14.6, lng: 121.0, continent: 'Asia' },
+  'Malaysia': { lat: 3.1, lng: 101.7, continent: 'Asia' },
+  'New Zealand': { lat: -41.3, lng: 174.8, continent: 'Oceania' },
+  'Pakistan': { lat: 33.7, lng: 73.0, continent: 'Asia' },
+  'Bangladesh': { lat: 23.8, lng: 90.4, continent: 'Asia' },
+  // Europe (individual countries)
+  'Germany': { lat: 52.5, lng: 13.4, continent: 'Europe' },
+  'United Kingdom': { lat: 51.5, lng: -0.1, continent: 'Europe' },
+  'France': { lat: 48.9, lng: 2.3, continent: 'Europe' },
+  'Italy': { lat: 41.9, lng: 12.5, continent: 'Europe' },
+  'Spain': { lat: 40.4, lng: -3.7, continent: 'Europe' },
+  'Netherlands': { lat: 52.4, lng: 4.9, continent: 'Europe' },
+  'Sweden': { lat: 59.3, lng: 18.1, continent: 'Europe' },
+  'Switzerland': { lat: 46.9, lng: 7.4, continent: 'Europe' },
+  'Norway': { lat: 59.9, lng: 10.7, continent: 'Europe' },
+  'Denmark': { lat: 55.7, lng: 12.6, continent: 'Europe' },
+  'Finland': { lat: 60.2, lng: 24.9, continent: 'Europe' },
+  'Poland': { lat: 52.2, lng: 21.0, continent: 'Europe' },
+  'Belgium': { lat: 50.8, lng: 4.4, continent: 'Europe' },
+  'Austria': { lat: 48.2, lng: 16.4, continent: 'Europe' },
+  'Ireland': { lat: 53.3, lng: -6.3, continent: 'Europe' },
+  'Portugal': { lat: 38.7, lng: -9.1, continent: 'Europe' },
+  'Czech Republic': { lat: 50.1, lng: 14.4, continent: 'Europe' },
+  'Greece': { lat: 37.9, lng: 23.7, continent: 'Europe' },
+  'Romania': { lat: 44.4, lng: 26.1, continent: 'Europe' },
+  'Ukraine': { lat: 50.4, lng: 30.5, continent: 'Europe' },
+  'Turkey': { lat: 39.9, lng: 32.9, continent: 'Europe' },
+  'Russia': { lat: 55.8, lng: 37.6, continent: 'Europe' },
+  // Middle East
+  'Israel': { lat: 31.8, lng: 35.2, continent: 'Asia' },
+  'United Arab Emirates': { lat: 24.5, lng: 54.4, continent: 'Asia' },
+  'Saudi Arabia': { lat: 24.7, lng: 46.7, continent: 'Asia' },
+  'Qatar': { lat: 25.3, lng: 51.5, continent: 'Asia' },
+  'Iran': { lat: 35.7, lng: 51.4, continent: 'Asia' },
+  'Iraq': { lat: 33.3, lng: 44.4, continent: 'Asia' },
+  'Middle East': { lat: 29.0, lng: 47.0, continent: 'Asia' },
+  // Americas
+  'Canada': { lat: 45.4, lng: -75.7, continent: 'North America' },
+  'Brazil': { lat: -15.8, lng: -47.9, continent: 'South America' },
+  'Argentina': { lat: -34.6, lng: -58.4, continent: 'South America' },
+  'Colombia': { lat: 4.7, lng: -74.1, continent: 'South America' },
+  'Chile': { lat: -33.4, lng: -70.7, continent: 'South America' },
+  'Peru': { lat: -12.0, lng: -77.0, continent: 'South America' },
+  'Central America': { lat: 14.6, lng: -90.5, continent: 'North America' },
+  'South America': { lat: -15.0, lng: -60.0, continent: 'South America' },
+  'Latin America': { lat: 10.0, lng: -70.0, continent: 'South America' },
+  // Africa
+  'South Africa': { lat: -25.7, lng: 28.2, continent: 'Africa' },
+  'Nigeria': { lat: 9.1, lng: 7.5, continent: 'Africa' },
+  'Egypt': { lat: 30.0, lng: 31.2, continent: 'Africa' },
+  'Kenya': { lat: -1.3, lng: 36.8, continent: 'Africa' },
+  'Ethiopia': { lat: 9.0, lng: 38.7, continent: 'Africa' },
+  'Morocco': { lat: 34.0, lng: -6.8, continent: 'Africa' },
+  'Africa': { lat: 0.0, lng: 25.0, continent: 'Africa' },
+  // Oceania
+  'Oceania': { lat: -25.0, lng: 135.0, continent: 'Oceania' },
 };
 
 const RISK_COLORS: Record<string, string> = { critical: '#ff4444', high: '#ff8800', elevated: '#ffb800', moderate: '#ffd700', low: '#00ff88' };
@@ -66,7 +132,10 @@ export default function MapPage() {
       const rMap: Record<string, RegionData> = {};
       for (const r of (b.regions || [])) {
         const geo = REGION_GEO[r.name];
-        if (!geo) continue;
+        if (!geo) {
+          console.warn(`[Map] Unknown region "${r.name}" — add to REGION_GEO to display on globe`);
+          continue;
+        }
         if (!rMap[r.name]) {
           rMap[r.name] = {
             id: r.name.toLowerCase().replace(/[^a-z]/g, '_'), name: r.name,
