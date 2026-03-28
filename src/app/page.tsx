@@ -407,7 +407,7 @@ export default function HomePage() {
       }}>
         <div style={{ fontFamily: FONT, fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em' }}>
           <span style={{ color: '#f5f5f5' }}>NXT</span>
-          <span style={{ color: '#00d4ff' }}{'\/\/'}</span>
+          <span style={{ color: '#00d4ff' }}>{'\/\/'}</span>
           <span style={{ color: '#f5f5f5' }}>LINK</span>
         </div>
         <div style={{ display: 'flex', gap: 32 }}>
@@ -761,7 +761,7 @@ export default function HomePage() {
         <div style={{
           fontFamily: FONT, fontSize: 12, color: '#505868',
         }}>
-          NXT//LINK -- Supply Chain Intelligence System
+          NXT{'\/'+'\/'+''}LINK -- Supply Chain Intelligence System
         </div>
         <div style={{
           fontFamily: FONT, fontSize: 11, color: '#505868',
