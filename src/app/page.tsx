@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { COLORS, FONT } from '@/lib/tokens';
+import { FONT } from '@/lib/tokens';
 
 /* ------------------------------------------------------------------ */
 /*  MINI GLOBE - canvas-based auto-rotating earth for hero section    */
@@ -407,14 +407,14 @@ export default function HomePage() {
       }}>
         <div style={{ fontFamily: FONT.mono, fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em' }}>
           <span style={{ color: '#f5f5f5' }}>NXT</span>
-          <span style={{ color: '#00d4ff' }}>//</span>
+          <span style={{ color: '#00d4ff' }}{'\/\/'}</span>
           <span style={{ color: '#f5f5f5' }}>LINK</span>
         </div>
         <div style={{ display: 'flex', gap: 32 }}>
           {['Briefing', 'Map', 'Industry', 'Vendors'].map((item) => (
             <Link
               key={item}
-              href={`/${item.toLowerCase()}`}
+              href={/$/{item.toLowerCase()}}
               style={{
                 fontFamily: FONT.mono, fontSize: 12, color: '#8b919a',
                 textDecoration: 'none', letterSpacing: '0.1em', textTransform: 'uppercase',
