@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { COLORS, FONT } from '@/lib/tokens';
 
-/* âââ types âââ */
+/* --- types --- */
 interface RelatedSignal {
   id: string;
   title: string;
@@ -91,7 +91,7 @@ function formatDate(dateString: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-/* âââ Tendency Detection Canvas Graph âââ */
+/* --- Tendency Detection Canvas Graph --- */
 const TREND_COLORS = [COLORS.cyan, COLORS.green, COLORS.gold, COLORS.amber, COLORS.red, '#a78bfa'];
 
 function TendencyDetection({ trends }: { trends: { snapshot: TrendSnapshot[]; time_series: TrendTimeSeries[] } }) {
@@ -229,7 +229,7 @@ function TendencyDetection({ trends }: { trends: { snapshot: TrendSnapshot[]; ti
   );
 }
 
-/* âââ Main Briefing Page âââ */
+/* --- Main Briefing Page --- */
 export default function BriefingPage() {
   const [data, setData] = useState<BriefingData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -287,7 +287,7 @@ export default function BriefingPage() {
 
   return (
     <div style={{ background: COLORS.bg, color: COLORS.text, minHeight: '100vh' }}>
-      {/* ââ Nav bar ââ */}
+      {/* -- Nav bar -- */}
       <div style={{
         position: 'sticky', top: 0, zIndex: 100,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -297,12 +297,12 @@ export default function BriefingPage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <span style={{ color: COLORS.cyan, fontSize: 11, letterSpacing: 1, borderBottom: `1px solid ${COLORS.cyan}` }}>
-            â BRIEFING
+            BRIEFING
           </span>
-          <Link href="/map" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>â MAP</Link>
-          <Link href="/conferences" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>â EVENTS</Link>
-          <Link href="/industry" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>â« INDUSTRY</Link>
-          <Link href="/vendors" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>â¦ VENDORS</Link>
+          <Link href="/map" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>MAP</Link>
+          <Link href="/conferences" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>EVENTS</Link>
+          <Link href="/industry" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>INDUSTRY</Link>
+          <Link href="/vendors" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>VENDORS</Link>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <span style={{ fontSize: 10, color: COLORS.dim }}>{briefing.total_signals} signals</span>
@@ -310,10 +310,10 @@ export default function BriefingPage() {
         </div>
       </div>
 
-      {/* ââ Content ââ */}
+      {/* -- Content -- */}
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px 80px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
-        {/* ââ TOP 3 INSIGHTS ââ */}
+        {/* -- TOP 3 INSIGHTS -- */}
         <div style={{ marginBottom: 32 }}>
           <div style={{ fontSize: 10, fontFamily: FONT, color: COLORS.cyan, letterSpacing: 2, marginBottom: 20, fontWeight: 600 }}>
             TODAY&apos;S BRIEFING
@@ -378,7 +378,7 @@ export default function BriefingPage() {
           })}
         </div>
 
-        {/* ââ REGIONS â clear labels ââ */}
+        {/* -- REGIONS -- clear labels -- */}
         <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 20, marginBottom: 20 }}>
           <div style={{ fontSize: 10, fontFamily: FONT, color: COLORS.dim, letterSpacing: 2, marginBottom: 14, fontWeight: 600 }}>
             REGIONAL SUPPLY CHAIN RISK
@@ -411,10 +411,10 @@ export default function BriefingPage() {
           </div>
         </div>
 
-        {/* ââ TREND CHART ââ */}
+        {/* -- TREND CHART -- */}
         {briefing.trends && <TendencyDetection trends={briefing.trends} />}
 
-        {/* ââ RECENT SIGNALS ââ */}
+        {/* -- RECENT SIGNALS -- */}
         <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 20 }}>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14, color: COLORS.text }}>Recent Signals</div>
           <div style={{ maxHeight: 400, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
