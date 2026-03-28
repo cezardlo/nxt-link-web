@@ -61,7 +61,7 @@ export async function GET(request: Request) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function runAgent(agent: string): Promise<Record<string, any>> {
   switch (agent) {
-    // ── Phase 1: Discovery ──────────────────────────────────────────────
+    // -- Phase 1: Discovery --------------------------------------------------
     case 'orchestrator': {
       const { orchestrator } = await import('@/lib/agents/orchestrator');
       const { loadLearningFromSupabase } = await import('@/lib/agents/swarm/learning');
@@ -125,8 +125,6 @@ async function runAgent(agent: string): Promise<Record<string, any>> {
     }
 
     case 'persist-kg': {
-      // Re-run the specialized agents that produce persistable results, then persist.
-      // This is intentionally lightweight — agents use in-memory caches from earlier calls.
       const { runPatentDiscoveryAgent } = await import('@/lib/agents/agents/patent-discovery-agent');
       const { runStartupDiscoveryAgent } = await import('@/lib/agents/agents/startup-discovery-agent');
       const { runResearchDiscoveryAgent } = await import('@/lib/agents/agents/research-discovery-agent');
@@ -146,7 +144,7 @@ async function runAgent(agent: string): Promise<Record<string, any>> {
       return { persisted: p.persisted, errors: p.errors.length };
     }
 
-    // ── Phase 2: Processing ─────────────────────────────────────────────
+    // -- Phase 2: Processing -------------------------------------------------
     case 'intel-curation': {
       const { runIntelDiscoveryAgent } = await import('@/lib/agents/agents/intel-discovery-agent');
       const { runIntelCurationAgent } = await import('@/lib/agents/agents/intel-curation-agent');
@@ -211,7 +209,7 @@ async function runAgent(agent: string): Promise<Record<string, any>> {
       return { entities: g?.entities_created ?? 0, relationships: g?.relationships_created ?? 0, signals_processed: g?.signals_processed ?? 0 };
     }
 
-    // ── Phase 3: Intelligence ───────────────────────────────────────────
+    // -- Phase 3: Intelligence ------------------------------------------------
     case 'intelligence-loop': {
       const { runIntelligenceLoop } = await import('@/lib/agents/os');
       const p = await runIntelligenceLoop();
@@ -251,7 +249,7 @@ async function runAgent(agent: string): Promise<Record<string, any>> {
       return { continents_updated: updated, signals_routed: report.totalSignalsRouted };
     }
 
-    // ── Phase 4: Learning ───────────────────────────────────────────────
+    // -- Phase 4: Learning ----------------------------------------------------
     case 'iker-learn': {
       const { runIntelDiscoveryAgent } = await import('@/lib/agents/agents/intel-discovery-agent');
       const {
@@ -366,7 +364,7 @@ async function runAgent(agent: string): Promise<Record<string, any>> {
       return { outcomes_measured: measured };
     }
 
-    // ── Phase 5: Vendor Pipeline ─────────────────────────────────────
+    // -- Phase 5: Vendor Pipeline ---------------------------------------------
     case 'vendor-scrape': {
       const { runVendorPipeline } = await import('@/lib/agents/agents/vendor-pipeline-orchestrator');
       const r = await runVendorPipeline({
@@ -392,6 +390,40 @@ async function runAgent(agent: string): Promise<Record<string, any>> {
         kg_entities: r.linking?.entities_created ?? 0,
         kg_relationships: r.linking?.relationships_created ?? 0,
         marketplace_synced: r.marketplace_sync?.vendors_synced ?? 0,
+      };
+    }
+
+    // -- Consolidated vendor pipeline (single cron, all phases) ---------------
+    case 'vendor-pipeline': {
+      const { runVendorPipeline, runVendorEnrichmentCycle, runVendorMaintenance } =
+        await import('@/lib/agents/agents/vendor-pipeline-orchestrator');
+
+      // Phase 1: Scrape + persist exhibitors
+      const scrape = await runVendorPipeline({
+        phases: ['scrape_exhibitors', 'persist_exhibitors'],
+        maxConferences: 5,
+        minRelevanceScore: 60,
+      }).catch(() => ({ exhibitors_persisted: 0, scrape: null }));
+
+      // Phase 2: Enrich top unenriched vendors
+      const enrich = await runVendorEnrichmentCycle(10).catch(() => ({
+        enrichment: null,
+        vendors_persisted: 0,
+      }));
+
+      // Phase 3: Clean + score + sync
+      const maintain = await runVendorMaintenance().catch(() => ({
+        cleanup: null,
+        scoring: null,
+        linking: null,
+        marketplace_sync: null,
+      }));
+
+      return {
+        exhibitors: scrape.exhibitors_persisted,
+        enriched: enrich.enrichment?.vendors_enriched ?? 0,
+        scored: maintain.scoring?.vendors_scored ?? 0,
+        synced: maintain.marketplace_sync?.vendors_synced ?? 0,
       };
     }
 
