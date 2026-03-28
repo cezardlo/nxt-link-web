@@ -19,7 +19,7 @@ const nextConfig = {
     ];
   },
   experimental: {
-    serverComponentsExternalPackages: ['googleapis', 'googleapis-common', 'google-auth-library', 'qs'],
+    serverComponentsExternalPackages: ['googleapis', 'googleapis-common', 'google-auth-library', 'qs', 'playwright-core', 'playwright'],
   },
   async headers() {
     return [
