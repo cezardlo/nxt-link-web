@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 
-/* âââ types âââ */
+/* --- types --- */
 interface Vendor {
   id: string;
   company_name: string;
@@ -26,7 +26,7 @@ interface SectorInfo {
   count: number;
 }
 
-/* âââ constants âââ */
+/* --- constants --- */
 const SECTOR_COLORS: Record<string, string> = {
   'Logistics': '#3b82f6',
   'Manufacturing': '#f59e0b',
@@ -57,7 +57,7 @@ const SCORE_COLOR = (s: number | null) => {
   return '#6b7280';
 };
 
-/* âââ VendorCard âââ */
+/* --- VendorCard --- */
 function VendorCard({ v }: { v: Vendor }) {
   const [expanded, setExpanded] = useState(false);
   const sColor = SECTOR_COLORS[v.sector || ''] || '#6b7280';
@@ -84,7 +84,7 @@ function VendorCard({ v }: { v: Vendor }) {
                 rel="noopener noreferrer"
                 style={{ color: '#f9fafb', fontSize: 16, fontWeight: 700, textDecoration: 'none' }}
               >
-                {v.company_name} â
+                {v.company_name}
               </a>
             ) : (
               <span style={{ color: '#f9fafb', fontSize: 16, fontWeight: 700 }}>{v.company_name}</span>
@@ -120,17 +120,17 @@ function VendorCard({ v }: { v: Vendor }) {
             )}
             {v.hq_city && v.hq_country && (
               <span style={{ fontSize: 11, color: '#6b7280' }}>
-                ð {v.hq_city}, {v.hq_country}
+                {v.hq_city}, {v.hq_country}
               </span>
             )}
             {!v.hq_city && v.hq_country && (
               <span style={{ fontSize: 11, color: '#6b7280' }}>
-                ð {v.hq_country}
+                {v.hq_country}
               </span>
             )}
             {v.employee_count_range && (
               <span style={{ fontSize: 11, color: '#6b7280' }}>
-                ð¥ {v.employee_count_range}
+                {v.employee_count_range}
               </span>
             )}
           </div>
@@ -144,7 +144,7 @@ function VendorCard({ v }: { v: Vendor }) {
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         }}>
           <span style={{ fontSize: 16, fontWeight: 800, color: SCORE_COLOR(v.iker_score) }}>
-            {v.iker_score ?? 'â'}
+            {v.iker_score ?? '-'}
           </span>
           <span style={{ fontSize: 8, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>SCORE</span>
         </div>
@@ -189,14 +189,14 @@ function VendorCard({ v }: { v: Vendor }) {
             fontSize: 11, marginTop: 8, padding: 0, fontWeight: 600,
           }}
         >
-          {expanded ? 'â² LESS' : 'â¼ MORE'}
+          {expanded ? '^ LESS' : 'v MORE'}
         </button>
       )}
     </div>
   );
 }
 
-/* âââ Main Page âââ */
+/* --- Main Page --- */
 export default function VendorsPage() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [sectors, setSectors] = useState<SectorInfo[]>([]);
@@ -262,19 +262,19 @@ export default function VendorsPage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <Link href="/briefing" style={{ color: '#6b7280', fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>
-            â BRIEFING
+            BRIEFING
           </Link>
           <Link href="/map" style={{ color: '#6b7280', fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>
-            â MAP
+            MAP
           </Link>
           <Link href="/conferences" style={{ color: '#6b7280', fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>
-            â EVENTS
+             EVENTS
           </Link>
           <Link href="/industry" style={{ color: '#6b7280', fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>
-            â« INDUSTRY
+            INDUSTRY
           </Link>
           <span style={{ color: '#3b82f6', fontSize: 11, letterSpacing: 1, borderBottom: '1px solid #3b82f6' }}>
-            â¦ VENDORS
+             VENDORS
           </span>
         </div>
         <span style={{ color: '#6b7280', fontSize: 10, letterSpacing: 2 }}>{'NXT'} {'//'}  {'LINK'}</span>
@@ -447,11 +447,11 @@ export default function VendorsPage() {
                       background: '#111827', color: '#9ca3af', fontWeight: 600, cursor: 'pointer', fontSize: 12,
                     }}
                   >
-                    â PREV
+                    PREV
                   </button>
                 )}
                 <span style={{ padding: '8px 0', fontSize: 12, color: '#6b7280' }}>
-                  {offset + 1}â{Math.min(offset + PAGE_SIZE, total)} of {total}
+                  {offset + 1}-{Math.min(offset + PAGE_SIZE, total)} of {total}
                 </span>
                 {offset + PAGE_SIZE < total && (
                   <button
@@ -461,7 +461,7 @@ export default function VendorsPage() {
                       background: '#111827', color: '#9ca3af', fontWeight: 600, cursor: 'pointer', fontSize: 12,
                     }}
                   >
-                    NEXT â
+                    NEXT
                   </button>
                 )}
               </div>
