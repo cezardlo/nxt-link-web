@@ -19,14 +19,14 @@ const SIGNAL_TYPE_COLORS: Record<string, string> = {
 };
 
 const SIGNAL_TYPE_ICONS: Record<string, string> = {
-  market_shift: '◈', technology: '⬡', funding: '◆', funding_round: '◇',
-  merger_acquisition: '◫', facility_expansion: '▣', partnership: '⬢',
-  regulation: '◉', connection: '◎', discovery: '✦',
+  market_shift: '~', technology: '>', funding: '$', funding_round: '$',
+  merger_acquisition: '+', facility_expansion: '^', partnership: '=',
+  regulation: '!', connection: '*', discovery: '?',
 };
 
 const INDUSTRIES = [
-  { id: 'manufacturing', label: 'Manufacturing', icon: '▣', color: COLORS.green },
-  { id: 'logistics', label: 'Logistics', icon: '⬡', color: COLORS.gold },
+  { id: 'manufacturing', label: 'Manufacturing', icon: '^', color: COLORS.green },
+  { id: 'logistics', label: 'Logistics', icon: '>', color: COLORS.gold },
 ];
 
 interface TypeBreakdown { type: string; count: number; total_usd: number; avg_importance: number; }
@@ -65,7 +65,7 @@ function timeAgo(d: string): string {
   return `${days}d ago`;
 }
 
-// ── Volume Sparkline ────────────────────────────────────────
+// -- Volume Sparkline ----------------------------------------
 function VolumeChart({ data }: { data: DailyVolume[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -114,7 +114,7 @@ function VolumeChart({ data }: { data: DailyVolume[] }) {
   return <canvas ref={canvasRef} style={{ width: '100%', height: 120 }} />;
 }
 
-// ── Type Distribution Ring ────────────────────────────────────────
+// -- Type Distribution Ring ----------------------------------------
 function TypeRing({ breakdown }: { breakdown: TypeBreakdown[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -162,7 +162,7 @@ function TypeRing({ breakdown }: { breakdown: TypeBreakdown[] }) {
   return <canvas ref={canvasRef} style={{ width: 120, height: 120 }} />;
 }
 
-// ── Main Page ────────────────────────────────────────
+// -- Main Page ----------------------------------------
 export default function IndustryPage() {
   const [activeIndustry, setActiveIndustry] = useState('manufacturing');
   const [data, setData] = useState<IndustryData | null>(null);
@@ -184,7 +184,7 @@ export default function IndustryPage() {
 
   return (
     <div style={{ background: COLORS.bg, minHeight: '100vh', fontFamily: FONT, color: COLORS.text }}>
-      {/* ── Top Bar ── */}
+      {/* -- Top Bar -- */}
       <div style={{
         position: 'sticky', top: 0, zIndex: 50,
         background: `linear-gradient(180deg, ${COLORS.bg} 0%, ${COLORS.bg}ee 100%)`,
@@ -195,22 +195,25 @@ export default function IndustryPage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <Link href="/briefing" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>
-            ◎ BRIEFING
+            * BRIEFING
           </Link>
           <Link href="/map" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>
-            ◇ MAP
+            $ MAP
           </Link>
           <Link href="/conferences" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>
-            ◆ EVENTS
+            $ EVENTS
           </Link>
           <span style={{ color: COLORS.purple, fontSize: 11, letterSpacing: 1, borderBottom: `1px solid ${COLORS.purple}` }}>
-            ◫ INDUSTRY
+            + INDUSTRY
           </span>
+          <Link href="/vendors" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>
+             VENDORS
+          </Link>
         </div>
         <span style={{ color: COLORS.dim, fontSize: 10, letterSpacing: 2 }}>NXT // LINK</span>
       </div>
 
-      {/* ── Industry Tabs ── */}
+      {/* -- Industry Tabs -- */}
       <div style={{ padding: '20px 24px 0', display: 'flex', gap: 12 }}>
         {INDUSTRIES.map(ind => (
           <button
@@ -236,17 +239,17 @@ export default function IndustryPage() {
 
       {loading ? (
         <div style={{ padding: 60, textAlign: 'center', color: COLORS.dim }}>
-          <div style={{ fontSize: 24, marginBottom: 8 }}>◎</div>
+          <div style={{ fontSize: 24, marginBottom: 8 }}>*</div>
           Loading {activeIndustry} intelligence...
         </div>
       ) : data ? (
         <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-          {/* ── Hero Stats ── */}
+          {/* -- Hero Stats -- */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
             {[
               { label: 'SIGNALS (90d)', value: String(data.total_signals), color: COLORS.accent },
-              { label: 'INVESTMENT TRACKED', value: data.total_investment > 0 ? formatUSD(data.total_investment) : '—', color: COLORS.green },
+              { label: 'INVESTMENT TRACKED', value: data.total_investment > 0 ? formatUSD(data.total_investment) : '-', color: COLORS.green },
               { label: 'ACTIVE CLUSTERS', value: String(data.clusters.length), color: COLORS.gold },
               { label: 'COMPANIES', value: String(data.top_companies.length), color: COLORS.purple },
             ].map((stat, i) => (
@@ -264,7 +267,7 @@ export default function IndustryPage() {
             ))}
           </div>
 
-          {/* ── Middle Grid: Volume + Type Breakdown ── */}
+          {/* -- Middle Grid: Volume + Type Breakdown -- */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 16 }}>
             {/* Volume Chart */}
             <div style={{
@@ -272,7 +275,7 @@ export default function IndustryPage() {
               borderRadius: 8, padding: 16,
             }}>
               <div style={{ fontSize: 10, color: COLORS.dim, letterSpacing: 1, marginBottom: 12 }}>
-                SIGNAL VOLUME — LAST 14 DAYS
+                SIGNAL VOLUME - LAST 14 DAYS
               </div>
               <VolumeChart data={data.daily_volume} />
             </div>
@@ -292,7 +295,7 @@ export default function IndustryPage() {
                     display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, fontSize: 11,
                   }}>
                     <span style={{ color: SIGNAL_TYPE_COLORS[tb.type] || COLORS.dim }}>
-                      {SIGNAL_TYPE_ICONS[tb.type] || '●'}
+                      {SIGNAL_TYPE_ICONS[tb.type] || ''}
                     </span>
                     <span style={{ color: COLORS.muted, flex: 1 }}>
                       {tb.type.replace(/_/g, ' ')}
@@ -304,7 +307,7 @@ export default function IndustryPage() {
             </div>
           </div>
 
-          {/* ── Clusters Grid ── */}
+          {/* -- Clusters Grid -- */}
           <div>
             <div style={{ fontSize: 10, color: COLORS.dim, letterSpacing: 1, marginBottom: 12 }}>
               ACTIVE CLUSTERS
@@ -347,7 +350,7 @@ export default function IndustryPage() {
                       )}
                       <div>
                         <span style={{ color: COLORS.dim }}>Rank: </span>
-                        <span style={{ color: COLORS.gold }}>{c.composite_rank?.toFixed(0) || '—'}</span>
+                        <span style={{ color: COLORS.gold }}>{c.composite_rank?.toFixed(0) || '-'}</span>
                       </div>
                     </div>
                     {/* Mini sparkline for trend */}
@@ -371,7 +374,7 @@ export default function IndustryPage() {
             </div>
           </div>
 
-          {/* ── Bottom: Companies + Recent Signals ── */}
+          {/* -- Bottom: Companies + Recent Signals -- */}
           <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 16 }}>
             {/* Top Companies */}
             <div style={{
@@ -402,7 +405,7 @@ export default function IndustryPage() {
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 11, color: COLORS.white, fontWeight: 500 }}>{co.name}</div>
                       <div style={{ fontSize: 9, color: COLORS.dim }}>
-                        {co.types.map(t => t.replace(/_/g, ' ')).join(' · ')}
+                        {co.types.map(t => t.replace(/_/g, ' ')).join(' . ')}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
@@ -435,7 +438,7 @@ export default function IndustryPage() {
                       color: SIGNAL_TYPE_COLORS[sig.signal_type] || COLORS.dim,
                       fontSize: 14, lineHeight: 1,
                     }}>
-                      {SIGNAL_TYPE_ICONS[sig.signal_type] || '●'}
+                      {SIGNAL_TYPE_ICONS[sig.signal_type] || ''}
                     </span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
@@ -446,7 +449,7 @@ export default function IndustryPage() {
                       </div>
                       <div style={{ fontSize: 9, color: COLORS.dim, marginTop: 3, display: 'flex', gap: 8 }}>
                         <span>{sig.source}</span>
-                        {sig.company && <span style={{ color: COLORS.muted }}>· {sig.company}</span>}
+                        {sig.company && <span style={{ color: COLORS.muted }}>. {sig.company}</span>}
                         {sig.amount_usd > 0 && <span style={{ color: COLORS.green }}>{formatUSD(sig.amount_usd)}</span>}
                         <span>{timeAgo(sig.discovered_at)}</span>
                       </div>

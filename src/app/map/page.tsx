@@ -15,10 +15,8 @@ interface Signal {
   company: string | null;
 }
 
-
-
 const REGION_GEO: Record<string, { lat: number; lng: number; continent: string }> = {
-  // Core regions (original)
+  // Core regions
   'United States': { lat: 39.8, lng: -98.5, continent: 'North America' },
   'China': { lat: 35.9, lng: 104.2, continent: 'Asia' },
   'Japan & Korea': { lat: 36.2, lng: 133.0, continent: 'Asia' },
@@ -26,6 +24,12 @@ const REGION_GEO: Record<string, { lat: number; lng: number; continent: string }
   'Mexico': { lat: 23.6, lng: -102.6, continent: 'North America' },
   'Southeast Asia': { lat: 5.0, lng: 110.0, continent: 'Asia' },
   'India': { lat: 20.6, lng: 78.9, continent: 'Asia' },
+  // Aliases returned by API
+  'US': { lat: 39.8, lng: -98.5, continent: 'North America' },
+  'EU': { lat: 50.0, lng: 10.0, continent: 'Europe' },
+  'Texas': { lat: 31.0, lng: -99.0, continent: 'North America' },
+  'El Paso': { lat: 31.8, lng: -106.4, continent: 'North America' },
+  'US-Mexico Border': { lat: 29.0, lng: -103.0, continent: 'North America' },
   // Asia-Pacific
   'Japan': { lat: 35.7, lng: 139.7, continent: 'Asia' },
   'South Korea': { lat: 37.6, lng: 127.0, continent: 'Asia' },
@@ -93,6 +97,17 @@ const REGION_GEO: Record<string, { lat: number; lng: number; continent: string }
   'Oceania': { lat: -25.0, lng: 135.0, continent: 'Oceania' },
 };
 
+// Merge aliases into canonical region names for grouping on the globe
+const REGION_MERGE: Record<string, string> = {
+  'US': 'United States',
+  'EU': 'Europe',
+  'Japan': 'Japan & Korea',
+  'South Korea': 'Japan & Korea',
+  'Texas': 'United States',
+  'El Paso': 'United States',
+  'US-Mexico Border': 'United States',
+};
+
 const RISK_COLORS: Record<string, string> = { critical: '#ff4444', high: '#ff8800', elevated: '#ffb800', moderate: '#ffd700', low: '#00ff88' };
 const TYPE_COLORS: Record<string, string> = {
   market_shift: COLORS.amber, technology: COLORS.cyan, funding: COLORS.green,
@@ -133,24 +148,26 @@ export default function MapPage() {
       for (const r of (b.regions || [])) {
         const geo = REGION_GEO[r.name];
         if (!geo) {
-          console.warn(`[Map] Unknown region "${r.name}" — add to REGION_GEO to display on globe`);
+          console.warn(`[Map] Unknown region "${r.name}" -- add to REGION_GEO to display on globe`);
           continue;
         }
-        if (!rMap[r.name]) {
-          rMap[r.name] = {
-            id: r.name.toLowerCase().replace(/[^a-z]/g, '_'), name: r.name,
-            lat: geo.lat, lng: geo.lng, continent: geo.continent,
+        const key = REGION_MERGE[r.name] || r.name;
+        const mergedGeo = REGION_GEO[key] || geo;
+        if (!rMap[key]) {
+          rMap[key] = {
+            id: key.toLowerCase().replace(/[^a-z]/g, '_'), name: key,
+            lat: mergedGeo.lat, lng: mergedGeo.lng, continent: mergedGeo.continent,
             signal_count: 0, risk_level: r.risk_level || 'low',
             opportunity_score: r.opportunity_score || 0, industries: [],
             top_themes: [], total_investment_usd: 0,
           };
         }
-        rMap[r.name].signal_count += r.total_signals;
-        rMap[r.name].total_investment_usd += (r.total_investment_usd || 0);
+        rMap[key].signal_count += r.total_signals;
+        rMap[key].total_investment_usd += (r.total_investment_usd || 0);
         for (const ind of (r.industries || [])) {
-          if (!rMap[r.name].industries.includes(ind)) rMap[r.name].industries.push(ind);
+          if (!rMap[key].industries.includes(ind)) rMap[key].industries.push(ind);
         }
-        if (r.risk_level === 'high' || r.risk_level === 'critical') rMap[r.name].risk_level = r.risk_level;
+        if (r.risk_level === 'high' || r.risk_level === 'critical') rMap[key].risk_level = r.risk_level;
       }
       setRegions(Object.values(rMap));
       setSignals(b.recent_signals || []);
@@ -186,6 +203,8 @@ export default function MapPage() {
             <a href="/briefing" style={{ fontSize: '11px', color: COLORS.muted, textDecoration: 'none', letterSpacing: '0.05em' }}>BRIEFING</a>
             <a href="/map" style={{ fontSize: '11px', color: COLORS.cyan, textDecoration: 'none', letterSpacing: '0.05em' }}>MAP</a>
             <a href="/conferences" style={{ fontSize: '11px', color: COLORS.muted, textDecoration: 'none', letterSpacing: '0.05em' }}>EVENTS</a>
+            <a href="/industry" style={{ fontSize: '11px', color: COLORS.muted, textDecoration: 'none', letterSpacing: '0.05em' }}>INDUSTRY</a>
+            <a href="/vendors" style={{ fontSize: '11px', color: COLORS.muted, textDecoration: 'none', letterSpacing: '0.05em' }}>VENDORS</a>
           </div>
         </div>
 
@@ -196,6 +215,7 @@ export default function MapPage() {
           selectedRegion={selectedRegion?.id || null}
         />
 
+        {/* Selected region overlay */}
         {selectedRegion && (
           <div style={{
             position: 'absolute', bottom: '24px', left: '24px', zIndex: 20,
@@ -205,7 +225,7 @@ export default function MapPage() {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
               <div style={{ fontSize: '16px', fontWeight: 600 }}>{selectedRegion.name}</div>
-              <div onClick={() => setSelectedRegion(null)} style={{ cursor: 'pointer', color: COLORS.dim, fontSize: '18px' }}>×</div>
+              <div onClick={() => setSelectedRegion(null)} style={{ cursor: 'pointer', color: COLORS.dim, fontSize: '18px' }}>{'\u00d7'}</div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
               <div style={{ background: COLORS.card, borderRadius: '8px', padding: '10px' }}>
@@ -217,7 +237,7 @@ export default function MapPage() {
                 <div style={{ fontSize: '14px', fontWeight: 700, color: RISK_COLORS[selectedRegion.risk_level] || COLORS.green, fontFamily: FONT, textTransform: 'uppercase' }}>{selectedRegion.risk_level}</div>
               </div>
             </div>
-            <div style={{ fontSize: '11px', color: COLORS.muted, fontFamily: FONT }}>{selectedRegion.continent} · {selectedRegion.industries.join(', ')}</div>
+            <div style={{ fontSize: '11px', color: COLORS.muted, fontFamily: FONT }}>{selectedRegion.continent} {'\u00b7'} {selectedRegion.industries.join(', ')}</div>
             {selectedRegion.total_investment_usd > 0 && (
               <div style={{ fontSize: '12px', color: COLORS.gold, fontFamily: FONT, marginTop: '8px' }}>
                 {selectedRegion.total_investment_usd >= 1e9 ? `$${(selectedRegion.total_investment_usd / 1e9).toFixed(1)}B` : `$${(selectedRegion.total_investment_usd / 1e6).toFixed(0)}M`} tracked
@@ -226,6 +246,7 @@ export default function MapPage() {
           </div>
         )}
 
+        {/* Bottom region bar */}
         <div style={{
           position: 'absolute', bottom: '16px', left: selectedRegion ? '320px' : '24px', right: '24px',
           display: 'flex', gap: '20px', justifyContent: 'center', zIndex: 10,
@@ -244,6 +265,7 @@ export default function MapPage() {
         </div>
       </div>
 
+      {/* Signal Feed Sidebar */}
       <div style={{ width: '400px', borderLeft: `1px solid ${COLORS.border}`, background: COLORS.surface, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: `1px solid ${COLORS.border}` }}>
           <div style={{ fontSize: '13px', fontWeight: 600, color: COLORS.text, marginBottom: '10px' }}>Live Signal Feed</div>
@@ -264,7 +286,7 @@ export default function MapPage() {
               </div>
               <div style={{ fontSize: '12px', color: COLORS.text, lineHeight: '1.4', marginBottom: '3px' }}>{s.title}</div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.dim }}>{s.source} · {s.industry}</span>
+                <span style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.dim }}>{s.source} {'\u00b7'} {s.industry}</span>
                 <span style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.gold, fontWeight: 600 }}>{(s.relevance_score * 100).toFixed(0)}</span>
               </div>
             </div>
