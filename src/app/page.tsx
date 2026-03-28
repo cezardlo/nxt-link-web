@@ -1,777 +1,447 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { FONT } from '@/lib/tokens';
+import { COLORS, FONT } from '@/lib/tokens';
 
-/* ------------------------------------------------------------------ */
-/*  MINI GLOBE - canvas-based auto-rotating earth for hero section    */
-/* ------------------------------------------------------------------ */
-function fibSphere(n: number): [number, number, number][] {
-  const pts: [number, number, number][] = [];
-  const phi = (1 + Math.sqrt(5)) / 2;
-  for (let i = 0; i < n; i++) {
-    const y = 1 - (2 * i) / (n - 1);
-    const r = Math.sqrt(1 - y * y);
-    const th = (2 * Math.PI * i) / phi;
-    pts.push([Math.cos(th) * r, y, Math.sin(th) * r]);
-  }
-  return pts;
+/* --- types --- */
+interface RelatedSignal {
+  id: string;
+  title: string;
+  source: string;
+  discovered_at: string;
+  signal_type: string;
+  relevance_score: number;
 }
 
-const MARKERS = [
-  { lat: 39.8, lng: -98.5, label: 'United States', size: 6 },
-  { lat: 35.9, lng: 104.2, label: 'China', size: 5 },
-  { lat: 50.0, lng: 10.0, label: 'Europe', size: 4 },
-  { lat: 36.2, lng: 133.0, label: 'Japan & Korea', size: 3.5 },
-  { lat: 20.6, lng: 78.9, label: 'India', size: 3 },
-  { lat: 23.6, lng: -102.6, label: 'Mexico', size: 3 },
-  { lat: 5.0, lng: 110.0, label: 'SE Asia', size: 2.5 },
-  { lat: -14.2, lng: -51.9, label: 'Brazil', size: 2.5 },
-  { lat: 51.5, lng: -0.1, label: 'London', size: 2 },
-  { lat: 1.35, lng: 103.8, label: 'Singapore', size: 3 },
-];
-
-function toXYZ(lat: number, lng: number): [number, number, number] {
-  const la = (lat * Math.PI) / 180;
-  const lo = (lng * Math.PI) / 180;
-  return [Math.cos(la) * Math.cos(lo), Math.sin(la), Math.cos(la) * Math.sin(lo)];
+interface TopInsight {
+  rank: number;
+  title: string;
+  what_is_happening: string;
+  why_it_matters: string;
+  where_its_going: string;
+  signal_count: number;
+  avg_score: number;
+  industry: string;
+  signal_type: string;
+  related_signals: RelatedSignal[];
 }
 
-function HeroGlobe() {
+interface Region {
+  name: string;
+  total_signals: number;
+  risk_level: string;
+  opportunity_score: number;
+  industries: string[];
+  total_investment_usd: number;
+}
+
+interface RecentSignal {
+  id: string;
+  title: string;
+  signal_type: string;
+  industry: string;
+  relevance_score: number;
+  discovered_at: string;
+  source: string;
+}
+
+interface TrendSnapshot {
+  cluster_id: string;
+  label: string;
+  date: string;
+  signal_count: number;
+  rolling_avg: string;
+  velocity: string;
+  acceleration: string;
+  trend_score: string;
+  trend_label: string;
+}
+
+interface TrendTimeSeries {
+  cluster_id: string;
+  label: string;
+  points: { date: string; score: number }[];
+}
+
+interface BriefingData {
+  briefing: {
+    generated_at: string;
+    total_signals: number;
+    top_insights: TopInsight[];
+    signal_stats: { by_type: Record<string, number>; by_industry: Record<string, number> };
+    regions: Region[];
+    recent_signals: RecentSignal[];
+    trends?: {
+      snapshot: TrendSnapshot[];
+      time_series: TrendTimeSeries[];
+    };
+  };
+}
+
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  if (hours < 1) return 'now';
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+/* --- Tendency Detection Canvas Graph --- */
+const TREND_COLORS = [COLORS.cyan, COLORS.green, COLORS.gold, COLORS.amber, COLORS.red, '#a78bfa'];
+
+function TendencyDetection({ trends }: { trends: { snapshot: TrendSnapshot[]; time_series: TrendTimeSeries[] } }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rotRef = useRef(0);
-  const frameRef = useRef(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  const draw = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const w = container.clientWidth;
+    const h = 220;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    ctx.scale(dpr, dpr);
 
-    const dots = fibSphere(800);
-    const SIZE = 500;
-    const R = 190;
-    const CX = SIZE / 2;
-    const CY = SIZE / 2;
-    canvas.width = SIZE;
-    canvas.height = SIZE;
+    const series = trends.time_series;
+    if (series.length === 0) return;
 
-    function draw() {
-      if (!ctx) return;
-      ctx.clearRect(0, 0, SIZE, SIZE);
-      const ry = rotRef.current;
+    const pad = { top: 20, right: 16, bottom: 32, left: 44 };
+    const gw = w - pad.left - pad.right;
+    const gh = h - pad.top - pad.bottom;
 
-      // Atmosphere glow
-      const atmo = ctx.createRadialGradient(CX, CY, R * 0.9, CX, CY, R * 1.4);
-      atmo.addColorStop(0, 'rgba(0,212,255,0.08)');
-      atmo.addColorStop(0.5, 'rgba(0,212,255,0.03)');
-      atmo.addColorStop(1, 'rgba(0,212,255,0)');
-      ctx.fillStyle = atmo;
-      ctx.fillRect(0, 0, SIZE, SIZE);
+    const allScores: number[] = [];
+    const allDates: string[] = [];
+    for (const s of series) {
+      for (const p of s.points) {
+        allScores.push(p.score);
+        if (!allDates.includes(p.date)) allDates.push(p.date);
+      }
+    }
+    allDates.sort();
+    const minScore = Math.min(...allScores, -1);
+    const maxScore = Math.max(...allScores, 1);
+    const range = maxScore - minScore || 1;
 
-      // Globe fill
-      const grd = ctx.createRadialGradient(CX - 40, CY - 40, R * 0.1, CX, CY, R);
-      grd.addColorStop(0, 'rgba(30,45,60,0.9)');
-      grd.addColorStop(1, 'rgba(10,14,20,0.95)');
+    const xScale = (date: string) => pad.left + (allDates.indexOf(date) / Math.max(allDates.length - 1, 1)) * gw;
+    const yScale = (score: number) => pad.top + gh - ((score - minScore) / range) * gh;
+
+    ctx.clearRect(0, 0, w, h);
+
+    const fontName = FONT.split(',')[0].replace(/'/g, '');
+
+    // Grid
+    ctx.strokeStyle = COLORS.border;
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 4; i++) {
+      const y = pad.top + (i / 4) * gh;
       ctx.beginPath();
-      ctx.arc(CX, CY, R, 0, Math.PI * 2);
-      ctx.fillStyle = grd;
-      ctx.fill();
-
-      // Globe edge
-      ctx.beginPath();
-      ctx.arc(CX, CY, R, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(0,212,255,0.15)';
-      ctx.lineWidth = 1.5;
+      ctx.moveTo(pad.left, y);
+      ctx.lineTo(pad.left + gw, y);
       ctx.stroke();
-
-      // Dot grid
-      const cosRy = Math.cos(ry);
-      const sinRy = Math.sin(ry);
-
-      for (const [x0, y0, z0] of dots) {
-        const x = x0 * cosRy + z0 * sinRy;
-        const z = -x0 * sinRy + z0 * cosRy;
-        if (z < -0.1) continue;
-        const px = CX + x * R;
-        const py = CY - y0 * R;
-        const alpha = 0.15 + z * 0.35;
-        ctx.beginPath();
-        ctx.arc(px, py, 1.2, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(0,212,255,${alpha})`;
-        ctx.fill();
-      }
-
-      // Markers
-      for (const m of MARKERS) {
-        const [mx, my, mz] = toXYZ(m.lat, m.lng);
-        const rx = mx * cosRy + mz * sinRy;
-        const rz = -mx * sinRy + mz * cosRy;
-        if (rz < 0.05) continue;
-        const px = CX + rx * R;
-        const py = CY - my * R;
-        const pulse = 1 + Math.sin(Date.now() / 800 + m.lat) * 0.3;
-
-        // Outer glow
-        const mg = ctx.createRadialGradient(px, py, 0, px, py, m.size * 3 * pulse);
-        mg.addColorStop(0, 'rgba(0,255,136,0.3)');
-        mg.addColorStop(1, 'rgba(0,255,136,0)');
-        ctx.fillStyle = mg;
-        ctx.fillRect(px - m.size * 4, py - m.size * 4, m.size * 8, m.size * 8);
-
-        // Core dot
-        ctx.beginPath();
-        ctx.arc(px, py, m.size * 0.8, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0,255,136,0.9)';
-        ctx.fill();
-      }
-
-      // Connection arcs between top markers
-      ctx.strokeStyle = 'rgba(0,212,255,0.08)';
-      ctx.lineWidth = 0.8;
-      for (let i = 0; i < 3; i++) {
-        const a = MARKERS[i];
-        const b = MARKERS[i + 1];
-        const [ax, ay, az] = toXYZ(a.lat, a.lng);
-        const [bx, by, bz] = toXYZ(b.lat, b.lng);
-        const arx = ax * cosRy + az * sinRy;
-        const arz = -ax * sinRy + az * cosRy;
-        const brx = bx * cosRy + bz * sinRy;
-        const brz = -bx * sinRy + bz * cosRy;
-        if (arz < 0 || brz < 0) continue;
-        const apx = CX + arx * R;
-        const apy = CY - ay * R;
-        const bpx = CX + brx * R;
-        const bpy = CY - by * R;
-        const cpx = (apx + bpx) / 2;
-        const cpy = Math.min(apy, bpy) - 30;
-        ctx.beginPath();
-        ctx.moveTo(apx, apy);
-        ctx.quadraticCurveTo(cpx, cpy, bpx, bpy);
-        ctx.stroke();
-      }
-
-      rotRef.current += 0.003;
-      frameRef.current = requestAnimationFrame(draw);
+      const val = maxScore - (i / 4) * range;
+      ctx.fillStyle = COLORS.dim;
+      ctx.font = `9px ${fontName}`;
+      ctx.textAlign = 'right';
+      ctx.fillText(val.toFixed(1), pad.left - 6, y + 3);
     }
 
+    // Zero line
+    if (minScore < 0 && maxScore > 0) {
+      const zeroY = yScale(0);
+      ctx.strokeStyle = COLORS.muted;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(pad.left, zeroY);
+      ctx.lineTo(pad.left + gw, zeroY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Date labels
+    ctx.fillStyle = COLORS.dim;
+    ctx.font = `9px ${fontName}`;
+    ctx.textAlign = 'center';
+    const step = Math.max(1, Math.floor(allDates.length / 6));
+    for (let i = 0; i < allDates.length; i += step) {
+      ctx.fillText(allDates[i].slice(5), xScale(allDates[i]), h - pad.bottom + 16);
+    }
+
+    // Series lines
+    series.forEach((s, idx) => {
+      const color = TREND_COLORS[idx % TREND_COLORS.length];
+      const pts = s.points;
+      if (pts.length < 2) return;
+
+      ctx.beginPath();
+      ctx.moveTo(xScale(pts[0].date), yScale(pts[0].score));
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(xScale(pts[i].date), yScale(pts[i].score));
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // End dot
+      const last = pts[pts.length - 1];
+      ctx.beginPath();
+      ctx.arc(xScale(last.date), yScale(last.score), 3, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+    });
+  }, [trends]);
+
+  useEffect(() => {
     draw();
-    return () => cancelAnimationFrame(frameRef.current);
-  }, []);
+    window.addEventListener('resize', draw);
+    return () => window.removeEventListener('resize', draw);
+  }, [draw]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        width: 500,
-        height: 500,
-        opacity: 0.85,
-      }}
-    />
+    <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 20, marginBottom: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>Trend Detection</div>
+        <div style={{ fontSize: 9, fontFamily: FONT, color: COLORS.dim, letterSpacing: 1 }}>14 DAY WINDOW</div>
+      </div>
+      <div ref={containerRef} style={{ width: '100%' }}>
+        <canvas ref={canvasRef} />
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 10 }}>
+        {trends.time_series.map((s, idx) => (
+          <div key={s.cluster_id} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: TREND_COLORS[idx % TREND_COLORS.length] }} />
+            <span style={{ fontSize: 10, color: COLORS.muted }}>{s.label.replace(/in (Manufacturing|Logistics)/i, '').trim()}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  TRACKING CATEGORY CARD                                            */
-/* ------------------------------------------------------------------ */
-interface TrackCard {
-  icon: string;
-  title: string;
-  desc: string;
-  signals: string;
-  color: string;
-  examples: string[];
-}
-
-const TRACKS: TrackCard[] = [
-  {
-    icon: '{}',
-    title: 'Tech & Innovation',
-    desc: 'AI breakthroughs, automation systems, cybersecurity threats, and emerging technologies reshaping global supply chains.',
-    signals: '550+',
-    color: '#00d4ff',
-    examples: ['AI integration in logistics', 'Autonomous trucking', 'Blockchain supply chain'],
-  },
-  {
-    icon: '$',
-    title: 'Startups & Funding',
-    desc: 'Venture rounds, acquisitions, IPOs, and emerging companies across logistics, defense tech, and border technology.',
-    signals: '200+',
-    color: '#00ff88',
-    examples: ['Series A-D rounds', 'M&A activity', 'SPAC launches'],
-  },
-  {
-    icon: '!',
-    title: 'Policy & Regulation',
-    desc: 'Trade policy shifts, tariff changes, sanctions, export controls, and regulatory actions affecting global commerce.',
-    signals: '150+',
-    color: '#ffb800',
-    examples: ['Tariff announcements', 'Trade agreements', 'Export controls'],
-  },
-  {
-    icon: '#',
-    title: 'Ports & Trade Routes',
-    desc: 'Port congestion, shipping lane disruptions, container volumes, and infrastructure developments at critical chokepoints.',
-    signals: '100+',
-    color: '#ff6600',
-    examples: ['Port delays', 'Route diversions', 'Infrastructure projects'],
-  },
-];
-
-function TrackingCard({ card, index }: { card: TrackCard; index: number }) {
-  const [visible, setVisible] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+/* --- Main Briefing Page --- */
+export default function BriefingPage() {
+  const [data, setData] = useState<BriefingData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) setVisible(true); },
-      { threshold: 0.2 }
+    const fetchBriefing = async () => {
+      try {
+        const response = await fetch('/api/briefing');
+        if (!response.ok) throw new Error('Failed to fetch briefing');
+        const json = await response.json();
+        setData(json);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBriefing();
+  }, []);
+
+  if (loading) {
+    return (
+      <div style={{ background: COLORS.bg, color: COLORS.text, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ fontFamily: FONT, fontSize: 13, color: COLORS.muted }}>loading briefing...</div>
+      </div>
     );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
+  }
+
+  if (error || !data) {
+    return (
+      <div style={{ background: COLORS.bg, color: COLORS.text, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ fontFamily: FONT, fontSize: 13, color: COLORS.red }}>{error || 'unable to load briefing'}</div>
+      </div>
+    );
+  }
+
+  const briefing = data.briefing;
+  const sectionColors = [COLORS.cyan, COLORS.gold, COLORS.green];
+
+  // Merge regions
+  const riskColorMap: Record<string, string> = { critical: '#ff4444', high: '#ff8800', elevated: '#ffb800', moderate: '#ffd700', low: '#00ff88' };
+  const regionMap: Record<string, { name: string; signal_count: number; risk_level: string; industries: string[] }> = {};
+  for (const r of briefing.regions) {
+    if (!regionMap[r.name]) {
+      regionMap[r.name] = { name: r.name, signal_count: 0, risk_level: r.risk_level || 'low', industries: [] };
+    }
+    regionMap[r.name].signal_count += r.total_signals;
+    for (const ind of (r.industries || [])) {
+      if (!regionMap[r.name].industries.includes(ind)) regionMap[r.name].industries.push(ind);
+    }
+    if (r.risk_level === 'high' || r.risk_level === 'critical') regionMap[r.name].risk_level = r.risk_level;
+  }
+  const mergedRegions = Object.values(regionMap).sort((a, b) => b.signal_count - a.signal_count);
 
   return (
-    <div
-      ref={ref}
-      style={{
-        background: 'rgba(26,30,37,0.6)',
-        border: `1px solid ${visible ? card.color + '40' : '#2e3440'}`,
-        borderRadius: 16,
-        padding: '32px 28px',
-        transition: 'all 0.6s ease',
-        transitionDelay: `${index * 0.1}s`,
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0)' : 'translateY(30px)',
-        cursor: 'default',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.border = `1px solid ${card.color}80`;
-        e.currentTarget.style.background = 'rgba(26,30,37,0.9)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.border = `1px solid ${card.color}40`;
-        e.currentTarget.style.background = 'rgba(26,30,37,0.6)';
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <div style={{
-          width: 40, height: 40, borderRadius: 10,
-          background: card.color + '15',
-          border: `1px solid ${card.color}30`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: FONT, fontSize: 18, color: card.color, fontWeight: 700,
-        }}>
-          {card.icon}
-        </div>
-        <h3 style={{
-          fontFamily: FONT, fontSize: 16, fontWeight: 600,
-          color: '#f5f5f5', letterSpacing: '0.02em', margin: 0,
-        }}>
-          {card.title}
-        </h3>
-      </div>
-      <p style={{
-        fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: 14, lineHeight: 1.6,
-        color: '#8b919a', margin: '0 0 20px 0',
-      }}>
-        {card.desc}
-      </p>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-        {card.examples.map((ex) => (
-          <span key={ex} style={{
-            fontFamily: FONT, fontSize: 11, color: card.color,
-            background: card.color + '10', border: `1px solid ${card.color}20`,
-            borderRadius: 6, padding: '3px 8px',
-          }}>
-            {ex}
-          </span>
-        ))}
-      </div>
+    <div style={{ background: COLORS.bg, color: COLORS.text, minHeight: '100vh' }}>
+      {/* -- Nav bar -- */}
       <div style={{
-        fontFamily: FONT, fontSize: 12, color: card.color,
-        display: 'flex', alignItems: 'center', gap: 6,
-      }}>
-        <span style={{
-          width: 6, height: 6, borderRadius: '50%',
-          background: card.color, display: 'inline-block',
-          animation: 'pulse 2s infinite',
-        }} />
-        {card.signals} signals tracked
-      </div>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  LIVE TICKER                                                       */
-/* ------------------------------------------------------------------ */
-const TICKER_ITEMS = [
-  'SpaceX acquires xAI robotics division',
-  'EU proposes new AI supply chain regulations',
-  'Port of Shanghai reports 12% volume increase',
-  'Series B: $40M raised for AI cybersecurity startup',
-  'US-Mexico border tech modernization contract awarded',
-  'India semiconductor policy attracts $10B investment',
-  'Panama Canal drought restrictions eased',
-  'South Korea chip export controls updated',
-];
-
-function LiveTicker() {
-  return (
-    <div style={{
-      overflow: 'hidden', whiteSpace: 'nowrap',
-      borderTop: '1px solid #2e3440', borderBottom: '1px solid #2e3440',
-      padding: '14px 0', background: 'rgba(18,21,26,0.8)',
-    }}>
-      <div style={{
-        display: 'inline-block',
-        animation: 'ticker 40s linear infinite',
-      }}>
-        {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
-          <span key={i} style={{
-            fontFamily: FONT, fontSize: 13, color: '#8b919a',
-            marginRight: 48, letterSpacing: '0.02em',
-          }}>
-            <span style={{ color: '#00ff88', marginRight: 8 }}>*</span>
-            {item}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  STATS BAR                                                         */
-/* ------------------------------------------------------------------ */
-const STATS = [
-  { value: '3,377', label: 'Signals Tracked', color: '#00d4ff' },
-  { value: '70K+', label: 'Sources Monitored', color: '#00ff88' },
-  { value: '15', label: 'Regions Covered', color: '#ffb800' },
-  { value: '292', label: 'Vendors Profiled', color: '#ff6600' },
-  { value: '4', label: 'Intel Categories', color: '#00d4ff' },
-];
-
-/* ------------------------------------------------------------------ */
-/*  HOW IT WORKS                                                      */
-/* ------------------------------------------------------------------ */
-const STEPS = [
-  { num: '01', title: 'INGEST', desc: 'We scrape 70K+ sources across news, filings, government databases, and industry feeds worldwide.' },
-  { num: '02', title: 'CLASSIFY', desc: 'Every signal is tagged by type, industry, region, and relevance using pattern matching and AI analysis.' },
-  { num: '03', title: 'CONNECT', desc: 'Related signals are linked across categories -- a policy change here means a supply chain shift there.' },
-  { num: '04', title: 'BRIEF', desc: 'You get a daily intelligence briefing: what happened, why it matters, and where it is heading.' },
-];
-
-/* ------------------------------------------------------------------ */
-/*  MAIN PAGE                                                         */
-/* ------------------------------------------------------------------ */
-export default function HomePage() {
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    const t = setTimeout(() => setLoaded(true), 100);
-    return () => clearTimeout(t);
-  }, []);
-
-  return (
-    <div style={{ background: '#0a0e14', minHeight: '100vh', color: '#f5f5f5' }}>
-      <style>{`
-        @keyframes ticker {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
-        }
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes glow {
-          0%, 100% { box-shadow: 0 0 20px rgba(0,212,255,0.3); }
-          50% { box-shadow: 0 0 40px rgba(0,212,255,0.6); }
-        }
-      `}</style>
-
-      {/* ============ NAV ============ */}
-      <nav style={{
+        position: 'sticky', top: 0, zIndex: 100,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '16px 40px', borderBottom: '1px solid #1a1e25',
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-        background: 'rgba(10,14,20,0.85)', backdropFilter: 'blur(12px)',
+        padding: '12px 24px', borderBottom: `1px solid ${COLORS.border}`,
+        background: 'rgba(10,14,20,0.9)', backdropFilter: 'blur(12px)',
+        fontFamily: FONT,
       }}>
-        <div style={{ fontFamily: FONT, fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em' }}>
-          <span style={{ color: '#f5f5f5' }}>NXT</span>
-          <span style={{ color: '#00d4ff' }}>{'\/\/'}</span>
-          <span style={{ color: '#f5f5f5' }}>LINK</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <span style={{ color: COLORS.cyan, fontSize: 11, letterSpacing: 1, borderBottom: `1px solid ${COLORS.cyan}` }}>
+            BRIEFING
+          </span>
+          <Link href="/map" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>MAP</Link>
+          <Link href="/conferences" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>EVENTS</Link>
+          <Link href="/industry" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>INDUSTRY</Link>
+          <Link href="/vendors" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>VENDORS</Link>
         </div>
-        <div style={{ display: 'flex', gap: 32 }}>
-          {['Briefing', 'Map', 'Industry', 'Vendors'].map((item) => (
-            <Link
-              key={item}
-              href={`/${item.toLowerCase()}`}
-              style={{
-                fontFamily: FONT, fontSize: 12, color: '#8b919a',
-                textDecoration: 'none', letterSpacing: '0.1em', textTransform: 'uppercase',
-              }}
-            >
-              {item}
-            </Link>
-          ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <span style={{ fontSize: 10, color: COLORS.dim }}>{briefing.total_signals} signals</span>
+          <span style={{ fontSize: 10, color: COLORS.dim, letterSpacing: 2 }}>{'NXT'} {'//'} {'LINK'}</span>
         </div>
-      </nav>
+      </div>
 
-      {/* ============ HERO ============ */}
-      <section style={{
-        minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        position: 'relative', overflow: 'hidden', paddingTop: 60,
-      }}>
-        {/* Background gradient */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'radial-gradient(ellipse at 60% 50%, rgba(0,212,255,0.06) 0%, transparent 60%)',
-        }} />
+      {/* -- Content -- */}
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px 80px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 60,
-          maxWidth: 1100, width: '100%', padding: '0 40px',
-          position: 'relative', zIndex: 1,
-        }}>
-          {/* Left: Text */}
-          <div style={{
-            flex: 1,
-            opacity: loaded ? 1 : 0,
-            transform: loaded ? 'translateY(0)' : 'translateY(30px)',
-            transition: 'all 0.8s ease',
-          }}>
-            <div style={{
-              fontFamily: FONT, fontSize: 12, color: '#00ff88',
-              letterSpacing: '0.15em', marginBottom: 16,
-              display: 'flex', alignItems: 'center', gap: 8,
-            }}>
-              <span style={{
-                width: 8, height: 8, borderRadius: '50%', background: '#00ff88',
-                animation: 'pulse 2s infinite',
-              }} />
-              LIVE INTELLIGENCE SYSTEM
-            </div>
-
-            <h1 style={{
-              fontFamily: FONT, fontSize: 52, fontWeight: 800,
-              lineHeight: 1.1, margin: '0 0 20px 0', letterSpacing: '-0.03em',
-            }}>
-              <span style={{ color: '#f5f5f5' }}>Global Supply</span><br />
-              <span style={{ color: '#f5f5f5' }}>Chain </span>
-              <span style={{ color: '#00d4ff' }}>Intelligence</span>
-            </h1>
-
-            <p style={{
-              fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: 18, lineHeight: 1.7,
-              color: '#8b919a', margin: '0 0 12px 0', maxWidth: 480,
-            }}>
-              Track what moves the world. Tech breakthroughs, startup funding,
-              trade policy, and port activity -- analyzed, connected, and
-              briefed daily from 70,000+ sources.
-            </p>
-
-            <p style={{
-              fontFamily: FONT, fontSize: 13, color: '#505868',
-              margin: '0 0 32px 0',
-            }}>
-              Covering 15 regions -- 4 intel categories -- updated in real-time
-            </p>
-
-            <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-              <Link
-                href="/briefing"
-                style={{
-                  fontFamily: FONT, fontSize: 14, fontWeight: 600,
-                  color: '#0a0e14', background: '#00d4ff',
-                  padding: '14px 32px', borderRadius: 10, textDecoration: 'none',
-                  letterSpacing: '0.05em', display: 'inline-block',
-                  transition: 'all 0.3s ease',
-                }}
-              >
-                ENTER BRIEFING
-              </Link>
-              <Link
-                href="/map"
-                style={{
-                  fontFamily: FONT, fontSize: 14, fontWeight: 600,
-                  color: '#00d4ff', background: 'transparent',
-                  padding: '14px 32px', borderRadius: 10, textDecoration: 'none',
-                  border: '1px solid rgba(0,212,255,0.3)',
-                  letterSpacing: '0.05em', display: 'inline-block',
-                  transition: 'all 0.3s ease',
-                }}
-              >
-                VIEW MAP
-              </Link>
-            </div>
+        {/* -- TOP 3 INSIGHTS -- */}
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: 10, fontFamily: FONT, color: COLORS.cyan, letterSpacing: 2, marginBottom: 20, fontWeight: 600 }}>
+            TODAY&apos;S BRIEFING
           </div>
 
-          {/* Right: Globe */}
-          <div style={{
-            flex: '0 0 auto',
-            opacity: loaded ? 1 : 0,
-            transition: 'opacity 1.2s ease 0.3s',
-          }}>
-            <HeroGlobe />
-          </div>
-        </div>
-      </section>
-
-      {/* ============ LIVE TICKER ============ */}
-      <LiveTicker />
-
-      {/* ============ WHAT WE TRACK ============ */}
-      <section style={{
-        maxWidth: 1100, margin: '0 auto', padding: '80px 40px',
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: 56 }}>
-          <h2 style={{
-            fontFamily: FONT, fontSize: 32, fontWeight: 700,
-            color: '#f5f5f5', margin: '0 0 12px 0', letterSpacing: '-0.02em',
-          }}>
-            What We Track
-          </h2>
-          <p style={{
-            fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: 16, color: '#8b919a', margin: 0,
-          }}>
-            Four intelligence categories. One unified view of global activity.
-          </p>
-        </div>
-
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: 20,
-        }}>
-          {TRACKS.map((card, i) => (
-            <TrackingCard key={card.title} card={card} index={i} />
-          ))}
-        </div>
-      </section>
-
-      {/* ============ STATS BAR ============ */}
-      <section style={{
-        borderTop: '1px solid #1a1e25', borderBottom: '1px solid #1a1e25',
-        background: 'rgba(18,21,26,0.5)',
-      }}>
-        <div style={{
-          maxWidth: 1100, margin: '0 auto', padding: '40px',
-          display: 'flex', justifyContent: 'space-between',
-        }}>
-          {STATS.map((s) => (
-            <div key={s.label} style={{ textAlign: 'center' }}>
-              <div style={{
-                fontFamily: FONT, fontSize: 28, fontWeight: 700,
-                color: s.color, marginBottom: 4,
-              }}>
-                {s.value}
-              </div>
-              <div style={{
-                fontFamily: FONT, fontSize: 11, color: '#505868',
-                letterSpacing: '0.1em', textTransform: 'uppercase',
-              }}>
-                {s.label}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ============ HOW IT WORKS ============ */}
-      <section style={{
-        maxWidth: 1100, margin: '0 auto', padding: '80px 40px',
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: 56 }}>
-          <h2 style={{
-            fontFamily: FONT, fontSize: 32, fontWeight: 700,
-            color: '#f5f5f5', margin: '0 0 12px 0', letterSpacing: '-0.02em',
-          }}>
-            How It Works
-          </h2>
-          <p style={{
-            fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: 16, color: '#8b919a', margin: 0,
-          }}>
-            From raw data to decision-ready intelligence in four steps.
-          </p>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
-          {STEPS.map((step, i) => (
-            <div key={step.num} style={{
-              position: 'relative', padding: '28px 24px',
-              background: 'rgba(26,30,37,0.4)',
-              border: '1px solid #2e3440', borderRadius: 14,
-            }}>
-              <div style={{
-                fontFamily: FONT, fontSize: 36, fontWeight: 800,
-                color: 'rgba(0,212,255,0.1)', marginBottom: 12,
-              }}>
-                {step.num}
-              </div>
-              <div style={{
-                fontFamily: FONT, fontSize: 14, fontWeight: 700,
-                color: '#00d4ff', letterSpacing: '0.1em', marginBottom: 12,
-              }}>
-                {step.title}
-              </div>
-              <p style={{
-                fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: 13, lineHeight: 1.6,
-                color: '#8b919a', margin: 0,
-              }}>
-                {step.desc}
-              </p>
-              {i < 3 && (
-                <div style={{
-                  position: 'absolute', right: -14, top: '50%',
-                  color: '#2e3440', fontSize: 20, fontFamily: FONT,
-                }}>
-                  {'>'}
+          {briefing.top_insights.slice(0, 3).map((insight, i) => {
+            const accent = sectionColors[i] || COLORS.cyan;
+            return (
+              <div
+                key={insight.rank}
+                style={{
+                  background: COLORS.surface,
+                  border: `1px solid ${COLORS.border}`,
+                  borderLeft: `3px solid ${accent}`,
+                  borderRadius: 10,
+                  padding: '24px 24px 20px',
+                  marginBottom: 16,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: 6,
+                    background: accent + '18', color: accent,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 14, fontWeight: 700, fontFamily: FONT,
+                  }}>
+                    {insight.rank}
+                  </div>
+                  <div style={{ fontSize: 10, fontFamily: FONT, color: COLORS.muted, letterSpacing: 1, textTransform: 'uppercase' }}>
+                    {insight.industry} &middot; {insight.signal_type.replace(/_/g, ' ')} &middot; {insight.signal_count} signals
+                  </div>
                 </div>
-              )}
-            </div>
-          ))}
+
+                <div style={{ fontSize: 14, lineHeight: 1.6, color: COLORS.text, marginBottom: 16 }}>
+                  {insight.what_is_happening}
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                  <div>
+                    <div style={{ fontSize: 9, fontFamily: FONT, color: COLORS.amber, letterSpacing: 1, marginBottom: 6, fontWeight: 600 }}>WHY IT MATTERS</div>
+                    <div style={{ fontSize: 12, lineHeight: 1.6, color: COLORS.text, opacity: 0.85 }}>{insight.why_it_matters}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 9, fontFamily: FONT, color: COLORS.green, letterSpacing: 1, marginBottom: 6, fontWeight: 600 }}>WHERE IT&apos;S GOING</div>
+                    <div style={{ fontSize: 12, lineHeight: 1.6, color: COLORS.text, opacity: 0.85 }}>{insight.where_its_going}</div>
+                  </div>
+                </div>
+
+                {insight.related_signals.length > 0 && (
+                  <div style={{ borderTop: `1px solid ${COLORS.border}`, paddingTop: 12, marginTop: 16 }}>
+                    <div style={{ fontSize: 9, fontFamily: FONT, color: COLORS.dim, letterSpacing: 1, marginBottom: 8 }}>SOURCE SIGNALS</div>
+                    {insight.related_signals.slice(0, 3).map((sig) => (
+                      <div key={sig.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{ fontSize: 11, color: COLORS.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80%' }}>{sig.title}</span>
+                        <span style={{ fontSize: 10, fontFamily: FONT, color: COLORS.dim, whiteSpace: 'nowrap', marginLeft: 8 }}>{formatDate(sig.discovered_at)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
-      </section>
 
-      {/* ============ PORTS & TRADE SPOTLIGHT ============ */}
-      <section style={{
-        maxWidth: 1100, margin: '0 auto', padding: '0 40px 80px',
-      }}>
-        <div style={{
-          background: 'rgba(26,30,37,0.6)', border: '1px solid #2e344060',
-          borderRadius: 20, padding: '48px 40px',
-          display: 'flex', gap: 48,
-        }}>
-          <div style={{ flex: 1 }}>
-            <div style={{
-              fontFamily: FONT, fontSize: 12, color: '#ff6600',
-              letterSpacing: '0.15em', marginBottom: 12,
-            }}>
-              PORTS & TRADE ROUTES
-            </div>
-            <h3 style={{
-              fontFamily: FONT, fontSize: 24, fontWeight: 700,
-              color: '#f5f5f5', margin: '0 0 16px 0', lineHeight: 1.3,
-            }}>
-              Critical chokepoints.<br />Monitored in real-time.
-            </h3>
-            <p style={{
-              fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: 15, lineHeight: 1.7,
-              color: '#8b919a', margin: '0 0 24px 0',
-            }}>
-              From the Port of Shanghai to the Panama Canal, we track
-              congestion levels, container throughput, route diversions,
-              and infrastructure changes that affect global trade flow.
-            </p>
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-              {['Shanghai', 'Singapore', 'Rotterdam', 'Los Angeles', 'Panama Canal', 'Suez Canal'].map((port) => (
-                <span key={port} style={{
-                  fontFamily: FONT, fontSize: 12, color: '#ff6600',
-                  background: 'rgba(255,102,0,0.08)', border: '1px solid rgba(255,102,0,0.2)',
-                  borderRadius: 8, padding: '6px 14px',
-                }}>
-                  {port}
-                </span>
-              ))}
-            </div>
+        {/* -- REGIONS -- */}
+        <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 20, marginBottom: 20 }}>
+          <div style={{ fontSize: 10, fontFamily: FONT, color: COLORS.dim, letterSpacing: 2, marginBottom: 14, fontWeight: 600 }}>
+            REGIONAL SUPPLY CHAIN RISK
           </div>
-
-          <div style={{ flex: 1 }}>
-            <div style={{
-              fontFamily: FONT, fontSize: 12, color: '#ffb800',
-              letterSpacing: '0.15em', marginBottom: 12,
-            }}>
-              POLICY & REGULATION
-            </div>
-            <h3 style={{
-              fontFamily: FONT, fontSize: 24, fontWeight: 700,
-              color: '#f5f5f5', margin: '0 0 16px 0', lineHeight: 1.3,
-            }}>
-              Trade policy shifts.<br />Before they hit the news.
-            </h3>
-            <p style={{
-              fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: 15, lineHeight: 1.7,
-              color: '#8b919a', margin: '0 0 24px 0',
-            }}>
-              Tariff announcements, sanctions updates, export controls,
-              and trade agreements -- tracked across 15 regions so you
-              see the signal before the market reacts.
-            </p>
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-              {['US Tariffs', 'EU AI Act', 'CHIPS Act', 'Export Controls', 'USMCA', 'Belt & Road'].map((tag) => (
-                <span key={tag} style={{
-                  fontFamily: FONT, fontSize: 12, color: '#ffb800',
-                  background: 'rgba(255,184,0,0.08)', border: '1px solid rgba(255,184,0,0.2)',
-                  borderRadius: 8, padding: '6px 14px',
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
+            {mergedRegions.map((r) => {
+              const riskColor = riskColorMap[r.risk_level] || COLORS.green;
+              return (
+                <div key={r.name} style={{
+                  background: COLORS.card, borderRadius: 8, padding: '14px 16px',
+                  borderLeft: `3px solid ${riskColor}`,
                 }}>
-                  {tag}
-                </span>
-              ))}
-            </div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, marginBottom: 8 }}>{r.name}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, fontFamily: FONT, color: COLORS.dim }}>SIGNALS</span>
+                    <span style={{ fontSize: 13, fontFamily: FONT, color: COLORS.cyan, fontWeight: 600 }}>{r.signal_count}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 10, fontFamily: FONT, color: COLORS.dim }}>RISK LEVEL</span>
+                    <span style={{ fontSize: 10, fontFamily: FONT, color: riskColor, fontWeight: 700, textTransform: 'uppercase' }}>{r.risk_level}</span>
+                  </div>
+                  {r.industries.length > 0 && (
+                    <div style={{ fontSize: 10, color: COLORS.muted, marginTop: 8, borderTop: `1px solid ${COLORS.border}`, paddingTop: 6 }}>
+                      {r.industries.slice(0, 3).join(', ')}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
-      </section>
 
-      {/* ============ CTA ============ */}
-      <section style={{
-        padding: '80px 40px', textAlign: 'center',
-        background: 'radial-gradient(ellipse at center, rgba(0,212,255,0.04) 0%, transparent 60%)',
-        borderTop: '1px solid #1a1e25',
-      }}>
-        <h2 style={{
-          fontFamily: FONT, fontSize: 36, fontWeight: 700,
-          color: '#f5f5f5', margin: '0 0 16px 0',
-        }}>
-          See what is happening. Now.
-        </h2>
-        <p style={{
-          fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: 16, color: '#8b919a',
-          margin: '0 0 32px 0',
-        }}>
-          Your daily intelligence briefing is ready.
-        </p>
-        <Link
-          href="/briefing"
-          style={{
-            fontFamily: FONT, fontSize: 16, fontWeight: 700,
-            color: '#0a0e14', background: '#00d4ff',
-            padding: '16px 48px', borderRadius: 12,
-            textDecoration: 'none', letterSpacing: '0.05em',
-            display: 'inline-block',
-            animation: 'glow 3s ease-in-out infinite',
-          }}
-        >
-          ENTER COMMAND CENTER
-        </Link>
-      </section>
+        {/* -- TREND CHART -- */}
+        {briefing.trends && <TendencyDetection trends={briefing.trends} />}
 
-      {/* ============ FOOTER ============ */}
-      <footer style={{
-        padding: '24px 40px', borderTop: '1px solid #1a1e25',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      }}>
-        <div style={{
-          fontFamily: FONT, fontSize: 12, color: '#505868',
-        }}>
-          {'NXT//LINK'} -- Supply Chain Intelligence System
+        {/* -- RECENT SIGNALS -- */}
+        <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14, color: COLORS.text }}>Recent Signals</div>
+          <div style={{ maxHeight: 400, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {briefing.recent_signals.slice(0, 15).map((signal) => (
+              <div
+                key={signal.id}
+                style={{
+                  background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 6,
+                  padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: COLORS.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {signal.title}
+                  </div>
+                  <div style={{ fontSize: 10, fontFamily: FONT, color: COLORS.dim }}>
+                    {signal.signal_type.replace(/_/g, ' ')} &middot; {signal.industry}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right', marginLeft: 12, whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: 10, fontFamily: FONT, color: COLORS.dim }}>{formatDate(signal.discovered_at)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-        <div style={{
-          fontFamily: FONT, fontSize: 11, color: '#505868',
-          display: 'flex', gap: 24,
-        }}>
-          <span>Real-time data</span>
-          <span>15 regions</span>
-          <span>4 categories</span>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 }
