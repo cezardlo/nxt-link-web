@@ -18,6 +18,9 @@
  *
  *   Phase 4 (Learning):
  *     iker-learn, ceo-briefing, prediction-outcomes
+ *
+ *   Phase 5 (Vendor Pipeline):
+ *     vendor-scrape, vendor-enrich, vendor-maintain
  */
 
 import { NextResponse } from 'next/server';
@@ -361,6 +364,35 @@ async function runAgent(agent: string): Promise<Record<string, any>> {
         measured++;
       }
       return { outcomes_measured: measured };
+    }
+
+    // ── Phase 5: Vendor Pipeline ─────────────────────────────────────
+    case 'vendor-scrape': {
+      const { runVendorPipeline } = await import('@/lib/agents/agents/vendor-pipeline-orchestrator');
+      const r = await runVendorPipeline({
+        phases: ['scrape_exhibitors', 'persist_exhibitors'],
+        maxConferences: 10,
+        minRelevanceScore: 60,
+      });
+      return { exhibitors: r.exhibitors_persisted, pages: r.scrape?.pages_found ?? 0 };
+    }
+
+    case 'vendor-enrich': {
+      const { runVendorEnrichmentCycle } = await import('@/lib/agents/agents/vendor-pipeline-orchestrator');
+      const r = await runVendorEnrichmentCycle(15);
+      return { enriched: r.enrichment?.vendors_enriched ?? 0, persisted: r.vendors_persisted };
+    }
+
+    case 'vendor-maintain': {
+      const { runVendorMaintenance } = await import('@/lib/agents/agents/vendor-pipeline-orchestrator');
+      const r = await runVendorMaintenance();
+      return {
+        cleaned: r.cleanup?.total_removed ?? 0,
+        scored: r.scoring?.vendors_scored ?? 0,
+        kg_entities: r.linking?.entities_created ?? 0,
+        kg_relationships: r.linking?.relationships_created ?? 0,
+        marketplace_synced: r.marketplace_sync?.vendors_synced ?? 0,
+      };
     }
 
     default:

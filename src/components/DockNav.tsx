@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { COLORS } from '@/lib/tokens';
+import { TranslateButton } from './TranslateButton';
 
 const DOCK_ITEMS = [
   {
@@ -39,6 +40,17 @@ const DOCK_ITEMS = [
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
         <path d="M2 20h20" /><path d="M5 20V8l5 4V8l5 4V4h3v16" />
+      </svg>
+    ),
+  },
+  {
+    href: '/products',
+    label: 'Products',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+        <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+        <line x1={12} y1={22.08} x2={12} y2={12} />
       </svg>
     ),
   },
@@ -94,6 +106,8 @@ export function DockNav() {
           </Link>
         );
       })}
+      <div className="w-px h-6 mx-1" style={{ background: COLORS.border + '40' }} />
+      <TranslateButton />
     </nav>
   );
 }

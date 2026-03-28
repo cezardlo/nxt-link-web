@@ -10,6 +10,14 @@ import trafilatura
 
 from pipeline.config import RSS_FEEDS
 from pipeline.utils.db import get_db
+from pipeline.utils.sanitize import (
+    sanitize_title,
+    sanitize_text,
+    validate_url,
+    validate_signal,
+    check_xss,
+    detect_injection,
+)
 
 logger = logging.getLogger("pipeline.ingestion")
 
@@ -45,25 +53,44 @@ class IngestionAgent:
         # Extract article text for top signals (limit to avoid rate limits)
         for signal in new_signals[:50]:
             try:
+                if not validate_url(signal["url"]):
+                    continue
                 text = trafilatura.fetch_url(signal["url"])
                 if text:
                     extracted = trafilatura.extract(text)
                     if extracted:
-                        signal["evidence"] = [{"text": extracted[:2000], "source": signal["source"]}]
+                        clean = sanitize_text(extracted, max_length=2000)
+                        injections = detect_injection(clean)
+                        if injections:
+                            signal["quality_flags"] = signal.get("quality_flags", []) + ["injection_detected"]
+                            logger.warning(f"Prompt injection in article: {signal['url'][:80]}")
+                        signal["evidence"] = [{"text": clean, "source": signal["source"]}]
             except Exception:
                 pass
 
-        # Write to Supabase in batches
+        # Validate and write to Supabase in batches
         batch_size = 50
         total_inserted = 0
+        skipped = 0
         for i in range(0, len(new_signals), batch_size):
             batch = new_signals[i : i + batch_size]
-            rows = [self._to_row(s) for s in batch]
+            rows = []
+            for s in batch:
+                valid, reason = validate_signal(s)
+                if valid:
+                    rows.append(self._to_row(s))
+                else:
+                    skipped += 1
+                    logger.debug(f"Signal rejected ({reason}): {s.get('title', '')[:60]}")
+            if not rows:
+                continue
             try:
                 db.insert("intel_signals", rows)
                 total_inserted += len(rows)
             except Exception as e:
                 logger.error(f"Insert failed: {e}")
+        if skipped:
+            logger.info(f"Rejected {skipped} signals during validation")
 
         logger.info(f"Ingested {total_inserted} new signals from {len(RSS_FEEDS)} feeds")
         return {"new_signals": total_inserted, "feeds_checked": len(RSS_FEEDS)}
@@ -81,6 +108,19 @@ class IngestionAgent:
             if not link or not title:
                 continue
 
+            link = link.strip()
+            if not validate_url(link):
+                logger.debug(f"[{name}] Skipped invalid URL: {link[:80]}")
+                continue
+
+            clean_title = sanitize_title(title)
+            if not clean_title or len(clean_title) < 5:
+                continue
+
+            if check_xss(title):
+                logger.warning(f"[{name}] XSS detected in RSS title, skipping: {title[:80]}")
+                continue
+
             published = getattr(entry, "published_parsed", None)
             if published:
                 try:
@@ -91,8 +131,8 @@ class IngestionAgent:
                 dt = datetime.now(timezone.utc)
 
             signals.append({
-                "title": title.strip(),
-                "url": link.strip(),
+                "title": clean_title,
+                "url": link,
                 "source": name,
                 "source_domain": _domain(link),
                 "discovered_at": dt.isoformat(),
@@ -103,9 +143,9 @@ class IngestionAgent:
         """Convert a signal dict to an intel_signals row."""
         return {
             "id": _signal_id(signal["url"]),
-            "title": signal["title"][:500],
+            "title": sanitize_title(signal["title"]),
             "url": signal["url"],
-            "source": signal["source"],
+            "source": sanitize_text(signal["source"], max_length=100),
             "source_domain": signal.get("source_domain", ""),
             "signal_type": "unknown",
             "industry": "unknown",
@@ -116,7 +156,7 @@ class IngestionAgent:
             "discovered_at": signal.get("discovered_at", datetime.now(timezone.utc).isoformat()),
             "evidence": signal.get("evidence", []),
             "tags": [],
-            "quality_flags": [],
+            "quality_flags": signal.get("quality_flags", []),
         }
 
 

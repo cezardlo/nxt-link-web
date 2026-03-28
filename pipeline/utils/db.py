@@ -2,6 +2,7 @@
 
 import httpx
 from pipeline.config import SUPABASE_URL, SUPABASE_KEY
+from pipeline.utils.sanitize import validate_table_name
 
 
 class DB:
@@ -20,6 +21,8 @@ class DB:
         self.client = httpx.Client(timeout=30.0)
 
     def _url(self, table: str) -> str:
+        if not validate_table_name(table):
+            raise ValueError(f"Invalid table name: {table}")
         return f"{self.base}/rest/v1/{table}"
 
     def select(self, table: str, params: dict | None = None) -> list[dict]:

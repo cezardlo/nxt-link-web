@@ -390,6 +390,26 @@ button:active:not(:disabled) {
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
+/* ─── Google Translate overrides ──────────────────────────── */
+.goog-te-banner-frame, #goog-gt-tt, .goog-te-balloon-frame { display: none !important; }
+body { top: 0 !important; }
+.goog-te-gadget { font-family: inherit !important; font-size: 0 !important; }
+.goog-te-gadget .goog-te-combo {
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 11px !important;
+  background: var(--card) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 6px !important;
+  padding: 6px 10px !important;
+  outline: none !important;
+  cursor: pointer !important;
+  width: 100% !important;
+}
+.goog-te-gadget .goog-te-combo:focus { border-color: var(--accent) !important; }
+.goog-te-gadget > span { display: none !important; }
+.VIpgJd-ZVi9od-ORHb-OEVmcd { display: none !important; }
+
 /* ─── Reduced motion ───────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

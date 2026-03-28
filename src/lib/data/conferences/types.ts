@@ -26,6 +26,15 @@ export type ConferenceCategory =
   | 'Retail' | 'Food & Beverage' | 'Agriculture' | 'Education' | 'Hospitality'
   | 'Media' | 'Sports' | 'Safety';
 
+export type Continent =
+  | 'North America'
+  | 'South America'
+  | 'Europe'
+  | 'Asia'
+  | 'Africa'
+  | 'Oceania'
+  | 'Middle East';
+
 export type ConferenceRecord = {
   id: string;
   name: string;
@@ -38,4 +47,6 @@ export type ConferenceRecord = {
   website: string;
   lat: number;
   lon: number;
+  country?: string;
+  continent?: Continent;
 };
