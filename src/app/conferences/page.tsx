@@ -56,6 +56,25 @@ interface Vendor {
   employee_count_range: string;
 }
 
+interface HotZone {
+  country: string;
+  continent: string;
+  conferences: number;
+  upcoming: number;
+  avg_relevance: number;
+  specialization: string[];
+  heat: 'extreme' | 'high' | 'medium';
+}
+
+interface GlobalStats {
+  total_conferences: number;
+  total_countries: number;
+  total_continents: number;
+  upcoming: number;
+  upcoming_30d: number;
+  hot_zones: HotZone[];
+}
+
 const CONTINENT_TABS = [
   { key: 'all', label: 'GLOBAL', icon: '\u{1F30D}' },
   { key: 'North America', label: 'N. AMERICA', icon: '\u{1F30E}' },
@@ -95,6 +114,12 @@ const SIGNAL_ICONS: Record<string, string> = {
   technical_session: '\u2699\uFE0F',
 };
 
+const HEAT_COLORS: Record<string, string> = {
+  extreme: '#ff4444',
+  high: COLORS.orange,
+  medium: COLORS.gold,
+};
+
 function formatDateRange(start: string, end: string | null): string {
   const s = new Date(start + 'T00:00:00');
   const sm = s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -127,6 +152,7 @@ export default function ConferencesPage() {
   const [countryStats, setCountryStats] = useState<CountryStat[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [vendorsLoading, setVendorsLoading] = useState(false);
+  const [globalStats, setGlobalStats] = useState<GlobalStats | null>(null);
 
   const fetchConferences = useCallback(() => {
     setLoading(true);
@@ -153,6 +179,15 @@ export default function ConferencesPage() {
 
   // Reset country when continent changes
   useEffect(() => { setSelectedCountry(null); }, [continent]);
+
+  // Fetch global stats (hot zones) when on global view
+  useEffect(() => {
+    if (continent !== 'all') { setGlobalStats(null); return; }
+    fetch('/api/conferences/global')
+      .then(r => r.json())
+      .then(data => setGlobalStats(data))
+      .catch(() => setGlobalStats(null));
+  }, [continent]);
 
   // Fetch vendors when geo context changes
   useEffect(() => {
@@ -252,7 +287,53 @@ export default function ConferencesPage() {
         })}
       </div>
 
-      <div style={{ paddingTop: '124px', paddingLeft: '32px', paddingRight: '32px', paddingBottom: '100px', maxWidth: '1200px', margin: '0 auto' }}>
+      <div style={{ paddingTop: '124px', paddingLeft: '32px', paddingRight: '32px', paddingBottom: '120px', maxWidth: '1200px', margin: '0 auto' }}>
+
+        {/* Hot Zones - Global View */}
+        {continent === 'all' && globalStats && globalStats.hot_zones.length > 0 && (
+          <div style={{ marginBottom: '28px' }}>
+            <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.orange, letterSpacing: '0.1em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {'\u{1F525}'} HOT ZONES
+              <span style={{ fontSize: '9px', color: COLORS.dim }}>{'|'} {globalStats.total_countries} COUNTRIES {'\u00B7'} {globalStats.total_continents} CONTINENTS {'\u00B7'} {globalStats.upcoming_30d} EVENTS NEXT 30D</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
+              {globalStats.hot_zones.map(hz => {
+                const heatColor = HEAT_COLORS[hz.heat] || COLORS.gold;
+                return (
+                  <button key={hz.country} onClick={() => { const cont = CONTINENT_TABS.find(t => t.label.includes(hz.continent.split(' ')[0].toUpperCase().slice(0, 4))); if (cont) setContinent(cont.key); }} style={{
+                    background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${heatColor}`,
+                    borderRadius: '10px', padding: '14px 18px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: COLORS.text }}>{hz.country}</div>
+                      <div style={{ fontSize: '8px', fontFamily: FONT, color: heatColor, letterSpacing: '0.08em', background: heatColor + '20', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>{hz.heat.toUpperCase()}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px', marginBottom: '8px' }}>
+                      <div>
+                        <div style={{ fontSize: '18px', fontWeight: 700, color: COLORS.cyan, fontFamily: FONT }}>{hz.conferences}</div>
+                        <div style={{ fontSize: '7px', fontFamily: FONT, color: COLORS.dim, letterSpacing: '0.06em' }}>EVENTS</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '18px', fontWeight: 700, color: COLORS.green, fontFamily: FONT }}>{hz.upcoming}</div>
+                        <div style={{ fontSize: '7px', fontFamily: FONT, color: COLORS.dim, letterSpacing: '0.06em' }}>UPCOMING</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '18px', fontWeight: 700, color: COLORS.gold, fontFamily: FONT }}>{hz.avg_relevance}</div>
+                        <div style={{ fontSize: '7px', fontFamily: FONT, color: COLORS.dim, letterSpacing: '0.06em' }}>AVG SCORE</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                      {hz.specialization.map(s => (
+                        <span key={s} style={{ fontSize: '8px', fontFamily: FONT, color: COLORS.muted, background: COLORS.card, padding: '2px 6px', borderRadius: '4px' }}>{s}</span>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: '8px', fontFamily: FONT, color: COLORS.dim, marginTop: '6px' }}>{hz.continent}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Country Cards */}
         {continent !== 'all' && countriesInView.length > 0 && !selectedCountry && (
@@ -262,7 +343,7 @@ export default function ConferencesPage() {
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {countriesInView.slice(0, 20).map(c => (
-                <button key={c.name} onClick={() => setSelectedCountry(c.name)} style={{
+      <button key={c.name} onClick={() => setSelectedCountry(c.name)} style={{
                   fontSize: '11px', fontFamily: FONT, padding: '8px 16px', borderRadius: '8px',
                   border: `1px solid ${COLORS.border}`, background: COLORS.surface,
                   color: COLORS.text, cursor: 'pointer', transition: 'all 0.2s',
