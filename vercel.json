@@ -5,24 +5,12 @@
       "schedule": "0 6 * * *"
     },
     {
-      "path": "/api/agents/cron-step?agent=persist-kg",
-      "schedule": "0 7 * * *"
-    },
-    {
       "path": "/api/assembly/run",
       "schedule": "0 8 * * *"
     },
     {
-      "path": "/api/agents/cron-step?agent=vendor-scrape",
+      "path": "/api/agents/cron-step?agent=vendor-pipeline",
       "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/agents/cron-step?agent=vendor-enrich",
-      "schedule": "0 10 * * *"
-    },
-    {
-      "path": "/api/agents/cron-step?agent=vendor-maintain",
-      "schedule": "0 11 * * *"
     }
   ]
 }
