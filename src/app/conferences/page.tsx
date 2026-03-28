@@ -65,7 +65,7 @@ const SIGNAL_ICONS: Record<string, string> = {
 function formatDateRange(start: string, end: string | null): string {
   const s = new Date(start + 'T00:00:00');
   const sm = s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  if (!end) return sm;
+  if (!end) return `${sm}, ${s.getFullYear()}`;
   const e = new Date(end + 'T00:00:00');
   if (s.getMonth() === e.getMonth()) return `${sm}â${e.getDate()}, ${e.getFullYear()}`;
   return `${sm} â ${e.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${e.getFullYear()}`;
