@@ -273,7 +273,6 @@ export function BackgroundPaths({
   ctaText?: string;
   ctaHref?: string;
 }) {
-  const _words = title.split(" ");
   const containerRef = useRef<HTMLDivElement>(null);
 
   return (
