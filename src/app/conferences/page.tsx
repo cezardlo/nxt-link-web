@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { COLORS, FONT } from '@/lib/tokens';
 
 interface Exhibitor {
@@ -21,6 +21,7 @@ interface Conference {
   category: string;
   city: string;
   country: string;
+  continent: string;
   start_date: string;
   end_date: string | null;
   website: string;
@@ -31,7 +32,22 @@ interface Conference {
   status: 'past' | 'live' | 'upcoming' | 'unknown';
   exhibitors: Exhibitor[];
   exhibitor_count: number;
+  lat?: number;
+  lon?: number;
 }
+
+interface ContinentStat { name: string; count: number; }
+interface CountryStat { name: string; count: number; }
+
+const CONTINENT_TABS = [
+  { key: 'all', label: 'GLOBAL', icon: '🌍' },
+  { key: 'North America', label: 'N. AMERICA', icon: '🌎' },
+  { key: 'Europe', label: 'EUROPE', icon: '🇪🇺' },
+  { key: 'Asia', label: 'ASIA', icon: '🌏' },
+  { key: 'South America', label: 'S. AMERICA', icon: '🌎' },
+  { key: 'Africa', label: 'AFRICA', icon: '🌍' },
+  { key: 'Oceania', label: 'OCEANIA', icon: '🌏' },
+];
 
 const CATEGORY_COLORS: Record<string, string> = {
   Logistics: COLORS.cyan,
@@ -55,11 +71,11 @@ const ROLE_LABELS: Record<string, { label: string; color: string }> = {
 };
 
 const SIGNAL_ICONS: Record<string, string> = {
-  product_launch: 'ð',
-  product_demo: 'ð§',
-  keynote: 'ð¤',
-  panel: 'ð¬',
-  technical_session: 'âï¸',
+  product_launch: '🚀',
+  product_demo: '🧪',
+  keynote: '🎤',
+  panel: '💬',
+  technical_session: '⚙️',
 };
 
 function formatDateRange(start: string, end: string | null): string {
@@ -67,8 +83,8 @@ function formatDateRange(start: string, end: string | null): string {
   const sm = s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   if (!end) return `${sm}, ${s.getFullYear()}`;
   const e = new Date(end + 'T00:00:00');
-  if (s.getMonth() === e.getMonth()) return `${sm}â${e.getDate()}, ${e.getFullYear()}`;
-  return `${sm} â ${e.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${e.getFullYear()}`;
+  if (s.getMonth() === e.getMonth()) return `${sm}–${e.getDate()}, ${e.getFullYear()}`;
+  return `${sm} – ${e.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${e.getFullYear()}`;
 }
 
 function daysUntil(date: string): string {
@@ -85,24 +101,39 @@ export default function ConferencesPage() {
   const [conferences, setConferences] = useState<Conference[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [continent, setContinent] = useState<string>('all');
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('all');
   const [view, setView] = useState<'upcoming' | 'all'>('upcoming');
+  const [sort, setSort] = useState<'date' | 'importance'>('date');
+  const [continentStats, setContinentStats] = useState<ContinentStat[]>([]);
+  const [countryStats, setCountryStats] = useState<CountryStat[]>([]);
 
-  function fetchConferences() {
+  const fetchConferences = useCallback(() => {
     setLoading(true);
     setError(null);
-    fetch('/api/conferences')
+    const params = new URLSearchParams();
+    if (continent !== 'all') params.set('continent', continent);
+    if (selectedCountry) params.set('country', selectedCountry);
+    if (sort) params.set('sort', sort);
+
+    fetch(`/api/conferences?${params.toString()}`)
       .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); })
       .then(data => {
         setConferences(data.conferences || []);
+        if (data.stats) {
+          setContinentStats(data.stats.continents || []);
+          setCountryStats(data.stats.countries || []);
+        }
         setLoading(false);
       })
       .catch(e => { setError(e.message); setLoading(false); });
-  }
+  }, [continent, selectedCountry, sort]);
 
-  useEffect(() => { fetchConferences(); }, []);
+  useEffect(() => { fetchConferences(); }, [fetchConferences]);
+  useEffect(() => { setSelectedCountry(null); }, [continent]);
 
-  const categories = [...new Set(conferences.map(c => c.category))].sort();
+  const categories = [...new Set(conferences.map(c => c.category).filter(Boolean))].sort();
   const filtered = conferences
     .filter(c => view === 'all' || c.status !== 'past')
     .filter(c => filter === 'all' || c.category === filter);
@@ -110,18 +141,29 @@ export default function ConferencesPage() {
   const live = filtered.filter(c => c.status === 'live');
   const upcoming = filtered.filter(c => c.status === 'upcoming');
   const past = filtered.filter(c => c.status === 'past');
-
   const totalExhibitors = conferences.reduce((sum, c) => sum + c.exhibitor_count, 0);
 
-  if (loading) {
+  const countriesInView = continent === 'all'
+    ? countryStats.filter(c => !['Various', 'Virtual'].includes(c.name))
+    : countryStats.filter(c => {
+        const conf = conferences.find(cf => cf.country === c.name);
+        return conf && conf.continent === continent;
+      });
+
+  const continentCount = (key: string) => {
+    if (key === 'all') return continentStats.reduce((s, c) => s + c.count, 0);
+    return continentStats.find(c => c.name === key)?.count || 0;
+  };
+
+  if (loading && conferences.length === 0) {
     return (
       <div style={{ background: COLORS.bg, color: COLORS.text, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ fontFamily: FONT, fontSize: '14px', color: COLORS.muted }}>loading events</div>
+        <div style={{ fontFamily: FONT, fontSize: '14px', color: COLORS.muted }}>loading global events...</div>
       </div>
     );
   }
 
-  if (error) {
+  if (error && conferences.length === 0) {
     return (
       <div style={{ background: COLORS.bg, color: COLORS.text, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px' }}>
         <div style={{ fontFamily: FONT, fontSize: '14px', color: COLORS.red }}>failed to load events</div>
@@ -132,15 +174,15 @@ export default function ConferencesPage() {
 
   return (
     <div style={{ background: COLORS.bg, color: COLORS.text, minHeight: '100vh' }}>
-      {/* Header */}
+      {/* Nav Header */}
       <div style={{
         position: 'fixed', top: 0, left: 0, right: 0, height: '56px', zIndex: 100,
         background: COLORS.surface, borderBottom: `1px solid ${COLORS.border}`,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         paddingLeft: '24px', paddingRight: '24px', fontFamily: FONT,
       }}>
-        <a href="/briefing" style={{ fontSize: '16px', fontWeight: 600, letterSpacing: '0.05em', color: COLORS.text, textDecoration: 'none' }}>NXT//LINK</a>
-        <div style={{ fontSize: '11px', letterSpacing: '0.1em', color: COLORS.cyan }}>SUPPLY CHAIN EVENTS</div>
+        <a href="/briefing" style={{ fontSize: '16px', fontWeight: 600, letterSpacing: '0.05em', color: COLORS.text, textDecoration: 'none' }}>{'NXT//LINK'}</a>
+        <div style={{ fontSize: '11px', letterSpacing: '0.1em', color: COLORS.cyan }}>GLOBAL EVENTS</div>
         <div style={{ display: 'flex', gap: '16px' }}>
           <a href="/briefing" style={{ fontSize: '11px', color: COLORS.muted, textDecoration: 'none', letterSpacing: '0.05em' }}>BRIEFING</a>
           <a href="/map" style={{ fontSize: '11px', color: COLORS.muted, textDecoration: 'none', letterSpacing: '0.05em' }}>MAP</a>
@@ -150,36 +192,97 @@ export default function ConferencesPage() {
         </div>
       </div>
 
-      <div style={{ paddingTop: '80px', paddingLeft: '32px', paddingRight: '32px', paddingBottom: '100px', maxWidth: '1100px', margin: '0 auto', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      {/* Continent Tabs */}
+      <div style={{
+        position: 'fixed', top: '56px', left: 0, right: 0, height: '44px', zIndex: 99,
+        background: COLORS.bg, borderBottom: `1px solid ${COLORS.border}`,
+        display: 'flex', alignItems: 'center', gap: '4px',
+        paddingLeft: '24px', paddingRight: '24px', overflowX: 'auto',
+      }}>
+        {CONTINENT_TABS.map(tab => {
+          const cnt = continentCount(tab.key);
+          const active = continent === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setContinent(tab.key)}
+              style={{
+                fontSize: '10px', fontFamily: FONT, padding: '6px 14px', borderRadius: '6px',
+                border: active ? `1px solid ${COLORS.cyan}50` : '1px solid transparent',
+                cursor: 'pointer', whiteSpace: 'nowrap',
+                background: active ? COLORS.cyan + '18' : 'transparent',
+                color: active ? COLORS.cyan : COLORS.muted,
+                letterSpacing: '0.06em', transition: 'all 0.2s',
+              }}
+            >
+              {tab.icon} {tab.label} {cnt > 0 && <span style={{ opacity: 0.6 }}>({cnt})</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ paddingTop: '124px', paddingLeft: '32px', paddingRight: '32px', paddingBottom: '100px', maxWidth: '1200px', margin: '0 auto' }}>
+
+        {/* Country Cards */}
+        {continent !== 'all' && countriesInView.length > 0 && !selectedCountry && (
+          <div style={{ marginBottom: '28px' }}>
+            <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.dim, letterSpacing: '0.1em', marginBottom: '12px' }}>
+              COUNTRIES IN {CONTINENT_TABS.find(t => t.key === continent)?.label || continent.toUpperCase()}
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {countriesInView.slice(0, 20).map(c => (
+                <button
+                  key={c.name}
+                  onClick={() => setSelectedCountry(c.name)}
+                  style={{
+                    fontSize: '11px', fontFamily: FONT, padding: '8px 16px', borderRadius: '8px',
+                    border: `1px solid ${COLORS.border}`, background: COLORS.surface,
+                    color: COLORS.text, cursor: 'pointer', transition: 'all 0.2s',
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                  }}
+                >
+                  <span style={{ fontWeight: 600 }}>{c.name}</span>
+                  <span style={{ fontSize: '9px', color: COLORS.cyan }}>{c.count}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Country breadcrumb */}
+        {selectedCountry && (
+          <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              onClick={() => setSelectedCountry(null)}
+              style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.cyan, background: 'transparent', border: 'none', cursor: 'pointer', letterSpacing: '0.06em', padding: 0 }}
+            >
+              \u2190 BACK
+            </button>
+            <span style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.dim }}>|</span>
+            <span style={{ fontSize: '12px', fontFamily: FONT, fontWeight: 600, color: COLORS.text }}>{selectedCountry}</span>
+          </div>
+        )}
 
         {/* Stats bar */}
-        <div style={{ display: 'flex', gap: '24px', marginBottom: '20px', flexWrap: 'wrap' }}>
-          <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.muted, letterSpacing: '0.08em' }}>
-            {conferences.length} EVENTS
-          </div>
-          {totalExhibitors > 0 && (
-            <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.cyan, letterSpacing: '0.08em' }}>
-              {totalExhibitors} EXHIBITOR INTEL TRACKED
-            </div>
-          )}
-          {live.length > 0 && (
-            <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.green, letterSpacing: '0.08em' }}>
-              {live.length} LIVE NOW
-            </div>
-          )}
+        <div style={{ display: 'flex', gap: '24px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.muted, letterSpacing: '0.08em' }}>{filtered.length} EVENTS</div>
+          {totalExhibitors > 0 && <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.cyan, letterSpacing: '0.08em' }}>{totalExhibitors} EXHIBITOR INTEL</div>}
+          {live.length > 0 && <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.green, letterSpacing: '0.08em' }}>{live.length} LIVE NOW</div>}
+          {loading && <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.dim }}>updating...</div>}
         </div>
 
         {/* Filters */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            <button onClick={() => setFilter('all')} style={{ fontSize: '10px', fontFamily: FONT, padding: '5px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: filter === 'all' ? COLORS.cyan + '25' : COLORS.card, color: filter === 'all' ? COLORS.cyan : COLORS.muted }}>ALL</button>
+            <button onClick={() => setFilter('all')} style={pillStyle(filter === 'all', COLORS.cyan)}>ALL</button>
             {categories.map(cat => (
-              <button key={cat} onClick={() => setFilter(filter === cat ? 'all' : cat)} style={{ fontSize: '10px', fontFamily: FONT, padding: '5px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: filter === cat ? (CATEGORY_COLORS[cat] || COLORS.cyan) + '25' : COLORS.card, color: filter === cat ? (CATEGORY_COLORS[cat] || COLORS.cyan) : COLORS.muted }}>{cat.toUpperCase()}</button>
+              <button key={cat} onClick={() => setFilter(filter === cat ? 'all' : cat)} style={pillStyle(filter === cat, CATEGORY_COLORS[cat] || COLORS.cyan)}>{cat.toUpperCase()}</button>
             ))}
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={() => setView('upcoming')} style={{ fontSize: '10px', fontFamily: FONT, padding: '5px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: view === 'upcoming' ? COLORS.surface : COLORS.card, color: view === 'upcoming' ? COLORS.text : COLORS.muted }}>UPCOMING</button>
-            <button onClick={() => setView('all')} style={{ fontSize: '10px', fontFamily: FONT, padding: '5px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: view === 'all' ? COLORS.surface : COLORS.card, color: view === 'all' ? COLORS.text : COLORS.muted }}>ALL</button>
+            <button onClick={() => setSort(sort === 'date' ? 'importance' : 'date')} style={pillStyle(false, COLORS.gold)}>{sort === 'date' ? '\u{1F4C5} DATE' : '\u2B50 SCORE'}</button>
+            <button onClick={() => setView('upcoming')} style={pillStyle(view === 'upcoming', COLORS.text)}>UPCOMING</button>
+            <button onClick={() => setView('all')} style={pillStyle(view === 'all', COLORS.text)}>ALL</button>
           </div>
         </div>
 
@@ -197,9 +300,7 @@ export default function ConferencesPage() {
         {/* Upcoming */}
         {upcoming.length > 0 && (
           <div style={{ marginBottom: '32px' }}>
-            <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.cyan, letterSpacing: '0.12em', marginBottom: '12px' }}>
-              UPCOMING â {upcoming.length} EVENTS
-            </div>
+            <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.cyan, letterSpacing: '0.12em', marginBottom: '12px' }}>UPCOMING \u2014 {upcoming.length} EVENTS</div>
             {upcoming.map(c => <ConferenceCard key={c.id} conference={c} />)}
           </div>
         )}
@@ -212,12 +313,22 @@ export default function ConferencesPage() {
           </div>
         )}
 
-        {filtered.length === 0 && (
+        {filtered.length === 0 && !loading && (
           <div style={{ textAlign: 'center', padding: '48px', color: COLORS.muted, fontSize: '14px' }}>No events found for this filter.</div>
         )}
       </div>
     </div>
   );
+}
+
+function pillStyle(active: boolean, color: string): React.CSSProperties {
+  return {
+    fontSize: '10px', fontFamily: FONT, padding: '5px 12px', borderRadius: '6px',
+    border: 'none', cursor: 'pointer',
+    background: active ? color + '25' : COLORS.card,
+    color: active ? color : COLORS.muted,
+    letterSpacing: '0.06em',
+  };
 }
 
 function ConferenceCard({ conference: c, isPast = false }: { conference: Conference; isPast?: boolean }) {
@@ -235,27 +346,20 @@ function ConferenceCard({ conference: c, isPast = false }: { conference: Confere
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
         <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '9px', fontFamily: FONT, color: catColor, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600 }}>{c.category}</span>
+            {c.continent && c.continent !== 'Global' && <span style={{ fontSize: '8px', fontFamily: FONT, color: COLORS.dim, letterSpacing: '0.05em' }}>{c.continent.toUpperCase()}</span>}
             {c.status === 'live' && <span style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.green, fontWeight: 700 }}>LIVE NOW</span>}
             {isPast && <span style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.dim }}>PAST</span>}
-            {hasExhibitors && (
-              <span style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.gold, letterSpacing: '0.05em' }}>
-                {c.exhibitor_count} EXHIBITOR{c.exhibitor_count > 1 ? 'S' : ''} TRACKED
-              </span>
-            )}
+            {hasExhibitors && <span style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.gold, letterSpacing: '0.05em' }}>{c.exhibitor_count} EXHIBITOR{c.exhibitor_count > 1 ? 'S' : ''} TRACKED</span>}
           </div>
           <div style={{ fontSize: '15px', fontWeight: 600, color: COLORS.text, marginBottom: '6px' }}>
             {c.website ? <a href={c.website} target="_blank" rel="noopener noreferrer" style={{ color: COLORS.text, textDecoration: 'none' }}>{c.name}</a> : c.name}
           </div>
           {c.description && <div style={{ fontSize: '12px', color: COLORS.muted, lineHeight: '1.5', marginBottom: '8px' }}>{c.description}</div>}
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '11px', fontFamily: FONT, color: COLORS.text }}>
-              {c.city}{c.country ? `, ${c.country}` : ''}
-            </span>
-            <span style={{ fontSize: '11px', fontFamily: FONT, color: COLORS.muted }}>
-              {formatDateRange(c.start_date, c.end_date)}
-            </span>
+            <span style={{ fontSize: '11px', fontFamily: FONT, color: COLORS.text }}>{c.city}{c.country ? `, ${c.country}` : ''}</span>
+            <span style={{ fontSize: '11px', fontFamily: FONT, color: COLORS.muted }}>{formatDateRange(c.start_date, c.end_date)}</span>
             {countdown && <span style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.cyan }}>{countdown}</span>}
             {c.sector_tags && c.sector_tags.length > 0 && (
               <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
@@ -272,26 +376,18 @@ function ConferenceCard({ conference: c, isPast = false }: { conference: Confere
         </div>
       </div>
 
-      {/* Exhibitor toggle */}
       {hasExhibitors && (
         <div style={{ marginTop: '12px', borderTop: `1px solid ${COLORS.border}`, paddingTop: '12px' }}>
           <button
             onClick={() => setExpanded(!expanded)}
-            style={{
-              fontSize: '10px', fontFamily: FONT, letterSpacing: '0.08em',
-              color: COLORS.cyan, background: 'transparent', border: 'none',
-              cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px',
-            }}
+            style={{ fontSize: '10px', fontFamily: FONT, letterSpacing: '0.08em', color: COLORS.cyan, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}
           >
-            <span style={{ transform: expanded ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform 0.2s', display: 'inline-block' }}>â¶</span>
+            <span style={{ transform: expanded ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform 0.2s', display: 'inline-block' }}>\u25B6</span>
             {expanded ? 'HIDE' : 'SHOW'} EXHIBITOR INTEL ({c.exhibitor_count})
           </button>
-
           {expanded && (
             <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {c.exhibitors.map(ex => (
-                <ExhibitorRow key={ex.id} exhibitor={ex} />
-              ))}
+              {c.exhibitors.map(ex => <ExhibitorRow key={ex.id} exhibitor={ex} />)}
             </div>
           )}
         </div>
@@ -301,8 +397,8 @@ function ConferenceCard({ conference: c, isPast = false }: { conference: Confere
 }
 
 function ExhibitorRow({ exhibitor: ex }: { exhibitor: Exhibitor }) {
-  const roleInfo = ROLE_LABELS[ex.role] || { label: ex.role.toUpperCase(), color: COLORS.muted };
-  const icon = SIGNAL_ICONS[ex.signal_type] || 'ð';
+  const roleInfo = ROLE_LABELS[ex.role] || { label: ex.role?.toUpperCase() || 'OTHER', color: COLORS.muted };
+  const icon = SIGNAL_ICONS[ex.signal_type] || '\u{1F4CB}';
 
   return (
     <div style={{
@@ -315,9 +411,7 @@ function ExhibitorRow({ exhibitor: ex }: { exhibitor: Exhibitor }) {
             <span style={{ fontSize: '13px' }}>{icon}</span>
             <span style={{ fontSize: '13px', fontWeight: 600, color: COLORS.text }}>{ex.company_name}</span>
             <span style={{ fontSize: '8px', fontFamily: FONT, color: roleInfo.color, letterSpacing: '0.08em', background: roleInfo.color + '15', padding: '2px 6px', borderRadius: '4px' }}>{roleInfo.label}</span>
-            {ex.technology_cluster && (
-              <span style={{ fontSize: '8px', fontFamily: FONT, color: COLORS.cyan, letterSpacing: '0.05em', background: COLORS.cyan + '10', padding: '2px 6px', borderRadius: '4px' }}>{ex.technology_cluster}</span>
-            )}
+            {ex.technology_cluster && <span style={{ fontSize: '8px', fontFamily: FONT, color: COLORS.cyan, letterSpacing: '0.05em', background: COLORS.cyan + '10', padding: '2px 6px', borderRadius: '4px' }}>{ex.technology_cluster}</span>}
           </div>
           <div style={{ fontSize: '12px', fontWeight: 500, color: COLORS.text, marginBottom: '2px' }}>{ex.title}</div>
           <div style={{ fontSize: '11px', color: COLORS.muted, lineHeight: '1.5' }}>{ex.description}</div>
