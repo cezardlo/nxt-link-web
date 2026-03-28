@@ -414,7 +414,7 @@ export default function HomePage() {
           {['Briefing', 'Map', 'Industry', 'Vendors'].map((item) => (
             <Link
               key={item}
-              href={/$/{item.toLowerCase()}}
+              href={`/${item.toLowerCase()}`}
               style={{
                 fontFamily: FONT, fontSize: 12, color: '#8b919a',
                 textDecoration: 'none', letterSpacing: '0.1em', textTransform: 'uppercase',
@@ -761,7 +761,7 @@ export default function HomePage() {
         <div style={{
           fontFamily: FONT, fontSize: 12, color: '#505868',
         }}>
-          NXT{'\/'+'\/'+''}LINK -- Supply Chain Intelligence System
+          {'NXT//LINK'} -- Supply Chain Intelligence System
         </div>
         <div style={{
           fontFamily: FONT, fontSize: 11, color: '#505868',
