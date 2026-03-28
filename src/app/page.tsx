@@ -263,19 +263,19 @@ function TrackingCard({ card, index }: { card: TrackCard; index: number }) {
           background: card.color + '15',
           border: `1px solid ${card.color}30`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: FONT.mono, fontSize: 18, color: card.color, fontWeight: 700,
+          fontFamily: FONT, fontSize: 18, color: card.color, fontWeight: 700,
         }}>
           {card.icon}
         </div>
         <h3 style={{
-          fontFamily: FONT.mono, fontSize: 16, fontWeight: 600,
+          fontFamily: FONT, fontSize: 16, fontWeight: 600,
           color: '#f5f5f5', letterSpacing: '0.02em', margin: 0,
         }}>
           {card.title}
         </h3>
       </div>
       <p style={{
-        fontFamily: FONT.sans, fontSize: 14, lineHeight: 1.6,
+        fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: 14, lineHeight: 1.6,
         color: '#8b919a', margin: '0 0 20px 0',
       }}>
         {card.desc}
@@ -283,7 +283,7 @@ function TrackingCard({ card, index }: { card: TrackCard; index: number }) {
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
         {card.examples.map((ex) => (
           <span key={ex} style={{
-            fontFamily: FONT.mono, fontSize: 11, color: card.color,
+            fontFamily: FONT, fontSize: 11, color: card.color,
             background: card.color + '10', border: `1px solid ${card.color}20`,
             borderRadius: 6, padding: '3px 8px',
           }}>
@@ -292,7 +292,7 @@ function TrackingCard({ card, index }: { card: TrackCard; index: number }) {
         ))}
       </div>
       <div style={{
-        fontFamily: FONT.mono, fontSize: 12, color: card.color,
+        fontFamily: FONT, fontSize: 12, color: card.color,
         display: 'flex', alignItems: 'center', gap: 6,
       }}>
         <span style={{
@@ -333,7 +333,7 @@ function LiveTicker() {
       }}>
         {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
           <span key={i} style={{
-            fontFamily: FONT.mono, fontSize: 13, color: '#8b919a',
+            fontFamily: FONT, fontSize: 13, color: '#8b919a',
             marginRight: 48, letterSpacing: '0.02em',
           }}>
             <span style={{ color: '#00ff88', marginRight: 8 }}>*</span>
@@ -405,7 +405,7 @@ export default function HomePage() {
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
         background: 'rgba(10,14,20,0.85)', backdropFilter: 'blur(12px)',
       }}>
-        <div style={{ fontFamily: FONT.mono, fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em' }}>
+        <div style={{ fontFamily: FONT, fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em' }}>
           <span style={{ color: '#f5f5f5' }}>NXT</span>
           <span style={{ color: '#00d4ff' }}>//</span>
           <span style={{ color: '#f5f5f5' }}>LINK</span>
@@ -416,7 +416,7 @@ export default function HomePage() {
               key={item}
               href={`/${item.toLowerCase()}`}
               style={{
-                fontFamily: FONT.mono, fontSize: 12, color: '#8b919a',
+                fontFamily: FONT, fontSize: 12, color: '#8b919a',
                 textDecoration: 'none', letterSpacing: '0.1em', textTransform: 'uppercase',
               }}
             >
@@ -450,7 +450,7 @@ export default function HomePage() {
             transition: 'all 0.8s ease',
           }}>
             <div style={{
-              fontFamily: FONT.mono, fontSize: 12, color: '#00ff88',
+              fontFamily: FONT, fontSize: 12, color: '#00ff88',
               letterSpacing: '0.15em', marginBottom: 16,
               display: 'flex', alignItems: 'center', gap: 8,
             }}>
@@ -462,7 +462,7 @@ export default function HomePage() {
             </div>
 
             <h1 style={{
-              fontFamily: FONT.mono, fontSize: 52, fontWeight: 800,
+              fontFamily: FONT, fontSize: 52, fontWeight: 800,
               lineHeight: 1.1, margin: '0 0 20px 0', letterSpacing: '-0.03em',
             }}>
               <span style={{ color: '#f5f5f5' }}>Global Supply</span><br />
@@ -471,7 +471,7 @@ export default function HomePage() {
             </h1>
 
             <p style={{
-              fontFamily: FONT.sans, fontSize: 18, lineHeight: 1.7,
+              fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: 18, lineHeight: 1.7,
               color: '#8b919a', margin: '0 0 12px 0', maxWidth: 480,
             }}>
               Track what moves the world. Tech breakthroughs, startup funding,
@@ -480,7 +480,7 @@ export default function HomePage() {
             </p>
 
             <p style={{
-              fontFamily: FONT.mono, fontSize: 13, color: '#505868',
+              fontFamily: FONT, fontSize: 13, color: '#505868',
               margin: '0 0 32px 0',
             }}>
               Covering 15 regions -- 4 intel categories -- updated in real-time
@@ -490,7 +490,7 @@ export default function HomePage() {
               <Link
                 href="/briefing"
                 style={{
-                  fontFamily: FONT.mono, fontSize: 14, fontWeight: 600,
+                  fontFamily: FONT, fontSize: 14, fontWeight: 600,
                   color: '#0a0e14', background: '#00d4ff',
                   padding: '14px 32px', borderRadius: 10, textDecoration: 'none',
                   letterSpacing: '0.05em', display: 'inline-block',
@@ -502,7 +502,7 @@ export default function HomePage() {
               <Link
                 href="/map"
                 style={{
-                  fontFamily: FONT.mono, fontSize: 14, fontWeight: 600,
+                  fontFamily: FONT, fontSize: 14, fontWeight: 600,
                   color: '#00d4ff', background: 'transparent',
                   padding: '14px 32px', borderRadius: 10, textDecoration: 'none',
                   border: '1px solid rgba(0,212,255,0.3)',
@@ -535,13 +535,13 @@ export default function HomePage() {
       }}>
         <div style={{ textAlign: 'center', marginBottom: 56 }}>
           <h2 style={{
-            fontFamily: FONT.mono, fontSize: 32, fontWeight: 700,
+            fontFamily: FONT, fontSize: 32, fontWeight: 700,
             color: '#f5f5f5', margin: '0 0 12px 0', letterSpacing: '-0.02em',
           }}>
             What We Track
           </h2>
           <p style={{
-            fontFamily: FONT.sans, fontSize: 16, color: '#8b919a', margin: 0,
+            fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: 16, color: '#8b919a', margin: 0,
           }}>
             Four intelligence categories. One unified view of global activity.
           </p>
@@ -569,13 +569,13 @@ export default function HomePage() {
           {STATS.map((s) => (
             <div key={s.label} style={{ textAlign: 'center' }}>
               <div style={{
-                fontFamily: FONT.mono, fontSize: 28, fontWeight: 700,
+                fontFamily: FONT, fontSize: 28, fontWeight: 700,
                 color: s.color, marginBottom: 4,
               }}>
                 {s.value}
               </div>
               <div style={{
-                fontFamily: FONT.mono, fontSize: 11, color: '#505868',
+                fontFamily: FONT, fontSize: 11, color: '#505868',
                 letterSpacing: '0.1em', textTransform: 'uppercase',
               }}>
                 {s.label}
@@ -591,13 +591,13 @@ export default function HomePage() {
       }}>
         <div style={{ textAlign: 'center', marginBottom: 56 }}>
           <h2 style={{
-            fontFamily: FONT.mono, fontSize: 32, fontWeight: 700,
+            fontFamily: FONT, fontSize: 32, fontWeight: 700,
             color: '#f5f5f5', margin: '0 0 12px 0', letterSpacing: '-0.02em',
           }}>
             How It Works
           </h2>
           <p style={{
-            fontFamily: FONT.sans, fontSize: 16, color: '#8b919a', margin: 0,
+            fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: 16, color: '#8b919a', margin: 0,
           }}>
             From raw data to decision-ready intelligence in four steps.
           </p>
@@ -611,19 +611,19 @@ export default function HomePage() {
               border: '1px solid #2e3440', borderRadius: 14,
             }}>
               <div style={{
-                fontFamily: FONT.mono, fontSize: 36, fontWeight: 800,
+                fontFamily: FONT, fontSize: 36, fontWeight: 800,
                 color: 'rgba(0,212,255,0.1)', marginBottom: 12,
               }}>
                 {step.num}
               </div>
               <div style={{
-                fontFamily: FONT.mono, fontSize: 14, fontWeight: 700,
+                fontFamily: FONT, fontSize: 14, fontWeight: 700,
                 color: '#00d4ff', letterSpacing: '0.1em', marginBottom: 12,
               }}>
                 {step.title}
               </div>
               <p style={{
-                fontFamily: FONT.sans, fontSize: 13, lineHeight: 1.6,
+                fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: 13, lineHeight: 1.6,
                 color: '#8b919a', margin: 0,
               }}>
                 {step.desc}
@@ -631,7 +631,7 @@ export default function HomePage() {
               {i < 3 && (
                 <div style={{
                   position: 'absolute', right: -14, top: '50%',
-                  color: '#2e3440', fontSize: 20, fontFamily: FONT.mono,
+                  color: '#2e3440', fontSize: 20, fontFamily: FONT,
                 }}>
                   {'>'}
                 </div>
@@ -652,19 +652,19 @@ export default function HomePage() {
         }}>
           <div style={{ flex: 1 }}>
             <div style={{
-              fontFamily: FONT.mono, fontSize: 12, color: '#ff6600',
+              fontFamily: FONT, fontSize: 12, color: '#ff6600',
               letterSpacing: '0.15em', marginBottom: 12,
             }}>
               PORTS & TRADE ROUTES
             </div>
             <h3 style={{
-              fontFamily: FONT.mono, fontSize: 24, fontWeight: 700,
+              fontFamily: FONT, fontSize: 24, fontWeight: 700,
               color: '#f5f5f5', margin: '0 0 16px 0', lineHeight: 1.3,
             }}>
               Critical chokepoints.<br />Monitored in real-time.
             </h3>
             <p style={{
-              fontFamily: FONT.sans, fontSize: 15, lineHeight: 1.7,
+              fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: 15, lineHeight: 1.7,
               color: '#8b919a', margin: '0 0 24px 0',
             }}>
               From the Port of Shanghai to the Panama Canal, we track
@@ -674,7 +674,7 @@ export default function HomePage() {
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
               {['Shanghai', 'Singapore', 'Rotterdam', 'Los Angeles', 'Panama Canal', 'Suez Canal'].map((port) => (
                 <span key={port} style={{
-                  fontFamily: FONT.mono, fontSize: 12, color: '#ff6600',
+                  fontFamily: FONT, fontSize: 12, color: '#ff6600',
                   background: 'rgba(255,102,0,0.08)', border: '1px solid rgba(255,102,0,0.2)',
                   borderRadius: 8, padding: '6px 14px',
                 }}>
@@ -686,19 +686,19 @@ export default function HomePage() {
 
           <div style={{ flex: 1 }}>
             <div style={{
-              fontFamily: FONT.mono, fontSize: 12, color: '#ffb800',
+              fontFamily: FONT, fontSize: 12, color: '#ffb800',
               letterSpacing: '0.15em', marginBottom: 12,
             }}>
               POLICY & REGULATION
             </div>
             <h3 style={{
-              fontFamily: FONT.mono, fontSize: 24, fontWeight: 700,
+              fontFamily: FONT, fontSize: 24, fontWeight: 700,
               color: '#f5f5f5', margin: '0 0 16px 0', lineHeight: 1.3,
             }}>
               Trade policy shifts.<br />Before they hit the news.
             </h3>
             <p style={{
-              fontFamily: FONT.sans, fontSize: 15, lineHeight: 1.7,
+              fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: 15, lineHeight: 1.7,
               color: '#8b919a', margin: '0 0 24px 0',
             }}>
               Tariff announcements, sanctions updates, export controls,
@@ -708,7 +708,7 @@ export default function HomePage() {
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
               {['US Tariffs', 'EU AI Act', 'CHIPS Act', 'Export Controls', 'USMCA', 'Belt & Road'].map((tag) => (
                 <span key={tag} style={{
-                  fontFamily: FONT.mono, fontSize: 12, color: '#ffb800',
+                  fontFamily: FONT, fontSize: 12, color: '#ffb800',
                   background: 'rgba(255,184,0,0.08)', border: '1px solid rgba(255,184,0,0.2)',
                   borderRadius: 8, padding: '6px 14px',
                 }}>
@@ -727,13 +727,13 @@ export default function HomePage() {
         borderTop: '1px solid #1a1e25',
       }}>
         <h2 style={{
-          fontFamily: FONT.mono, fontSize: 36, fontWeight: 700,
+          fontFamily: FONT, fontSize: 36, fontWeight: 700,
           color: '#f5f5f5', margin: '0 0 16px 0',
         }}>
           See what is happening. Now.
         </h2>
         <p style={{
-          fontFamily: FONT.sans, fontSize: 16, color: '#8b919a',
+          fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: 16, color: '#8b919a',
           margin: '0 0 32px 0',
         }}>
           Your daily intelligence briefing is ready.
@@ -741,7 +741,7 @@ export default function HomePage() {
         <Link
           href="/briefing"
           style={{
-            fontFamily: FONT.mono, fontSize: 16, fontWeight: 700,
+            fontFamily: FONT, fontSize: 16, fontWeight: 700,
             color: '#0a0e14', background: '#00d4ff',
             padding: '16px 48px', borderRadius: 12,
             textDecoration: 'none', letterSpacing: '0.05em',
@@ -759,12 +759,12 @@ export default function HomePage() {
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
         <div style={{
-          fontFamily: FONT.mono, fontSize: 12, color: '#505868',
+          fontFamily: FONT, fontSize: 12, color: '#505868',
         }}>
           NXT//LINK -- Supply Chain Intelligence System
         </div>
         <div style={{
-          fontFamily: FONT.mono, fontSize: 11, color: '#505868',
+          fontFamily: FONT, fontSize: 11, color: '#505868',
           display: 'flex', gap: 24,
         }}>
           <span>Real-time data</span>
