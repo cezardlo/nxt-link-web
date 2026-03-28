@@ -39,14 +39,31 @@ interface Conference {
 interface ContinentStat { name: string; count: number; }
 interface CountryStat { name: string; count: number; }
 
+interface Vendor {
+  id: string;
+  company_name: string;
+  company_url: string;
+  description: string;
+  primary_category: string;
+  sector: string;
+  hq_country: string;
+  hq_city: string;
+  continent: string;
+  iker_score: number;
+  credibility_score: number;
+  tags: string[] | null;
+  funding_stage: string;
+  employee_count_range: string;
+}
+
 const CONTINENT_TABS = [
-  { key: 'all', label: 'GLOBAL', icon: '🌍' },
-  { key: 'North America', label: 'N. AMERICA', icon: '🌎' },
-  { key: 'Europe', label: 'EUROPE', icon: '🇪🇺' },
-  { key: 'Asia', label: 'ASIA', icon: '🌏' },
-  { key: 'South America', label: 'S. AMERICA', icon: '🌎' },
-  { key: 'Africa', label: 'AFRICA', icon: '🌍' },
-  { key: 'Oceania', label: 'OCEANIA', icon: '🌏' },
+  { key: 'all', label: 'GLOBAL', icon: '\u{1F30D}' },
+  { key: 'North America', label: 'N. AMERICA', icon: '\u{1F30E}' },
+  { key: 'Europe', label: 'EUROPE', icon: '\u{1F1EA}\u{1F1FA}' },
+  { key: 'Asia', label: 'ASIA', icon: '\u{1F30F}' },
+  { key: 'South America', label: 'S. AMERICA', icon: '\u{1F30E}' },
+  { key: 'Africa', label: 'AFRICA', icon: '\u{1F30D}' },
+  { key: 'Oceania', label: 'OCEANIA', icon: '\u{1F30F}' },
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -71,11 +88,11 @@ const ROLE_LABELS: Record<string, { label: string; color: string }> = {
 };
 
 const SIGNAL_ICONS: Record<string, string> = {
-  product_launch: '🚀',
-  product_demo: '🧪',
-  keynote: '🎤',
-  panel: '💬',
-  technical_session: '⚙️',
+  product_launch: '\u{1F680}',
+  product_demo: '\u{1F9EA}',
+  keynote: '\u{1F3A4}',
+  panel: '\u{1F4AC}',
+  technical_session: '\u2699\uFE0F',
 };
 
 function formatDateRange(start: string, end: string | null): string {
@@ -83,8 +100,8 @@ function formatDateRange(start: string, end: string | null): string {
   const sm = s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   if (!end) return `${sm}, ${s.getFullYear()}`;
   const e = new Date(end + 'T00:00:00');
-  if (s.getMonth() === e.getMonth()) return `${sm}–${e.getDate()}, ${e.getFullYear()}`;
-  return `${sm} – ${e.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${e.getFullYear()}`;
+  if (s.getMonth() === e.getMonth()) return `${sm}\u2013${e.getDate()}, ${e.getFullYear()}`;
+  return `${sm} \u2013 ${e.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${e.getFullYear()}`;
 }
 
 function daysUntil(date: string): string {
@@ -108,6 +125,8 @@ export default function ConferencesPage() {
   const [sort, setSort] = useState<'date' | 'importance'>('date');
   const [continentStats, setContinentStats] = useState<ContinentStat[]>([]);
   const [countryStats, setCountryStats] = useState<CountryStat[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [vendorsLoading, setVendorsLoading] = useState(false);
 
   const fetchConferences = useCallback(() => {
     setLoading(true);
@@ -131,7 +150,22 @@ export default function ConferencesPage() {
   }, [continent, selectedCountry, sort]);
 
   useEffect(() => { fetchConferences(); }, [fetchConferences]);
+
+  // Reset country when continent changes
   useEffect(() => { setSelectedCountry(null); }, [continent]);
+
+  // Fetch vendors when geo context changes
+  useEffect(() => {
+    if (continent === 'all') { setVendors([]); return; }
+    setVendorsLoading(true);
+    const params = new URLSearchParams();
+    params.set('continent', continent);
+    params.set('limit', '12');
+    fetch(`/api/vendors?${params.toString()}`)
+      .then(r => r.json())
+      .then(data => { setVendors(data.vendors || []); setVendorsLoading(false); })
+      .catch(() => { setVendors([]); setVendorsLoading(false); });
+  }, [continent]);
 
   const categories = [...new Set(conferences.map(c => c.category).filter(Boolean))].sort();
   const filtered = conferences
@@ -143,6 +177,7 @@ export default function ConferencesPage() {
   const past = filtered.filter(c => c.status === 'past');
   const totalExhibitors = conferences.reduce((sum, c) => sum + c.exhibitor_count, 0);
 
+  // Countries for selected continent
   const countriesInView = continent === 'all'
     ? countryStats.filter(c => !['Various', 'Virtual'].includes(c.name))
     : countryStats.filter(c => {
@@ -203,18 +238,14 @@ export default function ConferencesPage() {
           const cnt = continentCount(tab.key);
           const active = continent === tab.key;
           return (
-            <button
-              key={tab.key}
-              onClick={() => setContinent(tab.key)}
-              style={{
-                fontSize: '10px', fontFamily: FONT, padding: '6px 14px', borderRadius: '6px',
-                border: active ? `1px solid ${COLORS.cyan}50` : '1px solid transparent',
-                cursor: 'pointer', whiteSpace: 'nowrap',
-                background: active ? COLORS.cyan + '18' : 'transparent',
-                color: active ? COLORS.cyan : COLORS.muted,
-                letterSpacing: '0.06em', transition: 'all 0.2s',
-              }}
-            >
+            <button key={tab.key} onClick={() => setContinent(tab.key)} style={{
+              fontSize: '10px', fontFamily: FONT, padding: '6px 14px', borderRadius: '6px',
+              border: active ? `1px solid ${COLORS.cyan}50` : '1px solid transparent',
+              cursor: 'pointer', whiteSpace: 'nowrap',
+              background: active ? COLORS.cyan + '18' : 'transparent',
+              color: active ? COLORS.cyan : COLORS.muted,
+              letterSpacing: '0.06em', transition: 'all 0.2s',
+            }}>
               {tab.icon} {tab.label} {cnt > 0 && <span style={{ opacity: 0.6 }}>({cnt})</span>}
             </button>
           );
@@ -231,16 +262,12 @@ export default function ConferencesPage() {
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {countriesInView.slice(0, 20).map(c => (
-                <button
-                  key={c.name}
-                  onClick={() => setSelectedCountry(c.name)}
-                  style={{
-                    fontSize: '11px', fontFamily: FONT, padding: '8px 16px', borderRadius: '8px',
-                    border: `1px solid ${COLORS.border}`, background: COLORS.surface,
-                    color: COLORS.text, cursor: 'pointer', transition: 'all 0.2s',
-                    display: 'flex', alignItems: 'center', gap: '8px',
-                  }}
-                >
+                <button key={c.name} onClick={() => setSelectedCountry(c.name)} style={{
+                  fontSize: '11px', fontFamily: FONT, padding: '8px 16px', borderRadius: '8px',
+                  border: `1px solid ${COLORS.border}`, background: COLORS.surface,
+                  color: COLORS.text, cursor: 'pointer', transition: 'all 0.2s',
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                }}>
                   <span style={{ fontWeight: 600 }}>{c.name}</span>
                   <span style={{ fontSize: '9px', color: COLORS.cyan }}>{c.count}</span>
                 </button>
@@ -252,14 +279,41 @@ export default function ConferencesPage() {
         {/* Country breadcrumb */}
         {selectedCountry && (
           <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              onClick={() => setSelectedCountry(null)}
-              style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.cyan, background: 'transparent', border: 'none', cursor: 'pointer', letterSpacing: '0.06em', padding: 0 }}
-            >
-              \u2190 BACK
+            <button onClick={() => setSelectedCountry(null)} style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.cyan, background: 'transparent', border: 'none', cursor: 'pointer', letterSpacing: '0.06em', padding: 0 }}>
+              {'\u2190'} BACK
             </button>
             <span style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.dim }}>|</span>
             <span style={{ fontSize: '12px', fontFamily: FONT, fontWeight: 600, color: COLORS.text }}>{selectedCountry}</span>
+          </div>
+        )}
+
+        {/* Top Vendors in Region */}
+        {continent !== 'all' && vendors.length > 0 && (
+          <div style={{ marginBottom: '28px' }}>
+            <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.gold, letterSpacing: '0.1em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {'\u{1F3E2}'} TOP VENDORS IN {CONTINENT_TABS.find(t => t.key === continent)?.label || continent.toUpperCase()}
+              <a href={`/vendors`} style={{ fontSize: '9px', color: COLORS.cyan, textDecoration: 'none', marginLeft: '8px' }}>{'\u2192'} VIEW ALL</a>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
+              {vendors.slice(0, 8).map(v => (
+                <div key={v.id} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: '10px', padding: '14px 16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: COLORS.text, flex: 1 }}>
+                      {v.company_url ? <a href={v.company_url.startsWith('http') ? v.company_url : `https://${v.company_url}`} target="_blank" rel="noopener noreferrer" style={{ color: COLORS.text, textDecoration: 'none' }}>{v.company_name}</a> : v.company_name}
+                    </div>
+                    {v.iker_score > 0 && <div style={{ fontSize: '14px', fontWeight: 700, color: COLORS.gold, fontFamily: FONT }}>{v.iker_score}</div>}
+                  </div>
+                  <div style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.cyan, letterSpacing: '0.06em', marginBottom: '4px' }}>{v.sector || v.primary_category}</div>
+                  {v.description && <div style={{ fontSize: '11px', color: COLORS.muted, lineHeight: '1.4', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const }}>{v.description}</div>}
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    {v.hq_city && <span style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.dim }}>{v.hq_city}{v.hq_country ? `, ${v.hq_country}` : ''}</span>}
+                    {v.funding_stage && <span style={{ fontSize: '8px', fontFamily: FONT, color: COLORS.amber, background: COLORS.amber + '15', padding: '1px 5px', borderRadius: '3px' }}>{v.funding_stage}</span>}
+                    {v.employee_count_range && <span style={{ fontSize: '8px', fontFamily: FONT, color: COLORS.dim }}>{v.employee_count_range}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {vendorsLoading && <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.dim, marginTop: '8px' }}>loading vendors...</div>}
           </div>
         )}
 
@@ -268,6 +322,7 @@ export default function ConferencesPage() {
           <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.muted, letterSpacing: '0.08em' }}>{filtered.length} EVENTS</div>
           {totalExhibitors > 0 && <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.cyan, letterSpacing: '0.08em' }}>{totalExhibitors} EXHIBITOR INTEL</div>}
           {live.length > 0 && <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.green, letterSpacing: '0.08em' }}>{live.length} LIVE NOW</div>}
+          {vendors.length > 0 && <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.gold, letterSpacing: '0.08em' }}>{vendors.length} VENDORS</div>}
           {loading && <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.dim }}>updating...</div>}
         </div>
 
@@ -300,7 +355,7 @@ export default function ConferencesPage() {
         {/* Upcoming */}
         {upcoming.length > 0 && (
           <div style={{ marginBottom: '32px' }}>
-            <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.cyan, letterSpacing: '0.12em', marginBottom: '12px' }}>UPCOMING \u2014 {upcoming.length} EVENTS</div>
+            <div style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.cyan, letterSpacing: '0.12em', marginBottom: '12px' }}>UPCOMING {'\u2014'} {upcoming.length} EVENTS</div>
             {upcoming.map(c => <ConferenceCard key={c.id} conference={c} />)}
           </div>
         )}
@@ -378,11 +433,12 @@ function ConferenceCard({ conference: c, isPast = false }: { conference: Confere
 
       {hasExhibitors && (
         <div style={{ marginTop: '12px', borderTop: `1px solid ${COLORS.border}`, paddingTop: '12px' }}>
-          <button
-            onClick={() => setExpanded(!expanded)}
-            style={{ fontSize: '10px', fontFamily: FONT, letterSpacing: '0.08em', color: COLORS.cyan, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <span style={{ transform: expanded ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform 0.2s', display: 'inline-block' }}>\u25B6</span>
+          <button onClick={() => setExpanded(!expanded)} style={{
+            fontSize: '10px', fontFamily: FONT, letterSpacing: '0.08em', color: COLORS.cyan,
+            background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
+            display: 'flex', alignItems: 'center', gap: '6px'
+          }}>
+            <span style={{ transform: expanded ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform 0.2s', display: 'inline-block' }}>{'\u25B6'}</span>
             {expanded ? 'HIDE' : 'SHOW'} EXHIBITOR INTEL ({c.exhibitor_count})
           </button>
           {expanded && (
@@ -401,10 +457,7 @@ function ExhibitorRow({ exhibitor: ex }: { exhibitor: Exhibitor }) {
   const icon = SIGNAL_ICONS[ex.signal_type] || '\u{1F4CB}';
 
   return (
-    <div style={{
-      background: COLORS.card, border: `1px solid ${COLORS.border}`,
-      borderRadius: '8px', padding: '12px 16px',
-    }}>
+    <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: '8px', padding: '12px 16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
