@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { COLORS } from '@/lib/tokens';
 
-/* \u2500\u2500\u2500 Types \u2500\u2500\u2500 */
+/* --- Types --- */
 type Signal = {
   id: string;
   title: string;
@@ -20,46 +20,42 @@ type Signal = {
 
 type Tab = 'all' | 'high' | 'trending';
 
-/* \u2500\u2500\u2500 Industry filter list \u2500\u2500\u2500 */
 const INDUSTRIES = [
   'ALL', 'manufacturing', 'logistics', 'cybersecurity', 'defense',
   'ai-ml', 'energy', 'border-tech', 'healthcare',
   'government', 'education', 'general',
 ];
 
-/* \u2500\u2500\u2500 Extract source display name \u2500\u2500\u2500 */
 function sourceName(source: string | null): string {
   if (!source) return '';
   try {
     const hostname = new URL(source).hostname.replace('www.', '');
     const map: Record<string, string> = {
-      'news.google.com': 'GOOGLE NEWS',
-      'sam.gov': 'SAM.GOV',
-      'grants.gov': 'GRANTS.GOV',
-      'news.ycombinator.com': 'HACKER NEWS',
-      'arxiv.org': 'ARXIV',
-      'patentsview.org': 'PATENTS',
-      'federalregister.gov': 'FED REGISTER',
+      'news.google.com': 'Google News',
+      'sam.gov': 'SAM.gov',
+      'grants.gov': 'Grants.gov',
+      'news.ycombinator.com': 'Hacker News',
+      'arxiv.org': 'arXiv',
+      'patentsview.org': 'Patents',
+      'federalregister.gov': 'Fed Register',
     };
-    return map[hostname] || hostname.split('.')[0].toUpperCase();
+    return map[hostname] || hostname.split('.')[0].charAt(0).toUpperCase() + hostname.split('.')[0].slice(1);
   } catch {
-    return source.toUpperCase().slice(0, 20);
+    return source.slice(0, 20);
   }
 }
 
-/* \u2500\u2500\u2500 Score display (handles both 0-1 and 0-100 scales) \u2500\u2500\u2500 */
 function displayScore(score: number | null): number {
   if (!score) return 0;
   return Math.round(score <= 1 ? score * 100 : score);
 }
 
-function scoreClass(display: number): { color: string; borderColor: string } {
-  if (display >= 75) return { color: COLORS.accent, borderColor: `${COLORS.accent}66` };
-  if (display >= 50) return { color: '#eab308', borderColor: 'rgba(234,179,8,0.3)' };
-  return { color: COLORS.dim, borderColor: COLORS.border };
+function scoreColor(display: number): string {
+  if (display >= 75) return COLORS.accent;
+  if (display >= 50) return COLORS.amber;
+  return COLORS.dim;
 }
 
-/* \u2500\u2500\u2500 Relative time helper \u2500\u2500\u2500 */
 function relTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
@@ -69,6 +65,20 @@ function relTime(dateStr: string): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
+}
+
+function signalTypeColor(type: string | null): string {
+  if (!type) return COLORS.muted;
+  const map: Record<string, string> = {
+    contract_award: COLORS.green,
+    funding_round: '#a855f7',
+    patent_filing: COLORS.cyan,
+    partnership: COLORS.amber,
+    product_launch: COLORS.orange,
+    regulation: COLORS.red,
+    market_expansion: COLORS.emerald,
+  };
+  return map[type] || COLORS.muted;
 }
 
 export default function IntelPage() {
@@ -86,243 +96,183 @@ export default function IntelPage() {
   const fetchSignals = useCallback(async (reset = false) => {
     const currentPage = reset ? 0 : page;
     setError(null);
-
     try {
-      const params = new URLSearchParams({
-        tab,
-        industry,
-        page: String(currentPage),
-        page_size: String(PAGE_SIZE),
-      });
-
+      const params = new URLSearchParams({ tab, industry, page: String(currentPage), page_size: String(PAGE_SIZE) });
       const res = await fetch(`/api/intel/feed?${params}`);
       if (!res.ok) throw new Error(`API returned ${res.status}`);
-
       const json = await res.json();
-
       if (reset || currentPage === 0) {
         setSignals(json.signals ?? []);
       } else {
         setSignals((prev) => [...prev, ...(json.signals ?? [])]);
       }
-
       setTotalCount(json.totalCount ?? 0);
       setHighCount(json.highCount ?? 0);
       setFilteredCount(json.filteredCount ?? 0);
     } catch (err) {
       console.error('[intel] fetch error:', err);
-      setError('Failed to load signals. Tap to retry.');
+      setError('Failed to load signals');
     } finally {
       setLoading(false);
     }
   }, [tab, industry, page]);
 
-  // Re-fetch when tab/industry changes
   useEffect(() => {
     setPage(0);
     setLoading(true);
     fetchSignals(true);
   }, [tab, industry]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fetch more when page changes (but not on reset)
   useEffect(() => {
     if (page > 0) fetchSignals();
   }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="min-h-screen" style={{ background: COLORS.bg }}>
-      {/* Top Bar */}
-      <header
-        className="fixed top-0 left-0 right-0 h-[52px] flex items-center justify-between px-6 z-[100]"
-        style={{
-          background: `${COLORS.bg}bf`,
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          borderBottom: `1px solid ${COLORS.accent}0f`,
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <Link href="/" className="font-mono text-[15px] font-semibold tracking-[0.12em] text-white">
-            NXT<span style={{ color: COLORS.accent }}>{'//'}
-            </span>LINK
-          </Link>
-          <span className="font-mono text-[11px] font-medium tracking-[0.12em] uppercase" style={{ color: COLORS.dim }}>
-            Intel Feed
-          </span>
-        </div>
-        <div className="flex items-center gap-3.5">
-          <span className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.1em]" style={{ color: '#22c55e' }}>
-            <span className="w-[5px] h-[5px] rounded-full bg-green-500 animate-pulse" />
-            LIVE
-          </span>
-          <span className="font-mono text-[10px]" style={{ color: COLORS.dim }}>
-            {totalCount.toLocaleString()} signals
-          </span>
-        </div>
-      </header>
+    <div className="min-h-screen">
+      <div className="max-w-[900px] mx-auto px-6 py-10 pb-20">
 
-      {/* Main Content */}
-      <main className="pt-[72px] pb-[100px] px-6 max-w-[900px] mx-auto">
-        <div className="mb-8">
-          <h1 className="font-mono text-[28px] font-bold tracking-wide text-white mb-1.5">
-            LIVE <span style={{ color: COLORS.accent }}>SIGNALS</span>
-          </h1>
-          <p className="text-sm leading-relaxed" style={{ color: COLORS.muted }}>
-            Real-time intelligence feed — ranked by importance score, filtered by industry.
+        {/* Header */}
+        <div className="mb-8 slide-up">
+          <h1 className="text-xl font-semibold text-nxt-text mb-1">Signal Feed</h1>
+          <p className="text-sm text-nxt-muted">
+            Real-time intelligence -- {totalCount.toLocaleString()} signals tracked, ranked by importance.
           </p>
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-0 mb-6" style={{ borderBottom: `1px solid ${COLORS.accent}0f` }}>
+        <div className="flex items-center gap-1 mb-5 p-1 bg-nxt-surface rounded-lg border border-nxt-border w-fit">
           {([
-            { key: 'all' as Tab, label: 'ALL SIGNALS', count: totalCount },
-            { key: 'high' as Tab, label: 'HIGH PRIORITY', count: highCount },
-            { key: 'trending' as Tab, label: 'TRENDING', count: null },
+            { key: 'all' as Tab, label: 'All Signals', count: totalCount },
+            { key: 'high' as Tab, label: 'High Priority', count: highCount },
+            { key: 'trending' as Tab, label: 'Trending', count: null },
           ]).map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className="font-mono text-xs font-medium tracking-wide px-5 py-3 transition-colors"
-              style={{
-                color: tab === t.key ? COLORS.accent : COLORS.dim,
-                background: 'none',
-                border: 'none',
-                borderBottom: `2px solid ${tab === t.key ? COLORS.accent : 'transparent'}`,
-                cursor: 'pointer',
-              }}
+              className={`text-[13px] font-medium px-4 py-1.5 rounded-md transition-all duration-150 ${
+                tab === t.key
+                  ? 'bg-nxt-elevated text-nxt-text'
+                  : 'text-nxt-muted hover:text-nxt-secondary'
+              }`}
             >
               {t.label}
               {t.count !== null && (
-                <span className="ml-1.5 text-[10px]" style={{ color: COLORS.border }}>
-                  {t.count.toLocaleString()}
-                </span>
+                <span className="ml-1.5 text-[11px] text-nxt-dim font-mono">{t.count.toLocaleString()}</span>
               )}
             </button>
           ))}
         </div>
 
         {/* Industry Filter Pills */}
-        <div className="flex items-center gap-2 mb-5 flex-wrap">
+        <div className="flex items-center gap-1.5 mb-6 flex-wrap">
           {INDUSTRIES.map((ind) => (
             <button
               key={ind}
               onClick={() => setIndustry(ind)}
-              className="font-mono text-[10px] font-medium tracking-wide px-3.5 py-1.5 rounded-[20px] transition-colors cursor-pointer"
-              style={{
-                border: `1px solid ${industry === ind ? `${COLORS.accent}4d` : `${COLORS.accent}1a`}`,
-                background: industry === ind ? `${COLORS.accent}14` : 'transparent',
-                color: industry === ind ? COLORS.accent : COLORS.muted,
-              }}
+              className={`text-xs font-medium px-3 py-1.5 rounded-full transition-all duration-150 border ${
+                industry === ind
+                  ? 'bg-nxt-accent/10 text-nxt-accent-light border-nxt-accent/20'
+                  : 'text-nxt-muted border-nxt-border hover:text-nxt-secondary hover:border-nxt-border'
+              }`}
             >
-              {ind === 'ALL' ? 'ALL' : ind.replace(/-/g, ' ').toUpperCase()}
+              {ind === 'ALL' ? 'All' : ind.replace(/-/g, ' ')}
             </button>
           ))}
         </div>
 
         {/* Signal Feed */}
-        <div className="flex flex-col gap-2">
+        <div className="space-y-2">
           {loading && signals.length === 0 ? (
-            <div className="flex items-center justify-center py-20">
-              <span className="font-mono text-xs tracking-wider animate-pulse" style={{ color: COLORS.dim }}>
-                LOADING SIGNALS...
-              </span>
+            <div className="py-20">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="bg-nxt-surface border border-nxt-border rounded-nxt-md p-5 mb-3">
+                  <div className="h-3 w-48 rounded bg-nxt-card shimmer mb-3" />
+                  <div className="h-4 w-full rounded bg-nxt-card shimmer mb-2" />
+                  <div className="h-4 w-2/3 rounded bg-nxt-card shimmer" />
+                </div>
+              ))}
             </div>
           ) : error ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <span className="font-mono text-xs tracking-wider" style={{ color: COLORS.red }}>
-                {error}
-              </span>
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <div className="text-sm text-nxt-red">{error}</div>
               <button
                 onClick={() => { setLoading(true); fetchSignals(true); }}
-                className="font-mono text-[11px] tracking-[0.1em] px-6 py-2 rounded-[10px] cursor-pointer transition-colors"
-                style={{
-                  border: `1px solid ${COLORS.accent}26`,
-                  background: 'transparent',
-                  color: COLORS.accent,
-                }}
+                className="text-sm font-medium px-5 py-2 rounded-lg border border-nxt-accent/20 text-nxt-accent-light hover:bg-nxt-accent/5 transition-colors"
               >
-                RETRY
+                Retry
               </button>
             </div>
           ) : signals.length === 0 ? (
             <div className="flex items-center justify-center py-20">
-              <span className="font-mono text-xs tracking-wider" style={{ color: COLORS.dim }}>
-                NO SIGNALS FOUND
-              </span>
+              <span className="text-sm text-nxt-dim">No signals found for this filter</span>
             </div>
           ) : (
             signals.map((signal) => {
               const score = displayScore(signal.importance_score);
-              const sc = scoreClass(score);
+              const sColor = scoreColor(score);
               return (
                 <a
                   key={signal.id}
                   href={signal.url ?? '#'}
                   target={signal.url ? '_blank' : undefined}
                   rel="noopener noreferrer"
-                  className="flex gap-4 p-4 rounded-[14px] transition-all duration-200 group"
-                  style={{
-                    background: 'rgba(8, 12, 20, 0.4)',
-                    border: `1px solid ${COLORS.accent}0a`,
-                  }}
+                  className="block bg-nxt-surface border border-nxt-border rounded-nxt-md p-5 card-hover"
                 >
-                  {/* Score ring */}
-                  <div className="flex flex-col items-center gap-1 min-w-[44px]">
-                    <div
-                      className="w-11 h-11 rounded-full flex items-center justify-center font-mono text-sm font-semibold"
-                      style={{ color: sc.color, border: `2px solid ${sc.borderColor}` }}
-                    >
-                      {score}
+                  <div className="flex gap-4">
+                    {/* Score */}
+                    <div className="flex flex-col items-center gap-1 shrink-0">
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center font-mono text-sm font-semibold"
+                        style={{ color: sColor, background: sColor + '12', border: `1px solid ${sColor}20` }}
+                      >
+                        {score}
+                      </div>
                     </div>
-                    <span className="font-mono text-[8px] tracking-wide" style={{ color: COLORS.border }}>SCORE</span>
-                  </div>
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                      {signal.industry && (
-                        <span
-                          className="font-mono text-[9px] font-semibold tracking-[0.1em] uppercase px-2 py-0.5 rounded"
-                          style={{ color: COLORS.accent, background: `${COLORS.accent}0f` }}
-                        >
-                          {signal.industry.replace(/-/g, ' ')}
-                        </span>
-                      )}
-                      {signal.signal_type && (
-                        <span
-                          className="font-mono text-[9px] px-2 py-0.5 rounded"
-                          style={{ color: COLORS.dim, background: 'rgba(255,255,255,0.03)' }}
-                        >
-                          {signal.signal_type.replace(/_/g, ' ')}
-                        </span>
-                      )}
-                      {signal.source && (
-                        <span className="font-mono text-[9px] tracking-wide" style={{ color: COLORS.border }}>
-                          {sourceName(signal.source)}
-                        </span>
-                      )}
-                      <span className="font-mono text-[9px] ml-auto" style={{ color: COLORS.dim }}>
-                        {relTime(signal.discovered_at)}
-                      </span>
-                    </div>
-                    <div className="text-[15px] font-medium leading-[1.45] mb-1.5 text-zinc-300 group-hover:text-white transition-colors">
-                      {signal.title}
-                    </div>
-                    {signal.evidence && (
-                      <div className="text-[13px] leading-relaxed line-clamp-2" style={{ color: COLORS.muted }}>
-                        {signal.evidence}
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      {/* Meta */}
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        {signal.industry && (
+                          <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-nxt-card border border-nxt-border-subtle text-nxt-secondary">
+                            {signal.industry.replace(/-/g, ' ')}
+                          </span>
+                        )}
+                        {signal.signal_type && (
+                          <span
+                            className="text-[11px] px-2 py-0.5 rounded-md"
+                            style={{ background: signalTypeColor(signal.signal_type) + '12', color: signalTypeColor(signal.signal_type) }}
+                          >
+                            {signal.signal_type.replace(/_/g, ' ')}
+                          </span>
+                        )}
+                        {signal.source && (
+                          <span className="text-[11px] text-nxt-dim">{sourceName(signal.source)}</span>
+                        )}
+                        <span className="text-[11px] font-mono text-nxt-dim ml-auto">{relTime(signal.discovered_at)}</span>
                       </div>
-                    )}
-                    {signal.company && (
-                      <div className="mt-2">
-                        <span
-                          className="font-mono text-[9px] px-2 py-0.5 rounded"
-                          style={{ color: COLORS.accent, background: `${COLORS.accent}08` }}
-                        >
-                          {signal.company}
-                        </span>
+
+                      {/* Title */}
+                      <div className="text-[15px] font-medium leading-snug text-nxt-text mb-1.5">
+                        {signal.title}
                       </div>
-                    )}
+
+                      {/* Evidence */}
+                      {signal.evidence && (
+                        <div className="text-[13px] leading-relaxed text-nxt-muted line-clamp-2">
+                          {signal.evidence}
+                        </div>
+                      )}
+
+                      {/* Company */}
+                      {signal.company && (
+                        <div className="mt-2">
+                          <span className="text-[11px] px-2 py-0.5 rounded-md bg-nxt-accent/8 text-nxt-accent-light">
+                            {signal.company}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </a>
               );
@@ -332,22 +282,17 @@ export default function IntelPage() {
 
         {/* Load More */}
         {signals.length > 0 && signals.length < filteredCount && (
-          <div className="flex justify-center mt-6">
+          <div className="flex justify-center mt-8">
             <button
               onClick={() => setPage((p) => p + 1)}
               disabled={loading}
-              className="font-mono text-[11px] font-medium tracking-[0.1em] px-8 py-2.5 rounded-[10px] cursor-pointer transition-colors"
-              style={{
-                border: `1px solid ${COLORS.accent}26`,
-                background: 'transparent',
-                color: loading ? COLORS.dim : COLORS.accent,
-              }}
+              className="text-sm font-medium px-6 py-2.5 rounded-lg border border-nxt-border text-nxt-secondary hover:text-nxt-text hover:border-nxt-accent/20 transition-all"
             >
-              {loading ? 'LOADING...' : 'LOAD MORE SIGNALS'}
+              {loading ? 'Loading...' : 'Load more signals'}
             </button>
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
-                          }
+                    }
