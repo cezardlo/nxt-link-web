@@ -1,53 +1,62 @@
-// ─── NXT LINK Design Tokens v2 ──────────────────────────────────────────────
-// Design spec: 3 moods — calm intelligence, living world, premium catalog
-// Dark gray (not true black), single electric accent, generous spacing
+// ─── NXT LINK Design Tokens v3 ──────────────────────────────────────────────
+// Clean modern SaaS aesthetic — inspired by Linear, Vercel, Raycast
+// Dark theme with soft contrast, generous spacing, minimal decoration
 
 export const COLORS = {
-  // Surfaces — brighter dark theme
-  bg:      '#12151a',
-  surface: '#1a1e25',
-  card:    '#21262e',
-  border:  '#2e3440',
-  text:    '#f5f5f5',
-  muted:   '#8b919a',
-  dim:     '#505868',
+    // Surfaces — softer dark palette
+    bg:      '#0a0a0f',
+    surface: '#111118',
+    card:    '#18181f',
+    elevated:'#1e1e27',
+    border:  '#27272f',
+    borderSubtle: '#1f1f28',
 
-  // Primary accent — electric cyan
-  accent:  '#00d4ff',
-  cyan:    '#00d4ff',
+    // Text hierarchy
+    text:    '#ededef',
+    secondary: '#a0a0ab',
+    muted:   '#6b6b76',
+    dim:     '#45454d',
 
-  // Secondary accents (use sparingly)
-  orange:  '#ff6600',  // brand / CTAs
-  gold:    '#ffd700',  // scores / premium
-  green:   '#00ff88',  // positive / live
-  red:     '#ff3b30',  // risk / urgent
-  amber:   '#ffb800',  // warning
-  emerald: '#10b981',  // online / active
+    // Primary accent — soft blue
+    accent:  '#6366f1',
+    accentLight: '#818cf8',
+    accentSubtle: 'rgba(99, 102, 241, 0.12)',
+
+    // Semantic
+    green:   '#22c55e',
+    red:     '#ef4444',
+    amber:   '#f59e0b',
+    orange:  '#f97316',
+    cyan:    '#06b6d4',
+    emerald: '#10b981',
+    gold:    '#eab308',
+    purple:  '#a855f7',
 } as const;
 
-export const FONT = "'IBM Plex Mono', 'JetBrains Mono', 'Courier New', monospace";
+export const FONT = "'Space Grotesk', system-ui, -apple-system, sans-serif";
+export const FONT_MONO = "'IBM Plex Mono', 'JetBrains Mono', 'Courier New', monospace";
 
 export const RADIUS = {
-  sm: '12px',
-  md: '16px',
-  lg: '20px',
-  xl: '24px',
-  full: '9999px',
+    sm: '8px',
+    md: '12px',
+    lg: '16px',
+    xl: '20px',
+    full: '9999px',
 } as const;
 
 export const BREAKPOINTS = {
-  sm: 640,
-  md: 768,
-  lg: 1024,
-  xl: 1280,
+    sm: 640,
+    md: 768,
+    lg: 1024,
+    xl: 1280,
 } as const;
 
 export const Z = {
-  nav:     100,
-  header:  90,
-  overlay: 80,
-  modal:   200,
-  toast:   300,
+    nav:     100,
+    header:  90,
+    overlay: 80,
+    modal:   200,
+    toast:   300,
 } as const;
 
-export const SPACE = [0, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64] as const;
+export const SPACE = [0, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80] as const;
