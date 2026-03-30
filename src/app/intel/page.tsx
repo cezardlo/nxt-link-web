@@ -20,9 +20,7 @@ type Signal = {
 type Tab = 'all' | 'high' | 'trending';
 
 const INDUSTRIES = [
-  'ALL', 'manufacturing', 'logistics', 'cybersecurity', 'defense',
-  'ai-ml', 'energy', 'border-tech', 'healthcare',
-  'government', 'education', 'general',
+  'ALL', 'logistics', 'manufacturing', 'border-tech', 'general',
 ];
 
 function sourceName(source: string | null): string {

@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { href: '/briefing', label: 'Briefing' },
   { href: '/intel', label: 'Signals' },
   { href: '/vendors', label: 'Vendors' },
+  { href: '/products', label: 'Products' },
   { href: '/industry', label: 'Industries' },
   { href: '/conferences', label: 'Events' },
   { href: '/map', label: 'Map' },

@@ -11,25 +11,19 @@ import { relativeTime } from '@/lib/utils';
 // ── Suggestions per industry ─────────────────────────────────────────────────
 
 const SUGGESTIONS: Record<string, string[]> = {
-  'defense':       ['Find defense contractors', 'Track government contracts', 'Monitor Fort Bliss activity', 'Find SBIR opportunities'],
-  'ai-ml':         ['Automate operations with AI', 'Find ML vendors', 'Track AI funding rounds', 'Compare AI platforms'],
-  'cybersecurity': ['Improve security posture', 'Find compliance solutions', 'Track cyber threats', 'Compare SIEM vendors'],
-  'manufacturing': ['Reduce production cost', 'Automate factory floor', 'Find robotics vendors', 'Track industry 4.0 trends'],
-  'logistics':     ['Speed up warehouse', 'Optimize fleet routes', 'Track shipments', 'Find last-mile solutions'],
-  'energy':        ['Find solar vendors', 'Track grid modernization', 'Compare EV charging', 'Monitor energy policy'],
-  'healthcare':    ['Find medical device vendors', 'Track FDA approvals', 'Compare telehealth platforms', 'Monitor biotech funding'],
-  'border-tech':   ['Speed up customs', 'Track CBP technology', 'Find cross-border solutions', 'Monitor trade policy'],
+  'manufacturing': ['Reduce production downtime', 'Automate factory floor', 'Improve inventory tracking', 'Find robotics vendors'],
+  'logistics':     ['Optimize fleet routes', 'Speed up warehouse', 'Reduce freight costs', 'Solve driver shortage'],
 };
 
 const ALL_SUGGESTIONS = [
-  'Find the best tech vendor for my problem',
-  'Reduce operational costs with AI',
-  'Track government contracts near me',
-  'Find cybersecurity solutions',
-  'Automate my warehouse',
-  'Compare solar energy vendors',
-  'Monitor defense industry trends',
-  'Speed up cross-border logistics',
+  'Reduce fleet downtime',
+  'Optimize my routes and cut fuel costs',
+  'Speed up my warehouse operations',
+  'Improve shipment tracking and visibility',
+  'Speed up cross-border customs',
+  'Solve driver shortage and retention',
+  'Reduce freight and carrier costs',
+  'Automate manual logistics processes',
 ];
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -263,7 +257,7 @@ function SolveInner() {
                 onChange={e => setInput(e.target.value)}
                 onFocus={() => setInputFocused(true)}
                 onBlur={() => setInputFocused(false)}
-                placeholder="e.g. reduce labor cost, find defense vendors..."
+                placeholder="e.g. trucks breaking down, warehouse is slow, freight costs too high..."
                 autoFocus
                 className="w-full text-[15px] font-light outline-none min-h-[56px] px-5 py-4 pr-14"
                 style={{
