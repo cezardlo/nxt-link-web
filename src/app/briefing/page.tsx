@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { COLORS, FONT_MONO } from '@/lib/tokens';
+import { COLORS } from '@/lib/tokens';
 
 /* --- types --- */
 interface RelatedSignal {
