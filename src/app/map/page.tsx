@@ -303,42 +303,69 @@ export default function MapPage() {
         <div ref={mapContainer} className="absolute inset-0" />
 
         {/* Selected region panel */}
-        {selectedRegion && (
-          <div className="absolute bottom-6 left-6 z-10 w-[300px] bg-nxt-surface/95 backdrop-blur-lg border border-nxt-border rounded-nxt-lg p-5">
-            <div className="flex justify-between items-start mb-3">
-              <h3 className="text-base font-semibold">{selectedRegion.name}</h3>
-              <button
-                onClick={() => setSelectedRegion(null)}
-                className="text-nxt-dim hover:text-nxt-text text-lg leading-none"
-              >
-                &times;
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              <div className="bg-nxt-card rounded-lg p-3">
-                <div className="text-[10px] font-mono text-nxt-dim tracking-wider uppercase mb-1">Signals</div>
-                <div className="text-xl font-bold font-mono text-nxt-accent">{selectedRegion.signal_count}</div>
-              </div>
-              <div className="bg-nxt-card rounded-lg p-3">
-                <div className="text-[10px] font-mono text-nxt-dim tracking-wider uppercase mb-1">Risk</div>
-                <div
-                  className="text-sm font-bold font-mono uppercase"
-                  style={{ color: RISK_COLORS[selectedRegion.risk_level] || RISK_COLORS.low }}
+        {selectedRegion && (() => {
+          const riskColor = RISK_COLORS[selectedRegion.risk_level] || RISK_COLORS.low;
+          const riskExplain: Record<string, string> = {
+            critical: 'Extreme signal volume with regulatory or disruption signals — immediate attention needed.',
+            high: 'Heavy signal activity with contracts, regulations, or market shifts flagged across industries.',
+            elevated: 'Above-average signal activity — notable funding rounds or partnerships detected.',
+            moderate: 'Steady signal flow — normal market activity, no major disruptions.',
+            low: 'Minimal signal activity — stable region with few market changes.',
+          };
+          return (
+            <div className="absolute bottom-6 left-6 z-10 w-[320px] bg-nxt-surface/95 backdrop-blur-lg border border-nxt-border rounded-nxt-lg p-5">
+              <div className="flex justify-between items-start mb-3">
+                <h3 className="text-base font-semibold">{selectedRegion.name}</h3>
+                <button
+                  onClick={() => setSelectedRegion(null)}
+                  className="text-nxt-dim hover:text-nxt-text text-lg leading-none"
                 >
-                  {selectedRegion.risk_level}
+                  &times;
+                </button>
+              </div>
+
+              {/* Signal count */}
+              <div className="bg-nxt-card rounded-lg p-3 mb-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-[10px] font-mono text-nxt-dim tracking-wider uppercase">Active Signals</div>
+                  <div className="text-lg font-bold font-mono text-nxt-accent">{selectedRegion.signal_count}</div>
                 </div>
               </div>
-            </div>
-            {selectedRegion.total_investment_usd > 0 && (
-              <div className="text-xs font-mono text-nxt-amber mb-2">
-                {formatUSD(selectedRegion.total_investment_usd)} tracked investment
+
+              {/* Supply chain risk */}
+              <div className="bg-nxt-card rounded-lg p-3 mb-3" style={{ borderLeftWidth: 3, borderLeftColor: riskColor }}>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="text-[10px] font-mono text-nxt-dim tracking-wider uppercase">Supply Chain Risk</div>
+                  <span
+                    className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded uppercase ml-auto"
+                    style={{ background: riskColor + '20', color: riskColor }}
+                  >
+                    {selectedRegion.risk_level}
+                  </span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-nxt-muted">
+                  {riskExplain[selectedRegion.risk_level] || riskExplain.low}
+                </p>
               </div>
-            )}
-            <div className="text-xs text-nxt-muted">
-              {selectedRegion.industries.join(' · ')}
+
+              {/* Investment */}
+              {selectedRegion.total_investment_usd > 0 && (
+                <div className="text-xs font-mono text-nxt-amber mb-2">
+                  {formatUSD(selectedRegion.total_investment_usd)} tracked investment
+                </div>
+              )}
+
+              {/* Industries */}
+              <div className="flex flex-wrap gap-1.5">
+                {selectedRegion.industries.map((ind) => (
+                  <span key={ind} className="text-[10px] px-2 py-0.5 rounded-md bg-nxt-elevated border border-nxt-border-subtle text-nxt-secondary">
+                    {ind}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Region bar */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex items-center gap-4 px-4 py-2.5 bg-nxt-surface/90 backdrop-blur-lg border border-nxt-border rounded-full">

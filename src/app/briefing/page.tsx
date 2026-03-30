@@ -407,7 +407,8 @@ export default function BriefingPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
           {/* REGIONS */}
           <div className="bg-nxt-surface border border-nxt-border rounded-nxt-md p-5">
-            <h3 className="text-sm font-semibold text-nxt-text mb-4">Regional Risk</h3>
+            <h3 className="text-sm font-semibold text-nxt-text mb-1">Supply Chain Risk by Region</h3>
+            <p className="text-[11px] text-nxt-dim mb-4">Based on signal volume, disruptions, and regulatory activity</p>
             <div className="space-y-2">
               {mergedRegions.slice(0, 6).map((r) => {
                 const riskColor = riskColorMap[r.risk_level] || COLORS.green;
