@@ -86,11 +86,14 @@ function VendorCard({ v }: { v: Vendor }) {
         </div>
 
         {/* Score */}
-        <div className="w-11 h-11 rounded-lg flex flex-col items-center justify-center shrink-0" style={{
-          background: scoreColor(v.iker_score) + '12',
-          border: `1px solid ${scoreColor(v.iker_score)}20`,
-        }}>
-          <span className="text-base font-bold font-mono" style={{ color: scoreColor(v.iker_score) }}>{v.iker_score ?? '-'}</span>
+        <div className="flex flex-col items-center shrink-0" title="Vendor quality score (0-100) based on credibility, funding, market presence, and technology fit">
+          <div className="w-11 h-11 rounded-lg flex flex-col items-center justify-center" style={{
+            background: scoreColor(v.iker_score) + '12',
+            border: `1px solid ${scoreColor(v.iker_score)}20`,
+          }}>
+            <span className="text-base font-bold font-mono" style={{ color: scoreColor(v.iker_score) }}>{v.iker_score ?? '-'}</span>
+          </div>
+          <span className="text-[8px] text-nxt-dim mt-1 uppercase tracking-wider">Score</span>
         </div>
       </div>
 
@@ -172,8 +175,10 @@ export default function VendorsPage() {
 
         {/* Header */}
         <div className="mb-8 slide-up">
-          <h1 className="text-xl font-semibold text-nxt-text mb-1">Vendor Intelligence</h1>
-          <p className="text-sm text-nxt-muted">{total} vendors tracked across {sectors.length} sectors</p>
+          <h1 className="text-xl font-semibold text-nxt-text mb-1">Vendor Directory</h1>
+          <p className="text-sm text-nxt-muted">
+            {total} logistics and supply chain vendors — scored on credibility, funding, and market fit.
+          </p>
         </div>
 
         {/* Stats */}
@@ -181,7 +186,7 @@ export default function VendorsPage() {
           {[
             { label: 'Total Vendors', value: total },
             { label: 'Sectors', value: sectors.length },
-            { label: 'Avg Score', value: avgScore },
+            { label: 'Avg Quality', value: avgScore },
             { label: 'Countries', value: countriesSet.size },
           ].map((s, i) => (
             <div key={i} className="bg-nxt-surface border border-nxt-border rounded-nxt-md p-4 text-center">

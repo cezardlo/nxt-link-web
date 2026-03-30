@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: '/industry', label: 'Industries' },
   { href: '/conferences', label: 'Events' },
   { href: '/map', label: 'Map' },
+  { href: '/solve', label: 'Solve' },
 ];
 
 function isActive(pathname: string, href: string): boolean {

@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { COLORS } from '@/lib/tokens';
 import { INDUSTRIES } from '@/lib/data/nav';
 import { AppShell } from '@/components/AppShell';
-import { relativeTime } from '@/lib/utils';
 
 // ── Suggestions per industry ─────────────────────────────────────────────────
 
@@ -66,31 +65,6 @@ type DecideResponse = {
   error?: string;
 };
 
-// ── Signal helpers ───────────────────────────────────────────────────────────
-
-type IntelSignal = {
-  signal_type: string;
-  title: string;
-  discovered_at: string;
-};
-
-const SIGNAL_COLORS: Record<string, string> = {
-  contracts: COLORS.green, product: COLORS.green,
-  patents: COLORS.cyan, technology: COLORS.cyan,
-  funding: COLORS.gold,
-  policy: COLORS.orange, direction: COLORS.orange,
-  research: COLORS.dim, discovery: COLORS.dim,
-  who: COLORS.dim, connection: COLORS.dim,
-};
-
-function signalColor(type: string): string {
-  const key = type.toLowerCase();
-  for (const [k, v] of Object.entries(SIGNAL_COLORS)) {
-    if (key.includes(k)) return v;
-  }
-  return COLORS.dim;
-}
-
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SolvePage() {
@@ -114,18 +88,7 @@ function SolveInner() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DecideResponse | null>(null);
   const [error, setError] = useState('');
-  const [signals, setSignals] = useState<IntelSignal[]>([]);
   const [inputFocused, setInputFocused] = useState(false);
-
-  useEffect(() => {
-    fetch('/api/intel-signals?limit=5')
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) setSignals(data);
-        else if (data?.signals && data.signals.length > 0) setSignals(data.signals);
-      })
-      .catch((err) => console.warn('[SolvePage] intel-signals fetch failed:', err));
-  }, []);
 
   async function solve(text: string) {
     const q = text.trim();
@@ -181,36 +144,17 @@ function SolveInner() {
   const selectedIndustry = INDUSTRIES.find(i => i.id === industry);
 
   return (
-    <div
-      className="min-h-[100dvh] flex flex-col pb-24"
-      style={{ background: COLORS.bg, color: COLORS.text, fontFamily: "'IBM Plex Mono', 'JetBrains Mono', monospace" }}
-    >
-      {/* ── Header ─────────────────────────────────────────────────── */}
-      <header className="px-6 pt-8 pb-2 flex items-center justify-between">
-        <div className="text-[11px] tracking-[0.25em] font-bold" style={{ color: COLORS.orange }}>
-          NXT<span style={{ color: COLORS.dim }}>{'//'}</span>LINK
-        </div>
-        <span
-          className="text-[9px] tracking-[0.2em] font-bold px-2.5 py-1 rounded-full"
-          style={{ background: `${COLORS.orange}12`, color: COLORS.orange, border: `1px solid ${COLORS.orange}25` }}
-        >
-          SOLVE
-        </span>
-      </header>
-
+    <div className="min-h-screen pb-20">
       {/* ── INPUT STATE (no result, not loading) ───────────────────── */}
       {!result && !loading && (
-        <div className="flex-1 flex flex-col px-6 animate-fade-up">
+        <div className="max-w-[700px] mx-auto px-6 pt-10 animate-fade-up">
           {/* Hero */}
-          <div className="mt-8 sm:mt-16 mb-8 text-center">
-            <h1
-              className="text-[26px] sm:text-[36px] font-bold leading-[1.15] tracking-tight"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-            >
-              What problem are you<br />trying to solve?
+          <div className="mb-8 text-center">
+            <h1 className="text-2xl sm:text-3xl font-grotesk font-bold text-nxt-text leading-tight mb-2">
+              What logistics problem are you trying to solve?
             </h1>
-            <p className="text-[11px] mt-3" style={{ color: `${COLORS.text}40` }}>
-              Describe it in plain English. We match you to the best solution.
+            <p className="text-sm text-nxt-muted">
+              Describe it in plain English — we match you to the right technology and vendors.
             </p>
           </div>
 
@@ -247,7 +191,7 @@ function SolveInner() {
               style={{
                 borderRadius: '18px',
                 boxShadow: inputFocused
-                  ? `0 0 0 1px ${COLORS.orange}60, 0 0 24px ${COLORS.orange}15`
+                  ? `0 0 0 1px ${COLORS.accent}60, 0 0 24px ${COLORS.accent}15`
                   : `0 0 0 1px ${COLORS.border}`,
               }}
             >
@@ -273,7 +217,7 @@ function SolveInner() {
                 disabled={input.trim().length < 3}
                 className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center transition-all disabled:opacity-20"
                 style={{
-                  background: COLORS.orange,
+                  background: COLORS.accent,
                   borderRadius: '12px',
                   border: 'none',
                   cursor: input.trim().length >= 3 ? 'pointer' : 'default',
@@ -290,7 +234,7 @@ function SolveInner() {
               <div className="text-center">
                 <span className="text-[9px] tracking-[0.1em]" style={{ color: `${COLORS.text}30` }}>
                   Filtering by{' '}
-                  <span style={{ color: selectedIndustry?.color ?? COLORS.orange, fontWeight: 700 }}>
+                  <span style={{ color: selectedIndustry?.color ?? COLORS.accent, fontWeight: 700 }}>
                     {selectedIndustry?.label ?? industry}
                   </span>
                 </span>
@@ -319,63 +263,6 @@ function SolveInner() {
             ))}
           </div>
 
-          {/* ── Live Intelligence Signals ───────────────────────────── */}
-          {signals.length > 0 && (
-            <div className="mt-10 max-w-[560px] mx-auto w-full">
-              <div className="h-px mb-4" style={{ background: `${COLORS.dim}25` }} />
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: COLORS.cyan }} />
-                <span
-                  className="text-[8px] tracking-[0.2em] font-bold uppercase"
-                  style={{ color: `${COLORS.cyan}80` }}
-                >
-                  Live Intelligence
-                </span>
-                <div className="flex-1 h-px" style={{ background: `${COLORS.cyan}12` }} />
-              </div>
-              <div className="flex flex-col gap-1">
-                {signals.map((sig, i) => (
-                  <div key={i} className="flex items-center gap-2 py-1">
-                    <span className="text-[9px] shrink-0 w-6 text-right" style={{ color: `${COLORS.text}25` }}>
-                      {relativeTime(sig.discovered_at)}
-                    </span>
-                    <span
-                      className="w-1.5 h-1.5 rounded-full shrink-0"
-                      style={{ background: signalColor(sig.signal_type) }}
-                    />
-                    <span className="text-[10px] truncate" style={{ color: `${COLORS.text}35` }}>
-                      {sig.title.length > 60 ? sig.title.slice(0, 60) + '...' : sig.title}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ── Quick Nav ──────────────────────────────────────────── */}
-          <div className="mt-8 mb-6 flex gap-2 flex-wrap justify-center">
-            <Link
-              href="/map"
-              className="flex items-center gap-2 px-3 py-2 rounded-[10px] transition-all hover:translate-y-[-1px]"
-              style={{ background: `${COLORS.cyan}08`, border: `1px solid ${COLORS.cyan}18`, textDecoration: 'none', color: `${COLORS.cyan}90`, fontSize: 9 }}
-            >
-              ◎ World Map
-            </Link>
-            <Link
-              href="/industry"
-              className="flex items-center gap-2 px-3 py-2 rounded-[10px] transition-all hover:translate-y-[-1px]"
-              style={{ background: `${COLORS.green}08`, border: `1px solid ${COLORS.green}18`, textDecoration: 'none', color: `${COLORS.green}90`, fontSize: 9 }}
-            >
-              ◫ Tech Store
-            </Link>
-            <Link
-              href="/command"
-              className="flex items-center gap-2 px-3 py-2 rounded-[10px] transition-all hover:translate-y-[-1px]"
-              style={{ background: `${COLORS.gold}08`, border: `1px solid ${COLORS.gold}18`, textDecoration: 'none', color: `${COLORS.gold}90`, fontSize: 9 }}
-            >
-              ⬡ Command
-            </Link>
-          </div>
         </div>
       )}
 
@@ -384,7 +271,7 @@ function SolveInner() {
         <div className="flex-1 flex flex-col items-center justify-center gap-3 pb-20">
           <div
             className="w-8 h-8 border-2 rounded-full animate-spin"
-            style={{ borderColor: `${COLORS.orange}30`, borderTopColor: COLORS.orange }}
+            style={{ borderColor: `${COLORS.accent}30`, borderTopColor: COLORS.accent }}
           />
           <span className="text-[10px] tracking-[0.15em]" style={{ color: `${COLORS.text}30` }}>
             MATCHING YOUR PROBLEM TO SOLUTIONS...
@@ -427,7 +314,7 @@ function SolveInner() {
 
           {/* ── SECTION 1: Recommended Solution ────────────────────── */}
           {result.recommended_solution && (
-            <Section title="RECOMMENDED SOLUTION" accent={COLORS.orange}>
+            <Section title="RECOMMENDED SOLUTION" accent={COLORS.accent}>
               <div className="flex flex-col gap-3">
                 <div>
                   <div className="text-[14px] font-bold" style={{ color: COLORS.text }}>
@@ -573,67 +460,30 @@ function SolveInner() {
           )}
 
           {/* ── SECTION 5: Next Step ───────────────────────────────── */}
-          <Section title="NEXT STEP" accent={COLORS.orange}>
+          <Section title="NEXT STEP" accent={COLORS.accent}>
             <div className="text-[12px] leading-relaxed" style={{ color: `${COLORS.text}70` }}>
               {result.next_step}
             </div>
           </Section>
 
-          {/* ── Go Deeper ──────────────────────────────────────────── */}
-          <Section title="GO DEEPER" accent={COLORS.gold}>
-            <div className="flex flex-col gap-3">
-              {industry && (
-                <Link
-                  href={`/industry/${industry}`}
-                  className="flex items-center justify-between"
-                  style={{ textDecoration: 'none', color: COLORS.text }}
-                >
-                  <div>
-                    <div className="text-[12px] font-bold">
-                      Explore {selectedIndustry?.label ?? 'Industry'} Intelligence
-                    </div>
-                    <div className="text-[9px] mt-1" style={{ color: `${COLORS.text}40` }}>
-                      Technologies, players, signals, global map
-                    </div>
-                  </div>
-                  <span className="text-[14px]" style={{ color: COLORS.gold }}>→</span>
-                </Link>
-              )}
-              {industry && <div className="h-px" style={{ background: COLORS.border }} />}
-              <Link
-                href="/industry"
-                className="flex items-center justify-between"
-                style={{ textDecoration: 'none', color: COLORS.text }}
-              >
-                <div>
-                  <div className="text-[12px] font-bold">Browse the Tech Store</div>
-                  <div className="text-[9px] mt-1" style={{ color: `${COLORS.text}40` }}>
-                    Ready-to-deploy solutions and vendor marketplace
-                  </div>
-                </div>
-                <span className="text-[14px]" style={{ color: COLORS.green }}>→</span>
-              </Link>
-            </div>
-          </Section>
-
-          {/* ── CTA ────────────────────────────────────────────────── */}
-          <div className="mt-6 mb-10 text-center">
-            <div className="text-[9px] tracking-[0.15em] mb-3" style={{ color: `${COLORS.text}25` }}>
-              NEED HELP IMPLEMENTING THIS?
-            </div>
-            <a
-              href="mailto:cessar@nxtlinktech.com?subject=NXT LINK Recommendation"
-              className="inline-block text-[12px] font-bold tracking-[0.08em] px-8 py-3"
-              style={{
-                background: `${COLORS.orange}15`,
-                border: `1px solid ${COLORS.orange}40`,
-                borderRadius: '12px',
-                color: COLORS.orange,
-                textDecoration: 'none',
-              }}
+          {/* ── Explore more ────────────────────────────────────────── */}
+          <div className="flex gap-3 mt-6 mb-10">
+            <Link
+              href="/vendors"
+              className="flex-1 p-4 rounded-nxt-md bg-nxt-surface border border-nxt-border card-hover text-center"
+              style={{ textDecoration: 'none' }}
             >
-              TALK TO A BROKER
-            </a>
+              <div className="text-sm font-semibold text-nxt-text mb-1">Browse Vendors</div>
+              <div className="text-[11px] text-nxt-muted">Find and compare logistics vendors</div>
+            </Link>
+            <Link
+              href="/products"
+              className="flex-1 p-4 rounded-nxt-md bg-nxt-surface border border-nxt-border card-hover text-center"
+              style={{ textDecoration: 'none' }}
+            >
+              <div className="text-sm font-semibold text-nxt-text mb-1">Browse Products</div>
+              <div className="text-[11px] text-nxt-muted">Compare supply chain technology</div>
+            </Link>
           </div>
         </div>
       )}
