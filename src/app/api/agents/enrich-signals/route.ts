@@ -11,7 +11,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const BATCH_SIZE = 10;
-const MAX_SIGNALS = 50; // Per invocation
+const MAX_SIGNALS = 50;
 
 const ENRICHMENT_PROMPT = `You are a supply chain intelligence analyst.
 
@@ -56,11 +56,11 @@ async function callGemini(title: string, evidence: string): Promise<{
         responseMimeType: 'application/json',
       },
     }),
-    signal: AbortSignal.timeout(15_000),
   });
 
   if (!response.ok) {
-    throw new Error(`Gemini ${response.status}`);
+    const body = await response.text();
+    throw new Error(`Gemini ${response.status}: ${body.slice(0, 200)}`);
   }
 
   const payload = await response.json() as {
@@ -96,7 +96,6 @@ export async function GET(request: Request) {
 
   const db = createClient(supabaseUrl, supabaseKey);
 
-  // Fetch untagged signals (problem IS NULL)
   const { data: signals, error: fetchError } = await db
     .from('intel_signals')
     .select('id, title, evidence, industry')
@@ -116,9 +115,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: 'Dry run', untagged: signals.length, sample: signals.slice(0, 3) });
   }
 
-  // Process in batches
   let tagged = 0;
   let failed = 0;
+  const errors: string[] = [];
   const results: Array<{ id: string; tags: Record<string, string> }> = [];
 
   for (let i = 0; i < signals.length; i += BATCH_SIZE) {
@@ -140,7 +139,7 @@ export async function GET(request: Request) {
             .eq('id', signal.id);
 
           if (updateError) {
-            console.warn(`[enrich] Update failed for ${signal.id}:`, updateError.message);
+            errors.push(`update:${signal.id}: ${updateError.message}`);
             failed++;
             return null;
           }
@@ -148,17 +147,9 @@ export async function GET(request: Request) {
           tagged++;
           return { id: signal.id, tags };
         } catch (err) {
-          await db
-            .from('intel_signals')
-            .update({
-              problem: 'unknown',
-              technology: 'unknown',
-              region: 'unknown',
-            })
-            .eq('id', signal.id);
-
+          const msg = err instanceof Error ? err.message : String(err);
+          errors.push(`gemini:${signal.id}: ${msg.slice(0, 200)}`);
           failed++;
-          console.warn(`[enrich] Gemini failed for ${signal.id}:`, err instanceof Error ? err.message : err);
           return null;
         }
       }),
@@ -184,6 +175,7 @@ export async function GET(request: Request) {
     tagged,
     failed,
     remaining: remaining ?? 0,
+    errors: errors.slice(0, 10),
     sample: results.slice(0, 5),
   });
 }
