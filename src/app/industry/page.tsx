@@ -1,32 +1,28 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import Link from 'next/link';
+import { COLORS } from '@/lib/tokens';
 
-const FONT = "'IBM Plex Mono', 'JetBrains Mono', 'Courier New', monospace";
-const COLORS = {
-  bg: '#12151a', surface: '#1a1e25', card: '#21262e', border: '#2e3440',
-  accent: '#00d4ff', gold: '#ffd700', green: '#00ff88', amber: '#ffb800',
-  red: '#ff3b30', orange: '#ff6600', emerald: '#10b981', purple: '#a855f7',
-  dim: '#6b7280', muted: '#9ca3af', text: '#e5e7eb', white: '#f9fafb',
-};
-
-const SIGNAL_TYPE_COLORS: Record<string, string> = {
-  market_shift: COLORS.amber, technology: COLORS.accent, funding: COLORS.green,
-  funding_round: COLORS.emerald, merger_acquisition: COLORS.purple,
-  facility_expansion: COLORS.gold, partnership: '#60a5fa', regulation: COLORS.orange,
-  connection: '#8b5cf6', discovery: '#ec4899',
-};
-
-const SIGNAL_TYPE_ICONS: Record<string, string> = {
-  market_shift: '~', technology: '>', funding: '$', funding_round: '$',
-  merger_acquisition: '+', facility_expansion: '^', partnership: '=',
-  regulation: '!', connection: '*', discovery: '?',
+const SIGNAL_TYPE_COLORS: Record<string, { label: string; color: string }> = {
+  market_shift:       { label: 'Market Shift',     color: COLORS.amber },
+  technology:         { label: 'Technology',        color: COLORS.cyan },
+  funding:            { label: 'Funding',           color: COLORS.green },
+  funding_round:      { label: 'Funding Round',     color: COLORS.emerald },
+  merger_acquisition: { label: 'M&A',              color: COLORS.purple },
+  facility_expansion: { label: 'Expansion',         color: COLORS.gold },
+  partnership:        { label: 'Partnership',        color: '#60a5fa' },
+  regulation:         { label: 'Regulation',         color: COLORS.orange },
+  contract_award:     { label: 'Contract',           color: COLORS.green },
+  patent_filing:      { label: 'Patent',             color: COLORS.cyan },
+  product_launch:     { label: 'Launch',             color: COLORS.orange },
+  market_expansion:   { label: 'Expansion',          color: COLORS.emerald },
+  discovery:          { label: 'Discovery',          color: '#ec4899' },
+  connection:         { label: 'Connection',         color: '#8b5cf6' },
 };
 
 const INDUSTRIES = [
-  { id: 'manufacturing', label: 'Manufacturing', icon: '^', color: COLORS.green },
-  { id: 'logistics', label: 'Logistics', icon: '>', color: COLORS.gold },
+  { id: 'manufacturing', label: 'Manufacturing' },
+  { id: 'logistics', label: 'Logistics' },
 ];
 
 interface TypeBreakdown { type: string; count: number; total_usd: number; avg_importance: number; }
@@ -61,11 +57,9 @@ function timeAgo(d: string): string {
   const hours = Math.floor(diff / 3600000);
   if (hours < 1) return 'just now';
   if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }
 
-// -- Volume Sparkline ----------------------------------------
 function VolumeChart({ data }: { data: DailyVolume[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -92,7 +86,6 @@ function VolumeChart({ data }: { data: DailyVolume[] }) {
       const x = i * (barW + 2);
       const y = h - barH - 16;
 
-      // Gradient bar
       const grad = ctx.createLinearGradient(x, y, x, h - 16);
       grad.addColorStop(0, COLORS.accent + 'cc');
       grad.addColorStop(1, COLORS.accent + '33');
@@ -101,10 +94,9 @@ function VolumeChart({ data }: { data: DailyVolume[] }) {
       ctx.roundRect(x, y, barW, barH, 2);
       ctx.fill();
 
-      // Date label (every 3rd)
       if (i % 3 === 0) {
         ctx.fillStyle = COLORS.dim;
-        ctx.font = `9px ${FONT}`;
+        ctx.font = "9px 'IBM Plex Mono', monospace";
         ctx.textAlign = 'center';
         ctx.fillText(d.date.slice(5), x + barW / 2, h - 2);
       }
@@ -114,55 +106,51 @@ function VolumeChart({ data }: { data: DailyVolume[] }) {
   return <canvas ref={canvasRef} style={{ width: '100%', height: 120 }} />;
 }
 
-// -- Type Distribution Ring ----------------------------------------
-function TypeRing({ breakdown }: { breakdown: TypeBreakdown[] }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+function TypeBar({ breakdown }: { breakdown: TypeBreakdown[] }) {
+  const total = breakdown.reduce((s, b) => s + b.count, 0);
+  if (total === 0) return null;
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || breakdown.length === 0) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+  return (
+    <div>
+      {/* Stacked bar */}
+      <div className="flex h-3 rounded-full overflow-hidden mb-4">
+        {breakdown.map((b) => {
+          const info = SIGNAL_TYPE_COLORS[b.type] || { label: b.type, color: COLORS.dim };
+          const pct = (b.count / total) * 100;
+          if (pct < 1) return null;
+          return (
+            <div
+              key={b.type}
+              style={{ width: `${pct}%`, background: info.color }}
+              title={`${info.label}: ${b.count}`}
+            />
+          );
+        })}
+      </div>
 
-    const dpr = window.devicePixelRatio || 1;
-    const size = canvas.clientWidth;
-    canvas.width = size * dpr;
-    canvas.height = size * dpr;
-    ctx.scale(dpr, dpr);
-
-    const cx = size / 2, cy = size / 2;
-    const outer = size / 2 - 8, inner = outer - 20;
-    const total = breakdown.reduce((s, b) => s + b.count, 0);
-
-    ctx.clearRect(0, 0, size, size);
-
-    let angle = -Math.PI / 2;
-    breakdown.forEach(b => {
-      const sweep = (b.count / total) * Math.PI * 2;
-      ctx.beginPath();
-      ctx.arc(cx, cy, outer, angle, angle + sweep);
-      ctx.arc(cx, cy, inner, angle + sweep, angle, true);
-      ctx.closePath();
-      ctx.fillStyle = SIGNAL_TYPE_COLORS[b.type] || COLORS.dim;
-      ctx.fill();
-      angle += sweep;
-    });
-
-    // Center text
-    ctx.fillStyle = COLORS.white;
-    ctx.font = `bold 18px ${FONT}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(String(total), cx, cy - 6);
-    ctx.fillStyle = COLORS.dim;
-    ctx.font = `10px ${FONT}`;
-    ctx.fillText('SIGNALS', cx, cy + 10);
-  }, [breakdown]);
-
-  return <canvas ref={canvasRef} style={{ width: 120, height: 120 }} />;
+      {/* Legend */}
+      <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+        {breakdown.slice(0, 8).map((b) => {
+          const info = SIGNAL_TYPE_COLORS[b.type] || { label: b.type, color: COLORS.dim };
+          const pct = ((b.count / total) * 100).toFixed(0);
+          return (
+            <div key={b.type} className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: info.color }} />
+                <span className="text-xs text-nxt-secondary truncate">{info.label}</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs font-mono font-semibold text-nxt-text">{b.count}</span>
+                <span className="text-[10px] font-mono text-nxt-dim">{pct}%</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
-// -- Main Page ----------------------------------------
 export default function IndustryPage() {
   const [activeIndustry, setActiveIndustry] = useState('manufacturing');
   const [data, setData] = useState<IndustryData | null>(null);
@@ -183,292 +171,243 @@ export default function IndustryPage() {
   useEffect(() => { fetchData(activeIndustry); }, [activeIndustry, fetchData]);
 
   return (
-    <div style={{ background: COLORS.bg, minHeight: '100vh', fontFamily: FONT, color: COLORS.text }}>
-      {/* -- Top Bar -- */}
-      <div style={{
-        position: 'sticky', top: 0, zIndex: 50,
-        background: `linear-gradient(180deg, ${COLORS.bg} 0%, ${COLORS.bg}ee 100%)`,
-        borderBottom: `1px solid ${COLORS.border}`,
-        padding: '12px 24px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        backdropFilter: 'blur(12px)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <Link href="/briefing" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>
-            * BRIEFING
-          </Link>
-          <Link href="/map" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>
-            $ MAP
-          </Link>
-          <Link href="/conferences" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>
-            $ EVENTS
-          </Link>
-          <span style={{ color: COLORS.purple, fontSize: 11, letterSpacing: 1, borderBottom: `1px solid ${COLORS.purple}` }}>
-            + INDUSTRY
-          </span>
-          <Link href="/vendors" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>
-             VENDORS
-          </Link>
+    <div className="min-h-screen">
+      <div className="max-w-[1000px] mx-auto px-6 py-10 pb-20">
+
+        {/* Header */}
+        <div className="mb-6 slide-up">
+          <h1 className="text-xl font-semibold text-nxt-text mb-1">Industry Intelligence</h1>
+          <p className="text-sm text-nxt-muted">
+            Signal activity, investment tracking, and market trends by industry.
+          </p>
         </div>
-        <span style={{ color: COLORS.dim, fontSize: 10, letterSpacing: 2 }}>NXT // LINK</span>
-      </div>
 
-      {/* -- Industry Tabs -- */}
-      <div style={{ padding: '20px 24px 0', display: 'flex', gap: 12 }}>
-        {INDUSTRIES.map(ind => (
-          <button
-            key={ind.id}
-            onClick={() => setActiveIndustry(ind.id)}
-            style={{
-              background: activeIndustry === ind.id ? ind.color + '18' : 'transparent',
-              border: `1px solid ${activeIndustry === ind.id ? ind.color + '60' : COLORS.border}`,
-              color: activeIndustry === ind.id ? ind.color : COLORS.dim,
-              padding: '10px 20px',
-              borderRadius: 6,
-              fontFamily: FONT,
-              fontSize: 12,
-              letterSpacing: 1,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-          >
-            {ind.icon} {ind.label.toUpperCase()}
-          </button>
-        ))}
-      </div>
-
-      {loading ? (
-        <div style={{ padding: 60, textAlign: 'center', color: COLORS.dim }}>
-          <div style={{ fontSize: 24, marginBottom: 8 }}>*</div>
-          Loading {activeIndustry} intelligence...
+        {/* Industry tabs */}
+        <div className="flex items-center gap-2 mb-8">
+          {INDUSTRIES.map((ind) => (
+            <button
+              key={ind.id}
+              onClick={() => setActiveIndustry(ind.id)}
+              className={`text-sm font-medium px-5 py-2 rounded-lg border transition-all duration-150 ${
+                activeIndustry === ind.id
+                  ? 'bg-nxt-accent/10 text-nxt-accent-light border-nxt-accent/20'
+                  : 'text-nxt-muted border-nxt-border hover:text-nxt-secondary hover:border-nxt-muted'
+              }`}
+            >
+              {ind.label}
+            </button>
+          ))}
         </div>
-      ) : data ? (
-        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-          {/* -- Hero Stats -- */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-            {[
-              { label: 'SIGNALS (90d)', value: String(data.total_signals), color: COLORS.accent },
-              { label: 'INVESTMENT TRACKED', value: data.total_investment > 0 ? formatUSD(data.total_investment) : '-', color: COLORS.green },
-              { label: 'ACTIVE CLUSTERS', value: String(data.clusters.length), color: COLORS.gold },
-              { label: 'COMPANIES', value: String(data.top_companies.length), color: COLORS.purple },
-            ].map((stat, i) => (
-              <div key={i} style={{
-                background: COLORS.surface, border: `1px solid ${COLORS.border}`,
-                borderRadius: 8, padding: 16,
-              }}>
-                <div style={{ fontSize: 10, color: COLORS.dim, letterSpacing: 1, marginBottom: 8 }}>
-                  {stat.label}
-                </div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: stat.color }}>
-                  {stat.value}
-                </div>
+        {loading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="bg-nxt-surface border border-nxt-border rounded-nxt-md p-6">
+                <div className="h-3 w-32 rounded bg-nxt-card shimmer mb-4" />
+                <div className="h-8 w-48 rounded bg-nxt-card shimmer" />
               </div>
             ))}
           </div>
+        ) : data ? (
+          <div className="space-y-5">
 
-          {/* -- Middle Grid: Volume + Type Breakdown -- */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 16 }}>
-            {/* Volume Chart */}
-            <div style={{
-              background: COLORS.surface, border: `1px solid ${COLORS.border}`,
-              borderRadius: 8, padding: 16,
-            }}>
-              <div style={{ fontSize: 10, color: COLORS.dim, letterSpacing: 1, marginBottom: 12 }}>
-                SIGNAL VOLUME - LAST 14 DAYS
-              </div>
-              <VolumeChart data={data.daily_volume} />
-            </div>
-
-            {/* Type Breakdown */}
-            <div style={{
-              background: COLORS.surface, border: `1px solid ${COLORS.border}`,
-              borderRadius: 8, padding: 16, display: 'flex', gap: 16, alignItems: 'center',
-            }}>
-              <TypeRing breakdown={data.type_breakdown} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 10, color: COLORS.dim, letterSpacing: 1, marginBottom: 10 }}>
-                  SIGNAL TYPES
-                </div>
-                {data.type_breakdown.slice(0, 6).map(tb => (
-                  <div key={tb.type} style={{
-                    display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, fontSize: 11,
-                  }}>
-                    <span style={{ color: SIGNAL_TYPE_COLORS[tb.type] || COLORS.dim }}>
-                      {SIGNAL_TYPE_ICONS[tb.type] || ''}
-                    </span>
-                    <span style={{ color: COLORS.muted, flex: 1 }}>
-                      {tb.type.replace(/_/g, ' ')}
-                    </span>
-                    <span style={{ color: COLORS.white, fontWeight: 600 }}>{tb.count}</span>
+            {/* Key metrics */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 slide-up">
+              {[
+                { label: 'Total Signals', sublabel: 'Last 90 days', value: data.total_signals.toLocaleString(), color: COLORS.accent },
+                { label: 'Investment Tracked', sublabel: 'Across all signals', value: data.total_investment > 0 ? formatUSD(data.total_investment) : '—', color: COLORS.green },
+                { label: 'Market Themes', sublabel: 'Active clusters', value: String(data.clusters.length), color: COLORS.amber },
+                { label: 'Companies', sublabel: 'Most mentioned', value: String(data.top_companies.length), color: COLORS.purple },
+              ].map((stat, i) => (
+                <div
+                  key={i}
+                  className="bg-nxt-surface border border-nxt-border rounded-nxt-md p-4"
+                >
+                  <div className="text-[11px] text-nxt-muted mb-1">{stat.label}</div>
+                  <div className="text-2xl font-bold font-mono" style={{ color: stat.color }}>
+                    {stat.value}
                   </div>
-                ))}
+                  <div className="text-[10px] text-nxt-dim mt-1">{stat.sublabel}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Volume + Signal types */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* Volume chart */}
+              <div className="bg-nxt-surface border border-nxt-border rounded-nxt-md p-5">
+                <h3 className="text-sm font-semibold text-nxt-text mb-1">Signal Volume</h3>
+                <p className="text-[11px] text-nxt-dim mb-4">Daily signal count over the last 14 days</p>
+                <VolumeChart data={data.daily_volume} />
+              </div>
+
+              {/* Signal type breakdown */}
+              <div className="bg-nxt-surface border border-nxt-border rounded-nxt-md p-5">
+                <h3 className="text-sm font-semibold text-nxt-text mb-1">Signal Types</h3>
+                <p className="text-[11px] text-nxt-dim mb-4">What kinds of signals are being detected</p>
+                <TypeBar breakdown={data.type_breakdown} />
               </div>
             </div>
-          </div>
 
-          {/* -- Clusters Grid -- */}
-          <div>
-            <div style={{ fontSize: 10, color: COLORS.dim, letterSpacing: 1, marginBottom: 12 }}>
-              ACTIVE CLUSTERS
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-              {data.clusters.map((c) => {
-                const trendPoints = data.tendency.filter(t => t.cluster_id === c.id);
-                const latestTrend = trendPoints.length > 0 ? trendPoints[trendPoints.length - 1] : null;
-                const trendColor = latestTrend?.trend_label === 'spiking' ? COLORS.red
-                  : latestTrend?.trend_label === 'growing' ? COLORS.green
-                  : latestTrend?.trend_label === 'declining' ? COLORS.amber
-                  : COLORS.dim;
+            {/* Market themes (clusters) */}
+            <div className="bg-nxt-surface border border-nxt-border rounded-nxt-md p-5">
+              <h3 className="text-sm font-semibold text-nxt-text mb-1">Market Themes</h3>
+              <p className="text-[11px] text-nxt-dim mb-4">
+                Groups of related signals forming trends — shows what topics are gaining or losing momentum
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {data.clusters.map((c) => {
+                  const trendPoints = data.tendency.filter(t => t.cluster_id === c.id);
+                  const latest = trendPoints.length > 0 ? trendPoints[trendPoints.length - 1] : null;
+                  const trendLabel = latest?.trend_label || 'stable';
+                  const trendColor = trendLabel === 'spiking' ? COLORS.red
+                    : trendLabel === 'growing' ? COLORS.green
+                    : trendLabel === 'declining' ? COLORS.amber
+                    : COLORS.dim;
+                  const typeInfo = SIGNAL_TYPE_COLORS[c.signal_type] || { label: c.signal_type, color: COLORS.dim };
 
-                return (
-                  <div key={c.id} style={{
-                    background: COLORS.card, border: `1px solid ${COLORS.border}`,
-                    borderRadius: 8, padding: 14,
-                    borderLeft: `3px solid ${SIGNAL_TYPE_COLORS[c.signal_type] || COLORS.dim}`,
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.white }}>{c.label}</div>
-                      <div style={{
-                        fontSize: 9, padding: '2px 6px', borderRadius: 3,
-                        background: trendColor + '20', color: trendColor,
-                        textTransform: 'uppercase', letterSpacing: 1,
-                      }}>
-                        {latestTrend?.trend_label || 'stable'}
+                  return (
+                    <div
+                      key={c.id}
+                      className="bg-nxt-card border border-nxt-border-subtle rounded-lg p-4"
+                      style={{ borderLeftWidth: 3, borderLeftColor: typeInfo.color }}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <div className="text-[13px] font-medium text-nxt-text leading-snug">{c.label}</div>
+                        <span
+                          className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded uppercase shrink-0"
+                          style={{ background: trendColor + '18', color: trendColor }}
+                        >
+                          {trendLabel}
+                        </span>
                       </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 16, fontSize: 11 }}>
-                      <div>
-                        <span style={{ color: COLORS.dim }}>Signals: </span>
-                        <span style={{ color: COLORS.accent }}>{c.signal_count}</span>
-                      </div>
-                      {c.total_usd > 0 && (
+
+                      <div className="flex items-center gap-4 text-xs">
                         <div>
-                          <span style={{ color: COLORS.dim }}>Capital: </span>
-                          <span style={{ color: COLORS.green }}>{formatUSD(c.total_usd)}</span>
+                          <span className="text-nxt-dim">Signals </span>
+                          <span className="font-mono font-semibold text-nxt-accent">{c.signal_count}</span>
+                        </div>
+                        {c.total_usd > 0 && (
+                          <div>
+                            <span className="text-nxt-dim">Value </span>
+                            <span className="font-mono font-semibold text-nxt-green">{formatUSD(c.total_usd)}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Mini trend sparkline */}
+                      {trendPoints.length > 3 && (
+                        <div className="flex items-end gap-[2px] mt-3 h-5">
+                          {trendPoints.slice(-10).map((tp, j) => {
+                            const absMax = Math.max(...trendPoints.slice(-10).map(t => Math.abs(t.trend_score)), 0.1);
+                            const h = Math.max(2, (Math.abs(tp.trend_score) / absMax) * 18);
+                            return (
+                              <div
+                                key={j}
+                                className="rounded-sm"
+                                style={{
+                                  width: 4, height: h,
+                                  background: tp.trend_score >= 0 ? COLORS.green + '70' : COLORS.red + '70',
+                                }}
+                              />
+                            );
+                          })}
                         </div>
                       )}
-                      <div>
-                        <span style={{ color: COLORS.dim }}>Rank: </span>
-                        <span style={{ color: COLORS.gold }}>{c.composite_rank?.toFixed(0) || '-'}</span>
-                      </div>
                     </div>
-                    {/* Mini sparkline for trend */}
-                    {trendPoints.length > 3 && (
-                      <div style={{ marginTop: 8, height: 24, display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-                        {trendPoints.slice(-10).map((tp, j) => {
-                          const absMax = Math.max(...trendPoints.slice(-10).map(t => Math.abs(t.trend_score)), 0.1);
-                          const h = Math.max(2, (Math.abs(tp.trend_score) / absMax) * 20);
-                          return (
-                            <div key={j} style={{
-                              width: 4, height: h, borderRadius: 1,
-                              background: tp.trend_score >= 0 ? COLORS.green + '80' : COLORS.red + '80',
-                            }} />
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* -- Bottom: Companies + Recent Signals -- */}
-          <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 16 }}>
-            {/* Top Companies */}
-            <div style={{
-              background: COLORS.surface, border: `1px solid ${COLORS.border}`,
-              borderRadius: 8, padding: 16,
-            }}>
-              <div style={{ fontSize: 10, color: COLORS.dim, letterSpacing: 1, marginBottom: 12 }}>
-                TOP COMPANIES
+                  );
+                })}
               </div>
-              {data.top_companies.length === 0 ? (
-                <div style={{ fontSize: 11, color: COLORS.dim, padding: '20px 0', textAlign: 'center' }}>
-                  No company data yet
+            </div>
+
+            {/* Companies + Recent signals */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              {/* Top companies */}
+              <div className="bg-nxt-surface border border-nxt-border rounded-nxt-md p-5">
+                <h3 className="text-sm font-semibold text-nxt-text mb-1">Top Companies</h3>
+                <p className="text-[11px] text-nxt-dim mb-4">Most frequently mentioned in signals</p>
+                {data.top_companies.length === 0 ? (
+                  <div className="text-xs text-nxt-dim text-center py-8">No company data yet</div>
+                ) : (
+                  <div className="space-y-1">
+                    {data.top_companies.map((co, i) => (
+                      <div key={co.name} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-nxt-card transition-colors">
+                        <div
+                          className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-mono font-bold"
+                          style={{ background: COLORS.accent + '14', color: COLORS.accent }}
+                        >
+                          {i + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[13px] font-medium text-nxt-text truncate">{co.name}</div>
+                          <div className="text-[10px] text-nxt-dim">
+                            {co.types.map(t => {
+                              const info = SIGNAL_TYPE_COLORS[t];
+                              return info ? info.label : t.replace(/_/g, ' ');
+                            }).join(', ')}
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="text-xs font-mono font-semibold text-nxt-accent">{co.signals}</div>
+                          {co.total_usd > 0 && (
+                            <div className="text-[10px] font-mono text-nxt-green">{formatUSD(co.total_usd)}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Recent signals */}
+              <div className="lg:col-span-2 bg-nxt-surface border border-nxt-border rounded-nxt-md p-5">
+                <h3 className="text-sm font-semibold text-nxt-text mb-1">Recent Signals</h3>
+                <p className="text-[11px] text-nxt-dim mb-4">Latest intelligence signals in {activeIndustry}</p>
+                <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                  {data.recent_signals.map((sig) => {
+                    const info = SIGNAL_TYPE_COLORS[sig.signal_type] || { label: sig.signal_type, color: COLORS.dim };
+                    return (
+                      <div
+                        key={sig.id}
+                        className="p-3 rounded-lg bg-nxt-card border border-nxt-border-subtle card-hover"
+                        style={{ borderLeftWidth: 3, borderLeftColor: info.color }}
+                      >
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span
+                            className="text-[10px] font-mono px-1.5 py-0.5 rounded uppercase"
+                            style={{ background: info.color + '18', color: info.color }}
+                          >
+                            {info.label}
+                          </span>
+                          {sig.amount_usd > 0 && (
+                            <span className="text-[10px] font-mono font-semibold text-nxt-green">
+                              {formatUSD(sig.amount_usd)}
+                            </span>
+                          )}
+                          <span className="text-[10px] font-mono text-nxt-dim ml-auto">{timeAgo(sig.discovered_at)}</span>
+                        </div>
+                        <div className="text-[13px] text-nxt-text leading-snug mb-1">{sig.title}</div>
+                        <div className="flex items-center gap-3 text-[10px] text-nxt-dim">
+                          <span>{sig.source}</span>
+                          {sig.company && <span className="text-nxt-muted">{sig.company}</span>}
+                          {sig.importance_score > 0 && (
+                            <span
+                              className="font-mono font-semibold ml-auto"
+                              style={{ color: sig.importance_score > 70 ? COLORS.green : COLORS.dim }}
+                            >
+                              {sig.importance_score.toFixed(0)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              ) : (
-                data.top_companies.map((co, i) => (
-                  <div key={co.name} style={{
-                    display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0',
-                    borderBottom: i < data.top_companies.length - 1 ? `1px solid ${COLORS.border}` : 'none',
-                  }}>
-                    <div style={{
-                      width: 20, height: 20, borderRadius: 4, display: 'flex',
-                      alignItems: 'center', justifyContent: 'center',
-                      background: COLORS.accent + '15', color: COLORS.accent,
-                      fontSize: 10, fontWeight: 700,
-                    }}>
-                      {i + 1}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 11, color: COLORS.white, fontWeight: 500 }}>{co.name}</div>
-                      <div style={{ fontSize: 9, color: COLORS.dim }}>
-                        {co.types.map(t => t.replace(/_/g, ' ')).join(' . ')}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 11, color: COLORS.accent }}>{co.signals} signals</div>
-                      {co.total_usd > 0 && (
-                        <div style={{ fontSize: 9, color: COLORS.green }}>{formatUSD(co.total_usd)}</div>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Recent Signals Feed */}
-            <div style={{
-              background: COLORS.surface, border: `1px solid ${COLORS.border}`,
-              borderRadius: 8, padding: 16,
-            }}>
-              <div style={{ fontSize: 10, color: COLORS.dim, letterSpacing: 1, marginBottom: 12 }}>
-                RECENT SIGNALS
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {data.recent_signals.map(sig => (
-                  <div key={sig.id} style={{
-                    padding: '10px 12px', borderRadius: 6,
-                    background: COLORS.card, border: `1px solid ${COLORS.border}`,
-                    display: 'flex', gap: 10, alignItems: 'flex-start',
-                  }}>
-                    <span style={{
-                      color: SIGNAL_TYPE_COLORS[sig.signal_type] || COLORS.dim,
-                      fontSize: 14, lineHeight: 1,
-                    }}>
-                      {SIGNAL_TYPE_ICONS[sig.signal_type] || ''}
-                    </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{
-                        fontSize: 11, color: COLORS.white, lineHeight: 1.4,
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>
-                        {sig.title}
-                      </div>
-                      <div style={{ fontSize: 9, color: COLORS.dim, marginTop: 3, display: 'flex', gap: 8 }}>
-                        <span>{sig.source}</span>
-                        {sig.company && <span style={{ color: COLORS.muted }}>. {sig.company}</span>}
-                        {sig.amount_usd > 0 && <span style={{ color: COLORS.green }}>{formatUSD(sig.amount_usd)}</span>}
-                        <span>{timeAgo(sig.discovered_at)}</span>
-                      </div>
-                    </div>
-                    {sig.importance_score > 0 && (
-                      <div style={{
-                        fontSize: 10, color: sig.importance_score > 70 ? COLORS.green : COLORS.dim,
-                        fontWeight: 600, whiteSpace: 'nowrap',
-                      }}>
-                        {sig.importance_score.toFixed(0)}
-                      </div>
-                    )}
-                  </div>
-                ))}
               </div>
             </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   );
 }
