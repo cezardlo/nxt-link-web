@@ -489,6 +489,7 @@ export default function BriefingPage() {
               <div
                 key={signal.id}
                 className="flex items-center justify-between p-3 rounded-lg bg-nxt-card border border-nxt-border-subtle card-hover"
+                style={{ borderLeftWidth: 3, borderLeftColor: signalTypeColor(signal.signal_type) }}
               >
                 <div className="flex-1 min-w-0 mr-3">
                   <div className="text-[13px] font-medium text-nxt-text truncate">{signal.title}</div>

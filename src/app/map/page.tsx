@@ -410,12 +410,12 @@ export default function MapPage() {
               <div
                 key={s.id}
                 className="p-3 rounded-lg bg-nxt-card border border-nxt-border-subtle card-hover"
+                style={{ borderLeftWidth: 3, borderLeftColor: info.color }}
               >
                 <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: info.color }} />
                   <span
-                    className="text-[10px] font-mono uppercase"
-                    style={{ color: info.color }}
+                    className="text-[10px] font-mono px-1.5 py-0.5 rounded uppercase"
+                    style={{ background: info.color + '18', color: info.color }}
                   >
                     {info.label}
                   </span>
@@ -424,7 +424,7 @@ export default function MapPage() {
                 <div className="text-[13px] text-nxt-text leading-snug mb-1.5">{s.title}</div>
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-nxt-dim">{s.source} · {s.industry}</span>
-                  <span className="text-[10px] font-mono font-semibold text-nxt-amber">
+                  <span className="text-[10px] font-mono font-semibold" style={{ color: info.color }}>
                     {(s.relevance_score * 100).toFixed(0)}
                   </span>
                 </div>

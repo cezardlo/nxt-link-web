@@ -216,6 +216,7 @@ export default function IntelPage() {
                   target={signal.url ? '_blank' : undefined}
                   rel="noopener noreferrer"
                   className="block bg-nxt-surface border border-nxt-border rounded-nxt-md p-5 card-hover"
+                  style={{ borderLeftWidth: 3, borderLeftColor: signalTypeColor(signal.signal_type) }}
                 >
                   <div className="flex gap-4">
                     {/* Score */}
