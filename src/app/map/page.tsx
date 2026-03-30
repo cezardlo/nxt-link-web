@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Component as Globe, RegionData } from '@/components/ui/interactive-globe';
-import { COLORS, FONT } from '@/lib/tokens';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import maplibregl from 'maplibre-gl';
+import { COLORS } from '@/lib/tokens';
 
 interface Signal {
   id: string;
@@ -15,89 +15,70 @@ interface Signal {
   company: string | null;
 }
 
-const REGION_GEO: Record<string, { lat: number; lng: number; continent: string }> = {
-  // Core regions
-  'United States': { lat: 39.8, lng: -98.5, continent: 'North America' },
-  'China': { lat: 35.9, lng: 104.2, continent: 'Asia' },
-  'Japan & Korea': { lat: 36.2, lng: 133.0, continent: 'Asia' },
-  'Europe': { lat: 50.0, lng: 10.0, continent: 'Europe' },
-  'Mexico': { lat: 23.6, lng: -102.6, continent: 'North America' },
-  'Southeast Asia': { lat: 5.0, lng: 110.0, continent: 'Asia' },
-  'India': { lat: 20.6, lng: 78.9, continent: 'Asia' },
-  // Aliases returned by API
-  'US': { lat: 39.8, lng: -98.5, continent: 'North America' },
-  'EU': { lat: 50.0, lng: 10.0, continent: 'Europe' },
-  'Texas': { lat: 31.0, lng: -99.0, continent: 'North America' },
-  'El Paso': { lat: 31.8, lng: -106.4, continent: 'North America' },
-  'US-Mexico Border': { lat: 29.0, lng: -103.0, continent: 'North America' },
-  // Asia-Pacific
-  'Japan': { lat: 35.7, lng: 139.7, continent: 'Asia' },
-  'South Korea': { lat: 37.6, lng: 127.0, continent: 'Asia' },
-  'Taiwan': { lat: 25.0, lng: 121.5, continent: 'Asia' },
-  'Singapore': { lat: 1.3, lng: 103.8, continent: 'Asia' },
-  'Australia': { lat: -35.3, lng: 149.1, continent: 'Oceania' },
-  'Indonesia': { lat: -6.2, lng: 106.8, continent: 'Asia' },
-  'Vietnam': { lat: 21.0, lng: 105.8, continent: 'Asia' },
-  'Thailand': { lat: 13.8, lng: 100.5, continent: 'Asia' },
-  'Philippines': { lat: 14.6, lng: 121.0, continent: 'Asia' },
-  'Malaysia': { lat: 3.1, lng: 101.7, continent: 'Asia' },
-  'New Zealand': { lat: -41.3, lng: 174.8, continent: 'Oceania' },
-  'Pakistan': { lat: 33.7, lng: 73.0, continent: 'Asia' },
-  'Bangladesh': { lat: 23.8, lng: 90.4, continent: 'Asia' },
-  // Europe (individual countries)
-  'Germany': { lat: 52.5, lng: 13.4, continent: 'Europe' },
-  'United Kingdom': { lat: 51.5, lng: -0.1, continent: 'Europe' },
-  'France': { lat: 48.9, lng: 2.3, continent: 'Europe' },
-  'Italy': { lat: 41.9, lng: 12.5, continent: 'Europe' },
-  'Spain': { lat: 40.4, lng: -3.7, continent: 'Europe' },
-  'Netherlands': { lat: 52.4, lng: 4.9, continent: 'Europe' },
-  'Sweden': { lat: 59.3, lng: 18.1, continent: 'Europe' },
-  'Switzerland': { lat: 46.9, lng: 7.4, continent: 'Europe' },
-  'Norway': { lat: 59.9, lng: 10.7, continent: 'Europe' },
-  'Denmark': { lat: 55.7, lng: 12.6, continent: 'Europe' },
-  'Finland': { lat: 60.2, lng: 24.9, continent: 'Europe' },
-  'Poland': { lat: 52.2, lng: 21.0, continent: 'Europe' },
-  'Belgium': { lat: 50.8, lng: 4.4, continent: 'Europe' },
-  'Austria': { lat: 48.2, lng: 16.4, continent: 'Europe' },
-  'Ireland': { lat: 53.3, lng: -6.3, continent: 'Europe' },
-  'Portugal': { lat: 38.7, lng: -9.1, continent: 'Europe' },
-  'Czech Republic': { lat: 50.1, lng: 14.4, continent: 'Europe' },
-  'Greece': { lat: 37.9, lng: 23.7, continent: 'Europe' },
-  'Romania': { lat: 44.4, lng: 26.1, continent: 'Europe' },
-  'Ukraine': { lat: 50.4, lng: 30.5, continent: 'Europe' },
-  'Turkey': { lat: 39.9, lng: 32.9, continent: 'Europe' },
-  'Russia': { lat: 55.8, lng: 37.6, continent: 'Europe' },
-  // Middle East
-  'Israel': { lat: 31.8, lng: 35.2, continent: 'Asia' },
-  'United Arab Emirates': { lat: 24.5, lng: 54.4, continent: 'Asia' },
-  'Saudi Arabia': { lat: 24.7, lng: 46.7, continent: 'Asia' },
-  'Qatar': { lat: 25.3, lng: 51.5, continent: 'Asia' },
-  'Iran': { lat: 35.7, lng: 51.4, continent: 'Asia' },
-  'Iraq': { lat: 33.3, lng: 44.4, continent: 'Asia' },
-  'Middle East': { lat: 29.0, lng: 47.0, continent: 'Asia' },
-  // Americas
-  'Canada': { lat: 45.4, lng: -75.7, continent: 'North America' },
-  'Brazil': { lat: -15.8, lng: -47.9, continent: 'South America' },
-  'Argentina': { lat: -34.6, lng: -58.4, continent: 'South America' },
-  'Colombia': { lat: 4.7, lng: -74.1, continent: 'South America' },
-  'Chile': { lat: -33.4, lng: -70.7, continent: 'South America' },
-  'Peru': { lat: -12.0, lng: -77.0, continent: 'South America' },
-  'Central America': { lat: 14.6, lng: -90.5, continent: 'North America' },
-  'South America': { lat: -15.0, lng: -60.0, continent: 'South America' },
-  'Latin America': { lat: 10.0, lng: -70.0, continent: 'South America' },
-  // Africa
-  'South Africa': { lat: -25.7, lng: 28.2, continent: 'Africa' },
-  'Nigeria': { lat: 9.1, lng: 7.5, continent: 'Africa' },
-  'Egypt': { lat: 30.0, lng: 31.2, continent: 'Africa' },
-  'Kenya': { lat: -1.3, lng: 36.8, continent: 'Africa' },
-  'Ethiopia': { lat: 9.0, lng: 38.7, continent: 'Africa' },
-  'Morocco': { lat: 34.0, lng: -6.8, continent: 'Africa' },
-  'Africa': { lat: 0.0, lng: 25.0, continent: 'Africa' },
-  // Oceania
-  'Oceania': { lat: -25.0, lng: 135.0, continent: 'Oceania' },
+interface Region {
+  name: string;
+  total_signals: number;
+  risk_level: string;
+  opportunity_score: number;
+  industries: string[];
+  total_investment_usd: number;
+}
+
+interface MergedRegion {
+  name: string;
+  lat: number;
+  lng: number;
+  signal_count: number;
+  risk_level: string;
+  industries: string[];
+  total_investment_usd: number;
+}
+
+const REGION_GEO: Record<string, { lat: number; lng: number }> = {
+  'United States': { lat: 39.8, lng: -98.5 },
+  'China': { lat: 35.9, lng: 104.2 },
+  'Japan & Korea': { lat: 36.2, lng: 133.0 },
+  'Europe': { lat: 50.0, lng: 10.0 },
+  'Mexico': { lat: 23.6, lng: -102.6 },
+  'Southeast Asia': { lat: 5.0, lng: 110.0 },
+  'India': { lat: 20.6, lng: 78.9 },
+  'US': { lat: 39.8, lng: -98.5 },
+  'EU': { lat: 50.0, lng: 10.0 },
+  'Texas': { lat: 31.0, lng: -99.0 },
+  'El Paso': { lat: 31.8, lng: -106.4 },
+  'US-Mexico Border': { lat: 29.0, lng: -103.0 },
+  'Japan': { lat: 35.7, lng: 139.7 },
+  'South Korea': { lat: 37.6, lng: 127.0 },
+  'Taiwan': { lat: 25.0, lng: 121.5 },
+  'Singapore': { lat: 1.3, lng: 103.8 },
+  'Australia': { lat: -25.3, lng: 134.0 },
+  'Indonesia': { lat: -2.5, lng: 118.0 },
+  'Vietnam': { lat: 16.0, lng: 108.0 },
+  'Thailand': { lat: 15.0, lng: 101.0 },
+  'Philippines': { lat: 12.0, lng: 122.0 },
+  'Malaysia': { lat: 4.2, lng: 108.0 },
+  'Germany': { lat: 51.2, lng: 10.4 },
+  'United Kingdom': { lat: 55.4, lng: -3.4 },
+  'France': { lat: 46.6, lng: 2.2 },
+  'Italy': { lat: 41.9, lng: 12.6 },
+  'Spain': { lat: 40.5, lng: -3.7 },
+  'Netherlands': { lat: 52.1, lng: 5.3 },
+  'Canada': { lat: 56.1, lng: -106.3 },
+  'Brazil': { lat: -14.2, lng: -51.9 },
+  'Israel': { lat: 31.0, lng: 34.9 },
+  'United Arab Emirates': { lat: 23.4, lng: 53.8 },
+  'Saudi Arabia': { lat: 23.9, lng: 45.1 },
+  'South Africa': { lat: -30.6, lng: 22.9 },
+  'Nigeria': { lat: 9.1, lng: 8.7 },
+  'Egypt': { lat: 26.8, lng: 30.8 },
+  'Middle East': { lat: 29.0, lng: 47.0 },
+  'Africa': { lat: 0.0, lng: 25.0 },
+  'South America': { lat: -15.0, lng: -60.0 },
+  'Latin America': { lat: 10.0, lng: -70.0 },
+  'Central America': { lat: 14.6, lng: -90.5 },
+  'Oceania': { lat: -25.0, lng: 135.0 },
 };
 
-// Merge aliases into canonical region names for grouping on the globe
 const REGION_MERGE: Record<string, string> = {
   'US': 'United States',
   'EU': 'Europe',
@@ -108,189 +89,348 @@ const REGION_MERGE: Record<string, string> = {
   'US-Mexico Border': 'United States',
 };
 
-const RISK_COLORS: Record<string, string> = { critical: '#ff4444', high: '#ff8800', elevated: '#ffb800', moderate: '#ffd700', low: '#00ff88' };
-const TYPE_COLORS: Record<string, string> = {
-  market_shift: COLORS.amber, technology: COLORS.cyan, funding: COLORS.green,
-  merger_acquisition: COLORS.red, facility_expansion: COLORS.gold, partnership: '#a78bfa',
-  contract_award: COLORS.emerald, discovery: COLORS.orange, funding_round: COLORS.green,
+const RISK_COLORS: Record<string, string> = {
+  critical: '#ef4444',
+  high: '#f97316',
+  elevated: '#f59e0b',
+  moderate: '#eab308',
+  low: '#22c55e',
+};
+
+const TYPE_COLORS: Record<string, { label: string; color: string }> = {
+  contract_award:   { label: 'Contract',    color: '#22c55e' },
+  funding_round:    { label: 'Funding',     color: '#a855f7' },
+  patent_filing:    { label: 'Patent',      color: '#06b6d4' },
+  partnership:      { label: 'Partnership', color: '#f59e0b' },
+  product_launch:   { label: 'Launch',      color: '#f97316' },
+  regulation:       { label: 'Regulation',  color: '#ef4444' },
+  market_expansion: { label: 'Expansion',   color: '#10b981' },
+  market_shift:     { label: 'Market',      color: '#f59e0b' },
+  technology:       { label: 'Tech',        color: '#06b6d4' },
+  funding:          { label: 'Funding',     color: '#22c55e' },
+  merger_acquisition: { label: 'M&A',       color: '#ef4444' },
+  facility_expansion: { label: 'Facility',  color: '#eab308' },
+  discovery:        { label: 'Discovery',   color: '#f97316' },
 };
 
 function formatDate(d: string): string {
-  const date = new Date(d);
-  const now = new Date();
-  const hours = Math.floor((now.getTime() - date.getTime()) / 3600000);
-  if (hours < 1) return 'now';
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
+  const diff = Date.now() - new Date(d).getTime();
+  const hrs = Math.floor(diff / 3600000);
+  if (hrs < 1) return 'now';
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
   if (days < 7) return `${days}d ago`;
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function formatUSD(n: number): string {
+  if (n >= 1e12) return `$${(n / 1e12).toFixed(1)}T`;
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(0)}M`;
+  return `$${n.toLocaleString()}`;
 }
 
 export default function MapPage() {
-  const [regions, setRegions] = useState<RegionData[]>([]);
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const markersRef = useRef<maplibregl.Marker[]>([]);
+  const [regions, setRegions] = useState<MergedRegion[]>([]);
   const [signals, setSignals] = useState<Signal[]>([]);
-  const [selectedRegion, setSelectedRegion] = useState<RegionData | null>(null);
-  const [filter, setFilter] = useState<string>('all');
+  const [selectedRegion, setSelectedRegion] = useState<MergedRegion | null>(null);
+  const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
-  const [globeSize, setGlobeSize] = useState(600);
 
+  // Fetch data
   useEffect(() => {
-    const updateSize = () => setGlobeSize(Math.max(280, Math.min(window.innerHeight - 60, window.innerWidth - 440, 700)));
-    updateSize();
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
+    fetch('/api/briefing')
+      .then((r) => r.json())
+      .then((data) => {
+        const b = data.briefing;
+        const rMap: Record<string, MergedRegion> = {};
+        for (const r of (b.regions || []) as Region[]) {
+          const geo = REGION_GEO[r.name];
+          if (!geo) continue;
+          const key = REGION_MERGE[r.name] || r.name;
+          const mergedGeo = REGION_GEO[key] || geo;
+          if (!rMap[key]) {
+            rMap[key] = {
+              name: key, lat: mergedGeo.lat, lng: mergedGeo.lng,
+              signal_count: 0, risk_level: r.risk_level || 'low',
+              industries: [], total_investment_usd: 0,
+            };
+          }
+          rMap[key].signal_count += r.total_signals;
+          rMap[key].total_investment_usd += r.total_investment_usd || 0;
+          for (const ind of r.industries || []) {
+            if (!rMap[key].industries.includes(ind)) rMap[key].industries.push(ind);
+          }
+          if (r.risk_level === 'high' || r.risk_level === 'critical') rMap[key].risk_level = r.risk_level;
+        }
+        setRegions(Object.values(rMap).sort((a, b) => b.signal_count - a.signal_count));
+        setSignals(b.recent_signals || []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
-    fetch('/api/briefing').then(r => r.json()).then(data => {
-      const b = data.briefing;
-      const rMap: Record<string, RegionData> = {};
-      for (const r of (b.regions || [])) {
-        const geo = REGION_GEO[r.name];
-        if (!geo) {
-          console.warn(`[Map] Unknown region "${r.name}" -- add to REGION_GEO to display on globe`);
-          continue;
-        }
-        const key = REGION_MERGE[r.name] || r.name;
-        const mergedGeo = REGION_GEO[key] || geo;
-        if (!rMap[key]) {
-          rMap[key] = {
-            id: key.toLowerCase().replace(/[^a-z]/g, '_'), name: key,
-            lat: mergedGeo.lat, lng: mergedGeo.lng, continent: mergedGeo.continent,
-            signal_count: 0, risk_level: r.risk_level || 'low',
-            opportunity_score: r.opportunity_score || 0, industries: [],
-            top_themes: [], total_investment_usd: 0,
-          };
-        }
-        rMap[key].signal_count += r.total_signals;
-        rMap[key].total_investment_usd += (r.total_investment_usd || 0);
-        for (const ind of (r.industries || [])) {
-          if (!rMap[key].industries.includes(ind)) rMap[key].industries.push(ind);
-        }
-        if (r.risk_level === 'high' || r.risk_level === 'critical') rMap[key].risk_level = r.risk_level;
-      }
-      setRegions(Object.values(rMap));
-      setSignals(b.recent_signals || []);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+  // Create markers
+  const addMarkers = useCallback((map: maplibregl.Map, regionData: MergedRegion[]) => {
+    // Clear old markers
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
+
+    for (const region of regionData) {
+      const riskColor = RISK_COLORS[region.risk_level] || RISK_COLORS.low;
+      const size = Math.max(24, Math.min(56, 16 + Math.sqrt(region.signal_count) * 5));
+
+      const el = document.createElement('div');
+      el.style.cssText = `
+        width: ${size}px; height: ${size}px; border-radius: 50%; cursor: pointer;
+        background: radial-gradient(circle, ${riskColor}cc, ${riskColor}40);
+        border: 2px solid ${riskColor}aa;
+        box-shadow: 0 0 ${size * 0.6}px ${riskColor}44, 0 0 ${size * 0.3}px ${riskColor}22;
+        display: flex; align-items: center; justify-content: center;
+        font-family: 'IBM Plex Mono', monospace; font-size: ${size > 30 ? 11 : 9}px;
+        font-weight: 700; color: white; transition: transform 0.2s, box-shadow 0.2s;
+      `;
+      el.textContent = String(region.signal_count);
+      el.title = region.name;
+
+      el.addEventListener('mouseenter', () => {
+        el.style.transform = 'scale(1.2)';
+        el.style.boxShadow = `0 0 ${size}px ${riskColor}88, 0 0 ${size * 0.5}px ${riskColor}44`;
+      });
+      el.addEventListener('mouseleave', () => {
+        el.style.transform = 'scale(1)';
+        el.style.boxShadow = `0 0 ${size * 0.6}px ${riskColor}44, 0 0 ${size * 0.3}px ${riskColor}22`;
+      });
+      el.addEventListener('click', () => {
+        setSelectedRegion((prev) => prev?.name === region.name ? null : region);
+        map.flyTo({ center: [region.lng, region.lat], zoom: 4, duration: 1200 });
+      });
+
+      // Label
+      const label = document.createElement('div');
+      label.style.cssText = `
+        position: absolute; top: ${size + 4}px; left: 50%; transform: translateX(-50%);
+        white-space: nowrap; font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+        color: ${COLORS.secondary}; text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+        pointer-events: none;
+      `;
+      label.textContent = region.name;
+
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'position: relative; display: flex; align-items: center; justify-content: center;';
+      wrapper.appendChild(el);
+      wrapper.appendChild(label);
+
+      const marker = new maplibregl.Marker({ element: wrapper, anchor: 'center' })
+        .setLngLat([region.lng, region.lat])
+        .addTo(map);
+
+      markersRef.current.push(marker);
+    }
   }, []);
 
-  const filteredSignals = filter === 'all' ? signals : signals.filter(s => s.signal_type === filter);
-  const signalTypes = [...new Set(signals.map(s => s.signal_type))];
+  // Init map
+  useEffect(() => {
+    if (!mapContainer.current || loading || mapRef.current) return;
+
+    const map = new maplibregl.Map({
+      container: mapContainer.current,
+      style: {
+        version: 8,
+        name: 'NXT Dark',
+        sources: {
+          'carto-dark': {
+            type: 'raster',
+            tiles: [
+              'https://a.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}@2x.png',
+              'https://b.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}@2x.png',
+              'https://c.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}@2x.png',
+            ],
+            tileSize: 256,
+            attribution: '&copy; CARTO &copy; OpenStreetMap contributors',
+          },
+        },
+        layers: [
+          {
+            id: 'carto-dark-layer',
+            type: 'raster',
+            source: 'carto-dark',
+            minzoom: 0,
+            maxzoom: 19,
+          },
+        ],
+        glyphs: 'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf',
+      },
+      center: [20, 20],
+      zoom: 2,
+      minZoom: 1.5,
+      maxZoom: 8,
+      attributionControl: false,
+    });
+
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
+
+    map.on('load', () => {
+      addMarkers(map, regions);
+    });
+
+    mapRef.current = map;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, [loading, regions, addMarkers]);
+
+  const filteredSignals = filter === 'all' ? signals : signals.filter((s) => s.signal_type === filter);
+  const signalTypes = [...new Set(signals.map((s) => s.signal_type))];
 
   if (loading) {
     return (
-      <div style={{ background: COLORS.bg, color: COLORS.text, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ fontFamily: FONT, fontSize: '14px', color: COLORS.muted }}>loading map</div>
+      <div className="min-h-screen flex items-center justify-center bg-nxt-bg">
+        <div className="text-nxt-muted text-sm font-mono">Loading map data...</div>
       </div>
     );
   }
 
   return (
-    <div style={{ background: COLORS.bg, color: COLORS.text, height: '100vh', overflow: 'hidden', display: 'flex', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      {/* Full-screen Globe */}
-      <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-        {/* Top bar */}
-        <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0, height: '56px', zIndex: 10,
-          background: `linear-gradient(180deg, ${COLORS.bg}, transparent)`,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          paddingLeft: '24px', paddingRight: '24px', fontFamily: FONT,
-        }}>
-          <a href="/briefing" style={{ fontSize: '16px', fontWeight: 600, letterSpacing: '0.05em', color: COLORS.text, textDecoration: 'none' }}>NXT//LINK</a>
-          <div style={{ fontSize: '11px', letterSpacing: '0.1em', color: COLORS.cyan }}>GLOBAL SUPPLY CHAIN MAP</div>
-          <div style={{ display: 'flex', gap: '16px' }}>
-            <a href="/briefing" style={{ fontSize: '11px', color: COLORS.muted, textDecoration: 'none', letterSpacing: '0.05em' }}>BRIEFING</a>
-            <a href="/map" style={{ fontSize: '11px', color: COLORS.cyan, textDecoration: 'none', letterSpacing: '0.05em' }}>MAP</a>
-            <a href="/conferences" style={{ fontSize: '11px', color: COLORS.muted, textDecoration: 'none', letterSpacing: '0.05em' }}>EVENTS</a>
-            <a href="/industry" style={{ fontSize: '11px', color: COLORS.muted, textDecoration: 'none', letterSpacing: '0.05em' }}>INDUSTRY</a>
-            <a href="/vendors" style={{ fontSize: '11px', color: COLORS.muted, textDecoration: 'none', letterSpacing: '0.05em' }}>VENDORS</a>
-          </div>
-        </div>
+    <div className="h-screen flex overflow-hidden bg-nxt-bg text-nxt-text">
+      {/* Map */}
+      <div className="flex-1 relative">
+        <div ref={mapContainer} className="absolute inset-0" />
 
-        <Globe
-          size={globeSize}
-          regions={regions}
-          onRegionSelect={(r) => setSelectedRegion(r)}
-          selectedRegion={selectedRegion?.id || null}
-        />
-
-        {/* Selected region overlay */}
+        {/* Selected region panel */}
         {selectedRegion && (
-          <div style={{
-            position: 'absolute', bottom: '24px', left: '24px', zIndex: 20,
-            background: COLORS.surface + 'ee', backdropFilter: 'blur(12px)',
-            border: `1px solid ${COLORS.border}`, borderRadius: '16px',
-            padding: '20px', minWidth: '280px',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-              <div style={{ fontSize: '16px', fontWeight: 600 }}>{selectedRegion.name}</div>
-              <div onClick={() => setSelectedRegion(null)} style={{ cursor: 'pointer', color: COLORS.dim, fontSize: '18px' }}>{'\u00d7'}</div>
+          <div className="absolute bottom-6 left-6 z-10 w-[300px] bg-nxt-surface/95 backdrop-blur-lg border border-nxt-border rounded-nxt-lg p-5">
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="text-base font-semibold">{selectedRegion.name}</h3>
+              <button
+                onClick={() => setSelectedRegion(null)}
+                className="text-nxt-dim hover:text-nxt-text text-lg leading-none"
+              >
+                &times;
+              </button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
-              <div style={{ background: COLORS.card, borderRadius: '8px', padding: '10px' }}>
-                <div style={{ fontSize: '8px', fontFamily: FONT, color: COLORS.dim, letterSpacing: '0.1em' }}>SIGNALS</div>
-                <div style={{ fontSize: '20px', fontWeight: 700, color: COLORS.cyan, fontFamily: FONT }}>{selectedRegion.signal_count}</div>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div className="bg-nxt-card rounded-lg p-3">
+                <div className="text-[10px] font-mono text-nxt-dim tracking-wider uppercase mb-1">Signals</div>
+                <div className="text-xl font-bold font-mono text-nxt-accent">{selectedRegion.signal_count}</div>
               </div>
-              <div style={{ background: COLORS.card, borderRadius: '8px', padding: '10px' }}>
-                <div style={{ fontSize: '8px', fontFamily: FONT, color: COLORS.dim, letterSpacing: '0.1em' }}>RISK</div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: RISK_COLORS[selectedRegion.risk_level] || COLORS.green, fontFamily: FONT, textTransform: 'uppercase' }}>{selectedRegion.risk_level}</div>
+              <div className="bg-nxt-card rounded-lg p-3">
+                <div className="text-[10px] font-mono text-nxt-dim tracking-wider uppercase mb-1">Risk</div>
+                <div
+                  className="text-sm font-bold font-mono uppercase"
+                  style={{ color: RISK_COLORS[selectedRegion.risk_level] || RISK_COLORS.low }}
+                >
+                  {selectedRegion.risk_level}
+                </div>
               </div>
             </div>
-            <div style={{ fontSize: '11px', color: COLORS.muted, fontFamily: FONT }}>{selectedRegion.continent} {'\u00b7'} {selectedRegion.industries.join(', ')}</div>
             {selectedRegion.total_investment_usd > 0 && (
-              <div style={{ fontSize: '12px', color: COLORS.gold, fontFamily: FONT, marginTop: '8px' }}>
-                {selectedRegion.total_investment_usd >= 1e9 ? `$${(selectedRegion.total_investment_usd / 1e9).toFixed(1)}B` : `$${(selectedRegion.total_investment_usd / 1e6).toFixed(0)}M`} tracked
+              <div className="text-xs font-mono text-nxt-amber mb-2">
+                {formatUSD(selectedRegion.total_investment_usd)} tracked investment
               </div>
             )}
+            <div className="text-xs text-nxt-muted">
+              {selectedRegion.industries.join(' · ')}
+            </div>
           </div>
         )}
 
-        {/* Bottom region bar */}
-        <div style={{
-          position: 'absolute', bottom: '16px', left: selectedRegion ? '320px' : '24px', right: '24px',
-          display: 'flex', gap: '20px', justifyContent: 'center', zIndex: 10,
-        }}>
-          {regions.sort((a, b) => b.signal_count - a.signal_count).slice(0, 6).map(r => (
-            <div
-              key={r.id}
-              onClick={() => setSelectedRegion(selectedRegion?.id === r.id ? null : r)}
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', opacity: selectedRegion && selectedRegion.id !== r.id ? 0.35 : 1, transition: 'opacity 0.2s' }}
+        {/* Region bar */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex items-center gap-4 px-4 py-2.5 bg-nxt-surface/90 backdrop-blur-lg border border-nxt-border rounded-full">
+          {regions.slice(0, 7).map((r) => (
+            <button
+              key={r.name}
+              onClick={() => {
+                setSelectedRegion((prev) => prev?.name === r.name ? null : r);
+                mapRef.current?.flyTo({ center: [r.lng, r.lat], zoom: 4, duration: 1200 });
+              }}
+              className="flex items-center gap-1.5 transition-opacity"
+              style={{ opacity: selectedRegion && selectedRegion.name !== r.name ? 0.35 : 1 }}
             >
-              <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: RISK_COLORS[r.risk_level] || COLORS.green }} />
-              <span style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.muted }}>{r.name}</span>
-              <span style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.text, fontWeight: 600 }}>{r.signal_count}</span>
-            </div>
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{ background: RISK_COLORS[r.risk_level] || RISK_COLORS.low }}
+              />
+              <span className="text-[11px] text-nxt-muted whitespace-nowrap">{r.name}</span>
+              <span className="text-[11px] font-mono font-semibold text-nxt-text">{r.signal_count}</span>
+            </button>
           ))}
         </div>
       </div>
 
-      {/* Signal Feed Sidebar */}
-      <div style={{ width: '400px', borderLeft: `1px solid ${COLORS.border}`, background: COLORS.surface, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ padding: '16px 20px', borderBottom: `1px solid ${COLORS.border}` }}>
-          <div style={{ fontSize: '13px', fontWeight: 600, color: COLORS.text, marginBottom: '10px' }}>Live Signal Feed</div>
-          <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-            <button onClick={() => setFilter('all')} style={{ fontSize: '9px', fontFamily: FONT, padding: '3px 8px', borderRadius: '4px', border: 'none', cursor: 'pointer', background: filter === 'all' ? COLORS.cyan + '30' : COLORS.card, color: filter === 'all' ? COLORS.cyan : COLORS.muted }}>ALL</button>
-            {signalTypes.map(t => (
-              <button key={t} onClick={() => setFilter(filter === t ? 'all' : t)} style={{ fontSize: '9px', fontFamily: FONT, padding: '3px 8px', borderRadius: '4px', border: 'none', cursor: 'pointer', background: filter === t ? (TYPE_COLORS[t] || COLORS.cyan) + '30' : COLORS.card, color: filter === t ? (TYPE_COLORS[t] || COLORS.cyan) : COLORS.muted }}>{t.replace(/_/g, ' ').toUpperCase()}</button>
-            ))}
+      {/* Signal feed sidebar */}
+      <div className="w-[380px] border-l border-nxt-border bg-nxt-surface flex flex-col overflow-hidden">
+        <div className="px-5 py-4 border-b border-nxt-border">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold">Live Signal Feed</h2>
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-nxt-green live-pulse" />
+              <span className="text-[10px] font-mono text-nxt-dim">LIVE</span>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              onClick={() => setFilter('all')}
+              className="text-[10px] font-mono px-2 py-1 rounded transition-colors"
+              style={{
+                background: filter === 'all' ? COLORS.accent + '30' : COLORS.card,
+                color: filter === 'all' ? COLORS.accentLight : COLORS.muted,
+              }}
+            >
+              ALL
+            </button>
+            {signalTypes.map((t) => {
+              const info = TYPE_COLORS[t] || { label: t, color: COLORS.muted };
+              return (
+                <button
+                  key={t}
+                  onClick={() => setFilter(filter === t ? 'all' : t)}
+                  className="text-[10px] font-mono px-2 py-1 rounded transition-colors"
+                  style={{
+                    background: filter === t ? info.color + '30' : COLORS.card,
+                    color: filter === t ? info.color : COLORS.muted,
+                  }}
+                >
+                  {info.label.toUpperCase()}
+                </button>
+              );
+            })}
           </div>
         </div>
-        <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px' }}>
-          {filteredSignals.map(s => (
-            <div key={s.id} style={{ padding: '10px 12px', borderRadius: '8px', marginBottom: '5px', background: COLORS.card, border: `1px solid ${COLORS.border}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
-                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: TYPE_COLORS[s.signal_type] || COLORS.cyan, flexShrink: 0 }} />
-                <span style={{ fontSize: '9px', fontFamily: FONT, color: TYPE_COLORS[s.signal_type] || COLORS.cyan, textTransform: 'uppercase' }}>{s.signal_type.replace(/_/g, ' ')}</span>
-                <span style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.dim, marginLeft: 'auto' }}>{formatDate(s.discovered_at)}</span>
+
+        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1.5">
+          {filteredSignals.map((s) => {
+            const info = TYPE_COLORS[s.signal_type] || { label: s.signal_type, color: COLORS.muted };
+            return (
+              <div
+                key={s.id}
+                className="p-3 rounded-lg bg-nxt-card border border-nxt-border-subtle card-hover"
+              >
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: info.color }} />
+                  <span
+                    className="text-[10px] font-mono uppercase"
+                    style={{ color: info.color }}
+                  >
+                    {info.label}
+                  </span>
+                  <span className="text-[10px] font-mono text-nxt-dim ml-auto">{formatDate(s.discovered_at)}</span>
+                </div>
+                <div className="text-[13px] text-nxt-text leading-snug mb-1.5">{s.title}</div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-nxt-dim">{s.source} · {s.industry}</span>
+                  <span className="text-[10px] font-mono font-semibold text-nxt-amber">
+                    {(s.relevance_score * 100).toFixed(0)}
+                  </span>
+                </div>
               </div>
-              <div style={{ fontSize: '12px', color: COLORS.text, lineHeight: '1.4', marginBottom: '3px' }}>{s.title}</div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.dim }}>{s.source} {'\u00b7'} {s.industry}</span>
-                <span style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.gold, fontWeight: 600 }}>{(s.relevance_score * 100).toFixed(0)}</span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
