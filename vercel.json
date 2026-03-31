@@ -2,11 +2,11 @@
   "crons": [
     {
       "path": "/api/agents/cron-step?agent=intel-discovery",
-      "schedule": "0 */4 * * *"
+      "schedule": "0 6 * * *"
     },
     {
       "path": "/api/assembly/run",
-      "schedule": "30 */4 * * *"
+      "schedule": "0 7 * * *"
     },
     {
       "path": "/api/agents/cron-step?agent=vendor-pipeline",
