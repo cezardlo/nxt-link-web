@@ -318,20 +318,20 @@ export default function MapPage() {
   }
 
   return (
-    <div className="h-screen flex overflow-hidden bg-nxt-bg text-nxt-text">
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', height: '100vh', overflow: 'hidden' }} className="bg-nxt-bg text-nxt-text">
       {/* Map */}
-      <div className="flex-1 relative">
+      <div style={{ position: 'relative', minWidth: 0 }}>
         <div ref={mapContainer} className="absolute inset-0" />
 
         {/* Selected region panel */}
         {selectedRegion && (() => {
           const riskColor = RISK_COLORS[selectedRegion.risk_level] || RISK_COLORS.low;
           const riskExplain: Record<string, string> = {
-            critical: 'Extreme signal volume with regulatory or disruption signals — immediate attention needed.',
+            critical: 'Extreme signal volume with regulatory or disruption signals \u2014 immediate attention needed.',
             high: 'Heavy signal activity with contracts, regulations, or market shifts flagged across industries.',
-            elevated: 'Above-average signal activity — notable funding rounds or partnerships detected.',
-            moderate: 'Steady signal flow — normal market activity, no major disruptions.',
-            low: 'Minimal signal activity — stable region with few market changes.',
+            elevated: 'Above-average signal activity \u2014 notable funding rounds or partnerships detected.',
+            moderate: 'Steady signal flow \u2014 normal market activity, no major disruptions.',
+            low: 'Minimal signal activity \u2014 stable region with few market changes.',
           };
           return (
             <div className="absolute bottom-6 left-6 z-10 w-[320px] bg-nxt-surface/95 backdrop-blur-lg border border-nxt-border rounded-nxt-lg p-5">
@@ -412,7 +412,7 @@ export default function MapPage() {
       </div>
 
       {/* Signal feed sidebar */}
-      <div className="w-[380px] border-l border-nxt-border bg-nxt-surface flex flex-col overflow-hidden">
+      <div className="border-l border-nxt-border bg-nxt-surface flex flex-col overflow-hidden">
         <div className="px-5 py-4 border-b border-nxt-border">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold">Live Signal Feed</h2>
@@ -471,9 +471,9 @@ export default function MapPage() {
                 </div>
                 <div className="text-[13px] text-nxt-text leading-snug mb-1.5">{s.title}</div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-nxt-dim">{s.source} · {s.industry}</span>
+                  <span className="text-[10px] text-nxt-dim">{s.source} \u00b7 {s.industry}</span>
                   <span className="text-[10px] font-mono font-semibold" style={{ color: info.color }}>
-                    {(s.relevance_score * 100).toFixed(0)}
+                    {Math.round(s.relevance_score)}
                   </span>
                 </div>
               </div>
