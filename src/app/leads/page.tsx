@@ -45,11 +45,60 @@ function tierBadge(tier: string) {
   );
 }
 
+function getDomain(url: string): string {
+  try {
+    return new URL(url.startsWith('http') ? url : `https://${url}`).hostname;
+  } catch {
+    return url.replace(/^https?:\/\//, '').split('/')[0];
+  }
+}
+
 function scoreColor(s: number): string {
   if (s >= 80) return COLORS.green;
   if (s >= 50) return COLORS.amber;
   if (s >= 30) return COLORS.accent;
   return COLORS.muted;
+}
+
+/* --- Score Reasoning --- */
+type ScoreReason = { icon: string; text: string; color: string };
+
+function getScoreReasons(lead: ConferenceLead): ScoreReason[] {
+  const reasons: ScoreReason[] = [];
+
+  // Product fit
+  const prodCount = lead.products?.length ?? 0;
+  if (prodCount >= 4) reasons.push({ icon: '\u2713', text: `${prodCount} products — strong product lineup`, color: '#22c55e' });
+  else if (prodCount >= 2) reasons.push({ icon: '\u2713', text: `${prodCount} products identified`, color: '#22c55e' });
+  else if (prodCount === 0) reasons.push({ icon: '\u2717', text: 'No products found', color: '#6b6b76' });
+
+  // Category fit
+  if (lead.logistics_category && lead.logistics_category !== 'Not Logistics') {
+    reasons.push({ icon: '\u25CF', text: `${lead.logistics_category} category`, color: '#3b82f6' });
+  } else {
+    reasons.push({ icon: '\u2717', text: 'Not logistics-focused', color: '#ef4444' });
+  }
+
+  // Conference presence
+  const confCount = lead.conference_appearances ?? 0;
+  if (confCount >= 3) reasons.push({ icon: '\u2605', text: `Active at ${confCount} conferences`, color: '#f59e0b' });
+  else if (confCount >= 1) reasons.push({ icon: '\u25CB', text: `${confCount} conference appearance`, color: '#f59e0b' });
+
+  // Tech
+  const techCount = lead.technologies?.length ?? 0;
+  if (techCount >= 3) reasons.push({ icon: '\u26A1', text: `${techCount} relevant technologies`, color: '#8b5cf6' });
+
+  // El Paso / border
+  if (lead.el_paso_relevant) reasons.push({ icon: '\u2691', text: 'Cross-border / El Paso relevant', color: '#f97316' });
+
+  // Company size
+  if (lead.employee_estimate && /10000|\d{5,}/i.test(lead.employee_estimate)) {
+    reasons.push({ icon: '\u25B2', text: 'Enterprise-scale company', color: '#22c55e' });
+  } else if (lead.employee_estimate && /startup|50-/i.test(lead.employee_estimate)) {
+    reasons.push({ icon: '\u25B3', text: 'Emerging startup', color: '#6366f1' });
+  }
+
+  return reasons;
 }
 
 /* --- LeadRow --- */
@@ -79,28 +128,40 @@ function LeadRow({ lead }: { lead: ConferenceLead }) {
 
         {/* Company */}
         <td className="px-3 py-3">
-          <div className="flex flex-col gap-0.5">
-            <div className="flex items-center gap-2">
-              {lead.official_domain ? (
-                <a
-                  href={lead.official_domain.startsWith('http') ? lead.official_domain : `https://${lead.official_domain}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[13px] font-semibold text-nxt-text hover:text-nxt-accent-light transition-colors"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {lead.canonical_name}
-                </a>
-              ) : (
+          <div className="flex items-start gap-3">
+            {/* Logo */}
+            {lead.official_domain && (
+              <img
+                src={`https://www.google.com/s2/favicons?domain=${getDomain(lead.official_domain)}&sz=32`}
+                alt=""
+                width={28}
+                height={28}
+                className="rounded mt-0.5 shrink-0 bg-nxt-card"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+            )}
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[13px] font-semibold text-nxt-text">{lead.canonical_name}</span>
-              )}
-              {lead.el_paso_relevant && (
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 uppercase tracking-wider">EP</span>
+                {lead.el_paso_relevant && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 uppercase tracking-wider">EP</span>
+                )}
+                {lead.official_domain && (
+                  <a
+                    href={lead.official_domain.startsWith('http') ? lead.official_domain : `https://${lead.official_domain}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-nxt-accent/10 text-nxt-accent-light hover:bg-nxt-accent/20 transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Visit Site &rarr;
+                  </a>
+                )}
+              </div>
+              {lead.description && (
+                <span className="text-[11px] text-nxt-dim line-clamp-1">{lead.description}</span>
               )}
             </div>
-            {lead.description && (
-              <span className="text-[11px] text-nxt-dim line-clamp-1">{lead.description}</span>
-            )}
           </div>
         </td>
 
@@ -126,21 +187,33 @@ function LeadRow({ lead }: { lead: ConferenceLead }) {
       {/* Expanded detail row */}
       {expanded && (
         <tr className="border-b border-nxt-border bg-nxt-card/30">
-          <td colSpan={7} className="px-6 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <td colSpan={7} className="px-6 py-5">
+            {/* Why this scored high */}
+            <div className="mb-4 p-3 rounded-lg bg-nxt-surface border border-nxt-border">
+              <div className="text-[10px] text-nxt-dim uppercase tracking-wider mb-2">Why this lead scored {lead.logistics_score}</div>
+              <div className="flex gap-2 flex-wrap">
+                {getScoreReasons(lead).map((reason, i) => (
+                  <span key={i} className="text-[11px] px-2.5 py-1 rounded-md bg-nxt-bg border border-nxt-border text-nxt-secondary flex items-center gap-1.5">
+                    <span style={{ color: reason.color }}>{reason.icon}</span> {reason.text}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Products */}
               <div>
-                <div className="text-[10px] text-nxt-dim uppercase tracking-wider mb-1.5">Products</div>
-                <div className="flex gap-1 flex-wrap">
+                <div className="text-[10px] text-nxt-dim uppercase tracking-wider mb-1.5">Products &amp; Platforms</div>
+                <div className="flex flex-col gap-1">
                   {(lead.products?.length ? lead.products : ['-']).map((p, i) => (
-                    <span key={i} className="text-[11px] px-2 py-0.5 rounded bg-nxt-surface text-nxt-secondary">{p}</span>
+                    <span key={i} className="text-[11px] px-2 py-1 rounded bg-nxt-surface text-nxt-secondary">{p}</span>
                   ))}
                 </div>
               </div>
 
               {/* Technologies */}
               <div>
-                <div className="text-[10px] text-nxt-dim uppercase tracking-wider mb-1.5">Technologies</div>
+                <div className="text-[10px] text-nxt-dim uppercase tracking-wider mb-1.5">Tech Stack</div>
                 <div className="flex gap-1 flex-wrap">
                   {(lead.technologies?.length ? lead.technologies : ['-']).map((t, i) => (
                     <span key={i} className="text-[11px] px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400">{t}</span>
@@ -150,21 +223,42 @@ function LeadRow({ lead }: { lead: ConferenceLead }) {
 
               {/* Conferences */}
               <div>
-                <div className="text-[10px] text-nxt-dim uppercase tracking-wider mb-1.5">Conferences</div>
-                <div className="flex gap-1 flex-wrap">
+                <div className="text-[10px] text-nxt-dim uppercase tracking-wider mb-1.5">Seen At</div>
+                <div className="flex flex-col gap-1">
                   {(lead.conference_names?.length ? lead.conference_names : ['-']).map((c, i) => (
-                    <span key={i} className="text-[11px] px-2 py-0.5 rounded bg-nxt-surface text-nxt-muted">{c}</span>
+                    <span key={i} className="text-[11px] px-2 py-1 rounded bg-nxt-surface text-nxt-muted">{c}</span>
                   ))}
+                </div>
+              </div>
+
+              {/* Company Info */}
+              <div>
+                <div className="text-[10px] text-nxt-dim uppercase tracking-wider mb-1.5">Company Info</div>
+                <div className="flex flex-col gap-1.5 text-[11px]">
+                  {lead.employee_estimate && lead.employee_estimate !== 'unknown' && (
+                    <div className="text-nxt-secondary"><span className="text-nxt-dim">Size:</span> {lead.employee_estimate} employees</div>
+                  )}
+                  {lead.country && <div className="text-nxt-secondary"><span className="text-nxt-dim">HQ:</span> {lead.country}</div>}
+                  <div className="text-nxt-secondary"><span className="text-nxt-dim">Category:</span> {lead.logistics_category}</div>
+                  {lead.official_domain && (
+                    <a
+                      href={lead.official_domain.startsWith('http') ? lead.official_domain : `https://${lead.official_domain}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 mt-1 px-3 py-1.5 rounded-md bg-nxt-accent/10 text-nxt-accent-light hover:bg-nxt-accent/20 transition-colors text-[11px] font-medium w-fit"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Visit Website &rarr;
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Meta */}
-            <div className="flex items-center gap-4 mt-3 text-[10px] text-nxt-dim">
-              {lead.employee_estimate && <span>Employees: {lead.employee_estimate}</span>}
-              {lead.official_domain && <span>Domain: {lead.official_domain}</span>}
-              {lead.last_scored_at && <span>Scored: {new Date(lead.last_scored_at).toLocaleDateString()}</span>}
-            </div>
+            {/* Description */}
+            {lead.description && (
+              <div className="mt-3 text-[12px] text-nxt-muted leading-relaxed">{lead.description}</div>
+            )}
           </td>
         </tr>
       )}
