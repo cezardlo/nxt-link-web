@@ -1,12 +1,8 @@
 /**
- * GET /api/briefing â Top 3 supply chain intelligence insights
+ * GET /api/briefing — Top 3 supply chain intelligence insights
  *
- * Returns:
- *   - top_insights (3 cards with what/why/where + related signals)
- *   - signal_stats (counts by type, industry, recent activity)
- *   - clusters (top clusters ranked by composite_rank)
- *   - regions (region intelligence with signal counts)
- *   - recent_signals (latest 20 signals for the feed)
+ * Computes everything from intel_signals (the real data).
+ * No dependency on missing tables (top_insights, signal_clusters, etc.)
  */
 
 import { NextResponse } from 'next/server';
@@ -14,95 +10,186 @@ import { createClient } from '@/lib/supabase/client';
 
 export const dynamic = 'force-dynamic';
 
+type SignalRow = {
+  id: string;
+  title: string;
+  signal_type: string;
+  industry: string;
+  company: string | null;
+  evidence: string | null;
+  amount_usd: number | null;
+  confidence: number;
+  importance_score: number;
+  relevance_score?: number;
+  discovered_at: string;
+  source: string | null;
+  source_domain?: string | null;
+  tags: string[];
+};
+
 export async function GET() {
   const supabase = createClient();
 
-  // Parallel fetch all data
+  // Parallel fetch: recent high-quality signals + total count + 24h count + last briefing
+  const since7d = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+  const since24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+
   const [
-    { data: insights },
-    { data: signals },
-    { data: clusters },
-    { data: regions },
+    { data: recentSignals },
     { count: totalSignals },
-    { data: trendMetrics },
-    { data: latestBriefing },
     { count: signals24h },
+    { data: latestBriefing },
   ] = await Promise.all([
-    supabase.from('top_insights').select('*').order('rank', { ascending: true }).limit(3),
-    supabase.from('intel_signals').select('id, title, signal_type, industry, company, relevance_score, discovered_at, source, source_domain').order('relevance_score', { ascending: false }).limit(50),
-    supabase.from('signal_clusters').select('*').order('composite_rank', { ascending: false }).limit(10),
-    supabase.from('region_intelligence').select('*').order('signal_count', { ascending: false }),
+    supabase
+      .from('intel_signals')
+      .select('id, title, signal_type, industry, company, evidence, amount_usd, confidence, importance_score, discovered_at, source, tags')
+      .gte('discovered_at', since7d)
+      .order('importance_score', { ascending: false })
+      .limit(200),
     supabase.from('intel_signals').select('*', { count: 'exact', head: true }),
-    supabase.from('cluster_metrics').select('cluster_id, date, signal_count, rolling_avg, velocity, acceleration, trend_score, trend_label').order('date', { ascending: true }),
+    supabase.from('intel_signals').select('*', { count: 'exact', head: true }).gte('discovered_at', since24h),
     supabase.from('daily_briefings').select('generated_at, briefing_date').order('briefing_date', { ascending: false }).limit(1),
-    supabase.from('intel_signals').select('*', { count: 'exact', head: true }).gte('discovered_at', new Date(Date.now() - 24 * 3600 * 1000).toISOString()),
   ]);
 
-  // Build signal stats
-  const signalList = signals || [];
+  const signals = (recentSignals || []) as SignalRow[];
+
+  // --- Build Top 3 Insights by grouping signals by industry ---
+  const industryGroups: Record<string, SignalRow[]> = {};
+  for (const s of signals) {
+    const key = s.industry || 'general';
+    if (!industryGroups[key]) industryGroups[key] = [];
+    industryGroups[key].push(s);
+  }
+
+  // Rank industries by total importance
+  const rankedIndustries = Object.entries(industryGroups)
+    .map(([industry, sigs]) => ({
+      industry,
+      signals: sigs,
+      totalImportance: sigs.reduce((sum, s) => sum + (s.importance_score || 0), 0),
+      avgImportance: sigs.reduce((sum, s) => sum + (s.importance_score || 0), 0) / sigs.length,
+      topSignal: sigs[0], // already sorted by importance_score
+    }))
+    .sort((a, b) => b.totalImportance - a.totalImportance);
+
+  // Build top 3 insight cards from the top 3 industry clusters
+  const topInsights = rankedIndustries.slice(0, 3).map((group, i) => {
+    const top = group.topSignal;
+    const topSignals = group.signals.slice(0, 5);
+
+    // Dominant signal type in this cluster
+    const typeCounts: Record<string, number> = {};
+    for (const s of group.signals) {
+      typeCounts[s.signal_type] = (typeCounts[s.signal_type] || 0) + 1;
+    }
+    const dominantType = Object.entries(typeCounts).sort(([, a], [, b]) => b - a)[0]?.[0] || 'discovery';
+
+    // Collect companies mentioned
+    const companySet: Record<string, boolean> = {};
+    for (const s of group.signals) { if (s.company) companySet[s.company] = true; }
+    const companies = Object.keys(companySet).slice(0, 4);
+    const companyMention = companies.length > 0 ? ` Key players: ${companies.join(', ')}.` : '';
+
+    // Build evidence summary from top signals
+    const evidenceBits = topSignals
+      .filter(s => s.evidence)
+      .map(s => s.evidence!)
+      .slice(0, 3);
+
+    // Build narrative fields
+    const what_is_happening = top.title + (top.evidence ? ` — ${top.evidence}` : '');
+
+    const why_it_matters = evidenceBits.length > 1
+      ? `${group.signals.length} signals detected in ${group.industry} this week.${companyMention} ${evidenceBits[1] || ''}`
+      : `${group.signals.length} signals tracked in ${group.industry} over the past 7 days.${companyMention}`;
+
+    const where_its_going = group.signals.length >= 5
+      ? `High activity cluster with ${group.signals.length} signals — this sector is moving. Watch for follow-on developments.`
+      : `Emerging activity with ${group.signals.length} signals. Monitor for acceleration.`;
+
+    // Related signals for source attribution
+    const related_signals = topSignals.map(s => ({
+      id: s.id,
+      title: s.title,
+      source: s.source || 'Unknown',
+      discovered_at: s.discovered_at,
+      signal_type: s.signal_type,
+      relevance_score: s.importance_score,
+    }));
+
+    return {
+      rank: i + 1,
+      title: top.title,
+      what_is_happening,
+      why_it_matters,
+      where_its_going,
+      signal_count: group.signals.length,
+      avg_score: Math.round(group.avgImportance * 100) / 100,
+      industry: group.industry,
+      signal_type: dominantType,
+      related_signals,
+    };
+  });
+
+  // --- Signal stats (from all fetched signals) ---
   const typeCount: Record<string, number> = {};
   const industryCount: Record<string, number> = {};
-  for (const s of signalList) {
+  for (const s of signals) {
     typeCount[s.signal_type] = (typeCount[s.signal_type] || 0) + 1;
     industryCount[s.industry] = (industryCount[s.industry] || 0) + 1;
   }
 
-  // Resolve related signals for each insight
-  const enrichedInsights = (insights || []).map(insight => {
-    const relatedIds = insight.related_signal_ids || [];
-    const relatedSignals = relatedIds
-      .map((id: string) => signalList.find(s => s.id === id))
-      .filter(Boolean)
-      .slice(0, 5);
-    return { ...insight, related_signals: relatedSignals };
+  // --- Recent signals for the feed (latest 20) ---
+  const sortedByDate = [...signals]
+    .sort((a, b) => new Date(b.discovered_at).getTime() - new Date(a.discovered_at).getTime())
+    .slice(0, 20);
+
+  // --- Trend data from daily signal counts (last 14 days) ---
+  const trendDays: Record<string, Record<string, number>> = {};
+  for (const s of signals) {
+    const day = s.discovered_at.split('T')[0];
+    const ind = s.industry || 'general';
+    if (!trendDays[day]) trendDays[day] = {};
+    trendDays[day][ind] = (trendDays[day][ind] || 0) + 1;
+  }
+
+  // Build time series for top 4 industries
+  const topIndustryNames = rankedIndustries.slice(0, 4).map(g => g.industry);
+  const sortedDates = Object.keys(trendDays).sort();
+
+  const timeSeries = topIndustryNames.map(ind => ({
+    cluster_id: ind,
+    label: ind,
+    points: sortedDates.map(date => ({
+      date,
+      score: trendDays[date][ind] || 0,
+    })),
+  }));
+
+  // Trend snapshot (simple: growing if recent days > earlier days)
+  const snapshot = topIndustryNames.map(ind => {
+    const pts = sortedDates.map(d => trendDays[d][ind] || 0);
+    const half = Math.floor(pts.length / 2);
+    const firstHalf = pts.slice(0, half).reduce((a, b) => a + b, 0) / (half || 1);
+    const secondHalf = pts.slice(half).reduce((a, b) => a + b, 0) / (pts.length - half || 1);
+    const velocity = secondHalf - firstHalf;
+    const trendLabel = velocity > 1 ? 'growing' : velocity < -1 ? 'declining' : 'stable';
+    return {
+      cluster_id: ind,
+      label: ind,
+      date: sortedDates[sortedDates.length - 1] || new Date().toISOString().split('T')[0],
+      signal_count: pts.reduce((a, b) => a + b, 0),
+      rolling_avg: (pts.reduce((a, b) => a + b, 0) / (pts.length || 1)).toFixed(1),
+      velocity: velocity.toFixed(2),
+      acceleration: '0',
+      trend_score: velocity.toFixed(2),
+      trend_label: trendLabel,
+    };
   });
 
-  // Group regions by name (combine manufacturing + logistics)
-  const regionMap: Record<string, { name: string; total_signals: number; risk_level: string; opportunity_score: number; industries: string[]; total_investment_usd: number }> = {};
-  for (const r of (regions || [])) {
-    if (!regionMap[r.region]) {
-      regionMap[r.region] = { name: r.region, total_signals: 0, risk_level: r.risk_level, opportunity_score: r.opportunity_score, industries: [], total_investment_usd: 0 };
-    }
-    regionMap[r.region].total_signals += r.signal_count;
-    regionMap[r.region].total_investment_usd += (r.total_investment_usd || 0);
-    regionMap[r.region].industries.push(r.industry);
-    // Use the higher risk level
-    if (r.risk_level === 'high' || r.risk_level === 'critical') regionMap[r.region].risk_level = r.risk_level;
-  }
-
-  // Build trend data: latest snapshot per cluster + time series for top clusters
-  const metricsList = trendMetrics || [];
-  const clusterLabels: Record<string, string> = {};
-  for (const c of (clusters || [])) { clusterLabels[c.id] = c.label; }
-
-  // Latest metric per cluster
-  const latestByCluster: Record<string, typeof metricsList[0] & { label: string }> = {};
-  for (const m of metricsList) {
-    if (!latestByCluster[m.cluster_id] || m.date > latestByCluster[m.cluster_id].date) {
-      latestByCluster[m.cluster_id] = { ...m, label: clusterLabels[m.cluster_id] || m.cluster_id };
-    }
-  }
-  const trendSnapshot = Object.values(latestByCluster)
-    .sort((a, b) => Number(b.trend_score) - Number(a.trend_score));
-
-  // Time series for top 6 clusters (last 14 days)
-  const topClusterIds = trendSnapshot.slice(0, 6).map(t => t.cluster_id);
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 14);
-  const cutoffStr = cutoff.toISOString().split('T')[0];
-  const trendTimeSeries: Record<string, { date: string; score: number }[]> = {};
-  for (const m of metricsList) {
-    if (topClusterIds.includes(m.cluster_id) && m.date >= cutoffStr) {
-      if (!trendTimeSeries[m.cluster_id]) trendTimeSeries[m.cluster_id] = [];
-      trendTimeSeries[m.cluster_id].push({ date: m.date, score: Number(m.trend_score) });
-    }
-  }
-
-  // Compute trend distribution from snapshot
   const trendDistribution: Record<string, number> = { spiking: 0, growing: 0, stable: 0, declining: 0 };
-  for (const t of trendSnapshot) {
-    const label = t.trend_label as string;
-    if (label in trendDistribution) trendDistribution[label]++;
+  for (const s of snapshot) {
+    if (s.trend_label in trendDistribution) trendDistribution[s.trend_label]++;
   }
 
   return NextResponse.json({
@@ -112,18 +199,14 @@ export async function GET() {
       signals_24h: signals24h || 0,
       last_pipeline_run: latestBriefing?.[0]?.generated_at || null,
       trend_distribution: trendDistribution,
-      top_insights: enrichedInsights,
+      top_insights: topInsights,
       signal_stats: { by_type: typeCount, by_industry: industryCount },
-      clusters: (clusters || []).slice(0, 5),
-      regions: Object.values(regionMap).sort((a, b) => b.total_signals - a.total_signals),
-      recent_signals: signalList.slice(0, 20),
+      clusters: [],
+      regions: [],
+      recent_signals: sortedByDate,
       trends: {
-        snapshot: trendSnapshot,
-        time_series: Object.entries(trendTimeSeries).map(([id, points]) => ({
-          cluster_id: id,
-          label: clusterLabels[id] || id,
-          points,
-        })),
+        snapshot,
+        time_series: timeSeries,
       },
     },
   });
