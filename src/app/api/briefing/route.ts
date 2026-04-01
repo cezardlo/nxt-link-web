@@ -1,8 +1,10 @@
 /**
- * GET /api/briefing — Top 3 supply chain intelligence insights
+ * GET /api/briefing — Top 3 supply chain intelligence insights for El Paso
  *
- * Computes everything from intel_signals (the real data).
- * Focuses on logistics/trucking/border-tech. Surfaces vendors + problems.
+ * 1. Filters out junk (arXiv, generic market news)
+ * 2. Prioritizes real logistics/border/trucking sources
+ * 3. Picks 3 signals from DIFFERENT industries
+ * 4. Calls Gemini once to analyze El Paso impact
  */
 
 import { NextResponse } from 'next/server';
@@ -35,25 +37,48 @@ type VendorRow = {
   iker_score: number | null;
 };
 
-/** Strip HTML tags and decode entities from evidence text */
 function sanitize(text: string | null): string {
   if (!text) return '';
   return text
-    .replace(/<[^>]*>/g, '')           // strip HTML tags
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#8230;/g, '...')
-    .replace(/&#\d+;/g, '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+    .replace(/&#8230;/g, '...').replace(/&#\d+;/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-/** Priority industries for a trucking/logistics platform */
-const FOCUS_INDUSTRIES = ['logistics', 'border-tech', 'manufacturing', 'defense', 'energy', 'government', 'tech'];
+/** Sources that produce real logistics/supply chain intelligence */
+const GOOD_SOURCES = [
+  'freightwaves', 'supply chain dive', 'transport topics', 'the loadstar',
+  'land line', 'commercial carrier journal', 'fleet owner', 'trucking info',
+  'logistics management', 'journal of commerce', 'american shipper',
+  'defense one', 'borderreport', 'reuters', 'associated press', 'bloomberg',
+];
 
-/** Human-readable problem labels */
+/** Sources that produce noise */
+const JUNK_SOURCES = ['arxiv', 'arXiv'];
+
+/** Check if a source is junk */
+function isJunkSource(source: string | null): boolean {
+  if (!source) return false;
+  const lower = source.toLowerCase();
+  return JUNK_SOURCES.some(j => lower.includes(j.toLowerCase()));
+}
+
+/** Score boost for high-value sources */
+function sourceBoost(source: string | null): number {
+  if (!source) return 0;
+  const lower = source.toLowerCase();
+  if (GOOD_SOURCES.some(g => lower.includes(g))) return 30;
+  return 0;
+}
+
+/** Score boost for having a problem category (means it's actionable) */
+function problemBoost(problem: string | null): number {
+  return problem ? 15 : 0;
+}
+
 const PROBLEM_LABELS: Record<string, string> = {
   border_delays: 'Border & Crossing Delays',
   documentation_errors: 'Documentation & Compliance Errors',
@@ -63,114 +88,6 @@ const PROBLEM_LABELS: Record<string, string> = {
   routing: 'Route Disruptions',
   labor_shortage: 'Labor & Workforce Gaps',
 };
-
-/** El Paso / Borderplex impact context by problem + industry */
-const EP_IMPACT: Record<string, string[]> = {
-  // Problem-based impacts
-  border_delays: [
-    'Could increase wait times at Ysleta, BOTA, or Santa Teresa POEs',
-    'Cross-border freight between El Paso and Juarez may slow down',
-    'Maquiladora supply chains could face delays',
-  ],
-  customs: [
-    'USMCA compliance requirements may shift for El Paso importers/exporters',
-    'Customs brokers in the Borderplex may need to adjust filings',
-    'Cross-border trade costs between US and Mexico could change',
-  ],
-  cost: [
-    'Freight and drayage costs in the El Paso corridor may rise',
-    'Fuel and transport pricing for cross-border carriers could shift',
-    'Operating costs for maquiladora logistics may increase',
-  ],
-  routing: [
-    'Trucking routes through the Borderplex may need rerouting',
-    'Carriers using El Paso as a gateway could face disruptions',
-    'Intermodal connections at El Paso rail hubs may be affected',
-  ],
-  documentation_errors: [
-    'Customs paperwork for El Paso-Juarez crossings may need updates',
-    'Documentation requirements for Borderplex trade could change',
-  ],
-  erp_integration: [
-    'Local manufacturers may need to update their systems',
-    'Borderplex companies on legacy ERPs could fall further behind',
-  ],
-  labor_shortage: [
-    'El Paso warehouse and driver labor pool may tighten',
-    'Cross-border workforce dynamics could shift',
-  ],
-  // Industry-based fallbacks
-  logistics: [
-    'El Paso is a top-10 US logistics hub — this affects local carriers and warehouses',
-    'Cross-border freight volume through the Borderplex could shift',
-  ],
-  manufacturing: [
-    'Juarez has 300+ maquiladoras — manufacturing shifts affect the whole Borderplex',
-    'El Paso-area manufacturers and suppliers may see ripple effects',
-  ],
-  'border-tech': [
-    'Border technology and security systems in the El Paso sector may be impacted',
-    'CBP and DHS operations at local POEs could change',
-  ],
-  defense: [
-    'Fort Bliss operations and defense contractors in El Paso may be affected',
-    'Defense supply chain through the Borderplex could see changes',
-  ],
-  energy: [
-    'Energy costs for El Paso industrial operations could shift',
-    'Fuel pricing at Borderplex terminals may be impacted',
-  ],
-  tech: [
-    'Tech adoption in Borderplex logistics and manufacturing may be affected',
-    'Local companies evaluating these solutions should take note',
-  ],
-};
-
-/** Get El Paso impact bullets for a signal */
-function getElPasoImpact(problemCategory: string | null, industry: string): string[] {
-  // Try problem-specific first, then industry fallback
-  if (problemCategory && EP_IMPACT[problemCategory]) {
-    return EP_IMPACT[problemCategory].slice(0, 2);
-  }
-  if (EP_IMPACT[industry]) {
-    return EP_IMPACT[industry].slice(0, 2);
-  }
-  return ['Monitor how this affects supply chains through the El Paso-Juarez corridor'];
-}
-
-/** Get "watch for" bullets based on signal context */
-function getWatchFor(signal: SignalRow, problemCategory: string | null): string[] {
-  const bullets: string[] = [];
-  if (signal.amount_usd && signal.amount_usd > 0) {
-    bullets.push(`Dollar amount involved: $${(signal.amount_usd / 1e6).toFixed(0)}M`);
-  }
-  if (problemCategory === 'border_delays') bullets.push('Check POE wait times this week');
-  if (problemCategory === 'customs') bullets.push('Watch for new tariff or compliance announcements');
-  if (problemCategory === 'cost') bullets.push('Track freight rate changes in your contracts');
-  if (problemCategory === 'routing') bullets.push('Check for route advisories or port congestion');
-  if (signal.signal_type === 'merger_acquisition') bullets.push('Watch for supply chain consolidation effects');
-  if (signal.signal_type === 'funding_round') bullets.push('New funding means this company is scaling — could be a future vendor');
-  if (signal.signal_type === 'contract_award') bullets.push('See if this contract affects your suppliers or competitors');
-  if (signal.signal_type === 'facility_expansion') bullets.push('New capacity coming — could change local competition');
-  if (bullets.length === 0) bullets.push('Follow up on this in the next 1-2 weeks');
-  return bullets.slice(0, 3);
-}
-
-/** Get "what to do" bullets */
-function getActionBullets(vendors: { name: string; category: string }[], problemCategory: string | null): string[] {
-  const bullets: string[] = [];
-  if (vendors.length > 0) {
-    bullets.push(`Talk to: ${vendors.map(v => v.name).join(', ')}`);
-  }
-  if (problemCategory === 'border_delays') bullets.push('Review your crossing schedules and backup POE options');
-  else if (problemCategory === 'customs') bullets.push('Check with your customs broker on compliance updates');
-  else if (problemCategory === 'cost') bullets.push('Review carrier contracts and lock in rates where possible');
-  else if (problemCategory === 'routing') bullets.push('Confirm your routes and have backup plans ready');
-  else if (problemCategory === 'labor_shortage') bullets.push('Review staffing levels and retention plans');
-  else bullets.push('Share this with your operations team');
-  if (vendors.length === 0) bullets.push('Look for vendors in this space — gap in your coverage');
-  return bullets.slice(0, 3);
-}
 
 export async function GET() {
   const supabase = createClient();
@@ -189,7 +106,7 @@ export async function GET() {
       .select('id, title, signal_type, industry, company, evidence, amount_usd, confidence, importance_score, discovered_at, source, tags, vendor_id, problem_category')
       .gte('discovered_at', since7d)
       .order('importance_score', { ascending: false })
-      .limit(300),
+      .limit(500),
     supabase.from('intel_signals').select('*', { count: 'exact', head: true }),
     supabase.from('intel_signals').select('*', { count: 'exact', head: true }).gte('discovered_at', since24h),
     supabase.from('daily_briefings').select('generated_at, briefing_date').order('briefing_date', { ascending: false }).limit(1),
@@ -197,10 +114,9 @@ export async function GET() {
 
   const signals = (recentSignals || []) as SignalRow[];
 
-  // Collect vendor IDs to fetch vendor details
+  // Fetch vendor details
   const vendorIds = signals.filter(s => s.vendor_id).map(s => s.vendor_id!);
   const uniqueVendorIds = Object.keys(vendorIds.reduce((acc: Record<string, boolean>, id) => { acc[id] = true; return acc; }, {}));
-
   const vendorMap: Record<string, VendorRow> = {};
   if (uniqueVendorIds.length > 0) {
     const { data: vendors } = await supabase
@@ -208,40 +124,57 @@ export async function GET() {
       .select('id, company_name, primary_category, iker_score')
       .in('id', uniqueVendorIds.slice(0, 50));
     if (vendors) {
-      for (const v of vendors as VendorRow[]) {
-        vendorMap[v.id] = v;
-      }
+      for (const v of vendors as VendorRow[]) vendorMap[v.id] = v;
     }
   }
 
-  // --- Pick Top 3 individual signals (focus industries, skip "other") ---
-  const focusSignals = signals
-    .filter(s => FOCUS_INDUSTRIES.includes(s.industry) && s.industry !== 'other')
-    .slice(0, 50);
+  // ──────────────────────────────────────────────────────────────
+  // STEP 1: Filter + re-score signals for El Paso relevance
+  // ──────────────────────────────────────────────────────────────
+  const scoredSignals = signals
+    .filter(s => !isJunkSource(s.source))                    // remove arXiv
+    .filter(s => s.industry !== 'other')                     // remove "other"
+    .filter(s => !s.title.toLowerCase().includes('arxiv'))   // catch any missed
+    .map(s => ({
+      ...s,
+      briefing_score: s.importance_score + sourceBoost(s.source) + problemBoost(s.problem_category),
+    }))
+    .sort((a, b) => b.briefing_score - a.briefing_score);
 
-  // Deduplicate by title similarity (skip near-duplicates)
-  const seenTitles: string[] = [];
-  const uniqueSignals = focusSignals.filter(s => {
-    const normalized = s.title.toLowerCase().slice(0, 40);
-    if (seenTitles.some(t => t.startsWith(normalized.slice(0, 25)))) return false;
-    seenTitles.push(normalized);
-    return true;
-  });
+  // ──────────────────────────────────────────────────────────────
+  // STEP 2: Pick top 3 from DIFFERENT industries
+  // ──────────────────────────────────────────────────────────────
+  const top3: (SignalRow & { briefing_score: number })[] = [];
+  const usedIndustries: string[] = [];
+  const usedTitlePrefixes: string[] = [];
 
-  const top3 = uniqueSignals.slice(0, 3);
-
-  // Also group by industry for stats
-  const industryGroups: Record<string, SignalRow[]> = {};
-  for (const s of signals) {
-    const key = s.industry || 'other';
-    if (!industryGroups[key]) industryGroups[key] = [];
-    industryGroups[key].push(s);
+  for (const s of scoredSignals) {
+    if (top3.length >= 3) break;
+    // Skip if we already have this industry
+    if (usedIndustries.includes(s.industry)) continue;
+    // Skip near-duplicate titles
+    const prefix = s.title.toLowerCase().slice(0, 30);
+    if (usedTitlePrefixes.some(p => p.startsWith(prefix.slice(0, 20)))) continue;
+    top3.push(s);
+    usedIndustries.push(s.industry);
+    usedTitlePrefixes.push(prefix);
   }
-  const rankedIndustries = Object.entries(industryGroups)
-    .map(([industry, sigs]) => ({ industry, signals: sigs, totalImportance: sigs.reduce((sum, s) => sum + (s.importance_score || 0), 0) }))
-    .sort((a, b) => b.totalImportance - a.totalImportance);
 
-  // --- Ask Gemini to analyze top 3 signals for El Paso impact ---
+  // If we couldn't fill 3 from different industries, fill from same
+  if (top3.length < 3) {
+    for (const s of scoredSignals) {
+      if (top3.length >= 3) break;
+      if (top3.some(t => t.id === s.id)) continue;
+      const prefix = s.title.toLowerCase().slice(0, 30);
+      if (usedTitlePrefixes.some(p => p.startsWith(prefix.slice(0, 20)))) continue;
+      top3.push(s);
+      usedTitlePrefixes.push(prefix);
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // STEP 3: Call Gemini for El Paso analysis (1 call, all 3)
+  // ──────────────────────────────────────────────────────────────
   type AnalyzedSignal = {
     whats_happening: string;
     el_paso_impact: string[];
@@ -253,6 +186,7 @@ export async function GET() {
 
   if (top3.length > 0) {
     const signalSummaries = top3.map((s, i) => {
+      // Find vendors related to this signal
       const vendorNames: string[] = [];
       for (const sig of signals) {
         if (sig.vendor_id && vendorMap[sig.vendor_id] && sig.industry === s.industry) {
@@ -263,31 +197,44 @@ export async function GET() {
       }
       return `Signal ${i + 1}:
 Title: ${sanitize(s.title)}
-Evidence: ${sanitize(s.evidence).slice(0, 200)}
+Summary: ${sanitize(s.evidence).slice(0, 300)}
+Source: ${s.source || 'unknown'}
 Industry: ${s.industry}
-Type: ${s.signal_type}
-Company: ${s.company || 'none'}
-Problem: ${s.problem_category || 'none'}
-Related vendors in our database: ${vendorNames.join(', ') || 'none'}`;
+Problem: ${s.problem_category || 'general'}
+Company mentioned: ${s.company || 'none'}
+Vendors in our database for this area: ${vendorNames.join(', ') || 'none found'}`;
     }).join('\n\n');
 
     try {
       const { result } = await runParallelJsonEnsemble<AnalyzedSignal[]>({
-        systemPrompt: `You are a supply chain analyst for the El Paso-Juárez Borderplex region. El Paso is a top-10 US logistics hub with 300+ maquiladoras in Juárez, Fort Bliss military base, and 4 international ports of entry (Ysleta, BOTA, Santa Teresa, Stanton).
+        systemPrompt: `You are a senior supply chain analyst writing a daily briefing for logistics operators in El Paso, Texas.
 
-Analyze each signal and return JSON. Be specific to El Paso. Use simple language. Short bullet points.`,
-        userPrompt: `Analyze these ${top3.length} signals. For each one, explain:
-1. whats_happening: One sentence, plain English, what this news means (not just the title)
-2. el_paso_impact: 2-3 bullet points, how this specifically affects El Paso, Juárez, or the Borderplex
-3. watch_for: 1-2 things to monitor this week
-4. what_to_do: 1-2 concrete actions (include vendor names if provided)
+Context about El Paso:
+- Top-10 US logistics hub, handles billions in cross-border trade with Mexico
+- 4 international ports of entry: Ysleta, BOTA (Bridge of the Americas), Santa Teresa (NM), Stanton Street
+- Ciudad Juárez across the border has 300+ maquiladoras (manufacturing plants)
+- Fort Bliss is one of the largest US military installations
+- Key industries: trucking, warehousing, customs brokerage, cross-border manufacturing
+- Major employers: UPS, FedEx, XPO, Amazon have distribution hubs here
+- Diesel prices, border wait times, and USMCA compliance directly impact local businesses
 
-Return a JSON array of objects. Keep bullets SHORT (under 15 words each).
+Write like you're briefing a busy operations manager. Be specific. No jargon. No filler.`,
+        userPrompt: `Analyze these ${top3.length} news signals. For EACH signal, return:
+
+1. "whats_happening" — 2-3 sentences explaining what this news actually means in plain English. Don't repeat the headline. Give context.
+
+2. "el_paso_impact" — 2-3 bullet points on how this SPECIFICALLY affects El Paso, Juárez, or cross-border operations. Be concrete. Name specific POEs, industries, or companies when relevant.
+
+3. "watch_for" — 1-2 specific things to monitor in the next 1-2 weeks related to this news.
+
+4. "what_to_do" — 1-2 concrete actions. If vendors are listed, mention them. Be practical.
+
+Return a JSON array with ${top3.length} objects. No markdown, just JSON.
 
 ${signalSummaries}`,
         temperature: 0.3,
         preferredProviders: ['gemini'],
-        budget: { maxCostUsd: 0.01 },
+        budget: { maxCostUsd: 0.02 },
         parse: (content) => {
           const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
           return JSON.parse(cleaned) as AnalyzedSignal[];
@@ -299,14 +246,23 @@ ${signalSummaries}`,
     }
   }
 
-  // Build top 3 insight cards
+  // ──────────────────────────────────────────────────────────────
+  // STEP 4: Build insight cards
+  // ──────────────────────────────────────────────────────────────
+  const industryGroups: Record<string, SignalRow[]> = {};
+  for (const s of signals) {
+    const key = s.industry || 'other';
+    if (!industryGroups[key]) industryGroups[key] = [];
+    industryGroups[key].push(s);
+  }
+
   const topInsights = top3.map((signal, i) => {
     const cleanTitle = sanitize(signal.title);
     const cleanEvidence = sanitize(signal.evidence);
     const problem = signal.problem_category;
     const ai = aiAnalysis[i];
 
-    // Find vendors for this signal's industry/problem
+    // Find vendors
     const industryVendors: { name: string; category: string; iker_score: number | null }[] = [];
     if (signal.vendor_id && vendorMap[signal.vendor_id]) {
       const v = vendorMap[signal.vendor_id];
@@ -324,31 +280,31 @@ ${signalSummaries}`,
       if (industryVendors.length >= 3) break;
     }
 
-    // Use AI analysis if available, otherwise fallback to templates
-    const el_paso_impact = ai?.el_paso_impact || getElPasoImpact(problem, signal.industry);
-    const watch_for = ai?.watch_for || getWatchFor(signal, problem);
-    const action_bullets = ai?.what_to_do || getActionBullets(industryVendors, problem);
+    // Use AI if available, fallback to evidence text
     const whats_happening = ai?.whats_happening || (cleanEvidence && cleanEvidence.length > 30 ? cleanEvidence : cleanTitle);
-
-    const industryCount = industryGroups[signal.industry]?.length || 0;
+    const el_paso_impact = ai?.el_paso_impact || ['Monitoring impact on El Paso-Juárez corridor'];
+    const watch_for = ai?.watch_for || ['Follow developments this week'];
+    const action_bullets = ai?.what_to_do || ['Share with your operations team'];
 
     return {
       rank: i + 1,
       title: cleanTitle,
+      source: signal.source || 'Unknown',
+      discovered_at: signal.discovered_at,
       what_is_happening: whats_happening,
       why_it_matters: el_paso_impact.join('. ') + '.',
       where_its_going: action_bullets.join('. ') + '.',
       el_paso_impact,
       watch_for,
       action_bullets,
-      signal_count: industryCount,
+      signal_count: industryGroups[signal.industry]?.length || 0,
       avg_score: signal.importance_score,
       industry: signal.industry,
       signal_type: signal.signal_type,
       problem_category: problem,
       problem_label: problem ? PROBLEM_LABELS[problem] || problem : null,
       related_signals: signals
-        .filter(s => s.industry === signal.industry && s.id !== signal.id)
+        .filter(s => s.industry === signal.industry && s.id !== signal.id && !isJunkSource(s.source))
         .slice(0, 3)
         .map(s => ({
           id: s.id,
@@ -362,7 +318,9 @@ ${signalSummaries}`,
     };
   });
 
-  // --- Signal stats ---
+  // ──────────────────────────────────────────────────────────────
+  // Signal stats + trends + recent (same as before)
+  // ──────────────────────────────────────────────────────────────
   const typeCount: Record<string, number> = {};
   const industryCount: Record<string, number> = {};
   for (const s of signals) {
@@ -370,13 +328,12 @@ ${signalSummaries}`,
     industryCount[s.industry] = (industryCount[s.industry] || 0) + 1;
   }
 
-  // --- Recent signals (latest 20, sanitized) ---
   const sortedByDate = [...signals]
+    .filter(s => !isJunkSource(s.source))
     .sort((a, b) => new Date(b.discovered_at).getTime() - new Date(a.discovered_at).getTime())
     .slice(0, 20)
     .map(s => ({ ...s, title: sanitize(s.title), evidence: sanitize(s.evidence) }));
 
-  // --- Trend data ---
   const trendDays: Record<string, Record<string, number>> = {};
   for (const s of signals) {
     const day = s.discovered_at.split('T')[0];
@@ -385,16 +342,15 @@ ${signalSummaries}`,
     trendDays[day][ind] = (trendDays[day][ind] || 0) + 1;
   }
 
+  const rankedIndustries = Object.entries(industryGroups)
+    .map(([industry, sigs]) => ({ industry, signals: sigs, totalImportance: sigs.reduce((sum, s) => sum + (s.importance_score || 0), 0) }))
+    .sort((a, b) => b.totalImportance - a.totalImportance);
   const topIndustryNames = rankedIndustries.slice(0, 4).map(g => g.industry);
   const sortedDates = Object.keys(trendDays).sort();
 
   const timeSeries = topIndustryNames.map(ind => ({
-    cluster_id: ind,
-    label: ind,
-    points: sortedDates.map(date => ({
-      date,
-      score: trendDays[date][ind] || 0,
-    })),
+    cluster_id: ind, label: ind,
+    points: sortedDates.map(date => ({ date, score: trendDays[date][ind] || 0 })),
   }));
 
   const snapshot = topIndustryNames.map(ind => {
@@ -403,17 +359,13 @@ ${signalSummaries}`,
     const firstHalf = pts.slice(0, half).reduce((a, b) => a + b, 0) / (half || 1);
     const secondHalf = pts.slice(half).reduce((a, b) => a + b, 0) / (pts.length - half || 1);
     const velocity = secondHalf - firstHalf;
-    const trendLabel = velocity > 1 ? 'growing' : velocity < -1 ? 'declining' : 'stable';
     return {
-      cluster_id: ind,
-      label: ind,
+      cluster_id: ind, label: ind,
       date: sortedDates[sortedDates.length - 1] || new Date().toISOString().split('T')[0],
       signal_count: pts.reduce((a, b) => a + b, 0),
       rolling_avg: (pts.reduce((a, b) => a + b, 0) / (pts.length || 1)).toFixed(1),
-      velocity: velocity.toFixed(2),
-      acceleration: '0',
-      trend_score: velocity.toFixed(2),
-      trend_label: trendLabel,
+      velocity: velocity.toFixed(2), acceleration: '0', trend_score: velocity.toFixed(2),
+      trend_label: velocity > 1 ? 'growing' : velocity < -1 ? 'declining' : 'stable',
     };
   });
 
@@ -434,10 +386,7 @@ ${signalSummaries}`,
       clusters: [],
       regions: [],
       recent_signals: sortedByDate,
-      trends: {
-        snapshot,
-        time_series: timeSeries,
-      },
+      trends: { snapshot, time_series: timeSeries },
     },
   });
 }

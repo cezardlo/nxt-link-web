@@ -386,18 +386,32 @@ export default function BriefingPage() {
                   </div>
                 </div>
 
-                {/* News headline */}
-                <p className="text-[15px] font-medium text-nxt-text mb-1">
+                {/* Full news headline */}
+                <h3 className="text-base font-semibold text-nxt-text leading-snug mb-2">
                   {insight.title}
+                </h3>
+
+                {/* Source + problem tag */}
+                <div className="flex items-center gap-2 mb-4">
+                  {(insight as Record<string, unknown>).source && (
+                    <span className="text-[11px] text-nxt-muted">
+                      {(insight as Record<string, unknown>).source as string} &middot; {formatDate((insight as Record<string, unknown>).discovered_at as string || '')}
+                    </span>
+                  )}
+                  {insight.problem_label && (
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-nxt-card border border-nxt-border text-nxt-red">
+                      {insight.problem_label}
+                    </span>
+                  )}
+                </div>
+
+                {/* What's happening — the real summary */}
+                <p className="text-[13px] leading-relaxed text-nxt-secondary mb-4 pl-3 border-l-2 border-nxt-border">
+                  {insight.what_is_happening}
                 </p>
-                {insight.problem_label && (
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-nxt-card border border-nxt-border text-nxt-red">
-                    {insight.problem_label}
-                  </span>
-                )}
 
                 {/* 4-section grid */}
-                <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="grid grid-cols-2 gap-4">
                   {/* El Paso Impact */}
                   <div className="p-4 rounded-lg bg-nxt-bg border border-nxt-border-subtle">
                     <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-amber mb-3 uppercase">El Paso Impact</div>
