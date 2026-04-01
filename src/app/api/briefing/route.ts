@@ -63,6 +63,114 @@ const PROBLEM_LABELS: Record<string, string> = {
   labor_shortage: 'Labor & Workforce Gaps',
 };
 
+/** El Paso / Borderplex impact context by problem + industry */
+const EP_IMPACT: Record<string, string[]> = {
+  // Problem-based impacts
+  border_delays: [
+    'Could increase wait times at Ysleta, BOTA, or Santa Teresa POEs',
+    'Cross-border freight between El Paso and Juarez may slow down',
+    'Maquiladora supply chains could face delays',
+  ],
+  customs: [
+    'USMCA compliance requirements may shift for El Paso importers/exporters',
+    'Customs brokers in the Borderplex may need to adjust filings',
+    'Cross-border trade costs between US and Mexico could change',
+  ],
+  cost: [
+    'Freight and drayage costs in the El Paso corridor may rise',
+    'Fuel and transport pricing for cross-border carriers could shift',
+    'Operating costs for maquiladora logistics may increase',
+  ],
+  routing: [
+    'Trucking routes through the Borderplex may need rerouting',
+    'Carriers using El Paso as a gateway could face disruptions',
+    'Intermodal connections at El Paso rail hubs may be affected',
+  ],
+  documentation_errors: [
+    'Customs paperwork for El Paso-Juarez crossings may need updates',
+    'Documentation requirements for Borderplex trade could change',
+  ],
+  erp_integration: [
+    'Local manufacturers may need to update their systems',
+    'Borderplex companies on legacy ERPs could fall further behind',
+  ],
+  labor_shortage: [
+    'El Paso warehouse and driver labor pool may tighten',
+    'Cross-border workforce dynamics could shift',
+  ],
+  // Industry-based fallbacks
+  logistics: [
+    'El Paso is a top-10 US logistics hub — this affects local carriers and warehouses',
+    'Cross-border freight volume through the Borderplex could shift',
+  ],
+  manufacturing: [
+    'Juarez has 300+ maquiladoras — manufacturing shifts affect the whole Borderplex',
+    'El Paso-area manufacturers and suppliers may see ripple effects',
+  ],
+  'border-tech': [
+    'Border technology and security systems in the El Paso sector may be impacted',
+    'CBP and DHS operations at local POEs could change',
+  ],
+  defense: [
+    'Fort Bliss operations and defense contractors in El Paso may be affected',
+    'Defense supply chain through the Borderplex could see changes',
+  ],
+  energy: [
+    'Energy costs for El Paso industrial operations could shift',
+    'Fuel pricing at Borderplex terminals may be impacted',
+  ],
+  tech: [
+    'Tech adoption in Borderplex logistics and manufacturing may be affected',
+    'Local companies evaluating these solutions should take note',
+  ],
+};
+
+/** Get El Paso impact bullets for a signal */
+function getElPasoImpact(problemCategory: string | null, industry: string): string[] {
+  // Try problem-specific first, then industry fallback
+  if (problemCategory && EP_IMPACT[problemCategory]) {
+    return EP_IMPACT[problemCategory].slice(0, 2);
+  }
+  if (EP_IMPACT[industry]) {
+    return EP_IMPACT[industry].slice(0, 2);
+  }
+  return ['Monitor how this affects supply chains through the El Paso-Juarez corridor'];
+}
+
+/** Get "watch for" bullets based on signal context */
+function getWatchFor(signal: SignalRow, problemCategory: string | null): string[] {
+  const bullets: string[] = [];
+  if (signal.amount_usd && signal.amount_usd > 0) {
+    bullets.push(`Dollar amount involved: $${(signal.amount_usd / 1e6).toFixed(0)}M`);
+  }
+  if (problemCategory === 'border_delays') bullets.push('Check POE wait times this week');
+  if (problemCategory === 'customs') bullets.push('Watch for new tariff or compliance announcements');
+  if (problemCategory === 'cost') bullets.push('Track freight rate changes in your contracts');
+  if (problemCategory === 'routing') bullets.push('Check for route advisories or port congestion');
+  if (signal.signal_type === 'merger_acquisition') bullets.push('Watch for supply chain consolidation effects');
+  if (signal.signal_type === 'funding_round') bullets.push('New funding means this company is scaling — could be a future vendor');
+  if (signal.signal_type === 'contract_award') bullets.push('See if this contract affects your suppliers or competitors');
+  if (signal.signal_type === 'facility_expansion') bullets.push('New capacity coming — could change local competition');
+  if (bullets.length === 0) bullets.push('Follow up on this in the next 1-2 weeks');
+  return bullets.slice(0, 3);
+}
+
+/** Get "what to do" bullets */
+function getActionBullets(vendors: { name: string; category: string }[], problemCategory: string | null): string[] {
+  const bullets: string[] = [];
+  if (vendors.length > 0) {
+    bullets.push(`Talk to: ${vendors.map(v => v.name).join(', ')}`);
+  }
+  if (problemCategory === 'border_delays') bullets.push('Review your crossing schedules and backup POE options');
+  else if (problemCategory === 'customs') bullets.push('Check with your customs broker on compliance updates');
+  else if (problemCategory === 'cost') bullets.push('Review carrier contracts and lock in rates where possible');
+  else if (problemCategory === 'routing') bullets.push('Confirm your routes and have backup plans ready');
+  else if (problemCategory === 'labor_shortage') bullets.push('Review staffing levels and retention plans');
+  else bullets.push('Share this with your operations team');
+  if (vendors.length === 0) bullets.push('Look for vendors in this space — gap in your coverage');
+  return bullets.slice(0, 3);
+}
+
 export async function GET() {
   const supabase = createClient();
 
@@ -105,136 +213,96 @@ export async function GET() {
     }
   }
 
-  // --- Group signals by industry, prioritizing focus industries ---
+  // --- Pick Top 3 individual signals (focus industries, skip "other") ---
+  const focusSignals = signals
+    .filter(s => FOCUS_INDUSTRIES.includes(s.industry) && s.industry !== 'other')
+    .slice(0, 50);
+
+  // Deduplicate by title similarity (skip near-duplicates)
+  const seenTitles: string[] = [];
+  const uniqueSignals = focusSignals.filter(s => {
+    const normalized = s.title.toLowerCase().slice(0, 40);
+    if (seenTitles.some(t => t.startsWith(normalized.slice(0, 25)))) return false;
+    seenTitles.push(normalized);
+    return true;
+  });
+
+  const top3 = uniqueSignals.slice(0, 3);
+
+  // Also group by industry for stats
   const industryGroups: Record<string, SignalRow[]> = {};
   for (const s of signals) {
     const key = s.industry || 'other';
     if (!industryGroups[key]) industryGroups[key] = [];
     industryGroups[key].push(s);
   }
-
-  // Rank: focus industries first, then by signal volume
   const rankedIndustries = Object.entries(industryGroups)
-    .map(([industry, sigs]) => {
-      const focusIdx = FOCUS_INDUSTRIES.indexOf(industry);
-      return {
-        industry,
-        signals: sigs,
-        totalImportance: sigs.reduce((sum, s) => sum + (s.importance_score || 0), 0),
-        avgImportance: sigs.reduce((sum, s) => sum + (s.importance_score || 0), 0) / sigs.length,
-        topSignal: sigs[0],
-        focusPriority: focusIdx >= 0 ? focusIdx : 100, // focus industries sort first
-      };
-    })
-    .filter(g => g.industry !== 'other') // exclude "other" from top insights
-    .sort((a, b) => {
-      // Primary: focus industries first
-      if (a.focusPriority !== b.focusPriority) return a.focusPriority - b.focusPriority;
-      // Secondary: by total importance
-      return b.totalImportance - a.totalImportance;
-    });
+    .map(([industry, sigs]) => ({ industry, signals: sigs, totalImportance: sigs.reduce((sum, s) => sum + (s.importance_score || 0), 0) }))
+    .sort((a, b) => b.totalImportance - a.totalImportance);
 
-  // Build top 3 insight cards
-  const topInsights = rankedIndustries.slice(0, 3).map((group, i) => {
-    const top = group.topSignal;
-    const topSignals = group.signals.slice(0, 5);
+  // Build top 3 insight cards — one per signal, framed for El Paso
+  const topInsights = top3.map((signal, i) => {
+    const cleanTitle = sanitize(signal.title);
+    const cleanEvidence = sanitize(signal.evidence);
+    const problem = signal.problem_category;
 
-    // Dominant signal type
-    const typeCounts: Record<string, number> = {};
-    for (const s of group.signals) {
-      typeCounts[s.signal_type] = (typeCounts[s.signal_type] || 0) + 1;
+    // Find linked vendor
+    const vendor = signal.vendor_id ? vendorMap[signal.vendor_id] : null;
+    // Also find vendors from same industry that solve this problem
+    const industryVendors: { name: string; category: string; iker_score: number | null }[] = [];
+    if (vendor) {
+      industryVendors.push({ name: vendor.company_name, category: vendor.primary_category, iker_score: vendor.iker_score });
     }
-    const dominantType = Object.entries(typeCounts).sort(([, a], [, b]) => b - a)[0]?.[0] || 'discovery';
-
-    // Companies mentioned
-    const companySet: Record<string, boolean> = {};
-    for (const s of group.signals) { if (s.company) companySet[s.company] = true; }
-    const companies = Object.keys(companySet).slice(0, 4);
-
-    // Problem categories in this cluster
-    const problemCounts: Record<string, number> = {};
-    for (const s of group.signals) {
-      if (s.problem_category) {
-        problemCounts[s.problem_category] = (problemCounts[s.problem_category] || 0) + 1;
+    // Add more vendors from other signals in same industry/problem
+    for (const s of signals) {
+      if (s.vendor_id && s.vendor_id !== signal.vendor_id && vendorMap[s.vendor_id]) {
+        const matchesProblem = problem && s.problem_category === problem;
+        const matchesIndustry = s.industry === signal.industry;
+        if (matchesProblem || matchesIndustry) {
+          const v = vendorMap[s.vendor_id];
+          if (!industryVendors.some(iv => iv.name === v.company_name)) {
+            industryVendors.push({ name: v.company_name, category: v.primary_category, iker_score: v.iker_score });
+          }
+        }
       }
+      if (industryVendors.length >= 3) break;
     }
-    const topProblems = Object.entries(problemCounts)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 2)
-      .map(([p, count]) => ({ key: p, label: PROBLEM_LABELS[p] || p, count }));
 
-    // Vendors linked to signals in this cluster
-    const linkedVendors: Record<string, VendorRow> = {};
-    for (const s of group.signals) {
-      if (s.vendor_id && vendorMap[s.vendor_id]) {
-        linkedVendors[s.vendor_id] = vendorMap[s.vendor_id];
-      }
-    }
-    const vendorList = Object.values(linkedVendors)
-      .sort((a, b) => (b.iker_score || 0) - (a.iker_score || 0))
-      .slice(0, 4)
-      .map(v => ({ name: v.company_name, category: v.primary_category, iker_score: v.iker_score }));
+    // Build the 4 bullet sections
+    const el_paso_impact = getElPasoImpact(problem, signal.industry);
+    const watch_for = getWatchFor(signal, problem);
+    const what_to_do = getActionBullets(industryVendors, problem);
 
-    // Clean evidence from top signals (no HTML)
-    const cleanEvidence = topSignals
-      .map(s => sanitize(s.evidence))
-      .filter(e => e.length > 30 && !e.startsWith('[') && !e.startsWith('http'))
-      .slice(0, 3);
-
-    // --- Build bullet-point fields ---
-
-    // "What's happening" — short headline
-    const what_is_happening = sanitize(top.title);
-
-    // "Why it matters" — bullet array
-    const why_bullets: string[] = [];
-    why_bullets.push(`${group.signals.length} signals detected this week`);
-    if (companies.length > 0) why_bullets.push(`Key players: ${companies.join(', ')}`);
-    if (topProblems.length > 0) why_bullets.push(...topProblems.map(p => `${p.label}: ${p.count} signals`));
-    if (cleanEvidence[0]) why_bullets.push(cleanEvidence[0]);
-
-    // "What to do" — bullet array
-    const action_bullets: string[] = [];
-    if (vendorList.length > 0) {
-      action_bullets.push(`Review vendors: ${vendorList.map(v => v.name).join(', ')}`);
-    }
-    if (topProblems.length > 0) {
-      action_bullets.push(`Monitor ${topProblems[0].label.toLowerCase()}`);
-    }
-    if (vendorList.length === 0 && topProblems.length === 0) {
-      action_bullets.push('Watch for contract awards and partnerships');
-    }
-    action_bullets.push(`Track ${group.industry} signals for changes`);
-
-    // Keep old string fields for backwards compat, add new bullet arrays
-    const why_it_matters = why_bullets.join('. ') + '.';
-    const where_its_going = action_bullets.join('. ') + '.';
-
-    // Related signals
-    const related_signals = topSignals.map(s => ({
-      id: s.id,
-      title: sanitize(s.title),
-      source: s.source || 'Unknown',
-      discovered_at: s.discovered_at,
-      signal_type: s.signal_type,
-      relevance_score: s.importance_score,
-    }));
+    // Signal count in same industry this week
+    const industryCount = industryGroups[signal.industry]?.length || 0;
 
     return {
       rank: i + 1,
-      title: sanitize(top.title),
-      what_is_happening,
-      why_it_matters,
-      where_its_going,
-      why_bullets,
-      action_bullets,
-      signal_count: group.signals.length,
-      avg_score: Math.round(group.avgImportance * 100) / 100,
-      industry: group.industry,
-      signal_type: dominantType,
-      related_signals,
-      vendors: vendorList,
-      problems: topProblems,
+      title: cleanTitle,
+      what_is_happening: cleanTitle + (cleanEvidence && cleanEvidence.length > 30 ? ` — ${cleanEvidence}` : ''),
+      why_it_matters: el_paso_impact.join('. ') + '.',
+      where_its_going: what_to_do.join('. ') + '.',
+      el_paso_impact,
+      watch_for,
+      action_bullets: what_to_do,
+      signal_count: industryCount,
+      avg_score: signal.importance_score,
+      industry: signal.industry,
+      signal_type: signal.signal_type,
+      problem_category: problem,
+      problem_label: problem ? PROBLEM_LABELS[problem] || problem : null,
+      related_signals: signals
+        .filter(s => s.industry === signal.industry && s.id !== signal.id)
+        .slice(0, 3)
+        .map(s => ({
+          id: s.id,
+          title: sanitize(s.title),
+          source: s.source || 'Unknown',
+          discovered_at: s.discovered_at,
+          signal_type: s.signal_type,
+          relevance_score: s.importance_score,
+        })),
+      vendors: industryVendors,
     };
   });
 

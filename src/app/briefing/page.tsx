@@ -31,12 +31,15 @@ interface TopInsight {
   what_is_happening: string;
   why_it_matters: string;
   where_its_going: string;
-  why_bullets?: string[];
+  el_paso_impact?: string[];
+  watch_for?: string[];
   action_bullets?: string[];
   signal_count: number;
   avg_score: number;
   industry: string;
   signal_type: string;
+  problem_category?: string | null;
+  problem_label?: string | null;
   related_signals: RelatedSignal[];
   vendors?: InsightVendor[];
   problems?: InsightProblem[];
@@ -383,57 +386,75 @@ export default function BriefingPage() {
                   </div>
                 </div>
 
-                {/* Headline */}
-                <p className="text-[15px] font-medium text-nxt-text mb-4">
-                  {insight.what_is_happening}
+                {/* News headline */}
+                <p className="text-[15px] font-medium text-nxt-text mb-1">
+                  {insight.title}
                 </p>
+                {insight.problem_label && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-nxt-card border border-nxt-border text-nxt-red">
+                    {insight.problem_label}
+                  </span>
+                )}
 
-                {/* Three columns: Why / What to do / Who can help */}
-                <div className="grid grid-cols-3 gap-4">
-                  {/* Why it matters */}
+                {/* 4-section grid */}
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  {/* El Paso Impact */}
                   <div className="p-4 rounded-lg bg-nxt-bg border border-nxt-border-subtle">
-                    <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-amber mb-3 uppercase">Why it matters</div>
+                    <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-amber mb-3 uppercase">El Paso Impact</div>
                     <ul className="space-y-2">
-                      {(insight.why_bullets || [insight.why_it_matters]).map((bullet, idx) => (
+                      {(insight.el_paso_impact || [insight.why_it_matters]).map((bullet, idx) => (
                         <li key={idx} className="flex items-start gap-2">
-                          <span className="text-nxt-amber mt-1 shrink-0">&#x2022;</span>
+                          <span className="text-nxt-amber mt-0.5 shrink-0 text-[10px]">&#x25B6;</span>
                           <span className="text-[12px] leading-snug text-nxt-secondary">{bullet}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
 
-                  {/* What to do */}
+                  {/* Watch For */}
                   <div className="p-4 rounded-lg bg-nxt-bg border border-nxt-border-subtle">
-                    <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-green mb-3 uppercase">What to do</div>
+                    <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-purple mb-3 uppercase">Watch For</div>
+                    <ul className="space-y-2">
+                      {(insight.watch_for || ['Follow up in 1-2 weeks']).map((bullet, idx) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <span className="text-nxt-purple mt-0.5 shrink-0 text-[10px]">&#x25B6;</span>
+                          <span className="text-[12px] leading-snug text-nxt-secondary">{bullet}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* What To Do */}
+                  <div className="p-4 rounded-lg bg-nxt-bg border border-nxt-border-subtle">
+                    <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-green mb-3 uppercase">What To Do</div>
                     <ul className="space-y-2">
                       {(insight.action_bullets || [insight.where_its_going]).map((bullet, idx) => (
                         <li key={idx} className="flex items-start gap-2">
-                          <span className="text-nxt-green mt-1 shrink-0">&#x2022;</span>
+                          <span className="text-nxt-green mt-0.5 shrink-0 text-[10px]">&#x25B6;</span>
                           <span className="text-[12px] leading-snug text-nxt-secondary">{bullet}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
 
-                  {/* Who can help */}
+                  {/* Who Can Help */}
                   <div className="p-4 rounded-lg bg-nxt-bg border border-nxt-border-subtle">
-                    <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-cyan mb-3 uppercase">Who can help</div>
+                    <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-cyan mb-3 uppercase">Who Can Help</div>
                     {insight.vendors && insight.vendors.length > 0 ? (
                       <ul className="space-y-2">
                         {insight.vendors.map((v) => (
                           <li key={v.name} className="flex items-start gap-2">
-                            <span className="text-nxt-cyan mt-1 shrink-0">&#x2022;</span>
+                            <span className="text-nxt-cyan mt-0.5 shrink-0 text-[10px]">&#x25B6;</span>
                             <span className="text-[12px] leading-snug text-nxt-secondary">
-                              {v.name}
-                              <span className="text-nxt-dim ml-1">({v.category})</span>
-                              {v.iker_score && <span className="text-nxt-accent font-mono ml-1">{v.iker_score}</span>}
+                              <span className="font-medium text-nxt-text">{v.name}</span>
+                              <span className="text-nxt-dim ml-1">{v.category}</span>
+                              {v.iker_score && <span className="text-nxt-accent font-mono ml-1">IKER {v.iker_score}</span>}
                             </span>
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-[12px] text-nxt-dim">No vendors linked yet</p>
+                      <p className="text-[12px] text-nxt-dim italic">No vendors linked — potential gap</p>
                     )}
                   </div>
                 </div>
