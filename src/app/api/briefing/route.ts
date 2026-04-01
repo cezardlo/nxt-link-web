@@ -7,6 +7,7 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/client';
+import { runParallelJsonEnsemble } from '@/lib/llm/parallel-router';
 
 export const dynamic = 'force-dynamic';
 
@@ -240,25 +241,80 @@ export async function GET() {
     .map(([industry, sigs]) => ({ industry, signals: sigs, totalImportance: sigs.reduce((sum, s) => sum + (s.importance_score || 0), 0) }))
     .sort((a, b) => b.totalImportance - a.totalImportance);
 
-  // Build top 3 insight cards — one per signal, framed for El Paso
+  // --- Ask Gemini to analyze top 3 signals for El Paso impact ---
+  type AnalyzedSignal = {
+    whats_happening: string;
+    el_paso_impact: string[];
+    watch_for: string[];
+    what_to_do: string[];
+  };
+
+  let aiAnalysis: AnalyzedSignal[] = [];
+
+  if (top3.length > 0) {
+    const signalSummaries = top3.map((s, i) => {
+      const vendorNames: string[] = [];
+      for (const sig of signals) {
+        if (sig.vendor_id && vendorMap[sig.vendor_id] && sig.industry === s.industry) {
+          const name = vendorMap[sig.vendor_id].company_name;
+          if (!vendorNames.includes(name)) vendorNames.push(name);
+          if (vendorNames.length >= 3) break;
+        }
+      }
+      return `Signal ${i + 1}:
+Title: ${sanitize(s.title)}
+Evidence: ${sanitize(s.evidence).slice(0, 200)}
+Industry: ${s.industry}
+Type: ${s.signal_type}
+Company: ${s.company || 'none'}
+Problem: ${s.problem_category || 'none'}
+Related vendors in our database: ${vendorNames.join(', ') || 'none'}`;
+    }).join('\n\n');
+
+    try {
+      const { result } = await runParallelJsonEnsemble<AnalyzedSignal[]>({
+        systemPrompt: `You are a supply chain analyst for the El Paso-Juárez Borderplex region. El Paso is a top-10 US logistics hub with 300+ maquiladoras in Juárez, Fort Bliss military base, and 4 international ports of entry (Ysleta, BOTA, Santa Teresa, Stanton).
+
+Analyze each signal and return JSON. Be specific to El Paso. Use simple language. Short bullet points.`,
+        userPrompt: `Analyze these ${top3.length} signals. For each one, explain:
+1. whats_happening: One sentence, plain English, what this news means (not just the title)
+2. el_paso_impact: 2-3 bullet points, how this specifically affects El Paso, Juárez, or the Borderplex
+3. watch_for: 1-2 things to monitor this week
+4. what_to_do: 1-2 concrete actions (include vendor names if provided)
+
+Return a JSON array of objects. Keep bullets SHORT (under 15 words each).
+
+${signalSummaries}`,
+        temperature: 0.3,
+        preferredProviders: ['gemini', 'nvidia'],
+        budget: { maxCostUsd: 0.01 },
+        parse: (content) => {
+          const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+          return JSON.parse(cleaned) as AnalyzedSignal[];
+        },
+      });
+      aiAnalysis = result;
+    } catch (err) {
+      console.warn('[briefing] AI analysis failed, using fallback:', err);
+    }
+  }
+
+  // Build top 3 insight cards
   const topInsights = top3.map((signal, i) => {
     const cleanTitle = sanitize(signal.title);
     const cleanEvidence = sanitize(signal.evidence);
     const problem = signal.problem_category;
+    const ai = aiAnalysis[i];
 
-    // Find linked vendor
-    const vendor = signal.vendor_id ? vendorMap[signal.vendor_id] : null;
-    // Also find vendors from same industry that solve this problem
+    // Find vendors for this signal's industry/problem
     const industryVendors: { name: string; category: string; iker_score: number | null }[] = [];
-    if (vendor) {
-      industryVendors.push({ name: vendor.company_name, category: vendor.primary_category, iker_score: vendor.iker_score });
+    if (signal.vendor_id && vendorMap[signal.vendor_id]) {
+      const v = vendorMap[signal.vendor_id];
+      industryVendors.push({ name: v.company_name, category: v.primary_category, iker_score: v.iker_score });
     }
-    // Add more vendors from other signals in same industry/problem
     for (const s of signals) {
       if (s.vendor_id && s.vendor_id !== signal.vendor_id && vendorMap[s.vendor_id]) {
-        const matchesProblem = problem && s.problem_category === problem;
-        const matchesIndustry = s.industry === signal.industry;
-        if (matchesProblem || matchesIndustry) {
+        if ((problem && s.problem_category === problem) || s.industry === signal.industry) {
           const v = vendorMap[s.vendor_id];
           if (!industryVendors.some(iv => iv.name === v.company_name)) {
             industryVendors.push({ name: v.company_name, category: v.primary_category, iker_score: v.iker_score });
@@ -268,23 +324,23 @@ export async function GET() {
       if (industryVendors.length >= 3) break;
     }
 
-    // Build the 4 bullet sections
-    const el_paso_impact = getElPasoImpact(problem, signal.industry);
-    const watch_for = getWatchFor(signal, problem);
-    const what_to_do = getActionBullets(industryVendors, problem);
+    // Use AI analysis if available, otherwise fallback to templates
+    const el_paso_impact = ai?.el_paso_impact || getElPasoImpact(problem, signal.industry);
+    const watch_for = ai?.watch_for || getWatchFor(signal, problem);
+    const action_bullets = ai?.what_to_do || getActionBullets(industryVendors, problem);
+    const whats_happening = ai?.whats_happening || (cleanEvidence && cleanEvidence.length > 30 ? cleanEvidence : cleanTitle);
 
-    // Signal count in same industry this week
     const industryCount = industryGroups[signal.industry]?.length || 0;
 
     return {
       rank: i + 1,
       title: cleanTitle,
-      what_is_happening: cleanTitle + (cleanEvidence && cleanEvidence.length > 30 ? ` — ${cleanEvidence}` : ''),
+      what_is_happening: whats_happening,
       why_it_matters: el_paso_impact.join('. ') + '.',
-      where_its_going: what_to_do.join('. ') + '.',
+      where_its_going: action_bullets.join('. ') + '.',
       el_paso_impact,
       watch_for,
-      action_bullets: what_to_do,
+      action_bullets,
       signal_count: industryCount,
       avg_score: signal.importance_score,
       industry: signal.industry,
