@@ -286,7 +286,7 @@ Return a JSON array of objects. Keep bullets SHORT (under 15 words each).
 
 ${signalSummaries}`,
         temperature: 0.3,
-        preferredProviders: ['gemini', 'nvidia'],
+        preferredProviders: ['gemini'],
         budget: { maxCostUsd: 0.01 },
         parse: (content) => {
           const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
