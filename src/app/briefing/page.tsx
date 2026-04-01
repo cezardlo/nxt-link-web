@@ -31,6 +31,8 @@ interface TopInsight {
   what_is_happening: string;
   why_it_matters: string;
   where_its_going: string;
+  why_bullets?: string[];
+  action_bullets?: string[];
   signal_count: number;
   avg_score: number;
   industry: string;
@@ -381,61 +383,60 @@ export default function BriefingPage() {
                   </div>
                 </div>
 
-                {/* Main narrative */}
-                <p className="text-[15px] leading-relaxed text-nxt-text mb-5">
+                {/* Headline */}
+                <p className="text-[15px] font-medium text-nxt-text mb-4">
                   {insight.what_is_happening}
                 </p>
 
-                {/* Why / Where grid */}
-                <div className="grid grid-cols-2 gap-5">
+                {/* Three columns: Why / What to do / Who can help */}
+                <div className="grid grid-cols-3 gap-4">
+                  {/* Why it matters */}
                   <div className="p-4 rounded-lg bg-nxt-bg border border-nxt-border-subtle">
-                    <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-amber mb-2 uppercase">Why it matters</div>
-                    <div className="text-[13px] leading-relaxed text-nxt-secondary">{insight.why_it_matters}</div>
+                    <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-amber mb-3 uppercase">Why it matters</div>
+                    <ul className="space-y-2">
+                      {(insight.why_bullets || [insight.why_it_matters]).map((bullet, idx) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <span className="text-nxt-amber mt-1 shrink-0">&#x2022;</span>
+                          <span className="text-[12px] leading-snug text-nxt-secondary">{bullet}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
+
+                  {/* What to do */}
                   <div className="p-4 rounded-lg bg-nxt-bg border border-nxt-border-subtle">
-                    <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-green mb-2 uppercase">Where it&apos;s going</div>
-                    <div className="text-[13px] leading-relaxed text-nxt-secondary">{insight.where_its_going}</div>
+                    <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-green mb-3 uppercase">What to do</div>
+                    <ul className="space-y-2">
+                      {(insight.action_bullets || [insight.where_its_going]).map((bullet, idx) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <span className="text-nxt-green mt-1 shrink-0">&#x2022;</span>
+                          <span className="text-[12px] leading-snug text-nxt-secondary">{bullet}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Who can help */}
+                  <div className="p-4 rounded-lg bg-nxt-bg border border-nxt-border-subtle">
+                    <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-cyan mb-3 uppercase">Who can help</div>
+                    {insight.vendors && insight.vendors.length > 0 ? (
+                      <ul className="space-y-2">
+                        {insight.vendors.map((v) => (
+                          <li key={v.name} className="flex items-start gap-2">
+                            <span className="text-nxt-cyan mt-1 shrink-0">&#x2022;</span>
+                            <span className="text-[12px] leading-snug text-nxt-secondary">
+                              {v.name}
+                              <span className="text-nxt-dim ml-1">({v.category})</span>
+                              {v.iker_score && <span className="text-nxt-accent font-mono ml-1">{v.iker_score}</span>}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-[12px] text-nxt-dim">No vendors linked yet</p>
+                    )}
                   </div>
                 </div>
-
-                {/* Problems + Vendors row */}
-                {((insight.problems && insight.problems.length > 0) || (insight.vendors && insight.vendors.length > 0)) && (
-                  <div className="grid grid-cols-2 gap-5 mt-4">
-                    {/* Problems */}
-                    {insight.problems && insight.problems.length > 0 && (
-                      <div className="p-4 rounded-lg bg-nxt-bg border border-nxt-border-subtle">
-                        <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-red mb-2 uppercase">Problems detected</div>
-                        <div className="space-y-1.5">
-                          {insight.problems.map((p) => (
-                            <div key={p.key} className="flex justify-between items-center">
-                              <span className="text-xs text-nxt-secondary">{p.label}</span>
-                              <span className="text-[10px] font-mono text-nxt-muted px-1.5 py-0.5 rounded bg-nxt-card">{p.count}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {/* Vendors */}
-                    {insight.vendors && insight.vendors.length > 0 && (
-                      <div className="p-4 rounded-lg bg-nxt-bg border border-nxt-border-subtle">
-                        <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-cyan mb-2 uppercase">Vendors to watch</div>
-                        <div className="space-y-1.5">
-                          {insight.vendors.map((v) => (
-                            <div key={v.name} className="flex justify-between items-center">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-nxt-secondary">{v.name}</span>
-                                <span className="text-[10px] text-nxt-dim">{v.category}</span>
-                              </div>
-                              {v.iker_score && (
-                                <span className="text-[10px] font-mono text-nxt-accent px-1.5 py-0.5 rounded bg-nxt-card">{v.iker_score}</span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 {/* Source signals */}
                 {insight.related_signals.length > 0 && (

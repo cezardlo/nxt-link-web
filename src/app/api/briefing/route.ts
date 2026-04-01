@@ -181,32 +181,34 @@ export async function GET() {
       .filter(e => e.length > 30 && !e.startsWith('[') && !e.startsWith('http'))
       .slice(0, 3);
 
-    // --- Build narrative fields ---
-    const what_is_happening = sanitize(top.title) + (cleanEvidence[0] ? ` — ${cleanEvidence[0]}` : '');
+    // --- Build bullet-point fields ---
 
-    // "Why it matters" — specific, not generic
-    const problemMention = topProblems.length > 0
-      ? ` Core issues: ${topProblems.map(p => `${p.label} (${p.count} signals)`).join(', ')}.`
-      : '';
-    const companyMention = companies.length > 0
-      ? ` Key players: ${companies.join(', ')}.`
-      : '';
-    const why_it_matters = cleanEvidence[1]
-      ? `${sanitize(cleanEvidence[1])}${companyMention}${problemMention}`
-      : `${group.signals.length} signals in ${group.industry} this week.${companyMention}${problemMention}`;
+    // "What's happening" — short headline
+    const what_is_happening = sanitize(top.title);
 
-    // "Where it's going" — actionable, with vendors
-    let where_its_going: string;
+    // "Why it matters" — bullet array
+    const why_bullets: string[] = [];
+    why_bullets.push(`${group.signals.length} signals detected this week`);
+    if (companies.length > 0) why_bullets.push(`Key players: ${companies.join(', ')}`);
+    if (topProblems.length > 0) why_bullets.push(...topProblems.map(p => `${p.label}: ${p.count} signals`));
+    if (cleanEvidence[0]) why_bullets.push(cleanEvidence[0]);
+
+    // "What to do" — bullet array
+    const action_bullets: string[] = [];
     if (vendorList.length > 0) {
-      const vendorNames = vendorList.map(v => v.name).join(', ');
-      where_its_going = topProblems.length > 0
-        ? `Vendors addressing this: ${vendorNames}. Focus on ${topProblems[0].label.toLowerCase()} — ${topProblems[0].count} signals and rising.`
-        : `Vendors to watch: ${vendorNames}. ${group.signals.length} signals this week — monitor for procurement opportunities.`;
-    } else if (topProblems.length > 0) {
-      where_its_going = `${topProblems[0].count} signals point to ${topProblems[0].label.toLowerCase()}. Review vendor coverage in this area — potential gap.`;
-    } else {
-      where_its_going = `${group.signals.length} signals this week. High activity — watch for contract awards and partnership announcements.`;
+      action_bullets.push(`Review vendors: ${vendorList.map(v => v.name).join(', ')}`);
     }
+    if (topProblems.length > 0) {
+      action_bullets.push(`Monitor ${topProblems[0].label.toLowerCase()}`);
+    }
+    if (vendorList.length === 0 && topProblems.length === 0) {
+      action_bullets.push('Watch for contract awards and partnerships');
+    }
+    action_bullets.push(`Track ${group.industry} signals for changes`);
+
+    // Keep old string fields for backwards compat, add new bullet arrays
+    const why_it_matters = why_bullets.join('. ') + '.';
+    const where_its_going = action_bullets.join('. ') + '.';
 
     // Related signals
     const related_signals = topSignals.map(s => ({
@@ -224,6 +226,8 @@ export async function GET() {
       what_is_happening,
       why_it_matters,
       where_its_going,
+      why_bullets,
+      action_bullets,
       signal_count: group.signals.length,
       avg_score: Math.round(group.avgImportance * 100) / 100,
       industry: group.industry,
