@@ -92,7 +92,7 @@ export async function GET() {
   const vendorIds = signals.filter(s => s.vendor_id).map(s => s.vendor_id!);
   const uniqueVendorIds = Object.keys(vendorIds.reduce((acc: Record<string, boolean>, id) => { acc[id] = true; return acc; }, {}));
 
-  let vendorMap: Record<string, VendorRow> = {};
+  const vendorMap: Record<string, VendorRow> = {};
   if (uniqueVendorIds.length > 0) {
     const { data: vendors } = await supabase
       .from('vendors')
