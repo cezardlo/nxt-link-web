@@ -1,6 +1,6 @@
 import { fetchWithRetry } from '@/lib/http/fetch-with-retry';
 
-export type LlmProviderName = 'gemini' | 'openrouter' | 'groq' | 'ollama' | 'openai' | 'together' | 'anthropic';
+export type LlmProviderName = 'gemini' | 'openrouter' | 'groq' | 'ollama' | 'openai' | 'together' | 'anthropic' | 'nvidia';
 
 export type ChatMessage = {
   role: 'system' | 'user' | 'assistant';
@@ -51,8 +51,8 @@ type ParsedCandidate<T> = {
   raw: string;
 };
 
-const providerPriority: LlmProviderName[] = ['anthropic', 'gemini', 'openrouter', 'groq', 'ollama', 'together', 'openai'];
-const lowCostProviderPriority: LlmProviderName[] = ['gemini', 'ollama', 'openrouter', 'groq', 'together', 'openai', 'anthropic'];
+const providerPriority: LlmProviderName[] = ['anthropic', 'nvidia', 'gemini', 'openrouter', 'groq', 'ollama', 'together', 'openai'];
+const lowCostProviderPriority: LlmProviderName[] = ['nvidia', 'gemini', 'ollama', 'openrouter', 'groq', 'together', 'openai', 'anthropic'];
 
 type UsageCounter = {
   day: string;
@@ -116,7 +116,7 @@ function parseProviderLock(
   value: string | undefined,
 ): LlmProviderName[] {
   if (!value) return [];
-  const supported: LlmProviderName[] = ['gemini', 'openrouter', 'groq', 'ollama', 'together', 'openai', 'anthropic'];
+  const supported: LlmProviderName[] = ['gemini', 'openrouter', 'groq', 'ollama', 'together', 'openai', 'anthropic', 'nvidia'];
   const allowed = new Set(supported);
   return value
     .split(',')
@@ -186,6 +186,15 @@ export function getConfiguredProviders(env: NodeJS.ProcessEnv = process.env): Pr
       model: env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',
       endpoint: 'https://api.anthropic.com/v1/messages',
       apiKey: env.ANTHROPIC_API_KEY,
+    });
+  }
+
+  if (env.NVIDIA_API_KEY) {
+    providers.push({
+      provider: 'nvidia',
+      model: env.NVIDIA_MODEL || 'nvidia/llama-3.1-nemotron-ultra-253b-v1',
+      endpoint: 'https://integrate.api.nvidia.com/v1/chat/completions',
+      apiKey: env.NVIDIA_API_KEY,
     });
   }
 
@@ -541,7 +550,7 @@ export async function runParallelJsonEnsemble<T>(input: {
   const configuredProviders = getConfiguredProviders();
   if (configuredProviders.length === 0) {
     throw new Error(
-      'No AI provider configured. Set at least one: ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, OLLAMA_BASE_URL/OLLAMA_MODEL, TOGETHER_API_KEY, OPENAI_API_KEY.',
+      'No AI provider configured. Set at least one: ANTHROPIC_API_KEY, GEMINI_API_KEY, NVIDIA_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, OLLAMA_BASE_URL/OLLAMA_MODEL, TOGETHER_API_KEY, OPENAI_API_KEY.',
     );
   }
 

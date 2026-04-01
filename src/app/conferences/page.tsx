@@ -32,6 +32,10 @@ interface Conference {
   status: 'past' | 'live' | 'upcoming' | 'unknown';
   exhibitors: Exhibitor[];
   exhibitor_count: number;
+  vendors_discovered: number;
+  new_exhibitors: number;
+  trending_technologies: string[];
+  top_vendors: Array<{ name: string; confidence: number }>;
   lat?: number;
   lon?: number;
 }
@@ -488,6 +492,8 @@ function ConferenceCard({ conference: c, isPast = false }: { conference: Confere
             {c.status === 'live' && <span style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.green, fontWeight: 700 }}>LIVE NOW</span>}
             {isPast && <span style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.dim }}>PAST</span>}
             {hasExhibitors && <span style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.gold, letterSpacing: '0.05em' }}>{c.exhibitor_count} EXHIBITOR{c.exhibitor_count > 1 ? 'S' : ''} TRACKED</span>}
+            {c.vendors_discovered > 0 && <span style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.cyan, letterSpacing: '0.05em', background: COLORS.cyan + '12', padding: '1px 6px', borderRadius: '4px' }}>{c.vendors_discovered} VENDOR{c.vendors_discovered > 1 ? 'S' : ''}</span>}
+            {c.trending_technologies && c.trending_technologies.length > 0 && <span style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.green, letterSpacing: '0.05em', background: COLORS.green + '12', padding: '1px 6px', borderRadius: '4px' }}>{c.trending_technologies.length} TECH</span>}
           </div>
           <div style={{ fontSize: '15px', fontWeight: 600, color: COLORS.text, marginBottom: '6px' }}>
             {c.website ? <a href={c.website} target="_blank" rel="noopener noreferrer" style={{ color: COLORS.text, textDecoration: 'none' }}>{c.name}</a> : c.name}
@@ -511,6 +517,18 @@ function ConferenceCard({ conference: c, isPast = false }: { conference: Confere
           <div style={{ fontSize: '8px', fontFamily: FONT, color: COLORS.dim, letterSpacing: '0.08em' }}>RELEVANCE</div>
         </div>
       </div>
+
+      {/* Discovery: top vendors + technologies */}
+      {(c.top_vendors?.length > 0 || c.trending_technologies?.length > 0) && (
+        <div style={{ marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {c.top_vendors?.slice(0, 3).map(v => (
+            <span key={v.name} style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.cyan, background: COLORS.cyan + '10', padding: '3px 8px', borderRadius: '5px', letterSpacing: '0.03em' }}>{v.name}</span>
+          ))}
+          {c.trending_technologies?.slice(0, 4).map(t => (
+            <span key={t} style={{ fontSize: '9px', fontFamily: FONT, color: COLORS.green, background: COLORS.green + '10', padding: '2px 6px', borderRadius: '4px', letterSpacing: '0.03em' }}>{t}</span>
+          ))}
+        </div>
+      )}
 
       {hasExhibitors && (
         <div style={{ marginTop: '12px', borderTop: `1px solid ${COLORS.border}`, paddingTop: '12px' }}>

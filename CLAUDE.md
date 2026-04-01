@@ -109,8 +109,25 @@ Always provide algorithmic fallbacks — never depend solely on LLM responses.
 - `opportunity-engine.ts` — 9 algorithmic opportunity detectors
 - `industry-profile.ts` — 11-block auto-generated pages (any keyword)
 
+### Agent Pipeline (`src/lib/agents/`)
+37 agents across 5 phases, running via `/api/agents/cron-step?agent=<name>` (one agent per 60s Vercel request).
+
+**Phase 1 (Discovery):** orchestrator, intel-discovery, product-discovery, conference-intel, entity, patent-discovery, startup-discovery, research-discovery, supply-chain, disruption-monitor, persist-kg
+**Phase 2 (Processing):** intel-curation, auto-discovery, graph-builder
+**Phase 3 (Intelligence):** intelligence-loop, insight, country-activity, continent-intel
+**Phase 4 (Learning):** iker-learn, ceo-briefing, prediction-outcomes
+**Phase 5 (Vendor Pipeline):** vendor-scrape, vendor-enrich, vendor-maintain, vendor-pipeline
+
+**Data flow:** RSS feeds → signals → intel-curation → knowledge graph → vendors → marketplace
+**Conference flow:** conferences → conference-intel → exhibitor-scraper → vendor-matcher → conference_vendor_links → /conferences frontend
+
+**Pipeline health:** Hit `/api/pipeline/health` or check `conference_scrape_runs` table for recent run status.
+
 ### Agent OS (`src/lib/agents/os/`)
 7-layer pipeline running via `/api/agents/cron`. Each layer independent — one crash doesn't stop others.
+
+### Focus: Trucking & Logistics
+NxtLink is focused on trucking, logistics, and supply chain intelligence. When adding agents or discovery logic, prioritize categories: Trucking, Supply Chain, Logistics, Warehousing, Fleet Management, Transportation.
 
 ## Key Patterns
 

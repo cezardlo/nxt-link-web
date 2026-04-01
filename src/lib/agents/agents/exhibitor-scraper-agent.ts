@@ -7,6 +7,7 @@ import { fetchWithRetry } from '@/lib/http/fetch-with-retry';
 import { fetchWithBrowser } from '@/lib/http/browser-fetch';
 import { runParallelJsonEnsemble } from '@/lib/llm/parallel-router';
 import { CONFERENCES, type ConferenceRecord } from '@/lib/data/conferences';
+import { detectAllTechClusters } from './tech-cluster-detector';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -18,6 +19,7 @@ export type ExhibitorEntry = {
   description: string;
   website: string;
   confidence: number;
+  technologies: string[];
 };
 
 export type ConferenceExhibitorResult = {
@@ -56,6 +58,12 @@ const EXHIBITOR_PAGE_PATHS = [
   '/exhibitor-directory',
   '/companies',
   '/participants',
+  // Speaker/agenda pages (may list company affiliations)
+  '/speakers',
+  '/agenda',
+  '/program',
+  '/schedule',
+  '/presenters',
 ];
 
 const EXHIBITOR_LINK_RE = /href=["']([^"']*(?:exhibitor|sponsor|directory|vendor|expo|showcase|partner|booth|companies|participant)[^"']*)["']/gi;
@@ -178,6 +186,12 @@ function extractFromHtml(html: string): ExhibitorEntry[] {
       if (seen.has(key)) continue;
       seen.add(key);
 
+      // Extract tech clusters from surrounding HTML context (200 chars around match)
+      const matchStart = Math.max(0, (match.index ?? 0) - 200);
+      const matchEnd = Math.min(html.length, (match.index ?? 0) + match[0].length + 200);
+      const context = html.slice(matchStart, matchEnd);
+      const technologies = detectAllTechClusters(context);
+
       results.push({
         raw_name: raw,
         normalized_name: normalized,
@@ -186,6 +200,7 @@ function extractFromHtml(html: string): ExhibitorEntry[] {
         description: '',
         website: '',
         confidence: 0.6,
+        technologies,
       });
     }
   }
@@ -216,11 +231,12 @@ Conference: ${conferenceName}
 Page text:
 ${truncated}
 
-Return ONLY a JSON array of objects: [{"name":"CompanyName","booth":"if found","category":"if found","website":"if found"}]
-Only include real company names. No navigation items, page labels, or generic terms.`;
+Return ONLY a JSON array of objects: [{"name":"CompanyName","booth":"if found","category":"if found","website":"if found","description":"brief 1-sentence description if context available","technologies":["relevant tech areas"]}]
+Only include real company names. No navigation items, page labels, or generic terms.
+For technologies, use categories like: AI, Robotics, Supply Chain, Fleet Management, Trucking Tech, Warehouse Automation, Clean Energy, etc.`;
 
   try {
-    type ExhItem = { name: string; booth?: string; category?: string; website?: string };
+    type ExhItem = { name: string; booth?: string; category?: string; website?: string; description?: string; technologies?: string[] };
     const { result } = await runParallelJsonEnsemble<ExhItem[]>({
       systemPrompt: 'You extract structured company data from conference pages. Return valid JSON only.',
       userPrompt: prompt,
@@ -240,9 +256,10 @@ Only include real company names. No navigation items, page labels, or generic te
         normalized_name: normalizeCompanyName(r.name),
         booth: r.booth ?? '',
         category: r.category ?? '',
-        description: '',
+        description: r.description ?? '',
         website: r.website ?? '',
         confidence: 0.75,
+        technologies: r.technologies ?? [],
       }));
   } catch {
     return [];
@@ -317,8 +334,39 @@ export async function runExhibitorScraper(
           return null;
         }
 
-        // Step 3: Extract exhibitors from static HTML
-        const exhibitors = extractFromHtml(html);
+        // Step 2b: Follow pagination links (up to 10 pages)
+        const paginatedHtml = [html];
+        const paginationRe = /href=["']([^"']*(?:\?page=|&page=|\/page\/)\d+[^"']*)["']/gi;
+        const seenPages = new Set<string>([page.url]);
+        let pMatch: RegExpExecArray | null;
+        const pageUrls: string[] = [];
+        paginationRe.lastIndex = 0;
+        while ((pMatch = paginationRe.exec(html)) !== null && pageUrls.length < 9) {
+          const baseUrl = new URL(page.url).origin;
+          const pUrl = pMatch[1].startsWith('http') ? pMatch[1] : `${baseUrl}${pMatch[1].startsWith('/') ? '' : '/'}${pMatch[1]}`;
+          if (!seenPages.has(pUrl)) {
+            seenPages.add(pUrl);
+            pageUrls.push(pUrl);
+          }
+        }
+        for (let pi = 0; pi < pageUrls.length; pi += 3) {
+          const pageBatch = pageUrls.slice(pi, pi + 3);
+          const pageResults = await Promise.allSettled(
+            pageBatch.map(async (pUrl) => {
+              const pRes = await fetchWithRetry(pUrl, {
+                headers: { 'User-Agent': 'NXTLink-Intel-Bot/1.0' },
+              }, { retries: 0, cacheTtlMs: 86400_000, cacheKey: `exh-page:${pUrl}` });
+              return pRes.ok ? pRes.text() : '';
+            }),
+          );
+          for (const pr of pageResults) {
+            if (pr.status === 'fulfilled' && pr.value) paginatedHtml.push(pr.value);
+          }
+        }
+        const combinedHtml = paginatedHtml.join('\n');
+
+        // Step 3: Extract exhibitors from static HTML (all pages combined)
+        const exhibitors = extractFromHtml(combinedHtml);
         let method: ConferenceExhibitorResult['scrape_method'] = 'html';
 
         // Step 3b: Browser fallback for JS-heavy sites (Playwright)

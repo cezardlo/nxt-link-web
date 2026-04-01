@@ -368,11 +368,11 @@ async function runAgent(agent: string): Promise<Record<string, any>> {
     case 'vendor-scrape': {
       const { runVendorPipeline } = await import('@/lib/agents/agents/vendor-pipeline-orchestrator');
       const r = await runVendorPipeline({
-        phases: ['scrape_exhibitors', 'persist_exhibitors'],
-        maxConferences: 10,
+        phases: ['scrape_exhibitors', 'persist_exhibitors', 'match_vendors'],
+        maxConferences: 15,
         minRelevanceScore: 60,
       });
-      return { exhibitors: r.exhibitors_persisted, pages: r.scrape?.pages_found ?? 0 };
+      return { exhibitors: r.exhibitors_persisted, vendors_matched: r.vendors_matched, pages: r.scrape?.pages_found ?? 0 };
     }
 
     case 'vendor-enrich': {
@@ -398,12 +398,12 @@ async function runAgent(agent: string): Promise<Record<string, any>> {
       const { runVendorPipeline, runVendorEnrichmentCycle, runVendorMaintenance } =
         await import('@/lib/agents/agents/vendor-pipeline-orchestrator');
 
-      // Phase 1: Scrape + persist exhibitors
+      // Phase 1: Scrape + persist + match exhibitors to vendors
       const scrape = await runVendorPipeline({
-        phases: ['scrape_exhibitors', 'persist_exhibitors'],
-        maxConferences: 5,
+        phases: ['scrape_exhibitors', 'persist_exhibitors', 'match_vendors'],
+        maxConferences: 15,
         minRelevanceScore: 60,
-      }).catch(() => ({ exhibitors_persisted: 0, scrape: null }));
+      }).catch(() => ({ exhibitors_persisted: 0, vendors_matched: 0, scrape: null }));
 
       // Phase 2: Enrich top unenriched vendors
       const enrich = await runVendorEnrichmentCycle(10).catch(() => ({
@@ -421,6 +421,7 @@ async function runAgent(agent: string): Promise<Record<string, any>> {
 
       return {
         exhibitors: scrape.exhibitors_persisted,
+        vendors_matched: scrape.vendors_matched,
         enriched: enrich.enrichment?.vendors_enriched ?? 0,
         scored: maintain.scoring?.vendors_scored ?? 0,
         synced: maintain.marketplace_sync?.vendors_synced ?? 0,

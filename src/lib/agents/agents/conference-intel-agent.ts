@@ -10,6 +10,8 @@ import {
   persistConferenceIntel,
   type ConferenceIntelInsert,
 } from '@/db/queries/conference-intel';
+import { detectTechCluster } from './tech-cluster-detector';
+import { matchConferenceCompaniesToVendors } from './vendor-matcher';
 
 // ─── Company Extraction Patterns ────────────────────────────────────────────────
 
@@ -66,21 +68,7 @@ const SIGNAL_DETECTORS: Array<{ type: string; patterns: RegExp[] }> = [
 ];
 
 // ─── Technology Cluster Detection ───────────────────────────────────────────────
-
-const TECH_CLUSTERS: Array<{ cluster: string; keywords: RegExp }> = [
-  { cluster: 'Warehouse Automation', keywords: /\b(warehouse|fulfillment|picking|sorting|conveyor)\b/i },
-  { cluster: 'Robotics', keywords: /\b(robot|autonomous|drone|UAV|unmanned|automated)\b/i },
-  { cluster: 'AI & Machine Learning', keywords: /\b(AI|artificial\s+intelligence|machine\s+learning|deep\s+learning|GPT|LLM|neural)\b/i },
-  { cluster: 'Cybersecurity', keywords: /\b(cyber|security|zero\s+trust|threat|ransomware|encryption)\b/i },
-  { cluster: 'Clean Energy', keywords: /\b(solar|wind|battery|hydrogen|renewable|grid|EV|electric\s+vehicle)\b/i },
-  { cluster: 'Biotech & Health', keywords: /\b(biotech|pharma|medical|health|clinical|genomic|CRISPR|therapy)\b/i },
-  { cluster: 'Manufacturing Tech', keywords: /\b(3D\s+print|additive|CNC|industrial|manufacturing|factory)\b/i },
-  { cluster: 'Supply Chain', keywords: /\b(supply\s+chain|logistics|freight|shipping|last\s+mile|tracking)\b/i },
-  { cluster: 'AgTech', keywords: /\b(agriculture|farming|crop|precision\s+ag|irrigation|livestock)\b/i },
-  { cluster: 'Construction Tech', keywords: /\b(construction|BIM|modular|prefab|infrastructure|smart\s+building)\b/i },
-  { cluster: 'Fintech', keywords: /\b(fintech|blockchain|payment|banking|DeFi|cryptocurrency)\b/i },
-  { cluster: 'Space & Aerospace', keywords: /\b(space|satellite|rocket|launch|orbit|aerospace|aviation)\b/i },
-];
+// Now imported from shared tech-cluster-detector.ts
 
 // ─── Importance Scoring ─────────────────────────────────────────────────────────
 
@@ -101,6 +89,7 @@ export type ConferenceIntelResult = {
   companies_extracted: number;
   signals_detected: number;
   persisted: number;
+  vendors_linked: number;
   technology_clusters: Record<string, number>;
   top_companies: Array<{ name: string; mentions: number }>;
   duration_ms: number;
@@ -181,6 +170,12 @@ export async function runConferenceIntelAgent(): Promise<ConferenceIntelResult> 
   // 3. Persist to Supabase
   const persisted = await persistConferenceIntel(records);
 
+  // 4. Match extracted companies against vendors table and create links
+  const vendorsLinked = await matchConferenceCompaniesToVendors(records).catch((err) => {
+    console.warn('[conference-intel] Vendor matching failed:', err);
+    return 0;
+  });
+
   const topCompanies = Object.entries(companyCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 20)
@@ -191,6 +186,7 @@ export async function runConferenceIntelAgent(): Promise<ConferenceIntelResult> 
     companies_extracted: Object.keys(companyCounts).length,
     signals_detected: records.filter(r => r.signal_type).length,
     persisted,
+    vendors_linked: vendorsLinked,
     technology_clusters: clusterCounts,
     top_companies: topCompanies,
     duration_ms: Date.now() - startMs,
@@ -220,13 +216,6 @@ function extractCompanies(text: string): string[] {
 function detectSignalType(text: string): string | null {
   for (const { type, patterns } of SIGNAL_DETECTORS) {
     if (patterns.some(re => re.test(text))) return type;
-  }
-  return null;
-}
-
-function detectTechCluster(text: string): string | null {
-  for (const { cluster, keywords } of TECH_CLUSTERS) {
-    if (keywords.test(text)) return cluster;
   }
   return null;
 }

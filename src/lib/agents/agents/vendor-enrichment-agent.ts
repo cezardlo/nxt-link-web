@@ -147,6 +147,7 @@ type AiExtractionResult = {
   use_cases: string[];
   country: string;
   employee_estimate: string;
+  logistics_category?: string;
 };
 
 async function extractWithAi(
@@ -169,7 +170,8 @@ Return ONLY a JSON object with:
   "vendor_type": "one of: startup, enterprise, manufacturer, distributor, software, services, robotics, unknown",
   "use_cases": ["specific problems they solve"],
   "country": "headquarters country",
-  "employee_estimate": "rough estimate like '50-200' or '1000+' or 'unknown'"
+  "employee_estimate": "rough estimate like '50-200' or '1000+' or 'unknown'",
+  "logistics_category": "one of: TMS, Fleet Management, Freight Brokerage, Warehouse/WMS, Telematics/ELD, Cold Chain, Last Mile, Cross-Border/Customs, Material Handling, Autonomous/Robotics, General Logistics Tech, Not Logistics"
 }`;
 
   try {

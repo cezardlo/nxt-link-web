@@ -16,38 +16,51 @@ import { runDataCleaner, type CleanupReport } from './vendor-data-cleaner';
 import { runVendorScorer, type ScoringReport } from './vendor-scorer';
 import { runVendorKgLinker, type LinkingReport } from './vendor-kg-linker';
 import { runMarketplaceSync, invalidateVendorCache, type SyncReport } from './vendor-marketplace-sync';
+import { runConferenceDiscovery, type ConferenceDiscoveryReport } from './conference-discovery-agent';
+import { runLogisticsLeadScorer, type LeadScoringReport } from './logistics-lead-scorer';
 import {
   upsertExhibitors,
   upsertEnrichedVendors,
   getUnenrichedExhibitorNames,
+  getExhibitors,
   recordScrapeRun,
   type ExhibitorInsert,
   type EnrichedVendorInsert,
 } from '@/db/queries/exhibitors';
+import { getDb, isSupabaseConfigured } from '@/db/client';
+import { matchExhibitorsToVendors } from './vendor-matcher';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
 export type PipelinePhase =
+  | 'discover_conferences'
   | 'scrape_exhibitors'
   | 'persist_exhibitors'
+  | 'match_vendors'
   | 'clean_data'
   | 'enrich_vendors'
   | 'persist_vendors'
   | 'score_vendors'
+  | 'score_logistics_leads'
   | 'link_kg'
   | 'sync_marketplace'
+  | 'cleanup_stale_data'
   | 'complete';
 
 export type PipelineReport = {
   phase: PipelinePhase;
+  conference_discovery: ConferenceDiscoveryReport | null;
   scrape: ExhibitorScrapeReport | null;
   enrichment: EnrichmentReport | null;
   cleanup: CleanupReport | null;
   scoring: ScoringReport | null;
+  lead_scoring: LeadScoringReport | null;
   linking: LinkingReport | null;
   marketplace_sync: SyncReport | null;
   exhibitors_persisted: number;
+  vendors_matched: number;
   vendors_persisted: number;
+  stale_data_cleaned: number;
   total_duration_ms: number;
   started_at: string;
   completed_at: string;
@@ -64,14 +77,18 @@ export type PipelineOptions = {
 };
 
 const ALL_PHASES: PipelinePhase[] = [
+  'discover_conferences',
   'scrape_exhibitors',
   'persist_exhibitors',
+  'match_vendors',
   'clean_data',
   'enrich_vendors',
   'persist_vendors',
   'score_vendors',
+  'score_logistics_leads',
   'link_kg',
   'sync_marketplace',
+  'cleanup_stale_data',
 ];
 
 // ─── Orchestrator ───────────────────────────────────────────────────────────────
@@ -91,14 +108,28 @@ export async function runVendorPipeline(
     dryRun = false,
   } = options;
 
+  let discoveryReport: ConferenceDiscoveryReport | null = null;
   let scrapeReport: ExhibitorScrapeReport | null = null;
   let enrichmentReport: EnrichmentReport | null = null;
   let cleanupReport: CleanupReport | null = null;
   let scoringReport: ScoringReport | null = null;
+  let leadScoringReport: LeadScoringReport | null = null;
   let linkingReport: LinkingReport | null = null;
   let syncReport: SyncReport | null = null;
   let exhibitorsPersisted = 0;
+  let vendorsMatched = 0;
   let vendorsPersisted = 0;
+  let staleDataCleaned = 0;
+
+  // ── Phase 0: Discover new conferences ──────────────────────────────────────
+
+  if (phases.includes('discover_conferences')) {
+    console.log('[vendor-pipeline] Phase 0: Discovering new conferences...');
+    discoveryReport = await runConferenceDiscovery();
+    console.log(
+      `[vendor-pipeline] Discovery: ${discoveryReport.new_conferences} new conferences from ${discoveryReport.feeds_scanned} feeds (${discoveryReport.duration_ms}ms)`,
+    );
+  }
 
   // ── Phase 1: Scrape exhibitor pages ────────────────────────────────────────
 
@@ -141,6 +172,26 @@ export async function runVendorPipeline(
     }
     exhibitorsPersisted = await upsertExhibitors(inserts);
     console.log(`[vendor-pipeline] Persisted ${exhibitorsPersisted} exhibitors`);
+  }
+
+  // ── Phase 2b: Match exhibitors to vendors ─────────────────────────────────
+
+  if (phases.includes('match_vendors') && !dryRun) {
+    console.log('[vendor-pipeline] Phase 2b: Matching exhibitors to vendors...');
+    // Get recently persisted exhibitors (or all unlinked)
+    const exhibitorsToMatch = await getExhibitors({ limit: 500 });
+    const matchInput = exhibitorsToMatch.map((e) => ({
+      id: e.id,
+      conference_id: e.conference_id,
+      normalized_name: e.normalized_name,
+      description: e.description,
+      technologies: [] as string[],
+    }));
+    vendorsMatched = await matchExhibitorsToVendors(matchInput).catch((err) => {
+      console.warn('[vendor-pipeline] Vendor matching failed:', err);
+      return 0;
+    });
+    console.log(`[vendor-pipeline] Matched ${vendorsMatched} exhibitor-vendor links`);
   }
 
   // ── Phase 3: Clean data ────────────────────────────────────────────────────
@@ -230,6 +281,16 @@ export async function runVendorPipeline(
     );
   }
 
+  // ── Phase 6b: Score logistics leads ────────────────────────────────────────
+
+  if (phases.includes('score_logistics_leads') && !dryRun) {
+    console.log('[vendor-pipeline] Phase 6b: Scoring logistics leads...');
+    leadScoringReport = await runLogisticsLeadScorer();
+    console.log(
+      `[vendor-pipeline] Lead scoring: ${leadScoringReport.leads_created} leads (avg ${leadScoringReport.avg_score}), tiers: ${JSON.stringify(leadScoringReport.tier_counts)}`,
+    );
+  }
+
   // ── Phase 7: Link to Knowledge Graph ───────────────────────────────────────
 
   if (phases.includes('link_kg') && !dryRun) {
@@ -249,16 +310,28 @@ export async function runVendorPipeline(
     console.log(`[vendor-pipeline] Marketplace synced: ${syncReport.vendors_synced} vendor products`);
   }
 
+  // ── Phase 9: Cleanup stale data ─────────────────────────────────────────────
+
+  if (phases.includes('cleanup_stale_data') && !dryRun) {
+    console.log('[vendor-pipeline] Phase 9: Cleaning up stale data...');
+    staleDataCleaned = await cleanupStaleData();
+    console.log(`[vendor-pipeline] Cleaned ${staleDataCleaned} stale records`);
+  }
+
   const report: PipelineReport = {
     phase: 'complete',
+    conference_discovery: discoveryReport,
     scrape: scrapeReport,
     enrichment: enrichmentReport,
     cleanup: cleanupReport,
     scoring: scoringReport,
+    lead_scoring: leadScoringReport,
     linking: linkingReport,
     marketplace_sync: syncReport,
     exhibitors_persisted: exhibitorsPersisted,
+    vendors_matched: vendorsMatched,
     vendors_persisted: vendorsPersisted,
+    stale_data_cleaned: staleDataCleaned,
     total_duration_ms: Date.now() - start,
     started_at: startedAt,
     completed_at: new Date().toISOString(),
@@ -294,8 +367,46 @@ export async function runVendorMaintenance(): Promise<PipelineReport> {
 
 export async function runVendorEnrichmentCycle(max = 20): Promise<PipelineReport> {
   return runVendorPipeline({
-    phases: ['enrich_vendors', 'persist_vendors', 'score_vendors', 'sync_marketplace'],
+    phases: ['enrich_vendors', 'persist_vendors', 'score_vendors', 'score_logistics_leads', 'sync_marketplace'],
     maxEnrichments: max,
     enrichOnlyNew: true,
   });
+}
+
+// ─── Stale data cleanup ─────────────────────────────────────────────────────
+
+async function cleanupStaleData(): Promise<number> {
+  if (!isSupabaseConfigured()) return 0;
+  const db = getDb({ admin: true });
+  let cleaned = 0;
+
+  // Delete exhibitor raw data older than 90 days
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+  const { count: exhCount } = await db
+    .from('exhibitors')
+    .delete({ count: 'exact' })
+    .lt('created_at', ninetyDaysAgo);
+  cleaned += exhCount ?? 0;
+
+  // Delete conference_intel older than 180 days
+  const oneEightyDaysAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString();
+  let intelCount = 0;
+  try {
+    const intelResult = await db
+      .from('conference_intel')
+      .delete({ count: 'exact' })
+      .lt('created_at', oneEightyDaysAgo);
+    intelCount = intelResult.count ?? 0;
+  } catch { /* table may not exist */ }
+  cleaned += intelCount;
+
+  // Delete old scrape runs older than 90 days
+  const { count: runCount } = await db
+    .from('conference_scrape_runs')
+    .delete({ count: 'exact' })
+    .lt('completed_at', ninetyDaysAgo);
+  cleaned += runCount ?? 0;
+
+  console.log(`[cleanup] Removed: ${exhCount ?? 0} exhibitors, ${intelCount ?? 0} intel, ${runCount ?? 0} runs`);
+  return cleaned;
 }

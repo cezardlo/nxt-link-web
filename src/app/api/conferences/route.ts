@@ -33,7 +33,7 @@ export async function GET(request: Request) {
 
   confQuery = confQuery.limit(limit);
 
-  const [confResult, intelResult, statsResult] = await Promise.allSettled([
+  const [confResult, intelResult, statsResult, linksResult, exhibitorsResult] = await Promise.allSettled([
     confQuery,
     supabase
       .from('conference_intel')
@@ -41,11 +41,23 @@ export async function GET(request: Request) {
       .order('importance_score', { ascending: false }),
     // Aggregate stats for the response
     supabase.from('conferences').select('continent, country, category').not('start_date', 'is', null),
+    // Conference-vendor links (discovered vendors)
+    supabase
+      .from('conference_vendor_links')
+      .select('conference_id, company_name, vendor_id, match_confidence, technologies, match_type')
+      .order('match_confidence', { ascending: false }),
+    // Exhibitors grouped by conference
+    supabase
+      .from('exhibitors')
+      .select('conference_id, normalized_name, technologies, confidence')
+      .order('confidence', { ascending: false }),
   ]);
 
   const conferences = confResult.status === 'fulfilled' ? confResult.value.data || [] : [];
   const intel = intelResult.status === 'fulfilled' ? intelResult.value.data || [] : [];
   const allConfs = statsResult.status === 'fulfilled' ? statsResult.value.data || [] : [];
+  const vendorLinks = linksResult.status === 'fulfilled' ? linksResult.value.data || [] : [];
+  const exhibitors = exhibitorsResult.status === 'fulfilled' ? exhibitorsResult.value.data || [] : [];
 
   // Group intel by conference_id
   const intelByConf: Record<string, typeof intel> = {};
@@ -54,15 +66,58 @@ export async function GET(request: Request) {
     intelByConf[item.conference_id].push(item);
   }
 
+  // Group vendor links by conference_id
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const linksByConf: Record<string, any[]> = {};
+  for (const link of vendorLinks) {
+    const cid = link.conference_id as string;
+    if (!linksByConf[cid]) linksByConf[cid] = [];
+    linksByConf[cid].push(link);
+  }
+
+  // Group exhibitors by conference_id
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const exhByConf: Record<string, any[]> = {};
+  for (const exh of exhibitors) {
+    const cid = exh.conference_id as string;
+    if (!exhByConf[cid]) exhByConf[cid] = [];
+    exhByConf[cid].push(exh);
+  }
+
   const now = new Date().toISOString().split('T')[0];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const items = conferences.map((c: any) => {
     const s = !c.start_date ? 'unknown' : c.end_date && c.end_date < now ? 'past' : c.start_date <= now && (!c.end_date || c.end_date >= now) ? 'live' : 'upcoming';
+    const confLinks = linksByConf[c.id] || [];
+    const confExhibitors = exhByConf[c.id] || [];
+
+    // Collect unique technologies from links and exhibitors
+    const techSet = new Set<string>();
+    for (const link of confLinks) {
+      for (const t of (link.technologies as string[]) || []) techSet.add(t);
+    }
+    for (const exh of confExhibitors) {
+      for (const t of (exh.technologies as string[]) || []) techSet.add(t);
+    }
+
+    // Top matched vendors (with vendor_id)
+    const matchedVendors = confLinks
+      .filter((l: { vendor_id: string | null }) => l.vendor_id)
+      .slice(0, 5)
+      .map((l: { company_name: string; match_confidence: number }) => ({
+        name: l.company_name,
+        confidence: l.match_confidence,
+      }));
+
     return {
       ...c,
       status: s,
       exhibitors: intelByConf[c.id] || [],
       exhibitor_count: (intelByConf[c.id] || []).length,
+      vendors_discovered: confLinks.length,
+      new_exhibitors: confExhibitors.length,
+      trending_technologies: Array.from(techSet).slice(0, 10),
+      top_vendors: matchedVendors,
     };
   }).filter(c => !status || c.status === status);
 
