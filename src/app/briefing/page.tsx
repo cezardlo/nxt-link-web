@@ -43,6 +43,8 @@ interface TopInsight {
   related_signals: RelatedSignal[];
   vendors?: InsightVendor[];
   problems?: InsightProblem[];
+  source?: string;
+  discovered_at?: string;
 }
 
 interface Region {
@@ -393,9 +395,9 @@ export default function BriefingPage() {
 
                 {/* Source + problem tag */}
                 <div className="flex items-center gap-2 mb-4">
-                  {(insight as Record<string, unknown>).source && (
+                  {insight.source && (
                     <span className="text-[11px] text-nxt-muted">
-                      {(insight as Record<string, unknown>).source as string} &middot; {formatDate((insight as Record<string, unknown>).discovered_at as string || '')}
+                      {insight.source} &middot; {formatDate(insight.discovered_at || '')}
                     </span>
                   )}
                   {insight.problem_label && (

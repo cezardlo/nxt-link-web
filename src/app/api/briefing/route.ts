@@ -234,7 +234,7 @@ Return a JSON array with ${top3.length} objects. No markdown, just JSON.
 ${signalSummaries}`,
         temperature: 0.3,
         preferredProviders: ['gemini'],
-        budget: { maxCostUsd: 0.02 },
+        budget: { maxProviders: 1, preferLowCostProviders: true },
         parse: (content) => {
           const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
           return JSON.parse(cleaned) as AnalyzedSignal[];
