@@ -2,7 +2,7 @@
  * GET /api/briefing — Top 3 supply chain intelligence insights
  *
  * Computes everything from intel_signals (the real data).
- * No dependency on missing tables (top_insights, signal_clusters, etc.)
+ * Focuses on logistics/trucking/border-tech. Surfaces vendors + problems.
  */
 
 import { NextResponse } from 'next/server';
@@ -20,17 +20,52 @@ type SignalRow = {
   amount_usd: number | null;
   confidence: number;
   importance_score: number;
-  relevance_score?: number;
   discovered_at: string;
   source: string | null;
-  source_domain?: string | null;
   tags: string[];
+  vendor_id: string | null;
+  problem_category: string | null;
+};
+
+type VendorRow = {
+  id: string;
+  company_name: string;
+  primary_category: string;
+  iker_score: number | null;
+};
+
+/** Strip HTML tags and decode entities from evidence text */
+function sanitize(text: string | null): string {
+  if (!text) return '';
+  return text
+    .replace(/<[^>]*>/g, '')           // strip HTML tags
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#8230;/g, '...')
+    .replace(/&#\d+;/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Priority industries for a trucking/logistics platform */
+const FOCUS_INDUSTRIES = ['logistics', 'border-tech', 'manufacturing', 'defense', 'energy', 'government', 'tech'];
+
+/** Human-readable problem labels */
+const PROBLEM_LABELS: Record<string, string> = {
+  border_delays: 'Border & Crossing Delays',
+  documentation_errors: 'Documentation & Compliance Errors',
+  erp_integration: 'System Integration Gaps',
+  customs: 'Trade & Customs Risk',
+  cost: 'Cost Pressure',
+  routing: 'Route Disruptions',
+  labor_shortage: 'Labor & Workforce Gaps',
 };
 
 export async function GET() {
   const supabase = createClient();
 
-  // Parallel fetch: recent high-quality signals + total count + 24h count + last briefing
   const since7d = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
   const since24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
 
@@ -42,10 +77,10 @@ export async function GET() {
   ] = await Promise.all([
     supabase
       .from('intel_signals')
-      .select('id, title, signal_type, industry, company, evidence, amount_usd, confidence, importance_score, discovered_at, source, tags')
+      .select('id, title, signal_type, industry, company, evidence, amount_usd, confidence, importance_score, discovered_at, source, tags, vendor_id, problem_category')
       .gte('discovered_at', since7d)
       .order('importance_score', { ascending: false })
-      .limit(200),
+      .limit(300),
     supabase.from('intel_signals').select('*', { count: 'exact', head: true }),
     supabase.from('intel_signals').select('*', { count: 'exact', head: true }).gte('discovered_at', since24h),
     supabase.from('daily_briefings').select('generated_at, briefing_date').order('briefing_date', { ascending: false }).limit(1),
@@ -53,64 +88,130 @@ export async function GET() {
 
   const signals = (recentSignals || []) as SignalRow[];
 
-  // --- Build Top 3 Insights by grouping signals by industry ---
+  // Collect vendor IDs to fetch vendor details
+  const vendorIds = signals.filter(s => s.vendor_id).map(s => s.vendor_id!);
+  const uniqueVendorIds = Object.keys(vendorIds.reduce((acc: Record<string, boolean>, id) => { acc[id] = true; return acc; }, {}));
+
+  let vendorMap: Record<string, VendorRow> = {};
+  if (uniqueVendorIds.length > 0) {
+    const { data: vendors } = await supabase
+      .from('vendors')
+      .select('id, company_name, primary_category, iker_score')
+      .in('id', uniqueVendorIds.slice(0, 50));
+    if (vendors) {
+      for (const v of vendors as VendorRow[]) {
+        vendorMap[v.id] = v;
+      }
+    }
+  }
+
+  // --- Group signals by industry, prioritizing focus industries ---
   const industryGroups: Record<string, SignalRow[]> = {};
   for (const s of signals) {
-    const key = s.industry || 'general';
+    const key = s.industry || 'other';
     if (!industryGroups[key]) industryGroups[key] = [];
     industryGroups[key].push(s);
   }
 
-  // Rank industries by total importance
+  // Rank: focus industries first, then by signal volume
   const rankedIndustries = Object.entries(industryGroups)
-    .map(([industry, sigs]) => ({
-      industry,
-      signals: sigs,
-      totalImportance: sigs.reduce((sum, s) => sum + (s.importance_score || 0), 0),
-      avgImportance: sigs.reduce((sum, s) => sum + (s.importance_score || 0), 0) / sigs.length,
-      topSignal: sigs[0], // already sorted by importance_score
-    }))
-    .sort((a, b) => b.totalImportance - a.totalImportance);
+    .map(([industry, sigs]) => {
+      const focusIdx = FOCUS_INDUSTRIES.indexOf(industry);
+      return {
+        industry,
+        signals: sigs,
+        totalImportance: sigs.reduce((sum, s) => sum + (s.importance_score || 0), 0),
+        avgImportance: sigs.reduce((sum, s) => sum + (s.importance_score || 0), 0) / sigs.length,
+        topSignal: sigs[0],
+        focusPriority: focusIdx >= 0 ? focusIdx : 100, // focus industries sort first
+      };
+    })
+    .filter(g => g.industry !== 'other') // exclude "other" from top insights
+    .sort((a, b) => {
+      // Primary: focus industries first
+      if (a.focusPriority !== b.focusPriority) return a.focusPriority - b.focusPriority;
+      // Secondary: by total importance
+      return b.totalImportance - a.totalImportance;
+    });
 
-  // Build top 3 insight cards from the top 3 industry clusters
+  // Build top 3 insight cards
   const topInsights = rankedIndustries.slice(0, 3).map((group, i) => {
     const top = group.topSignal;
     const topSignals = group.signals.slice(0, 5);
 
-    // Dominant signal type in this cluster
+    // Dominant signal type
     const typeCounts: Record<string, number> = {};
     for (const s of group.signals) {
       typeCounts[s.signal_type] = (typeCounts[s.signal_type] || 0) + 1;
     }
     const dominantType = Object.entries(typeCounts).sort(([, a], [, b]) => b - a)[0]?.[0] || 'discovery';
 
-    // Collect companies mentioned
+    // Companies mentioned
     const companySet: Record<string, boolean> = {};
     for (const s of group.signals) { if (s.company) companySet[s.company] = true; }
     const companies = Object.keys(companySet).slice(0, 4);
-    const companyMention = companies.length > 0 ? ` Key players: ${companies.join(', ')}.` : '';
 
-    // Build evidence summary from top signals
-    const evidenceBits = topSignals
-      .filter(s => s.evidence)
-      .map(s => s.evidence!)
+    // Problem categories in this cluster
+    const problemCounts: Record<string, number> = {};
+    for (const s of group.signals) {
+      if (s.problem_category) {
+        problemCounts[s.problem_category] = (problemCounts[s.problem_category] || 0) + 1;
+      }
+    }
+    const topProblems = Object.entries(problemCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 2)
+      .map(([p, count]) => ({ key: p, label: PROBLEM_LABELS[p] || p, count }));
+
+    // Vendors linked to signals in this cluster
+    const linkedVendors: Record<string, VendorRow> = {};
+    for (const s of group.signals) {
+      if (s.vendor_id && vendorMap[s.vendor_id]) {
+        linkedVendors[s.vendor_id] = vendorMap[s.vendor_id];
+      }
+    }
+    const vendorList = Object.values(linkedVendors)
+      .sort((a, b) => (b.iker_score || 0) - (a.iker_score || 0))
+      .slice(0, 4)
+      .map(v => ({ name: v.company_name, category: v.primary_category, iker_score: v.iker_score }));
+
+    // Clean evidence from top signals (no HTML)
+    const cleanEvidence = topSignals
+      .map(s => sanitize(s.evidence))
+      .filter(e => e.length > 30 && !e.startsWith('[') && !e.startsWith('http'))
       .slice(0, 3);
 
-    // Build narrative fields
-    const what_is_happening = top.title + (top.evidence ? ` — ${top.evidence}` : '');
+    // --- Build narrative fields ---
+    const what_is_happening = sanitize(top.title) + (cleanEvidence[0] ? ` — ${cleanEvidence[0]}` : '');
 
-    const why_it_matters = evidenceBits.length > 1
-      ? `${group.signals.length} signals detected in ${group.industry} this week.${companyMention} ${evidenceBits[1] || ''}`
-      : `${group.signals.length} signals tracked in ${group.industry} over the past 7 days.${companyMention}`;
+    // "Why it matters" — specific, not generic
+    const problemMention = topProblems.length > 0
+      ? ` Core issues: ${topProblems.map(p => `${p.label} (${p.count} signals)`).join(', ')}.`
+      : '';
+    const companyMention = companies.length > 0
+      ? ` Key players: ${companies.join(', ')}.`
+      : '';
+    const why_it_matters = cleanEvidence[1]
+      ? `${sanitize(cleanEvidence[1])}${companyMention}${problemMention}`
+      : `${group.signals.length} signals in ${group.industry} this week.${companyMention}${problemMention}`;
 
-    const where_its_going = group.signals.length >= 5
-      ? `High activity cluster with ${group.signals.length} signals — this sector is moving. Watch for follow-on developments.`
-      : `Emerging activity with ${group.signals.length} signals. Monitor for acceleration.`;
+    // "Where it's going" — actionable, with vendors
+    let where_its_going: string;
+    if (vendorList.length > 0) {
+      const vendorNames = vendorList.map(v => v.name).join(', ');
+      where_its_going = topProblems.length > 0
+        ? `Vendors addressing this: ${vendorNames}. Focus on ${topProblems[0].label.toLowerCase()} — ${topProblems[0].count} signals and rising.`
+        : `Vendors to watch: ${vendorNames}. ${group.signals.length} signals this week — monitor for procurement opportunities.`;
+    } else if (topProblems.length > 0) {
+      where_its_going = `${topProblems[0].count} signals point to ${topProblems[0].label.toLowerCase()}. Review vendor coverage in this area — potential gap.`;
+    } else {
+      where_its_going = `${group.signals.length} signals this week. High activity — watch for contract awards and partnership announcements.`;
+    }
 
-    // Related signals for source attribution
+    // Related signals
     const related_signals = topSignals.map(s => ({
       id: s.id,
-      title: s.title,
+      title: sanitize(s.title),
       source: s.source || 'Unknown',
       discovered_at: s.discovered_at,
       signal_type: s.signal_type,
@@ -119,7 +220,7 @@ export async function GET() {
 
     return {
       rank: i + 1,
-      title: top.title,
+      title: sanitize(top.title),
       what_is_happening,
       why_it_matters,
       where_its_going,
@@ -128,10 +229,12 @@ export async function GET() {
       industry: group.industry,
       signal_type: dominantType,
       related_signals,
+      vendors: vendorList,
+      problems: topProblems,
     };
   });
 
-  // --- Signal stats (from all fetched signals) ---
+  // --- Signal stats ---
   const typeCount: Record<string, number> = {};
   const industryCount: Record<string, number> = {};
   for (const s of signals) {
@@ -139,21 +242,21 @@ export async function GET() {
     industryCount[s.industry] = (industryCount[s.industry] || 0) + 1;
   }
 
-  // --- Recent signals for the feed (latest 20) ---
+  // --- Recent signals (latest 20, sanitized) ---
   const sortedByDate = [...signals]
     .sort((a, b) => new Date(b.discovered_at).getTime() - new Date(a.discovered_at).getTime())
-    .slice(0, 20);
+    .slice(0, 20)
+    .map(s => ({ ...s, title: sanitize(s.title), evidence: sanitize(s.evidence) }));
 
-  // --- Trend data from daily signal counts (last 14 days) ---
+  // --- Trend data ---
   const trendDays: Record<string, Record<string, number>> = {};
   for (const s of signals) {
     const day = s.discovered_at.split('T')[0];
-    const ind = s.industry || 'general';
+    const ind = s.industry || 'other';
     if (!trendDays[day]) trendDays[day] = {};
     trendDays[day][ind] = (trendDays[day][ind] || 0) + 1;
   }
 
-  // Build time series for top 4 industries
   const topIndustryNames = rankedIndustries.slice(0, 4).map(g => g.industry);
   const sortedDates = Object.keys(trendDays).sort();
 
@@ -166,7 +269,6 @@ export async function GET() {
     })),
   }));
 
-  // Trend snapshot (simple: growing if recent days > earlier days)
   const snapshot = topIndustryNames.map(ind => {
     const pts = sortedDates.map(d => trendDays[d][ind] || 0);
     const half = Math.floor(pts.length / 2);

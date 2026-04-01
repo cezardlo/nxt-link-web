@@ -13,6 +13,18 @@ interface RelatedSignal {
   relevance_score: number;
 }
 
+interface InsightVendor {
+  name: string;
+  category: string;
+  iker_score: number | null;
+}
+
+interface InsightProblem {
+  key: string;
+  label: string;
+  count: number;
+}
+
 interface TopInsight {
   rank: number;
   title: string;
@@ -24,6 +36,8 @@ interface TopInsight {
   industry: string;
   signal_type: string;
   related_signals: RelatedSignal[];
+  vendors?: InsightVendor[];
+  problems?: InsightProblem[];
 }
 
 interface Region {
@@ -383,6 +397,45 @@ export default function BriefingPage() {
                     <div className="text-[13px] leading-relaxed text-nxt-secondary">{insight.where_its_going}</div>
                   </div>
                 </div>
+
+                {/* Problems + Vendors row */}
+                {((insight.problems && insight.problems.length > 0) || (insight.vendors && insight.vendors.length > 0)) && (
+                  <div className="grid grid-cols-2 gap-5 mt-4">
+                    {/* Problems */}
+                    {insight.problems && insight.problems.length > 0 && (
+                      <div className="p-4 rounded-lg bg-nxt-bg border border-nxt-border-subtle">
+                        <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-red mb-2 uppercase">Problems detected</div>
+                        <div className="space-y-1.5">
+                          {insight.problems.map((p) => (
+                            <div key={p.key} className="flex justify-between items-center">
+                              <span className="text-xs text-nxt-secondary">{p.label}</span>
+                              <span className="text-[10px] font-mono text-nxt-muted px-1.5 py-0.5 rounded bg-nxt-card">{p.count}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Vendors */}
+                    {insight.vendors && insight.vendors.length > 0 && (
+                      <div className="p-4 rounded-lg bg-nxt-bg border border-nxt-border-subtle">
+                        <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-cyan mb-2 uppercase">Vendors to watch</div>
+                        <div className="space-y-1.5">
+                          {insight.vendors.map((v) => (
+                            <div key={v.name} className="flex justify-between items-center">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-nxt-secondary">{v.name}</span>
+                                <span className="text-[10px] text-nxt-dim">{v.category}</span>
+                              </div>
+                              {v.iker_score && (
+                                <span className="text-[10px] font-mono text-nxt-accent px-1.5 py-0.5 rounded bg-nxt-card">{v.iker_score}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Source signals */}
                 {insight.related_signals.length > 0 && (
