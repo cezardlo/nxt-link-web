@@ -33,7 +33,7 @@ export async function GET(request: Request) {
 
   confQuery = confQuery.limit(limit);
 
-  const [confResult, intelResult, statsResult, linksResult, exhibitorsResult] = await Promise.allSettled([
+  const [confResult, intelResult, statsResult, linksResult, exhibitorsResult, insightsResult, marketInsightsResult] = await Promise.allSettled([
     confQuery,
     supabase
       .from('conference_intel')
@@ -51,6 +51,18 @@ export async function GET(request: Request) {
       .from('exhibitors')
       .select('conference_id, normalized_name, technologies, confidence')
       .order('confidence', { ascending: false }),
+    // Per-conference insights (Why It Matters + Recommendations)
+    supabase
+      .from('conference_insights')
+      .select('conference_id, insight_type, insight, why_it_matters, recommendation, supporting_vendors, technologies, problem_area, confidence, vendor_count')
+      .order('confidence', { ascending: false }),
+    // Global market insights
+    supabase
+      .from('market_insights')
+      .select('insight_type, insight, why_it_matters, recommendation, supporting_vendors, technologies, problem_area, source_conferences, confidence, vendor_count')
+      .gte('expires_at', new Date().toISOString())
+      .order('confidence', { ascending: false })
+      .limit(10),
   ]);
 
   const conferences = confResult.status === 'fulfilled' ? confResult.value.data || [] : [];
@@ -58,6 +70,9 @@ export async function GET(request: Request) {
   const allConfs = statsResult.status === 'fulfilled' ? statsResult.value.data || [] : [];
   const vendorLinks = linksResult.status === 'fulfilled' ? linksResult.value.data || [] : [];
   const exhibitors = exhibitorsResult.status === 'fulfilled' ? exhibitorsResult.value.data || [] : [];
+  const _conferenceInsights = insightsResult.status === 'fulfilled' ? insightsResult.value.data || [] : [];
+  const _marketInsights = marketInsightsResult.status === 'fulfilled' ? marketInsightsResult.value.data || [] : [];
+  void _conferenceInsights; void _marketInsights; // fetched for future use
 
   // Group intel by conference_id
   const intelByConf: Record<string, typeof intel> = {};

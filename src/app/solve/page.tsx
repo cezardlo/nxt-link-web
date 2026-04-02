@@ -1,69 +1,89 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { COLORS } from '@/lib/tokens';
 import { INDUSTRIES } from '@/lib/data/nav';
 import { AppShell } from '@/components/AppShell';
 
-// ── Suggestions per industry ─────────────────────────────────────────────────
-
-const SUGGESTIONS: Record<string, string[]> = {
-  'manufacturing': ['Reduce production downtime', 'Automate factory floor', 'Improve inventory tracking', 'Find robotics vendors'],
-  'logistics':     ['Optimize fleet routes', 'Speed up warehouse', 'Reduce freight costs', 'Solve driver shortage'],
-};
-
-const ALL_SUGGESTIONS = [
-  'Reduce fleet downtime',
-  'Optimize my routes and cut fuel costs',
-  'Speed up my warehouse operations',
-  'Improve shipment tracking and visibility',
-  'Speed up cross-border customs',
-  'Solve driver shortage and retention',
-  'Reduce freight and carrier costs',
-  'Automate manual logistics processes',
-];
-
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type Solution = {
-  technology: string;
-  product: string;
-  price: string;
-  buy_now: boolean;
+type Vendor = {
+  name: string;
+  category: string | null;
+  iker_score: number | null;
+  website: string | null;
+};
+
+type Decision = {
+  rank: number;
+  signal_id: string;
+  title: string;
   industry: string;
+  signal_type: string;
+  company: string | null;
+  amount_usd: number | null;
+  source: string | null;
+  discovered_at: string;
+  score: {
+    final: number;
+    cluster_volume: number;
+    cluster_velocity: number;
+    ep_relevance: number;
+    source_quality: number;
+  };
+  cause: string;
+  effect: string;
+  consequence: string;
+  what_to_do: string[];
+  who_can_help: Vendor[];
+  urgency: 'act_now' | 'watch' | 'opportunity';
+  why_el_paso: string;
+  related_count: number;
 };
 
-type Region = { region: string; reason: string };
-type Vendor = { name: string; sector: string; score: number; website: string };
-
-type DecideResponse = {
+type Top3Response = {
   ok: boolean;
-  problem: string;
-  user_input: string;
-  matched_industries: string[];
-  recommended_solution: {
-    technology: string;
-    product: string;
-    price: string;
-    website: string;
-    reason: string;
-    local_option: string | null;
-    local_phone: string | null;
-    value_pick: string | null;
-    value_price: string | null;
-    value_why: string | null;
-    avoid: string | null;
-    avoid_why: string | null;
-  } | null;
-  all_solutions: Solution[];
-  best_regions: Region[];
-  market_insight: { growth: string; competition: string; summary: string };
-  vendors: Vendor[];
-  next_step: string;
-  error?: string;
+  mode: 'top3';
+  generated_at: string;
+  decisions: Decision[];
+  total_signals_analyzed: number;
 };
+
+type SearchResponse = {
+  ok: boolean;
+  mode: 'search';
+  query: string;
+  cause: string;
+  effect: string;
+  consequence: string;
+  what_to_do: string[];
+  urgency: string;
+  why_el_paso: string;
+  signals: { id: string; title: string; industry: string; company: string | null; source: string | null; discovered_at: string; score: number }[];
+  who_can_help: Vendor[];
+  total_signals_searched: number;
+};
+
+// ── Urgency badge ────────────────────────────────────────────────────────────
+
+const URGENCY_CONFIG = {
+  act_now:     { label: 'ACT NOW',     bg: `${COLORS.red}18`,    border: `${COLORS.red}40`,    color: COLORS.red },
+  watch:       { label: 'WATCH',       bg: `${COLORS.amber}12`,  border: `${COLORS.amber}35`,  color: COLORS.amber },
+  opportunity: { label: 'OPPORTUNITY', bg: `${COLORS.green}12`,  border: `${COLORS.green}35`,  color: COLORS.green },
+} as const;
+
+// ── Suggestions ──────────────────────────────────────────────────────────────
+
+const SUGGESTIONS = [
+  'Reduce fleet downtime',
+  'Speed up cross-border customs',
+  'Find warehouse automation',
+  'Cut freight costs',
+  'Solve driver shortage',
+  'Improve shipment visibility',
+];
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -85,17 +105,44 @@ function SolveInner() {
     presetIndustry && INDUSTRIES.some(i => i.id === presetIndustry) ? presetIndustry : null
   );
   const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<DecideResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
+  const [top3, setTop3] = useState<Decision[] | null>(null);
+  const [searchResult, setSearchResult] = useState<SearchResponse | null>(null);
   const [error, setError] = useState('');
+  const [totalAnalyzed, setTotalAnalyzed] = useState(0);
   const [inputFocused, setInputFocused] = useState(false);
 
-  async function solve(text: string) {
-    const q = text.trim();
-    if (q.length < 3) return;
+  // Load top 3 on mount
+  useEffect(() => {
+    loadTop3();
+  }, []);
+
+  async function loadTop3() {
     setLoading(true);
     setError('');
-    setResult(null);
+    try {
+      const res = await fetch('/api/decide');
+      const data: Top3Response = await res.json();
+      if (data.ok) {
+        setTop3(data.decisions);
+        setTotalAnalyzed(data.total_signals_analyzed);
+      } else {
+        setError('Failed to load intelligence');
+      }
+    } catch {
+      setError('Network error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function search(text: string) {
+    const q = text.trim();
+    if (q.length < 3) return;
+    setSearching(true);
+    setSearchResult(null);
+    setError('');
 
     try {
       const res = await fetch('/api/decide', {
@@ -103,157 +150,147 @@ function SolveInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ problem: q, industry }),
       });
-      const data: DecideResponse = await res.json();
-      if (!data.ok) {
-        setError(data.error ?? 'Something went wrong');
+      const data: SearchResponse = await res.json();
+      if (data.ok) {
+        setSearchResult(data);
       } else {
-        setResult(data);
+        setError('No results found');
       }
     } catch {
-      setError('Network error -- try again');
+      setError('Network error');
     } finally {
-      setLoading(false);
+      setSearching(false);
     }
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    solve(input);
+    search(input);
   }
 
-  function handleSuggestion(s: string) {
-    setInput(s);
-    solve(s);
+  function clearSearch() {
+    setSearchResult(null);
+    setInput('');
+    setError('');
   }
 
   function toggleIndustry(id: string) {
     setIndustry(prev => prev === id ? null : id);
   }
 
-  function startOver() {
-    setIndustry(null);
-    setInput('');
-    setResult(null);
-    setError('');
-  }
-
-  const activeSuggestions = industry && SUGGESTIONS[industry]
-    ? SUGGESTIONS[industry]
-    : ALL_SUGGESTIONS;
-
   const selectedIndustry = INDUSTRIES.find(i => i.id === industry);
 
   return (
-    <div className="min-h-screen pb-20">
-      {/* ── INPUT STATE (no result, not loading) ───────────────────── */}
-      {!result && !loading && (
-        <div className="max-w-[700px] mx-auto px-6 pt-10 animate-fade-up">
-          {/* Hero */}
-          <div className="mb-8 text-center">
-            <h1 className="text-2xl sm:text-3xl font-grotesk font-bold text-nxt-text leading-tight mb-2">
-              What logistics problem are you trying to solve?
-            </h1>
-            <p className="text-sm text-nxt-muted">
-              Describe it in plain English — we match you to the right technology and vendors.
-            </p>
-          </div>
+    <div className="min-h-screen pb-24">
+      {/* ── Header + Search ───────────────────────────────────────── */}
+      <div className="max-w-[720px] mx-auto px-6 pt-8">
+        <div className="mb-6">
+          <h1
+            className="text-xl sm:text-2xl font-bold leading-tight"
+            style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.text }}
+          >
+            {searchResult ? 'Search Results' : 'Top 3 Things to Act On'}
+          </h1>
+          <p className="text-[12px] mt-1" style={{ color: COLORS.muted }}>
+            {searchResult
+              ? `${searchResult.total_signals_searched} signals searched`
+              : loading
+                ? 'Analyzing live signals...'
+                : `From ${totalAnalyzed} signals this week`}
+          </p>
+        </div>
 
-          {/* Industry filter chips */}
-          <div className="flex flex-wrap justify-center gap-1.5 mb-6">
-            {INDUSTRIES.map(ind => {
-              const active = industry === ind.id;
-              return (
-                <button
-                  key={ind.id}
-                  onClick={() => toggleIndustry(ind.id)}
-                  className="text-[10px] tracking-[0.04em] px-3 py-1.5 transition-all hover:translate-y-[-1px]"
-                  style={{
-                    background: active ? `${ind.color}18` : 'transparent',
-                    border: `1px solid ${active ? `${ind.color}50` : COLORS.border}`,
-                    borderRadius: '20px',
-                    color: active ? ind.color : `${COLORS.text}45`,
-                    cursor: 'pointer',
-                    fontFamily: "'Space Grotesk', sans-serif",
-                    fontWeight: active ? 700 : 400,
-                  }}
-                >
-                  <span style={{ marginRight: 4 }}>{ind.icon}</span>
-                  {ind.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Search input */}
-          <form onSubmit={handleSubmit} className="w-full max-w-[560px] mx-auto flex flex-col gap-3">
-            <div
-              className="relative transition-all duration-300"
+        {/* Search bar */}
+        <form onSubmit={handleSubmit} className="mb-4">
+          <div
+            className="relative transition-all duration-200"
+            style={{
+              borderRadius: '14px',
+              boxShadow: inputFocused
+                ? `0 0 0 1px ${COLORS.accent}50, 0 0 16px ${COLORS.accent}10`
+                : `0 0 0 1px ${COLORS.border}`,
+            }}
+          >
+            <input
+              type="text"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
+              placeholder="Describe a logistics problem..."
+              className="w-full text-[14px] outline-none min-h-[48px] px-4 py-3 pr-12"
               style={{
-                borderRadius: '18px',
-                boxShadow: inputFocused
-                  ? `0 0 0 1px ${COLORS.accent}60, 0 0 24px ${COLORS.accent}15`
-                  : `0 0 0 1px ${COLORS.border}`,
+                background: COLORS.card,
+                border: 'none',
+                borderRadius: '14px',
+                color: COLORS.text,
+                fontFamily: "'Space Grotesk', sans-serif",
+              }}
+            />
+            <button
+              type="submit"
+              disabled={input.trim().length < 3 || searching}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center transition-all disabled:opacity-20"
+              style={{
+                background: COLORS.accent,
+                borderRadius: '10px',
+                border: 'none',
+                cursor: input.trim().length >= 3 ? 'pointer' : 'default',
+                color: '#fff',
+                fontSize: 15,
+                fontWeight: 700,
               }}
             >
-              <input
-                type="text"
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onFocus={() => setInputFocused(true)}
-                onBlur={() => setInputFocused(false)}
-                placeholder="e.g. trucks breaking down, warehouse is slow, freight costs too high..."
-                autoFocus
-                className="w-full text-[15px] font-light outline-none min-h-[56px] px-5 py-4 pr-14"
-                style={{
-                  background: COLORS.card,
-                  border: 'none',
-                  borderRadius: '18px',
-                  color: COLORS.text,
-                  fontFamily: "'Space Grotesk', sans-serif",
-                }}
-              />
+              {searching ? '...' : '→'}
+            </button>
+          </div>
+        </form>
+
+        {/* Industry filter chips */}
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {INDUSTRIES.map(ind => {
+            const active = industry === ind.id;
+            return (
               <button
-                type="submit"
-                disabled={input.trim().length < 3}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center transition-all disabled:opacity-20"
+                key={ind.id}
+                onClick={() => toggleIndustry(ind.id)}
+                className="text-[10px] tracking-[0.04em] px-2.5 py-1 transition-all"
                 style={{
-                  background: COLORS.accent,
-                  borderRadius: '12px',
-                  border: 'none',
-                  cursor: input.trim().length >= 3 ? 'pointer' : 'default',
-                  color: '#000',
-                  fontSize: 16,
-                  fontWeight: 700,
+                  background: active ? `${ind.color}15` : 'transparent',
+                  border: `1px solid ${active ? `${ind.color}40` : COLORS.border}`,
+                  borderRadius: '16px',
+                  color: active ? ind.color : COLORS.dim,
+                  cursor: 'pointer',
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontWeight: active ? 700 : 400,
                 }}
               >
-                →
+                <span style={{ marginRight: 3 }}>{ind.icon}</span>
+                {ind.label}
               </button>
-            </div>
+            );
+          })}
+        </div>
 
-            {industry && (
-              <div className="text-center">
-                <span className="text-[9px] tracking-[0.1em]" style={{ color: `${COLORS.text}30` }}>
-                  Filtering by{' '}
-                  <span style={{ color: selectedIndustry?.color ?? COLORS.accent, fontWeight: 700 }}>
-                    {selectedIndustry?.label ?? industry}
-                  </span>
-                </span>
-              </div>
-            )}
-          </form>
+        {industry && (
+          <div className="text-[9px] tracking-[0.08em] mb-3" style={{ color: COLORS.dim }}>
+            Filtering: <span style={{ color: selectedIndustry?.color, fontWeight: 700 }}>{selectedIndustry?.label}</span>
+          </div>
+        )}
 
-          {/* Suggestion chips */}
-          <div className="flex flex-wrap justify-center gap-2 mt-6 max-w-[560px] mx-auto">
-            {activeSuggestions.map(s => (
+        {/* Suggestion chips (only when no search result) */}
+        {!searchResult && !loading && (
+          <div className="flex flex-wrap gap-1.5 mt-3 mb-6">
+            {SUGGESTIONS.map(s => (
               <button
                 key={s}
-                onClick={() => handleSuggestion(s)}
-                className="text-[10px] tracking-[0.04em] px-3 py-1.5 transition-all hover:translate-y-[-1px] hover:border-opacity-60"
+                onClick={() => { setInput(s); search(s); }}
+                className="text-[10px] px-2.5 py-1 transition-all hover:translate-y-[-1px]"
                 style={{
                   background: 'transparent',
                   border: `1px solid ${COLORS.border}`,
-                  borderRadius: '20px',
-                  color: `${COLORS.text}45`,
+                  borderRadius: '16px',
+                  color: COLORS.dim,
                   cursor: 'pointer',
                   fontFamily: "'Space Grotesk', sans-serif",
                 }}
@@ -262,228 +299,341 @@ function SolveInner() {
               </button>
             ))}
           </div>
+        )}
 
+        {searchResult && (
+          <button
+            onClick={clearSearch}
+            className="text-[10px] tracking-[0.08em] mb-4 py-1"
+            style={{ color: COLORS.muted, background: 'none', border: 'none', cursor: 'pointer' }}
+          >
+            ← Back to Top 3
+          </button>
+        )}
+      </div>
+
+      {/* ── Error ─────────────────────────────────────────────────── */}
+      {error && (
+        <div className="max-w-[720px] mx-auto px-6">
+          <div className="p-3 mb-4" style={{ background: `${COLORS.red}08`, border: `1px solid ${COLORS.red}25`, borderRadius: '10px' }}>
+            <span className="text-[11px]" style={{ color: COLORS.red }}>{error}</span>
+          </div>
         </div>
       )}
 
-      {/* ── Loading ────────────────────────────────────────────────── */}
-      {loading && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 pb-20">
+      {/* ── Loading ───────────────────────────────────────────────── */}
+      {(loading || searching) && (
+        <div className="flex flex-col items-center justify-center gap-3 py-16">
           <div
-            className="w-8 h-8 border-2 rounded-full animate-spin"
-            style={{ borderColor: `${COLORS.accent}30`, borderTopColor: COLORS.accent }}
+            className="w-7 h-7 border-2 rounded-full animate-spin"
+            style={{ borderColor: `${COLORS.accent}25`, borderTopColor: COLORS.accent }}
           />
-          <span className="text-[10px] tracking-[0.15em]" style={{ color: `${COLORS.text}30` }}>
-            MATCHING YOUR PROBLEM TO SOLUTIONS...
+          <span className="text-[10px] tracking-[0.12em]" style={{ color: COLORS.dim }}>
+            {searching ? 'SEARCHING LIVE SIGNALS...' : 'ANALYZING INTELLIGENCE...'}
           </span>
         </div>
       )}
 
-      {/* ── Error ──────────────────────────────────────────────────── */}
-      {error && (
-        <div className="mx-6 p-4 mb-4" style={{ background: `${COLORS.red}10`, border: `1px solid ${COLORS.red}30`, borderRadius: '12px' }}>
-          <span className="text-[11px]" style={{ color: COLORS.red }}>{error}</span>
+      {/* ── TOP 3 DECISIONS (default view) ────────────────────────── */}
+      {!loading && !searching && !searchResult && top3 && (
+        <div className="max-w-[720px] mx-auto px-6 flex flex-col gap-4">
+          {top3.map(d => (
+            <DecisionCard key={d.signal_id} decision={d} />
+          ))}
+
+          {/* Footer links */}
+          <div className="flex gap-3 mt-4">
+            <Link
+              href="/briefing"
+              className="flex-1 p-3 text-center"
+              style={{
+                background: COLORS.surface,
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: '12px',
+                textDecoration: 'none',
+              }}
+            >
+              <div className="text-[12px] font-semibold" style={{ color: COLORS.text }}>Full Briefing</div>
+              <div className="text-[10px]" style={{ color: COLORS.dim }}>Detailed signal analysis</div>
+            </Link>
+            <Link
+              href="/vendors"
+              className="flex-1 p-3 text-center"
+              style={{
+                background: COLORS.surface,
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: '12px',
+                textDecoration: 'none',
+              }}
+            >
+              <div className="text-[12px] font-semibold" style={{ color: COLORS.text }}>All Vendors</div>
+              <div className="text-[10px]" style={{ color: COLORS.dim }}>Browse by category</div>
+            </Link>
+          </div>
         </div>
       )}
 
-      {/* ── Results ────────────────────────────────────────────────── */}
-      {result && (
-        <div className="flex-1 overflow-y-auto px-6 pb-20">
-          {/* Back button */}
-          <button
-            onClick={startOver}
-            className="text-[10px] tracking-[0.1em] mb-6 py-2"
-            style={{ color: `${COLORS.text}40`, background: 'none', border: 'none', cursor: 'pointer' }}
+      {/* ── SEARCH RESULTS ────────────────────────────────────────── */}
+      {!searching && searchResult && (
+        <div className="max-w-[720px] mx-auto px-6">
+          {/* AI Answer */}
+          <div
+            className="p-5 mb-4"
+            style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: '14px' }}
           >
-            ← SOLVE ANOTHER
-          </button>
+            {/* Urgency badge */}
+            <div className="mb-3">
+              <UrgencyBadge urgency={searchResult.urgency as 'act_now' | 'watch' | 'opportunity'} />
+            </div>
 
-          {/* Problem header */}
-          <div className="mb-6">
-            <span className="text-[8px] tracking-[0.2em]" style={{ color: `${COLORS.text}25` }}>YOUR PROBLEM</span>
-            <h2
-              className="text-[20px] font-bold mt-1"
-              style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.text }}
-            >
-              {result.problem.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-            </h2>
-            <span className="text-[9px] mt-1 inline-block" style={{ color: `${COLORS.text}30` }}>
-              Industries: {result.matched_industries.join(', ')}
-            </span>
+            {/* CAUSE */}
+            <div className="mb-3">
+              <SectionLabel text="CAUSE" />
+              <p className="text-[13px] leading-relaxed mt-1" style={{ color: `${COLORS.text}cc` }}>
+                {searchResult.cause}
+              </p>
+            </div>
+
+            {/* EFFECT */}
+            <div className="mb-3">
+              <SectionLabel text="EFFECT" />
+              <p className="text-[12px] leading-relaxed mt-1" style={{ color: `${COLORS.text}a0` }}>
+                {searchResult.effect}
+              </p>
+            </div>
+
+            {/* CONSEQUENCE */}
+            <div className="mb-4">
+              <SectionLabel text="IF YOU DON'T ACT" />
+              <p className="text-[12px] leading-relaxed mt-1" style={{ color: COLORS.amber }}>
+                {searchResult.consequence}
+              </p>
+            </div>
+
+            {/* What to do */}
+            <div className="mb-4">
+              <SectionLabel text="ACTION" />
+              <div className="flex flex-col gap-2 mt-2">
+                {searchResult.what_to_do.map((action, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span
+                      className="text-[10px] font-bold shrink-0 w-5 h-5 flex items-center justify-center mt-0.5"
+                      style={{ background: `${COLORS.accent}15`, borderRadius: '6px', color: COLORS.accent }}
+                    >
+                      {i + 1}
+                    </span>
+                    <span className="text-[12px] leading-relaxed" style={{ color: `${COLORS.text}b0` }}>
+                      {action}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Who can help */}
+            {searchResult.who_can_help.length > 0 && (
+              <div className="mb-3">
+                <SectionLabel text="WHO CAN HELP" />
+                <div className="flex flex-col gap-2 mt-2">
+                  {searchResult.who_can_help.map((v, i) => (
+                    <VendorRow key={i} vendor={v} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* El Paso context */}
+            <div className="pt-3 mt-2" style={{ borderTop: `1px solid ${COLORS.border}` }}>
+              <span className="text-[10px]" style={{ color: COLORS.cyan }}>
+                EL PASO: {searchResult.why_el_paso}
+              </span>
+            </div>
           </div>
 
-          {/* ── SECTION 1: Recommended Solution ────────────────────── */}
-          {result.recommended_solution && (
-            <Section title="RECOMMENDED SOLUTION" accent={COLORS.accent}>
-              <div className="flex flex-col gap-3">
-                <div>
-                  <div className="text-[14px] font-bold" style={{ color: COLORS.text }}>
-                    {result.recommended_solution.product}
-                  </div>
-                  <div className="text-[10px] mt-1" style={{ color: `${COLORS.text}50` }}>
-                    {result.recommended_solution.technology}
-                  </div>
-                </div>
-                <div className="text-[11px] leading-relaxed" style={{ color: `${COLORS.text}60` }}>
-                  {result.recommended_solution.reason}
-                </div>
-                <div className="flex items-center gap-4">
-                  <Badge label="PRICE" value={result.recommended_solution.price} color={COLORS.green} />
-                  {result.recommended_solution.website && (
-                    <a
-                      href={result.recommended_solution.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[9px] tracking-[0.1em]"
-                      style={{ color: COLORS.cyan }}
-                    >
-                      VISIT WEBSITE →
-                    </a>
-                  )}
-                </div>
-
-                {result.recommended_solution.local_option && (
-                  <div className="pt-3 mt-1" style={{ borderTop: `1px solid ${COLORS.border}` }}>
-                    <span className="text-[8px] tracking-[0.15em]" style={{ color: COLORS.gold }}>LOCAL OPTION</span>
-                    <div className="text-[12px] font-bold mt-1">{result.recommended_solution.local_option}</div>
-                    {result.recommended_solution.local_phone && (
-                      <a href={`tel:${result.recommended_solution.local_phone}`} className="text-[11px] mt-1 inline-block" style={{ color: COLORS.cyan }}>
-                        {result.recommended_solution.local_phone}
-                      </a>
-                    )}
-                  </div>
-                )}
-
-                {result.recommended_solution.value_pick && (
-                  <div className="pt-3 mt-1" style={{ borderTop: `1px solid ${COLORS.border}` }}>
-                    <span className="text-[8px] tracking-[0.15em]" style={{ color: COLORS.green }}>BEST VALUE</span>
-                    <div className="text-[12px] font-bold mt-1">{result.recommended_solution.value_pick}</div>
-                    <div className="text-[10px] mt-0.5" style={{ color: `${COLORS.text}50` }}>
-                      {result.recommended_solution.value_price} — {result.recommended_solution.value_why}
+          {/* Supporting signals */}
+          {searchResult.signals.length > 0 && (
+            <div className="mb-4">
+              <SectionLabel text="SUPPORTING SIGNALS" />
+              <div className="flex flex-col gap-2 mt-2">
+                {searchResult.signals.map(s => (
+                  <div
+                    key={s.id}
+                    className="p-3"
+                    style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: '10px' }}
+                  >
+                    <div className="text-[11px] font-medium" style={{ color: COLORS.text }}>
+                      {s.title}
                     </div>
-                  </div>
-                )}
-
-                {result.recommended_solution.avoid && (
-                  <div className="pt-3 mt-1" style={{ borderTop: `1px solid ${COLORS.border}` }}>
-                    <span className="text-[8px] tracking-[0.15em]" style={{ color: COLORS.red }}>AVOID</span>
-                    <div className="text-[12px] font-bold mt-1" style={{ color: COLORS.red }}>
-                      {result.recommended_solution.avoid}
-                    </div>
-                    <div className="text-[10px] mt-0.5" style={{ color: `${COLORS.text}40` }}>
-                      {result.recommended_solution.avoid_why}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </Section>
-          )}
-
-          {/* ── Other Options ──────────────────────────────────────── */}
-          {result.all_solutions.length > 1 && (
-            <Section title="OTHER OPTIONS" accent={COLORS.cyan}>
-              <div className="flex flex-col gap-2">
-                {result.all_solutions.slice(1).map((s, i) => (
-                  <div key={i} className="flex items-center justify-between py-2" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-                    <div>
-                      <div className="text-[11px] font-bold">{s.product}</div>
-                      <div className="text-[9px]" style={{ color: `${COLORS.text}40` }}>{s.technology}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-[10px]" style={{ color: COLORS.green }}>{s.price}</div>
-                      <div className="text-[8px]" style={{ color: s.buy_now ? COLORS.green : COLORS.gold }}>
-                        {s.buy_now ? 'BUY NOW' : 'WAIT'}
-                      </div>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-[9px]" style={{ color: COLORS.dim }}>{s.industry}</span>
+                      {s.company && <span className="text-[9px]" style={{ color: COLORS.muted }}>{s.company}</span>}
+                      <span className="text-[9px]" style={{ color: COLORS.dim }}>{s.source}</span>
+                      <span className="text-[9px]" style={{ color: COLORS.dim }}>
+                        {timeAgo(s.discovered_at)}
+                      </span>
                     </div>
                   </div>
                 ))}
               </div>
-            </Section>
+            </div>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
 
-          {/* ── SECTION 2: Best Regions ─────────────────────────────── */}
-          <Section title="BEST REGIONS" accent={COLORS.cyan}>
-            <div className="flex flex-col gap-3">
-              {result.best_regions.map((r, i) => (
-                <div key={i} className="flex items-start gap-3">
-                  <div className="text-[18px] font-bold shrink-0 w-8 text-center" style={{ color: `${COLORS.text}15` }}>{i + 1}</div>
-                  <div>
-                    <div className="text-[12px] font-bold">{r.region}</div>
-                    <div className="text-[10px] mt-0.5" style={{ color: `${COLORS.text}45` }}>{r.reason}</div>
-                  </div>
+// ── Decision Card ────────────────────────────────────────────────────────────
+
+function DecisionCard({ decision: d }: { decision: Decision }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div
+      className="transition-all"
+      style={{
+        background: COLORS.card,
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: '14px',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Header — always visible */}
+      <button
+        onClick={() => setExpanded(prev => !prev)}
+        className="w-full text-left p-5 flex items-start gap-4"
+        style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+      >
+        {/* Rank */}
+        <div
+          className="shrink-0 w-8 h-8 flex items-center justify-center text-[14px] font-bold"
+          style={{
+            background: `${COLORS.accent}12`,
+            borderRadius: '10px',
+            color: COLORS.accent,
+          }}
+        >
+          {d.rank}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          {/* Urgency + industry */}
+          <div className="flex items-center gap-2 mb-1.5">
+            <UrgencyBadge urgency={d.urgency} />
+            <span className="text-[9px] tracking-[0.06em]" style={{ color: COLORS.dim }}>
+              {d.industry}
+            </span>
+            {d.company && (
+              <span className="text-[9px] font-medium" style={{ color: COLORS.muted }}>
+                {d.company}
+              </span>
+            )}
+          </div>
+
+          {/* Title */}
+          <div className="text-[13px] font-semibold leading-snug" style={{ color: COLORS.text }}>
+            {d.title}
+          </div>
+
+          {/* Cause preview */}
+          {!expanded && (
+            <div className="text-[11px] mt-1.5 line-clamp-2" style={{ color: `${COLORS.text}80` }}>
+              {d.cause}
+            </div>
+          )}
+        </div>
+
+        {/* Expand icon */}
+        <span className="text-[12px] shrink-0 mt-1" style={{ color: COLORS.dim }}>
+          {expanded ? '−' : '+'}
+        </span>
+      </button>
+
+      {/* Expanded content */}
+      {expanded && (
+        <div className="px-5 pb-5" style={{ borderTop: `1px solid ${COLORS.border}` }}>
+          {/* CAUSE */}
+          <div className="pt-4 mb-3">
+            <SectionLabel text="CAUSE" />
+            <p className="text-[12px] leading-relaxed mt-1.5" style={{ color: `${COLORS.text}b0` }}>
+              {d.cause}
+            </p>
+          </div>
+
+          {/* EFFECT */}
+          <div className="mb-3">
+            <SectionLabel text="EFFECT" />
+            <p className="text-[12px] leading-relaxed mt-1" style={{ color: `${COLORS.text}90` }}>
+              {d.effect}
+            </p>
+          </div>
+
+          {/* CONSEQUENCE */}
+          <div className="mb-4">
+            <SectionLabel text="IF YOU DON'T ACT" />
+            <p className="text-[12px] leading-relaxed mt-1" style={{ color: COLORS.amber }}>
+              {d.consequence}
+            </p>
+          </div>
+
+          {/* ACTION */}
+          <div className="mb-4">
+            <SectionLabel text="ACTION" />
+            <div className="flex flex-col gap-2 mt-2">
+              {d.what_to_do.map((action, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <span
+                    className="text-[10px] font-bold shrink-0 w-5 h-5 flex items-center justify-center mt-0.5"
+                    style={{ background: `${COLORS.accent}15`, borderRadius: '6px', color: COLORS.accent }}
+                  >
+                    {i + 1}
+                  </span>
+                  <span className="text-[12px] leading-relaxed" style={{ color: `${COLORS.text}b0` }}>
+                    {action}
+                  </span>
                 </div>
               ))}
             </div>
-          </Section>
+          </div>
 
-          {/* ── SECTION 3: Market Insight ───────────────────────────── */}
-          <Section title="MARKET INSIGHT" accent={COLORS.gold}>
-            <div className="flex gap-4 mb-3">
-              <Badge label="GROWTH" value={result.market_insight.growth.toUpperCase()} color={COLORS.green} />
-              <Badge label="COMPETITION" value={result.market_insight.competition.toUpperCase()} color={COLORS.gold} />
-            </div>
-            <div className="text-[11px] leading-relaxed" style={{ color: `${COLORS.text}55` }}>
-              {result.market_insight.summary}
-            </div>
-          </Section>
-
-          {/* ── SECTION 4: Vendors ──────────────────────────────────── */}
-          {result.vendors.length > 0 && (
-            <Section title="VENDORS" accent={COLORS.green}>
-              <div className="flex flex-col gap-2">
-                {result.vendors.map((v, i) => (
-                  <div key={i} className="flex items-center justify-between py-2" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-                    <div>
-                      <div className="text-[12px] font-bold">{v.name}</div>
-                      <div className="text-[9px]" style={{ color: `${COLORS.text}35` }}>{v.sector}</div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {v.score > 0 && (
-                        <span className="text-[10px] font-bold" style={{ color: v.score >= 80 ? COLORS.green : COLORS.gold }}>{v.score}</span>
-                      )}
-                      {v.website && (
-                        <a
-                          href={v.website.startsWith('http') ? v.website : `https://${v.website}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[8px] tracking-[0.1em]"
-                          style={{ color: COLORS.cyan }}
-                        >
-                          VISIT →
-                        </a>
-                      )}
-                    </div>
-                  </div>
+          {/* Who can help */}
+          {d.who_can_help.length > 0 && (
+            <div className="mb-4">
+              <SectionLabel text="WHO CAN HELP" />
+              <div className="flex flex-col gap-2 mt-2">
+                {d.who_can_help.map((v, i) => (
+                  <VendorRow key={i} vendor={v} />
                 ))}
               </div>
-            </Section>
+            </div>
           )}
 
-          {/* ── SECTION 5: Next Step ───────────────────────────────── */}
-          <Section title="NEXT STEP" accent={COLORS.accent}>
-            <div className="text-[12px] leading-relaxed" style={{ color: `${COLORS.text}70` }}>
-              {result.next_step}
-            </div>
-          </Section>
+          {/* El Paso context */}
+          <div className="pt-3" style={{ borderTop: `1px solid ${COLORS.border}` }}>
+            <span className="text-[10px]" style={{ color: COLORS.cyan }}>
+              EL PASO: {d.why_el_paso}
+            </span>
+          </div>
 
-          {/* ── Explore more ────────────────────────────────────────── */}
-          <div className="flex gap-3 mt-6 mb-10">
-            <Link
-              href="/vendors"
-              className="flex-1 p-4 rounded-nxt-md bg-nxt-surface border border-nxt-border card-hover text-center"
-              style={{ textDecoration: 'none' }}
-            >
-              <div className="text-sm font-semibold text-nxt-text mb-1">Browse Vendors</div>
-              <div className="text-[11px] text-nxt-muted">Find and compare logistics vendors</div>
-            </Link>
-            <Link
-              href="/products"
-              className="flex-1 p-4 rounded-nxt-md bg-nxt-surface border border-nxt-border card-hover text-center"
-              style={{ textDecoration: 'none' }}
-            >
-              <div className="text-sm font-semibold text-nxt-text mb-1">Browse Products</div>
-              <div className="text-[11px] text-nxt-muted">Compare supply chain technology</div>
-            </Link>
+          {/* Meta + Score breakdown */}
+          <div className="flex items-center gap-3 mt-3 flex-wrap">
+            <span className="text-[9px]" style={{ color: COLORS.dim }}>{d.source}</span>
+            <span className="text-[9px]" style={{ color: COLORS.dim }}>{timeAgo(d.discovered_at)}</span>
+            <span className="text-[9px]" style={{ color: COLORS.dim }}>{d.related_count} related</span>
+            {d.amount_usd && (
+              <span className="text-[9px] font-medium" style={{ color: COLORS.green }}>
+                ${(d.amount_usd / 1e6).toFixed(1)}M
+              </span>
+            )}
+          </div>
+          {/* Score transparency */}
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-[8px] tracking-[0.1em] font-bold" style={{ color: COLORS.dim }}>
+              SCORE {d.score.final}
+            </span>
+            <span className="text-[7px]" style={{ color: `${COLORS.text}25` }}>
+              vol:{d.score.cluster_volume} vel:{d.score.cluster_velocity} ep:{d.score.ep_relevance} src:{d.score.source_quality}
+            </span>
           </div>
         </div>
       )}
@@ -493,25 +643,71 @@ function SolveInner() {
 
 // ── Sub-components ───────────────────────────────────────────────────────────
 
-function Section({ title, accent, children }: { title: string; accent: string; children: React.ReactNode }) {
+function SectionLabel({ text }: { text: string }) {
   return (
-    <div className="mb-6">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-1 h-4 rounded-full" style={{ background: accent }} />
-        <span className="text-[9px] tracking-[0.2em] font-bold" style={{ color: `${COLORS.text}35` }}>{title}</span>
+    <span className="text-[8px] tracking-[0.18em] font-bold" style={{ color: COLORS.dim }}>
+      {text}
+    </span>
+  );
+}
+
+function UrgencyBadge({ urgency }: { urgency: 'act_now' | 'watch' | 'opportunity' }) {
+  const config = URGENCY_CONFIG[urgency] || URGENCY_CONFIG.watch;
+  return (
+    <span
+      className="text-[8px] tracking-[0.12em] font-bold px-2 py-0.5"
+      style={{
+        background: config.bg,
+        border: `1px solid ${config.border}`,
+        borderRadius: '8px',
+        color: config.color,
+      }}
+    >
+      {config.label}
+    </span>
+  );
+}
+
+function VendorRow({ vendor: v }: { vendor: Vendor }) {
+  return (
+    <div className="flex items-center justify-between py-1.5">
+      <div>
+        <span className="text-[12px] font-medium" style={{ color: COLORS.text }}>{v.name}</span>
+        {v.category && (
+          <span className="text-[9px] ml-2" style={{ color: COLORS.dim }}>{v.category}</span>
+        )}
       </div>
-      <div className="p-5" style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: '16px' }}>
-        {children}
+      <div className="flex items-center gap-2">
+        {v.iker_score != null && v.iker_score > 0 && (
+          <span
+            className="text-[10px] font-bold"
+            style={{ color: v.iker_score >= 80 ? COLORS.green : v.iker_score >= 60 ? COLORS.amber : COLORS.dim }}
+          >
+            {v.iker_score}
+          </span>
+        )}
+        {v.website && (
+          <a
+            href={v.website.startsWith('http') ? v.website : `https://${v.website}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[8px] tracking-[0.08em]"
+            style={{ color: COLORS.cyan, textDecoration: 'none' }}
+          >
+            VISIT →
+          </a>
+        )}
       </div>
     </div>
   );
 }
 
-function Badge({ label, value, color }: { label: string; value: string; color: string }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-[7px] tracking-[0.2em]" style={{ color: `${COLORS.text}25` }}>{label}</span>
-      <span className="text-[11px] font-bold" style={{ color }}>{value}</span>
-    </div>
-  );
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const hours = Math.floor(diff / 3600000);
+  if (hours < 1) return 'just now';
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return `${Math.floor(days / 7)}w ago`;
 }

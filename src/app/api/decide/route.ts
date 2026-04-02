@@ -1,406 +1,638 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/client';
+import { runParallelJsonEnsemble } from '@/lib/llm/parallel-router';
 
 export const dynamic = 'force-dynamic';
 
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+// ── Types ────────────────────────────────────────────────────────────────────
+
+type SignalRow = {
+  id: string;
+  title: string;
+  signal_type: string;
+  industry: string;
+  company: string | null;
+  evidence: string | null;
+  amount_usd: number | null;
+  confidence: number;
+  importance_score: number;
+  discovered_at: string;
+  source: string | null;
+  tags: string[];
+  vendor_id: string | null;
+  problem_category: string | null;
+};
+
+type VendorRow = {
+  id: string;
+  company_name: string;
+  primary_category: string;
+  iker_score: number | null;
+  company_url: string | null;
+  description: string | null;
+  sector: string | null;
+};
+
+// ── Scoring Formula (deterministic, transparent) ─────────────────────────────
+// score = (0.4 × cluster_volume) + (0.3 × trend_velocity) + (0.2 × ep_relevance) + (0.1 × source_quality)
+// All components normalized to 0-100 scale, final score 0-100
+
+const JUNK_SOURCES = ['arxiv'];
+
+function isJunk(source: string | null, title: string): boolean {
+  const lower = `${source || ''} ${title}`.toLowerCase();
+  return JUNK_SOURCES.some(j => lower.includes(j));
+}
+
+// Source quality: 0-100
+const TIER1_SOURCES = ['freightwaves', 'supply chain dive', 'reuters', 'bloomberg', 'associated press', 'journal of commerce', 'american shipper'];
+const TIER2_SOURCES = ['transport topics', 'the loadstar', 'commercial carrier journal', 'fleet owner', 'trucking info', 'logistics management', 'borderreport'];
+
+function sourceQuality(source: string | null): number {
+  if (!source) return 20;
+  const lower = source.toLowerCase();
+  if (TIER1_SOURCES.some(s => lower.includes(s))) return 100;
+  if (TIER2_SOURCES.some(s => lower.includes(s))) return 75;
+  return 30;
+}
+
+// El Paso relevance: 0-100
+const EP_KEYWORDS = ['el paso', 'juarez', 'juárez', 'border', 'cbp', 'customs', 'maquiladora', 'fort bliss', 'santa teresa', 'bota', 'ysleta', 'usmca', 'nearshoring', 'cross-border', 'borderplex'];
+
+function elPasoRelevance(s: SignalRow): number {
+  const text = `${s.title} ${s.evidence || ''} ${s.company || ''}`.toLowerCase();
+  let score = 0;
+  for (const kw of EP_KEYWORDS) {
+    if (text.includes(kw)) score += 20;
+  }
+  // Industry boost
+  if (['logistics', 'manufacturing', 'border-tech'].includes(s.industry)) score += 15;
+  if (s.problem_category) score += 10;
+  return Math.min(score, 100);
+}
+
+// Urgency calculation: deterministic, not AI
+function calculateUrgency(s: SignalRow, velocity: number): 'act_now' | 'watch' | 'opportunity' {
+  const hoursSinceDiscovery = (Date.now() - new Date(s.discovered_at).getTime()) / 3600000;
+
+  // ACT NOW: high importance + recent + disruption signals
+  if (s.importance_score >= 80 && hoursSinceDiscovery < 48) return 'act_now';
+  if (s.signal_type === 'regulatory_action' && s.importance_score >= 60) return 'act_now';
+  if (s.amount_usd && s.amount_usd > 100_000_000 && hoursSinceDiscovery < 72) return 'act_now';
+
+  // WATCH: emerging trends, moderate importance
+  if (velocity > 1.5 || s.importance_score >= 60) return 'watch';
+  if (s.signal_type === 'funding_round' || s.signal_type === 'facility_expansion') return 'watch';
+
+  // OPPORTUNITY: everything else worth showing
+  return 'opportunity';
+}
+
+// ── Cluster signals by theme (group related signals) ─────────────────────────
+
+type SignalCluster = {
+  theme: string;
+  signals: (SignalRow & { final_score: number })[];
+  volume: number;
+  velocity: number; // signals per day in this cluster
+  avg_importance: number;
+  top_companies: string[];
+  industries: string[];
+};
+
+function clusterSignals(signals: (SignalRow & { final_score: number })[]): SignalCluster[] {
+  // Group by industry + signal_type as a proxy for theme
+  const groups: Record<string, (SignalRow & { final_score: number })[]> = {};
+
+  for (const s of signals) {
+    const key = `${s.industry}::${s.signal_type}`;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(s);
+  }
+
+  const clusters: SignalCluster[] = [];
+  for (const [key, sigs] of Object.entries(groups)) {
+    if (sigs.length < 2) continue; // Skip singleton "clusters"
+    const [industry, signalType] = key.split('::');
+
+    // Calculate velocity: signals per day
+    const timestamps = sigs.map(s => new Date(s.discovered_at).getTime());
+    const oldest = Math.min(...timestamps);
+    const newest = Math.max(...timestamps);
+    const daySpan = Math.max((newest - oldest) / 86400000, 1);
+    const velocity = sigs.length / daySpan;
+
+    // Extract companies
+    const companies = sigs
+      .map(s => s.company)
+      .filter((c): c is string => c != null && c.length > 0);
+    const uniqueCompanies = [...new Set(companies)].slice(0, 5);
+
+    clusters.push({
+      theme: `${industry} / ${signalType.replace(/_/g, ' ')}`,
+      signals: sigs.sort((a, b) => b.final_score - a.final_score),
+      volume: sigs.length,
+      velocity,
+      avg_importance: sigs.reduce((sum, s) => sum + s.importance_score, 0) / sigs.length,
+      top_companies: uniqueCompanies,
+      industries: [...new Set(sigs.map(s => s.industry))],
+    });
+  }
+
+  return clusters;
+}
+
+// ── Final score per signal ───────────────────────────────────────────────────
+
+function computeFinalScore(s: SignalRow, clusterVolume: number, velocity: number): number {
+  const volNorm = Math.min(clusterVolume * 5, 100);  // 20 signals = max
+  const velNorm = Math.min(velocity * 30, 100);       // 3.3/day = max
+  const epNorm = elPasoRelevance(s);
+  const srcNorm = sourceQuality(s.source);
+
+  return Math.round(
+    0.4 * volNorm +
+    0.3 * velNorm +
+    0.2 * epNorm +
+    0.1 * srcNorm
   );
 }
 
-// ── STEP 1: Problem aliases → normalized problem ─────────────────────────────
-// Focused on trucking, logistics, freight, warehousing, supply chain
+// ── Vendor matching: problem → technology → vendor ───────────────────────────
 
-const PROBLEM_ALIASES: Record<string, string> = {
-  // Fleet & Transportation
-  'trucks breaking down':     'reduce fleet downtime',
-  'vehicle maintenance':      'reduce fleet downtime',
-  'fleet costs too high':     'reduce fleet downtime',
-  'truck repairs':            'reduce fleet downtime',
-  'vehicles are old':         'reduce fleet downtime',
-  'breakdowns on route':      'reduce fleet downtime',
-
-  'bad routes':               'optimize fleet routes',
-  'drivers waste fuel':       'optimize fleet routes',
-  'fuel costs too high':      'optimize fleet routes',
-  'too many empty miles':     'optimize fleet routes',
-  'deadhead miles':           'optimize fleet routes',
-  'inefficient routing':      'optimize fleet routes',
-
-  'cant find drivers':        'solve driver shortage',
-  'driver turnover':          'solve driver shortage',
-  'losing drivers':           'solve driver shortage',
-  'driver retention':         'solve driver shortage',
-  'hiring drivers is hard':   'solve driver shortage',
-  'need more drivers':        'solve driver shortage',
-
-  'late deliveries':          'improve on-time delivery',
-  'missed delivery windows':  'improve on-time delivery',
-  'customers complaining about delays': 'improve on-time delivery',
-  'delivery takes too long':  'improve on-time delivery',
-  'last mile is slow':        'improve on-time delivery',
-
-  // Warehouse & Fulfillment
-  'warehouse is slow':        'speed up warehouse',
-  'shipping takes too long':  'speed up warehouse',
-  'picking errors':           'speed up warehouse',
-  'fulfillment problems':     'speed up warehouse',
-  'packing is slow':          'speed up warehouse',
-  'dock congestion':          'speed up warehouse',
-
-  'losing track of stock':    'improve inventory',
-  'stock problems':           'improve inventory',
-  'running out of product':   'improve inventory',
-  'too much inventory':       'improve inventory',
-  'inventory is a mess':      'improve inventory',
-  'dont know what we have':   'improve inventory',
-  'stockouts':                'improve inventory',
-
-  // Freight & Shipping
-  'freight costs too high':   'reduce freight costs',
-  'shipping is expensive':    'reduce freight costs',
-  'paying too much for freight': 'reduce freight costs',
-  'carrier rates are up':     'reduce freight costs',
-  'need cheaper shipping':    'reduce freight costs',
-
-  'cant track shipments':     'improve shipment visibility',
-  'where is my freight':      'improve shipment visibility',
-  'lost shipments':           'improve shipment visibility',
-  'no tracking':              'improve shipment visibility',
-  'blind spots in supply chain': 'improve shipment visibility',
-
-  'too many carriers':        'streamline carrier management',
-  'carrier selection':        'streamline carrier management',
-  'broker takes too much':    'streamline carrier management',
-  'need better carriers':     'streamline carrier management',
-
-  // Operations & Compliance
-  'too much paperwork':       'automate operations',
-  'everything is manual':     'automate operations',
-  'need automation':          'automate operations',
-  'repetitive tasks':         'automate operations',
-  'wasting time on tasks':    'automate operations',
-  'manual data entry':        'automate operations',
-
-  'eld problems':             'improve compliance',
-  'hos violations':           'improve compliance',
-  'dot audit':                'improve compliance',
-  'safety violations':        'improve compliance',
-  'fmcsa compliance':         'improve compliance',
-  'inspection failed':        'improve compliance',
-  'csa scores':               'improve compliance',
-
-  // Cross-border
-  'customs delays':           'speed up customs',
-  'border crossing slow':     'speed up customs',
-  'shipment stuck at border': 'speed up customs',
-  'tariff problems':          'speed up customs',
-  'maquiladora logistics':    'speed up customs',
-  'cross border shipments':   'speed up customs',
-
-  // Labor
-  'too many workers':         'reduce labor cost',
-  'high labor cost':          'reduce labor cost',
-  'labor is expensive':       'reduce labor cost',
-  'payroll too high':         'reduce labor cost',
-  'overtime costs':           'reduce labor cost',
+const TECH_MAP: Record<string, string[]> = {
+  logistics:      ['fleet management', 'tms', 'route optimization', 'freight', 'dispatch', 'telematics', 'tracking', 'carrier', 'shipping'],
+  manufacturing:  ['automation', 'robotics', 'quality', 'erp', 'mes', 'plc', 'scada', 'cnc', 'assembly'],
+  'border-tech':  ['customs', 'compliance', 'brokerage', 'trade', 'clearance', 'cross-border'],
+  cybersecurity:  ['security', 'threat', 'vulnerability', 'compliance', 'zero trust'],
+  'ai-ml':        ['artificial intelligence', 'machine learning', 'analytics', 'prediction', 'optimization'],
+  energy:         ['solar', 'battery', 'grid', 'efficiency', 'renewable'],
 };
 
-// ── STEP 2: Problem → Industries mapping ─────────────────────────────────────
+function matchVendorsDeep(signal: SignalRow, vendors: VendorRow[]): VendorRow[] {
+  // Step 1: Get technology keywords for this signal's industry
+  const techKeywords = TECH_MAP[signal.industry] || [];
 
-const PROBLEM_INDUSTRY_MAP: Record<string, string[]> = {
-  'reduce fleet downtime':       ['logistics', 'manufacturing'],
-  'optimize fleet routes':       ['logistics', 'manufacturing'],
-  'solve driver shortage':       ['logistics'],
-  'improve on-time delivery':    ['logistics', 'manufacturing'],
-  'speed up warehouse':          ['warehouse', 'logistics'],
-  'improve inventory':           ['warehouse', 'logistics', 'manufacturing'],
-  'reduce freight costs':        ['logistics', 'manufacturing'],
-  'improve shipment visibility': ['logistics', 'manufacturing'],
-  'streamline carrier management': ['logistics'],
-  'automate operations':         ['warehouse', 'logistics', 'manufacturing'],
-  'improve compliance':          ['logistics', 'manufacturing'],
-  'speed up customs':            ['logistics', 'border_tech'],
-  'reduce labor cost':           ['warehouse', 'logistics', 'manufacturing'],
-};
+  // Step 2: Extract problem context from signal
+  const signalContext = `${signal.title} ${signal.evidence || ''} ${signal.problem_category || ''}`.toLowerCase();
 
-// ── STEP 3: Problem → Technology needs mapping ───────────────────────────────
-
-const PROBLEM_TECHNOLOGY_MAP: Record<string, string[]> = {
-  'reduce fleet downtime':       ['Fleet maintenance software', 'Telematics and diagnostics', 'Predictive maintenance AI', 'Vehicle inspection tools'],
-  'optimize fleet routes':       ['Route optimization software', 'GPS fleet tracking', 'Fuel management systems', 'Transportation management system TMS'],
-  'solve driver shortage':       ['Driver recruiting platforms', 'Driver retention tools', 'Workforce scheduling', 'Employee time tracking'],
-  'improve on-time delivery':    ['Transportation management system TMS', 'Route optimization software', 'Last-mile delivery software', 'Dispatch management system'],
-  'speed up warehouse':          ['Warehouse management system WMS', 'Picking and packing automation', 'Barcode and RFID scanning', 'Dock and yard management', 'Emerging: autonomous mobile robots AMR'],
-  'improve inventory':           ['Inventory tracking software', 'Warehouse management system WMS', 'Barcode and RFID scanning', 'Demand forecasting tools'],
-  'reduce freight costs':        ['Freight rate benchmarking', 'Load board platforms', 'Transportation management system TMS', 'Freight audit and payment'],
-  'improve shipment visibility': ['Cargo tracking and visibility', 'Transportation management system TMS', 'IoT tracking devices', 'Supply chain visibility platforms'],
-  'streamline carrier management': ['Carrier management platforms', 'Freight broker software', 'Load board platforms', 'Carrier compliance screening'],
-  'automate operations':         ['Document automation OCR', 'Dispatch management system', 'Robotic process automation', 'Emerging: AI logistics automation'],
-  'improve compliance':          ['ELD and compliance tools', 'Safety compliance tools', 'DOT inspection software', 'Driver qualification file management'],
-  'speed up customs':            ['Customs brokerage software', 'Cross-border customs software', 'Document automation OCR', 'Cargo tracking and visibility', 'Emerging: AI customs processing'],
-  'reduce labor cost':           ['Picking and packing automation', 'Workforce scheduling', 'Employee time tracking', 'Emerging: autonomous mobile robots AMR'],
-};
-
-// ── STEP 4: Best regions per problem ─────────────────────────────────────────
-
-const PROBLEM_REGIONS: Record<string, Array<{ region: string; reason: string }>> = {
-  'reduce fleet downtime':       [
-    { region: 'USA / Texas', reason: 'Major trucking corridor with strong fleet service networks' },
-    { region: 'Germany', reason: 'Premium telematics and predictive maintenance technology' },
-    { region: 'Israel', reason: 'Leading AI-powered vehicle diagnostics startups' },
-  ],
-  'optimize fleet routes':       [
-    { region: 'USA', reason: 'Dominant route optimization and TMS ecosystem (Samsara, Motive, Trimble)' },
-    { region: 'Europe', reason: 'Advanced green logistics and multi-modal routing' },
-  ],
-  'solve driver shortage':       [
-    { region: 'USA / Sun Belt', reason: 'Fastest-growing freight markets, highest driver demand' },
-    { region: 'Mexico', reason: 'Cross-border driver programs for nearshoring growth' },
-  ],
-  'improve on-time delivery':    [
-    { region: 'USA', reason: 'Leading last-mile and TMS platforms' },
-    { region: 'China / Shenzhen', reason: 'Low-cost IoT tracking hardware at scale' },
-  ],
-  'speed up warehouse':          [
-    { region: 'USA / Boston', reason: 'Leading warehouse robotics companies (Locus, 6RS)' },
-    { region: 'China', reason: 'Low-cost AMR and conveyor systems' },
-    { region: 'Germany', reason: 'Premium warehouse automation (KUKA, Dematic)' },
-  ],
-  'improve inventory':           [
-    { region: 'USA', reason: 'Dominant inventory management software market' },
-    { region: 'China', reason: 'Cheapest barcode/RFID scanning hardware' },
-  ],
-  'reduce freight costs':        [
-    { region: 'USA', reason: 'DAT, Truckstop, and FreightWaves provide rate intelligence' },
-    { region: 'Mexico', reason: 'Nearshoring driving competitive cross-border rates' },
-  ],
-  'improve shipment visibility': [
-    { region: 'USA', reason: 'FourKites, project44, and Descartes lead visibility' },
-    { region: 'Europe', reason: 'Strong multi-modal tracking across borders' },
-  ],
-  'streamline carrier management': [
-    { region: 'USA', reason: 'Largest carrier network and load board ecosystem' },
-    { region: 'Canada', reason: 'Strong cross-border carrier management platforms' },
-  ],
-  'automate operations':         [
-    { region: 'USA / Silicon Valley', reason: 'AI-powered logistics automation platforms' },
-    { region: 'Japan', reason: 'World leader in process automation and robotics' },
-    { region: 'China / Shenzhen', reason: 'Affordable automation hardware at scale' },
-  ],
-  'improve compliance':          [
-    { region: 'USA', reason: 'FMCSA-specific ELD and compliance platforms' },
-    { region: 'Canada', reason: 'Cross-border compliance technology' },
-  ],
-  'speed up customs':            [
-    { region: 'USA / El Paso', reason: 'Largest US-Mexico land port, local broker network' },
-    { region: 'Netherlands', reason: 'Advanced trade compliance software (Descartes)' },
-    { region: 'Singapore', reason: 'Leading customs automation technology' },
-  ],
-  'reduce labor cost':           [
-    { region: 'USA / Texas', reason: 'Strong systems integration and warehouse automation vendors' },
-    { region: 'China / Shenzhen', reason: 'Lowest-cost automation hardware manufacturing hub' },
-    { region: 'Germany', reason: 'Premium industrial automation with highest reliability' },
-  ],
-};
-
-// ── STEP 5: Market insight per problem ────────────────────────────────────────
-
-const MARKET_INSIGHTS: Record<string, { growth: string; competition: string; summary: string }> = {
-  'reduce fleet downtime':       { growth: 'high', competition: 'medium', summary: 'Predictive maintenance is cutting unplanned downtime by 30-50%. Telematics adoption in trucking has doubled since 2022, with most ROI coming from preventing roadside breakdowns.' },
-  'optimize fleet routes':       { growth: 'very high', competition: 'medium', summary: 'AI-powered route optimization can reduce fuel costs 10-15%. The shift to real-time dynamic routing is the biggest efficiency gain in trucking right now.' },
-  'solve driver shortage':       { growth: 'high', competition: 'low', summary: 'The ATA estimates a shortage of 80,000+ drivers. Companies with better technology, scheduling flexibility, and retention programs are winning the talent war.' },
-  'improve on-time delivery':    { growth: 'high', competition: 'medium', summary: 'On-time delivery rates directly impact customer retention. Real-time visibility and dynamic ETAs are becoming table stakes for shippers.' },
-  'speed up warehouse':          { growth: 'very high', competition: 'low', summary: 'Warehouse robotics and optimization are booming. Most warehouses have not adopted modern WMS, creating a huge opportunity gap.' },
-  'improve inventory':           { growth: 'medium', competition: 'high', summary: 'Inventory management is a solved problem — the technology is proven and affordable. The challenge is implementation, not finding the right tool.' },
-  'reduce freight costs':        { growth: 'high', competition: 'high', summary: 'Freight rate volatility makes benchmarking critical. Companies using rate intelligence tools save 8-12% on average freight spend.' },
-  'improve shipment visibility': { growth: 'very high', competition: 'medium', summary: 'Real-time visibility is the fastest-growing logistics tech category. Shippers now expect tracking as standard — carriers without it lose business.' },
-  'streamline carrier management': { growth: 'medium', competition: 'medium', summary: 'Digital freight matching is replacing phone-and-email brokerage. Platforms that automate carrier selection and compliance save 15-20 hours per week.' },
-  'automate operations':         { growth: 'very high', competition: 'medium', summary: 'AI-powered automation is the fastest-growing category in logistics tech. Early adopters gain 2-3 years of competitive advantage.' },
-  'improve compliance':          { growth: 'medium', competition: 'low', summary: 'ELD mandates drove initial adoption, but CSA score management and driver qualification file automation are the next wave. Non-compliance costs $16,000+ per violation.' },
-  'speed up customs':            { growth: 'high', competition: 'low', summary: 'AI customs processing is emerging. The US-Mexico trade corridor ($779B annually) has unique demand for these tools, especially with nearshoring growth.' },
-  'reduce labor cost':           { growth: 'high', competition: 'medium', summary: 'Warehouse and logistics labor costs have risen significantly. Even small automation investments in picking, packing, or sorting pay back within 12 months.' },
-};
-
-// ── STEP 6: Next steps per problem ───────────────────────────────────────────
-
-const NEXT_STEPS: Record<string, string> = {
-  'reduce fleet downtime':       'Start with a telematics provider like Samsara or Motive (most offer 30-day trials). Track fault codes and maintenance intervals for your top 5 breakdown-prone vehicles first.',
-  'optimize fleet routes':       'Install GPS tracking on your fleet if you haven\'t already. Run your current routes through a free route optimization trial (OptimoRoute, Route4Me). Compare actual vs. optimized fuel costs.',
-  'solve driver shortage':       'Survey your current drivers on why they stay. Fix the top 2 complaints first. Then use a platform like CDLLife or Tenstreet to source new drivers — referral bonuses outperform job boards 3:1.',
-  'improve on-time delivery':    'Track your current on-time rate for 2 weeks. Identify whether delays come from dispatch, routing, loading, or traffic. A TMS with real-time ETA updates addresses most causes.',
-  'speed up warehouse':          'Install barcode scanning first — it\'s the highest-ROI warehouse improvement. A $350 Bluetooth scanner + free WMS trial can cut errors 50% in one week.',
-  'improve inventory':           'Pick one inventory tracking tool and do a free trial. Count your actual stock once manually. Enter it into the system. The software handles everything after that.',
-  'reduce freight costs':        'Run your last 3 months of freight invoices through a rate benchmarking tool (DAT RateView, Greenscreens). You\'ll immediately see which lanes are overpriced.',
-  'improve shipment visibility': 'Start with one visibility platform trial (FourKites, project44, or Descartes MacroPoint). Connect your top 5 carriers. You\'ll have full visibility within a week.',
-  'streamline carrier management': 'List your top 10 carriers and rate them on price, reliability, and communication. A carrier management platform can automate scoring and compliance checks across all of them.',
-  'automate operations':         'List your top 5 most time-consuming manual processes. Pick the one with the most hours. Research one software tool that replaces it. Start a free trial this week.',
-  'improve compliance':          'Run a CSA score check on your DOT number today (free at ai.fmcsa.dot.gov). If any BASICs are above threshold, prioritize those areas. An ELD with built-in compliance alerts prevents most violations.',
-  'speed up customs':            'Talk to El Paso PTAC (free government counseling) about your specific customs bottleneck. They can match you with the right broker software without paying for a consultant.',
-  'reduce labor cost':           'Start with time tracking software (free options exist). Measure actual labor hours per task for 2 weeks. Then evaluate automation for your highest-labor-cost process.',
-};
-
-// ── Normalize input ──────────────────────────────────────────────────────────
-
-function normalizeInput(raw: string): string {
-  const lower = raw.toLowerCase().trim()
-    .replace(/[^a-z0-9 ]/g, '')
-    .replace(/\s+/g, ' ');
-
-  for (const canonical of Object.keys(PROBLEM_INDUSTRY_MAP)) {
-    if (lower.includes(canonical.replace(/ /g, ' '))) return canonical;
-  }
-
-  for (const [alias, canonical] of Object.entries(PROBLEM_ALIASES)) {
-    if (lower.includes(alias)) return canonical;
-  }
-
-  const keywords: Record<string, string[]> = {
-    'reduce fleet downtime':       ['fleet', 'truck', 'breakdown', 'maintenance', 'repair', 'vehicle', 'mechanic', 'downtime'],
-    'optimize fleet routes':       ['route', 'fuel', 'miles', 'gps', 'deadhead', 'empty', 'routing', 'mileage'],
-    'solve driver shortage':       ['driver', 'cdl', 'trucker', 'retention', 'turnover', 'hiring', 'recruit'],
-    'improve on-time delivery':    ['delivery', 'late', 'delay', 'window', 'eta', 'on time', 'last mile'],
-    'speed up warehouse':          ['warehouse', 'picking', 'packing', 'shipping', 'fulfillment', 'dock', 'forklift', 'loading'],
-    'improve inventory':           ['inventory', 'stock', 'supply', 'count', 'tracking', 'wms', 'sku'],
-    'reduce freight costs':        ['freight', 'rate', 'carrier cost', 'shipping cost', 'lane', 'ltl', 'ftl', 'truckload'],
-    'improve shipment visibility': ['visibility', 'track', 'shipment', 'where is', 'blind spot', 'iot', 'sensor'],
-    'streamline carrier management': ['carrier', 'broker', 'load board', 'capacity', 'tender'],
-    'automate operations':         ['automat', 'manual', 'repetitive', 'process', 'streamline', 'paperwork', 'data entry'],
-    'improve compliance':          ['compliance', 'eld', 'hos', 'dot', 'fmcsa', 'csa', 'inspection', 'violation', 'safety'],
-    'speed up customs':            ['customs', 'border', 'tariff', 'import', 'export', 'cross-border', 'clearance', 'maquiladora'],
-    'reduce labor cost':           ['labor', 'workers', 'staff', 'employee', 'payroll', 'headcount', 'overtime', 'wages'],
-  };
-
-  let bestMatch = '';
-  let bestScore = 0;
-
-  for (const [problem, words] of Object.entries(keywords)) {
+  // Step 3: Score each vendor on technology + context match
+  const vendorScores = vendors.map(v => {
+    const vendorText = `${v.company_name} ${v.primary_category || ''} ${v.description || ''} ${v.sector || ''}`.toLowerCase();
     let score = 0;
-    for (const w of words) {
-      if (lower.includes(w)) score++;
-    }
-    if (score > bestScore) {
-      bestScore = score;
-      bestMatch = problem;
-    }
-  }
 
-  return bestMatch || 'automate operations';
+    // Technology keyword match (problem → technology)
+    for (const tech of techKeywords) {
+      if (vendorText.includes(tech)) score += 3;
+    }
+
+    // Direct context match (signal content → vendor)
+    const contextWords = signalContext.split(/\s+/).filter(w => w.length > 4);
+    for (const w of contextWords) {
+      if (vendorText.includes(w)) score += 1;
+    }
+
+    // Industry match
+    if (v.primary_category?.toLowerCase().includes(signal.industry)) score += 5;
+    if (v.sector?.toLowerCase().includes(signal.industry)) score += 3;
+
+    // IKER quality floor
+    const iker = v.iker_score || 0;
+    if (iker >= 80) score += 4;
+    else if (iker >= 60) score += 2;
+
+    return { vendor: v, score, iker };
+  });
+
+  return vendorScores
+    .filter(vs => vs.score > 0)
+    .sort((a, b) => (b.score * 10 + b.iker) - (a.score * 10 + a.iker))
+    .slice(0, 3)
+    .map(vs => vs.vendor);
 }
 
-// ── POST /api/decide ─────────────────────────────────────────────────────────
+// ── Decision logging (store inputs + outputs + clusters) ─────────────────────
+
+async function logDecision(
+  mode: 'top3' | 'search',
+  query: string | null,
+  decisions: unknown[],
+  signalCount: number,
+) {
+  try {
+    const supabase = createClient();
+    await supabase.from('decision_log').insert({
+      mode,
+      query,
+      decisions: JSON.stringify(decisions),
+      signal_count: signalCount,
+      created_at: new Date().toISOString(),
+    });
+  } catch {
+    // Silent fail — logging should never block the response
+  }
+}
+
+// ── Sanitize ─────────────────────────────────────────────────────────────────
+
+function sanitize(text: string | null): string {
+  if (!text) return '';
+  return text
+    .replace(/<[^>]*>/g, '')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+    .replace(/&#\d+;/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// ── GET /api/decide — Top 3 actionable decisions ─────────────────────────────
+
+export async function GET() {
+  const supabase = createClient();
+  const since7d = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+
+  const [{ data: recentSignals }, { data: allVendors }] = await Promise.all([
+    supabase
+      .from('intel_signals')
+      .select('id, title, signal_type, industry, company, evidence, amount_usd, confidence, importance_score, discovered_at, source, tags, vendor_id, problem_category')
+      .gte('discovered_at', since7d)
+      .order('importance_score', { ascending: false })
+      .limit(500),
+    supabase
+      .from('vendors')
+      .select('id, company_name, primary_category, iker_score, company_url, description, sector')
+      .order('iker_score', { ascending: false })
+      .limit(100),
+  ]);
+
+  const signals = (recentSignals || []) as SignalRow[];
+  const vendors = (allVendors || []) as VendorRow[];
+
+  // Filter junk
+  const clean = signals
+    .filter(s => !isJunk(s.source, s.title))
+    .filter(s => s.industry !== 'other' && s.industry !== 'general');
+
+  // Pre-score all signals (without cluster context yet)
+  const preScored = clean.map(s => ({
+    ...s,
+    final_score: s.importance_score + elPasoRelevance(s) * 0.3 + sourceQuality(s.source) * 0.1,
+  }));
+
+  // Cluster signals to find volume + velocity
+  const clusters = clusterSignals(preScored);
+
+  // Re-score with cluster context
+  const clusterMap = new Map<string, SignalCluster>();
+  for (const c of clusters) {
+    for (const s of c.signals) {
+      clusterMap.set(s.id, c);
+    }
+  }
+
+  const finalScored = preScored.map(s => {
+    const cluster = clusterMap.get(s.id);
+    const volume = cluster?.volume ?? 1;
+    const velocity = cluster?.velocity ?? 0;
+    return {
+      ...s,
+      final_score: computeFinalScore(s, volume, velocity),
+      cluster_volume: volume,
+      cluster_velocity: velocity,
+    };
+  }).sort((a, b) => b.final_score - a.final_score);
+
+  // ── TOP 3: Pick by IMPACT, not industry diversity ──────────────────────
+  // Deduplicate by title prefix only (avoid near-duplicate headlines)
+  const top3: typeof finalScored = [];
+  const usedPrefixes: string[] = [];
+
+  for (const s of finalScored) {
+    if (top3.length >= 3) break;
+    const prefix = s.title.toLowerCase().slice(0, 30);
+    if (usedPrefixes.some(p => prefix.startsWith(p.slice(0, 20)) || p.startsWith(prefix.slice(0, 20)))) continue;
+    top3.push(s);
+    usedPrefixes.push(prefix);
+  }
+
+  // Fill if dedup was too aggressive
+  for (const s of finalScored) {
+    if (top3.length >= 3) break;
+    if (top3.some(t => t.id === s.id)) continue;
+    top3.push(s);
+  }
+
+  // ── Pre-structure for AI (AI only EXPLAINS, doesn't reason) ────────────
+  const preStructured = top3.map(signal => {
+    const cluster = clusterMap.get(signal.id);
+    const matchedVendors = matchVendorsDeep(signal, vendors);
+    const urgency = calculateUrgency(signal, signal.cluster_velocity);
+
+    return {
+      signal,
+      cluster,
+      vendors: matchedVendors,
+      urgency,
+      // Pre-computed causal chain
+      cause: sanitize(signal.title),
+      effect: signal.industry,
+      technologies: TECH_MAP[signal.industry] || [],
+    };
+  });
+
+  // ── AI call: ONLY explains the pre-structured data ─────────────────────
+  type AIExplanation = {
+    cause: string;
+    effect: string;
+    consequence: string;
+    action: string[];
+    why_el_paso: string;
+  };
+
+  let aiExplanations: AIExplanation[] = [];
+
+  if (preStructured.length > 0) {
+    const structuredInput = preStructured.map((ps, i) => {
+      const s = ps.signal;
+      return `Decision ${i + 1}:
+CAUSE: ${sanitize(s.title)}
+EVIDENCE: ${sanitize(s.evidence)?.slice(0, 300)}
+INDUSTRY: ${s.industry}
+COMPANY: ${s.company || 'none'}
+AMOUNT: ${s.amount_usd ? `$${(s.amount_usd / 1e6).toFixed(1)}M` : 'unknown'}
+URGENCY: ${ps.urgency} (pre-calculated)
+CLUSTER SIZE: ${ps.cluster?.volume || 1} related signals
+CLUSTER VELOCITY: ${ps.cluster?.velocity?.toFixed(1) || '0'} signals/day
+MATCHED VENDORS: ${ps.vendors.map(v => `${v.company_name} (IKER: ${v.iker_score || '?'}, ${v.primary_category || 'general'})`).join('; ') || 'none'}
+TECH AREA: ${ps.technologies.slice(0, 5).join(', ')}`;
+    }).join('\n\n---\n\n');
+
+    try {
+      const { result } = await runParallelJsonEnsemble<AIExplanation[]>({
+        systemPrompt: `You EXPLAIN pre-analyzed intelligence decisions. You do NOT decide — the system already decided. Your job is to write clear, specific explanations that follow CAUSE → EFFECT → CONSEQUENCE → ACTION structure.
+
+El Paso context: Top US-Mexico trade hub, 4 ports of entry, 300+ maquiladoras in Juárez, major trucking/warehousing/customs hub.
+
+Rules:
+- DO NOT change the urgency or vendor selection — those are pre-calculated
+- DO explain WHY the cause leads to the effect
+- DO name specific companies and actions
+- Keep each field to 1-2 sentences max`,
+        userPrompt: `Explain each of these ${preStructured.length} pre-analyzed decisions.
+
+For each, return:
+1. "cause" — What happened (1 sentence, plain English)
+2. "effect" — What this means for logistics operators (1 sentence)
+3. "consequence" — What happens next if you don't act (1 sentence)
+4. "action" — 2-3 SPECIFIC steps. Name the matched vendors when relevant.
+5. "why_el_paso" — 1 sentence, El Paso specific
+
+Return a JSON array. No markdown.
+
+${structuredInput}`,
+        temperature: 0.2,
+        preferredProviders: ['gemini'],
+        budget: { maxProviders: 1, preferLowCostProviders: true },
+        parse: (content) => {
+          const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+          return JSON.parse(cleaned) as AIExplanation[];
+        },
+      });
+      aiExplanations = result;
+    } catch (err) {
+      console.warn('[decide] AI explanation failed:', err);
+    }
+  }
+
+  // ── Build response ─────────────────────────────────────────────────────
+  const decisions = preStructured.map((ps, i) => {
+    const ai = aiExplanations[i];
+    const s = ps.signal;
+
+    return {
+      rank: i + 1,
+      signal_id: s.id,
+      title: sanitize(s.title),
+      industry: s.industry,
+      signal_type: s.signal_type,
+      company: s.company,
+      amount_usd: s.amount_usd,
+      source: s.source,
+      discovered_at: s.discovered_at,
+
+      // Transparent scoring
+      score: {
+        final: s.final_score,
+        cluster_volume: ps.cluster?.volume || 1,
+        cluster_velocity: +(ps.cluster?.velocity?.toFixed(2) || 0),
+        ep_relevance: elPasoRelevance(s),
+        source_quality: sourceQuality(s.source),
+      },
+
+      // Causal structure: CAUSE → EFFECT → CONSEQUENCE → ACTION
+      cause: ai?.cause || sanitize(s.title),
+      effect: ai?.effect || sanitize(s.evidence)?.slice(0, 150) || 'Potential impact on supply chain operations.',
+      consequence: ai?.consequence || 'Monitor for developments this week.',
+      what_to_do: ai?.action || ['Review this signal and assess impact on your operations'],
+
+      // Pre-calculated urgency (NOT from AI)
+      urgency: ps.urgency,
+
+      // Vendor match (problem → technology → vendor)
+      who_can_help: ps.vendors.map(v => ({
+        name: v.company_name,
+        category: v.primary_category,
+        iker_score: v.iker_score,
+        website: v.company_url,
+      })),
+
+      why_el_paso: ai?.why_el_paso || 'Impacts El Paso cross-border operations.',
+      related_count: ps.cluster?.volume || 1,
+    };
+  });
+
+  // Log decision (non-blocking)
+  logDecision('top3', null, decisions, clean.length);
+
+  return NextResponse.json({
+    ok: true,
+    mode: 'top3',
+    generated_at: new Date().toISOString(),
+    decisions,
+    total_signals_analyzed: clean.length,
+    clusters_found: clusters.length,
+  }, {
+    headers: { 'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=300' },
+  });
+}
+
+// ── POST /api/decide — Search mode ───────────────────────────────────────────
 
 export async function POST(request: Request): Promise<NextResponse> {
   const body = await request.json() as { problem: string; industry?: string };
-  const raw = body.problem;
+  const query = (body.problem || '').trim();
   const userIndustry = body.industry ?? null;
 
-  if (!raw || typeof raw !== 'string' || raw.trim().length < 3) {
+  if (!query || query.length < 3) {
     return NextResponse.json(
-      { ok: false, error: 'Please describe your problem (at least 3 characters).' },
+      { ok: false, error: 'Describe your problem (at least 3 characters).' },
       { status: 400 },
     );
   }
 
-  const problem = normalizeInput(raw);
+  const supabase = createClient();
+  const since30d = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+  const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
 
-  const allIndustries = PROBLEM_INDUSTRY_MAP[problem] ?? ['logistics'];
-  const industries = userIndustry
-    ? [userIndustry, ...allIndustries.filter(i => i !== userIndustry)]
-    : allIndustries;
+  const [{ data: textResults }, { data: allVendors }] = await Promise.all([
+    supabase
+      .from('intel_signals')
+      .select('id, title, signal_type, industry, company, evidence, amount_usd, confidence, importance_score, discovered_at, source, tags, vendor_id, problem_category')
+      .gte('discovered_at', since30d)
+      .or(`title.ilike.%${queryWords[0] || query}%,evidence.ilike.%${queryWords[0] || query}%`)
+      .order('importance_score', { ascending: false })
+      .limit(200),
+    supabase
+      .from('vendors')
+      .select('id, company_name, primary_category, iker_score, company_url, description, sector')
+      .order('iker_score', { ascending: false })
+      .limit(100),
+  ]);
 
-  const techNeeds = PROBLEM_TECHNOLOGY_MAP[problem] ?? [];
+  let signals = (textResults || []) as SignalRow[];
+  const vendors = (allVendors || []) as VendorRow[];
 
-  let sources: Array<Record<string, unknown>> = [];
-  if (techNeeds.length > 0) {
-    const { data } = await getSupabase()
-      .from('best_sources')
-      .select('*')
-      .in('technology_need', techNeeds)
-      .in('industry', industries)
-      .order('buy_now', { ascending: false });
-    sources = data ?? [];
+  if (userIndustry) {
+    const filtered = signals.filter(s => s.industry === userIndustry);
+    if (filtered.length >= 3) signals = filtered;
   }
 
-  if (sources.length === 0) {
-    const { data } = await getSupabase()
-      .from('best_sources')
-      .select('*')
-      .in('industry', industries)
-      .order('technology_need');
-    sources = data ?? [];
+  // Score by query relevance + impact
+  const scored = signals
+    .filter(s => !isJunk(s.source, s.title))
+    .map(s => {
+      const hay = `${s.title} ${s.evidence || ''}`.toLowerCase();
+      let relevance = s.importance_score * 0.4;
+      for (const w of queryWords) {
+        if (hay.includes(w)) relevance += 20;
+      }
+      relevance += elPasoRelevance(s) * 0.2;
+      relevance += sourceQuality(s.source) * 0.1;
+      return { ...s, decision_score: Math.round(relevance) };
+    })
+    .sort((a, b) => b.decision_score - a.decision_score);
+
+  const top3 = scored.slice(0, 3);
+
+  // Match vendors via technology chain
+  const industryHint = userIndustry || top3[0]?.industry || 'logistics';
+  const techKeywords = TECH_MAP[industryHint] || [];
+  const vendorScores = vendors.map(v => {
+    const vendorText = `${v.company_name} ${v.primary_category || ''} ${v.description || ''} ${v.sector || ''}`.toLowerCase();
+    let score = 0;
+    for (const w of queryWords) { if (vendorText.includes(w)) score += 3; }
+    for (const tech of techKeywords) { if (vendorText.includes(tech)) score += 2; }
+    if (v.primary_category?.toLowerCase().includes(industryHint)) score += 4;
+    return { vendor: v, score, iker: v.iker_score || 0 };
+  });
+  const matchedVendors = vendorScores
+    .filter(vs => vs.score > 0 || vs.iker >= 75)
+    .sort((a, b) => (b.score * 10 + b.iker) - (a.score * 10 + a.iker))
+    .slice(0, 5)
+    .map(vs => vs.vendor);
+
+  // Urgency: deterministic
+  const urgency = top3.length > 0
+    ? calculateUrgency(top3[0], scored.length / 7)
+    : 'watch' as const;
+
+  // AI: only explains pre-structured data
+  let aiExplanation: { cause: string; effect: string; consequence: string; action: string[]; why_el_paso: string } | null = null;
+
+  if (top3.length > 0) {
+    const signalText = top3.map((s, i) =>
+      `${i + 1}. [${s.industry}] ${sanitize(s.title)} — ${sanitize(s.evidence)?.slice(0, 150)}`
+    ).join('\n');
+    const vendorText = matchedVendors.map(v =>
+      `${v.company_name} (${v.primary_category || 'general'}, IKER: ${v.iker_score || '?'})`
+    ).join(', ');
+
+    try {
+      const { result } = await runParallelJsonEnsemble<{ cause: string; effect: string; consequence: string; action: string[]; why_el_paso: string }>({
+        systemPrompt: `You EXPLAIN how pre-selected signals relate to a user's problem. You do NOT decide — just explain using CAUSE → EFFECT → CONSEQUENCE → ACTION structure. Be specific. Name companies.`,
+        userPrompt: `Problem: "${query}"
+Pre-calculated urgency: ${urgency}
+
+Relevant signals:
+${signalText}
+
+Matched vendors: ${vendorText || 'none'}
+
+Return ONE JSON object:
+1. "cause" — What's happening (1-2 sentences connecting signals to the problem)
+2. "effect" — What this means for the operator (1 sentence)
+3. "consequence" — What happens if they don't act (1 sentence)
+4. "action" — 3-5 specific steps. Name vendors when relevant.
+5. "why_el_paso" — 1 sentence
+
+No markdown.`,
+        temperature: 0.2,
+        preferredProviders: ['gemini'],
+        budget: { maxProviders: 1, preferLowCostProviders: true },
+        parse: (content) => {
+          const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+          return JSON.parse(cleaned);
+        },
+      });
+      aiExplanation = result;
+    } catch (err) {
+      console.warn('[decide] AI search explanation failed:', err);
+    }
   }
 
-  const { data: vendorData } = await getSupabase()
-    .from('vendors')
-    .select('company_name,sector,iker_score,company_url,description')
-    .order('iker_score', { ascending: false })
-    .limit(20);
-  const allVendors = vendorData ?? [];
-
-  const problemWords = problem.split(' ');
-  const relevantVendors = allVendors.filter(v => {
-    const hay = `${v.sector ?? ''} ${v.description ?? ''}`.toLowerCase();
-    return problemWords.some(w => hay.includes(w));
-  }).slice(0, 5);
-
-  const finalVendors = relevantVendors.length > 0
-    ? relevantVendors
-    : allVendors.filter(v => (v.iker_score ?? 0) > 70).slice(0, 5);
-
-  const topSource = sources.find(s => s.buy_now === true) ?? sources[0];
-
-  const regions = PROBLEM_REGIONS[problem] ?? [
-    { region: 'USA', reason: 'Largest trucking and logistics technology ecosystem' },
-    { region: 'Mexico', reason: 'Growing nearshoring and cross-border freight corridor' },
-  ];
-
-  const insight = MARKET_INSIGHTS[problem] ?? {
-    growth: 'medium',
-    competition: 'medium',
-    summary: 'This is an active market with proven logistics solutions available.',
-  };
-
-  const nextStep = NEXT_STEPS[problem] ?? 'Research 2-3 vendors that match your needs. Start a free trial with the one that has the best reviews for logistics and trucking.';
-
-  return NextResponse.json({
+  const response = {
     ok: true,
-    problem,
-    user_input: raw.trim(),
-    matched_industries: industries,
-    recommended_solution: topSource ? {
-      technology: topSource.technology_need as string,
-      product: topSource.best_global_name as string,
-      price: topSource.best_global_price as string,
-      website: topSource.best_global_website as string,
-      reason: topSource.best_global_why as string,
-      local_option: topSource.best_local_name as string | null,
-      local_phone: topSource.best_local_phone as string | null,
-      value_pick: topSource.best_value_name as string | null,
-      value_price: topSource.best_value_price as string | null,
-      value_why: topSource.best_value_why as string | null,
-      avoid: topSource.avoid_what as string | null,
-      avoid_why: topSource.avoid_why as string | null,
-    } : null,
-    all_solutions: sources.slice(0, 5).map(s => ({
-      technology: s.technology_need,
-      product: s.best_global_name,
-      price: s.best_global_price,
-      buy_now: s.buy_now,
+    mode: 'search' as const,
+    query,
+    industry: userIndustry,
+    generated_at: new Date().toISOString(),
+
+    // Causal structure
+    cause: aiExplanation?.cause || (top3.length > 0
+      ? `Found ${top3.length} relevant signals for "${query}".`
+      : `No recent signals match "${query}". Try broader terms.`),
+    effect: aiExplanation?.effect || 'Review these signals to assess potential impact.',
+    consequence: aiExplanation?.consequence || 'Without action, you may miss emerging opportunities or threats.',
+    what_to_do: aiExplanation?.action || ['Research vendors in this space', 'Check industry publications'],
+    urgency,
+    why_el_paso: aiExplanation?.why_el_paso || 'Impacts El Paso-Juárez trade corridor.',
+
+    // Supporting data
+    signals: top3.map(s => ({
+      id: s.id,
+      title: sanitize(s.title),
       industry: s.industry,
+      company: s.company,
+      source: s.source,
+      discovered_at: s.discovered_at,
+      score: s.decision_score,
     })),
-    best_regions: regions,
-    market_insight: insight,
-    vendors: finalVendors.map(v => ({
+
+    who_can_help: matchedVendors.map(v => ({
       name: v.company_name,
-      sector: v.sector,
-      score: v.iker_score,
+      category: v.primary_category,
+      iker_score: v.iker_score,
       website: v.company_url,
     })),
-    next_step: nextStep,
-  }, {
-    headers: { 'Cache-Control': 'public, max-age=300' },
+
+    total_signals_searched: scored.length,
+  };
+
+  // Log decision (non-blocking)
+  logDecision('search', query, [response], scored.length);
+
+  return NextResponse.json(response, {
+    headers: { 'Cache-Control': 'public, max-age=120' },
   });
 }
