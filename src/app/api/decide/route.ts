@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/client';
 import { runParallelJsonEnsemble } from '@/lib/llm/parallel-router';
+import { analyzeCausality, type CausalAnalysis } from '@/lib/causal-engine';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,22 +72,7 @@ function elPasoRelevance(s: SignalRow): number {
   return Math.min(score, 100);
 }
 
-// Urgency calculation: deterministic, not AI
-function calculateUrgency(s: SignalRow, velocity: number): 'act_now' | 'watch' | 'opportunity' {
-  const hoursSinceDiscovery = (Date.now() - new Date(s.discovered_at).getTime()) / 3600000;
-
-  // ACT NOW: high importance + recent + disruption signals
-  if (s.importance_score >= 80 && hoursSinceDiscovery < 48) return 'act_now';
-  if (s.signal_type === 'regulatory_action' && s.importance_score >= 60) return 'act_now';
-  if (s.amount_usd && s.amount_usd > 100_000_000 && hoursSinceDiscovery < 72) return 'act_now';
-
-  // WATCH: emerging trends, moderate importance
-  if (velocity > 1.5 || s.importance_score >= 60) return 'watch';
-  if (s.signal_type === 'funding_round' || s.signal_type === 'facility_expansion') return 'watch';
-
-  // OPPORTUNITY: everything else worth showing
-  return 'opportunity';
-}
+// Urgency now handled by causal-engine.ts (analyzeCausality)
 
 // ── Cluster signals by theme (group related signals) ─────────────────────────
 
@@ -323,21 +309,27 @@ export async function GET() {
     top3.push(s);
   }
 
-  // ── Pre-structure for AI (AI only EXPLAINS, doesn't reason) ────────────
+  // ── Pre-structure with CAUSAL ENGINE (rules, not AI) ────────────────────
   const preStructured = top3.map(signal => {
     const cluster = clusterMap.get(signal.id);
     const matchedVendors = matchVendorsDeep(signal, vendors);
-    const urgency = calculateUrgency(signal, signal.cluster_velocity);
+
+    // Run causal analysis: classify event → apply rules → get effects → map technologies
+    const causal = analyzeCausality(
+      signal.id,
+      signal.title,
+      signal.evidence || '',
+      signal.importance_score,
+      signal.discovered_at,
+      matchedVendors.map(v => ({ id: v.id, name: v.company_name })),
+    );
 
     return {
       signal,
       cluster,
       vendors: matchedVendors,
-      urgency,
-      // Pre-computed causal chain
-      cause: sanitize(signal.title),
-      effect: signal.industry,
-      technologies: TECH_MAP[signal.industry] || [],
+      urgency: causal.urgency,
+      causal,
     };
   });
 
@@ -355,17 +347,20 @@ export async function GET() {
   if (preStructured.length > 0) {
     const structuredInput = preStructured.map((ps, i) => {
       const s = ps.signal;
+      const c = ps.causal;
       return `Decision ${i + 1}:
 CAUSE: ${sanitize(s.title)}
 EVIDENCE: ${sanitize(s.evidence)?.slice(0, 300)}
 INDUSTRY: ${s.industry}
 COMPANY: ${s.company || 'none'}
 AMOUNT: ${s.amount_usd ? `$${(s.amount_usd / 1e6).toFixed(1)}M` : 'unknown'}
-URGENCY: ${ps.urgency} (pre-calculated)
+EVENT TYPE: ${c.event_type} (confidence: ${(c.event_confidence * 100).toFixed(0)}%)
+MATCHED KEYWORDS: ${c.matched_keywords.join(', ')}
+EFFECTS: ${c.effects.map(e => `${e.label} [${e.severity}, ${e.timeframe}]`).join('; ')}
+URGENCY: ${ps.urgency} (pre-calculated from rules)
+TECHNOLOGIES NEEDED: ${c.technologies.slice(0, 6).join(', ')}
 CLUSTER SIZE: ${ps.cluster?.volume || 1} related signals
-CLUSTER VELOCITY: ${ps.cluster?.velocity?.toFixed(1) || '0'} signals/day
-MATCHED VENDORS: ${ps.vendors.map(v => `${v.company_name} (IKER: ${v.iker_score || '?'}, ${v.primary_category || 'general'})`).join('; ') || 'none'}
-TECH AREA: ${ps.technologies.slice(0, 5).join(', ')}`;
+MATCHED VENDORS: ${ps.vendors.map(v => `${v.company_name} (IKER: ${v.iker_score || '?'}, ${v.primary_category || 'general'})`).join('; ') || 'none'}`;
     }).join('\n\n---\n\n');
 
     try {
@@ -439,6 +434,18 @@ ${structuredInput}`,
       // Pre-calculated urgency (NOT from AI)
       urgency: ps.urgency,
 
+      // Causal analysis (from rules engine, NOT AI)
+      causal: {
+        event_type: ps.causal.event_type,
+        event_confidence: ps.causal.event_confidence,
+        effects: ps.causal.effects.map(e => ({
+          label: e.label,
+          severity: e.severity,
+          timeframe: e.timeframe,
+        })),
+        technologies: ps.causal.technologies.slice(0, 6),
+      },
+
       // Vendor match (problem → technology → vendor)
       who_can_help: ps.vendors.map(v => ({
         name: v.company_name,
@@ -446,6 +453,9 @@ ${structuredInput}`,
         iker_score: v.iker_score,
         website: v.company_url,
       })),
+
+      // Graph data for visualization
+      graph: ps.causal.graph,
 
       why_el_paso: ai?.why_el_paso || 'Impacts El Paso cross-border operations.',
       related_count: ps.cluster?.volume || 1,
@@ -542,10 +552,19 @@ export async function POST(request: Request): Promise<NextResponse> {
     .slice(0, 5)
     .map(vs => vs.vendor);
 
-  // Urgency: deterministic
-  const urgency = top3.length > 0
-    ? calculateUrgency(top3[0], scored.length / 7)
-    : 'watch' as const;
+  // Causal analysis on top signal
+  const causal: CausalAnalysis | null = top3.length > 0
+    ? analyzeCausality(
+        top3[0].id,
+        top3[0].title,
+        top3[0].evidence || '',
+        top3[0].importance_score,
+        top3[0].discovered_at,
+        matchedVendors.map(v => ({ id: v.id, name: v.company_name })),
+      )
+    : null;
+
+  const urgency = causal?.urgency || 'watch';
 
   // AI: only explains pre-structured data
   let aiExplanation: { cause: string; effect: string; consequence: string; action: string[]; why_el_paso: string } | null = null;
@@ -625,6 +644,20 @@ No markdown.`,
       iker_score: v.iker_score,
       website: v.company_url,
     })),
+
+    // Causal analysis
+    causal: causal ? {
+      event_type: causal.event_type,
+      event_confidence: causal.event_confidence,
+      effects: causal.effects.map(e => ({
+        label: e.label,
+        severity: e.severity,
+        timeframe: e.timeframe,
+      })),
+      technologies: causal.technologies.slice(0, 6),
+    } : null,
+
+    graph: causal?.graph || null,
 
     total_signals_searched: scored.length,
   };

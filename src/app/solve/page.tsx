@@ -16,6 +16,19 @@ type Vendor = {
   website: string | null;
 };
 
+type CausalEffect = {
+  label: string;
+  severity: 'high' | 'medium' | 'low';
+  timeframe: 'immediate' | 'weeks' | 'months';
+};
+
+type CausalData = {
+  event_type: string;
+  event_confidence: number;
+  effects: CausalEffect[];
+  technologies: string[];
+};
+
 type Decision = {
   rank: number;
   signal_id: string;
@@ -41,6 +54,7 @@ type Decision = {
   urgency: 'act_now' | 'watch' | 'opportunity';
   why_el_paso: string;
   related_count: number;
+  causal?: CausalData;
 };
 
 type Top3Response = {
@@ -64,6 +78,7 @@ type SearchResponse = {
   signals: { id: string; title: string; industry: string; company: string | null; source: string | null; discovered_at: string; score: number }[];
   who_can_help: Vendor[];
   total_signals_searched: number;
+  causal?: CausalData | null;
 };
 
 // ── Urgency badge ────────────────────────────────────────────────────────────
@@ -567,6 +582,65 @@ function DecisionCard({ decision: d }: { decision: Decision }) {
               {d.effect}
             </p>
           </div>
+
+          {/* CAUSAL CHAIN — Effects with severity */}
+          {d.causal && d.causal.effects.length > 0 && (
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <SectionLabel text="CHAIN REACTION" />
+                <span className="text-[7px] px-1.5 py-0.5" style={{
+                  background: `${COLORS.purple}15`,
+                  border: `1px solid ${COLORS.purple}30`,
+                  borderRadius: '6px',
+                  color: COLORS.purple,
+                }}>
+                  {d.causal.event_type.replace(/_/g, ' ')} ({(d.causal.event_confidence * 100).toFixed(0)}%)
+                </span>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                {d.causal.effects.map((eff, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-[10px]" style={{ color: COLORS.dim }}>→</span>
+                    <span className="text-[11px]" style={{ color: `${COLORS.text}b0` }}>{eff.label}</span>
+                    <span
+                      className="text-[7px] px-1.5 py-0.5 shrink-0"
+                      style={{
+                        background: eff.severity === 'high' ? `${COLORS.red}12` : eff.severity === 'medium' ? `${COLORS.amber}10` : `${COLORS.green}10`,
+                        border: `1px solid ${eff.severity === 'high' ? `${COLORS.red}30` : eff.severity === 'medium' ? `${COLORS.amber}25` : `${COLORS.green}25`}`,
+                        borderRadius: '6px',
+                        color: eff.severity === 'high' ? COLORS.red : eff.severity === 'medium' ? COLORS.amber : COLORS.green,
+                      }}
+                    >
+                      {eff.severity} · {eff.timeframe}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TECHNOLOGIES */}
+          {d.causal && d.causal.technologies.length > 0 && (
+            <div className="mb-4">
+              <SectionLabel text="TECHNOLOGIES NEEDED" />
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {d.causal.technologies.map((tech, i) => (
+                  <span
+                    key={i}
+                    className="text-[9px] px-2 py-1"
+                    style={{
+                      background: `${COLORS.cyan}10`,
+                      border: `1px solid ${COLORS.cyan}25`,
+                      borderRadius: '8px',
+                      color: COLORS.cyan,
+                    }}
+                  >
+                    {tech}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* CONSEQUENCE */}
           <div className="mb-4">
