@@ -546,7 +546,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       else if (matchCount >= 2) relevance += 20;
       if (matchCount === 0) relevance -= 50;
       relevance += s.importance_score * 0.25;
-      relevance += elPasoRelevance(hay) * 0.15;
+      relevance += elPasoRelevance(s) * 0.15;
       relevance += sourceQuality(s.source) * 0.3;
       return { ...s, decision_score: Math.round(relevance) };
     })
