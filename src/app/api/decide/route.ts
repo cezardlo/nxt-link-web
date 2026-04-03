@@ -309,13 +309,13 @@ export async function GET() {
     top3.push(s);
   }
 
-  // ── Pre-structure with CAUSAL ENGINE (rules, not AI) ────────────────────
-  const preStructured = top3.map(signal => {
+  // ── Pre-structure with CAUSAL ENGINE (loads stored maps from DB) ─────────
+  const preStructured = await Promise.all(top3.map(async signal => {
     const cluster = clusterMap.get(signal.id);
     const matchedVendors = matchVendorsDeep(signal, vendors);
 
-    // Run causal analysis: classify event → apply rules → get effects → map technologies
-    const causal = analyzeCausality(
+    // Pattern-match signal → stored causal map → load effects + technologies
+    const causal = await analyzeCausality(
       signal.id,
       signal.title,
       signal.evidence || '',
@@ -331,7 +331,7 @@ export async function GET() {
       urgency: causal.urgency,
       causal,
     };
-  });
+  }));
 
   // ── AI call: ONLY explains the pre-structured data ─────────────────────
   type AIExplanation = {
@@ -349,18 +349,20 @@ export async function GET() {
       const s = ps.signal;
       const c = ps.causal;
       return `Decision ${i + 1}:
-CAUSE: ${sanitize(s.title)}
+SIGNAL: ${sanitize(s.title)}
 EVIDENCE: ${sanitize(s.evidence)?.slice(0, 300)}
 INDUSTRY: ${s.industry}
 COMPANY: ${s.company || 'none'}
 AMOUNT: ${s.amount_usd ? `$${(s.amount_usd / 1e6).toFixed(1)}M` : 'unknown'}
+MATCHED PROBLEM: ${c.matched_problem || 'unknown'}
 EVENT TYPE: ${c.event_type} (confidence: ${(c.event_confidence * 100).toFixed(0)}%)
-MATCHED KEYWORDS: ${c.matched_keywords.join(', ')}
+CAUSES: ${c.causes.slice(0, 4).join(', ') || 'unknown'}
 EFFECTS: ${c.effects.map(e => `${e.label} [${e.severity}, ${e.timeframe}]`).join('; ')}
-URGENCY: ${ps.urgency} (pre-calculated from rules)
-TECHNOLOGIES NEEDED: ${c.technologies.slice(0, 6).join(', ')}
+SOLUTIONS: ${c.solutions.slice(0, 4).join(', ') || 'general monitoring'}
+URGENCY: ${ps.urgency} (pre-calculated)
+TECHNOLOGIES: ${c.technologies.slice(0, 6).join(', ')}
 CLUSTER SIZE: ${ps.cluster?.volume || 1} related signals
-MATCHED VENDORS: ${ps.vendors.map(v => `${v.company_name} (IKER: ${v.iker_score || '?'}, ${v.primary_category || 'general'})`).join('; ') || 'none'}`;
+VENDORS: ${ps.vendors.map(v => `${v.company_name} (IKER: ${v.iker_score || '?'}, ${v.primary_category || 'general'})`).join('; ') || 'none'}`;
     }).join('\n\n---\n\n');
 
     try {
@@ -434,16 +436,19 @@ ${structuredInput}`,
       // Pre-calculated urgency (NOT from AI)
       urgency: ps.urgency,
 
-      // Causal analysis (from rules engine, NOT AI)
+      // Causal analysis (from stored maps in DB, NOT AI)
       causal: {
+        matched_problem: ps.causal.matched_problem,
         event_type: ps.causal.event_type,
         event_confidence: ps.causal.event_confidence,
+        causes: ps.causal.causes,
         effects: ps.causal.effects.map(e => ({
           label: e.label,
           severity: e.severity,
           timeframe: e.timeframe,
         })),
-        technologies: ps.causal.technologies.slice(0, 6),
+        solutions: ps.causal.solutions,
+        technologies: ps.causal.technologies.slice(0, 8),
       },
 
       // Vendor match (problem → technology → vendor)
@@ -554,7 +559,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   // Causal analysis on top signal
   const causal: CausalAnalysis | null = top3.length > 0
-    ? analyzeCausality(
+    ? await analyzeCausality(
         top3[0].id,
         top3[0].title,
         top3[0].evidence || '',
