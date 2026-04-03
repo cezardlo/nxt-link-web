@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { COLORS } from '@/lib/tokens';
 import { INDUSTRIES } from '@/lib/data/nav';
 import { AppShell } from '@/components/AppShell';
+import { CausalGraph } from '@/components/CausalGraph';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -55,6 +56,10 @@ type Decision = {
   why_el_paso: string;
   related_count: number;
   causal?: CausalData;
+  graph?: {
+    nodes: { id: string; type: string; label: string; data?: Record<string, unknown> }[];
+    edges: { source: string; target: string; type: string; weight: number }[];
+  };
 };
 
 type Top3Response = {
@@ -688,6 +693,19 @@ function DecisionCard({ decision: d }: { decision: Decision }) {
               EL PASO: {d.why_el_paso}
             </span>
           </div>
+
+          {/* Causal Graph */}
+          {d.graph && d.graph.nodes.length > 1 && (
+            <div className="mt-4">
+              <SectionLabel text="CAUSAL MAP" />
+              <div className="mt-2" style={{ borderRadius: '12px', overflow: 'hidden' }}>
+                <CausalGraph
+                  data={d.graph as { nodes: { id: string; type: 'signal' | 'event' | 'effect' | 'technology' | 'vendor' | 'solution'; label: string; data?: Record<string, unknown> }[]; edges: { source: string; target: string; type: 'causes' | 'leads_to' | 'solved_by' | 'provided_by'; weight: number }[] }}
+                  height={320}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Meta + Score breakdown */}
           <div className="flex items-center gap-3 mt-3 flex-wrap">
