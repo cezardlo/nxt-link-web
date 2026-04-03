@@ -147,12 +147,15 @@ function computeFinalScore(s: SignalRow, clusterVolume: number, velocity: number
 // ── Vendor matching: problem → technology → vendor ───────────────────────────
 
 const TECH_MAP: Record<string, string[]> = {
-  logistics:      ['fleet management', 'tms', 'route optimization', 'freight', 'dispatch', 'telematics', 'tracking', 'carrier', 'shipping'],
-  manufacturing:  ['automation', 'robotics', 'quality', 'erp', 'mes', 'plc', 'scada', 'cnc', 'assembly'],
-  'border-tech':  ['customs', 'compliance', 'brokerage', 'trade', 'clearance', 'cross-border'],
-  cybersecurity:  ['security', 'threat', 'vulnerability', 'compliance', 'zero trust'],
-  'ai-ml':        ['artificial intelligence', 'machine learning', 'analytics', 'prediction', 'optimization'],
-  energy:         ['solar', 'battery', 'grid', 'efficiency', 'renewable'],
+  logistics:      ['fleet management', 'tms', 'route optimization', 'freight', 'dispatch', 'telematics', 'tracking', 'carrier', 'shipping', 'warehouse', 'fulfillment', 'last mile', 'delivery', 'trucking', 'ltl', 'drayage'],
+  manufacturing:  ['automation', 'robotics', 'quality', 'erp', 'mes', 'plc', 'scada', 'cnc', 'assembly', 'fabrication', 'production', 'maquiladora'],
+  'border-tech':  ['customs', 'compliance', 'brokerage', 'trade', 'clearance', 'cross-border', 'cbp', 'usmca', 'tariff', 'import', 'export'],
+  cybersecurity:  ['security', 'threat', 'vulnerability', 'compliance', 'zero trust', 'endpoint', 'firewall', 'soc'],
+  'ai-ml':        ['artificial intelligence', 'machine learning', 'analytics', 'prediction', 'optimization', 'computer vision', 'nlp'],
+  energy:         ['solar', 'battery', 'grid', 'efficiency', 'renewable', 'ev', 'electric vehicle', 'charging'],
+  defense:        ['defense', 'military', 'dod', 'army', 'missile', 'radar', 'c4isr', 'fort bliss'],
+  transportation: ['trucking', 'fleet', 'driver', 'cdl', 'freight', 'intermodal', 'rail'],
+  tech:           ['software', 'saas', 'cloud', 'platform', 'api', 'data', 'iot'],
 };
 
 function matchVendorsDeep(signal: SignalRow, vendors: VendorRow[]): VendorRow[] {
@@ -499,13 +502,17 @@ export async function POST(request: Request): Promise<NextResponse> {
   const supabase = createClient();
   const since30d = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
   const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+    const searchWords = queryWords.filter(w => w.length > 3).slice(0, 6);
+    const orClauses = searchWords.length > 0
+      ? searchWords.flatMap(w => [`title.ilike.%${w}%`, `evidence.ilike.%${w}%`]).join(',')
+      : `title.ilike.%${queryWords[0] || query}%,evidence.ilike.%${queryWords[0] || query}%`;
 
   const [{ data: textResults }, { data: allVendors }] = await Promise.all([
     supabase
       .from('intel_signals')
       .select('id, title, signal_type, industry, company, evidence, amount_usd, confidence, importance_score, discovered_at, source, tags, vendor_id, problem_category')
       .gte('discovered_at', since30d)
-      .or(`title.ilike.%${queryWords[0] || query}%,evidence.ilike.%${queryWords[0] || query}%`)
+      .or(orClauses)
       .order('importance_score', { ascending: false })
       .limit(200),
     supabase
@@ -527,13 +534,20 @@ export async function POST(request: Request): Promise<NextResponse> {
   const scored = signals
     .filter(s => !isJunk(s.source, s.title))
     .map(s => {
-      const hay = `${s.title} ${s.evidence || ''}`.toLowerCase();
-      let relevance = s.importance_score * 0.4;
+      const hay = `${s.title} ${s.evidence || ''} ${s.problem_category || ''} ${s.company || ''}`.toLowerCase();
+      let relevance = 0;
+      let matchCount = 0;
+      const titleLow = s.title.toLowerCase();
       for (const w of queryWords) {
-        if (hay.includes(w)) relevance += 20;
+        if (titleLow.includes(w)) { relevance += 35; matchCount++; }
+        else if (hay.includes(w)) { relevance += 20; matchCount++; }
       }
-      relevance += elPasoRelevance(s) * 0.2;
-      relevance += sourceQuality(s.source) * 0.1;
+      if (matchCount >= 3) relevance += 40;
+      else if (matchCount >= 2) relevance += 20;
+      if (matchCount === 0) relevance -= 50;
+      relevance += s.importance_score * 0.25;
+      relevance += elPasoRelevance(hay) * 0.15;
+      relevance += sourceQuality(s.source) * 0.3;
       return { ...s, decision_score: Math.round(relevance) };
     })
     .sort((a, b) => b.decision_score - a.decision_score);
@@ -671,6 +685,6 @@ No markdown.`,
   logDecision('search', query, [response], scored.length);
 
   return NextResponse.json(response, {
-    headers: { 'Cache-Control': 'public, max-age=120' },
+    headers: { 'Cache-Control': 'no-store' },
   });
 }
