@@ -28,6 +28,7 @@ type SignalRow = {
   tags: string[];
   vendor_id: string | null;
   problem_category: string | null;
+  region: string | null;
 };
 
 type VendorRow = {
@@ -103,7 +104,7 @@ export async function GET() {
   ] = await Promise.all([
     supabase
       .from('intel_signals')
-      .select('id, title, signal_type, industry, company, evidence, amount_usd, confidence, importance_score, discovered_at, source, tags, vendor_id, problem_category')
+      .select('id, title, signal_type, industry, company, evidence, amount_usd, confidence, importance_score, discovered_at, source, tags, vendor_id, problem_category, region')
       .gte('discovered_at', since7d)
       .order('importance_score', { ascending: false })
       .limit(500),
@@ -374,6 +375,47 @@ ${signalSummaries}`,
     if (s.trend_label in trendDistribution) trendDistribution[s.trend_label]++;
   }
 
+  // Region aggregation from intel_signals.region column
+  const REGION_NORMALIZE: Record<string, string> = {
+    'USA': 'United States', 'US': 'United States', 'U.S.': 'United States',
+    'UK': 'United Kingdom', 'UAE': 'United Arab Emirates',
+    'unknown': '', 'Unknown': '', 'Global': '',
+    'North America': 'United States',
+    'California': 'United States', 'Texas': 'United States',
+  };
+
+  const regionAcc: Record<string, {
+    total_signals: number;
+    industries: Set<string>;
+    total_investment_usd: number;
+    max_importance: number;
+  }> = {};
+
+  for (const s of signals) {
+    const raw = s.region || '';
+    const name = REGION_NORMALIZE[raw] ?? raw;
+    if (!name || name.length < 2) continue;
+
+    if (!regionAcc[name]) {
+      regionAcc[name] = { total_signals: 0, industries: new Set(), total_investment_usd: 0, max_importance: 0 };
+    }
+    regionAcc[name].total_signals++;
+    regionAcc[name].industries.add(s.industry);
+    if (s.amount_usd) regionAcc[name].total_investment_usd += s.amount_usd;
+    if (s.importance_score > regionAcc[name].max_importance) regionAcc[name].max_importance = s.importance_score;
+  }
+
+  const regions = Object.entries(regionAcc)
+    .map(([name, data]) => ({
+      name,
+      total_signals: data.total_signals,
+      risk_level: data.total_signals >= 50 ? 'high' : data.total_signals >= 20 ? 'elevated' : data.total_signals >= 5 ? 'moderate' : 'low',
+      opportunity_score: Math.min(100, data.max_importance + data.total_signals),
+      industries: [...data.industries],
+      total_investment_usd: data.total_investment_usd,
+    }))
+    .sort((a, b) => b.total_signals - a.total_signals);
+
   return NextResponse.json({
     briefing: {
       generated_at: new Date().toISOString(),
@@ -384,6 +426,7 @@ ${signalSummaries}`,
       top_insights: topInsights,
       signal_stats: { by_type: typeCount, by_industry: industryCount },
       clusters: [],
+      regions,
       regions: [],
       recent_signals: sortedByDate,
       trends: { snapshot, time_series: timeSeries },
