@@ -19,6 +19,17 @@ type Signal = {
 
 type Tab = 'all' | 'high' | 'trending';
 
+type BrainLearning = {
+  sourceScores?: Array<{ source: string; trustScore: number; signalCount: number }>;
+  industryMomentum?: Array<{ name: string; momentumScore: number; signalCount: number }>;
+  companyPriority?: Array<{ name: string; priorityScore: number; signalCount: number; industries: string[] }>;
+  summary?: {
+    strongestSource: string | null;
+    hottestIndustry: string | null;
+    highestPriorityCompany: string | null;
+  };
+};
+
 const INDUSTRIES = ['ALL', 'logistics', 'manufacturing', 'border-tech', 'general'];
 const SCORE_FILTERS = [0, 50, 70, 85];
 
@@ -115,6 +126,7 @@ export default function IntelPage() {
   const [searchInput, setSearchInput] = useState('');
   const [minScore, setMinScore] = useState(0);
   const [page, setPage] = useState(0);
+  const [learning, setLearning] = useState<BrainLearning | null>(null);
   const PAGE_SIZE = 25;
 
   useEffect(() => {
@@ -157,6 +169,25 @@ export default function IntelPage() {
       ignore = true;
     };
   }, [tab, industry, search, minScore, page]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadLearning() {
+      try {
+        const response = await fetch('/api/brain/sync?limit=120');
+        if (!response.ok) return;
+        const json = await response.json();
+        if (ignore) return;
+        setLearning(json.learning ?? null);
+      } catch {}
+    }
+
+    loadLearning();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const topIndustry = useMemo(() => {
     const counts = new Map<string, number>();
@@ -335,6 +366,68 @@ export default function IntelPage() {
                   ))}
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mb-6 grid gap-4 lg:grid-cols-3">
+          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-4">
+            <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Brain read</div>
+            <div className="mt-3 space-y-3 text-sm text-nxt-secondary">
+              <div>
+                Hottest industry
+                <div className="mt-1 text-base font-semibold text-nxt-text">{learning?.summary?.hottestIndustry ?? 'Loading...'}</div>
+              </div>
+              <div>
+                Top company
+                <div className="mt-1 text-base font-semibold text-nxt-text">{learning?.summary?.highestPriorityCompany ?? 'Loading...'}</div>
+              </div>
+              <div>
+                Strongest source
+                <div className="mt-1 text-sm font-semibold text-nxt-text break-all">{sourceName(learning?.summary?.strongestSource ?? null)}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Top industries</div>
+              <div className="text-[11px] font-mono text-nxt-dim">brain momentum</div>
+            </div>
+            <div className="space-y-2">
+              {(learning?.industryMomentum ?? []).slice(0, 4).map((item) => (
+                <div key={item.name} className="flex items-center justify-between rounded-[16px] border border-nxt-border bg-nxt-card p-3">
+                  <div>
+                    <div className="text-sm font-medium text-nxt-text">{item.name}</div>
+                    <div className="text-[11px] text-nxt-dim">{item.signalCount} signals</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-mono font-bold text-nxt-text">{Math.round(item.momentumScore * 100)}</div>
+                    <div className="text-[10px] uppercase tracking-[0.16em] text-nxt-dim">score</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Top sources</div>
+              <div className="text-[11px] font-mono text-nxt-dim">trust score</div>
+            </div>
+            <div className="space-y-2">
+              {(learning?.sourceScores ?? []).slice(0, 4).map((item) => (
+                <div key={item.source} className="flex items-center justify-between rounded-[16px] border border-nxt-border bg-nxt-card p-3">
+                  <div>
+                    <div className="text-sm font-medium text-nxt-text">{sourceName(item.source)}</div>
+                    <div className="text-[11px] text-nxt-dim">{item.signalCount} signals</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-mono font-bold text-nxt-text">{Math.round(item.trustScore * 100)}</div>
+                    <div className="text-[10px] uppercase tracking-[0.16em] text-nxt-dim">trust</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>

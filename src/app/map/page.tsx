@@ -29,6 +29,18 @@ type BrainSyncResponse = {
   entities: BrainEntity[];
   relationships: Array<{ source: string; target: string; type: string }>;
   mapPoints: MapPoint[];
+  learning?: {
+    sourceScores?: Array<{ source: string; trustScore: number; signalCount: number }>;
+    industryMomentum?: Array<{ name: string; momentumScore: number; signalCount: number }>;
+    locationMomentum?: Array<{ name: string; momentumScore: number; signalCount: number }>;
+    companyPriority?: Array<{ slug: string; name: string; priorityScore: number; signalCount: number; industries: string[] }>;
+    summary?: {
+      strongestSource: string | null;
+      hottestIndustry: string | null;
+      hottestLocation: string | null;
+      highestPriorityCompany: string | null;
+    };
+  };
   warnings?: string[];
   sources?: {
     obsidian?: {
@@ -84,6 +96,7 @@ export default function MapPage() {
     obsidianReady: false,
   });
   const [loading, setLoading] = useState(true);
+  const [learning, setLearning] = useState<NonNullable<BrainSyncResponse['learning']> | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -102,6 +115,7 @@ export default function MapPage() {
 
         setPoints(brainJson.mapPoints ?? []);
         setEntities(brainJson.entities ?? []);
+        setLearning(brainJson.learning ?? null);
         setSignals(briefingJson.briefing?.recent_signals?.slice(0, 16) ?? []);
         setBrainStats({
           scannedSignals: brainJson.scannedSignals ?? 0,
@@ -217,7 +231,9 @@ export default function MapPage() {
   const filteredPoints = showHighOnly ? points.filter((point) => point.avgImportance >= 0.75) : points;
   const companyCount = entities.filter((entity) => entity.type === 'company').length;
   const noteCount = brainStats.notesScanned;
-  const topCompanies = entities.filter((entity) => entity.type === 'company').slice(0, 6);
+  const topCompanies = learning?.companyPriority?.slice(0, 6) ?? [];
+  const topIndustryMomentum = learning?.industryMomentum?.slice(0, 4) ?? [];
+  const topLocationMomentum = learning?.locationMomentum?.slice(0, 4) ?? [];
 
   return (
     <div className="min-h-screen bg-nxt-bg text-nxt-text">
@@ -301,6 +317,16 @@ export default function MapPage() {
                 <div className="text-xs text-nxt-muted">Tracked companies</div>
                 <div className="mt-1 text-2xl font-mono font-bold">{companyCount}</div>
               </div>
+              {learning?.summary && (
+                <div className="rounded-[18px] border border-[rgba(138,160,255,0.12)] bg-[rgba(9,13,22,0.86)] p-4">
+                  <div className="text-xs text-nxt-muted">Brain summary</div>
+                  <div className="mt-3 space-y-2 text-sm text-nxt-secondary">
+                    <div>Hottest industry: <span className="font-semibold text-nxt-text">{learning.summary.hottestIndustry ?? 'none yet'}</span></div>
+                    <div>Hottest place: <span className="font-semibold text-nxt-text">{learning.summary.hottestLocation ?? 'none yet'}</span></div>
+                    <div>Top company: <span className="font-semibold text-nxt-text">{learning.summary.highestPriorityCompany ?? 'none yet'}</span></div>
+                  </div>
+                </div>
+              )}
               <div className="rounded-[18px] border border-nxt-border bg-nxt-surface/70 p-4">
                 <div className="text-xs text-nxt-muted">Obsidian memory</div>
                 <div className="mt-1 text-sm font-semibold text-nxt-text">
@@ -369,8 +395,8 @@ export default function MapPage() {
 
             <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-5">
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-sm font-semibold">Mapped companies</h2>
-                <span className="text-[11px] font-mono text-nxt-dim">from sync graph</span>
+                <h2 className="text-sm font-semibold">Top companies</h2>
+                <span className="text-[11px] font-mono text-nxt-dim">brain priority</span>
               </div>
               <div className="space-y-2">
                 {topCompanies.length === 0 ? (
@@ -379,13 +405,70 @@ export default function MapPage() {
                   </div>
                 ) : (
                   topCompanies.map((entity) => (
-                    <div key={entity.id} className="rounded-[18px] border border-nxt-border bg-nxt-card/85 p-4">
-                      <div className="text-sm font-medium text-nxt-text">{entity.name}</div>
-                      <div className="mt-1 text-xs text-nxt-dim">{entity.type}</div>
+                    <div key={entity.slug} className="rounded-[18px] border border-nxt-border bg-nxt-card/85 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-sm font-medium text-nxt-text">{entity.name}</div>
+                          <div className="mt-1 text-xs text-nxt-dim">{entity.industries.join(', ') || 'No industry yet'}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-mono font-bold text-nxt-text">{Math.round(entity.priorityScore * 100)}</div>
+                          <div className="text-[10px] uppercase tracking-[0.16em] text-nxt-dim">priority</div>
+                        </div>
+                      </div>
+                      <div className="mt-2 text-[11px] text-nxt-muted">{entity.signalCount} linked signals</div>
                     </div>
                   ))
                 )}
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-4 grid gap-4 lg:grid-cols-2">
+          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold">Industry momentum</h2>
+              <span className="text-[11px] font-mono text-nxt-dim">what is heating up</span>
+            </div>
+            <div className="space-y-2">
+              {topIndustryMomentum.map((item) => (
+                <div key={item.name} className="rounded-[18px] border border-nxt-border bg-nxt-card/85 p-4">
+                  <div className="flex items-end justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-medium text-nxt-text">{item.name}</div>
+                      <div className="mt-1 text-xs text-nxt-dim">{item.signalCount} signals behind this rank</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-mono font-bold text-nxt-text">{Math.round(item.momentumScore * 100)}</div>
+                      <div className="text-[10px] uppercase tracking-[0.16em] text-nxt-dim">momentum</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold">Location momentum</h2>
+              <span className="text-[11px] font-mono text-nxt-dim">where activity is rising</span>
+            </div>
+            <div className="space-y-2">
+              {topLocationMomentum.map((item) => (
+                <div key={item.name} className="rounded-[18px] border border-nxt-border bg-nxt-card/85 p-4">
+                  <div className="flex items-end justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-medium text-nxt-text">{item.name}</div>
+                      <div className="mt-1 text-xs text-nxt-dim">{item.signalCount} signals behind this rank</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-mono font-bold text-nxt-text">{Math.round(item.momentumScore * 100)}</div>
+                      <div className="text-[10px] uppercase tracking-[0.16em] text-nxt-dim">momentum</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>

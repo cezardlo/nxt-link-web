@@ -4,6 +4,14 @@
 
 NXT Link Ops is a neutral innovation operating system for structured 45-day sandbox pilots. It is built for disciplined challenge intake, provider screening, pilot execution, paperwork control, and measurable result publication.
 
+## Repo Status
+
+- Active product app: `src/`
+- Active brain path: `src/lib/intelligence` and `src/app/api/brain`
+- Archived historical systems: `archive/services/*`
+
+Historical Python systems were moved out of the active repo root. Treat anything under `archive/services/` as reference-only unless explicitly reactivated.
+
 ## Stack
 
 - Next.js 14 (App Router)
@@ -12,9 +20,9 @@ NXT Link Ops is a neutral innovation operating system for structured 45-day sand
 - MapLibre GL + deck.gl
 - Prisma ORM
 - SQLite (local)
-- FastAPI (Python 3.11) in `intelligence/intel_backend`
-- Postgres + pgvector schema in `intelligence/db/schema.sql`
-- Prefect flows in `intelligence/intel_backend/app/orchestration/flows.py`
+- FastAPI (Python 3.11) archive in `archive/services/intelligence/intel_backend`
+- Postgres + pgvector schema archive in `archive/services/intelligence/db/schema.sql`
+- Prefect flows archive in `archive/services/intelligence/intel_backend/app/orchestration/flows.py`
 - Lucide React
 - Inter font
 
@@ -153,7 +161,7 @@ Notes:
 
 Location:
 
-- `intelligence/intel_backend`
+- `archive/services/intelligence/intel_backend`
 
 Key endpoints:
 
@@ -167,7 +175,7 @@ Key endpoints:
 Start locally (Python):
 
 ```bash
-cd intelligence/intel_backend
+cd archive/services/intelligence/intel_backend
 pip install .
 uvicorn app.api:app --reload --port 8100
 ```
@@ -175,14 +183,14 @@ uvicorn app.api:app --reload --port 8100
 Seed demo dataset (5 sources + 10 truth cards):
 
 ```bash
-cd intelligence/intel_backend
+cd archive/services/intelligence/intel_backend
 python scripts/seed_demo.py
 ```
 
 Smoke test:
 
 ```bash
-cd intelligence/intel_backend
+cd archive/services/intelligence/intel_backend
 python scripts/smoke_test.py
 ```
 
@@ -207,8 +215,8 @@ Compose file:
 
 ## SQL Schema and Migrations
 
-- Base schema: `intelligence/db/schema.sql`
-- Command monitor migration: `intelligence/db/migrations/20260226_command_monitor.sql`
+- Base schema archive: `archive/services/intelligence/db/schema.sql`
+- Command monitor migration archive: `archive/services/intelligence/db/migrations/20260226_command_monitor.sql`
 
 ## Supabase Connection
 

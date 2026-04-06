@@ -99,6 +99,19 @@ interface BriefingData {
   };
 }
 
+interface BrainLearning {
+  sourceScores?: Array<{ source: string; trustScore: number; signalCount: number }>;
+  industryMomentum?: Array<{ name: string; momentumScore: number; signalCount: number }>;
+  locationMomentum?: Array<{ name: string; momentumScore: number; signalCount: number }>;
+  companyPriority?: Array<{ name: string; priorityScore: number; signalCount: number }>;
+  summary?: {
+    strongestSource: string | null;
+    hottestIndustry: string | null;
+    hottestLocation: string | null;
+    highestPriorityCompany: string | null;
+  };
+}
+
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
   const now = new Date();
@@ -291,16 +304,24 @@ function BriefingSkeleton() {
 /* --- Main Briefing Page --- */
 export default function BriefingPage() {
   const [data, setData] = useState<BriefingData | null>(null);
+  const [learning, setLearning] = useState<BrainLearning | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchBriefing = async () => {
       try {
-        const response = await fetch('/api/briefing');
-        if (!response.ok) throw new Error('Failed to fetch briefing');
-        const json = await response.json();
+        const [briefingResponse, brainResponse] = await Promise.all([
+          fetch('/api/briefing'),
+          fetch('/api/brain/sync?limit=120'),
+        ]);
+        if (!briefingResponse.ok) throw new Error('Failed to fetch briefing');
+        const json = await briefingResponse.json();
         setData(json);
+        if (brainResponse.ok) {
+          const brainJson = await brainResponse.json();
+          setLearning(brainJson.learning ?? null);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
@@ -375,6 +396,21 @@ export default function BriefingPage() {
             <div className="w-1.5 h-1.5 rounded-full bg-nxt-green live-pulse" />
             <span className="text-xs font-mono text-nxt-muted uppercase tracking-[0.18em]">Monitoring live</span>
           </div>
+        </section>
+
+        <section className="mb-8 grid gap-4 xl:grid-cols-4">
+          {[
+            ['Hottest industry', learning?.summary?.hottestIndustry ?? 'Loading...', learning?.industryMomentum?.[0] ? `${learning.industryMomentum[0].signalCount} signals behind it` : ''],
+            ['Hottest place', learning?.summary?.hottestLocation ?? 'Loading...', learning?.locationMomentum?.[0] ? `${learning.locationMomentum[0].signalCount} signals behind it` : ''],
+            ['Top company', learning?.summary?.highestPriorityCompany ?? 'Loading...', learning?.companyPriority?.[0] ? `${learning.companyPriority[0].signalCount} linked signals` : ''],
+            ['Strongest source', learning?.summary?.strongestSource ?? 'Loading...', learning?.sourceScores?.[0] ? `${Math.round(learning.sourceScores[0].trustScore * 100)} trust score` : ''],
+          ].map(([label, value, hint]) => (
+            <div key={label} className="rounded-[20px] border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-5">
+              <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">{label}</div>
+              <div className="mt-3 text-xl font-semibold text-nxt-text break-words">{value}</div>
+              <div className="mt-2 text-xs text-nxt-muted">{hint}</div>
+            </div>
+          ))}
         </section>
 
         {/* TOP 3 INSIGHTS */}

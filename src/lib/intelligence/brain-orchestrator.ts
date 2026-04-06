@@ -13,6 +13,10 @@ import {
   type MappedRelationship,
 } from '@/lib/intelligence/mapping-engine';
 import {
+  buildBrainLearningReport,
+  type BrainLearningReport,
+} from '@/lib/intelligence/learning-engine';
+import {
   loadObsidianImportReport,
   type ObsidianNoteEntity,
   type ObsidianRelationship,
@@ -42,6 +46,7 @@ export type UnifiedBrainReport = {
   entities: UnifiedBrainEntity[];
   relationships: UnifiedBrainRelationship[];
   mapPoints: MapPoint[];
+  learning: BrainLearningReport;
   warnings: string[];
   sources: {
     signals: {
@@ -137,18 +142,28 @@ export async function loadUnifiedBrainReport(
     }
   }
 
+  const entities = dedupeByKey(
+    [...mappingReport.entities.map(normalizeMappedEntity), ...obsidianEntities],
+    (entity) => entity.id
+  );
+  const relationships = dedupeByKey(
+    [...mappingReport.relationships.map(normalizeMappedRelationship), ...obsidianRelationships],
+    (relationship) => `${relationship.source}|${relationship.target}|${relationship.type}`
+  );
+  const learning = buildBrainLearningReport(
+    signals,
+    entities,
+    relationships,
+    mappingReport.mapPoints
+  );
+
   return {
     scannedSignals: mappingReport.scannedSignals,
     notesScanned,
-    entities: dedupeByKey(
-      [...mappingReport.entities.map(normalizeMappedEntity), ...obsidianEntities],
-      (entity) => entity.id
-    ),
-    relationships: dedupeByKey(
-      [...mappingReport.relationships.map(normalizeMappedRelationship), ...obsidianRelationships],
-      (relationship) => `${relationship.source}|${relationship.target}|${relationship.type}`
-    ),
+    entities,
+    relationships,
     mapPoints: mappingReport.mapPoints,
+    learning,
     warnings,
     sources: {
       signals: {
@@ -172,11 +187,34 @@ export async function persistUnifiedBrainReport(
   const entityIdMap = new Map<string, string>();
 
   for (const entity of report.entities) {
+    const enrichedMetadata = { ...entity.metadata };
+    const companyScore = report.learning.companyPriority.find((item) => item.slug === entity.slug);
+    const industryScore = report.learning.industryMomentum.find((item) => item.slug === entity.slug);
+    const locationScore = report.learning.locationMomentum.find((item) => item.slug === entity.slug);
+
+    if (entity.type === 'company' && companyScore) {
+      enrichedMetadata.learned_priority_score = companyScore.priorityScore;
+      enrichedMetadata.learned_signal_count = companyScore.signalCount;
+      enrichedMetadata.learned_location_count = companyScore.locationCount;
+    }
+
+    if (entity.type === 'industry' && industryScore) {
+      enrichedMetadata.learned_momentum_score = industryScore.momentumScore;
+      enrichedMetadata.learned_signal_count = industryScore.signalCount;
+      enrichedMetadata.learned_recency_score = industryScore.recencyScore;
+    }
+
+    if (entity.type === 'location' && locationScore) {
+      enrichedMetadata.learned_momentum_score = locationScore.momentumScore;
+      enrichedMetadata.learned_signal_count = locationScore.signalCount;
+      enrichedMetadata.learned_recency_score = locationScore.recencyScore;
+    }
+
     const persistedId = await upsertEntity({
       entity_type: entity.type,
       name: entity.name,
       slug: entity.slug,
-      metadata: entity.metadata,
+      metadata: enrichedMetadata,
       aliases: entity.aliases,
     });
     if (!persistedId) continue;

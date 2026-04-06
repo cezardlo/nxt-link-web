@@ -1,5 +1,7 @@
 # Claude Handoff
 
+Historical note: this file reflects an older workspace snapshot before the repo was reorganized around one active Next.js app. Use `CLAUDE.md`, `claude/repo-organization.md`, and `docs/architecture/current-system.md` as the current source of truth.
+
 ## Project
 - Repo: `nxt-link-web`
 - Branch: `master`
@@ -35,9 +37,9 @@ You are being brought into this workspace from VS Code so you can continue the s
 - `.npmrc`
 - `autobuilder.py`
 - `docker-compose.yml`
-- `intelligence/`
+- `archive/services/intelligence/`
 - `middleware.ts`
-- `n8n/`
+- `archive/workflows/n8n/`
 - `prisma.config.ts`
 - `prisma/`
 - `scripts/`

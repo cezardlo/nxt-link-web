@@ -2,8 +2,8 @@
 
 # dependencies
 /node_modules
-/pipeline/.pylibs
-/pipeline/.env
+/archive/services/pipeline/.pylibs
+/archive/services/pipeline/.env
 /.pnp
 .pnp.js
 .yarn/install-state.gz
