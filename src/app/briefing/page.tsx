@@ -92,6 +92,11 @@ interface BriefingData {
     signal_stats: { by_type: Record<string, number>; by_industry: Record<string, number> };
     regions: Region[];
     recent_signals: RecentSignal[];
+    source_ops?: {
+      duplicates_filtered?: number;
+      low_evidence_discarded?: number;
+      strongest_source?: string | null;
+    };
     trends?: {
       snapshot: TrendSnapshot[];
       time_series: TrendTimeSeries[];
@@ -411,6 +416,24 @@ export default function BriefingPage() {
               <div className="mt-2 text-xs text-nxt-muted">{hint}</div>
             </div>
           ))}
+        </section>
+
+        <section className="mb-8 grid gap-4 xl:grid-cols-3">
+          <div className="rounded-[20px] border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-5">
+            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Source quality</div>
+            <div className="mt-3 text-xl font-semibold text-nxt-text">{briefing.source_ops?.strongest_source ?? 'Loading...'}</div>
+            <div className="mt-2 text-xs text-nxt-muted">Strongest source feeding the current briefing set</div>
+          </div>
+          <div className="rounded-[20px] border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-5">
+            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Duplicates filtered</div>
+            <div className="mt-3 text-xl font-semibold text-nxt-text">{briefing.source_ops?.duplicates_filtered ?? 0}</div>
+            <div className="mt-2 text-xs text-nxt-muted">Repeated or near-duplicate signals removed before briefing selection</div>
+          </div>
+          <div className="rounded-[20px] border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-5">
+            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Low evidence discarded</div>
+            <div className="mt-3 text-xl font-semibold text-nxt-text">{briefing.source_ops?.low_evidence_discarded ?? 0}</div>
+            <div className="mt-2 text-xs text-nxt-muted">Thin signals downgraded or dropped before they reached the top stories</div>
+          </div>
         </section>
 
         {/* TOP 3 INSIGHTS */}

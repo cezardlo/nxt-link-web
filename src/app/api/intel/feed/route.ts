@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { analyzeSignalIntake } from '@/lib/intelligence/source-intelligence';
+import { FALLBACK_INTEL_SIGNALS } from '@/lib/intelligence/fallback-signals';
+import type { IntelSignalRow } from '@/db/queries/intel-signals';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,13 +11,6 @@ export const dynamic = 'force-dynamic';
  * Server-side query for intel_signals with pagination, tab filters, and industry filter.
  */
 export async function GET(request: Request): Promise<NextResponse> {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json(
-      { signals: [], totalCount: 0, highCount: 0, error: 'Database not configured' },
-      { status: 503 },
-    );
-  }
-
   const { searchParams } = new URL(request.url);
   const tab = searchParams.get('tab') ?? 'all';
   const industry = searchParams.get('industry') ?? 'ALL';
@@ -24,8 +20,32 @@ export async function GET(request: Request): Promise<NextResponse> {
   const minScore = minScoreRaw > 1 ? minScoreRaw / 100 : minScoreRaw;
   const page = Math.max(0, parseInt(searchParams.get('page') ?? '0', 10) || 0);
   const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('page_size') ?? '25', 10) || 25));
+  const supabaseReady = isSupabaseConfigured();
 
   try {
+    if (!supabaseReady) {
+      const intake = analyzeSignalIntake(FALLBACK_INTEL_SIGNALS, { fallbackUsed: true, limit: FALLBACK_INTEL_SIGNALS.length });
+      const sortedSignals = [...intake.signals].sort((a, b) => {
+        const aScore = (a.quality_score ?? 0) * 0.6 + (a.source_trust ?? 0) * 0.4;
+        const bScore = (b.quality_score ?? 0) * 0.6 + (b.source_trust ?? 0) * 0.4;
+        if (bScore !== aScore) return bScore - aScore;
+        return new Date(b.discovered_at).getTime() - new Date(a.discovered_at).getTime();
+      });
+      const pagedSignals = sortedSignals.slice(page * pageSize, (page + 1) * pageSize);
+
+      return NextResponse.json({
+        signals: pagedSignals,
+        totalCount: FALLBACK_INTEL_SIGNALS.length,
+        highCount: FALLBACK_INTEL_SIGNALS.filter((signal) => signal.importance_score >= 0.75).length,
+        filteredCount: intake.signals.length,
+        pipeline: intake.pipeline,
+        sourceScores: intake.sourceScores.slice(0, 5),
+        page,
+        pageSize,
+        preview: true,
+      });
+    }
+
     const supabase = getSupabaseClient({ admin: true });
 
     function applyFilters<T>(builder: T): T {
@@ -73,7 +93,7 @@ export async function GET(request: Request): Promise<NextResponse> {
           { count: 'exact' }
         )
         .order('discovered_at', { ascending: false })
-        .range(page * pageSize, (page + 1) * pageSize - 1)
+        .limit(500)
     );
 
     const filteredCountQuery = applyFilters(
@@ -87,12 +107,29 @@ export async function GET(request: Request): Promise<NextResponse> {
       supabase.from('intel_signals').select('*', { count: 'exact', head: true }).gte('importance_score', 0.75),
     ]);
 
+    const rawSignals = (signalResult.data ?? []).map((signal) => ({
+      ...signal,
+      amount_usd: null,
+      tags: [],
+      created_at: signal.discovered_at,
+    })) as IntelSignalRow[];
+    const intake = analyzeSignalIntake(rawSignals, { limit: rawSignals.length });
+    const sortedSignals = [...intake.signals].sort((a, b) => {
+      const aScore = (a.quality_score ?? 0) * 0.6 + (a.source_trust ?? 0) * 0.4;
+      const bScore = (b.quality_score ?? 0) * 0.6 + (b.source_trust ?? 0) * 0.4;
+      if (bScore !== aScore) return bScore - aScore;
+      return new Date(b.discovered_at).getTime() - new Date(a.discovered_at).getTime();
+    });
+    const pagedSignals = sortedSignals.slice(page * pageSize, (page + 1) * pageSize);
+
     return NextResponse.json(
       {
-        signals: signalResult.data ?? [],
+        signals: pagedSignals,
         totalCount: totalResult.count ?? 0,
         highCount: highResult.count ?? 0,
-        filteredCount: filteredResult.count ?? 0,
+        filteredCount: filteredResult.count ?? intake.signals.length,
+        pipeline: intake.pipeline,
+        sourceScores: intake.sourceScores.slice(0, 5),
         page,
         pageSize,
       },

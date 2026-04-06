@@ -15,12 +15,15 @@ type Signal = {
   url: string | null;
   signal_type: string | null;
   company: string | null;
+  source_trust?: number | null;
+  evidence_quality?: number | null;
+  quality_score?: number | null;
 };
 
 type Tab = 'all' | 'high' | 'trending';
 
 type BrainLearning = {
-  sourceScores?: Array<{ source: string; trustScore: number; signalCount: number }>;
+  sourceScores?: Array<{ source: string; trustScore: number; signalCount: number; duplicateRate?: number; noiseScore?: number }>;
   industryMomentum?: Array<{ name: string; momentumScore: number; signalCount: number }>;
   companyPriority?: Array<{ name: string; priorityScore: number; signalCount: number; industries: string[] }>;
   summary?: {
@@ -28,6 +31,16 @@ type BrainLearning = {
     hottestIndustry: string | null;
     highestPriorityCompany: string | null;
   };
+};
+
+type PipelineQuality = {
+  duplicatesFiltered?: number;
+  lowEvidenceDiscarded?: number;
+  noisySourceSignals?: number;
+  acceptedSignals?: number;
+  scannedSignals?: number;
+  topTrustedSources?: Array<{ source: string; trustScore: number; signalCount: number }>;
+  weakestSources?: Array<{ source: string; trustScore: number; signalCount: number }>;
 };
 
 const INDUSTRIES = ['ALL', 'logistics', 'manufacturing', 'border-tech', 'general'];
@@ -127,6 +140,7 @@ export default function IntelPage() {
   const [minScore, setMinScore] = useState(0);
   const [page, setPage] = useState(0);
   const [learning, setLearning] = useState<BrainLearning | null>(null);
+  const [pipeline, setPipeline] = useState<PipelineQuality | null>(null);
   const PAGE_SIZE = 25;
 
   useEffect(() => {
@@ -154,6 +168,7 @@ export default function IntelPage() {
         setTotalCount(json.totalCount ?? 0);
         setHighCount(json.highCount ?? 0);
         setFilteredCount(json.filteredCount ?? 0);
+        if (reset) setPipeline(json.pipeline ?? null);
       } catch (fetchError) {
         if (!ignore) {
           console.error('[intel] fetch error:', fetchError);
@@ -180,6 +195,7 @@ export default function IntelPage() {
         const json = await response.json();
         if (ignore) return;
         setLearning(json.learning ?? null);
+        setPipeline((current) => current ?? json.pipeline ?? null);
       } catch {}
     }
 
@@ -432,6 +448,36 @@ export default function IntelPage() {
           </div>
         </section>
 
+        <section className="mb-6 grid gap-4 lg:grid-cols-3">
+          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-4">
+            <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Pipeline quality</div>
+            <div className="mt-3 space-y-3 text-sm text-nxt-secondary">
+              <div>Duplicates filtered: <span className="font-semibold text-nxt-text">{pipeline?.duplicatesFiltered ?? 0}</span></div>
+              <div>Low evidence discarded: <span className="font-semibold text-nxt-text">{pipeline?.lowEvidenceDiscarded ?? 0}</span></div>
+              <div>Noisy source signals: <span className="font-semibold text-nxt-text">{pipeline?.noisySourceSignals ?? 0}</span></div>
+            </div>
+          </div>
+          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-4">
+            <div className="mb-3 text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Weakest sources</div>
+            <div className="space-y-2">
+              {(pipeline?.weakestSources ?? []).slice(0, 3).map((item) => (
+                <div key={item.source} className="flex items-center justify-between rounded-[16px] border border-nxt-border bg-nxt-card p-3">
+                  <div className="text-sm font-medium text-nxt-text">{sourceName(item.source)}</div>
+                  <div className="text-sm font-mono text-nxt-muted">{Math.round(item.trustScore * 100)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-4">
+            <div className="mb-3 text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Intake health</div>
+            <div className="space-y-2 text-sm text-nxt-secondary">
+              <div>Accepted signals: <span className="font-semibold text-nxt-text">{pipeline?.acceptedSignals ?? filteredCount}</span></div>
+              <div>Raw scanned: <span className="font-semibold text-nxt-text">{pipeline?.scannedSignals ?? totalCount}</span></div>
+              <div>Best source: <span className="font-semibold text-nxt-text">{sourceName(pipeline?.topTrustedSources?.[0]?.source ?? null)}</span></div>
+            </div>
+          </div>
+        </section>
+
         <section className="space-y-3">
           {loading && signals.length === 0 ? (
             <div className="py-20">
@@ -519,6 +565,12 @@ export default function IntelPage() {
                             {signal.company}
                           </span>
                         )}
+                        <span className="rounded-full bg-nxt-card px-2.5 py-1 text-[11px] text-nxt-secondary">
+                          Source trust {displayConfidence(signal.source_trust)}
+                        </span>
+                        <span className="rounded-full bg-nxt-card px-2.5 py-1 text-[11px] text-nxt-secondary">
+                          Evidence {displayConfidence(signal.evidence_quality)}
+                        </span>
                         <span className="text-[11px] text-nxt-dim">Trust basis: {trustReason(signal)}</span>
                       </div>
                     </div>

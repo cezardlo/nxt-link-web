@@ -8,8 +8,11 @@
  */
 
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/client';
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { runParallelJsonEnsemble } from '@/lib/llm/parallel-router';
+import { analyzeSignalIntake } from '@/lib/intelligence/source-intelligence';
+import { FALLBACK_INTEL_SIGNALS } from '@/lib/intelligence/fallback-signals';
+import type { IntelSignalRow } from '@/db/queries/intel-signals';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,6 +40,8 @@ type VendorRow = {
   primary_category: string;
   iker_score: number | null;
 };
+
+type BriefingSignalRow = IntelSignalRow & Pick<SignalRow, 'vendor_id' | 'problem_category' | 'region'>;
 
 function sanitize(text: string | null): string {
   if (!text) return '';
@@ -91,7 +96,8 @@ const PROBLEM_LABELS: Record<string, string> = {
 };
 
 export async function GET() {
-  const supabase = createClient();
+  const supabaseReady = isSupabaseConfigured();
+  const supabase = supabaseReady ? createClient() : null;
 
   const since7d = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
   const since24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
@@ -101,25 +107,40 @@ export async function GET() {
     { count: totalSignals },
     { count: signals24h },
     { data: latestBriefing },
-  ] = await Promise.all([
-    supabase
-      .from('intel_signals')
-      .select('id, title, signal_type, industry, company, evidence, amount_usd, confidence, importance_score, discovered_at, source, tags, vendor_id, problem_category, region')
-      .gte('discovered_at', since7d)
-      .order('importance_score', { ascending: false })
-      .limit(500),
-    supabase.from('intel_signals').select('*', { count: 'exact', head: true }),
-    supabase.from('intel_signals').select('*', { count: 'exact', head: true }).gte('discovered_at', since24h),
-    supabase.from('daily_briefings').select('generated_at, briefing_date').order('briefing_date', { ascending: false }).limit(1),
-  ]);
+  ] = supabaseReady && supabase
+    ? await Promise.all([
+        supabase
+          .from('intel_signals')
+          .select('id, title, signal_type, industry, company, evidence, amount_usd, confidence, importance_score, discovered_at, source, tags, vendor_id, problem_category, region')
+          .gte('discovered_at', since7d)
+          .order('importance_score', { ascending: false })
+          .limit(500),
+        supabase.from('intel_signals').select('*', { count: 'exact', head: true }),
+        supabase.from('intel_signals').select('*', { count: 'exact', head: true }).gte('discovered_at', since24h),
+        supabase.from('daily_briefings').select('generated_at, briefing_date').order('briefing_date', { ascending: false }).limit(1),
+      ])
+    : [
+        { data: FALLBACK_INTEL_SIGNALS as BriefingSignalRow[] },
+        { count: FALLBACK_INTEL_SIGNALS.length },
+        { count: FALLBACK_INTEL_SIGNALS.length },
+        { data: [] },
+      ];
 
-  const signals = (recentSignals || []) as SignalRow[];
+  const rawSignals: BriefingSignalRow[] = supabaseReady
+    ? ((recentSignals || []) as SignalRow[]).map((signal) => ({
+        ...signal,
+        url: null,
+        created_at: signal.discovered_at,
+      }))
+    : FALLBACK_INTEL_SIGNALS;
+  const intake = analyzeSignalIntake(rawSignals, { limit: 500, fallbackUsed: !supabaseReady });
+  const signals = intake.signals;
 
   // Fetch vendor details
   const vendorIds = signals.filter(s => s.vendor_id).map(s => s.vendor_id!);
   const uniqueVendorIds = Object.keys(vendorIds.reduce((acc: Record<string, boolean>, id) => { acc[id] = true; return acc; }, {}));
   const vendorMap: Record<string, VendorRow> = {};
-  if (uniqueVendorIds.length > 0) {
+  if (supabaseReady && supabase && uniqueVendorIds.length > 0) {
     const { data: vendors } = await supabase
       .from('vendors')
       .select('id, company_name, primary_category, iker_score')
@@ -138,14 +159,19 @@ export async function GET() {
     .filter(s => !s.title.toLowerCase().includes('arxiv'))   // catch any missed
     .map(s => ({
       ...s,
-      briefing_score: s.importance_score + sourceBoost(s.source) + problemBoost(s.problem_category),
+      briefing_score:
+        (s.quality_score ?? s.importance_score) * 100 +
+        (s.source_trust ?? 0.5) * 30 +
+        (s.evidence_quality ?? 0.4) * 20 +
+        sourceBoost(s.source) +
+        problemBoost(s.problem_category),
     }))
     .sort((a, b) => b.briefing_score - a.briefing_score);
 
   // ──────────────────────────────────────────────────────────────
   // STEP 2: Pick top 3 from DIFFERENT industries
   // ──────────────────────────────────────────────────────────────
-  const top3: (SignalRow & { briefing_score: number })[] = [];
+  const top3: (typeof scoredSignals)[number][] = [];
   const usedIndustries: string[] = [];
   const usedTitlePrefixes: string[] = [];
 
@@ -250,7 +276,7 @@ ${signalSummaries}`,
   // ──────────────────────────────────────────────────────────────
   // STEP 4: Build insight cards
   // ──────────────────────────────────────────────────────────────
-  const industryGroups: Record<string, SignalRow[]> = {};
+  const industryGroups: Record<string, typeof signals> = {};
   for (const s of signals) {
     const key = s.industry || 'other';
     if (!industryGroups[key]) industryGroups[key] = [];
@@ -290,7 +316,7 @@ ${signalSummaries}`,
     return {
       rank: i + 1,
       title: cleanTitle,
-      source: signal.source || 'Unknown',
+      source: signal.source_label || signal.source || 'Unknown',
       discovered_at: signal.discovered_at,
       what_is_happening: whats_happening,
       why_it_matters: el_paso_impact.join('. ') + '.',
@@ -310,10 +336,10 @@ ${signalSummaries}`,
         .map(s => ({
           id: s.id,
           title: sanitize(s.title),
-          source: s.source || 'Unknown',
+          source: s.source_label || s.source || 'Unknown',
           discovered_at: s.discovered_at,
           signal_type: s.signal_type,
-          relevance_score: s.importance_score,
+          relevance_score: s.quality_score ?? s.importance_score,
         })),
       vendors: industryVendors,
     };
@@ -428,6 +454,11 @@ ${signalSummaries}`,
       clusters: [],
       regions,
       recent_signals: sortedByDate,
+      source_ops: {
+        duplicates_filtered: intake.pipeline.duplicatesFiltered,
+        low_evidence_discarded: intake.pipeline.lowEvidenceDiscarded,
+        strongest_source: intake.pipeline.topTrustedSources[0]?.source ?? null,
+      },
       trends: { snapshot, time_series: timeSeries },
     },
   });

@@ -8,6 +8,7 @@ import {
 import {
   buildMappingReport,
   loadSignalsForMapping,
+  type MappingReport,
   type MapPoint,
   type MappedEntity,
   type MappedRelationship,
@@ -47,6 +48,7 @@ export type UnifiedBrainReport = {
   relationships: UnifiedBrainRelationship[];
   mapPoints: MapPoint[];
   learning: BrainLearningReport;
+  pipeline: MappingReport['pipeline'];
   warnings: string[];
   sources: {
     signals: {
@@ -156,6 +158,20 @@ export async function loadUnifiedBrainReport(
     relationships,
     mappingReport.mapPoints
   );
+  learning.sourceScores = mappingReport.sourceScores.map((score) => ({
+    source: score.source,
+    normalizedSource: score.normalizedSource,
+    signalCount: score.signalCount,
+    acceptedSignals: score.acceptedSignals,
+    discardedSignals: score.discardedSignals,
+    avgConfidence: score.avgConfidence,
+    avgImportance: score.avgImportance,
+    recencyScore: score.freshnessScore,
+    evidenceQuality: score.evidenceQuality,
+    duplicateRate: score.duplicateRate,
+    noiseScore: score.noiseScore,
+    trustScore: score.trustScore,
+  }));
 
   return {
     scannedSignals: mappingReport.scannedSignals,
@@ -164,7 +180,8 @@ export async function loadUnifiedBrainReport(
     relationships,
     mapPoints: mappingReport.mapPoints,
     learning,
-    warnings,
+    pipeline: mappingReport.pipeline,
+    warnings: [...warnings, ...mappingReport.pipeline.failureStates],
     sources: {
       signals: {
         enabled: true,

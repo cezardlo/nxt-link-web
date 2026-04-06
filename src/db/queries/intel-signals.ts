@@ -18,6 +18,14 @@ export type IntelSignalRow = {
   tags: string[];
   discovered_at: string;
   created_at: string;
+  normalized_source?: string;
+  source_label?: string;
+  source_trust?: number;
+  source_noise?: number;
+  evidence_quality?: number;
+  duplicate_group_size?: number;
+  duplicate_penalty?: number;
+  quality_score?: number;
 };
 
 export type IntelSignalInsert = {

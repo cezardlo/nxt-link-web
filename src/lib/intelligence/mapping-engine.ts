@@ -6,10 +6,29 @@ import {
 } from '@/db/queries/knowledge-graph';
 import { getIntelSignals, type IntelSignalRow } from '@/db/queries/intel-signals';
 import { isSupabaseConfigured } from '@/db/client';
+import {
+  analyzeSignalIntake,
+  type PipelineQualityReport,
+  type SourceQualityScore,
+} from '@/lib/intelligence/source-intelligence';
 
 export type MappingSignal = Pick<
   IntelSignalRow,
-  'id' | 'title' | 'signal_type' | 'industry' | 'company' | 'importance_score' | 'confidence' | 'source' | 'evidence' | 'discovered_at'
+  | 'id'
+  | 'title'
+  | 'signal_type'
+  | 'industry'
+  | 'company'
+  | 'importance_score'
+  | 'confidence'
+  | 'source'
+  | 'evidence'
+  | 'discovered_at'
+  | 'normalized_source'
+  | 'source_label'
+  | 'source_trust'
+  | 'evidence_quality'
+  | 'quality_score'
 >;
 
 export type MappedEntity = {
@@ -41,6 +60,8 @@ export type MapPoint = {
 
 export type MappingReport = {
   scannedSignals: number;
+  sourceScores: SourceQualityScore[];
+  pipeline: PipelineQualityReport;
   entities: MappedEntity[];
   relationships: MappedRelationship[];
   mapPoints: MapPoint[];
@@ -164,6 +185,11 @@ function buildSignalEntity(signal: MappingSignal): MappedEntity {
       company: signal.company,
       importance_score: signal.importance_score,
       discovered_at: signal.discovered_at,
+      normalized_source: signal.normalized_source,
+      source_label: signal.source_label,
+      source_trust: signal.source_trust,
+      evidence_quality: signal.evidence_quality,
+      quality_score: signal.quality_score,
     },
   };
 }
@@ -173,7 +199,7 @@ export async function loadSignalsForMapping(limit = 100): Promise<MappingSignal[
     return FALLBACK_SIGNALS.slice(0, Math.max(1, Math.min(limit, FALLBACK_SIGNALS.length)));
   }
 
-  const signals = await getIntelSignals({ limit });
+  const signals = await getIntelSignals({ limit: Math.min(limit * 3, 500) });
   if (signals.length === 0) {
     return FALLBACK_SIGNALS.slice(0, Math.max(1, Math.min(limit, FALLBACK_SIGNALS.length)));
   }
@@ -181,11 +207,15 @@ export async function loadSignalsForMapping(limit = 100): Promise<MappingSignal[
 }
 
 export function buildMappingReport(signals: MappingSignal[]): MappingReport {
+  const intake = analyzeSignalIntake(signals as IntelSignalRow[], {
+    fallbackUsed: !isSupabaseConfigured(),
+    limit: signals.length,
+  });
   const entities: MappedEntity[] = [];
   const relationships: MappedRelationship[] = [];
   const locationSignalMap = new Map<string, { seed: LocationSeed; signals: MappingSignal[] }>();
 
-  for (const signal of signals) {
+  for (const signal of intake.signals as MappingSignal[]) {
     const signalEntity = buildSignalEntity(signal);
     entities.push(signalEntity);
 
@@ -202,6 +232,8 @@ export function buildMappingReport(signals: MappingSignal[]): MappingReport {
     if (signal.company) {
       const companyEntity = buildEntity(signal, 'company', signal.company, Math.max(0.65, signal.confidence ?? 0.65), {
         source: signal.source,
+        normalized_source: signal.normalized_source,
+        source_trust: signal.source_trust,
       });
       entities.push(companyEntity);
       relationships.push({
@@ -231,6 +263,7 @@ export function buildMappingReport(signals: MappingSignal[]): MappingReport {
         metadata: {
           latitude: location.latitude,
           longitude: location.longitude,
+          source_trust: signal.source_trust,
         },
       };
       entities.push(locationEntity);
@@ -277,7 +310,9 @@ export function buildMappingReport(signals: MappingSignal[]): MappingReport {
   });
 
   return {
-    scannedSignals: signals.length,
+    scannedSignals: intake.pipeline.scannedSignals,
+    sourceScores: intake.sourceScores,
+    pipeline: intake.pipeline,
     entities: dedupedEntities,
     relationships: dedupedRelationships,
     mapPoints,

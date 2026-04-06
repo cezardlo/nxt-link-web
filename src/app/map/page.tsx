@@ -41,6 +41,12 @@ type BrainSyncResponse = {
       highestPriorityCompany: string | null;
     };
   };
+  pipeline?: {
+    duplicatesFiltered?: number;
+    lowEvidenceDiscarded?: number;
+    topTrustedSources?: Array<{ source: string; trustScore: number; signalCount: number }>;
+    weakestSources?: Array<{ source: string; trustScore: number; signalCount: number }>;
+  };
   warnings?: string[];
   sources?: {
     obsidian?: {
@@ -97,6 +103,7 @@ export default function MapPage() {
   });
   const [loading, setLoading] = useState(true);
   const [learning, setLearning] = useState<NonNullable<BrainSyncResponse['learning']> | null>(null);
+  const [pipeline, setPipeline] = useState<NonNullable<BrainSyncResponse['pipeline']> | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -116,6 +123,7 @@ export default function MapPage() {
         setPoints(brainJson.mapPoints ?? []);
         setEntities(brainJson.entities ?? []);
         setLearning(brainJson.learning ?? null);
+        setPipeline(brainJson.pipeline ?? null);
         setSignals(briefingJson.briefing?.recent_signals?.slice(0, 16) ?? []);
         setBrainStats({
           scannedSignals: brainJson.scannedSignals ?? 0,
@@ -327,6 +335,16 @@ export default function MapPage() {
                   </div>
                 </div>
               )}
+              {pipeline && (
+                <div className="rounded-[18px] border border-[rgba(138,160,255,0.12)] bg-[rgba(9,13,22,0.86)] p-4">
+                  <div className="text-xs text-nxt-muted">Pipeline quality</div>
+                  <div className="mt-3 space-y-2 text-sm text-nxt-secondary">
+                    <div>Duplicates filtered: <span className="font-semibold text-nxt-text">{pipeline.duplicatesFiltered ?? 0}</span></div>
+                    <div>Low evidence discarded: <span className="font-semibold text-nxt-text">{pipeline.lowEvidenceDiscarded ?? 0}</span></div>
+                    <div>Best source: <span className="font-semibold text-nxt-text">{pipeline.topTrustedSources?.[0]?.source ?? 'none yet'}</span></div>
+                  </div>
+                </div>
+              )}
               <div className="rounded-[18px] border border-nxt-border bg-nxt-surface/70 p-4">
                 <div className="text-xs text-nxt-muted">Obsidian memory</div>
                 <div className="mt-1 text-sm font-semibold text-nxt-text">
@@ -472,6 +490,49 @@ export default function MapPage() {
             </div>
           </div>
         </section>
+
+        {pipeline && (
+          <section className="mt-4 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-sm font-semibold">Top trusted sources</h2>
+                <span className="text-[11px] font-mono text-nxt-dim">map weighting</span>
+              </div>
+              <div className="space-y-2">
+                {(pipeline.topTrustedSources ?? []).slice(0, 4).map((item) => (
+                  <div key={item.source} className="rounded-[18px] border border-nxt-border bg-nxt-card/85 p-4">
+                    <div className="flex items-end justify-between gap-3">
+                      <div className="text-sm font-medium text-nxt-text">{item.source}</div>
+                      <div className="text-right">
+                        <div className="text-lg font-mono font-bold text-nxt-text">{Math.round(item.trustScore * 100)}</div>
+                        <div className="text-[10px] uppercase tracking-[0.16em] text-nxt-dim">trust</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-sm font-semibold">Weakest sources</h2>
+                <span className="text-[11px] font-mono text-nxt-dim">noise watch</span>
+              </div>
+              <div className="space-y-2">
+                {(pipeline.weakestSources ?? []).slice(0, 4).map((item) => (
+                  <div key={item.source} className="rounded-[18px] border border-nxt-border bg-nxt-card/85 p-4">
+                    <div className="flex items-end justify-between gap-3">
+                      <div className="text-sm font-medium text-nxt-text">{item.source}</div>
+                      <div className="text-right">
+                        <div className="text-lg font-mono font-bold text-nxt-text">{Math.round(item.trustScore * 100)}</div>
+                        <div className="text-[10px] uppercase tracking-[0.16em] text-nxt-dim">trust</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

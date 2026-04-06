@@ -3,10 +3,16 @@ import type { MappingSignal, MapPoint } from '@/lib/intelligence/mapping-engine'
 
 export type LearnedSourceScore = {
   source: string;
+  normalizedSource?: string;
   signalCount: number;
+  acceptedSignals?: number;
+  discardedSignals?: number;
   avgConfidence: number;
   avgImportance: number;
   recencyScore: number;
+  evidenceQuality?: number;
+  duplicateRate?: number;
+  noiseScore?: number;
   trustScore: number;
 };
 
@@ -148,9 +154,10 @@ export function buildBrainLearningReport(
     const importance = clamp(signal.importance_score ?? 0.5);
     const confidence = clamp(signal.confidence ?? 0.5);
     const recency = computeRecencyScore(signal.discovered_at);
+    const sourceTrust = clamp(signal.source_trust ?? 0.5);
 
-    const sourceName = signal.source?.trim() || 'unknown-source';
-    const sourceSlug = slugify(sourceName);
+    const sourceName = signal.source_label?.trim() || signal.source?.trim() || 'unknown-source';
+    const sourceSlug = signal.normalized_source || slugify(sourceName);
     const sourceBucket = sourceBuckets.get(sourceSlug) ?? {
       name: sourceName,
       slug: sourceSlug,
@@ -160,7 +167,7 @@ export function buildBrainLearningReport(
       recencyTotal: 0,
     };
     sourceBucket.signalCount += 1;
-    sourceBucket.importanceTotal += importance;
+    sourceBucket.importanceTotal += importance * 0.7 + sourceTrust * 0.3;
     sourceBucket.confidenceTotal += confidence;
     sourceBucket.recencyTotal += recency;
     sourceBuckets.set(sourceSlug, sourceBucket);
@@ -176,8 +183,8 @@ export function buildBrainLearningReport(
       recencyTotal: 0,
     };
     industryBucket.signalCount += 1;
-    industryBucket.importanceTotal += importance;
-    industryBucket.confidenceTotal += confidence;
+    industryBucket.importanceTotal += importance * 0.72 + sourceTrust * 0.28;
+    industryBucket.confidenceTotal += confidence * 0.8 + sourceTrust * 0.2;
     industryBucket.recencyTotal += recency;
     industryBuckets.set(industrySlug, industryBucket);
 
@@ -195,8 +202,8 @@ export function buildBrainLearningReport(
         locations: new Set<string>(),
       };
       companyBucket.signalCount += 1;
-      companyBucket.importanceTotal += importance;
-      companyBucket.confidenceTotal += confidence;
+      companyBucket.importanceTotal += importance * 0.7 + sourceTrust * 0.3;
+      companyBucket.confidenceTotal += confidence * 0.78 + sourceTrust * 0.22;
       companyBucket.recencyTotal += recency;
       companyBucket.industries.add(industryName);
 
@@ -214,10 +221,16 @@ export function buildBrainLearningReport(
       const volumeBoost = Math.min(bucket.signalCount / 10, 1);
       return {
         source: bucket.name,
+        normalizedSource: bucket.slug,
         signalCount: bucket.signalCount,
+        acceptedSignals: bucket.signalCount,
+        discardedSignals: 0,
         avgConfidence: round(avgConfidence),
         avgImportance: round(avgImportance),
         recencyScore: round(avgRecency),
+        evidenceQuality: undefined,
+        duplicateRate: undefined,
+        noiseScore: undefined,
         trustScore: round(
           clamp(avgConfidence * 0.45 + avgImportance * 0.3 + avgRecency * 0.15 + volumeBoost * 0.1)
         ),
