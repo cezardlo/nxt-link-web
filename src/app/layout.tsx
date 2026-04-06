@@ -23,8 +23,8 @@ export const viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'NXT//LINK â Supply Chain Intelligence',
-  description: 'Global supply chain intelligence platform â signals, vendors, and opportunities across every industry.',
+  title: 'NXT//LINK | Supply Chain Intelligence',
+  description: 'Supply chain intelligence platform for tracking signals, vendors, products, and market opportunities.',
   robots: { index: false, follow: false },
   appleWebApp: {
     capable: true,

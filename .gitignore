@@ -48,6 +48,7 @@ next-env.d.ts
 
 # Claude workspace
 .claude/
+.tmp/
 
 # Prisma SQLite dev database
 prisma/dev.db

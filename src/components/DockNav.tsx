@@ -25,31 +25,34 @@ export function DockNav() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-[100] glass">
-      <div className="max-w-[1200px] mx-auto px-6 h-14 flex items-center justify-between">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 shrink-0">
-          <div className="w-7 h-7 rounded-lg bg-nxt-accent flex items-center justify-center">
+      <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between px-4 sm:px-6">
+        <Link href="/" className="flex shrink-0 items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[rgba(138,160,255,0.22)] bg-[linear-gradient(180deg,rgba(88,113,255,0.26),rgba(88,113,255,0.12))]">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
             </svg>
           </div>
-          <span className="font-grotesk font-semibold text-sm text-nxt-text tracking-tight">
-            NXT<span className="text-nxt-muted mx-0.5">{'//'}</span>LINK
-          </span>
+          <div className="min-w-0">
+            <div className="font-grotesk text-sm font-semibold tracking-tight text-nxt-text">
+              NXT<span className="mx-0.5 text-nxt-muted">{'//'}</span>LINK
+            </div>
+            <div className="hidden font-mono text-[10px] uppercase tracking-[0.22em] text-nxt-dim sm:block">
+              Market intelligence
+            </div>
+          </div>
         </Link>
 
-        {/* Nav links */}
-        <div className="flex items-center gap-1">
+        <div className="hidden items-center gap-1 rounded-full border border-nxt-border bg-[rgba(9,14,26,0.72)] p-1 lg:flex">
           {NAV_ITEMS.map((item) => {
             const active = isActive(pathname, item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors duration-150 ${
+                className={`rounded-full px-3 py-1.5 text-[13px] font-medium transition-all duration-150 ${
                   active
-                    ? 'text-nxt-text bg-nxt-elevated'
-                    : 'text-nxt-muted hover:text-nxt-secondary hover:bg-nxt-surface'
+                    ? 'bg-nxt-elevated text-nxt-text shadow-[inset_0_0_0_1px_rgba(138,160,255,0.12)]'
+                    : 'text-nxt-muted hover:bg-nxt-surface hover:text-nxt-secondary'
                 }`}
               >
                 {item.label}
@@ -58,13 +61,12 @@ export function DockNav() {
           })}
         </div>
 
-        {/* Right side */}
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex shrink-0 items-center gap-3">
           <TranslateButton />
-          <div className="w-px h-5 bg-nxt-border" />
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-nxt-green live-pulse" />
-            <span className="text-xs text-nxt-muted font-mono">LIVE</span>
+          <div className="hidden h-5 w-px bg-nxt-border sm:block" />
+          <div className="flex items-center gap-2 rounded-full border border-[rgba(39,209,127,0.18)] bg-[rgba(39,209,127,0.08)] px-2.5 py-1">
+            <div className="h-2 w-2 rounded-full bg-nxt-green live-pulse" />
+            <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-nxt-secondary">Live</span>
           </div>
         </div>
       </div>

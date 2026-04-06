@@ -1,21 +1,15 @@
-// ─── POST /api/mcp — NXT LINK MCP Endpoint ──────────────────────────────────
+// POST /api/mcp - NXT LINK MCP endpoint
 // JSON-RPC 2.0 endpoint implementing the Model Context Protocol.
-// AI agents (Claude, GPT, etc.) can query NXT LINK intelligence programmatically.
+// AI agents can query NXT LINK intelligence programmatically.
 //
 // Auth: X-MCP-Key header or Authorization: Bearer <key>
 //       If MCP_API_KEY env var is not set, auth is disabled (dev mode).
 //
 // Methods:
-//   initialize   — MCP handshake
-//   ping         — Health check
-//   tools/list   — List available tools
-//   tools/call   — Execute a tool
-//
-// Example:
-//   curl -X POST http://localhost:3000/api/mcp \
-//     -H "Content-Type: application/json" \
-//     -H "X-MCP-Key: your-key" \
-//     -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+//   initialize   - MCP handshake
+//   ping         - Health check
+//   tools/list   - List available tools
+//   tools/call   - Execute a tool
 
 import { NextResponse } from 'next/server';
 import { validateAuth, processRawBody } from '@/lib/mcp/server';
@@ -24,7 +18,6 @@ import { RPC_ERRORS } from '@/lib/mcp/types';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request): Promise<NextResponse> {
-  // ── Auth ────────────────────────────────────────────────────────────────
   const auth = validateAuth(request.headers);
   if (!auth.valid) {
     return NextResponse.json(
@@ -41,7 +34,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  // ── Parse body ──────────────────────────────────────────────────────────
   let body: unknown;
   try {
     body = await request.json();
@@ -60,7 +52,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  // ── Process ─────────────────────────────────────────────────────────────
   try {
     const result = await processRawBody(body);
     return NextResponse.json(result, {
@@ -86,8 +77,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 }
 
-// ── GET — Discovery / health check ────────────────────────────────────────
-
+// GET - Discovery and health check
 export async function GET(): Promise<NextResponse> {
   return NextResponse.json(
     {
@@ -100,11 +90,11 @@ export async function GET(): Promise<NextResponse> {
       methods: ['initialize', 'ping', 'tools/list', 'tools/call'],
       auth: process.env.MCP_API_KEY ? 'required (X-MCP-Key or Bearer token)' : 'disabled (dev mode)',
       tools: [
-        'search_vendors — Search vendor database with IKER scores',
-        'get_vendor_dossier — Full intelligence dossier for a vendor',
-        'list_signals — Get recent intelligence signals',
-        'get_signal_connections — Get connected signals graph',
-        'solve_problem — Run the NXT LINK solve engine',
+        'search_vendors - Search vendor database with IKER scores',
+        'get_vendor_dossier - Full intelligence dossier for a vendor',
+        'list_signals - Get recent intelligence signals',
+        'get_signal_connections - Get connected signals graph',
+        'solve_problem - Run the NXT LINK solve engine',
       ],
     },
     {
