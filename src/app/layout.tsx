@@ -25,7 +25,7 @@ export const viewport = {
 export const metadata: Metadata = {
   title: 'NXT//LINK | Supply Chain Intelligence',
   description: 'Supply chain intelligence platform for tracking signals, vendors, products, and market opportunities.',
-  robots: { index: false, follow: false },
+  robots: { index: true, follow: true },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -46,7 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to content
         </a>
         <DockNav />
-        <main id="main-content" className="pt-14">
+        <main id="main-content" className="pt-24 lg:pt-14">
           {children}
         </main>
         <Analytics />

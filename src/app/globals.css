@@ -94,6 +94,8 @@ img { transition: opacity 0.3s ease; }
 /* Hide scrollbar */
 .scrollbar-none { scrollbar-width: none; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
+.nav-scroll { scrollbar-width: none; }
+.nav-scroll::-webkit-scrollbar { display: none; }
 
 /* Touch scroll */
 .scrollbar-thin, [class*="overflow-y-auto"] {
@@ -274,5 +276,11 @@ body { top: 0 !important; }
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .feed-scroll {
+    animation-duration: 52s;
   }
 }

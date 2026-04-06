@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { COLORS } from '@/lib/tokens';
 
-/* --- Types --- */
 type Signal = {
   id: string;
   title: string;
@@ -11,6 +10,7 @@ type Signal = {
   source: string | null;
   industry: string | null;
   importance_score: number | null;
+  confidence?: number | null;
   discovered_at: string;
   url: string | null;
   signal_type: string | null;
@@ -19,12 +19,11 @@ type Signal = {
 
 type Tab = 'all' | 'high' | 'trending';
 
-const INDUSTRIES = [
-  'ALL', 'logistics', 'manufacturing', 'border-tech', 'general',
-];
+const INDUSTRIES = ['ALL', 'logistics', 'manufacturing', 'border-tech', 'general'];
+const SCORE_FILTERS = [0, 50, 70, 85];
 
 function sourceName(source: string | null): string {
-  if (!source) return '';
+  if (!source) return 'Unknown source';
   try {
     const hostname = new URL(source).hostname.replace('www.', '');
     const map: Record<string, string> = {
@@ -34,11 +33,11 @@ function sourceName(source: string | null): string {
       'news.ycombinator.com': 'Hacker News',
       'arxiv.org': 'arXiv',
       'patentsview.org': 'Patents',
-      'federalregister.gov': 'Fed Register',
+      'federalregister.gov': 'Federal Register',
     };
     return map[hostname] || hostname.split('.')[0].charAt(0).toUpperCase() + hostname.split('.')[0].slice(1);
   } catch {
-    return source.slice(0, 20);
+    return source.slice(0, 28);
   }
 }
 
@@ -47,10 +46,26 @@ function displayScore(score: number | null): number {
   return Math.round(score <= 1 ? score * 100 : score);
 }
 
+function displayConfidence(score: number | null | undefined): number {
+  if (!score) return 0;
+  return Math.round(score <= 1 ? score * 100 : score);
+}
+
 function scoreColor(display: number): string {
-  if (display >= 75) return COLORS.accent;
+  if (display >= 85) return COLORS.green;
+  if (display >= 70) return COLORS.accent;
   if (display >= 50) return COLORS.amber;
-  return COLORS.dim;
+  return COLORS.muted;
+}
+
+function trustLabel(score: number, confidence: number, signal: Signal): string {
+  let value = score * 0.5 + confidence * 0.35;
+  if (signal.source) value += 8;
+  if (signal.evidence) value += 7;
+  if (signal.company) value += 5;
+  if (value >= 82) return 'High trust';
+  if (value >= 62) return 'Medium trust';
+  return 'Early signal';
 }
 
 function relTime(dateStr: string): string {
@@ -78,6 +93,15 @@ function signalTypeColor(type: string | null): string {
   return map[type] || COLORS.muted;
 }
 
+function trustReason(signal: Signal): string {
+  const parts: string[] = [];
+  if (signal.source) parts.push('named source');
+  if (signal.evidence) parts.push('supporting evidence');
+  if (signal.company) parts.push('company attached');
+  if (parts.length === 0) return 'limited context so far';
+  return parts.join(', ');
+}
+
 export default function IntelPage() {
   const [signals, setSignals] = useState<Signal[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -87,204 +111,353 @@ export default function IntelPage() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('all');
   const [industry, setIndustry] = useState('ALL');
+  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [minScore, setMinScore] = useState(0);
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 25;
 
-  const fetchSignals = useCallback(async (reset = false) => {
-    const currentPage = reset ? 0 : page;
-    setError(null);
-    try {
-      const params = new URLSearchParams({ tab, industry, page: String(currentPage), page_size: String(PAGE_SIZE) });
-      const res = await fetch(`/api/intel/feed?${params}`);
-      if (!res.ok) throw new Error(`API returned ${res.status}`);
-      const json = await res.json();
-      if (reset || currentPage === 0) {
-        setSignals(json.signals ?? []);
-      } else {
-        setSignals((prev) => [...prev, ...(json.signals ?? [])]);
+  useEffect(() => {
+    let ignore = false;
+
+    async function load(reset: boolean) {
+      const nextPage = reset ? 0 : page;
+      if (reset) setLoading(true);
+      setError(null);
+
+      try {
+        const params = new URLSearchParams({
+          tab,
+          industry,
+          q: search,
+          page: String(nextPage),
+          page_size: String(PAGE_SIZE),
+          min_score: String(minScore),
+        });
+        const response = await fetch(`/api/intel/feed?${params.toString()}`);
+        if (!response.ok) throw new Error(`API returned ${response.status}`);
+        const json = await response.json();
+        if (ignore) return;
+        setSignals((current) => (reset ? (json.signals ?? []) : [...current, ...(json.signals ?? [])]));
+        setTotalCount(json.totalCount ?? 0);
+        setHighCount(json.highCount ?? 0);
+        setFilteredCount(json.filteredCount ?? 0);
+      } catch (fetchError) {
+        if (!ignore) {
+          console.error('[intel] fetch error:', fetchError);
+          setError('Failed to load signals');
+        }
+      } finally {
+        if (!ignore) setLoading(false);
       }
-      setTotalCount(json.totalCount ?? 0);
-      setHighCount(json.highCount ?? 0);
-      setFilteredCount(json.filteredCount ?? 0);
-    } catch (err) {
-      console.error('[intel] fetch error:', err);
-      setError('Failed to load signals');
-    } finally {
-      setLoading(false);
     }
-  }, [tab, industry, page]);
 
-  useEffect(() => {
-    setPage(0);
-    setLoading(true);
-    fetchSignals(true);
-  }, [tab, industry]); // eslint-disable-line react-hooks/exhaustive-deps
+    load(page === 0);
+    return () => {
+      ignore = true;
+    };
+  }, [tab, industry, search, minScore, page]);
 
-  useEffect(() => {
-    if (page > 0) fetchSignals();
-  }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
+  const topIndustry = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const signal of signals) {
+      const key = signal.industry ?? 'unknown';
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'none';
+  }, [signals]);
+
+  const averageScore = useMemo(() => {
+    if (signals.length === 0) return 0;
+    const total = signals.reduce((sum, signal) => sum + displayScore(signal.importance_score), 0);
+    return Math.round(total / signals.length);
+  }, [signals]);
+
+  const confidenceCoverage = useMemo(() => {
+    if (signals.length === 0) return 0;
+    const covered = signals.filter((signal) => (signal.confidence ?? 0) > 0).length;
+    return Math.round((covered / signals.length) * 100);
+  }, [signals]);
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-[900px] mx-auto px-6 py-10 pb-20">
+      <div className="mx-auto max-w-[1120px] px-6 py-10 pb-20">
+        <section className="slide-up mb-8 grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
+          <div className="rounded-[28px] border border-[rgba(138,160,255,0.14)] bg-[linear-gradient(180deg,rgba(16,22,39,0.94),rgba(9,12,22,0.96))] p-6 shadow-[0_24px_80px_rgba(2,6,20,0.34)]">
+            <p className="section-kicker mb-3">Signal Desk</p>
+            <h1 className="max-w-[620px] text-3xl font-semibold leading-tight text-nxt-text sm:text-4xl">
+              Filter the noise, rank the movement, and explain why each signal matters.
+            </h1>
+            <p className="mt-4 max-w-[660px] text-sm leading-7 text-nxt-secondary">
+              This feed is now tuned for faster decisions: stronger filters, clearer trust scoring,
+              easier scanning, and better context around where a signal came from.
+            </p>
 
-        {/* Header */}
-        <div className="mb-8 slide-up">
-          <h1 className="text-xl font-semibold text-nxt-text mb-1">Signal Feed</h1>
-          <p className="text-sm text-nxt-muted">
-            Real-time intelligence -- {totalCount.toLocaleString()} signals tracked, ranked by importance.
-          </p>
-        </div>
+            <div className="mt-6 flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  setPage(0);
+                  setTab('high');
+                }}
+                className="rounded-full border border-[rgba(39,209,127,0.24)] bg-[rgba(14,39,30,0.72)] px-3 py-1.5 text-xs font-medium text-nxt-green"
+              >
+                Highest-priority first
+              </button>
+              <button
+                onClick={() => {
+                  setPage(0);
+                  setMinScore(70);
+                }}
+                className="rounded-full border border-nxt-border bg-nxt-surface px-3 py-1.5 text-xs font-medium text-nxt-secondary"
+              >
+                Show stronger evidence only
+              </button>
+            </div>
+          </div>
 
-        {/* Tabs */}
-        <div className="flex items-center gap-1 mb-5 p-1 bg-nxt-surface rounded-lg border border-nxt-border w-fit">
-          {([
-            { key: 'all' as Tab, label: 'All Signals', count: totalCount },
-            { key: 'high' as Tab, label: 'High Priority', count: highCount },
-            { key: 'trending' as Tab, label: 'Trending', count: null },
-          ]).map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`text-[13px] font-medium px-4 py-1.5 rounded-md transition-all duration-150 ${
-                tab === t.key
-                  ? 'bg-nxt-elevated text-nxt-text'
-                  : 'text-nxt-muted hover:text-nxt-secondary'
-              }`}
-            >
-              {t.label}
-              {t.count !== null && (
-                <span className="ml-1.5 text-[11px] text-nxt-dim font-mono">{t.count.toLocaleString()}</span>
-              )}
-            </button>
-          ))}
-        </div>
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+            {[
+              { label: 'Visible signals', value: filteredCount, hint: `${totalCount.toLocaleString()} total tracked` },
+              { label: 'Average priority', value: averageScore, hint: `top industry: ${topIndustry.replace(/-/g, ' ')}` },
+              { label: 'Confidence coverage', value: `${confidenceCoverage}%`, hint: `${highCount.toLocaleString()} high-priority signals` },
+            ].map((item) => (
+              <div key={item.label} className="rounded-[22px] border border-nxt-border bg-nxt-surface/88 p-4">
+                <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">{item.label}</div>
+                <div className="mt-2 text-2xl font-mono font-bold text-nxt-text">{item.value}</div>
+                <div className="mt-1 text-xs text-nxt-muted">{item.hint}</div>
+              </div>
+            ))}
+          </div>
+        </section>
 
-        {/* Industry Filter Pills */}
-        <div className="flex items-center gap-1.5 mb-6 flex-wrap">
-          {INDUSTRIES.map((ind) => (
-            <button
-              key={ind}
-              onClick={() => setIndustry(ind)}
-              className={`text-xs font-medium px-3 py-1.5 rounded-full transition-all duration-150 border ${
-                industry === ind
-                  ? 'bg-nxt-accent/10 text-nxt-accent-light border-nxt-accent/20'
-                  : 'text-nxt-muted border-nxt-border hover:text-nxt-secondary hover:border-nxt-border'
-              }`}
-            >
-              {ind === 'ALL' ? 'All' : ind.replace(/-/g, ' ')}
-            </button>
-          ))}
-        </div>
+        <section className="mb-6 rounded-[24px] border border-nxt-border bg-nxt-surface/80 p-4">
+          <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Search company, source, headline, or evidence"
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      setPage(0);
+                      setSearch(searchInput.trim());
+                    }
+                  }}
+                  className="flex-1 rounded-xl border border-nxt-border bg-[rgba(7,10,18,0.9)] px-4 py-3 text-sm text-nxt-text placeholder:text-nxt-dim focus:border-nxt-accent/40 focus:outline-none"
+                />
+                <button
+                  onClick={() => {
+                    setPage(0);
+                    setSearch(searchInput.trim());
+                  }}
+                  className="rounded-xl bg-nxt-accent px-4 py-3 text-sm font-semibold text-white"
+                >
+                  Apply
+                </button>
+                <button
+                  onClick={() => {
+                    setPage(0);
+                    setSearch('');
+                    setSearchInput('');
+                    setIndustry('ALL');
+                    setMinScore(0);
+                    setTab('all');
+                  }}
+                  className="rounded-xl border border-nxt-border bg-nxt-card px-4 py-3 text-sm text-nxt-muted"
+                >
+                  Reset
+                </button>
+              </div>
 
-        {/* Signal Feed */}
-        <div className="space-y-2">
+              <div className="flex flex-wrap gap-1.5">
+                {(['all', 'high', 'trending'] as Tab[]).map((item) => (
+                  <button
+                    key={item}
+                    onClick={() => {
+                      setPage(0);
+                      setTab(item);
+                    }}
+                    className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
+                      tab === item
+                        ? 'bg-nxt-elevated text-nxt-text shadow-[inset_0_0_0_1px_rgba(138,160,255,0.14)]'
+                        : 'border border-nxt-border text-nxt-muted'
+                    }`}
+                  >
+                    {item === 'all' ? 'All signals' : item === 'high' ? 'High priority' : 'Trending'}
+                  </button>
+                ))}
+                {INDUSTRIES.map((item) => (
+                  <button
+                    key={item}
+                    onClick={() => {
+                      setPage(0);
+                      setIndustry(item);
+                    }}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+                      industry === item
+                        ? 'border-nxt-accent/20 bg-nxt-accent/10 text-nxt-accent-light'
+                        : 'border-nxt-border text-nxt-muted'
+                    }`}
+                  >
+                    {item === 'ALL' ? 'All industries' : item.replace(/-/g, ' ')}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[18px] border border-[rgba(138,160,255,0.12)] bg-[rgba(9,13,22,0.86)] p-4">
+              <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Trust guide</div>
+              <div className="mt-3 space-y-3 text-sm text-nxt-secondary">
+                <p>Priority score measures potential importance. Confidence measures how solid the evidence looks.</p>
+                <p>The strongest signals usually have a named source, supporting evidence, and a company attached.</p>
+                <div className="flex flex-wrap gap-2">
+                  {SCORE_FILTERS.map((value) => (
+                    <button
+                      key={value}
+                      onClick={() => {
+                        setPage(0);
+                        setMinScore(value);
+                      }}
+                      className={`rounded-full px-3 py-1 text-xs font-mono ${
+                        minScore === value ? 'bg-nxt-accent/15 text-nxt-accent-light' : 'bg-nxt-card text-nxt-muted'
+                      }`}
+                    >
+                      {value === 0 ? 'all scores' : `${value}+ only`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-3">
           {loading && signals.length === 0 ? (
             <div className="py-20">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="bg-nxt-surface border border-nxt-border rounded-nxt-md p-5 mb-3">
-                  <div className="h-3 w-48 rounded bg-nxt-card shimmer mb-3" />
-                  <div className="h-4 w-full rounded bg-nxt-card shimmer mb-2" />
+              {[1, 2, 3, 4].map((item) => (
+                <div key={item} className="mb-3 rounded-[22px] border border-nxt-border bg-nxt-surface p-5">
+                  <div className="mb-3 h-3 w-48 rounded bg-nxt-card shimmer" />
+                  <div className="mb-2 h-4 w-full rounded bg-nxt-card shimmer" />
                   <div className="h-4 w-2/3 rounded bg-nxt-card shimmer" />
                 </div>
               ))}
             </div>
           ) : error ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <div className="flex flex-col items-center justify-center gap-4 py-20">
               <div className="text-sm text-nxt-red">{error}</div>
               <button
-                onClick={() => { setLoading(true); fetchSignals(true); }}
-                className="text-sm font-medium px-5 py-2 rounded-lg border border-nxt-accent/20 text-nxt-accent-light hover:bg-nxt-accent/5 transition-colors"
+                onClick={() => setPage(0)}
+                className="rounded-lg border border-nxt-accent/20 px-5 py-2 text-sm font-medium text-nxt-accent-light"
               >
                 Retry
               </button>
             </div>
           ) : signals.length === 0 ? (
-            <div className="flex items-center justify-center py-20">
-              <span className="text-sm text-nxt-dim">No signals found for this filter</span>
+            <div className="flex items-center justify-center py-20 text-sm text-nxt-dim">
+              No signals found for this filter.
             </div>
           ) : (
             signals.map((signal) => {
               const score = displayScore(signal.importance_score);
-              const sColor = scoreColor(score);
+              const confidence = displayConfidence(signal.confidence);
+              const accent = signalTypeColor(signal.signal_type);
+              const label = trustLabel(score, confidence, signal);
+
               return (
                 <a
                   key={signal.id}
                   href={signal.url ?? '#'}
                   target={signal.url ? '_blank' : undefined}
                   rel="noopener noreferrer"
-                  className="block bg-nxt-surface border border-nxt-border rounded-nxt-md p-5 card-hover"
-                  style={{ borderLeftWidth: 3, borderLeftColor: signalTypeColor(signal.signal_type) }}
+                  className="block rounded-[24px] border border-nxt-border bg-[linear-gradient(180deg,rgba(15,19,32,0.94),rgba(9,12,22,0.96))] p-5 transition-all hover:border-[rgba(138,160,255,0.22)] hover:shadow-[0_18px_48px_rgba(3,8,21,0.32)]"
+                  style={{ borderLeftWidth: 3, borderLeftColor: accent }}
                 >
-                  <div className="flex gap-4">
-                    {/* Score */}
-                    <div className="flex flex-col items-center gap-1 shrink-0">
+                  <div className="grid gap-4 lg:grid-cols-[76px_1fr_210px]">
+                    <div className="flex gap-3 lg:block">
                       <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center font-mono text-sm font-semibold"
-                        style={{ color: sColor, background: sColor + '12', border: `1px solid ${sColor}20` }}
+                        className="flex h-14 w-14 flex-col items-center justify-center rounded-2xl border"
+                        style={{ color: scoreColor(score), background: `${scoreColor(score)}14`, borderColor: `${scoreColor(score)}24` }}
                       >
-                        {score}
+                        <span className="text-lg font-bold font-mono">{score}</span>
+                        <span className="text-[9px] uppercase tracking-[0.18em]">Priority</span>
+                      </div>
+                      <div
+                        className="flex h-14 w-14 flex-col items-center justify-center rounded-2xl border"
+                        style={{ color: scoreColor(confidence), background: `${scoreColor(confidence)}10`, borderColor: `${scoreColor(confidence)}20` }}
+                      >
+                        <span className="text-lg font-bold font-mono">{confidence}</span>
+                        <span className="text-[9px] uppercase tracking-[0.18em]">Conf</span>
                       </div>
                     </div>
 
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      {/* Meta */}
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <div className="min-w-0">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
                         {signal.industry && (
-                          <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-nxt-card border border-nxt-border-subtle text-nxt-secondary">
+                          <span className="rounded-full border border-nxt-border bg-nxt-card px-2.5 py-1 text-[11px] text-nxt-secondary">
                             {signal.industry.replace(/-/g, ' ')}
                           </span>
                         )}
                         {signal.signal_type && (
-                          <span
-                            className="text-[11px] px-2 py-0.5 rounded-md"
-                            style={{ background: signalTypeColor(signal.signal_type) + '12', color: signalTypeColor(signal.signal_type) }}
-                          >
+                          <span className="rounded-full px-2.5 py-1 text-[11px]" style={{ background: `${accent}16`, color: accent }}>
                             {signal.signal_type.replace(/_/g, ' ')}
                           </span>
                         )}
-                        {signal.source && (
-                          <span className="text-[11px] text-nxt-dim">{sourceName(signal.source)}</span>
-                        )}
-                        <span className="text-[11px] font-mono text-nxt-dim ml-auto">{relTime(signal.discovered_at)}</span>
+                        <span className="text-[11px] text-nxt-dim">{sourceName(signal.source)}</span>
+                        <span className="ml-auto text-[11px] font-mono text-nxt-dim">{relTime(signal.discovered_at)}</span>
                       </div>
 
-                      {/* Title */}
-                      <div className="text-[15px] font-medium leading-snug text-nxt-text mb-1.5">
-                        {signal.title}
-                      </div>
+                      <div className="text-[16px] font-medium leading-snug text-nxt-text">{signal.title}</div>
 
-                      {/* Evidence */}
                       {signal.evidence && (
-                        <div className="text-[13px] leading-relaxed text-nxt-muted line-clamp-2">
-                          {signal.evidence}
-                        </div>
+                        <p className="mt-2 text-[13px] leading-6 text-nxt-muted">{signal.evidence}</p>
                       )}
 
-                      {/* Company */}
-                      {signal.company && (
-                        <div className="mt-2">
-                          <span className="text-[11px] px-2 py-0.5 rounded-md bg-nxt-accent/8 text-nxt-accent-light">
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        {signal.company && (
+                          <span className="rounded-full bg-nxt-accent/10 px-2.5 py-1 text-[11px] text-nxt-accent-light">
                             {signal.company}
                           </span>
-                        </div>
-                      )}
+                        )}
+                        <span className="text-[11px] text-nxt-dim">Trust basis: {trustReason(signal)}</span>
+                      </div>
+                    </div>
+
+                    <div className="rounded-[18px] border border-[rgba(138,160,255,0.12)] bg-[rgba(9,13,22,0.86)] p-4">
+                      <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Decision read</div>
+                      <div className="mt-2 text-sm font-semibold text-nxt-text">{label}</div>
+                      <p className="mt-2 text-xs leading-6 text-nxt-secondary">
+                        {label === 'High trust'
+                          ? 'Ready to brief or route to a team without much extra cleanup.'
+                          : label === 'Medium trust'
+                            ? 'Strong enough to watch closely, but still benefits from follow-up.'
+                            : 'Useful as an early indicator, not as a finished decision by itself.'}
+                      </p>
+                      <div className="mt-3 flex items-center justify-between text-[11px] text-nxt-dim">
+                        <span>Why this matters</span>
+                        <span className="font-mono">{Math.max(score, confidence)} / 100</span>
+                      </div>
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-nxt-card">
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${Math.max(score, confidence)}%`, background: accent }}
+                        />
+                      </div>
                     </div>
                   </div>
                 </a>
               );
             })
           )}
-        </div>
+        </section>
 
-        {/* Load More */}
         {signals.length > 0 && signals.length < filteredCount && (
-          <div className="flex justify-center mt-8">
+          <div className="mt-8 flex justify-center">
             <button
-              onClick={() => setPage((p) => p + 1)}
+              onClick={() => setPage((current) => current + 1)}
               disabled={loading}
-              className="text-sm font-medium px-6 py-2.5 rounded-lg border border-nxt-border text-nxt-secondary hover:text-nxt-text hover:border-nxt-accent/20 transition-all"
+              className="rounded-lg border border-nxt-border px-6 py-2.5 text-sm font-medium text-nxt-secondary hover:border-nxt-accent/20 hover:text-nxt-text"
             >
               {loading ? 'Loading...' : 'Load more signals'}
             </button>
@@ -293,4 +466,4 @@ export default function IntelPage() {
       </div>
     </div>
   );
-                    }
+}

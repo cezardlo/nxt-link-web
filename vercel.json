@@ -11,6 +11,10 @@
     {
       "path": "/api/agents/cron-step?agent=vendor-pipeline",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/brain/sync/cron?limit=150",
+      "schedule": "0 * * * *"
     }
   ]
 }
