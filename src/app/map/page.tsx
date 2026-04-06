@@ -29,6 +29,17 @@ type BrainSyncResponse = {
   entities: BrainEntity[];
   relationships: Array<{ source: string; target: string; type: string }>;
   mapPoints: MapPoint[];
+  signalAssessments?: Array<{
+    id: string;
+    title: string;
+    industry: string | null;
+    el_paso_relevance: number;
+    opportunity_score: number;
+    urgency_score: number;
+    local_pathway: string;
+    recommended_actions: string[];
+    suggested_targets: string[];
+  }>;
   learning?: {
     sourceScores?: Array<{ source: string; trustScore: number; signalCount: number }>;
     industryMomentum?: Array<{ name: string; momentumScore: number; signalCount: number }>;
@@ -46,6 +57,23 @@ type BrainSyncResponse = {
     lowEvidenceDiscarded?: number;
     topTrustedSources?: Array<{ source: string; trustScore: number; signalCount: number }>;
     weakestSources?: Array<{ source: string; trustScore: number; signalCount: number }>;
+  };
+  memory?: {
+    recurringCompanies?: Array<{ name: string; repeatCount: number; score: number }>;
+    recurringTechnologies?: Array<{ name: string; repeatCount: number; score: number }>;
+    risingLocations?: Array<{ name: string; score: number; change: number }>;
+  };
+  opportunities?: {
+    topOpportunities?: Array<{
+      signalId: string;
+      title: string;
+      opportunityType: string;
+      opportunityScore: number;
+      elPasoRelevance: number;
+      urgencyScore: number;
+      localPathway: string;
+      recommendedActions: string[];
+    }>;
   };
   warnings?: string[];
   sources?: {
@@ -104,6 +132,9 @@ export default function MapPage() {
   const [loading, setLoading] = useState(true);
   const [learning, setLearning] = useState<NonNullable<BrainSyncResponse['learning']> | null>(null);
   const [pipeline, setPipeline] = useState<NonNullable<BrainSyncResponse['pipeline']> | null>(null);
+  const [signalAssessments, setSignalAssessments] = useState<NonNullable<BrainSyncResponse['signalAssessments']>>([]);
+  const [memory, setMemory] = useState<NonNullable<BrainSyncResponse['memory']> | null>(null);
+  const [opportunities, setOpportunities] = useState<NonNullable<BrainSyncResponse['opportunities']> | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -124,6 +155,9 @@ export default function MapPage() {
         setEntities(brainJson.entities ?? []);
         setLearning(brainJson.learning ?? null);
         setPipeline(brainJson.pipeline ?? null);
+        setSignalAssessments(brainJson.signalAssessments ?? []);
+        setMemory(brainJson.memory ?? null);
+        setOpportunities(brainJson.opportunities ?? null);
         setSignals(briefingJson.briefing?.recent_signals?.slice(0, 16) ?? []);
         setBrainStats({
           scannedSignals: brainJson.scannedSignals ?? 0,
@@ -242,6 +276,7 @@ export default function MapPage() {
   const topCompanies = learning?.companyPriority?.slice(0, 6) ?? [];
   const topIndustryMomentum = learning?.industryMomentum?.slice(0, 4) ?? [];
   const topLocationMomentum = learning?.locationMomentum?.slice(0, 4) ?? [];
+  const topOpportunities = opportunities?.topOpportunities?.slice(0, 4) ?? [];
 
   return (
     <div className="min-h-screen bg-nxt-bg text-nxt-text">
@@ -252,7 +287,7 @@ export default function MapPage() {
             <p className="section-kicker mb-3">Brain Map</p>
             <h1 className="max-w-[320px] text-[clamp(2.4rem,4vw,4rem)] font-bold leading-[0.95] tracking-[-0.04em] text-nxt-text">See where the system is clustering.</h1>
             <p className="mt-4 text-sm leading-7 text-nxt-secondary">
-              This view now uses the combined brain sync. Live signals drive the map, and Obsidian notes can enrich the same knowledge graph.
+              This view now shows where global industry movement turns into El Paso relevance. The map is weighted by trust, local fit, and opportunity pressure.
             </p>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
@@ -267,6 +302,10 @@ export default function MapPage() {
               <div className="rounded-[18px] border border-nxt-border bg-nxt-surface/70 p-4">
                 <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Memory notes</div>
                 <div className="mt-2 text-2xl font-mono font-bold">{noteCount}</div>
+              </div>
+              <div className="rounded-[18px] border border-nxt-border bg-nxt-surface/70 p-4">
+                <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Locally ranked</div>
+                <div className="mt-2 text-2xl font-mono font-bold">{signalAssessments.length}</div>
               </div>
             </div>
 
@@ -333,6 +372,13 @@ export default function MapPage() {
                     <div>Hottest place: <span className="font-semibold text-nxt-text">{learning.summary.hottestLocation ?? 'none yet'}</span></div>
                     <div>Top company: <span className="font-semibold text-nxt-text">{learning.summary.highestPriorityCompany ?? 'none yet'}</span></div>
                   </div>
+                </div>
+              )}
+              {topOpportunities[0] && (
+                <div className="rounded-[18px] border border-[rgba(39,209,127,0.16)] bg-[rgba(12,30,23,0.42)] p-4">
+                  <div className="text-xs text-nxt-muted">Top local opening</div>
+                  <div className="mt-2 text-sm font-semibold text-nxt-text">{topOpportunities[0].title}</div>
+                  <p className="mt-2 text-xs leading-5 text-nxt-secondary">{topOpportunities[0].localPathway}</p>
                 </div>
               )}
               {pipeline && (
@@ -439,6 +485,56 @@ export default function MapPage() {
                   ))
                 )}
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-4 grid gap-4 lg:grid-cols-2">
+          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold">El Paso opportunity queue</h2>
+              <span className="text-[11px] font-mono text-nxt-dim">map to action</span>
+            </div>
+            <div className="space-y-2">
+              {topOpportunities.map((item) => (
+                <div key={item.signalId} className="rounded-[18px] border border-nxt-border bg-nxt-card/85 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-medium text-nxt-text">{item.title}</div>
+                      <div className="mt-1 text-xs text-nxt-dim">{item.opportunityType.replace(/-/g, ' ')}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-mono font-bold text-nxt-text">{Math.round(item.elPasoRelevance * 100)}</div>
+                      <div className="text-[10px] uppercase tracking-[0.16em] text-nxt-dim">local fit</div>
+                    </div>
+                  </div>
+                  <div className="mt-2 text-[11px] leading-5 text-nxt-secondary">{item.localPathway}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold">Recurring pattern memory</h2>
+              <span className="text-[11px] font-mono text-nxt-dim">longitudinal read</span>
+            </div>
+            <div className="space-y-2">
+              {(memory?.recurringCompanies ?? []).slice(0, 3).map((item) => (
+                <div key={item.name} className="rounded-[18px] border border-nxt-border bg-nxt-card/85 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-medium text-nxt-text">{item.name}</div>
+                    <div className="text-[11px] font-mono text-nxt-dim">{item.repeatCount}x</div>
+                  </div>
+                </div>
+              ))}
+              {(memory?.recurringTechnologies ?? []).slice(0, 3).map((item) => (
+                <div key={item.name} className="rounded-[18px] border border-nxt-border bg-nxt-card/85 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-medium text-nxt-text">{item.name}</div>
+                    <div className="text-[11px] font-mono text-nxt-dim">{item.repeatCount}x</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>

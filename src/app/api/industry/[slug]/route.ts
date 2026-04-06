@@ -14,6 +14,7 @@ import type { KgTechnologyRow } from '@/db/queries/kg-technologies';
 import type { KgSignalRow } from '@/db/queries/kg-signals';
 import type { VendorRecord } from '@/db/queries/vendors';
 import type { ConferenceRecord } from '@/db/queries/conferences';
+import { loadUnifiedBrainReport } from '@/lib/intelligence/brain-orchestrator';
 
 // ── Industry → vendor primary_category mapping ──────────────────────────────
 
@@ -93,6 +94,17 @@ const SLUG_TO_SIGNAL_KEYWORDS: Record<string, string[]> = {
   'border-tech': ['border', 'cbp', 'immigration', 'customs', 'surveillance', 'biometric', 'checkpoint'],
 };
 
+const SLUG_TO_TRACKED_TECH: Record<string, string[]> = {
+  'ai-ml': ['AI', 'Robotics', 'Sensors'],
+  'cybersecurity': ['AI', 'Sensors', 'Trade Compliance'],
+  'defense': ['Robotics', 'Sensors', 'AI'],
+  'manufacturing': ['Additive Manufacturing', 'Robotics', 'AI'],
+  'energy': ['Battery Systems', 'Grid Tech', 'AI'],
+  'healthcare': ['AI', 'Sensors'],
+  'logistics': ['Freight Tech', 'Trade Compliance', 'AI'],
+  'border-tech': ['Trade Compliance', 'Sensors', 'AI'],
+};
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function matchesKeywords(text: string, keywords: string[]): boolean {
@@ -131,6 +143,27 @@ function filterConferences(conferences: readonly ConferenceRecord[], slug: strin
   if (!cats) return [...conferences];
   const catSet = new Set(cats.map(c => c.toLowerCase()));
   return conferences.filter(c => catSet.has(c.category.toLowerCase()));
+}
+
+function normalizeIndustryLabel(value: string | null | undefined): string {
+  return (value ?? '').toLowerCase().replace(/[_\s]+/g, '-');
+}
+
+function assessmentMatchesSlug(
+  slug: string,
+  assessment: {
+    industry: string | null;
+    tracked_technologies: string[];
+    title: string;
+    local_pathway: string;
+  }
+): boolean {
+  const industry = normalizeIndustryLabel(assessment.industry);
+  if (industry === slug) return true;
+  if (slug === 'logistics' && (industry === 'supply-chain' || industry === 'supply_chain')) return true;
+  if (slug === 'border-tech' && (industry === 'defense' || assessment.local_pathway.toLowerCase().includes('border'))) return true;
+  const text = `${assessment.title} ${assessment.local_pathway}`.toLowerCase();
+  return (SLUG_TO_SIGNAL_KEYWORDS[slug] ?? []).some((keyword) => text.includes(keyword));
 }
 
 export async function GET(
@@ -173,6 +206,7 @@ export async function GET(
   const intelSignalResults = await Promise.all(
     sigIndustries.map(ind => getIntelSignals({ industry: ind, limit: 30 })),
   );
+  const brainReport = await loadUnifiedBrainReport({ signalLimit: 180, includeObsidian: true });
 
   // ── Filter data by industry ───────────────────────────────────────────────
 
@@ -186,6 +220,36 @@ export async function GET(
 
   // Merge intel signal results
   const intelSignals = intelSignalResults.flat();
+  const industryAssessments = brainReport.signalAssessments
+    .filter((assessment) => assessmentMatchesSlug(slug, assessment))
+    .slice(0, 12);
+  const trackedTechnologies = Array.from(
+    new Set([
+      ...(SLUG_TO_TRACKED_TECH[slug] ?? []),
+      ...industryAssessments.flatMap((assessment) => assessment.tracked_technologies),
+    ])
+  ).slice(0, 8);
+  const topOpportunities = industryAssessments
+    .slice(0, 6)
+    .map((assessment) => ({
+      id: assessment.id,
+      title: assessment.title,
+      opportunity_type: assessment.opportunity_type,
+      opportunity_score: assessment.opportunity_score,
+      urgency_score: assessment.urgency_score,
+      el_paso_relevance: assessment.el_paso_relevance,
+      local_pathway: assessment.local_pathway,
+      recommended_actions: assessment.recommended_actions,
+      suggested_targets: assessment.suggested_targets,
+      who_it_matters_to: assessment.who_it_matters_to,
+      what_changed_vs_last_week: assessment.what_changed_vs_last_week,
+    }));
+  const topCompanies = brainReport.learning.companyPriority
+    .filter((company) => company.industries.some((item) => normalizeIndustryLabel(item) === slug))
+    .slice(0, 6);
+  const localFitSummary = topOpportunities[0]
+    ? `${industry.name} signals are being translated into El Paso action through ${topOpportunities[0].opportunity_type.replace(/-/g, ' ')} plays and corridor relevance.`
+    : `NXT//LINK is still building a stronger El Paso fit model for ${industry.name}.`;
 
   // Filter companies by cross-referencing with filtered vendor names
   const vendorNameSet = new Set(vendors.map(v => v.name.toLowerCase()));
@@ -203,5 +267,23 @@ export async function GET(
     products,
     conferences: filteredConferences,
     intelSignals,
+    trackedTechnologies,
+    topOpportunities,
+    topCompanies,
+    localFitSummary,
+    actionQueue: brainReport.opportunities.actionQueue.filter((item) =>
+      topOpportunities.some((opportunity) => opportunity.id === item.signalId)
+    ),
+    memory: {
+      recurringCompanies: brainReport.memory.recurringCompanies.filter((item) =>
+        topCompanies.some((company) => company.name === item.name)
+      ),
+      recurringTechnologies: brainReport.memory.recurringTechnologies.filter((item) =>
+        trackedTechnologies.includes(item.name)
+      ),
+      risingIndustries: brainReport.memory.risingIndustries.filter((item) =>
+        normalizeIndustryLabel(item.name) === slug
+      ),
+    },
   });
 }

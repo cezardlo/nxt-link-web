@@ -18,6 +18,12 @@ import {
   type BrainLearningReport,
 } from '@/lib/intelligence/learning-engine';
 import {
+  buildElPasoAssessmentReport,
+  type ElPasoMemorySummary,
+  type ElPasoOpportunitySummary,
+  type ElPasoSignalAssessment,
+} from '@/lib/intelligence/el-paso-relevance';
+import {
   loadObsidianImportReport,
   type ObsidianNoteEntity,
   type ObsidianRelationship,
@@ -47,7 +53,10 @@ export type UnifiedBrainReport = {
   entities: UnifiedBrainEntity[];
   relationships: UnifiedBrainRelationship[];
   mapPoints: MapPoint[];
+  signalAssessments: ElPasoSignalAssessment[];
   learning: BrainLearningReport;
+  memory: ElPasoMemorySummary;
+  opportunities: ElPasoOpportunitySummary;
   pipeline: MappingReport['pipeline'];
   warnings: string[];
   sources: {
@@ -158,6 +167,7 @@ export async function loadUnifiedBrainReport(
     relationships,
     mappingReport.mapPoints
   );
+  const elPasoReport = buildElPasoAssessmentReport(signals, entities, relationships);
   learning.sourceScores = mappingReport.sourceScores.map((score) => ({
     source: score.source,
     normalizedSource: score.normalizedSource,
@@ -179,7 +189,10 @@ export async function loadUnifiedBrainReport(
     entities,
     relationships,
     mapPoints: mappingReport.mapPoints,
+    signalAssessments: elPasoReport.signalAssessments,
     learning,
+    memory: elPasoReport.memory,
+    opportunities: elPasoReport.opportunities,
     pipeline: mappingReport.pipeline,
     warnings: [...warnings, ...mappingReport.pipeline.failureStates],
     sources: {
@@ -215,10 +228,25 @@ export async function persistUnifiedBrainReport(
       enrichedMetadata.learned_location_count = companyScore.locationCount;
     }
 
+    const opportunitySignal = report.signalAssessments.find((item) => item.company && item.company === entity.name);
+    if (entity.type === 'company' && opportunitySignal) {
+      enrichedMetadata.el_paso_relevance = opportunitySignal.el_paso_relevance;
+      enrichedMetadata.opportunity_score = opportunitySignal.opportunity_score;
+      enrichedMetadata.urgency_score = opportunitySignal.urgency_score;
+      enrichedMetadata.local_pathway = opportunitySignal.local_pathway;
+    }
+
     if (entity.type === 'industry' && industryScore) {
       enrichedMetadata.learned_momentum_score = industryScore.momentumScore;
       enrichedMetadata.learned_signal_count = industryScore.signalCount;
       enrichedMetadata.learned_recency_score = industryScore.recencyScore;
+    }
+
+    const industryOpportunity = report.signalAssessments.find((item) => item.industry === entity.name);
+    if (entity.type === 'industry' && industryOpportunity) {
+      enrichedMetadata.el_paso_relevance = industryOpportunity.el_paso_relevance;
+      enrichedMetadata.opportunity_score = industryOpportunity.opportunity_score;
+      enrichedMetadata.tracked_technologies = industryOpportunity.tracked_technologies;
     }
 
     if (entity.type === 'location' && locationScore) {

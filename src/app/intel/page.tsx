@@ -18,6 +18,20 @@ type Signal = {
   source_trust?: number | null;
   evidence_quality?: number | null;
   quality_score?: number | null;
+  global_significance?: number | null;
+  el_paso_relevance?: number | null;
+  opportunity_score?: number | null;
+  urgency_score?: number | null;
+  why_now?: string;
+  who_it_matters_to?: string[];
+  what_changed_vs_last_week?: string;
+  opportunity_type?: string;
+  recommended_actions?: string[];
+  suggested_targets?: string[];
+  local_pathway?: string;
+  tracked_technologies?: string[];
+  reason_for_ranking?: string[];
+  confidence_explanation?: string;
 };
 
 type Tab = 'all' | 'high' | 'trending';
@@ -124,6 +138,11 @@ function trustReason(signal: Signal): string {
   if (signal.company) parts.push('company attached');
   if (parts.length === 0) return 'limited context so far';
   return parts.join(', ');
+}
+
+function scorePercent(score: number | null | undefined): number {
+  if (!score) return 0;
+  return Math.round(score <= 1 ? score * 100 : score);
 }
 
 export default function IntelPage() {
@@ -241,8 +260,8 @@ export default function IntelPage() {
               Read the signal faster.
             </h1>
             <p className="mt-5 max-w-[700px] text-base leading-8 text-nxt-secondary">
-              This feed is now tuned for faster decisions: stronger filters, clearer trust scoring,
-              easier scanning, and better context around where a signal came from.
+              This feed now answers the El Paso question directly: what matters, who it matters to,
+              why it matters now, and what teams should do next.
             </p>
 
             <div className="mt-6 flex flex-wrap gap-2">
@@ -573,6 +592,41 @@ export default function IntelPage() {
                         </span>
                         <span className="text-[11px] text-nxt-dim">Trust basis: {trustReason(signal)}</span>
                       </div>
+
+                      <div className="mt-4 grid gap-2 md:grid-cols-2">
+                        <div className="rounded-[16px] border border-nxt-border bg-nxt-card/70 p-3">
+                          <div className="text-[10px] uppercase tracking-[0.16em] text-nxt-dim">El Paso relevance</div>
+                          <div className="mt-2 flex items-center justify-between">
+                            <div className="text-base font-semibold text-nxt-text">{scorePercent(signal.el_paso_relevance)}</div>
+                            <div className="text-[11px] text-nxt-dim">opportunity {scorePercent(signal.opportunity_score)}</div>
+                          </div>
+                          <p className="mt-2 text-[11px] leading-5 text-nxt-secondary">
+                            {signal.local_pathway ?? 'Local pathway still being determined.'}
+                          </p>
+                        </div>
+                        <div className="rounded-[16px] border border-nxt-border bg-nxt-card/70 p-3">
+                          <div className="text-[10px] uppercase tracking-[0.16em] text-nxt-dim">Why now</div>
+                          <div className="mt-2 text-[12px] leading-5 text-nxt-secondary">
+                            {signal.why_now ?? 'This is still an early read.'}
+                          </div>
+                          <div className="mt-2 text-[11px] text-nxt-dim">
+                            Urgency {scorePercent(signal.urgency_score)} | Global {scorePercent(signal.global_significance)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        {(signal.recommended_actions ?? []).slice(0, 3).map((action) => (
+                          <span key={action} className="rounded-full border border-[rgba(39,209,127,0.16)] bg-[rgba(12,30,23,0.4)] px-2.5 py-1 text-[11px] text-nxt-green">
+                            {action.replace(/-/g, ' ')}
+                          </span>
+                        ))}
+                        {(signal.tracked_technologies ?? []).slice(0, 3).map((technology) => (
+                          <span key={technology} className="rounded-full bg-nxt-card px-2.5 py-1 text-[11px] text-nxt-secondary">
+                            {technology}
+                          </span>
+                        ))}
+                      </div>
                     </div>
 
                     <div className="rounded-[18px] border border-[rgba(138,160,255,0.12)] bg-[rgba(9,13,22,0.86)] p-4">
@@ -594,6 +648,24 @@ export default function IntelPage() {
                           className="h-full rounded-full"
                           style={{ width: `${Math.max(score, confidence)}%`, background: accent }}
                         />
+                      </div>
+                      <div className="mt-3 space-y-2 text-[11px] leading-5 text-nxt-secondary">
+                        <div>{signal.confidence_explanation ?? 'Confidence is based on source and evidence quality.'}</div>
+                        {signal.what_changed_vs_last_week && (
+                          <div className="text-nxt-muted">{signal.what_changed_vs_last_week}</div>
+                        )}
+                        {(signal.suggested_targets ?? []).length > 0 && (
+                          <div>
+                            <span className="text-nxt-dim">Targets:</span>{' '}
+                            {(signal.suggested_targets ?? []).slice(0, 3).join(', ')}
+                          </div>
+                        )}
+                        {(signal.who_it_matters_to ?? []).length > 0 && (
+                          <div>
+                            <span className="text-nxt-dim">For:</span>{' '}
+                            {(signal.who_it_matters_to ?? []).slice(0, 3).join(', ')}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

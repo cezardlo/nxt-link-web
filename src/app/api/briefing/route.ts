@@ -12,6 +12,7 @@ import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { runParallelJsonEnsemble } from '@/lib/llm/parallel-router';
 import { analyzeSignalIntake } from '@/lib/intelligence/source-intelligence';
 import { FALLBACK_INTEL_SIGNALS } from '@/lib/intelligence/fallback-signals';
+import { buildElPasoAssessmentReport } from '@/lib/intelligence/el-paso-relevance';
 import type { IntelSignalRow } from '@/db/queries/intel-signals';
 
 export const dynamic = 'force-dynamic';
@@ -135,6 +136,8 @@ export async function GET() {
     : FALLBACK_INTEL_SIGNALS;
   const intake = analyzeSignalIntake(rawSignals, { limit: 500, fallbackUsed: !supabaseReady });
   const signals = intake.signals;
+  const elPasoReport = buildElPasoAssessmentReport(signals);
+  const assessmentMap = new Map(elPasoReport.signalAssessments.map((item) => [item.id, item]));
 
   // Fetch vendor details
   const vendorIds = signals.filter(s => s.vendor_id).map(s => s.vendor_id!);
@@ -157,15 +160,18 @@ export async function GET() {
     .filter(s => !isJunkSource(s.source))                    // remove arXiv
     .filter(s => s.industry !== 'other')                     // remove "other"
     .filter(s => !s.title.toLowerCase().includes('arxiv'))   // catch any missed
-    .map(s => ({
+    .map(s => {
+      const assessment = assessmentMap.get(s.id);
+      return ({
       ...s,
       briefing_score:
-        (s.quality_score ?? s.importance_score) * 100 +
-        (s.source_trust ?? 0.5) * 30 +
-        (s.evidence_quality ?? 0.4) * 20 +
+        (assessment?.opportunity_score ?? s.quality_score ?? s.importance_score) * 100 +
+        (assessment?.el_paso_relevance ?? s.source_trust ?? 0.5) * 35 +
+        (assessment?.urgency_score ?? s.evidence_quality ?? 0.4) * 25 +
         sourceBoost(s.source) +
         problemBoost(s.problem_category),
-    }))
+    });
+    })
     .sort((a, b) => b.briefing_score - a.briefing_score);
 
   // ──────────────────────────────────────────────────────────────
@@ -288,6 +294,7 @@ ${signalSummaries}`,
     const cleanEvidence = sanitize(signal.evidence);
     const problem = signal.problem_category;
     const ai = aiAnalysis[i];
+    const assessment = assessmentMap.get(signal.id);
 
     // Find vendors
     const industryVendors: { name: string; category: string; iker_score: number | null }[] = [];
@@ -315,6 +322,7 @@ ${signalSummaries}`,
 
     return {
       rank: i + 1,
+      id: signal.id,
       title: cleanTitle,
       source: signal.source_label || signal.source || 'Unknown',
       discovered_at: signal.discovered_at,
@@ -323,11 +331,25 @@ ${signalSummaries}`,
       where_its_going: action_bullets.join('. ') + '.',
       el_paso_impact,
       watch_for,
-      action_bullets,
+      action_bullets: assessment?.recommended_actions?.length
+        ? assessment.recommended_actions.map((action) => action.replace(/-/g, ' '))
+        : action_bullets,
       signal_count: industryGroups[signal.industry]?.length || 0,
       avg_score: signal.importance_score,
       industry: signal.industry,
       signal_type: signal.signal_type,
+      opportunity_type: assessment?.opportunity_type ?? 'vendor',
+      opportunity_score: assessment?.opportunity_score ?? signal.quality_score ?? signal.importance_score,
+      urgency_score: assessment?.urgency_score ?? signal.importance_score,
+      el_paso_relevance: assessment?.el_paso_relevance ?? signal.source_trust ?? 0.5,
+      why_now: assessment?.why_now ?? 'This sits in the current operating window.',
+      who_it_matters_to: assessment?.who_it_matters_to ?? ['regional operators'],
+      local_pathway: assessment?.local_pathway ?? 'Potential El Paso relevance is still emerging.',
+      suggested_targets: assessment?.suggested_targets ?? [],
+      tracked_technologies: assessment?.tracked_technologies ?? [],
+      confidence_explanation: assessment?.confidence_explanation ?? 'Confidence is based on source and evidence quality.',
+      reason_for_ranking: assessment?.reason_for_ranking ?? [],
+      what_changed_vs_last_week: assessment?.what_changed_vs_last_week ?? 'No week-over-week baseline yet.',
       problem_category: problem,
       problem_label: problem ? PROBLEM_LABELS[problem] || problem : null,
       related_signals: signals
@@ -459,6 +481,10 @@ ${signalSummaries}`,
         low_evidence_discarded: intake.pipeline.lowEvidenceDiscarded,
         strongest_source: intake.pipeline.topTrustedSources[0]?.source ?? null,
       },
+      local_relevance_summary: elPasoReport.opportunities.localRelevanceSummary,
+      top_opportunities: elPasoReport.opportunities.topOpportunities,
+      action_queue: elPasoReport.opportunities.actionQueue,
+      memory: elPasoReport.memory,
       trends: { snapshot, time_series: timeSeries },
     },
   });

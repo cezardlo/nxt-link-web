@@ -63,6 +63,40 @@ interface IndustryApiData {
   signals: ApiSignal[];
   conferences: ApiConference[];
   vendors: ApiVendor[];
+  trackedTechnologies?: string[];
+  topOpportunities?: Array<{
+    id: string;
+    title: string;
+    opportunity_type: string;
+    opportunity_score: number;
+    urgency_score: number;
+    el_paso_relevance: number;
+    local_pathway: string;
+    recommended_actions: string[];
+    suggested_targets: string[];
+    who_it_matters_to: string[];
+    what_changed_vs_last_week: string;
+  }>;
+  topCompanies?: Array<{
+    slug: string;
+    name: string;
+    priorityScore: number;
+    signalCount: number;
+    industries: string[];
+  }>;
+  localFitSummary?: string;
+  actionQueue?: Array<{
+    signalId: string;
+    title: string;
+    action: string;
+    whyNow: string;
+    suggestedTargets: string[];
+  }>;
+  memory?: {
+    recurringCompanies?: Array<{ name: string; repeatCount: number; score: number }>;
+    recurringTechnologies?: Array<{ name: string; repeatCount: number; score: number }>;
+    risingIndustries?: Array<{ name: string; score: number; change: number }>;
+  };
 }
 
 interface IndustryProfile {
@@ -466,6 +500,122 @@ export default function IndustryCommandCenter() {
             accentColor={accentColor}
             isFirstVisit={isFirstVisit}
           />
+        </div>
+
+        <div className="pt-8 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+          <div
+            className="rounded-xl p-6"
+            style={{
+              background: COLORS.card,
+              border: `1px solid ${COLORS.border}`,
+            }}
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-1.5 h-1.5 rounded-full" style={{ background: accentColor }} />
+              <span className="font-mono text-[10px] tracking-[0.2em]" style={{ color: `${COLORS.text}cc` }}>
+                EL PASO FIT
+              </span>
+            </div>
+            <h2 className="text-2xl font-semibold leading-tight" style={{ color: COLORS.text }}>
+              Bring global {industry.label} movement into El Paso action.
+            </h2>
+            <p className="mt-4 text-sm leading-7" style={{ color: `${COLORS.text}b3` }}>
+              {apiData?.localFitSummary ??
+                `This dossier watches global ${industry.label.toLowerCase()} movement, maps the strongest technologies and companies, and translates the signal into El Paso relevance.`}
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {(apiData?.trackedTechnologies ?? []).slice(0, 6).map((item) => (
+                <span
+                  key={item}
+                  className="rounded-full px-3 py-1 text-[11px] font-mono"
+                  style={{ background: `${accentColor}14`, color: accentColor, border: `1px solid ${accentColor}22` }}
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div
+            className="rounded-xl p-6"
+            style={{
+              background: COLORS.card,
+              border: `1px solid ${COLORS.border}`,
+            }}
+          >
+            <div className="font-mono text-[10px] tracking-[0.2em] mb-4" style={{ color: `${COLORS.text}80` }}>
+              NEXT MOVES
+            </div>
+            <div className="space-y-3">
+              {(apiData?.actionQueue ?? []).slice(0, 3).map((item) => (
+                <div key={`${item.signalId}-${item.action}`} className="rounded-lg p-4" style={{ background: COLORS.surface }}>
+                  <div className="text-[10px] uppercase tracking-[0.18em]" style={{ color: accentColor }}>
+                    {item.action.replace(/-/g, ' ')}
+                  </div>
+                  <div className="mt-2 text-sm font-semibold" style={{ color: COLORS.text }}>
+                    {item.title}
+                  </div>
+                  <div className="mt-2 text-xs leading-6" style={{ color: `${COLORS.text}a8` }}>
+                    {item.whyNow}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-8 grid gap-4 lg:grid-cols-3">
+          <div className="rounded-xl p-6" style={{ background: COLORS.card, border: `1px solid ${COLORS.border}` }}>
+            <div className="font-mono text-[10px] tracking-[0.2em] mb-4" style={{ color: `${COLORS.text}80` }}>
+              TOP OPPORTUNITIES
+            </div>
+            <div className="space-y-3">
+              {(apiData?.topOpportunities ?? []).slice(0, 3).map((item) => (
+                <div key={item.id} className="rounded-lg p-4" style={{ background: COLORS.surface }}>
+                  <div className="text-[10px] uppercase tracking-[0.18em]" style={{ color: accentColor }}>
+                    {item.opportunity_type.replace(/-/g, ' ')}
+                  </div>
+                  <div className="mt-2 text-sm font-semibold" style={{ color: COLORS.text }}>{item.title}</div>
+                  <div className="mt-2 text-xs leading-6" style={{ color: `${COLORS.text}a8` }}>{item.local_pathway}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-xl p-6" style={{ background: COLORS.card, border: `1px solid ${COLORS.border}` }}>
+            <div className="font-mono text-[10px] tracking-[0.2em] mb-4" style={{ color: `${COLORS.text}80` }}>
+              WATCHED COMPANIES
+            </div>
+            <div className="space-y-3">
+              {(apiData?.topCompanies ?? []).slice(0, 4).map((item) => (
+                <div key={item.slug} className="flex items-center justify-between rounded-lg p-4" style={{ background: COLORS.surface }}>
+                  <div>
+                    <div className="text-sm font-semibold" style={{ color: COLORS.text }}>{item.name}</div>
+                    <div className="text-[11px]" style={{ color: `${COLORS.text}80` }}>{item.signalCount} linked signals</div>
+                  </div>
+                  <div className="font-mono text-sm" style={{ color: accentColor }}>{Math.round(item.priorityScore * 100)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-xl p-6" style={{ background: COLORS.card, border: `1px solid ${COLORS.border}` }}>
+            <div className="font-mono text-[10px] tracking-[0.2em] mb-4" style={{ color: `${COLORS.text}80` }}>
+              MEMORY
+            </div>
+            <div className="space-y-3">
+              {(apiData?.memory?.recurringTechnologies ?? []).slice(0, 3).map((item) => (
+                <div key={item.name} className="rounded-lg p-4" style={{ background: COLORS.surface }}>
+                  <div className="text-sm font-semibold" style={{ color: COLORS.text }}>{item.name}</div>
+                  <div className="text-[11px]" style={{ color: `${COLORS.text}80` }}>{item.repeatCount} recurring appearances</div>
+                </div>
+              ))}
+              {(apiData?.memory?.recurringCompanies ?? []).slice(0, 2).map((item) => (
+                <div key={item.name} className="rounded-lg p-4" style={{ background: COLORS.surface }}>
+                  <div className="text-sm font-semibold" style={{ color: COLORS.text }}>{item.name}</div>
+                  <div className="text-[11px]" style={{ color: `${COLORS.text}80` }}>{item.repeatCount} recurring appearances</div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Trajectory Matrix */}

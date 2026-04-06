@@ -26,6 +26,7 @@ interface InsightProblem {
 }
 
 interface TopInsight {
+  id?: string;
   rank: number;
   title: string;
   what_is_happening: string;
@@ -45,6 +46,18 @@ interface TopInsight {
   problems?: InsightProblem[];
   source?: string;
   discovered_at?: string;
+  opportunity_type?: string;
+  opportunity_score?: number;
+  urgency_score?: number;
+  el_paso_relevance?: number;
+  why_now?: string;
+  who_it_matters_to?: string[];
+  local_pathway?: string;
+  suggested_targets?: string[];
+  tracked_technologies?: string[];
+  confidence_explanation?: string;
+  reason_for_ranking?: string[];
+  what_changed_vs_last_week?: string;
 }
 
 interface Region {
@@ -96,6 +109,29 @@ interface BriefingData {
       duplicates_filtered?: number;
       low_evidence_discarded?: number;
       strongest_source?: string | null;
+    };
+    local_relevance_summary?: string[];
+    top_opportunities?: Array<{
+      signalId: string;
+      title: string;
+      opportunityType: string;
+      opportunityScore: number;
+      elPasoRelevance: number;
+      urgencyScore: number;
+      localPathway: string;
+      recommendedActions: string[];
+    }>;
+    action_queue?: Array<{
+      signalId: string;
+      title: string;
+      action: string;
+      whyNow: string;
+      suggestedTargets: string[];
+    }>;
+    memory?: {
+      recurringCompanies?: Array<{ name: string; repeatCount: number; score: number }>;
+      recurringTechnologies?: Array<{ name: string; repeatCount: number; score: number }>;
+      risingIndustries?: Array<{ name: string; score: number; change: number }>;
     };
     trends?: {
       snapshot: TrendSnapshot[];
@@ -381,7 +417,7 @@ export default function BriefingPage() {
                 operating read.
               </h1>
               <p className="mt-5 max-w-[640px] text-base leading-8 text-nxt-secondary">
-                This is the plain-language layer of NXT//LINK. It compresses the incoming signal flow into what changed, why it matters, and what teams should watch next.
+                This is the plain-language layer of NXT//LINK. It turns global industrial and tech movement into El Paso relevance, local opportunity, and the next move to make.
               </p>
             </div>
             <div className="slide-up grid gap-px overflow-hidden border border-[rgba(138,160,255,0.12)] bg-[rgba(138,160,255,0.12)]" style={{ animationDelay: '0.08s' }}>
@@ -433,6 +469,31 @@ export default function BriefingPage() {
             <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Low evidence discarded</div>
             <div className="mt-3 text-xl font-semibold text-nxt-text">{briefing.source_ops?.low_evidence_discarded ?? 0}</div>
             <div className="mt-2 text-xs text-nxt-muted">Thin signals downgraded or dropped before they reached the top stories</div>
+          </div>
+        </section>
+
+        <section className="mb-8 grid gap-4 xl:grid-cols-3">
+          <div className="rounded-[20px] border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-5 xl:col-span-2">
+            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Local relevance summary</div>
+            <div className="mt-4 space-y-3">
+              {(briefing.local_relevance_summary ?? []).map((item) => (
+                <div key={item} className="rounded-[16px] border border-nxt-border bg-nxt-card p-4 text-sm leading-6 text-nxt-secondary">
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-[20px] border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-5">
+            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Action queue</div>
+            <div className="mt-4 space-y-3">
+              {(briefing.action_queue ?? []).slice(0, 4).map((item) => (
+                <div key={`${item.signalId}-${item.action}`} className="rounded-[16px] border border-nxt-border bg-nxt-card p-4">
+                  <div className="text-xs uppercase tracking-[0.16em] text-nxt-green">{item.action.replace(/-/g, ' ')}</div>
+                  <div className="mt-2 text-sm font-semibold text-nxt-text">{item.title}</div>
+                  <div className="mt-2 text-[11px] leading-5 text-nxt-secondary">{item.whyNow}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -530,6 +591,17 @@ export default function BriefingPage() {
                     </ul>
                   </div>
 
+                  <div className="p-4 bg-[rgba(13,18,30,0.42)] border border-[rgba(138,160,255,0.08)]">
+                    <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-accent mb-3 uppercase">Why NXT//LINK ranked this</div>
+                    <div className="space-y-2 text-[12px] leading-snug text-nxt-secondary">
+                      <div>El Paso relevance {Math.round((insight.el_paso_relevance ?? 0) * 100)}</div>
+                      <div>Opportunity score {Math.round((insight.opportunity_score ?? 0) * 100)}</div>
+                      <div>Urgency {Math.round((insight.urgency_score ?? 0) * 100)}</div>
+                      <div>{insight.confidence_explanation}</div>
+                      {insight.what_changed_vs_last_week && <div className="text-nxt-dim">{insight.what_changed_vs_last_week}</div>}
+                    </div>
+                  </div>
+
                   {/* Who Can Help */}
                   <div className="p-4 bg-[rgba(13,18,30,0.42)] border border-[rgba(138,160,255,0.08)]">
                     <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-cyan mb-3 uppercase">Who Can Help</div>
@@ -551,6 +623,20 @@ export default function BriefingPage() {
                     )}
                   </div>
                 </div>
+
+                {(insight.tracked_technologies?.length || insight.suggested_targets?.length || insight.who_it_matters_to?.length) ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {(insight.tracked_technologies ?? []).slice(0, 3).map((item) => (
+                      <span key={item} className="rounded-full bg-nxt-card px-2.5 py-1 text-[11px] text-nxt-secondary">{item}</span>
+                    ))}
+                    {(insight.suggested_targets ?? []).slice(0, 3).map((item) => (
+                      <span key={item} className="rounded-full border border-[rgba(39,209,127,0.16)] bg-[rgba(12,30,23,0.4)] px-2.5 py-1 text-[11px] text-nxt-green">{item}</span>
+                    ))}
+                    {(insight.who_it_matters_to ?? []).slice(0, 2).map((item) => (
+                      <span key={item} className="rounded-full border border-nxt-border px-2.5 py-1 text-[11px] text-nxt-dim">{item}</span>
+                    ))}
+                  </div>
+                ) : null}
 
                 {/* Source signals */}
                 {insight.related_signals.length > 0 && (
@@ -646,6 +732,43 @@ export default function BriefingPage() {
 
         {/* TREND CHART */}
         {briefing.trends && <TrendChart trends={briefing.trends} />}
+
+        <section className="mt-5 grid gap-5 lg:grid-cols-3">
+          <div className="bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5">
+            <h3 className="text-sm font-semibold text-nxt-text mb-4">Top opportunities</h3>
+            <div className="space-y-3">
+              {(briefing.top_opportunities ?? []).slice(0, 4).map((item) => (
+                <div key={item.signalId} className="rounded-[16px] border border-nxt-border bg-nxt-card p-4">
+                  <div className="text-[10px] uppercase tracking-[0.16em] text-nxt-green">{item.opportunityType.replace(/-/g, ' ')}</div>
+                  <div className="mt-2 text-sm font-semibold text-nxt-text">{item.title}</div>
+                  <div className="mt-2 text-[11px] text-nxt-secondary">{item.localPathway}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5">
+            <h3 className="text-sm font-semibold text-nxt-text mb-4">Recurring companies</h3>
+            <div className="space-y-2">
+              {(briefing.memory?.recurringCompanies ?? []).slice(0, 5).map((item) => (
+                <div key={item.name} className="flex items-center justify-between rounded-[16px] border border-nxt-border bg-nxt-card p-3">
+                  <div className="text-sm text-nxt-text">{item.name}</div>
+                  <div className="text-xs font-mono text-nxt-dim">{item.repeatCount}x</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5">
+            <h3 className="text-sm font-semibold text-nxt-text mb-4">Recurring technologies</h3>
+            <div className="space-y-2">
+              {(briefing.memory?.recurringTechnologies ?? []).slice(0, 5).map((item) => (
+                <div key={item.name} className="flex items-center justify-between rounded-[16px] border border-nxt-border bg-nxt-card p-3">
+                  <div className="text-sm text-nxt-text">{item.name}</div>
+                  <div className="text-xs font-mono text-nxt-dim">{item.repeatCount}x</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
 
         {/* RECENT SIGNALS */}
         <div className="bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5">

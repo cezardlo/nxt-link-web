@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { analyzeSignalIntake } from '@/lib/intelligence/source-intelligence';
 import { FALLBACK_INTEL_SIGNALS } from '@/lib/intelligence/fallback-signals';
+import { buildElPasoAssessmentReport } from '@/lib/intelligence/el-paso-relevance';
 import type { IntelSignalRow } from '@/db/queries/intel-signals';
 
 export const dynamic = 'force-dynamic';
@@ -25,13 +26,17 @@ export async function GET(request: Request): Promise<NextResponse> {
   try {
     if (!supabaseReady) {
       const intake = analyzeSignalIntake(FALLBACK_INTEL_SIGNALS, { fallbackUsed: true, limit: FALLBACK_INTEL_SIGNALS.length });
+      const assessments = buildElPasoAssessmentReport(intake.signals).signalAssessments;
+      const assessmentMap = new Map(assessments.map((item) => [item.id, item]));
       const sortedSignals = [...intake.signals].sort((a, b) => {
         const aScore = (a.quality_score ?? 0) * 0.6 + (a.source_trust ?? 0) * 0.4;
         const bScore = (b.quality_score ?? 0) * 0.6 + (b.source_trust ?? 0) * 0.4;
         if (bScore !== aScore) return bScore - aScore;
         return new Date(b.discovered_at).getTime() - new Date(a.discovered_at).getTime();
       });
-      const pagedSignals = sortedSignals.slice(page * pageSize, (page + 1) * pageSize);
+      const pagedSignals = sortedSignals
+        .slice(page * pageSize, (page + 1) * pageSize)
+        .map((signal) => ({ ...signal, ...(assessmentMap.get(signal.id) ?? {}) }));
 
       return NextResponse.json({
         signals: pagedSignals,
@@ -114,13 +119,17 @@ export async function GET(request: Request): Promise<NextResponse> {
       created_at: signal.discovered_at,
     })) as IntelSignalRow[];
     const intake = analyzeSignalIntake(rawSignals, { limit: rawSignals.length });
+    const assessments = buildElPasoAssessmentReport(intake.signals).signalAssessments;
+    const assessmentMap = new Map(assessments.map((item) => [item.id, item]));
     const sortedSignals = [...intake.signals].sort((a, b) => {
       const aScore = (a.quality_score ?? 0) * 0.6 + (a.source_trust ?? 0) * 0.4;
       const bScore = (b.quality_score ?? 0) * 0.6 + (b.source_trust ?? 0) * 0.4;
       if (bScore !== aScore) return bScore - aScore;
       return new Date(b.discovered_at).getTime() - new Date(a.discovered_at).getTime();
     });
-    const pagedSignals = sortedSignals.slice(page * pageSize, (page + 1) * pageSize);
+    const pagedSignals = sortedSignals
+      .slice(page * pageSize, (page + 1) * pageSize)
+      .map((signal) => ({ ...signal, ...(assessmentMap.get(signal.id) ?? {}) }));
 
     return NextResponse.json(
       {
