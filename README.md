@@ -232,15 +232,23 @@ If keys are missing, the endpoint returns `400`.
 If Supabase is unreachable or unauthorized, it returns `502`.
 If reachable, it returns `200`.
 
-## Gemini-Only AI Setup (No n8n)
+## NVIDIA-First AI Setup (Recommended)
 
-To run intelligence directly inside NXT Link with Gemini only:
+To run intelligence directly inside NXT Link with NVIDIA Build as the main provider:
 
 ```bash
-GEMINI_API_KEY="<your-gemini-api-key>"
-GEMINI_MODEL="gemini-2.0-flash"
-NXT_LINK_LLM_PROVIDER="gemini"
+NVIDIA_API_KEY="<your-nvidia-build-api-key>"
+NVIDIA_MODEL="nvidia/llama-3.1-nemotron-ultra-253b-v1"
+NXT_LINK_LLM_PROVIDER="nvidia"
+LLM_PROVIDER_LOCK="nvidia,gemini,groq"
 SUPABASE_SERVICE_ROLE_KEY="<your-service-role-key>"
+```
+
+Optional fallbacks:
+
+```bash
+GEMINI_API_KEY="<optional-gemini-api-key>"
+GROQ_API_KEY="<optional-groq-api-key>"
 ```
 
 Then restart dev server and use:
@@ -258,6 +266,69 @@ NXT Link includes a direct in-app discovery flow:
 3. Click **Discover Vendor**
 
 What it does:
+
+## Brain Mapping API
+
+NXT//LINK now includes a first-pass mapping layer that turns incoming signals into:
+
+- entities
+- relationships
+- map-ready location points
+
+Preview recent mapping output:
+
+```text
+GET /api/brain/map?limit=100
+```
+
+Persist mapped entities and relationships to the knowledge graph tables:
+
+```text
+POST /api/brain/map
+```
+
+## Obsidian Brain Import
+
+If you keep research and notes in Obsidian, NXT//LINK can import them as graph memory.
+
+Set the vault path:
+
+```bash
+OBSIDIAN_VAULT_PATH="V:\\usuario\\Documents\\NXT LINK"
+```
+
+Preview the import:
+
+```text
+GET /api/brain/obsidian
+```
+
+Persist Obsidian notes and links into the knowledge graph:
+
+```text
+POST /api/brain/obsidian
+```
+
+## Unified Brain Sync
+
+Run the live signal mapping and Obsidian memory import together through one endpoint:
+
+```text
+GET /api/brain/sync?limit=100
+```
+
+Persist both sources into the same knowledge graph:
+
+```text
+POST /api/brain/sync
+```
+
+This route:
+
+- maps incoming live signals into companies, industries, locations, and map points
+- imports Obsidian notes, tags, and wiki links when `OBSIDIAN_VAULT_PATH` is set
+- merges both sources into one graph response
+- keeps working even if the Obsidian vault is not configured yet
 
 - Fetches website text server-side
 - Uses parallel AI routing (OpenRouter/Groq/Ollama/Together/OpenAI) to extract structured vendor fields

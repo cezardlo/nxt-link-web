@@ -51,8 +51,8 @@ type ParsedCandidate<T> = {
   raw: string;
 };
 
-const providerPriority: LlmProviderName[] = ['anthropic', 'nvidia', 'gemini', 'openrouter', 'groq', 'ollama', 'together', 'openai'];
-const lowCostProviderPriority: LlmProviderName[] = ['nvidia', 'gemini', 'ollama', 'openrouter', 'groq', 'together', 'openai', 'anthropic'];
+const providerPriority: LlmProviderName[] = ['nvidia', 'anthropic', 'gemini', 'openrouter', 'groq', 'ollama', 'together', 'openai'];
+const lowCostProviderPriority: LlmProviderName[] = ['nvidia', 'ollama', 'gemini', 'openrouter', 'groq', 'together', 'openai', 'anthropic'];
 
 type UsageCounter = {
   day: string;

@@ -33,7 +33,7 @@ npm run db:seed      # seed Supabase with vendors/conferences/technologies
 - Next.js 15 App Router, TypeScript strict (`"es2017"` target), Tailwind CSS
 - deck.gl (ScatterplotLayer, TextLayer) + MapLibre GL via `react-map-gl/maplibre`
 - Supabase - access only via `getDb()` from `@/db/client`, never `getSupabaseClient()` directly
-- LLM: Gemini 2.0 Flash + Groq Llama via `src/lib/llm/parallel-router.ts`
+- LLM: NVIDIA Build first via `src/lib/llm/parallel-router.ts`, with Gemini and Groq as optional fallbacks
 - Fonts: JetBrains Mono (consumer screens), IBM Plex Mono (map overlays), Space Grotesk (headings)
 
 ## Known Dependency Issues (fix if they reappear)

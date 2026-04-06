@@ -18,8 +18,12 @@ The product experience is map-first, with additional pages for industries, vendo
 - Frontend/runtime: Next.js App Router + TypeScript + Tailwind
 - Mapping/rendering: MapLibre + deck.gl
 - Data + storage: Supabase (when configured), plus in-memory caches/fallbacks
-- Optional local/remote AI providers: Anthropic, Gemini, OpenAI-compatible providers, Ollama
+- Primary AI provider: NVIDIA Build via OpenAI-compatible API, with optional fallbacks including Anthropic, Gemini, Groq, OpenAI-compatible providers, and Ollama
 - Optional external Intel backend proxy: `/api/intel/[...path]` to `INTEL_API_URL` (default `http://localhost:8100`)
+- Unified brain ingestion:
+  - `/api/brain/map` maps live signals into graph entities and map points
+  - `/api/brain/obsidian` imports Obsidian notes and links
+  - `/api/brain/sync` merges both into one knowledge graph flow
 
 Main shell behavior:
 - Root layout (`src/app/layout.tsx`) loads app fonts and wraps with `AppShell`
