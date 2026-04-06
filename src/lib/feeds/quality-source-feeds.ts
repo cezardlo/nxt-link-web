@@ -22,6 +22,77 @@ export type QualityFeedSource = {
   tags: string[];
 };
 
+const INTEL_PRIORITY_TAGS = [
+  'border',
+  'trade',
+  'customs',
+  'usmca',
+  'mexico',
+  'el paso',
+  'logistics',
+  'supply-chain',
+  'freight',
+  'shipping',
+  'manufacturing',
+  'industrial',
+  'factory',
+  'automation',
+  'energy',
+  'grid',
+  'grants',
+  'patent',
+  'federal',
+  'government',
+  'compliance',
+  'defense',
+] as const;
+
+const INTEL_PRIORITY_IDS = new Set([
+  'cbp-newsroom',
+  'ustr-news',
+  'ita-trade',
+  'migration-policy',
+  'gao-reports',
+  'cisa-advisories',
+  'nist-pubs',
+  'fedreg-technology',
+  'dhs-news',
+  'nsf-news',
+  'supply-chain-dive',
+  'gn-freightwaves',
+  'gn-usmca-trade',
+  'gn-border-technology',
+  'gn-smart-manufacturing',
+  'gn-industryweek',
+  'gn-mexico-nearshoring',
+  'gn-doe-clean-energy-grants',
+  'gn-patent-manufacturing',
+  'gn-patent-energy',
+  'gn-patent-defense',
+]);
+
+function intelPriorityScore(feed: QualityFeedSource): number {
+  let score = 0;
+  const lowerTags = feed.tags.map((tag) => tag.toLowerCase());
+
+  if (INTEL_PRIORITY_IDS.has(feed.id)) score += 12;
+  score += (4 - feed.tier) * 6;
+
+  if (feed.type === 'government') score += 10;
+  if (feed.type === 'standards') score += 8;
+  if (feed.type === 'patent') score += 7;
+  if (feed.type === 'financial') score += 4;
+
+  for (const tag of INTEL_PRIORITY_TAGS) {
+    if (lowerTags.includes(tag)) score += 4;
+  }
+
+  if (lowerTags.includes('el paso') || lowerTags.includes('borderplex')) score += 6;
+  if (lowerTags.includes('research') || lowerTags.includes('preprint')) score -= 2;
+
+  return score;
+}
+
 // Google News RSS base (free, no key)
 const GN = (q: string) =>
   `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
@@ -4229,6 +4300,22 @@ export function getElPasoFeeds(): QualityFeedSource[] {
       ),
     ),
   );
+}
+
+export function selectPriorityIntelFeeds(
+  staticFeeds: QualityFeedSource[],
+  dynamicFeeds: QualityFeedSource[],
+  maxFeeds: number,
+): QualityFeedSource[] {
+  const uniqueFeeds = [...staticFeeds, ...dynamicFeeds].filter(
+    (feed, index, all) => all.findIndex((candidate) => candidate.id === feed.id) === index,
+  );
+
+  return uniqueFeeds
+    .map((feed, index) => ({ feed, index, score: intelPriorityScore(feed) }))
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .slice(0, maxFeeds)
+    .map(({ feed }) => feed);
 }
 
 /** Total count of quality feeds */

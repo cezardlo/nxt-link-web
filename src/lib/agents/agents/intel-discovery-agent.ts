@@ -8,6 +8,7 @@ import { parseAnyFeed, type ParsedItem } from '@/lib/rss/parser';
 import {
   QUALITY_FEEDS,
   type QualityFeedSource,
+  selectPriorityIntelFeeds,
 } from '@/lib/feeds/quality-source-feeds';
 import { getDynamicFeeds } from '@/lib/feeds/dynamic-feed-generator';
 import { persistIntelSignals } from '@/db/queries/intel-signals';
@@ -531,6 +532,7 @@ export async function runIntelDiscoveryAgent(): Promise<IntelDiscoveryStore> {
 
 const CONCURRENCY = 15;
 const MAX_FEEDS = 300;
+const MAX_DYNAMIC_FEEDS = 120;
 
 async function doRun(): Promise<IntelDiscoveryStore> {
   const startMs = Date.now();
@@ -541,26 +543,9 @@ async function doRun(): Promise<IntelDiscoveryStore> {
   // Select feeds — prioritize tier 1 financial + professional first (highest signal quality),
   // then patent, then government/academic. Within each tier, financial > professional > patent > rest.
   // Dynamic feeds (country×sector, company-specific) are appended as tier 3 to fill remaining slots.
-  const allFeeds: QualityFeedSource[] = [...QUALITY_FEEDS];
-
-  // Add dynamic feeds (randomized subset to rotate coverage across runs)
   const dynamicPool = getDynamicFeeds();
-  // Shuffle dynamic feeds so each run covers different countries/companies
-  const shuffled = dynamicPool.slice().sort(() => Math.random() - 0.5);
-  allFeeds.push(...shuffled);
-
-  const tier1Financial = allFeeds.filter(f => f.tier === 1 && f.type === 'financial');
-  const tier1Professional = allFeeds.filter(f => f.tier === 1 && f.type === 'professional');
-  const tier1Rest = allFeeds.filter(f => f.tier === 1 && f.type !== 'financial' && f.type !== 'professional');
-  const tier2Financial = allFeeds.filter(f => f.tier === 2 && f.type === 'financial');
-  const tier2Professional = allFeeds.filter(f => f.tier === 2 && f.type === 'professional');
-  const tier2Rest = allFeeds.filter(f => f.tier === 2 && f.type !== 'financial' && f.type !== 'professional');
-  const tier3 = allFeeds.filter(f => f.tier === 3);
-  const selectedFeeds = [
-    ...tier1Financial, ...tier1Professional, ...tier1Rest,
-    ...tier2Financial, ...tier2Professional, ...tier2Rest,
-    ...tier3,
-  ].slice(0, MAX_FEEDS);
+  const shuffledDynamic = dynamicPool.slice().sort(() => Math.random() - 0.5).slice(0, MAX_DYNAMIC_FEEDS);
+  const selectedFeeds = selectPriorityIntelFeeds(QUALITY_FEEDS, shuffledDynamic, MAX_FEEDS);
 
   // Fetch all feeds in batches
   const allItems: Array<{ item: ParsedItem; feed: QualityFeedSource }> = [];
