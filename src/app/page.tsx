@@ -21,7 +21,13 @@ type BriefingResponse = {
 type BrainResponse = {
   scannedSignals?: number;
   notesScanned?: number;
-  mapPoints?: Array<{ slug: string; name: string; signalCount: number; avgImportance: number; topIndustries: string[] }>;
+  mapPoints?: Array<{
+    slug: string;
+    name: string;
+    signalCount: number;
+    avgImportance: number;
+    topIndustries: string[];
+  }>;
   entities?: Array<{ id: string; type: string; name: string }>;
   warnings?: string[];
   sources?: {
@@ -91,145 +97,194 @@ export default function Home() {
   const noteCount = brain?.notesScanned ?? 0;
 
   return (
-    <div className="min-h-screen">
-      <section className="relative overflow-hidden border-b border-nxt-border/60">
-        <div className="hero-orb hero-orb-indigo left-[-8rem] top-[-6rem] h-[18rem] w-[18rem]" />
-        <div className="hero-orb hero-orb-cyan right-[5%] top-[2rem] h-[14rem] w-[14rem]" />
-        <div className="absolute inset-0 grid-pattern opacity-40" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(88,113,255,0.22),transparent_34%),radial-gradient(circle_at_75%_15%,rgba(54,211,255,0.12),transparent_28%),linear-gradient(180deg,transparent_0%,rgba(8,10,18,0.28)_48%,var(--bg)_100%)]" />
+    <div className="min-h-screen bg-nxt-bg">
+      <section className="relative overflow-hidden">
+        <div className="hero-orb hero-orb-indigo left-[-10rem] top-[-8rem] h-[22rem] w-[22rem]" />
+        <div className="hero-orb hero-orb-cyan right-[4%] top-[6rem] h-[16rem] w-[16rem]" />
+        <div className="absolute inset-0 grid-pattern opacity-35" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(88,113,255,0.22),transparent_28%),radial-gradient(circle_at_80%_18%,rgba(54,211,255,0.14),transparent_24%),linear-gradient(180deg,rgba(7,8,18,0.18)_0%,rgba(7,8,18,0.74)_54%,var(--bg)_100%)]" />
 
-        <div className="relative mx-auto max-w-[1280px] px-6 pb-20 pt-20">
-          <div className="grid gap-10 xl:grid-cols-[1.05fr_0.95fr] xl:items-start">
-            <div className="max-w-[680px]">
-              <div className="slide-up mb-5 inline-flex items-center gap-2 rounded-full border border-[rgba(138,160,255,0.16)] bg-[rgba(13,19,34,0.9)] px-3 py-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
+        <div className="relative mx-auto max-w-[1320px] px-6 pb-24 pt-14">
+          <div className="mb-10 flex flex-wrap items-center justify-between gap-4 border-b border-[rgba(138,160,255,0.12)] pb-5">
+            <div className="text-[11px] font-mono uppercase tracking-[0.24em] text-nxt-dim">
+              Intelligence Operating System
+            </div>
+            <div className="flex items-center gap-3 text-[11px] font-mono uppercase tracking-[0.18em] text-nxt-muted">
+              <div className="flex items-center gap-2 rounded-full border border-[rgba(39,209,127,0.16)] bg-[rgba(12,30,23,0.58)] px-3 py-1.5">
                 <div className="h-1.5 w-1.5 rounded-full bg-nxt-green live-pulse" />
-                <span className="text-xs font-mono tracking-wide text-nxt-muted">
-                  {stats ? `${stats.total.toLocaleString()} signals tracked` : 'live monitoring'}
-                </span>
+                <span>{stats ? `${stats.total.toLocaleString()} tracked` : 'Live intake'}</span>
               </div>
+              <span>NVIDIA-first reasoning</span>
+            </div>
+          </div>
 
-              <p className="section-kicker slide-up mb-4" style={{ animationDelay: '0.04s' }}>
-                Market intelligence for operators
+          <div className="grid gap-10 xl:grid-cols-[1.15fr_0.85fr] xl:items-end">
+            <div className="max-w-[820px]">
+              <p className="section-kicker slide-up mb-5" style={{ animationDelay: '0.04s' }}>
+                NXT//LINK
               </p>
-
-              <h1 className="slide-up max-w-[760px] text-4xl font-bold leading-[1.02] text-nxt-text sm:text-5xl xl:text-6xl" style={{ animationDelay: '0.08s' }}>
-                Turn incoming market noise into
-                <span className="gradient-text"> one operating picture.</span>
+              <h1
+                className="slide-up max-w-[900px] text-[clamp(3.4rem,8vw,7.8rem)] font-bold leading-[0.92] tracking-[-0.05em] text-nxt-text"
+                style={{ animationDelay: '0.08s' }}
+              >
+                We turn incoming
+                <br />
+                market movement
+                <br />
+                into an
+                <span className="gradient-text"> operating picture.</span>
               </h1>
+            </div>
 
-              <p className="slide-up mt-5 max-w-[640px] text-lg leading-8 text-nxt-secondary" style={{ animationDelay: '0.14s' }}>
-                NXT//LINK watches live signals, maps them to companies and places, and explains what matters in plain language.
-                It is built for supply chain, logistics, and market teams that need a faster read on change.
+            <div className="slide-up max-w-[420px] xl:justify-self-end" style={{ animationDelay: '0.14s' }}>
+              <p className="text-base leading-8 text-nxt-secondary">
+                NXT//LINK watches signals, maps them to companies and places, merges research memory, and explains what matters so operators can move faster.
               </p>
-
-              <div className="slide-up mt-8 flex flex-wrap items-center gap-3" style={{ animationDelay: '0.18s' }}>
+              <div className="mt-7 flex flex-wrap gap-3">
                 <Link
                   href="/briefing"
-                  className="rounded-xl bg-nxt-accent px-5 py-3 text-sm font-semibold text-white transition-all hover:brightness-110"
+                  className="rounded-full bg-nxt-accent px-5 py-3 text-sm font-semibold text-white transition-all hover:brightness-110"
                 >
-                  Start with the briefing
+                  Open the briefing
                 </Link>
                 <Link
                   href="/command"
-                  className="rounded-xl border border-nxt-border bg-nxt-surface px-5 py-3 text-sm font-medium text-nxt-secondary transition-all hover:border-nxt-muted hover:text-nxt-text"
+                  className="rounded-full border border-nxt-border bg-nxt-surface px-5 py-3 text-sm font-medium text-nxt-secondary transition-all hover:border-nxt-muted hover:text-nxt-text"
                 >
-                  Open command view
-                </Link>
-                <Link
-                  href="/map"
-                  className="rounded-xl border border-[rgba(39,209,127,0.18)] bg-[rgba(12,30,23,0.72)] px-5 py-3 text-sm font-medium text-nxt-green transition-all hover:brightness-110"
-                >
-                  See the brain map
+                  Launch command view
                 </Link>
               </div>
+            </div>
+          </div>
 
-              <div className="slide-up mt-10 grid gap-4 sm:grid-cols-3" style={{ animationDelay: '0.22s' }}>
-                {[
-                  { label: 'Signals tracked', value: stats?.total?.toLocaleString() ?? '---', hint: 'Live public intake' },
-                  { label: 'Mapped companies', value: companyCount.toLocaleString(), hint: 'Connected into the graph' },
-                  { label: 'Research notes', value: noteCount.toLocaleString(), hint: brain?.sources?.obsidian?.enabled ? 'Obsidian merged in' : 'Memory optional' },
-                ].map((card) => (
-                  <div key={card.label} className="rounded-[22px] border border-[rgba(138,160,255,0.12)] bg-[linear-gradient(180deg,rgba(20,27,46,0.92),rgba(11,15,27,0.92))] p-4">
-                    <p className="text-xs font-mono uppercase tracking-[0.18em] text-nxt-dim">{card.label}</p>
-                    <p className="mt-3 text-2xl font-mono font-bold text-nxt-text">{card.value}</p>
-                    <p className="mt-1 text-xs text-nxt-muted">{card.hint}</p>
+          <div className="slide-up mt-14 grid gap-3 border-t border-[rgba(138,160,255,0.12)] pt-5 sm:grid-cols-2 xl:grid-cols-4" style={{ animationDelay: '0.2s' }}>
+            {[
+              { label: 'Signals tracked', value: stats?.total?.toLocaleString() ?? '---', note: 'public and monitored continuously' },
+              { label: 'Mapped companies', value: companyCount.toLocaleString(), note: 'linked into one graph' },
+              { label: 'Research notes', value: noteCount.toLocaleString(), note: brain?.sources?.obsidian?.enabled ? 'Obsidian memory connected' : 'memory layer optional' },
+              { label: 'Active locations', value: topPlaces.length.toString(), note: 'visible on the live map' },
+            ].map((item) => (
+              <div key={item.label} className="flex items-end justify-between gap-4 border border-[rgba(138,160,255,0.1)] bg-[rgba(13,18,30,0.46)] px-4 py-4">
+                <div>
+                  <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">{item.label}</div>
+                  <div className="mt-2 text-2xl font-mono font-bold text-nxt-text">{item.value}</div>
+                </div>
+                <div className="max-w-[120px] text-right text-[11px] leading-5 text-nxt-muted">{item.note}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-y border-[rgba(138,160,255,0.1)] bg-[rgba(9,13,22,0.7)]">
+        <div className="mx-auto max-w-[1320px] px-6 py-20">
+          <div className="grid gap-10 xl:grid-cols-[0.78fr_1.22fr]">
+            <div>
+              <p className="section-kicker">What It Does</p>
+              <h2 className="mt-3 max-w-[420px] text-3xl font-semibold leading-tight text-nxt-text sm:text-4xl">
+                An intelligence system built to connect signal to decision.
+              </h2>
+            </div>
+
+            <div className="grid gap-px overflow-hidden border border-[rgba(138,160,255,0.12)] bg-[rgba(138,160,255,0.12)] md:grid-cols-2">
+              {[
+                ['Watch the market', 'Track contracts, funding, launches, partnerships, regulations, and movement as it happens.'],
+                ['Map the entities', 'Turn signals into linked companies, industries, locations, and relationships for the live graph.'],
+                ['Learn your memory', 'Pull research notes and wiki-links from Obsidian so the system stops starting from zero.'],
+                ['Explain clearly', 'Use NVIDIA-backed reasoning to create briefings, trust cues, and operator-ready summaries.'],
+              ].map(([title, text], index) => (
+                <div key={title} className="bg-[rgba(10,13,22,0.96)] p-6">
+                  <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-nxt-dim">0{index + 1}</div>
+                  <h3 className="mt-4 text-xl font-semibold text-nxt-text">{title}</h3>
+                  <p className="mt-3 max-w-[420px] text-sm leading-7 text-nxt-secondary">{text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-[1320px] px-6 py-20">
+        <div className="mb-8 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <p className="section-kicker">Experience</p>
+            <h2 className="mt-3 text-3xl font-semibold leading-tight text-nxt-text sm:text-4xl">
+              See the system through the screens that matter.
+            </h2>
+          </div>
+          <p className="max-w-[460px] text-sm leading-7 text-nxt-secondary">
+            The experience is designed to move from short explanation into live evidence, then into deeper action surfaces.
+          </p>
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+          <div className="overflow-hidden border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)]">
+            <div className="border-b border-[rgba(138,160,255,0.12)] px-5 py-4">
+              <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Primary screens</div>
+            </div>
+            <div className="grid gap-px bg-[rgba(138,160,255,0.12)]">
+              {[
+                ['/briefing', 'Briefing', 'A short daily operating read on what changed, why it matters, and what to watch next.'],
+                ['/intel', 'Signal Feed', 'A ranked feed with filters, confidence, trust cues, and source context.'],
+                ['/map', 'Brain Map', 'A live picture of where activity is clustering across companies and locations.'],
+                ['/command', 'Command View', 'A denser control surface for operators who want the full picture at once.'],
+              ].map(([href, title, desc]) => (
+                <Link key={href} href={href} className="group bg-[rgba(10,13,22,0.96)] px-5 py-5 transition-colors hover:bg-[rgba(18,24,41,0.96)]">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-nxt-text">{title}</h3>
+                      <p className="mt-2 max-w-[500px] text-sm leading-7 text-nxt-secondary">{desc}</p>
+                    </div>
+                    <div className="pt-1 text-[10px] font-mono uppercase tracking-[0.2em] text-nxt-dim transition-colors group-hover:text-nxt-accent">
+                      Open
+                    </div>
                   </div>
-                ))}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-5">
+              <p className="section-kicker">Top Places</p>
+              <div className="mt-5 space-y-3">
+                {topPlaces.length === 0 ? (
+                  <p className="text-sm leading-7 text-nxt-dim">Map clusters will appear here after the sync runs.</p>
+                ) : (
+                  topPlaces.map((place) => (
+                    <div key={place.slug} className="border border-[rgba(138,160,255,0.1)] bg-[rgba(13,18,30,0.46)] p-4">
+                      <div className="flex items-end justify-between gap-4">
+                        <div>
+                          <div className="text-base font-medium text-nxt-text">{place.name}</div>
+                          <div className="mt-1 text-xs text-nxt-dim">{place.topIndustries.join(', ') || 'No industries tagged yet'}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xl font-mono font-bold text-nxt-text">{place.signalCount}</div>
+                          <div className="text-[10px] font-mono uppercase tracking-[0.16em] text-nxt-dim">
+                            {Math.round(place.avgImportance * 100)} score
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
-            <div className="slide-up grid gap-4" style={{ animationDelay: '0.24s' }}>
-              <div className="rounded-[30px] border border-[rgba(138,160,255,0.16)] bg-[linear-gradient(180deg,rgba(18,24,41,0.96),rgba(10,13,24,0.96))] p-6 shadow-[0_24px_80px_rgba(1,5,16,0.42)] backdrop-blur">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="section-kicker">How it works</p>
-                    <h2 className="mt-2 text-2xl font-semibold text-nxt-text">One system, four jobs</h2>
+            <div className="border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-5">
+              <p className="section-kicker">System Notes</p>
+              <div className="mt-5 space-y-4 text-sm leading-7 text-nxt-secondary">
+                <p>
+                  NXT//LINK is not just a dashboard. It is an intelligence workflow that combines live signals, mapped entities, memory, and explanation.
+                </p>
+                <p>
+                  The goal is simple: make it easier to understand what is changing before teams have to react.
+                </p>
+                {brain?.warnings?.[0] && (
+                  <div className="border border-[rgba(242,185,75,0.22)] bg-[rgba(46,30,8,0.56)] p-4 text-xs leading-6 text-nxt-secondary">
+                    {brain.warnings[0]}
                   </div>
-                  <div className="rounded-full border border-[rgba(88,113,255,0.16)] bg-[rgba(88,113,255,0.08)] px-2.5 py-1 text-[11px] font-mono text-nxt-accent">
-                    NVIDIA-first
-                  </div>
-                </div>
-
-                <div className="mt-6 grid gap-3">
-                  {[
-                    ['Watch', 'Track live contracts, funding, launches, regulations, and market movement.'],
-                    ['Map', 'Link each signal to companies, industries, and locations so the story has shape.'],
-                    ['Learn', 'Merge memory from your notes and research instead of starting from zero each time.'],
-                    ['Explain', 'Turn ranked signals into briefings, trust cues, and next actions for teams.'],
-                  ].map(([title, text], index) => (
-                    <div key={title} className="rounded-[20px] border border-[rgba(138,160,255,0.12)] bg-[rgba(20,27,46,0.78)] p-4">
-                      <div className="mb-2 flex items-center gap-3">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-nxt-accent/15 text-xs font-mono text-nxt-accent">
-                          0{index + 1}
-                        </div>
-                        <h3 className="text-sm font-semibold text-nxt-text">{title}</h3>
-                      </div>
-                      <p className="text-sm leading-6 text-nxt-secondary">{text}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div className="rounded-[24px] border border-nxt-border bg-nxt-card/86 p-5">
-                  <p className="section-kicker">Top places</p>
-                  <div className="mt-4 space-y-3">
-                    {topPlaces.length === 0 ? (
-                      <p className="text-sm text-nxt-dim">Map clusters will appear here once the sync runs.</p>
-                    ) : (
-                      topPlaces.map((place) => (
-                        <div key={place.slug} className="flex items-center justify-between rounded-2xl border border-nxt-border bg-[rgba(10,13,22,0.75)] p-3">
-                          <div>
-                            <div className="text-sm font-medium text-nxt-text">{place.name}</div>
-                            <div className="mt-1 text-xs text-nxt-dim">{place.topIndustries.join(', ') || 'No industries tagged yet'}</div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-lg font-mono font-bold text-nxt-text">{place.signalCount}</div>
-                            <div className="text-[10px] font-mono text-nxt-dim">{Math.round(place.avgImportance * 100)} score</div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                <div className="rounded-[24px] border border-nxt-border bg-nxt-card/86 p-5">
-                  <p className="section-kicker">Trust layer</p>
-                  <div className="mt-4 space-y-3 text-sm leading-6 text-nxt-secondary">
-                    <p>The site now ranks what looks important, shows confidence, and keeps the graph working even if memory is not connected yet.</p>
-                    <div className="rounded-2xl border border-[rgba(39,209,127,0.18)] bg-[rgba(12,30,23,0.72)] p-4">
-                      <div className="text-xs font-mono uppercase tracking-[0.18em] text-nxt-green">Brain status</div>
-                      <div className="mt-2 text-sm font-semibold text-nxt-text">
-                        {brain?.sources?.obsidian?.enabled ? 'Live signals + Obsidian memory' : 'Live signals active'}
-                      </div>
-                    </div>
-                    {brain?.warnings?.[0] && (
-                      <div className="rounded-2xl border border-[rgba(242,185,75,0.22)] bg-[rgba(46,30,8,0.56)] p-4 text-xs leading-5 text-nxt-secondary">
-                        {brain.warnings[0]}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -237,10 +292,10 @@ export default function Home() {
       </section>
 
       {signals.length > 0 && (
-        <section className="overflow-hidden border-y border-nxt-border bg-nxt-surface/50">
+        <section className="overflow-hidden border-y border-[rgba(138,160,255,0.1)] bg-[rgba(9,13,22,0.7)]">
           <div className="flex items-center">
-            <div className="shrink-0 border-r border-nxt-border bg-nxt-card px-4 py-3">
-              <span className="text-[10px] font-mono font-semibold uppercase tracking-widest text-nxt-accent">LIVE</span>
+            <div className="shrink-0 border-r border-[rgba(138,160,255,0.1)] px-4 py-3">
+              <span className="text-[10px] font-mono font-semibold uppercase tracking-widest text-nxt-accent">Live Intake</span>
             </div>
             <div className="flex-1 overflow-hidden">
               <div className="feed-scroll flex items-center gap-8 px-4 py-3">
@@ -254,7 +309,7 @@ export default function Home() {
                       >
                         {typeInfo.label}
                       </span>
-                      <span className="max-w-[320px] truncate whitespace-nowrap text-xs text-nxt-secondary">{signal.title}</span>
+                      <span className="max-w-[340px] truncate whitespace-nowrap text-xs text-nxt-secondary">{signal.title}</span>
                       <span className="text-[10px] font-mono text-nxt-dim">{timeAgo(signal.discovered_at)}</span>
                     </div>
                   );
@@ -265,29 +320,29 @@ export default function Home() {
         </section>
       )}
 
-      <section className="mx-auto max-w-[1220px] px-6 py-16">
-        <div className="mb-8 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      <section className="mx-auto max-w-[1320px] px-6 py-20">
+        <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr] xl:items-end">
           <div>
-            <p className="section-kicker">Main paths</p>
-            <h2 className="mt-2 text-3xl font-semibold text-nxt-text">Start fast, then go deeper where you need it.</h2>
+            <p className="section-kicker">Why Teams Use It</p>
+            <h2 className="mt-3 max-w-[680px] text-3xl font-semibold leading-tight text-nxt-text sm:text-4xl">
+              Less scattered research. Faster briefings. Better visibility into what is building.
+            </h2>
           </div>
-          <p className="max-w-[520px] text-sm leading-6 text-nxt-secondary">
-            The website now has clearer jobs for each screen. You should be able to move from a short briefing into the signal feed, map, command view, or vendor research without getting lost.
-          </p>
+          <div className="text-sm leading-7 text-nxt-secondary">
+            Built for logistics, supply chain, market intelligence, and innovation teams that need to turn monitoring into actual operating context.
+          </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-10 grid gap-px overflow-hidden border border-[rgba(138,160,255,0.12)] bg-[rgba(138,160,255,0.12)] md:grid-cols-3">
           {[
-            ['/briefing', 'Briefing', 'Start with the short narrative and what changed today.'],
-            ['/intel', 'Signal Feed', 'Filter raw movement by score, source, and trust cues.'],
-            ['/map', 'Brain Map', 'See which places are clustering and why.'],
-            ['/vendors', 'Vendor Directory', 'Move from a signal into actual companies and categories.'],
-          ].map(([href, title, desc]) => (
-            <Link key={href} href={href} className="card-hover rounded-[24px] border border-nxt-border bg-nxt-surface p-5">
-              <div className="text-sm font-semibold text-nxt-text">{title}</div>
-              <p className="mt-2 text-sm leading-6 text-nxt-secondary">{desc}</p>
-              <div className="mt-4 text-xs font-mono uppercase tracking-[0.18em] text-nxt-dim">Open</div>
-            </Link>
+            ['For operators', 'Know what changed, where it is happening, and what requires attention right now.'],
+            ['For researchers', 'Merge notes, wiki-links, and external signals into one memory-backed graph.'],
+            ['For decision makers', 'Get a simpler story about movement, trust, and opportunity without reading raw feeds all day.'],
+          ].map(([title, text]) => (
+            <div key={title} className="bg-[rgba(10,13,22,0.96)] p-6">
+              <h3 className="text-xl font-semibold text-nxt-text">{title}</h3>
+              <p className="mt-3 text-sm leading-7 text-nxt-secondary">{text}</p>
+            </div>
           ))}
         </div>
       </section>

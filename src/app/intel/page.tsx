@@ -182,13 +182,18 @@ export default function IntelPage() {
   return (
     <div className="min-h-screen">
       <div className="mx-auto max-w-[1120px] px-6 py-10 pb-20">
-        <section className="slide-up mb-8 grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
-          <div className="rounded-[28px] border border-[rgba(138,160,255,0.14)] bg-[linear-gradient(180deg,rgba(16,22,39,0.94),rgba(9,12,22,0.96))] p-6 shadow-[0_24px_80px_rgba(2,6,20,0.34)]">
+        <section className="slide-up mb-8 border-b border-[rgba(138,160,255,0.12)] pb-8">
+          <div className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
+          <div className="p-0">
             <p className="section-kicker mb-3">Signal Desk</p>
-            <h1 className="max-w-[620px] text-3xl font-semibold leading-tight text-nxt-text sm:text-4xl">
-              Filter the noise, rank the movement, and explain why each signal matters.
+            <h1 className="max-w-[820px] text-[clamp(2.8rem,6vw,5.4rem)] font-bold leading-[0.95] tracking-[-0.04em] text-nxt-text">
+              Filter the noise.
+              <br />
+              Rank the movement.
+              <br />
+              Read the signal faster.
             </h1>
-            <p className="mt-4 max-w-[660px] text-sm leading-7 text-nxt-secondary">
+            <p className="mt-5 max-w-[700px] text-base leading-8 text-nxt-secondary">
               This feed is now tuned for faster decisions: stronger filters, clearer trust scoring,
               easier scanning, and better context around where a signal came from.
             </p>
@@ -215,18 +220,19 @@ export default function IntelPage() {
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+          <div className="grid gap-px overflow-hidden border border-[rgba(138,160,255,0.12)] bg-[rgba(138,160,255,0.12)] sm:grid-cols-3 lg:grid-cols-1">
             {[
               { label: 'Visible signals', value: filteredCount, hint: `${totalCount.toLocaleString()} total tracked` },
               { label: 'Average priority', value: averageScore, hint: `top industry: ${topIndustry.replace(/-/g, ' ')}` },
               { label: 'Confidence coverage', value: `${confidenceCoverage}%`, hint: `${highCount.toLocaleString()} high-priority signals` },
             ].map((item) => (
-              <div key={item.label} className="rounded-[22px] border border-nxt-border bg-nxt-surface/88 p-4">
+              <div key={item.label} className="bg-[rgba(10,13,22,0.96)] p-4">
                 <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">{item.label}</div>
                 <div className="mt-2 text-2xl font-mono font-bold text-nxt-text">{item.value}</div>
                 <div className="mt-1 text-xs text-nxt-muted">{item.hint}</div>
               </div>
             ))}
+          </div>
           </div>
         </section>
 

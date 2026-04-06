@@ -342,31 +342,49 @@ export default function BriefingPage() {
   const mergedRegions = Object.values(regionMap).sort((a, b) => b.signal_count - a.signal_count);
 
   return (
-    <div className="min-h-screen">
-      <div className="max-w-[900px] mx-auto px-6 py-10 pb-20">
+    <div className="min-h-screen bg-nxt-bg">
+      <div className="max-w-[1240px] mx-auto px-6 py-10 pb-20">
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8 slide-up">
-          <div>
-            <h1 className="text-xl font-semibold text-nxt-text mb-1">Today&apos;s Briefing</h1>
-            <p className="text-sm text-nxt-muted">
-              {briefing.total_signals} signals tracked &middot; Updated {formatDate(briefing.generated_at)}
-            </p>
+        <section className="mb-10 border-b border-[rgba(138,160,255,0.12)] pb-8">
+          <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr] xl:items-end">
+            <div className="slide-up">
+              <p className="section-kicker mb-4">Daily Briefing</p>
+              <h1 className="max-w-[820px] text-[clamp(2.8rem,6vw,5.6rem)] font-bold leading-[0.95] tracking-[-0.04em] text-nxt-text">
+                Start with the short
+                <br />
+                operating read.
+              </h1>
+              <p className="mt-5 max-w-[640px] text-base leading-8 text-nxt-secondary">
+                This is the plain-language layer of NXT//LINK. It compresses the incoming signal flow into what changed, why it matters, and what teams should watch next.
+              </p>
+            </div>
+            <div className="slide-up grid gap-px overflow-hidden border border-[rgba(138,160,255,0.12)] bg-[rgba(138,160,255,0.12)]" style={{ animationDelay: '0.08s' }}>
+              {[
+                ['Signals tracked', briefing.total_signals.toLocaleString()],
+                ['Last update', formatDate(briefing.generated_at)],
+                ['Top stories', String(briefing.top_insights.slice(0, 3).length)],
+              ].map(([label, value]) => (
+                <div key={label} className="bg-[rgba(10,13,22,0.96)] px-5 py-4">
+                  <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">{label}</div>
+                  <div className="mt-2 text-xl font-mono font-bold text-nxt-text">{value}</div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-nxt-surface border border-nxt-border">
+          <div className="mt-6 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[rgba(12,30,23,0.58)] border border-[rgba(39,209,127,0.16)] w-fit">
             <div className="w-1.5 h-1.5 rounded-full bg-nxt-green live-pulse" />
-            <span className="text-xs font-mono text-nxt-muted">MONITORING</span>
+            <span className="text-xs font-mono text-nxt-muted uppercase tracking-[0.18em]">Monitoring live</span>
           </div>
-        </div>
+        </section>
 
         {/* TOP 3 INSIGHTS */}
-        <div className="mb-8">
+        <div className="mb-8 grid gap-4 xl:grid-cols-3">
           {briefing.top_insights.slice(0, 3).map((insight, i) => {
             const accent = insightAccents[i] || COLORS.accent;
             return (
               <div
                 key={insight.rank}
-                className="bg-nxt-surface border border-nxt-border rounded-nxt-md p-6 mb-4 card-hover slide-up"
+                className="bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-6 card-hover slide-up"
                 style={{ animationDelay: `${i * 0.08}s`, borderLeftWidth: 3, borderLeftColor: accent }}
               >
                 {/* Meta row */}
@@ -413,9 +431,9 @@ export default function BriefingPage() {
                 </p>
 
                 {/* 4-section grid */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-3">
                   {/* El Paso Impact */}
-                  <div className="p-4 rounded-lg bg-nxt-bg border border-nxt-border-subtle">
+                  <div className="p-4 bg-[rgba(13,18,30,0.42)] border border-[rgba(138,160,255,0.08)]">
                     <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-amber mb-3 uppercase">El Paso Impact</div>
                     <ul className="space-y-2">
                       {(insight.el_paso_impact || [insight.why_it_matters]).map((bullet, idx) => (
@@ -428,7 +446,7 @@ export default function BriefingPage() {
                   </div>
 
                   {/* Watch For */}
-                  <div className="p-4 rounded-lg bg-nxt-bg border border-nxt-border-subtle">
+                  <div className="p-4 bg-[rgba(13,18,30,0.42)] border border-[rgba(138,160,255,0.08)]">
                     <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-purple mb-3 uppercase">Watch For</div>
                     <ul className="space-y-2">
                       {(insight.watch_for || ['Follow up in 1-2 weeks']).map((bullet, idx) => (
@@ -441,7 +459,7 @@ export default function BriefingPage() {
                   </div>
 
                   {/* What To Do */}
-                  <div className="p-4 rounded-lg bg-nxt-bg border border-nxt-border-subtle">
+                  <div className="p-4 bg-[rgba(13,18,30,0.42)] border border-[rgba(138,160,255,0.08)]">
                     <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-green mb-3 uppercase">What To Do</div>
                     <ul className="space-y-2">
                       {(insight.action_bullets || [insight.where_its_going]).map((bullet, idx) => (
@@ -454,7 +472,7 @@ export default function BriefingPage() {
                   </div>
 
                   {/* Who Can Help */}
-                  <div className="p-4 rounded-lg bg-nxt-bg border border-nxt-border-subtle">
+                  <div className="p-4 bg-[rgba(13,18,30,0.42)] border border-[rgba(138,160,255,0.08)]">
                     <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-cyan mb-3 uppercase">Who Can Help</div>
                     {insight.vendors && insight.vendors.length > 0 ? (
                       <ul className="space-y-2">
@@ -497,7 +515,7 @@ export default function BriefingPage() {
         {/* Two-column: Regions + Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
           {/* REGIONS */}
-          <div className="bg-nxt-surface border border-nxt-border rounded-nxt-md p-5">
+          <div className="bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5">
             <h3 className="text-sm font-semibold text-nxt-text mb-1">Supply Chain Risk by Region</h3>
             <p className="text-[11px] text-nxt-dim mb-4">Based on signal volume, disruptions, and regulatory activity</p>
             <div className="space-y-2">
@@ -523,7 +541,7 @@ export default function BriefingPage() {
           </div>
 
           {/* SIGNAL STATS */}
-          <div className="bg-nxt-surface border border-nxt-border rounded-nxt-md p-5">
+          <div className="bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5">
             <h3 className="text-sm font-semibold text-nxt-text mb-4">Signal Breakdown</h3>
             <div className="mb-5">
               <div className="text-[10px] font-mono text-nxt-dim tracking-wider mb-3 uppercase">By Type</div>
@@ -571,7 +589,7 @@ export default function BriefingPage() {
         {briefing.trends && <TrendChart trends={briefing.trends} />}
 
         {/* RECENT SIGNALS */}
-        <div className="bg-nxt-surface border border-nxt-border rounded-nxt-md p-5">
+        <div className="bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-semibold text-nxt-text">Recent Signals</h3>
             <span className="text-xs text-nxt-muted">{briefing.recent_signals.length} latest</span>

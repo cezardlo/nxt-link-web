@@ -222,11 +222,12 @@ export default function MapPage() {
   return (
     <div className="min-h-screen bg-nxt-bg text-nxt-text">
       <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-6 sm:px-6">
-        <section className="mb-5 grid gap-4 xl:grid-cols-[320px_1fr_320px]">
-          <div className="rounded-[24px] border border-nxt-border bg-[linear-gradient(180deg,rgba(15,19,32,0.94),rgba(9,12,22,0.96))] p-5">
+        <section className="mb-8 border-b border-[rgba(138,160,255,0.12)] pb-8">
+          <div className="grid gap-4 xl:grid-cols-[320px_1fr_320px]">
+          <div className="p-0">
             <p className="section-kicker mb-3">Brain Map</p>
-            <h1 className="text-2xl font-semibold">See where signals, companies, and memory are clustering.</h1>
-            <p className="mt-3 text-sm leading-6 text-nxt-secondary">
+            <h1 className="max-w-[320px] text-[clamp(2.4rem,4vw,4rem)] font-bold leading-[0.95] tracking-[-0.04em] text-nxt-text">See where the system is clustering.</h1>
+            <p className="mt-4 text-sm leading-7 text-nxt-secondary">
               This view now uses the combined brain sync. Live signals drive the map, and Obsidian notes can enrich the same knowledge graph.
             </p>
 
@@ -261,7 +262,7 @@ export default function MapPage() {
             </div>
           </div>
 
-          <div className="relative min-h-[420px] overflow-hidden rounded-[28px] border border-[rgba(138,160,255,0.16)] bg-[rgba(6,9,16,0.92)]">
+          <div className="relative min-h-[420px] overflow-hidden border border-[rgba(138,160,255,0.16)] bg-[rgba(6,9,16,0.92)]">
             <div ref={mapContainer} className="absolute inset-0" />
             {selectedPoint && (
               <div className="absolute bottom-4 left-4 z-10 w-[280px] rounded-[20px] border border-nxt-border bg-[rgba(9,13,22,0.94)] p-4 backdrop-blur">
@@ -271,7 +272,7 @@ export default function MapPage() {
                     <div className="mt-1 text-xs text-nxt-dim">{selectedPoint.topIndustries.join(', ') || 'No industries yet'}</div>
                   </div>
                   <button onClick={() => setSelectedPoint(null)} className="text-nxt-dim">
-                    ×
+                    x
                   </button>
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-3 text-center">
@@ -293,7 +294,7 @@ export default function MapPage() {
             )}
           </div>
 
-          <div className="rounded-[24px] border border-nxt-border bg-[linear-gradient(180deg,rgba(15,19,32,0.94),rgba(9,12,22,0.96))] p-5">
+          <div className="border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-5">
             <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Knowledge summary</div>
             <div className="mt-4 space-y-3">
               <div className="rounded-[18px] border border-nxt-border bg-nxt-surface/70 p-4">
@@ -317,6 +318,7 @@ export default function MapPage() {
                 </div>
               )}
             </div>
+          </div>
           </div>
         </section>
 
