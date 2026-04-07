@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
+import Link from 'next/link';
 import { COLORS } from '@/lib/tokens';
 import { PageTransition } from '@/components/PageTransition';
 
@@ -158,17 +159,32 @@ function TypeBar({ breakdown }: { breakdown: TypeBreakdown[] }) {
   );
 }
 
+// Ecosystem types
+type EcosystemEntity = { id: string; name: string; slug: string; entity_type: string };
+type Ecosystem = { companies: EcosystemEntity[]; technologies: EcosystemEntity[]; products: EcosystemEntity[] };
+
 export default function IndustryPage() {
   const [activeIndustry, setActiveIndustry] = useState('manufacturing');
   const [data, setData] = useState<IndustryData | null>(null);
+  const [ecosystem, setEcosystem] = useState<Ecosystem | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async (industry: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/industry?industry=${industry}`);
-      const json = await res.json();
-      setData(json);
+      const [indRes, ecoRes] = await Promise.allSettled([
+        fetch(`/api/industry?industry=${industry}`).then(r => r.json()),
+        fetch(`/api/explore?industry=${industry}&limit=100`).then(r => r.json()),
+      ]);
+      if (indRes.status === 'fulfilled') setData(indRes.value);
+      if (ecoRes.status === 'fulfilled' && ecoRes.value.entities) {
+        const entities = ecoRes.value.entities as EcosystemEntity[];
+        setEcosystem({
+          companies: entities.filter(e => e.entity_type === 'company'),
+          technologies: entities.filter(e => e.entity_type === 'technology'),
+          products: entities.filter(e => e.entity_type === 'product'),
+        });
+      }
     } catch (e) {
       console.error('Failed to fetch industry data:', e);
     }
@@ -435,6 +451,89 @@ export default function IndustryPage() {
             </div>
           </div>
         ) : null}
+
+            {/* ═══ Ecosystem — Connected Entities ═══════════════════════ */}
+            {ecosystem && (ecosystem.companies.length > 0 || ecosystem.technologies.length > 0) && (
+              <div className="mt-8 rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-[11px] font-mono uppercase tracking-[0.18em] text-nxt-dim">
+                    Ecosystem — Knowledge Graph
+                  </h3>
+                  <Link
+                    href={`/explore?industry=${activeIndustry}`}
+                    className="text-[10px] font-mono uppercase tracking-wider text-nxt-accent hover:text-nxt-accent-light transition-colors no-underline"
+                  >
+                    Explore full graph →
+                  </Link>
+                </div>
+
+                {ecosystem.technologies.length > 0 && (
+                  <div className="mb-4">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <span>⚡</span>
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-400">
+                        Technologies ({ecosystem.technologies.length})
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {ecosystem.technologies.slice(0, 12).map((t) => (
+                        <Link
+                          key={t.id}
+                          href={`/entity/${t.slug || t.id}`}
+                          className="text-[11px] px-2.5 py-1 rounded-full border border-cyan-500/20 bg-cyan-500/[0.06] text-cyan-400 no-underline hover:bg-cyan-500/10 transition-colors"
+                        >
+                          {t.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {ecosystem.companies.length > 0 && (
+                  <div className="mb-4">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <span>🏢</span>
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400">
+                        Companies ({ecosystem.companies.length})
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {ecosystem.companies.slice(0, 12).map((c) => (
+                        <Link
+                          key={c.id}
+                          href={`/entity/${c.slug || c.id}`}
+                          className="text-[11px] px-2.5 py-1 rounded-full border border-emerald-500/20 bg-emerald-500/[0.06] text-emerald-400 no-underline hover:bg-emerald-500/10 transition-colors"
+                        >
+                          {c.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {ecosystem.products.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <span>📦</span>
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400">
+                        Products ({ecosystem.products.length})
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {ecosystem.products.slice(0, 8).map((p) => (
+                        <Link
+                          key={p.id}
+                          href={`/entity/${p.slug || p.id}`}
+                          className="text-[11px] px-2.5 py-1 rounded-full border border-amber-500/20 bg-amber-500/[0.06] text-amber-400 no-underline hover:bg-amber-500/10 transition-colors"
+                        >
+                          {p.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
       </div>
     </div>
     </PageTransition>
