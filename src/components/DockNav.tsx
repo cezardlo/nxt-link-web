@@ -5,18 +5,17 @@ import { usePathname } from 'next/navigation';
 import { TranslateButton } from './TranslateButton';
 
 const NAV_ITEMS = [
+  { href: '/', label: 'Home' },
   { href: '/briefing', label: 'Briefing' },
   { href: '/intel', label: 'Signals' },
-  { href: '/vendors', label: 'Vendors' },
-  { href: '/products', label: 'Products' },
-  { href: '/industry', label: 'Industries' },
-  { href: '/conferences', label: 'Events' },
   { href: '/map', label: 'Map' },
   { href: '/solve', label: 'Solve' },
+  { href: '/vendors', label: 'Vendors' },
+  { href: '/industry', label: 'Industries' },
 ];
 
 function isActive(pathname: string, href: string): boolean {
-  if (href === '/briefing') return pathname === '/' || pathname === '/briefing';
+  if (href === '/') return pathname === '/';
   return pathname === href || pathname.startsWith(href + '/');
 }
 
