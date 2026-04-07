@@ -3,10 +3,23 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { COLORS } from '@/lib/tokens';
 import { INDUSTRIES } from '@/lib/data/nav';
 import { AppShell } from '@/components/AppShell';
-import { CausalGraph } from '@/components/CausalGraph';
+
+// Dynamic import for heavy D3 causal graph visualization
+const CausalGraph = dynamic(
+  () => import('@/components/CausalGraph').then(m => ({ default: m.CausalGraph })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[320px] flex items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950">
+        <div className="w-10 h-10 border-4 border-zinc-700 border-t-emerald-500 rounded-full animate-spin" />
+      </div>
+    ),
+  }
+);
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -201,9 +214,9 @@ function SolveInner() {
   const selectedIndustry = INDUSTRIES.find(i => i.id === industry);
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="min-h-screen bg-nxt-bg pb-24">
       {/* ── Header + Search ───────────────────────────────────────── */}
-      <div className="max-w-[720px] mx-auto px-6 pt-8">
+      <div className="max-w-[720px] mx-auto px-4 sm:px-6 pt-8">
         <div className="mb-6">
           <h1
             className="text-xl sm:text-2xl font-bold leading-tight"
@@ -356,20 +369,20 @@ function SolveInner() {
 
       {/* ── TOP 3 DECISIONS (default view) ────────────────────────── */}
       {!loading && !searching && !searchResult && top3 && (
-        <div className="max-w-[720px] mx-auto px-6 flex flex-col gap-4">
+        <div className="max-w-[720px] mx-auto px-4 sm:px-6 flex flex-col gap-4">
           {top3.map(d => (
             <DecisionCard key={d.signal_id} decision={d} />
           ))}
 
           {/* Footer links */}
-          <div className="flex gap-3 mt-4">
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
             <Link
               href="/briefing"
-              className="flex-1 p-3 text-center"
+              className="flex-1 p-3 text-center transition-all duration-200 hover:translate-y-[-1px]"
               style={{
                 background: COLORS.surface,
                 border: `1px solid ${COLORS.border}`,
-                borderRadius: '12px',
+                borderRadius: '14px',
                 textDecoration: 'none',
               }}
             >
@@ -378,11 +391,11 @@ function SolveInner() {
             </Link>
             <Link
               href="/vendors"
-              className="flex-1 p-3 text-center"
+              className="flex-1 p-3 text-center transition-all duration-200 hover:translate-y-[-1px]"
               style={{
                 background: COLORS.surface,
                 border: `1px solid ${COLORS.border}`,
-                borderRadius: '12px',
+                borderRadius: '14px',
                 textDecoration: 'none',
               }}
             >
@@ -395,7 +408,7 @@ function SolveInner() {
 
       {/* ── SEARCH RESULTS ────────────────────────────────────────── */}
       {!searching && searchResult && (
-        <div className="max-w-[720px] mx-auto px-6">
+        <div className="max-w-[720px] mx-auto px-4 sm:px-6">
           {/* AI Answer */}
           <div
             className="p-5 mb-4"

@@ -41,11 +41,11 @@ function VendorCard({ v }: { v: Vendor }) {
   const sColor = SECTOR_COLORS[v.sector || ''] || COLORS.muted;
 
   return (
-    <div className="border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-5" style={{ borderLeftWidth: 3, borderLeftColor: sColor }}>
+    <div className="rounded-xl border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-5 shadow-lg shadow-black/20 transition-all duration-200 hover:border-[rgba(138,160,255,0.22)] hover:shadow-xl hover:shadow-black/30" style={{ borderLeftWidth: 3, borderLeftColor: sColor }}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           {v.company_url ? (
-            <a href={v.company_url} target="_blank" rel="noopener noreferrer" className="text-[18px] font-semibold text-nxt-text hover:text-nxt-accent-light">
+            <a href={v.company_url} target="_blank" rel="noopener noreferrer" className="text-[18px] font-semibold text-nxt-text transition-colors duration-200 hover:text-nxt-accent-light">
               {v.company_name}
             </a>
           ) : (
@@ -69,7 +69,7 @@ function VendorCard({ v }: { v: Vendor }) {
       {v.tags && v.tags.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-2">
           {v.tags.slice(0, 6).map((tag, i) => (
-            <span key={i} className="bg-[rgba(13,18,30,0.42)] px-2 py-1 text-[10px] text-nxt-dim">{tag}</span>
+            <span key={i} className="rounded-full bg-[rgba(13,18,30,0.42)] px-3 py-1 text-[10px] text-nxt-dim">{tag}</span>
           ))}
         </div>
       )}
@@ -148,8 +148,8 @@ export default function VendorsPage() {
           </div>
         </section>
 
-        <section className="mb-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-4">
+        <section className="mb-6 grid gap-4 grid-cols-1 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="rounded-xl border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-4">
             <div className="flex gap-2">
               <input
                 type="text"
@@ -157,17 +157,17 @@ export default function VendorsPage() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && (setSearch(searchInput.trim()), setOffset(0))}
-                className="flex-1 border border-nxt-border bg-[rgba(7,10,18,0.9)] px-4 py-3 text-sm text-nxt-text placeholder:text-nxt-dim focus:border-nxt-accent/40 focus:outline-none"
+                className="flex-1 rounded-xl border border-nxt-border bg-[rgba(7,10,18,0.9)] px-4 py-3 text-sm text-nxt-text placeholder:text-nxt-dim focus:border-nxt-accent/40 focus:outline-none transition-colors duration-200"
               />
-              <button onClick={() => { setSearch(searchInput.trim()); setOffset(0); }} className="bg-nxt-accent px-5 py-3 text-sm font-medium text-white">Search</button>
+              <button onClick={() => { setSearch(searchInput.trim()); setOffset(0); }} className="rounded-xl bg-nxt-accent px-5 py-3 text-sm font-medium text-white transition-colors duration-200 hover:bg-nxt-accent/90">Search</button>
             </div>
           </div>
-          <div className="border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-4">
+          <div className="rounded-xl border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-4">
             <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Filter by sector</div>
             <div className="mt-3 flex flex-wrap gap-1.5">
-              <button onClick={() => { setActiveSector(null); setOffset(0); }} className={`px-3 py-1.5 text-xs font-medium ${!activeSector ? 'bg-nxt-accent/10 text-nxt-accent-light' : 'border border-nxt-border text-nxt-muted'}`}>All</button>
+              <button onClick={() => { setActiveSector(null); setOffset(0); }} className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-200 ${!activeSector ? 'bg-nxt-accent/10 text-nxt-accent-light' : 'border border-nxt-border text-nxt-muted hover:text-nxt-secondary'}`}>All</button>
               {sectors.slice(0, 12).map((s) => (
-                <button key={s.name} onClick={() => { setActiveSector(s.name); setOffset(0); }} className={`px-3 py-1.5 text-xs font-medium ${activeSector === s.name ? 'bg-nxt-elevated text-nxt-text' : 'border border-nxt-border text-nxt-muted'}`}>
+                <button key={s.name} onClick={() => { setActiveSector(s.name); setOffset(0); }} className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-200 ${activeSector === s.name ? 'bg-nxt-elevated text-nxt-text' : 'border border-nxt-border text-nxt-muted hover:text-nxt-secondary'}`}>
                   {s.name} ({s.count})
                 </button>
               ))}
@@ -175,23 +175,23 @@ export default function VendorsPage() {
           </div>
         </section>
 
-        {error && <div className="mb-4 border border-nxt-red/20 bg-nxt-red/5 p-5 text-sm text-nxt-red">{error}</div>}
+        {error && <div className="mb-4 rounded-xl border border-nxt-red/20 bg-nxt-red/5 p-5 text-sm text-nxt-red">{error}</div>}
 
         {loading && !error ? (
-          <div className="py-20 text-sm text-nxt-dim">Loading vendor directory...</div>
+          <div className="py-20 text-center text-sm text-nxt-dim">Loading vendor directory...</div>
         ) : (
           <>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {vendors.map((v) => <VendorCard key={v.id} v={v} />)}
             </div>
 
-            {vendors.length === 0 && <div className="py-20 text-sm text-nxt-dim">No vendors found.</div>}
+            {vendors.length === 0 && <div className="py-20 text-center text-sm text-nxt-dim">No vendors found for this search.</div>}
 
             {vendors.length > 0 && (
               <div className="mt-8 flex items-center justify-center gap-3 pb-8">
-                {offset > 0 && <button onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))} className="border border-nxt-border px-4 py-2 text-sm text-nxt-muted">Previous</button>}
+                {offset > 0 && <button onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))} className="rounded-xl border border-nxt-border px-4 py-2 text-sm text-nxt-muted transition-colors duration-200 hover:text-nxt-text hover:border-nxt-accent/20">Previous</button>}
                 <span className="text-xs font-mono text-nxt-dim">{offset + 1}-{Math.min(offset + PAGE_SIZE, total)} of {total}</span>
-                {offset + PAGE_SIZE < total && <button onClick={() => setOffset(offset + PAGE_SIZE)} className="border border-nxt-border px-4 py-2 text-sm text-nxt-muted">Next</button>}
+                {offset + PAGE_SIZE < total && <button onClick={() => setOffset(offset + PAGE_SIZE)} className="rounded-xl border border-nxt-border px-4 py-2 text-sm text-nxt-muted transition-colors duration-200 hover:text-nxt-text hover:border-nxt-accent/20">Next</button>}
               </div>
             )}
           </>
