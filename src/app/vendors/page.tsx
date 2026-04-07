@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { COLORS } from '@/lib/tokens';
+import { PageTransition } from '@/components/PageTransition';
 
 interface Vendor {
   id: string;
@@ -117,6 +118,7 @@ export default function VendorsPage() {
   const countries = new Set(vendors.map((v) => v.hq_country).filter(Boolean)).size;
 
   return (
+    <PageTransition>
     <div className="min-h-screen bg-nxt-bg">
       <div className="mx-auto max-w-[1240px] px-6 py-10 pb-20">
         <section className="mb-8 border-b border-[rgba(138,160,255,0.12)] pb-8">
@@ -198,5 +200,6 @@ export default function VendorsPage() {
         )}
       </div>
     </div>
+    </PageTransition>
   );
 }

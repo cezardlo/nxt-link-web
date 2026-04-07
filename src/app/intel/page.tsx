@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { COLORS } from '@/lib/tokens';
+import { PageTransition } from '@/components/PageTransition';
 
 type Signal = {
   id: string;
@@ -246,6 +247,7 @@ export default function IntelPage() {
   }, [signals]);
 
   return (
+    <PageTransition>
     <div className="min-h-screen bg-nxt-bg">
       <div className="mx-auto max-w-[1120px] px-6 py-10 pb-20">
         <section className="slide-up mb-8 border-b border-[rgba(138,160,255,0.12)] pb-8">
@@ -688,5 +690,6 @@ export default function IntelPage() {
         )}
       </div>
     </div>
+    </PageTransition>
   );
 }

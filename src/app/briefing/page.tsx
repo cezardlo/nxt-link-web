@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { COLORS } from '@/lib/tokens';
+import { PageTransition } from '@/components/PageTransition';
 
 /* --- types --- */
 interface RelatedSignal {
@@ -404,6 +405,7 @@ export default function BriefingPage() {
   const mergedRegions = Object.values(regionMap).sort((a, b) => b.signal_count - a.signal_count);
 
   return (
+    <PageTransition>
     <div className="min-h-screen bg-nxt-bg">
       <div className="max-w-[1240px] mx-auto px-6 py-10 pb-20">
 
@@ -802,5 +804,6 @@ export default function BriefingPage() {
         </div>
       </div>
     </div>
+    </PageTransition>
   );
 }

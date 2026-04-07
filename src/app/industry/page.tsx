@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { COLORS } from '@/lib/tokens';
+import { PageTransition } from '@/components/PageTransition';
 
 const SIGNAL_TYPE_COLORS: Record<string, { label: string; color: string }> = {
   market_shift:       { label: 'Market Shift',     color: COLORS.amber },
@@ -171,6 +172,7 @@ export default function IndustryPage() {
   useEffect(() => { fetchData(activeIndustry); }, [activeIndustry, fetchData]);
 
   return (
+    <PageTransition>
     <div className="min-h-screen bg-nxt-bg">
       <div className="max-w-[1000px] mx-auto px-6 py-10 pb-20">
 
@@ -409,5 +411,6 @@ export default function IndustryPage() {
         ) : null}
       </div>
     </div>
+    </PageTransition>
   );
 }
