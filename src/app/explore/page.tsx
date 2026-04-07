@@ -167,6 +167,8 @@ export default function ExplorePage() {
   // Handle node click
   const handleCyInit = useCallback((cy: cytoscape.Core) => {
     cyRef.current = cy;
+    // Fit graph after layout completes
+    setTimeout(() => { try { cy.fit(undefined, 40); } catch {} }, 100);
     cy.on('tap', 'node', (evt) => {
       const node = evt.target;
       const nodeData = node.data();
@@ -261,7 +263,7 @@ export default function ExplorePage() {
                 <CytoscapeComponent
                   elements={elements}
                   stylesheet={CYTO_STYLE}
-                  layout={{ name: 'cose', animate: false, nodeDimensionsIncludeLabels: true, nodeRepulsion: () => 8000, idealEdgeLength: () => 80 } as cytoscape.LayoutOptions}
+                  layout={{ name: 'random', animate: false } as cytoscape.LayoutOptions}
                   cy={handleCyInit}
                   style={{ width: '100%', height: '560px' }}
                   minZoom={0.3}

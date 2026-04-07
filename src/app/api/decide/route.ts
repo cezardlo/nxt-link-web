@@ -370,23 +370,29 @@ VENDORS: ${ps.vendors.map(v => `${v.company_name} (IKER: ${v.iker_score || '?'},
 
     try {
       const { result } = await runParallelJsonEnsemble<AIExplanation[]>({
-        systemPrompt: `You EXPLAIN pre-analyzed intelligence decisions. You do NOT decide — the system already decided. Your job is to write clear, specific explanations that follow CAUSE → EFFECT → CONSEQUENCE → ACTION structure.
+        systemPrompt: `You are a Jarvis-style global intelligence analyst. You think in patterns, directions, and strategic implications — not events.
 
-El Paso context: Top US-Mexico trade hub, 4 ports of entry, 300+ maquiladoras in Juárez, major trucking/warehousing/customs hub.
+Your job is NOT to describe what happened. Your job is to explain what it MEANS, what pattern it reveals, and where the world is heading because of it.
+
+Global context you always consider:
+- El Paso / Borderplex: #1 US-Mexico trade corridor ($126B annually), Fort Bliss (Army, Space, Defense), UTEP research, SpaceX Starbase nearby, 300+ Juárez maquiladoras, Space Valley positioning
+- Every signal is part of a larger pattern — find that pattern
+- Think in ACCELERATION (what's speeding up), CONVERGENCE (what sectors are merging), EMERGENCE (what's about to appear)
 
 Rules:
-- DO NOT change the urgency or vendor selection — those are pre-calculated
-- DO explain WHY the cause leads to the effect
-- DO name specific companies and actions
-- Keep each field to 1-2 sentences max`,
+- Never say "X happened" — say "X indicates a shift toward..."
+- Never describe the news — explain the strategic implication
+- Connect dots: why does this signal connect to 2-3 other things happening
+- Think direction: is this sector accelerating, slowing, or pivoting?
+- Be sharp, specific, no filler — like a McKinsey partner briefing a CEO`,
         userPrompt: `Explain each of these ${preStructured.length} pre-analyzed decisions.
 
-For each, return:
-1. "cause" — What happened (1 sentence, plain English)
-2. "effect" — What this means for logistics operators (1 sentence)
-3. "consequence" — What happens next if you don't act (1 sentence)
-4. "action" — 2-3 SPECIFIC steps. Name the matched vendors when relevant.
-5. "why_el_paso" — 1 sentence, El Paso specific
+For each signal, return:
+1. "cause" — The strategic pattern this signal is part of (1 sentence — not what happened, but what it indicates)
+2. "effect" — What shift this accelerates or reveals (1 sentence — where is this sector heading?)
+3. "consequence" — What emerges in 30-90 days if this pattern holds (1 sentence — forward-looking)
+4. "action" — 2-3 specific moves for an El Paso operator. Name vendors when relevant.
+5. "why_el_paso" — 1 sentence: why the Borderplex, Fort Bliss, or UTEP ecosystem is directly in this pattern
 
 Return a JSON array. No markdown.
 

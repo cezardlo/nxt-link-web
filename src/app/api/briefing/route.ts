@@ -240,27 +240,33 @@ Vendors in our database for this area: ${vendorNames.join(', ') || 'none found'}
 
     try {
       const { result } = await runParallelJsonEnsemble<AnalyzedSignal[]>({
-        systemPrompt: `You are a senior supply chain analyst writing a daily briefing for logistics operators in El Paso, Texas.
+        systemPrompt: `You are a Jarvis-style global intelligence analyst briefing the leadership of a city at the center of the world's most important trade corridor.
 
-Context about El Paso:
-- Top-10 US logistics hub, handles billions in cross-border trade with Mexico
-- 4 international ports of entry: Ysleta, BOTA (Bridge of the Americas), Santa Teresa (NM), Stanton Street
-- Ciudad Juárez across the border has 300+ maquiladoras (manufacturing plants)
-- Fort Bliss is one of the largest US military installations
-- Key industries: trucking, warehousing, customs brokerage, cross-border manufacturing
-- Major employers: UPS, FedEx, XPO, Amazon have distribution hubs here
-- Diesel prices, border wait times, and USMCA compliance directly impact local businesses
+The Borderplex (El Paso / Juárez) context:
+- $126B in annual US-Mexico trade — #1 crossing in the Western Hemisphere
+- Fort Bliss: one of the largest US Army installations, home to 1st Armored Division, THAAD missile defense testing, growing AI and autonomy programs
+- UTEP: rising research university, NSF grants, cross-border research
+- SpaceX Starbase: 45 minutes away — space economy emerging
+- 300+ Juárez maquiladoras: manufacturing for Ford, Foxconn, Bosch, and more
+- Space Valley positioning: El Paso is positioning as a technology test corridor
+- Key sectors: Defense, Logistics, Border Tech, AI/ML, Manufacturing, Energy, Space
 
-Write like you're briefing a busy operations manager. Be specific. No jargon. No filler.`,
-        userPrompt: `Analyze these ${top3.length} news signals. For EACH signal, return:
+Your job is NOT to report news. Your job is to brief like a strategist:
+- What PATTERNS are forming across sectors?
+- What is ACCELERATING vs SLOWING?
+- What is about to EMERGE that nobody sees yet?
+- What does this mean for someone operating in the Borderplex?
 
-1. "whats_happening" — 2-3 sentences explaining what this news actually means in plain English. Don't repeat the headline. Give context.
+Tone: Sharp. Strategic. No filler. Like a Palantir analyst briefing a general.`,
+        userPrompt: `Analyze these ${top3.length} signals. For EACH, return:
 
-2. "el_paso_impact" — 2-3 bullet points on how this SPECIFICALLY affects El Paso, Juárez, or cross-border operations. Be concrete. Name specific POEs, industries, or companies when relevant.
+1. "whats_happening" — 2-3 sentences on the STRATEGIC PATTERN this signal is part of. Not what happened — what it indicates about where a sector is heading. Think like a Palantir analyst, not a journalist.
 
-3. "watch_for" — 1-2 specific things to monitor in the next 1-2 weeks related to this news.
+2. "el_paso_impact" — 2-3 bullet points on how this pattern specifically intersects with the Borderplex — Fort Bliss, Juárez maquiladoras, BOTA/BOTE crossings, UTEP, or Space Valley. Name specific entities.
 
-4. "what_to_do" — 1-2 concrete actions. If vendors are listed, mention them. Be practical.
+3. "watch_for" — 1-2 forward-looking signals: what would you see in the next 2-4 weeks if this pattern accelerates?
+
+4. "what_to_do" — 1-2 strategic moves. Not "monitor this" — specific actions with named vendors or institutions.
 
 Return a JSON array with ${top3.length} objects. No markdown, just JSON.
 
