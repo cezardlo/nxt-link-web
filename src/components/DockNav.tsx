@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: '/vendors', label: 'Vendors' },
   { href: '/products', label: 'Products' },
   { href: '/industry', label: 'Industries' },
+  { href: '/explore', label: 'Explore' },
 ];
 
 function isActive(pathname: string, href: string): boolean {
