@@ -502,6 +502,7 @@ function ConferenceCard({ conference: c, isPast = false }: { conference: Confere
             <span style={{ fontSize: '11px', fontFamily: FONT, color: COLORS.text }}>{c.city}{c.country ? `, ${c.country}` : ''}</span>
             <span style={{ fontSize: '11px', fontFamily: FONT, color: COLORS.muted }}>{formatDateRange(c.start_date, c.end_date)}</span>
             {countdown && <span style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.cyan }}>{countdown}</span>}
+          <a href={`/conference/${c.id}`} style={{ fontSize: '10px', fontFamily: FONT, color: COLORS.cyan, textDecoration: 'none', background: COLORS.cyan + '12', padding: '3px 10px', borderRadius: '5px', letterSpacing: '0.05em', fontWeight: 600 }}>EXHIBITORS →</a>
             {c.sector_tags && c.sector_tags.length > 0 && (
               <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                 {c.sector_tags.slice(0, 4).map(tag => (
