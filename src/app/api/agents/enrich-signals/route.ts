@@ -9,7 +9,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { runParallelJsonEnsemble } from '@/lib/llm/parallel-router';
 
 export const dynamic = 'force-dynamic';
@@ -74,7 +74,7 @@ export async function GET() {
     return NextResponse.json({ ok: false, message: 'Supabase not configured' });
   }
 
-  const supabase = getSupabaseClient({ admin: true });
+  const supabase = createClient();
   
   const [totalRes, enrichedRes, pendingRes] = await Promise.all([
     supabase.from('intel_signals').select('*', { count: 'exact', head: true })
@@ -107,7 +107,7 @@ export async function POST(request: Request) {
   const batchSize = Math.min(body.batch_size ?? 20, 50);
   const forceRe = body.force_re_enrich === true;
 
-  const supabase = getSupabaseClient({ admin: true });
+  const supabase = createClient();
 
   // Pull unenriched signals (skip arXiv)
   let query = supabase

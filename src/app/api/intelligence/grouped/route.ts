@@ -8,7 +8,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, groups: [], message: 'Supabase not configured' });
   }
 
-  const supabase = getSupabaseClient({ admin: true });
+  const supabase = createClient();
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
   // Get signals from last N days, enriched ones first

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { FALLBACK_INTEL_SIGNALS } from '@/lib/intelligence/fallback-signals';
 
 export const dynamic = 'force-dynamic';
@@ -91,7 +91,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   try {
-    const supabase = getSupabaseClient({ admin: true });
+    const supabase = createClient();
 
     // Base query — exclude academic arXiv noise
     let query = supabase

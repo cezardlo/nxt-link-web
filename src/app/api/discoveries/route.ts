@@ -4,7 +4,7 @@
 // Falls back to mock data when Supabase is unavailable.
 
 import { NextResponse } from 'next/server';
-import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -225,7 +225,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   // ── Supabase path ──────────────────────────────────────────────────────────
   if (isSupabaseConfigured()) {
     try {
-      const db = getSupabaseClient();
+      const db = createClient();
 
       // Build base query — count
       let countQuery = db
