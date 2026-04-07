@@ -1,161 +1,215 @@
+/**
+ * POST /api/agents/enrich-signals
+ * 
+ * Takes raw intel_signals and converts them into structured intelligence objects.
+ * Each signal gets: subsystem, capability_layer, meaning, direction
+ * 
+ * This is what makes NXT LINK smart — not just a news reader,
+ * but a system that converts information into understanding.
+ */
+
 import { NextResponse } from 'next/server';
+import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { runParallelJsonEnsemble } from '@/lib/llm/parallel-router';
 
-export const runtime = 'nodejs';
-export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
+export const maxDuration = 120;
 
-const BATCH_SIZE = 5;
-const MAX_SIGNALS = 50;
+// ── Structured signal schema ────────────────────────────────────────────────
+interface EnrichedSignal {
+  id: string;
+  industry: string;        // normalized canonical industry
+  subsystem: string;       // sub-category within industry
+  capability_layer: string; // Autonomous | Platform | Infrastructure | Application | Research | Policy
+  type: string;            // funding | research | product | contract | patent | regulation | news
+  importance: 'low' | 'medium' | 'high' | 'critical';
+  meaning: string;         // what it means strategically (1-2 sentences)
+  direction: string;       // growing | stable | declining | emerging | converging
+}
 
-const SYSTEM_PROMPT = `You are a supply chain intelligence analyst.
-Given a signal, extract exactly 4 fields as JSON:
-- problem: Real-world problem addressed (1-5 words)
-- technology: Primary technology involved (1-3 words)
-- industry: Primary industry sector (1-2 words)
-- region: Country or geographic region
+// ── Industry normalizer ─────────────────────────────────────────────────────
+const INDUSTRY_MAP: Record<string, string> = {
+  'ai-ml': 'ai-ml', 'ai/ml': 'ai-ml', 'artificial intelligence': 'ai-ml',
+  'machine learning': 'ai-ml', 'tech': 'ai-ml', 'technology': 'ai-ml',
+  'cybersecurity': 'cybersecurity', 'cyber': 'cybersecurity', 'security': 'cybersecurity',
+  'defense': 'defense', 'government': 'defense', 'military': 'defense',
+  'border-tech': 'border-tech', 'bordertech': 'border-tech', 'border': 'border-tech',
+  'manufacturing': 'manufacturing', 'industrial': 'manufacturing', 'robotics': 'manufacturing',
+  'logistics': 'logistics', 'transportation': 'logistics', 'supply chain': 'logistics',
+  'energy': 'energy', 'healthcare': 'healthcare', 'health': 'healthcare',
+  'finance': 'finance', 'fintech': 'finance', 'space': 'space', 'telecom': 'space',
+  'startup': 'ai-ml', 'education': 'ai-ml', 'general': 'general',
+};
+
+function normalizeIndustry(raw: string | null): string {
+  if (!raw) return 'general';
+  return INDUSTRY_MAP[raw.toLowerCase().trim()] ?? raw.toLowerCase().trim();
+}
+
+// ── Main extraction prompt ──────────────────────────────────────────────────
+const EXTRACTION_SYSTEM = `You are an intelligence extraction system. Your job is to convert raw news signals into structured intelligence objects.
+
+For each signal, extract:
+1. industry — one of: ai-ml, defense, cybersecurity, logistics, manufacturing, border-tech, energy, healthcare, space, finance, general
+2. subsystem — specific sub-area within the industry (e.g. "Autonomous Vehicles", "Missile Defense", "Border Surveillance", "Route Optimization")
+3. capability_layer — one of: Autonomous | Platform | Infrastructure | Application | Research | Policy | Funding
+4. importance — one of: low | medium | high | critical
+5. meaning — 1-2 sentences: NOT what happened, but what it MEANS strategically. What pattern does this signal? What shift does it indicate?
+6. direction — one of: growing | stable | declining | emerging | converging
 
 Rules:
-- Be specific, not generic
-- If unclear, use "unknown"
-- Return ONLY valid JSON, no explanation
+- Never describe the event. Explain the strategic implication.
+- "growing" = this area is getting more signals, investment, and activity
+- "emerging" = this area is new and accelerating fast
+- "converging" = this area is merging with another sector
+- "declining" = less activity, less investment, losing momentum
+- Critical importance = affects multiple sectors, major shift, Fort Bliss / Borderplex directly impacted
+- Be specific: name the capability, name the shift, name the direction
 
-Format: {"problem":"...","technology":"...","industry":"...","region":"..."}`;
+Respond with a JSON array only. No markdown.`;
 
-interface Tags {
-  problem: string;
-  technology: string;
-  industry: string;
-  region: string;
-}
+// ── GET: status / health ────────────────────────────────────────────────────
+export async function GET() {
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json({ ok: false, message: 'Supabase not configured' });
+  }
 
-async function callNvidia(title: string, evidence: string): Promise<Tags> {
-  const apiKey = process.env.NVIDIA_API_KEY;
-  if (!apiKey) throw new Error('NVIDIA_API_KEY not configured');
+  const supabase = getSupabaseClient({ admin: true });
+  
+  const [totalRes, enrichedRes, pendingRes] = await Promise.all([
+    supabase.from('intel_signals').select('*', { count: 'exact', head: true })
+      .not('source', 'ilike', '%arxiv%'),
+    supabase.from('intel_signals').select('*', { count: 'exact', head: true })
+      .not('enriched_at', 'is', null),
+    supabase.from('intel_signals').select('*', { count: 'exact', head: true })
+      .is('enriched_at', null)
+      .not('source', 'ilike', '%arxiv%'),
+  ]);
 
-  const endpoint = 'https://integrate.api.nvidia.com/v1/chat/completions';
-  const signal = `Title: ${title}\nDetails: ${(evidence || '').slice(0, 300)}`;
-
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: 'meta/llama-3.3-70b-instruct',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: signal },
-      ],
-      temperature: 0.1,
-      max_tokens: 150,
-    }),
+  return NextResponse.json({
+    ok: true,
+    total: totalRes.count ?? 0,
+    enriched: enrichedRes.count ?? 0,
+    pending: pendingRes.count ?? 0,
+    coverage_pct: totalRes.count 
+      ? Math.round(((enrichedRes.count ?? 0) / totalRes.count) * 100) 
+      : 0,
   });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`NVIDIA ${response.status}: ${body.slice(0, 200)}`);
-  }
-
-  const payload = await response.json() as {
-    choices?: Array<{ message?: { content?: string } }>;
-  };
-
-  const text = payload.choices?.[0]?.message?.content;
-  if (!text) throw new Error('Empty NVIDIA response');
-
-  const jsonMatch = text.match(/\{[^}]+\}/);
-  if (!jsonMatch) throw new Error('No JSON in response: ' + text.slice(0, 100));
-
-  const parsed = JSON.parse(jsonMatch[0]);
-
-  return {
-    problem: typeof parsed.problem === 'string' ? parsed.problem : 'unknown',
-    technology: typeof parsed.technology === 'string' ? parsed.technology : 'unknown',
-    industry: typeof parsed.industry === 'string' ? parsed.industry : 'unknown',
-    region: typeof parsed.region === 'string' ? parsed.region : 'unknown',
-  };
 }
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const limit = Math.min(parseInt(searchParams.get('limit') ?? String(MAX_SIGNALS), 10), 200);
-  const dryRun = searchParams.get('dry') === '1';
-
-  const { createClient } = await import('@supabase/supabase-js');
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 });
+// ── POST: enrich a batch of signals ────────────────────────────────────────
+export async function POST(request: Request) {
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json({ ok: false, message: 'Supabase not configured' }, { status: 503 });
   }
 
-  const db = createClient(supabaseUrl, supabaseKey);
+  const body = await request.json().catch(() => ({}));
+  const batchSize = Math.min(body.batch_size ?? 20, 50);
+  const forceRe = body.force_re_enrich === true;
 
-  const { data: signals, error: fetchError } = await db
+  const supabase = getSupabaseClient({ admin: true });
+
+  // Pull unenriched signals (skip arXiv)
+  let query = supabase
     .from('intel_signals')
-    .select('id, title, evidence, industry')
-    .is('problem', null)
-    .order('created_at', { ascending: false })
-    .limit(limit);
+    .select('id, title, evidence, source, industry, signal_type, company, importance_score')
+    .not('source', 'ilike', '%arxiv%')
+    .order('importance_score', { ascending: false })
+    .limit(batchSize);
 
-  if (fetchError) {
-    return NextResponse.json({ error: fetchError.message }, { status: 500 });
+  if (!forceRe) {
+    query = query.is('enriched_at', null);
   }
 
-  if (!signals || signals.length === 0) {
-    return NextResponse.json({ message: 'All signals tagged', tagged: 0, remaining: 0 });
+  const { data: signals, error } = await query;
+
+  if (error || !signals?.length) {
+    return NextResponse.json({ ok: true, enriched: 0, message: 'No signals to enrich' });
   }
 
-  if (dryRun) {
-    return NextResponse.json({ message: 'Dry run', untagged: signals.length, sample: signals.slice(0, 3) });
+  // Build the extraction prompt
+  const signalInput = signals.map((s, i) => 
+    `[${i}] ID:${s.id} | TITLE: ${s.title} | TYPE: ${s.signal_type ?? 'unknown'} | INDUSTRY: ${s.industry ?? 'unknown'} | COMPANY: ${s.company ?? 'none'} | EVIDENCE: ${(s.evidence ?? '').slice(0, 200)}`
+  ).join('\n');
+
+  let enriched: EnrichedSignal[] = [];
+  
+  try {
+    const { result } = await runParallelJsonEnsemble<EnrichedSignal[]>({
+      systemPrompt: EXTRACTION_SYSTEM,
+      userPrompt: `Extract structured intelligence from these ${signals.length} signals:\n\n${signalInput}\n\nReturn a JSON array of ${signals.length} objects. Each object needs: id (the exact ID from [N]), industry, subsystem, capability_layer, importance, meaning, direction.`,
+      temperature: 0.1,
+      preferredProviders: ['gemini'],
+      budget: { maxProviders: 1, preferLowCostProviders: true },
+      parse: (content) => {
+        const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        return JSON.parse(cleaned) as EnrichedSignal[];
+      },
+    });
+    enriched = result;
+  } catch (err) {
+    console.error('[enrich-signals] AI extraction failed:', err);
+    // Fallback: basic enrichment from existing fields
+    enriched = signals.map(s => ({
+      id: s.id,
+      industry: normalizeIndustry(s.industry),
+      subsystem: s.industry ?? 'General',
+      capability_layer: s.signal_type === 'patent_filing' ? 'Research' 
+        : s.signal_type === 'funding_round' ? 'Funding'
+        : s.signal_type === 'product_launch' ? 'Application'
+        : s.signal_type === 'contract_award' ? 'Platform'
+        : 'Application',
+      importance: (s.importance_score ?? 0) >= 0.85 ? 'critical'
+        : (s.importance_score ?? 0) >= 0.65 ? 'high'
+        : (s.importance_score ?? 0) >= 0.4 ? 'medium' : 'low',
+      meaning: `Signal in ${s.industry ?? 'tech'} sector — ${s.signal_type ?? 'development'} activity detected.`,
+      direction: 'stable',
+    }));
   }
 
-  let tagged = 0;
-  let failed = 0;
+  // Persist enriched signals back to Supabase
+  let savedCount = 0;
   const errors: string[] = [];
-  const results: Array<{ id: string; tags: Tags }> = [];
+  const now = new Date().toISOString();
 
-  for (let i = 0; i < signals.length; i += BATCH_SIZE) {
-    const batch = signals.slice(i, i + BATCH_SIZE);
+  for (const enrichedSignal of enriched) {
+    // Match by index position if ID extraction fails
+    const originalSignal = signals.find(s => s.id === enrichedSignal.id) ?? signals[enriched.indexOf(enrichedSignal)];
+    if (!originalSignal) continue;
 
-    const batchResults = await Promise.allSettled(
-      batch.map(async (signal) => {
-        try {
-          const tags = await callNvidia(signal.title, signal.evidence ?? '');
-          const { error: updateError } = await db
-            .from('intel_signals')
-            .update({ problem: tags.problem, technology: tags.technology, industry: tags.industry, region: tags.region })
-            .eq('id', signal.id);
+    const { error: updateError } = await supabase
+      .from('intel_signals')
+      .update({
+        industry: normalizeIndustry(enrichedSignal.industry),
+        subsystem: enrichedSignal.subsystem,
+        capability_layer: enrichedSignal.capability_layer,
+        meaning: enrichedSignal.meaning,
+        direction: enrichedSignal.direction,
+        enriched_at: now,
+      })
+      .eq('id', originalSignal.id);
 
-          if (updateError) {
-            errors.push(`db:${signal.id}: ${updateError.message}`);
-            failed++;
-            return null;
-          }
-          tagged++;
-          return { id: signal.id, tags };
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          errors.push(`llm:${signal.id}: ${msg.slice(0, 200)}`);
-          failed++;
-          return null;
-        }
-      }),
-    );
-
-    for (const r of batchResults) {
-      if (r.status === 'fulfilled' && r.value) results.push(r.value);
-    }
-
-    if (i + BATCH_SIZE < signals.length) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    if (updateError) {
+      errors.push(`${originalSignal.id}: ${updateError.message}`);
+    } else {
+      savedCount++;
     }
   }
 
-  const { count: remaining } = await db
-    .from('intel_signals')
-    .select('id', { count: 'exact', head: true })
-    .is('problem', null);
-
-  return NextResponse.json({ tagged, failed, remaining: remaining ?? 0, errors: errors.slice(0, 10), sample: results.slice(0, 5) });
+  return NextResponse.json({
+    ok: true,
+    batch_size: batchSize,
+    signals_processed: signals.length,
+    enriched: savedCount,
+    errors: errors.length,
+    sample: enriched.slice(0, 3).map(e => ({
+      title: signals.find(s => s.id === e.id)?.title?.slice(0, 60),
+      industry: e.industry,
+      subsystem: e.subsystem,
+      layer: e.capability_layer,
+      importance: e.importance,
+      direction: e.direction,
+      meaning: e.meaning?.slice(0, 100),
+    })),
+  });
 }
