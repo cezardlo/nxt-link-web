@@ -10,6 +10,7 @@ import {
   Building2,
   Package,
   Factory,
+  Network,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { name: 'VENDORS', url: '/vendors', icon: Building2 },
   { name: 'PRODUCTS', url: '/products', icon: Package },
   { name: 'INDUSTRY', url: '/industry', icon: Factory },
+  { name: 'EXPLORE', url: '/explore', icon: Network },
 ];
 
 export function MobileNav() {

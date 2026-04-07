@@ -123,6 +123,7 @@ const QUICK_NAV = [
   { href: '/vendors',  label: 'Vendors',       icon: '🏢', desc: 'Browse by category' },
   { href: '/products', label: 'Products',      icon: '📦', desc: 'Solution marketplace' },
   { href: '/industry', label: 'Industries',    icon: '🏭', desc: 'Sector intelligence' },
+  { href: '/explore',  label: 'Explore',        icon: '🔗', desc: 'Relationship graph' },
 ];
 
 // ── Animation variants ──────────────────────────────────────────────────────
@@ -513,7 +514,30 @@ export default function Home() {
                 <StatItem label="Research" value={stats?.notes ?? 0} />
               </motion.section>
 
-              {/* ═══ D. Quick Navigation ══════════════════════════════════ */}
+              {/* ═══ D. Connection Spotlight ══════════════════════════════ */}
+              <motion.section
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.35 }}
+              >
+                <Link
+                  href="/explore"
+                  className="block rounded-2xl border border-white/[0.06] bg-gradient-to-r from-nxt-accent/[0.04] to-emerald-500/[0.04] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.15] hover:shadow-lg hover:shadow-nxt-accent/5 no-underline group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-[10px] font-mono uppercase tracking-widest text-nxt-accent mb-1">Knowledge Graph</div>
+                      <h3 className="text-[15px] font-semibold text-white group-hover:text-nxt-accent-light transition-colors">
+                        Explore {stats ? `${stats.total.toLocaleString()} signals` : ''} across {stats ? stats.companies : '...'} companies
+                      </h3>
+                      <p className="text-[12px] text-nxt-dim mt-1">Click to see how industries, technologies, vendors, and signals connect.</p>
+                    </div>
+                    <div className="text-2xl">🔗</div>
+                  </div>
+                </Link>
+              </motion.section>
+
+              {/* ═══ E. Quick Navigation ══════════════════════════════════ */}
               <motion.section
                 variants={stagger}
                 initial="hidden"
