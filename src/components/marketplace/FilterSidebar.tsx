@@ -27,10 +27,10 @@ function FilterGroup({ label, options, selected, onToggle }: GroupProps) {
         onClick={() => setOpen(!open)}
         className="flex items-center justify-between w-full mb-2"
       >
-        <span className="font-mono text-[9px] tracking-[0.2em] text-white/50 uppercase">
+        <span className="font-mono text-[9px] tracking-[0.2em] text-nxt-muted uppercase">
           {label}
         </span>
-        <span className="font-mono text-[10px] text-white/20">
+        <span className="font-mono text-[10px] text-nxt-dim">
           {open ? '−' : '+'}
         </span>
       </button>
@@ -59,10 +59,10 @@ function FilterGroup({ label, options, selected, onToggle }: GroupProps) {
                   </svg>
                 )}
               </span>
-              <span className="font-mono text-[10px] text-white/40 group-hover/item:text-white/60 transition-colors capitalize">
+              <span className="font-mono text-[10px] text-nxt-muted group-hover/item:text-nxt-secondary transition-colors capitalize">
                 {val}
               </span>
-              <span className="font-mono text-[8px] text-white/15 ml-auto">
+              <span className="font-mono text-[8px] text-nxt-dim ml-auto">
                 {count}
               </span>
             </label>
@@ -87,7 +87,7 @@ export function FilterSidebar({ facets, filters, onChange }: Props) {
   const content = (
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
-        <span className="font-mono text-[10px] tracking-[0.2em] text-white/70 uppercase">
+        <span className="font-mono text-[10px] tracking-[0.2em] text-nxt-secondary uppercase">
           Filters
         </span>
         <button
@@ -128,7 +128,7 @@ export function FilterSidebar({ facets, filters, onChange }: Props) {
   return (
     <>
       {/* Desktop */}
-      <aside className="hidden lg:block w-56 shrink-0 border-r border-white/[0.06] overflow-y-auto">
+      <aside className="hidden lg:block w-56 shrink-0 border-r border-white/[0.06] overflow-y-auto rounded-2xl"  >
         {content}
       </aside>
 
@@ -156,7 +156,7 @@ export function FilterSidebar({ facets, filters, onChange }: Props) {
               </span>
               <button
                 onClick={() => setMobileOpen(false)}
-                className="font-mono text-[10px] text-white/30"
+                className="font-mono text-[10px] text-nxt-dim"
               >
                 &times;
               </button>

@@ -46,7 +46,7 @@ export function ProductMarketCard({ product, onCompareToggle, isComparing }: Pro
   const matColor = MATURITY_COLOR[product.maturity] ?? '#6b7280';
 
   return (
-    <div className="group relative flex flex-col p-5 bg-white/[0.015] border border-white/[0.06] rounded-sm hover:bg-white/[0.035] hover:border-white/[0.12] transition-all duration-200">
+    <div className="group relative flex flex-col p-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm hover:border-white/[0.12] hover:bg-white/[0.04] transition-all duration-300">
       {/* NXT PICK badge */}
       {product.isNxtPick && (
         <div className="absolute top-3 right-3 px-2 py-0.5 rounded-sm bg-[#ffd700]/10 border border-[#ffd700]/30">
@@ -77,34 +77,34 @@ export function ProductMarketCard({ product, onCompareToggle, isComparing }: Pro
       </div>
 
       {/* Name */}
-      <h3 className="font-mono text-[14px] font-semibold text-white/90 leading-tight mb-1.5 group-hover:text-white transition-colors">
+      <h3 className="font-mono text-[14px] font-semibold text-nxt-text leading-tight mb-1.5 group-hover:text-nxt-accent-light transition-colors">
         {product.name}
       </h3>
 
       {/* Stars + score */}
       <div className="flex items-center gap-2 mb-2">
         <Stars score={product.recommendationScore} />
-        <span className="font-mono text-[10px] text-white/40">
+        <span className="font-mono text-[10px] text-nxt-muted">
           {product.recommendationScore}/100
         </span>
       </div>
 
       {/* Description */}
-      <p className="font-mono text-[10px] text-white/35 leading-[1.7] line-clamp-2 mb-3">
+      <p className="font-mono text-[10px] text-nxt-dim leading-[1.7] line-clamp-2 mb-3">
         {product.description}
       </p>
 
       {/* Meta row */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
-        <span className="font-mono text-[7px] tracking-[0.1em] text-white/20 px-1.5 py-0.5 border border-white/[0.06] rounded-sm uppercase">
+        <span className="font-mono text-[7px] tracking-[0.1em] text-nxt-dim px-1.5 py-0.5 border border-white/[0.06] rounded-sm uppercase">
           {product.priceEstimate}
         </span>
         {product.priceRange && (
-          <span className="font-mono text-[8px] text-white/30">
+          <span className="font-mono text-[8px] text-nxt-dim">
             {product.priceRange}
           </span>
         )}
-        <span className="font-mono text-[7px] tracking-[0.1em] text-white/20 px-1.5 py-0.5 border border-white/[0.06] rounded-sm uppercase">
+        <span className="font-mono text-[7px] tracking-[0.1em] text-nxt-dim px-1.5 py-0.5 border border-white/[0.06] rounded-sm uppercase">
           {product.deploymentTimeline}
         </span>
         <span

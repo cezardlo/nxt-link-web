@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { COLORS } from '@/lib/tokens';
 import { PageTransition } from '@/components/PageTransition';
 
@@ -149,6 +150,12 @@ export default function VendorsPage() {
             </div>
           </div>
         </section>
+
+        <div className="mt-4 flex items-center gap-3">
+          <Link href="/products" className="text-[11px] font-mono uppercase tracking-wider text-nxt-accent hover:text-nxt-accent-light transition-colors">
+            View Product Marketplace →
+          </Link>
+        </div>
 
         <section className="mb-6 grid gap-4 grid-cols-1 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">

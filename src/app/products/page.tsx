@@ -7,6 +7,7 @@ import { FilterSidebar } from '@/components/marketplace/FilterSidebar';
 import { SortBar } from '@/components/marketplace/SortBar';
 import type { MarketplaceProduct, MarketplaceFilters, SortKey, Facets } from '@/types/marketplace';
 import Link from 'next/link';
+import { PageTransition } from '@/components/PageTransition';
 
 const PAGE_SIZE = 24;
 
@@ -74,28 +75,32 @@ function ProductsInner() {
   const nxtPickCount = products.filter((p) => p.isNxtPick).length;
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="min-h-screen bg-nxt-bg pb-24">
       {/* Header */}
       <div className="px-6 pt-8 pb-6 border-b border-white/[0.06]">
-        <h1 className="font-mono text-[22px] font-bold text-white/90 tracking-tight mb-1">
+        <h1 className="font-grotesk text-2xl font-bold text-nxt-text tracking-tight mb-1">
           Product Marketplace
         </h1>
-        <p className="font-mono text-[11px] text-white/30">
+        <p className="font-mono text-[11px] text-nxt-dim">
           Supply chain intelligence across {total} products
         </p>
 
+        <Link href="/vendors" className="font-mono text-[9px] text-nxt-accent uppercase tracking-wider hover:text-nxt-accent-light transition-colors">
+          View Vendor Directory →
+        </Link>
+
         {/* Stats bar */}
         <div className="flex items-center gap-4 mt-4">
-          <span className="font-mono text-[9px] text-white/20 uppercase tracking-wider">
+          <span className="font-mono text-[9px] text-nxt-dim uppercase tracking-wider">
             {total} products
           </span>
-          <span className="font-mono text-[9px] text-[#ffd700]/50 uppercase tracking-wider">
+          <span className="font-mono text-[9px] text-nxt-gold/50 uppercase tracking-wider">
             {nxtPickCount} nxt picks
           </span>
           {compareIds.length > 0 && (
             <Link
               href={`/products/compare?ids=${compareIds.join(',')}`}
-              className="font-mono text-[9px] text-[#00d4ff] uppercase tracking-wider hover:underline"
+              className="font-mono text-[9px] text-nxt-cyan uppercase tracking-wider hover:underline"
             >
               Compare {compareIds.length} products &rarr;
             </Link>
@@ -108,7 +113,7 @@ function ProductsInner() {
         <div className="relative flex-1 max-w-md">
           <svg
             viewBox="0 0 24 24"
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-nxt-dim"
             fill="none"
             stroke="currentColor"
             strokeWidth={2}
@@ -121,7 +126,7 @@ function ProductsInner() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search products, vendors, technologies..."
-            className="w-full pl-9 pr-4 py-2 bg-white/[0.03] border border-white/[0.06] rounded-sm font-mono text-[11px] text-white/70 placeholder:text-white/20 focus:outline-none focus:border-[#00d4ff]/30 transition-colors"
+            className="w-full pl-9 pr-4 py-2 bg-white/[0.02] border border-white/[0.06] rounded-sm font-mono text-[11px] text-nxt-secondary placeholder:text-nxt-dim focus:outline-none focus:border-nxt-cyan/30 transition-colors"
           />
         </div>
         <SortBar active={sortKey} onChange={setSortKey} />
@@ -141,13 +146,13 @@ function ProductsInner() {
               {Array.from({ length: 6 }, (_, i) => (
                 <div
                   key={i}
-                  className="h-64 bg-white/[0.015] border border-white/[0.06] rounded-sm animate-pulse"
+                  className="h-64 bg-nxt-card border border-white/[0.06] rounded-sm animate-pulse"
                 />
               ))}
             </div>
           ) : products.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20">
-              <span className="font-mono text-[12px] text-white/20">
+              <span className="font-mono text-[12px] text-nxt-dim">
                 No products match your filters
               </span>
             </div>
@@ -170,17 +175,17 @@ function ProductsInner() {
                   <button
                     disabled={page === 0}
                     onClick={() => setPage((p) => Math.max(0, p - 1))}
-                    className="font-mono text-[10px] px-3 py-1.5 border border-white/[0.06] rounded-sm text-white/30 hover:text-white/60 disabled:opacity-30 transition-colors"
+                    className="font-mono text-[10px] px-3 py-1.5 border border-white/[0.06] rounded-sm text-nxt-dim hover:text-nxt-muted disabled:opacity-30 transition-colors"
                   >
                     Prev
                   </button>
-                  <span className="font-mono text-[10px] text-white/30">
+                  <span className="font-mono text-[10px] text-nxt-dim">
                     {page + 1} / {totalPages}
                   </span>
                   <button
                     disabled={page >= totalPages - 1}
                     onClick={() => setPage((p) => p + 1)}
-                    className="font-mono text-[10px] px-3 py-1.5 border border-white/[0.06] rounded-sm text-white/30 hover:text-white/60 disabled:opacity-30 transition-colors"
+                    className="font-mono text-[10px] px-3 py-1.5 border border-white/[0.06] rounded-sm text-nxt-dim hover:text-nxt-muted disabled:opacity-30 transition-colors"
                   >
                     Next
                   </button>
@@ -196,16 +201,18 @@ function ProductsInner() {
 
 export default function ProductsPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <span className="font-mono text-[11px] text-white/20 animate-pulse">
-            Loading marketplace...
-          </span>
-        </div>
-      }
-    >
-      <ProductsInner />
-    </Suspense>
+    <PageTransition>
+      <Suspense
+        fallback={
+          <div className="min-h-screen flex items-center justify-center">
+            <span className="font-mono text-[11px] text-nxt-dim animate-pulse">
+              Loading marketplace...
+            </span>
+          </div>
+        }
+      >
+        <ProductsInner />
+      </Suspense>
+    </PageTransition>
   );
 }

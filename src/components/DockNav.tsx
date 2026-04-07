@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: '/map', label: 'Map' },
   { href: '/solve', label: 'Solve' },
   { href: '/vendors', label: 'Vendors' },
+  { href: '/products', label: 'Products' },
   { href: '/industry', label: 'Industries' },
 ];
 

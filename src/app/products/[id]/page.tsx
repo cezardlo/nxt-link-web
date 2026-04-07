@@ -32,7 +32,7 @@ function Stars({ score }: { score: number }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-8">
-      <h2 className="font-mono text-[10px] tracking-[0.25em] text-white/30 uppercase mb-3">
+      <h2 className="font-mono text-[10px] tracking-[0.25em] text-nxt-dim uppercase mb-3">
         {title}
       </h2>
       {children}
@@ -59,7 +59,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <span className="font-mono text-[11px] text-white/20 animate-pulse">
+        <span className="font-mono text-[11px] text-nxt-dim animate-pulse">
           Loading product...
         </span>
       </div>
@@ -69,7 +69,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   if (!product) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <span className="font-mono text-[13px] text-white/30">Product not found</span>
+        <span className="font-mono text-[13px] text-nxt-dim">Product not found</span>
         <Link
           href="/products"
           className="font-mono text-[10px] text-[#00d4ff] hover:underline"
@@ -84,7 +84,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const momColor = MOMENTUM_COLOR[product.momentum] ?? '#ffb800';
 
   return (
-    <div className="min-h-screen pb-24 max-w-4xl mx-auto px-6">
+    <div className="min-h-screen bg-nxt-bg pb-24 max-w-4xl mx-auto px-6">
       {/* Breadcrumb */}
       <div className="pt-6 pb-4">
         <Link
@@ -105,7 +105,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             >
               {product.company}
             </span>
-            <h1 className="font-mono text-[24px] font-bold text-white/95 mt-1 mb-2">
+            <h1 className="font-mono text-[24px] font-bold text-nxt-text mt-1 mb-2">
               {product.name}
             </h1>
             <div className="flex items-center gap-3 mb-3">
@@ -126,15 +126,15 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </div>
 
             <div className="flex items-center gap-3 flex-wrap">
-              <span className="font-mono text-[10px] text-white/40 px-2 py-1 border border-white/[0.06] rounded-sm uppercase">
+              <span className="font-mono text-[10px] text-nxt-muted px-2 py-1 border border-white/[0.06] rounded-sm uppercase">
                 {product.priceEstimate}
               </span>
               {product.priceRange && (
-                <span className="font-mono text-[10px] text-white/30">
+                <span className="font-mono text-[10px] text-nxt-dim">
                   {product.priceRange}
                 </span>
               )}
-              <span className="font-mono text-[10px] text-white/40 px-2 py-1 border border-white/[0.06] rounded-sm">
+              <span className="font-mono text-[10px] text-nxt-muted px-2 py-1 border border-white/[0.06] rounded-sm">
                 {product.deploymentTimeline}
               </span>
             </div>
@@ -152,7 +152,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
       {/* Description */}
       <Section title="Overview">
-        <p className="font-mono text-[12px] text-white/50 leading-[1.8]">
+        <p className="font-mono text-[12px] text-nxt-secondary leading-[1.8]">
           {product.longDescription}
         </p>
       </Section>
@@ -164,7 +164,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             {product.features.map((f, i) => (
               <li key={i} className="flex items-start gap-2">
                 <span className="text-[#00d4ff] mt-1 text-[8px]">&#9670;</span>
-                <span className="font-mono text-[11px] text-white/45 leading-[1.6]">
+                <span className="font-mono text-[11px] text-nxt-secondary leading-[1.6]">
                   {f}
                 </span>
               </li>
@@ -177,21 +177,21 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       {(product.buyerInsight || product.researchNotes) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {product.buyerInsight && (
-            <div className="p-4 bg-[#00d4ff]/[0.03] border border-[#00d4ff]/10 rounded-sm">
-              <h3 className="font-mono text-[9px] tracking-[0.2em] text-[#00d4ff]/60 uppercase mb-2">
+            <div className="p-4 bg-nxt-cyan/[0.03] border border-nxt-cyan/10 rounded-sm">
+              <h3 className="font-mono text-[9px] tracking-[0.2em] text-nxt-cyan/60 uppercase mb-2">
                 Buyer Insight
               </h3>
-              <p className="font-mono text-[11px] text-white/45 leading-[1.7]">
+              <p className="font-mono text-[11px] text-nxt-secondary leading-[1.7]">
                 {product.buyerInsight}
               </p>
             </div>
           )}
           {product.researchNotes && (
             <div className="p-4 bg-white/[0.02] border border-white/[0.06] rounded-sm">
-              <h3 className="font-mono text-[9px] tracking-[0.2em] text-white/30 uppercase mb-2">
+              <h3 className="font-mono text-[9px] tracking-[0.2em] text-nxt-dim uppercase mb-2">
                 Research Notes
               </h3>
-              <p className="font-mono text-[11px] text-white/45 leading-[1.7]">
+              <p className="font-mono text-[11px] text-nxt-secondary leading-[1.7]">
                 {product.researchNotes}
               </p>
             </div>
@@ -231,7 +231,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               {product.features.slice(0, 5).map((f, i) => (
                 <li key={i} className="flex items-start gap-2">
                   <span className="text-[#00ff88] text-[10px]">+</span>
-                  <span className="font-mono text-[10px] text-white/40 leading-[1.6]">
+                  <span className="font-mono text-[10px] text-nxt-muted leading-[1.6]">
                     {f}
                   </span>
                 </li>
@@ -248,7 +248,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               {product.watchOutFor.map((w, i) => (
                 <li key={i} className="flex items-start gap-2">
                   <span className="text-[#ff3b30] text-[10px]">!</span>
-                  <span className="font-mono text-[10px] text-white/40 leading-[1.6]">
+                  <span className="font-mono text-[10px] text-nxt-muted leading-[1.6]">
                     {w}
                   </span>
                 </li>
@@ -262,34 +262,34 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       <Section title="Implementation Details">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="p-3 bg-white/[0.02] border border-white/[0.06] rounded-sm">
-            <span className="font-mono text-[8px] text-white/20 uppercase tracking-wider block mb-1">
+            <span className="font-mono text-[8px] text-nxt-dim uppercase tracking-wider block mb-1">
               Difficulty
             </span>
-            <span className="font-mono text-[12px] text-white/60 capitalize">
+            <span className="font-mono text-[12px] text-nxt-muted capitalize">
               {product.implementationDifficulty}
             </span>
           </div>
           <div className="p-3 bg-white/[0.02] border border-white/[0.06] rounded-sm">
-            <span className="font-mono text-[8px] text-white/20 uppercase tracking-wider block mb-1">
+            <span className="font-mono text-[8px] text-nxt-dim uppercase tracking-wider block mb-1">
               Timeline
             </span>
-            <span className="font-mono text-[12px] text-white/60">
+            <span className="font-mono text-[12px] text-nxt-muted">
               {product.deploymentTimeline}
             </span>
           </div>
           <div className="p-3 bg-white/[0.02] border border-white/[0.06] rounded-sm">
-            <span className="font-mono text-[8px] text-white/20 uppercase tracking-wider block mb-1">
+            <span className="font-mono text-[8px] text-nxt-dim uppercase tracking-wider block mb-1">
               Maturity
             </span>
-            <span className="font-mono text-[12px] text-white/60 capitalize">
+            <span className="font-mono text-[12px] text-nxt-muted capitalize">
               {product.maturity}
             </span>
           </div>
           <div className="p-3 bg-white/[0.02] border border-white/[0.06] rounded-sm">
-            <span className="font-mono text-[8px] text-white/20 uppercase tracking-wider block mb-1">
+            <span className="font-mono text-[8px] text-nxt-dim uppercase tracking-wider block mb-1">
               Price Tier
             </span>
-            <span className="font-mono text-[12px] text-white/60 capitalize">
+            <span className="font-mono text-[12px] text-nxt-muted">
               {product.priceEstimate}
             </span>
           </div>
@@ -300,7 +300,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       {product.recommendationReason && (
         <Section title="ROI & Recommendation">
           <div className="p-4 bg-white/[0.02] border border-white/[0.06] rounded-sm">
-            <p className="font-mono text-[11px] text-white/45 leading-[1.7]">
+            <p className="font-mono text-[11px] text-nxt-secondary leading-[1.7]">
               {product.recommendationReason}
             </p>
           </div>
@@ -317,10 +317,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 href={`/products/${alt.id}`}
                 className="p-4 bg-white/[0.015] border border-white/[0.06] rounded-sm hover:bg-white/[0.03] hover:border-white/[0.1] transition-all group"
               >
-                <span className="font-mono text-[8px] text-white/25 tracking-wider uppercase">
+                <span className="font-mono text-[8px] text-nxt-dim tracking-wider uppercase">
                   {alt.company}
                 </span>
-                <h4 className="font-mono text-[12px] font-semibold text-white/70 group-hover:text-white/90 mt-0.5 mb-1 transition-colors">
+                <h4 className="font-mono text-[12px] font-semibold text-nxt-secondary group-hover:text-nxt-text mt-0.5 mb-1 transition-colors">
                   {alt.name}
                 </h4>
                 <div className="flex items-center gap-2">
@@ -330,7 +330,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   >
                     {alt.recommendationScore}/100
                   </span>
-                  <span className="font-mono text-[8px] text-white/20 uppercase">
+                  <span className="font-mono text-[8px] text-nxt-dim uppercase">
                     {alt.priceEstimate}
                   </span>
                   {alt.isNxtPick && (
@@ -351,7 +351,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           {product.tags.map((t) => (
             <span
               key={t}
-              className="font-mono text-[8px] text-white/20 px-2 py-0.5 border border-white/[0.04] rounded-sm"
+              className="font-mono text-[8px] text-nxt-dim px-2 py-0.5 border border-white/[0.04] rounded-sm"
             >
               {t}
             </span>
