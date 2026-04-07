@@ -2,7 +2,66 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { COLORS } from '@/lib/tokens';
+
+// ── Types (mirrored from solve page / API) ──────────────────────────────────
+
+type Vendor = {
+  name: string;
+  category: string | null;
+  iker_score: number | null;
+  website: string | null;
+};
+
+type Decision = {
+  rank: number;
+  signal_id: string;
+  title: string;
+  industry: string;
+  signal_type: string;
+  company: string | null;
+  amount_usd: number | null;
+  source: string | null;
+  discovered_at: string;
+  score: {
+    final: number;
+    cluster_volume: number;
+    cluster_velocity: number;
+    ep_relevance: number;
+    source_quality: number;
+  };
+  cause: string;
+  effect: string;
+  consequence: string;
+  what_to_do: string[];
+  who_can_help: Vendor[];
+  urgency: 'act_now' | 'watch' | 'opportunity';
+  why_el_paso: string;
+  related_count: number;
+};
+
+type Top3Response = {
+  ok: boolean;
+  mode: 'top3';
+  generated_at: string;
+  decisions: Decision[];
+  total_signals_analyzed: number;
+};
+
+type SearchResponse = {
+  ok: boolean;
+  mode: 'search';
+  query: string;
+  cause: string;
+  effect: string;
+  consequence: string;
+  what_to_do: string[];
+  urgency: string;
+  why_el_paso: string;
+  signals: { id: string; title: string; industry: string; company: string | null; source: string | null; discovered_at: string; score: number }[];
+  who_can_help: Vendor[];
+  total_signals_searched: number;
+};
 
 type TickerSignal = {
   id: string;
@@ -22,397 +81,557 @@ type BriefingResponse = {
 type BrainResponse = {
   scannedSignals?: number;
   notesScanned?: number;
-  mapPoints?: Array<{
-    slug: string;
-    name: string;
-    signalCount: number;
-    avgImportance: number;
-    topIndustries: string[];
-  }>;
   entities?: Array<{ id: string; type: string; name: string }>;
-  warnings?: string[];
-  sources?: {
-    obsidian?: {
-      enabled: boolean;
-    };
-  };
 };
+
+// ── Urgency config ──────────────────────────────────────────────────────────
+
+const URGENCY_CONFIG = {
+  act_now:     { label: 'ACT NOW',     bg: `${COLORS.red}18`,    border: `${COLORS.red}40`,    color: COLORS.red },
+  watch:       { label: 'WATCH',       bg: `${COLORS.amber}12`,  border: `${COLORS.amber}35`,  color: COLORS.amber },
+  opportunity: { label: 'OPPORTUNITY', bg: `${COLORS.green}12`,  border: `${COLORS.green}35`,  color: COLORS.green },
+} as const;
+
+// ── Signal type labels for ticker ───────────────────────────────────────────
 
 const SIGNAL_TYPE_LABELS: Record<string, { label: string; color: string }> = {
   contract_award: { label: 'Contract', color: '#22c55e' },
-  funding_round: { label: 'Funding', color: '#a855f7' },
-  patent_filing: { label: 'Patent', color: '#06b6d4' },
-  partnership: { label: 'Partner', color: '#f59e0b' },
-  product_launch: { label: 'Launch', color: '#f97316' },
-  regulation: { label: 'Rule', color: '#ef4444' },
-  market_expansion: { label: 'Expand', color: '#10b981' },
+  funding_round:  { label: 'Funding',  color: '#a855f7' },
+  patent_filing:  { label: 'Patent',   color: '#06b6d4' },
+  partnership:    { label: 'Partner',   color: '#f59e0b' },
+  product_launch: { label: 'Launch',    color: '#f97316' },
+  regulation:     { label: 'Rule',      color: '#ef4444' },
+  market_expansion: { label: 'Expand',  color: '#10b981' },
 };
 
-function timeAgo(dateString: string): string {
-  const diff = Date.now() - new Date(dateString).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
+// ── Quick nav items ─────────────────────────────────────────────────────────
+
+const QUICK_NAV = [
+  { href: '/briefing', label: 'Daily Brief',  icon: '📋', desc: 'Today\'s intelligence summary' },
+  { href: '/intel',    label: 'Signal Feed',   icon: '📡', desc: 'Live ranked signals' },
+  { href: '/map',      label: 'Brain Map',     icon: '🌐', desc: 'Place-based clusters' },
+  { href: '/vendors',  label: 'Vendors',       icon: '🏢', desc: 'Browse by category' },
+  { href: '/industry', label: 'Industries',    icon: '🏭', desc: 'Sector intelligence' },
+];
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const hours = Math.floor(diff / 3600000);
+  if (hours < 1) return 'just now';
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return `${Math.floor(days / 7)}w ago`;
 }
 
+// ── Page ────────────────────────────────────────────────────────────────────
+
 export default function Home() {
-  const [signals, setSignals] = useState<TickerSignal[]>([]);
-  const [stats, setStats] = useState<{ total: number; today: number } | null>(null);
-  const [brain, setBrain] = useState<BrainResponse | null>(null);
+  // Decision state
+  const [loading, setLoading] = useState(true);
+  const [top3, setTop3] = useState<Decision[] | null>(null);
+  const [totalAnalyzed, setTotalAnalyzed] = useState(0);
+  const [error, setError] = useState('');
 
+  // Search state
+  const [input, setInput] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [searchResult, setSearchResult] = useState<SearchResponse | null>(null);
+  const [inputFocused, setInputFocused] = useState(false);
+
+  // Stats state (from existing page)
+  const [stats, setStats] = useState<{ total: number; companies: number; notes: number } | null>(null);
+
+  // Ticker state
+  const [tickerSignals, setTickerSignals] = useState<TickerSignal[]>([]);
+
+  // Load top 3 decisions on mount
   useEffect(() => {
-    let active = true;
+    loadTop3();
+    loadStats();
+  }, []);
 
-    async function load() {
+  async function loadTop3() {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/decide');
+      const data: Top3Response = await res.json();
+      if (data.ok) {
+        setTop3(data.decisions);
+        setTotalAnalyzed(data.total_signals_analyzed);
+      } else {
+        setError('Failed to load intelligence');
+      }
+    } catch {
+      setError('Network error loading decisions');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadStats() {
+    try {
       const [briefingRes, brainRes] = await Promise.allSettled([
-        fetch('/api/briefing').then((res) => res.json() as Promise<BriefingResponse>),
-        fetch('/api/brain/sync?limit=80').then((res) => res.json() as Promise<BrainResponse>),
+        fetch('/api/briefing').then(r => r.json() as Promise<BriefingResponse>),
+        fetch('/api/brain/sync?limit=80').then(r => r.json() as Promise<BrainResponse>),
       ]);
-
-      if (!active) return;
 
       if (briefingRes.status === 'fulfilled' && briefingRes.value?.briefing) {
         const recentSignals = briefingRes.value.briefing.recent_signals?.slice(0, 10) || [];
-        setSignals(recentSignals);
-        setStats({
-          total: briefingRes.value.briefing.total_signals || 0,
-          today: recentSignals.length,
-        });
+        setTickerSignals(recentSignals);
+        const total = briefingRes.value.briefing.total_signals || 0;
+        setStats(prev => ({ total, companies: prev?.companies ?? 0, notes: prev?.notes ?? 0 }));
       }
 
       if (brainRes.status === 'fulfilled') {
-        setBrain(brainRes.value);
+        const companyCount = brainRes.value.entities?.filter(e => e.type === 'company').length ?? 0;
+        const noteCount = brainRes.value.notesScanned ?? 0;
+        setStats(prev => ({ total: prev?.total ?? 0, companies: companyCount, notes: noteCount }));
       }
+    } catch {
+      // Stats are non-critical
     }
+  }
 
-    load().catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, []);
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const q = input.trim();
+    if (q.length < 3) return;
 
-  const topPlaces = brain?.mapPoints?.slice(0, 5) ?? [];
-  const companyCount = brain?.entities?.filter((entity) => entity.type === 'company').length ?? 0;
-  const noteCount = brain?.notesScanned ?? 0;
-  const signalTape = useMemo(() => (signals.length ? [...signals, ...signals] : []), [signals]);
+    setSearching(true);
+    setSearchResult(null);
+    setError('');
 
-  const jobs = [
-    {
-      index: '01',
-      title: 'Watch live movement',
-      body: 'Track contracts, launches, policy, funding, and expansion as they appear.',
-    },
-    {
-      index: '02',
-      title: 'Map what connects',
-      body: 'Turn raw signals into companies, sectors, places, and linked activity.',
-    },
-    {
-      index: '03',
-      title: 'Merge research memory',
-      body: 'Pull Obsidian notes into the same operating picture instead of leaving context scattered.',
-    },
-    {
-      index: '04',
-      title: 'Explain the change',
-      body: 'Use NVIDIA-first agents to turn graph movement into plain-language decisions.',
-    },
-  ];
+    try {
+      const res = await fetch('/api/decide', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ problem: q }),
+      });
+      const data: SearchResponse = await res.json();
+      if (data.ok) {
+        setSearchResult(data);
+      } else {
+        setError('No results found');
+      }
+    } catch {
+      setError('Network error');
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  function clearSearch() {
+    setSearchResult(null);
+    setInput('');
+    setError('');
+  }
+
+  const signalTape = useMemo(() => (tickerSignals.length ? [...tickerSignals, ...tickerSignals] : []), [tickerSignals]);
 
   return (
-    <div className="bg-nxt-bg text-nxt-text">
-      <section className="relative isolate min-h-[calc(100svh-4.5rem)] overflow-hidden border-b border-[rgba(138,160,255,0.1)]">
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,6,12,0.22)_0%,rgba(4,6,12,0.72)_72%,rgba(4,6,12,1)_100%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_14%_18%,rgba(88,113,255,0.28),transparent_24%),radial-gradient(circle_at_78%_22%,rgba(54,211,255,0.18),transparent_24%),linear-gradient(120deg,rgba(255,255,255,0.02)_0%,transparent_36%,rgba(255,255,255,0.02)_100%)]" />
-        <div className="absolute inset-y-0 left-[5vw] hidden w-px bg-[linear-gradient(180deg,transparent,rgba(138,160,255,0.16),transparent)] xl:block" />
-        <div className="absolute inset-y-0 right-[6vw] hidden w-px bg-[linear-gradient(180deg,transparent,rgba(138,160,255,0.12),transparent)] xl:block" />
-
-        <div className="relative flex min-h-[calc(100svh-4.5rem)] flex-col justify-between px-6 pb-8 pt-6 lg:px-10 xl:px-16">
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="flex flex-wrap items-center justify-between gap-4 border-b border-[rgba(138,160,255,0.12)] pb-4"
-          >
-            <div className="flex items-center gap-4">
-              <div className="nxt-hero-wordmark">NXT//LINK</div>
-              <div className="hidden text-[10px] font-mono uppercase tracking-[0.22em] text-nxt-dim sm:block">
-                Intelligence operating system
-              </div>
-            </div>
-            <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-[0.2em] text-nxt-muted">
-              <div className="flex items-center gap-2 rounded-full border border-[rgba(39,209,127,0.16)] bg-[rgba(9,22,17,0.55)] px-3 py-1.5">
-                <div className="h-1.5 w-1.5 rounded-full bg-nxt-green live-pulse" />
-                <span>{stats ? `${stats.total.toLocaleString()} records live` : 'Live intake active'}</span>
-              </div>
-              <span className="hidden sm:inline">NVIDIA-first agents</span>
-            </div>
-          </motion.div>
-
-          <div className="grid flex-1 gap-12 py-10 xl:grid-cols-[minmax(0,0.9fr)_minmax(540px,1.1fr)] xl:items-center xl:gap-16">
-            <motion.div
-              initial={{ opacity: 0, y: 26 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.85, delay: 0.08 }}
-              className="max-w-[42rem]"
-            >
-              <div className="mb-6 text-[10px] font-mono uppercase tracking-[0.34em] text-nxt-dim">
-                Signals in. Patterns mapped. Decisions explained.
-              </div>
-              <h1 className="text-[clamp(3.5rem,8vw,8.8rem)] font-bold uppercase leading-[0.86] tracking-[-0.08em] text-white">
-                Build the
-                <br />
-                market picture
-                <br />
-                before it is
-                <br />
-                obvious.
-              </h1>
-              <p className="mt-7 max-w-[34rem] text-base leading-8 text-nxt-secondary sm:text-lg">
-                NXT//LINK watches incoming signals, maps companies and places, learns from research memory, and turns movement into a usable operating picture.
-              </p>
-
-              <div className="mt-10 flex flex-wrap gap-3">
-                <Link href="/briefing" className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#05070d] transition-transform duration-200 hover:-translate-y-0.5">
-                  Open the briefing
-                </Link>
-                <Link href="/map" className="rounded-full border border-[rgba(138,160,255,0.18)] bg-[rgba(13,18,30,0.46)] px-6 py-3 text-sm font-medium text-nxt-text transition-colors duration-200 hover:border-[rgba(138,160,255,0.34)]">
-                  See the live map
-                </Link>
-              </div>
-
-              <div className="mt-10 grid max-w-[36rem] gap-3 border-t border-[rgba(138,160,255,0.12)] pt-6 sm:grid-cols-3">
-                <div>
-                  <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Signals</div>
-                  <div className="mt-2 text-3xl font-mono font-bold text-white">{stats?.total?.toLocaleString() ?? '---'}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Companies</div>
-                  <div className="mt-2 text-3xl font-mono font-bold text-white">{companyCount.toLocaleString()}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Research memory</div>
-                  <div className="mt-2 text-3xl font-mono font-bold text-white">{noteCount.toLocaleString()}</div>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 24 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 0.9, delay: 0.16 }}
-              className="relative"
-            >
-              <div className="nxt-field-plane">
-                <div className="nxt-field-grid" />
-                <div className="nxt-field-sweep" />
-
-                <div className="absolute left-6 top-6 z-10 text-[10px] font-mono uppercase tracking-[0.26em] text-nxt-dim">
-                  Operating picture
-                </div>
-                <div className="absolute right-6 top-6 z-10 rounded-full border border-[rgba(138,160,255,0.16)] bg-[rgba(7,10,16,0.6)] px-3 py-1 text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-accent">
-                  Live graph sync
-                </div>
-
-                <div className="absolute inset-x-8 bottom-8 top-16 z-10 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-                  <div className="flex flex-col justify-between rounded-[1.8rem] border border-[rgba(138,160,255,0.12)] bg-[rgba(6,9,16,0.58)] p-6 backdrop-blur-sm">
-                    <div>
-                      <div className="text-[11px] font-mono uppercase tracking-[0.2em] text-nxt-dim">Field priority</div>
-                      <div className="mt-5 max-w-[18rem] text-[clamp(2.2rem,4vw,4.8rem)] font-bold leading-[0.92] tracking-[-0.06em] text-white">
-                        Signal to map to action.
-                      </div>
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      <div className="border-t border-[rgba(138,160,255,0.12)] pt-3">
-                        <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Today</div>
-                        <div className="mt-2 text-2xl font-mono font-bold text-white">{stats?.today ?? 0}</div>
-                      </div>
-                      <div className="border-t border-[rgba(138,160,255,0.12)] pt-3">
-                        <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Places</div>
-                        <div className="mt-2 text-2xl font-mono font-bold text-white">{topPlaces.length}</div>
-                      </div>
-                      <div className="border-t border-[rgba(138,160,255,0.12)] pt-3">
-                        <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Mode</div>
-                        <div className="mt-2 text-sm font-semibold uppercase tracking-[0.14em] text-nxt-text">NVIDIA</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="relative overflow-hidden rounded-[1.8rem] border border-[rgba(138,160,255,0.12)] bg-[rgba(6,9,16,0.68)] p-5 backdrop-blur-sm">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(88,113,255,0.18),transparent_44%)]" />
-                    <div className="absolute left-[18%] top-[24%] h-3 w-3 rounded-full bg-nxt-cyan shadow-[0_0_28px_rgba(54,211,255,0.8)]" />
-                    <div className="absolute left-[42%] top-[48%] h-3 w-3 rounded-full bg-nxt-accent shadow-[0_0_28px_rgba(88,113,255,0.8)]" />
-                    <div className="absolute right-[20%] top-[30%] h-3 w-3 rounded-full bg-nxt-green shadow-[0_0_28px_rgba(39,209,127,0.8)]" />
-                    <div className="absolute bottom-[18%] right-[28%] h-3 w-3 rounded-full bg-[#f59e0b] shadow-[0_0_28px_rgba(245,158,11,0.8)]" />
-                    <div className="nxt-radar-ring left-[18%] top-[24%]" />
-                    <div className="nxt-radar-ring left-[42%] top-[48%]" />
-                    <div className="nxt-radar-ring right-[20%] top-[30%]" />
-                    <div className="nxt-radar-ring bottom-[18%] right-[28%]" />
-
-                    <div className="relative z-10 flex h-full flex-col justify-between">
-                      <div>
-                        <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-nxt-dim">Map clusters</div>
-                        <div className="mt-4 space-y-3">
-                          {topPlaces.length === 0 ? (
-                            <p className="max-w-[16rem] text-sm leading-7 text-nxt-secondary">
-                              Location clusters will appear after the sync finishes.
-                            </p>
-                          ) : (
-                            topPlaces.slice(0, 3).map((place) => (
-                              <div key={place.slug} className="flex items-end justify-between border-b border-[rgba(138,160,255,0.1)] pb-3">
-                                <div>
-                                  <div className="text-base font-medium text-white">{place.name}</div>
-                                  <div className="mt-1 text-[11px] uppercase tracking-[0.16em] text-nxt-dim">
-                                    {place.topIndustries[0] || 'Mixed activity'}
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <div className="text-xl font-mono font-bold text-white">{place.signalCount}</div>
-                                  <div className="text-[10px] font-mono uppercase tracking-[0.16em] text-nxt-dim">signals</div>
-                                </div>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-[11px] leading-6 text-nxt-secondary">
-                        The homepage now behaves like a field display, not a dashboard grid.
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.85, delay: 0.28 }}
-            className="border-t border-[rgba(138,160,255,0.12)] pt-5"
-          >
-            <div className="nxt-tape-wrap">
-              <div className="nxt-tape">
-                {signalTape.map((signal, index) => {
-                  const typeInfo = SIGNAL_TYPE_LABELS[signal.signal_type] || { label: signal.signal_type, color: '#6b6b76' };
-                  return (
-                    <div key={`${signal.id}-${index}`} className="nxt-tape-item">
-                      <span className="rounded px-1.5 py-0.5 font-mono text-[10px]" style={{ background: `${typeInfo.color}18`, color: typeInfo.color }}>
-                        {typeInfo.label}
-                      </span>
-                      <span className="max-w-[340px] truncate whitespace-nowrap text-xs text-nxt-secondary">{signal.title}</span>
-                      <span className="text-[10px] font-mono text-nxt-dim">{timeAgo(signal.discovered_at)}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      <section className="border-b border-[rgba(138,160,255,0.08)] px-6 py-20 lg:px-10 xl:px-16">
-        <div className="grid gap-12 xl:grid-cols-[0.7fr_1.3fr] xl:items-start">
-          <div>
-            <div className="text-[10px] font-mono uppercase tracking-[0.28em] text-nxt-dim">What NXT//LINK does</div>
-            <h2 className="mt-4 max-w-[22rem] text-[clamp(2.3rem,4vw,4.5rem)] font-bold uppercase leading-[0.9] tracking-[-0.06em] text-white">
-              Four jobs.
-              <br />
-              One system.
-            </h2>
-          </div>
-
-          <div className="border-t border-[rgba(138,160,255,0.12)]">
-            {jobs.map((job, index) => (
-              <motion.div
-                key={job.index}
-                initial={{ opacity: 0, y: 18 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.25 }}
-                transition={{ duration: 0.55, delay: index * 0.06 }}
-                className="grid gap-4 border-b border-[rgba(138,160,255,0.12)] py-6 md:grid-cols-[100px_minmax(0,1fr)_minmax(0,16rem)] md:items-start"
+    <div className="min-h-screen bg-black">
+      {/* ═══ A. Command Bar ═══════════════════════════════════════════════ */}
+      <header className="border-b border-zinc-800 bg-zinc-950">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-6">
+          {/* Title row */}
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h1
+                className="text-xl sm:text-2xl font-bold tracking-tight text-white"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
-                <div className="text-[11px] font-mono uppercase tracking-[0.22em] text-nxt-dim">{job.index}</div>
-                <div className="text-2xl font-semibold tracking-[-0.03em] text-white">{job.title}</div>
-                <p className="max-w-[22rem] text-sm leading-7 text-nxt-secondary">{job.body}</p>
-              </motion.div>
-            ))}
+                NXT LINK
+              </h1>
+              <p className="text-[10px] tracking-[0.16em] uppercase mt-0.5" style={{ color: COLORS.dim }}>
+                Mission Control
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest" style={{ color: COLORS.muted }}>
+              <div className="flex items-center gap-1.5 rounded-full border border-emerald-900/40 bg-emerald-950/40 px-2.5 py-1">
+                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>{stats ? `${stats.total.toLocaleString()} signals` : 'Live'}</span>
+              </div>
+            </div>
           </div>
+
+          {/* Search bar */}
+          <form onSubmit={handleSearch}>
+            <div
+              className="relative transition-all duration-200"
+              style={{
+                borderRadius: '14px',
+                boxShadow: inputFocused
+                  ? `0 0 0 1px ${COLORS.accent}50, 0 0 16px ${COLORS.accent}10`
+                  : `0 0 0 1px ${COLORS.border}`,
+              }}
+            >
+              <input
+                type="text"
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onFocus={() => setInputFocused(true)}
+                onBlur={() => setInputFocused(false)}
+                placeholder="Describe a problem or ask anything..."
+                className="w-full text-[14px] outline-none min-h-[48px] px-4 py-3 pr-12"
+                style={{
+                  background: COLORS.card,
+                  border: 'none',
+                  borderRadius: '14px',
+                  color: COLORS.text,
+                  fontFamily: "'Space Grotesk', sans-serif",
+                }}
+              />
+              <button
+                type="submit"
+                disabled={input.trim().length < 3 || searching}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center transition-all disabled:opacity-20"
+                style={{
+                  background: COLORS.accent,
+                  borderRadius: '10px',
+                  border: 'none',
+                  cursor: input.trim().length >= 3 ? 'pointer' : 'default',
+                  color: '#fff',
+                  fontSize: 15,
+                  fontWeight: 700,
+                }}
+              >
+                {searching ? '...' : '→'}
+              </button>
+            </div>
+          </form>
+
+          {/* Back button when showing search results */}
+          {searchResult && (
+            <button
+              onClick={clearSearch}
+              className="text-[11px] tracking-wide mt-3"
+              style={{ color: COLORS.muted, background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              ← Back to Mission Control
+            </button>
+          )}
         </div>
-      </section>
+      </header>
 
-      <section className="px-6 py-20 lg:px-10 xl:px-16">
-        <div className="grid gap-8 xl:grid-cols-[1.15fr_0.85fr]">
-          <div className="relative overflow-hidden rounded-[2rem] border border-[rgba(138,160,255,0.12)] bg-[rgba(8,11,18,0.92)] p-6 sm:p-8">
-            <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(88,113,255,0.08),transparent_44%,rgba(54,211,255,0.08)_100%)]" />
-            <div className="relative z-10">
-              <div className="text-[10px] font-mono uppercase tracking-[0.28em] text-nxt-dim">System surfaces</div>
-              <h2 className="mt-4 max-w-[38rem] text-[clamp(2.1rem,4vw,4rem)] font-bold uppercase leading-[0.92] tracking-[-0.05em] text-white">
-                Move from the picture to the right operating screen.
-              </h2>
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-8">
+        {/* ═══ Error ═══════════════════════════════════════════════════════ */}
+        {error && (
+          <div
+            className="p-3 rounded-xl text-[12px]"
+            style={{ background: `${COLORS.red}08`, border: `1px solid ${COLORS.red}25`, color: COLORS.red }}
+          >
+            {error}
+          </div>
+        )}
 
-              <div className="mt-10 space-y-5">
-                {[
-                  ['/briefing', 'Briefing', 'The short read on what changed, why it matters, and what to do next.'],
-                  ['/intel', 'Signal Feed', 'A ranked list with confidence, filters, and source context.'],
-                  ['/map', 'Brain Map', 'A place-based view of where activity is clustering.'],
-                  ['/command', 'Command View', 'The dense operating surface for full-system work.'],
-                ].map(([href, title, body]) => (
-                  <Link
-                    key={href}
-                    href={href}
-                    className="group flex flex-col gap-3 border-t border-[rgba(138,160,255,0.12)] py-4 transition-colors hover:text-white md:flex-row md:items-start md:justify-between"
-                  >
-                    <div>
-                      <div className="text-2xl font-semibold tracking-[-0.03em] text-white">{title}</div>
-                      <p className="mt-2 max-w-[32rem] text-sm leading-7 text-nxt-secondary">{body}</p>
-                    </div>
-                    <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-nxt-dim transition-colors group-hover:text-nxt-accent">
-                      Open screen
-                    </div>
-                  </Link>
+        {/* ═══ Search Results ═════════════════════════════════════════════ */}
+        {searching && (
+          <div className="flex flex-col items-center justify-center gap-3 py-16">
+            <div
+              className="w-7 h-7 border-2 rounded-full animate-spin"
+              style={{ borderColor: `${COLORS.accent}25`, borderTopColor: COLORS.accent }}
+            />
+            <span className="text-[10px] tracking-[0.12em] uppercase" style={{ color: COLORS.dim }}>
+              Searching live signals...
+            </span>
+          </div>
+        )}
+
+        {!searching && searchResult && (
+          <div
+            className="p-5 rounded-xl"
+            style={{ background: COLORS.card, border: `1px solid ${COLORS.border}` }}
+          >
+            <div className="mb-3">
+              <UrgencyBadge urgency={searchResult.urgency as 'act_now' | 'watch' | 'opportunity'} />
+              <span className="text-[10px] ml-2" style={{ color: COLORS.dim }}>
+                {searchResult.total_signals_searched} signals searched
+              </span>
+            </div>
+
+            <div className="mb-3">
+              <SectionLabel text="CAUSE" />
+              <p className="text-[13px] leading-relaxed mt-1" style={{ color: `${COLORS.text}cc` }}>
+                {searchResult.cause}
+              </p>
+            </div>
+
+            <div className="mb-3">
+              <SectionLabel text="EFFECT" />
+              <p className="text-[12px] leading-relaxed mt-1" style={{ color: `${COLORS.text}a0` }}>
+                {searchResult.effect}
+              </p>
+            </div>
+
+            <div className="mb-4">
+              <SectionLabel text="IF YOU DON'T ACT" />
+              <p className="text-[12px] leading-relaxed mt-1" style={{ color: COLORS.amber }}>
+                {searchResult.consequence}
+              </p>
+            </div>
+
+            <div className="mb-4">
+              <SectionLabel text="ACTION" />
+              <div className="flex flex-col gap-2 mt-2">
+                {searchResult.what_to_do.map((action, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span
+                      className="text-[10px] font-bold shrink-0 w-5 h-5 flex items-center justify-center mt-0.5"
+                      style={{ background: `${COLORS.accent}15`, borderRadius: '6px', color: COLORS.accent }}
+                    >
+                      {i + 1}
+                    </span>
+                    <span className="text-[12px] leading-relaxed" style={{ color: `${COLORS.text}b0` }}>
+                      {action}
+                    </span>
+                  </div>
                 ))}
               </div>
             </div>
-          </div>
 
-          <div className="flex flex-col justify-between rounded-[2rem] border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.92)] p-6 sm:p-8">
-            <div>
-              <div className="text-[10px] font-mono uppercase tracking-[0.28em] text-nxt-dim">Memory and trust</div>
-              <div className="mt-4 text-4xl font-bold uppercase leading-[0.9] tracking-[-0.05em] text-white">
-                Research memory is part of the picture.
+            {searchResult.who_can_help.length > 0 && (
+              <div className="mb-3">
+                <SectionLabel text="WHO CAN HELP" />
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {searchResult.who_can_help.map((v, i) => (
+                    <span
+                      key={i}
+                      className="text-[11px] px-2.5 py-1 rounded-lg"
+                      style={{ background: `${COLORS.cyan}10`, border: `1px solid ${COLORS.cyan}25`, color: COLORS.cyan }}
+                    >
+                      {v.name}
+                    </span>
+                  ))}
+                </div>
               </div>
-              <p className="mt-5 text-sm leading-7 text-nxt-secondary">
-                Obsidian notes, mapped entities, and live intake can sit in the same system instead of living in separate tools.
-              </p>
-            </div>
+            )}
 
-            <div className="mt-10 space-y-4">
-              <div className="flex items-end justify-between border-t border-[rgba(138,160,255,0.12)] pt-4">
+            {searchResult.signals.length > 0 && (
+              <div className="mt-4 pt-3" style={{ borderTop: `1px solid ${COLORS.border}` }}>
+                <SectionLabel text="SUPPORTING SIGNALS" />
+                <div className="flex flex-col gap-2 mt-2">
+                  {searchResult.signals.map(s => (
+                    <div
+                      key={s.id}
+                      className="p-2.5 rounded-lg"
+                      style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}` }}
+                    >
+                      <div className="text-[11px] font-medium" style={{ color: COLORS.text }}>{s.title}</div>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-[9px]" style={{ color: COLORS.dim }}>{s.industry}</span>
+                        {s.company && <span className="text-[9px]" style={{ color: COLORS.muted }}>{s.company}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ═══ B. Top 3 Decisions ═════════════════════════════════════════ */}
+        {!searchResult && !searching && (
+          <>
+            <section>
+              <div className="flex items-center justify-between mb-4">
                 <div>
-                  <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Obsidian</div>
-                  <div className="mt-2 text-lg font-semibold text-white">
-                    {brain?.sources?.obsidian?.enabled ? 'Connected' : 'Optional'}
+                  <h2 className="text-lg font-semibold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    Top 3 Things to Act On
+                  </h2>
+                  <p className="text-[11px] mt-0.5" style={{ color: COLORS.dim }}>
+                    {loading ? 'Analyzing live signals...' : `From ${totalAnalyzed} signals this week`}
+                  </p>
+                </div>
+              </div>
+
+              {loading && (
+                <div className="flex flex-col items-center justify-center gap-3 py-16">
+                  <div
+                    className="w-7 h-7 border-2 rounded-full animate-spin"
+                    style={{ borderColor: `${COLORS.accent}25`, borderTopColor: COLORS.accent }}
+                  />
+                  <span className="text-[10px] tracking-[0.12em] uppercase" style={{ color: COLORS.dim }}>
+                    Analyzing intelligence...
+                  </span>
+                </div>
+              )}
+
+              {!loading && top3 && (
+                <div className="grid gap-4 md:grid-cols-3">
+                  {top3.map(d => (
+                    <DecisionCard key={d.signal_id} decision={d} />
+                  ))}
+                </div>
+              )}
+
+              {!loading && !top3 && !error && (
+                <p className="text-sm text-center py-8" style={{ color: COLORS.muted }}>
+                  No decisions available right now.
+                </p>
+              )}
+            </section>
+
+            {/* ═══ C. Stats Bar ═══════════════════════════════════════════ */}
+            <section
+              className="grid grid-cols-3 gap-4 p-4 rounded-xl"
+              style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}` }}
+            >
+              <div>
+                <div className="text-[10px] font-mono uppercase tracking-widest" style={{ color: COLORS.dim }}>Signals</div>
+                <div className="mt-1 text-2xl font-mono font-bold text-white">
+                  {stats?.total?.toLocaleString() ?? '---'}
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] font-mono uppercase tracking-widest" style={{ color: COLORS.dim }}>Companies</div>
+                <div className="mt-1 text-2xl font-mono font-bold text-white">
+                  {stats?.companies?.toLocaleString() ?? '---'}
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] font-mono uppercase tracking-widest" style={{ color: COLORS.dim }}>Research</div>
+                <div className="mt-1 text-2xl font-mono font-bold text-white">
+                  {stats?.notes?.toLocaleString() ?? '---'}
+                </div>
+              </div>
+            </section>
+
+            {/* ═══ D. Quick Navigation ════════════════════════════════════ */}
+            <section>
+              <h2 className="text-[10px] font-mono uppercase tracking-widest mb-3" style={{ color: COLORS.dim }}>
+                Navigate
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                {QUICK_NAV.map(item => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="group p-4 rounded-xl transition-all duration-200 hover:scale-[1.02] hover:border-zinc-600"
+                    style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, textDecoration: 'none' }}
+                  >
+                    <div className="text-xl mb-2">{item.icon}</div>
+                    <div className="text-[13px] font-semibold text-white">{item.label}</div>
+                    <div className="text-[10px] mt-1" style={{ color: COLORS.dim }}>{item.desc}</div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+
+            {/* ═══ E. Signal Ticker ═══════════════════════════════════════ */}
+            {signalTape.length > 0 && (
+              <section className="border-t border-zinc-800 pt-5">
+                <div className="text-[10px] font-mono uppercase tracking-widest mb-3" style={{ color: COLORS.dim }}>
+                  Latest Signals
+                </div>
+                <div className="overflow-hidden">
+                  <div className="flex gap-4 animate-marquee">
+                    {signalTape.map((signal, index) => {
+                      const typeInfo = SIGNAL_TYPE_LABELS[signal.signal_type] || { label: signal.signal_type, color: '#6b6b76' };
+                      return (
+                        <div key={`${signal.id}-${index}`} className="flex items-center gap-2 shrink-0">
+                          <span
+                            className="rounded px-1.5 py-0.5 font-mono text-[10px]"
+                            style={{ background: `${typeInfo.color}18`, color: typeInfo.color }}
+                          >
+                            {typeInfo.label}
+                          </span>
+                          <span className="max-w-[340px] truncate whitespace-nowrap text-xs" style={{ color: COLORS.secondary }}>
+                            {signal.title}
+                          </span>
+                          <span className="text-[10px] font-mono" style={{ color: COLORS.dim }}>
+                            {timeAgo(signal.discovered_at)}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-                <div className="text-right text-[11px] leading-5 text-nxt-muted">{noteCount.toLocaleString()} notes scanned</div>
-              </div>
-              <div className="flex items-end justify-between border-t border-[rgba(138,160,255,0.12)] pt-4">
-                <div>
-                  <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Warnings</div>
-                  <div className="mt-2 text-lg font-semibold text-white">{brain?.warnings?.length ? 'Attention needed' : 'System clear'}</div>
-                </div>
-                <div className="max-w-[10rem] text-right text-[11px] leading-5 text-nxt-muted">
-                  {brain?.warnings?.[0] ?? 'No blocking sync warnings reported.'}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+              </section>
+            )}
+          </>
+        )}
+      </main>
     </div>
+  );
+}
+
+// ── Decision Card ───────────────────────────────────────────────────────────
+
+function DecisionCard({ decision: d }: { decision: Decision }) {
+  return (
+    <div
+      className="p-4 rounded-xl transition-all duration-200 hover:scale-[1.01] hover:border-zinc-600 flex flex-col"
+      style={{ background: COLORS.card, border: `1px solid ${COLORS.border}` }}
+    >
+      {/* Urgency + industry */}
+      <div className="flex items-center gap-2 mb-2">
+        <UrgencyBadge urgency={d.urgency} />
+        <span className="text-[9px] tracking-wide uppercase" style={{ color: COLORS.dim }}>{d.industry}</span>
+      </div>
+
+      {/* Title */}
+      <h3 className="text-[13px] font-semibold leading-snug mb-2 text-white">{d.title}</h3>
+
+      {/* Cause */}
+      <p className="text-[11px] leading-relaxed mb-3 flex-1" style={{ color: `${COLORS.text}90` }}>
+        {d.cause}
+      </p>
+
+      {/* Recommended action */}
+      {d.what_to_do.length > 0 && (
+        <div className="mb-3">
+          <SectionLabel text="ACTION" />
+          <p className="text-[11px] leading-relaxed mt-1" style={{ color: `${COLORS.text}b0` }}>
+            {d.what_to_do[0]}
+          </p>
+        </div>
+      )}
+
+      {/* Vendors */}
+      {d.who_can_help.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-auto pt-2" style={{ borderTop: `1px solid ${COLORS.border}` }}>
+          {d.who_can_help.map((v, i) => (
+            <span
+              key={i}
+              className="text-[9px] px-2 py-0.5 rounded-md"
+              style={{ background: `${COLORS.cyan}10`, border: `1px solid ${COLORS.cyan}20`, color: COLORS.cyan }}
+            >
+              {v.name}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Sub-components ──────────────────────────────────────────────────────────
+
+function SectionLabel({ text }: { text: string }) {
+  return (
+    <span className="text-[8px] tracking-[0.18em] font-bold" style={{ color: COLORS.dim }}>
+      {text}
+    </span>
+  );
+}
+
+function UrgencyBadge({ urgency }: { urgency: 'act_now' | 'watch' | 'opportunity' }) {
+  const config = URGENCY_CONFIG[urgency] || URGENCY_CONFIG.watch;
+  return (
+    <span
+      className="text-[8px] tracking-[0.12em] font-bold px-2 py-0.5"
+      style={{
+        background: config.bg,
+        border: `1px solid ${config.border}`,
+        borderRadius: '8px',
+        color: config.color,
+      }}
+    >
+      {config.label}
+    </span>
   );
 }
