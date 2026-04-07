@@ -304,9 +304,9 @@ export default function ConferencesPage() {
               {globalStats.hot_zones.map(hz => {
                 const heatColor = HEAT_COLORS[hz.heat] || COLORS.gold;
                 return (
-                  <button key={hz.country} onClick={() => { const cont = CONTINENT_TABS.find(t => t.label.includes(hz.continent.split(' ')[0].toUpperCase().slice(0, 4))); if (cont) setContinent(cont.key); }} style={{
-                    background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${heatColor}`,
-                    borderRadius: '10px', padding: '14px 18px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s',
+                  <button key={hz.country} onClick={() => { const cont = CONTINENT_TABS.find(t => t.label.includes(hz.continent.split(' ')[0].toUpperCase().slice(0, 4))); if (cont) setContinent(cont.key); }} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5 text-left cursor-pointer" style={{
+                    borderLeft: `3px solid ${heatColor}`,
+                    padding: '14px 18px',
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                       <div style={{ fontSize: '14px', fontWeight: 700, color: COLORS.text }}>{hz.country}</div>
@@ -381,7 +381,7 @@ export default function ConferencesPage() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
               {vendors.slice(0, 8).map(v => (
-                <div key={v.id} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: '10px', padding: '14px 16px' }}>
+                <div key={v.id} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5" style={{ padding: '14px 16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
                     <div style={{ fontSize: '13px', fontWeight: 600, color: COLORS.text, flex: 1 }}>
                       {v.company_url ? <a href={v.company_url.startsWith('http') ? v.company_url : `https://${v.company_url}`} target="_blank" rel="noopener noreferrer" style={{ color: COLORS.text, textDecoration: 'none' }}>{v.company_name}</a> : v.company_name}
@@ -479,12 +479,9 @@ function ConferenceCard({ conference: c, isPast = false }: { conference: Confere
   const hasExhibitors = c.exhibitors && c.exhibitors.length > 0;
 
   return (
-    <div style={{
-      background: COLORS.surface, border: `1px solid ${COLORS.border}`,
+    <div className={`rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5 ${isPast ? 'opacity-50' : ''}`} style={{
       borderLeft: `3px solid ${isPast ? COLORS.dim : catColor}`,
-      borderRadius: '16px', padding: '20px 24px', marginBottom: '10px',
-      opacity: isPast ? 0.5 : 1, transition: 'all 0.2s',
-      boxShadow: '0 10px 15px -3px rgba(0,0,0,0.2), 0 4px 6px -4px rgba(0,0,0,0.1)',
+      padding: '20px 24px', marginBottom: '10px',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
         <div style={{ flex: 1 }}>
@@ -558,7 +555,7 @@ function ExhibitorRow({ exhibitor: ex }: { exhibitor: Exhibitor }) {
   const icon = SIGNAL_ICONS[ex.signal_type] || '\u{1F4CB}';
 
   return (
-    <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: '8px', padding: '12px 16px' }}>
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]" style={{ padding: '12px 16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>

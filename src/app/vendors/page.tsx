@@ -41,7 +41,7 @@ function VendorCard({ v }: { v: Vendor }) {
   const sColor = SECTOR_COLORS[v.sector || ''] || COLORS.muted;
 
   return (
-    <div className="rounded-xl border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-5 shadow-lg shadow-black/20 transition-all duration-200 hover:border-[rgba(138,160,255,0.22)] hover:shadow-xl hover:shadow-black/30" style={{ borderLeftWidth: 3, borderLeftColor: sColor }}>
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5" style={{ borderLeftWidth: 3, borderLeftColor: sColor }}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           {v.company_url ? (
@@ -149,7 +149,7 @@ export default function VendorsPage() {
         </section>
 
         <section className="mb-6 grid gap-4 grid-cols-1 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-xl border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-4">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
             <div className="flex gap-2">
               <input
                 type="text"
@@ -162,7 +162,7 @@ export default function VendorsPage() {
               <button onClick={() => { setSearch(searchInput.trim()); setOffset(0); }} className="rounded-xl bg-nxt-accent px-5 py-3 text-sm font-medium text-white transition-colors duration-200 hover:bg-nxt-accent/90">Search</button>
             </div>
           </div>
-          <div className="rounded-xl border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-4">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
             <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Filter by sector</div>
             <div className="mt-3 flex flex-wrap gap-1.5">
               <button onClick={() => { setActiveSector(null); setOffset(0); }} className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-200 ${!activeSector ? 'bg-nxt-accent/10 text-nxt-accent-light' : 'border border-nxt-border text-nxt-muted hover:text-nxt-secondary'}`}>All</button>

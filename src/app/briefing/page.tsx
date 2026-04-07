@@ -306,7 +306,7 @@ function TrendChart({ trends }: { trends: { snapshot: TrendSnapshot[]; time_seri
   }, [draw]);
 
   return (
-    <div className="bg-nxt-surface border border-nxt-border rounded-nxt-md p-5 mb-5">
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 mb-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-sm font-semibold text-nxt-text">Trend Detection</h3>
         <span className="text-[10px] font-mono text-nxt-dim tracking-widest uppercase">14 day window</span>
@@ -446,7 +446,7 @@ export default function BriefingPage() {
             ['Top company', learning?.summary?.highestPriorityCompany ?? 'Loading...', learning?.companyPriority?.[0] ? `${learning.companyPriority[0].signalCount} linked signals` : ''],
             ['Strongest source', learning?.summary?.strongestSource ?? 'Loading...', learning?.sourceScores?.[0] ? `${Math.round(learning.sourceScores[0].trustScore * 100)} trust score` : ''],
           ].map(([label, value, hint]) => (
-            <div key={label} className="rounded-[20px] border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-5">
+            <div key={label} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
               <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">{label}</div>
               <div className="mt-3 text-xl font-semibold text-nxt-text break-words">{value}</div>
               <div className="mt-2 text-xs text-nxt-muted">{hint}</div>
@@ -455,17 +455,17 @@ export default function BriefingPage() {
         </section>
 
         <section className="mb-8 grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-          <div className="rounded-[20px] border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-5 shadow-lg shadow-black/20">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
             <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Source quality</div>
             <div className="mt-3 text-xl font-semibold text-nxt-text">{briefing.source_ops?.strongest_source ?? 'Loading...'}</div>
             <div className="mt-2 text-xs text-nxt-muted">Strongest source feeding the current briefing set</div>
           </div>
-          <div className="rounded-[20px] border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-5">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
             <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Duplicates filtered</div>
             <div className="mt-3 text-xl font-semibold text-nxt-text">{briefing.source_ops?.duplicates_filtered ?? 0}</div>
             <div className="mt-2 text-xs text-nxt-muted">Repeated or near-duplicate signals removed before briefing selection</div>
           </div>
-          <div className="rounded-[20px] border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-5">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
             <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Low evidence discarded</div>
             <div className="mt-3 text-xl font-semibold text-nxt-text">{briefing.source_ops?.low_evidence_discarded ?? 0}</div>
             <div className="mt-2 text-xs text-nxt-muted">Thin signals downgraded or dropped before they reached the top stories</div>
@@ -473,21 +473,21 @@ export default function BriefingPage() {
         </section>
 
         <section className="mb-8 grid gap-4 xl:grid-cols-3">
-          <div className="rounded-[20px] border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-5 xl:col-span-2">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 xl:col-span-2 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
             <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Local relevance summary</div>
             <div className="mt-4 space-y-3">
               {(briefing.local_relevance_summary ?? []).map((item) => (
-                <div key={item} className="rounded-[16px] border border-nxt-border bg-nxt-card p-4 text-sm leading-6 text-nxt-secondary">
+                <div key={item} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 text-sm leading-6 text-nxt-secondary transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
                   {item}
                 </div>
               ))}
             </div>
           </div>
-          <div className="rounded-[20px] border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-5">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
             <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Action queue</div>
             <div className="mt-4 space-y-3">
               {(briefing.action_queue ?? []).slice(0, 4).map((item) => (
-                <div key={`${item.signalId}-${item.action}`} className="rounded-[16px] border border-nxt-border bg-nxt-card p-4">
+                <div key={`${item.signalId}-${item.action}`} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
                   <div className="text-xs uppercase tracking-[0.16em] text-nxt-green">{item.action.replace(/-/g, ' ')}</div>
                   <div className="mt-2 text-sm font-semibold text-nxt-text">{item.title}</div>
                   <div className="mt-2 text-[11px] leading-5 text-nxt-secondary">{item.whyNow}</div>
@@ -504,7 +504,7 @@ export default function BriefingPage() {
             return (
               <div
                 key={insight.rank}
-                className="bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-6 card-hover slide-up"
+                className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-6 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5 slide-up"
                 style={{ animationDelay: `${i * 0.08}s`, borderLeftWidth: 3, borderLeftColor: accent }}
               >
                 {/* Meta row */}
@@ -660,14 +660,14 @@ export default function BriefingPage() {
         {/* Two-column: Regions + Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
           {/* REGIONS */}
-          <div className="rounded-xl bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5 shadow-lg shadow-black/20">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
             <h3 className="text-sm font-semibold text-nxt-text mb-1">Supply Chain Risk by Region</h3>
             <p className="text-[11px] text-nxt-dim mb-4">Based on signal volume, disruptions, and regulatory activity</p>
             <div className="space-y-2">
               {mergedRegions.slice(0, 6).map((r) => {
                 const riskColor = riskColorMap[r.risk_level] || COLORS.green;
                 return (
-                  <div key={r.name} className="flex items-center justify-between p-3 rounded-xl bg-nxt-card border border-nxt-border-subtle transition-colors duration-200 hover:bg-nxt-elevated">
+                  <div key={r.name} className="flex items-center justify-between p-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
                     <div className="flex items-center gap-3">
                       <div className="w-1 h-8 rounded-full" style={{ background: riskColor }} />
                       <div>
@@ -686,7 +686,7 @@ export default function BriefingPage() {
           </div>
 
           {/* SIGNAL STATS */}
-          <div className="rounded-xl bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5 shadow-lg shadow-black/20">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
             <h3 className="text-sm font-semibold text-nxt-text mb-4">Signal Breakdown</h3>
             <div className="mb-5">
               <div className="text-[10px] font-mono text-nxt-dim tracking-wider mb-3 uppercase">By Type</div>
@@ -734,11 +734,11 @@ export default function BriefingPage() {
         {briefing.trends && <TrendChart trends={briefing.trends} />}
 
         <section className="mt-5 grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          <div className="rounded-xl bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5 shadow-lg shadow-black/20">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
             <h3 className="text-sm font-semibold text-nxt-text mb-4">Top opportunities</h3>
             <div className="space-y-3">
               {(briefing.top_opportunities ?? []).slice(0, 4).map((item) => (
-                <div key={item.signalId} className="rounded-[16px] border border-nxt-border bg-nxt-card p-4">
+                <div key={item.signalId} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
                   <div className="text-[10px] uppercase tracking-[0.16em] text-nxt-green">{item.opportunityType.replace(/-/g, ' ')}</div>
                   <div className="mt-2 text-sm font-semibold text-nxt-text">{item.title}</div>
                   <div className="mt-2 text-[11px] text-nxt-secondary">{item.localPathway}</div>
@@ -746,22 +746,22 @@ export default function BriefingPage() {
               ))}
             </div>
           </div>
-          <div className="rounded-xl bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5 shadow-lg shadow-black/20">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
             <h3 className="text-sm font-semibold text-nxt-text mb-4">Recurring companies</h3>
             <div className="space-y-2">
               {(briefing.memory?.recurringCompanies ?? []).slice(0, 5).map((item) => (
-                <div key={item.name} className="flex items-center justify-between rounded-[16px] border border-nxt-border bg-nxt-card p-3">
+                <div key={item.name} className="flex items-center justify-between rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-3 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
                   <div className="text-sm text-nxt-text">{item.name}</div>
                   <div className="text-xs font-mono text-nxt-dim">{item.repeatCount}x</div>
                 </div>
               ))}
             </div>
           </div>
-          <div className="rounded-xl bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5 shadow-lg shadow-black/20">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
             <h3 className="text-sm font-semibold text-nxt-text mb-4">Recurring technologies</h3>
             <div className="space-y-2">
               {(briefing.memory?.recurringTechnologies ?? []).slice(0, 5).map((item) => (
-                <div key={item.name} className="flex items-center justify-between rounded-[16px] border border-nxt-border bg-nxt-card p-3">
+                <div key={item.name} className="flex items-center justify-between rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-3 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
                   <div className="text-sm text-nxt-text">{item.name}</div>
                   <div className="text-xs font-mono text-nxt-dim">{item.repeatCount}x</div>
                 </div>
@@ -771,7 +771,7 @@ export default function BriefingPage() {
         </section>
 
         {/* RECENT SIGNALS */}
-        <div className="rounded-xl bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5 shadow-lg shadow-black/20">
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-semibold text-nxt-text">Recent Signals</h3>
             <span className="text-xs text-nxt-muted">{briefing.recent_signals.length} latest</span>
@@ -780,7 +780,7 @@ export default function BriefingPage() {
             {briefing.recent_signals.slice(0, 15).map((signal) => (
               <div
                 key={signal.id}
-                className="flex items-center justify-between p-3 rounded-lg bg-nxt-card border border-nxt-border-subtle card-hover"
+                className="flex items-center justify-between p-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]"
                 style={{ borderLeftWidth: 3, borderLeftColor: signalTypeColor(signal.signal_type) }}
               >
                 <div className="flex-1 min-w-0 mr-3">

@@ -337,7 +337,7 @@ function SolveInner() {
         {searchResult && (
           <button
             onClick={clearSearch}
-            className="text-[10px] tracking-[0.08em] mb-4 py-1"
+            className="text-[10px] tracking-[0.08em] mb-4 py-1 transition-colors duration-200"
             style={{ color: COLORS.muted, background: 'none', border: 'none', cursor: 'pointer' }}
           >
             ← Back to Top 3
@@ -378,26 +378,14 @@ function SolveInner() {
           <div className="flex flex-col sm:flex-row gap-3 mt-4">
             <Link
               href="/briefing"
-              className="flex-1 p-3 text-center transition-all duration-200 hover:translate-y-[-1px]"
-              style={{
-                background: COLORS.surface,
-                border: `1px solid ${COLORS.border}`,
-                borderRadius: '14px',
-                textDecoration: 'none',
-              }}
+              className="flex-1 p-3 text-center rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5 no-underline"
             >
               <div className="text-[12px] font-semibold" style={{ color: COLORS.text }}>Full Briefing</div>
               <div className="text-[10px]" style={{ color: COLORS.dim }}>Detailed signal analysis</div>
             </Link>
             <Link
               href="/vendors"
-              className="flex-1 p-3 text-center transition-all duration-200 hover:translate-y-[-1px]"
-              style={{
-                background: COLORS.surface,
-                border: `1px solid ${COLORS.border}`,
-                borderRadius: '14px',
-                textDecoration: 'none',
-              }}
+              className="flex-1 p-3 text-center rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5 no-underline"
             >
               <div className="text-[12px] font-semibold" style={{ color: COLORS.text }}>All Vendors</div>
               <div className="text-[10px]" style={{ color: COLORS.dim }}>Browse by category</div>
@@ -411,8 +399,7 @@ function SolveInner() {
         <div className="max-w-[720px] mx-auto px-4 sm:px-6">
           {/* AI Answer */}
           <div
-            className="p-5 mb-4"
-            style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: '14px' }}
+            className="p-5 mb-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5"
           >
             {/* Urgency badge */}
             <div className="mb-3">
@@ -491,8 +478,7 @@ function SolveInner() {
                 {searchResult.signals.map(s => (
                   <div
                     key={s.id}
-                    className="p-3"
-                    style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: '10px' }}
+                    className="p-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]"
                   >
                     <div className="text-[11px] font-medium" style={{ color: COLORS.text }}>
                       {s.title}
@@ -523,13 +509,7 @@ function DecisionCard({ decision: d }: { decision: Decision }) {
 
   return (
     <div
-      className="transition-all"
-      style={{
-        background: COLORS.card,
-        border: `1px solid ${COLORS.border}`,
-        borderRadius: '14px',
-        overflow: 'hidden',
-      }}
+      className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5 overflow-hidden"
     >
       {/* Header — always visible */}
       <button
