@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic';
  *   ?limit=200                                         — max entities to return
  */
 export async function GET(req: NextRequest) {
-  const supabase = getSupabaseClient({ admin: true });
+  const supabase = createClient();
   const sp = req.nextUrl.searchParams;
 
   const entityId = sp.get('entity');
