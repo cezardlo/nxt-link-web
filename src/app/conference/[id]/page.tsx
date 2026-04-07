@@ -44,7 +44,11 @@ export default async function ConferenceDetailPage({ params }: PageProps) {
     company_url: string | null; description: string | null;
     sector: string | null; iker_score: number | null;
     technologies: string[]; match_confidence: number; has_vendor_profile: boolean;
+    products?: Array<{ id: string; product_name: string; category: string | null; description: string | null; maturity: string | null; price_range: string | null }>;
+    source?: string;
   }> = [];
+  let exhibitorSource = 'no_data';
+  let exhibitorMessage = '';
   let exhibitorTotal = 0;
 
   try {
@@ -54,6 +58,8 @@ export default async function ConferenceDetailPage({ params }: PageProps) {
       const data = await res.json();
       exhibitors = data.exhibitors ?? [];
       exhibitorTotal = data.total ?? 0;
+      exhibitorSource = data.source ?? 'no_data';
+      exhibitorMessage = data.message ?? '';
     }
   } catch {
     // exhibitors will be empty — page still works
@@ -194,48 +200,65 @@ export default async function ConferenceDetailPage({ params }: PageProps) {
         {/* ── Exhibitors ── */}
         {exhibitorTotal > 0 && (
           <Section title={`EXHIBITORS (${exhibitorTotal} COMPANIES TRACKED)`}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Source label */}
+            {exhibitorSource === 'sector_match' && exhibitorMessage && (
+              <div className="mb-4 px-3 py-2 rounded-lg border border-[#00d4ff]/10 bg-[#00d4ff]/5">
+                <p className="font-mono text-[9px] text-[#00d4ff]/60">{exhibitorMessage}</p>
+              </div>
+            )}
+            <div className="grid grid-cols-1 gap-4">
               {exhibitors.slice(0, 12).map((exh) => {
                 const initials = exh.company_name.split(' ').slice(0,2).map(w => w[0] || '').join('').toUpperCase();
                 return (
-                  <div key={exh.id} className="flex items-start gap-3 p-3 border border-white/[0.04] hover:border-white/[0.1] transition-colors">
-                    {/* Logo */}
-                    <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg overflow-hidden"
-                      style={{ background: 'rgba(0,212,255,0.08)' }}>
-                      {exh.logo_url ? (
-                        <img src={exh.logo_url} alt={exh.company_name} width={36} height={36}
-                          className="w-full h-full object-contain p-1"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                      ) : null}
-                      <span className="font-mono text-[10px] font-bold text-[#00d4ff]"
-                        style={{ display: exh.logo_url ? 'none' : 'block' }}>{initials}</span>
+                  <div key={exh.id} className="border border-white/[0.06] hover:border-white/[0.12] transition-colors p-4 rounded-xl">
+                    <div className="flex items-start gap-3">
+                      {/* Logo */}
+                      <div className="w-10 h-10 shrink-0 flex items-center justify-center rounded-lg overflow-hidden"
+                        style={{ background: 'rgba(0,212,255,0.08)' }}>
+                        {exh.logo_url ? (
+                          <img src={exh.logo_url} alt={exh.company_name} width={40} height={40}
+                            className="w-full h-full object-contain p-1"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                        ) : null}
+                        <span className="font-mono text-[10px] font-bold text-[#00d4ff]"
+                          style={{ display: exh.logo_url ? 'none' : 'block' }}>{initials}</span>
+                      </div>
+                      {/* Info */}
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-[13px] text-white">{exh.company_name}</div>
+                        {exh.sector && <div className="text-[10px] text-[#00d4ff]/70 mt-0.5">{exh.sector}</div>}
+                        {exh.description && <p className="text-[11px] text-white/40 mt-1 line-clamp-2">{exh.description}</p>}
+                      </div>
+                      {/* Score + CTA */}
+                      <div className="shrink-0 text-right">
+                        {exh.iker_score && (
+                          <div className="font-mono text-[13px] font-bold" style={{ color: exh.iker_score >= 85 ? '#00ff88' : exh.iker_score >= 65 ? '#ffd700' : '#6b7280' }}>
+                            {exh.iker_score}
+                          </div>
+                        )}
+                        {exh.company_url && (
+                          <a href={exh.company_url} target="_blank" rel="noopener noreferrer"
+                            className="font-mono text-[9px] text-[#00d4ff] hover:text-white transition-colors mt-1 block border border-[#00d4ff]/20 px-2 py-0.5">
+                            VISIT →
+                          </a>
+                        )}
+                      </div>
                     </div>
-                    {/* Info */}
-                    <div className="min-w-0 flex-1">
-                      <div className="font-mono text-[11px] text-white/80 truncate">{exh.company_name}</div>
-                      {exh.sector && <div className="font-mono text-[9px] text-[#00d4ff]/60 mt-0.5">{exh.sector}</div>}
-                      {exh.technologies.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {exh.technologies.slice(0,3).map(t => (
-                            <span key={t} className="font-mono text-[8px] px-1.5 py-0.5 bg-white/[0.04] text-white/40">{t}</span>
+                    {/* Products this company sells */}
+                    {exh.products && exh.products.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-white/[0.04]">
+                        <div className="font-mono text-[8px] text-white/30 mb-2 tracking-widest">PRODUCTS</div>
+                        <div className="flex flex-wrap gap-2">
+                          {exh.products.map(p => (
+                            <div key={p.id} className="text-[10px] px-2.5 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02]">
+                              <span className="text-white/70 font-medium">{p.product_name}</span>
+                              {p.category && <span className="text-[#00d4ff]/50 ml-1.5">· {p.category}</span>}
+                              {p.price_range && <span className="text-white/30 ml-1.5">{p.price_range}</span>}
+                            </div>
                           ))}
                         </div>
-                      )}
-                    </div>
-                    {/* Score + CTA */}
-                    <div className="shrink-0 text-right">
-                      {exh.iker_score && (
-                        <div className="font-mono text-[11px] font-bold" style={{ color: exh.iker_score >= 85 ? '#00ff88' : exh.iker_score >= 65 ? '#ffd700' : '#6b7280' }}>
-                          {exh.iker_score}
-                        </div>
-                      )}
-                      {exh.company_url && (
-                        <a href={exh.company_url} target="_blank" rel="noopener noreferrer"
-                          className="font-mono text-[8px] text-[#00d4ff]/60 hover:text-[#00d4ff] transition-colors mt-1 block">
-                          VISIT →
-                        </a>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
