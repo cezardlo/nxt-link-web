@@ -58,7 +58,32 @@ type PipelineQuality = {
   weakestSources?: Array<{ source: string; trustScore: number; signalCount: number }>;
 };
 
-const INDUSTRIES = ['ALL', 'logistics', 'manufacturing', 'border-tech', 'general'];
+const INDUSTRIES = [
+  { value: 'ALL',           label: 'All Sectors',     emoji: '🌐' },
+  { value: 'ai-ml',         label: 'AI / ML',         emoji: '🤖' },
+  { value: 'defense',       label: 'Defense',         emoji: '🛡️' },
+  { value: 'cybersecurity', label: 'Cybersecurity',   emoji: '🔐' },
+  { value: 'logistics',     label: 'Logistics',       emoji: '🚚' },
+  { value: 'manufacturing', label: 'Manufacturing',   emoji: '🏭' },
+  { value: 'border-tech',   label: 'Border Tech',     emoji: '🌉' },
+  { value: 'energy',        label: 'Energy',          emoji: '⚡' },
+  { value: 'healthcare',    label: 'Healthcare',      emoji: '🏥' },
+  { value: 'space',         label: 'Space',           emoji: '🚀' },
+  { value: 'finance',       label: 'Finance',         emoji: '💹' },
+  { value: 'startup',       label: 'Startups',        emoji: '💡' },
+];
+
+const SIGNAL_TYPES = [
+  { value: 'ALL',              label: 'All Types' },
+  { value: 'technology',       label: 'Technology' },
+  { value: 'product_launch',   label: 'Product Launch' },
+  { value: 'funding_round',    label: 'Funding' },
+  { value: 'contract_award',   label: 'Contract' },
+  { value: 'patent_filing',    label: 'Patent' },
+  { value: 'market_shift',     label: 'Market Shift' },
+  { value: 'direction',        label: 'Direction' },
+  { value: 'partnership',      label: 'Partnership' },
+];
 const SCORE_FILTERS = [0, 50, 70, 85];
 
 function sourceName(source: string | null): string {
@@ -155,6 +180,7 @@ export default function IntelPage() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('all');
   const [industry, setIndustry] = useState('ALL');
+  const [signalType, setSignalType] = useState('ALL');
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [minScore, setMinScore] = useState(0);
@@ -175,6 +201,7 @@ export default function IntelPage() {
         const params = new URLSearchParams({
           tab,
           industry,
+          signal_type: signalType,
           q: search,
           page: String(nextPage),
           page_size: String(PAGE_SIZE),
@@ -203,7 +230,7 @@ export default function IntelPage() {
     return () => {
       ignore = true;
     };
-  }, [tab, industry, search, minScore, page]);
+  }, [tab, industry, signalType, search, minScore, page]);
 
   useEffect(() => {
     let ignore = false;
@@ -336,6 +363,7 @@ export default function IntelPage() {
                     setSearch('');
                     setSearchInput('');
                     setIndustry('ALL');
+                    setSignalType('ALL');
                     setMinScore(0);
                     setTab('all');
                   }}
@@ -364,18 +392,35 @@ export default function IntelPage() {
                 ))}
                 {INDUSTRIES.map((item) => (
                   <button
-                    key={item}
+                    key={item.value}
                     onClick={() => {
                       setPage(0);
-                      setIndustry(item);
+                      setIndustry(item.value);
                     }}
                     className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
-                      industry === item
+                      industry === item.value
                         ? 'border-nxt-accent/20 bg-nxt-accent/10 text-nxt-accent-light'
                         : 'border-nxt-border text-nxt-muted'
                     }`}
                   >
-                    {item === 'ALL' ? 'All industries' : item.replace(/-/g, ' ')}
+                    <span className="mr-1">{item.emoji}</span>{item.label}
+                  </button>
+                ))}
+                <div className="w-px h-4 bg-nxt-border mx-1 self-center" />
+                {SIGNAL_TYPES.map((item) => (
+                  <button
+                    key={item.value}
+                    onClick={() => {
+                      setPage(0);
+                      setSignalType(item.value);
+                    }}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+                      signalType === item.value
+                        ? 'border-purple-500/20 bg-purple-500/10 text-purple-300'
+                        : 'border-nxt-border text-nxt-muted'
+                    }`}
+                  >
+                    {item.label}
                   </button>
                 ))}
               </div>

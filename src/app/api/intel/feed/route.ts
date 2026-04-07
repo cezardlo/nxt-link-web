@@ -1,158 +1,192 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
-import { analyzeSignalIntake } from '@/lib/intelligence/source-intelligence';
 import { FALLBACK_INTEL_SIGNALS } from '@/lib/intelligence/fallback-signals';
-import { buildElPasoAssessmentReport } from '@/lib/intelligence/el-paso-relevance';
-import type { IntelSignalRow } from '@/db/queries/intel-signals';
 
 export const dynamic = 'force-dynamic';
 
+// Canonical industry labels — normalizes messy DB values
+const INDUSTRY_MAP: Record<string, string> = {
+  'ai-ml': 'ai-ml',
+  'ai/ml': 'ai-ml',
+  'artificial intelligence': 'ai-ml',
+  'machine learning': 'ai-ml',
+  'tech': 'ai-ml',
+  'technology': 'ai-ml',
+  'cybersecurity': 'cybersecurity',
+  'cyber': 'cybersecurity',
+  'security': 'cybersecurity',
+  'defense': 'defense',
+  'government': 'defense',
+  'border-tech': 'border-tech',
+  'bordertech': 'border-tech',
+  'border': 'border-tech',
+  'manufacturing': 'manufacturing',
+  'industrial': 'manufacturing',
+  'logistics': 'logistics',
+  'transportation': 'logistics',
+  'supply chain': 'logistics',
+  'supply-chain': 'logistics',
+  'energy': 'energy',
+  'healthcare': 'healthcare',
+  'health': 'healthcare',
+  'biotech': 'healthcare',
+  'finance': 'finance',
+  'fintech': 'finance',
+  'space': 'space',
+  'telecom': 'space',
+  'startup': 'startup',
+  'education': 'education',
+  'robotics': 'manufacturing',
+  'automotive': 'logistics',
+  'construction': 'manufacturing',
+  'agriculture': 'energy',
+  'food': 'energy',
+};
+
+function normalizeIndustry(raw: string | null): string {
+  if (!raw) return 'general';
+  const key = raw.toLowerCase().trim();
+  return INDUSTRY_MAP[key] ?? raw.toLowerCase().trim();
+}
+
+// Sources that are purely academic — not business intelligence
+const ACADEMIC_SOURCES = ['arxiv', 'arxiv.org', 'ar5iv', 'semanticscholar'];
+
+function isAcademic(source: string | null, title: string | null): boolean {
+  if (!source) return false;
+  const s = source.toLowerCase();
+  if (ACADEMIC_SOURCES.some(a => s.includes(a))) return true;
+  // arXiv papers often have titles starting with "arxiv:" or look like papers
+  if (title?.toLowerCase().startsWith('arxiv')) return true;
+  return false;
+}
+
 /**
  * GET /api/intel/feed
- * Server-side query for intel_signals with pagination, tab filters, and industry filter.
+ * Global tech intelligence feed — signals from all sectors and regions worldwide.
+ * Pulls directly from intel_signals table. No complex pipeline filtering.
  */
 export async function GET(request: Request): Promise<NextResponse> {
   const { searchParams } = new URL(request.url);
-  const tab = searchParams.get('tab') ?? 'all';
-  const industry = searchParams.get('industry') ?? 'ALL';
+  const tab        = searchParams.get('tab') ?? 'all';
+  const industry   = searchParams.get('industry') ?? 'ALL';
   const signalType = searchParams.get('signal_type') ?? 'ALL';
-  const queryText = (searchParams.get('q') ?? '').trim();
-  const minScoreRaw = Number(searchParams.get('min_score') ?? 0);
-  const minScore = minScoreRaw > 1 ? minScoreRaw / 100 : minScoreRaw;
-  const page = Math.max(0, parseInt(searchParams.get('page') ?? '0', 10) || 0);
-  const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('page_size') ?? '25', 10) || 25));
-  const supabaseReady = isSupabaseConfigured();
+  const queryText  = (searchParams.get('q') ?? '').trim();
+  const minScore   = Number(searchParams.get('min_score') ?? 0);
+  const page       = Math.max(0, parseInt(searchParams.get('page') ?? '0', 10) || 0);
+  const pageSize   = Math.min(100, Math.max(1, parseInt(searchParams.get('page_size') ?? '25', 10) || 25));
+  const offset     = page * pageSize;
+
+  if (!isSupabaseConfigured()) {
+    const fallback = FALLBACK_INTEL_SIGNALS.slice(offset, offset + pageSize);
+    return NextResponse.json({
+      signals: fallback,
+      totalCount: FALLBACK_INTEL_SIGNALS.length,
+      highCount: FALLBACK_INTEL_SIGNALS.filter(s => s.importance_score >= 0.75).length,
+      filteredCount: FALLBACK_INTEL_SIGNALS.length,
+      page,
+      pageSize,
+      source: 'fallback',
+    });
+  }
 
   try {
-    if (!supabaseReady) {
-      const intake = analyzeSignalIntake(FALLBACK_INTEL_SIGNALS, { fallbackUsed: true, limit: FALLBACK_INTEL_SIGNALS.length });
-      const assessments = buildElPasoAssessmentReport(intake.signals).signalAssessments;
-      const assessmentMap = new Map(assessments.map((item) => [item.id, item]));
-      const sortedSignals = [...intake.signals].sort((a, b) => {
-        const aScore = (a.quality_score ?? 0) * 0.6 + (a.source_trust ?? 0) * 0.4;
-        const bScore = (b.quality_score ?? 0) * 0.6 + (b.source_trust ?? 0) * 0.4;
-        if (bScore !== aScore) return bScore - aScore;
-        return new Date(b.discovered_at).getTime() - new Date(a.discovered_at).getTime();
-      });
-      const pagedSignals = sortedSignals
-        .slice(page * pageSize, (page + 1) * pageSize)
-        .map((signal) => ({ ...signal, ...(assessmentMap.get(signal.id) ?? {}) }));
-
-      return NextResponse.json({
-        signals: pagedSignals,
-        totalCount: FALLBACK_INTEL_SIGNALS.length,
-        highCount: FALLBACK_INTEL_SIGNALS.filter((signal) => signal.importance_score >= 0.75).length,
-        filteredCount: intake.signals.length,
-        pipeline: intake.pipeline,
-        sourceScores: intake.sourceScores.slice(0, 5),
-        page,
-        pageSize,
-        preview: true,
-      });
-    }
-
     const supabase = getSupabaseClient({ admin: true });
 
-    function applyFilters<T>(builder: T): T {
-      let filtered = builder as T & {
-        gte: (column: string, value: number) => typeof filtered;
-        eq: (column: string, value: string) => typeof filtered;
-        ilike: (column: string, value: string) => typeof filtered;
-        or: (value: string) => typeof filtered;
-        order: (column: string, options?: { ascending: boolean }) => typeof filtered;
-      };
+    // Base query — exclude academic arXiv noise
+    let query = supabase
+      .from('intel_signals')
+      .select('id, title, evidence, source, industry, importance_score, confidence, discovered_at, url, signal_type, company, region', { count: 'exact' })
+      .not('source', 'ilike', '%arxiv%')
+      .not('source', 'ilike', '%ar5iv%')
+      .order('discovered_at', { ascending: false });
 
-      if (tab === 'high') {
-        filtered = filtered.gte('importance_score', 0.75);
-      } else if (tab === 'trending') {
-        filtered = filtered.gte('importance_score', 0.5).order('importance_score', { ascending: false });
-      }
-
-      if (industry !== 'ALL') {
-        filtered = filtered.eq('industry', industry);
-      }
-
-      if (signalType !== 'ALL') {
-        filtered = filtered.eq('signal_type', signalType);
-      }
-
-      if (minScore > 0) {
-        filtered = filtered.gte('importance_score', minScore);
-      }
-
-      if (queryText) {
-        const safe = queryText.replace(/,/g, ' ');
-        filtered = filtered.or(
-          `title.ilike.%${safe}%,evidence.ilike.%${safe}%,company.ilike.%${safe}%,source.ilike.%${safe}%`
-        );
-      }
-
-      return filtered as T;
+    // Tab filters
+    if (tab === 'high') {
+      query = query.gte('importance_score', 0.65);
+    } else if (tab === 'trending') {
+      query = query.gte('importance_score', 0.5);
     }
 
-    const query = applyFilters(
+    // Industry filter — match against normalized values
+    if (industry !== 'ALL') {
+      // Match the raw industry value OR common variants
+      const variants = Object.entries(INDUSTRY_MAP)
+        .filter(([, v]) => v === industry)
+        .map(([k]) => k);
+      // Use OR across known variants + exact match
+      const allVariants = Array.from(new Set([industry, ...variants]));
+      query = query.in('industry', allVariants);
+    }
+
+    // Signal type filter
+    if (signalType !== 'ALL') {
+      query = query.eq('signal_type', signalType);
+    }
+
+    // Min score filter
+    if (minScore > 0) {
+      const normalized = minScore > 1 ? minScore / 100 : minScore;
+      query = query.gte('importance_score', normalized);
+    }
+
+    // Text search
+    if (queryText) {
+      const safe = queryText.replace(/[%_]/g, '');
+      query = query.or(
+        `title.ilike.%${safe}%,evidence.ilike.%${safe}%,company.ilike.%${safe}%`
+      );
+    }
+
+    // Paginate
+    const { data, count, error } = await query.range(offset, offset + pageSize - 1);
+
+    if (error) throw error;
+
+    // Get counts
+    const [totalResult, highResult] = await Promise.all([
       supabase
         .from('intel_signals')
-        .select(
-          'id, title, evidence, source, industry, importance_score, confidence, discovered_at, url, signal_type, company',
-          { count: 'exact' }
-        )
-        .order('discovered_at', { ascending: false })
-        .limit(500)
-    );
-
-    const filteredCountQuery = applyFilters(
-      supabase.from('intel_signals').select('id', { count: 'exact', head: true })
-    );
-
-    const [signalResult, filteredResult, totalResult, highResult] = await Promise.all([
-      query,
-      filteredCountQuery,
-      supabase.from('intel_signals').select('*', { count: 'exact', head: true }),
-      supabase.from('intel_signals').select('*', { count: 'exact', head: true }).gte('importance_score', 0.75),
+        .select('*', { count: 'exact', head: true })
+        .not('source', 'ilike', '%arxiv%'),
+      supabase
+        .from('intel_signals')
+        .select('*', { count: 'exact', head: true })
+        .not('source', 'ilike', '%arxiv%')
+        .gte('importance_score', 0.65),
     ]);
 
-    const rawSignals = (signalResult.data ?? []).map((signal) => ({
-      ...signal,
-      amount_usd: null,
-      tags: [],
-      created_at: signal.discovered_at,
-    })) as IntelSignalRow[];
-    const intake = analyzeSignalIntake(rawSignals, { limit: rawSignals.length });
-    const assessments = buildElPasoAssessmentReport(intake.signals).signalAssessments;
-    const assessmentMap = new Map(assessments.map((item) => [item.id, item]));
-    const sortedSignals = [...intake.signals].sort((a, b) => {
-      const aScore = (a.quality_score ?? 0) * 0.6 + (a.source_trust ?? 0) * 0.4;
-      const bScore = (b.quality_score ?? 0) * 0.6 + (b.source_trust ?? 0) * 0.4;
-      if (bScore !== aScore) return bScore - aScore;
-      return new Date(b.discovered_at).getTime() - new Date(a.discovered_at).getTime();
-    });
-    const pagedSignals = sortedSignals
-      .slice(page * pageSize, (page + 1) * pageSize)
-      .map((signal) => ({ ...signal, ...(assessmentMap.get(signal.id) ?? {}) }));
+    const signals = (data ?? []).map(s => ({
+      ...s,
+      industry: normalizeIndustry(s.industry),
+    }));
 
     return NextResponse.json(
       {
-        signals: pagedSignals,
+        signals,
         totalCount: totalResult.count ?? 0,
         highCount: highResult.count ?? 0,
-        filteredCount: filteredResult.count ?? intake.signals.length,
-        pipeline: intake.pipeline,
-        sourceScores: intake.sourceScores.slice(0, 5),
+        filteredCount: count ?? 0,
         page,
         pageSize,
+        source: 'supabase',
       },
-      {
-        headers: {
-          'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
-        },
-      },
+      { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' } }
     );
   } catch (err) {
     console.error('[intel/feed] Error:', err);
-    return NextResponse.json(
-      { signals: [], totalCount: 0, highCount: 0, error: 'Failed to fetch signals' },
-      { status: 500 },
-    );
+
+    // Always return something — never a blank page
+    const fallback = FALLBACK_INTEL_SIGNALS.slice(offset, offset + pageSize);
+    return NextResponse.json({
+      signals: fallback,
+      totalCount: FALLBACK_INTEL_SIGNALS.length,
+      highCount: FALLBACK_INTEL_SIGNALS.filter(s => s.importance_score >= 0.75).length,
+      filteredCount: FALLBACK_INTEL_SIGNALS.length,
+      page,
+      pageSize,
+      source: 'fallback',
+      error: err instanceof Error ? err.message : 'Unknown error',
+    });
   }
 }
