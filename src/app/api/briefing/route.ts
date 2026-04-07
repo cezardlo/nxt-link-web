@@ -57,11 +57,27 @@ function sanitize(text: string | null): string {
 
 /** Sources that produce real logistics/supply chain intelligence */
 const GOOD_SOURCES = [
+  // Logistics & Supply Chain
   'freightwaves', 'supply chain dive', 'transport topics', 'the loadstar',
   'land line', 'commercial carrier journal', 'fleet owner', 'trucking info',
   'logistics management', 'journal of commerce', 'american shipper',
-  'defense one', 'borderreport', 'reuters', 'associated press', 'bloomberg',
+  // Defense & Military
+  'defense one', 'breaking defense', 'c4isrnet', 'military.com', 'stars and stripes',
+  'national defense', 'defensenews', 'janes', 'army times',
+  // AI & Technology
+  'techcrunch', 'the verge', 'wired', 'mit technology review', 'ars technica',
+  'venturebeat', 'zdnet', 'ieee spectrum',
+  // Cybersecurity
+  'dark reading', 'krebs on security', 'cyberscoop', 'bleeping computer',
+  'threatpost', 'security week', 'infosecurity',
+  // Border & Regional
+  'borderreport', 'ktsm', 'kvia', 'el paso times', 'el paso matters',
+  // General tier-1
+  'reuters', 'associated press', 'bloomberg', 'wall street journal', 'financial times',
 ];
+
+// All canonical industries (not just 2)
+const ALL_INDUSTRIES = ['logistics', 'manufacturing', 'border-tech', 'defense', 'ai-ml', 'cybersecurity', 'energy', 'healthcare', 'space', 'finance'];
 
 /** Sources that produce noise */
 const JUNK_SOURCES = ['arxiv', 'arXiv'];

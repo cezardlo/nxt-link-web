@@ -46,8 +46,23 @@ function isJunk(source: string | null, title: string): boolean {
 }
 
 // Source quality: 0-100
-const TIER1_SOURCES = ['freightwaves', 'supply chain dive', 'reuters', 'bloomberg', 'associated press', 'journal of commerce', 'american shipper'];
+const TIER1_SOURCES = ['freightwaves', 'supply chain dive', 'reuters', 'bloomberg', 'associated press', 'journal of commerce', 'american shipper', 'defense one', 'breaking defense', 'c4isrnet', 'techcrunch', 'the verge', 'wired', 'mit technology review', 'dark reading', 'krebs on security', 'cyberscoop'];
 const TIER2_SOURCES = ['transport topics', 'the loadstar', 'commercial carrier journal', 'fleet owner', 'trucking info', 'logistics management', 'borderreport'];
+
+function signalTypeQuality(signalType: string | null): number {
+  if (!signalType) return 30;
+  const HIGH = ['technology', 'product_launch', 'patent_filing', 'funding_round', 'contract_award', 'partnership', 'market_expansion'];
+  const LOW  = ['connection', 'general', 'market_shift'];
+  if (HIGH.includes(signalType)) return 95;
+  if (LOW.includes(signalType)) return 15;
+  return 50;
+}
+
+function signalTitleExclusion(title: string): boolean {
+  const lower = title.toLowerCase();
+  const JUNK_PATTERNS = ['drug', 'smuggl', 'crash', 'arrest', 'shooting', 'murder', 'homicide', 'theft', 'stolen', 'accident', 'fire kills', 'death toll', 'obituary'];
+  return JUNK_PATTERNS.some(p => lower.includes(p));
+}
 
 function sourceQuality(source: string | null): number {
   if (!source) return 20;
@@ -58,7 +73,7 @@ function sourceQuality(source: string | null): number {
 }
 
 // El Paso relevance: 0-100
-const EP_KEYWORDS = ['el paso', 'juarez', 'juárez', 'border', 'cbp', 'customs', 'maquiladora', 'fort bliss', 'santa teresa', 'bota', 'ysleta', 'usmca', 'nearshoring', 'cross-border', 'borderplex'];
+const EP_KEYWORDS = ['el paso', 'juarez', 'juárez', 'border', 'cbp', 'customs', 'maquiladora', 'fort bliss', 'santa teresa', 'bota', 'ysleta', 'usmca', 'nearshoring', 'cross-border', 'borderplex', 'utep', 'starbase', 'space valley', 'army', 'military', '1st armored', 'thaad'];
 
 function elPasoRelevance(s: SignalRow): number {
   const text = `${s.title} ${s.evidence || ''} ${s.company || ''}`.toLowerCase();
@@ -67,7 +82,7 @@ function elPasoRelevance(s: SignalRow): number {
     if (text.includes(kw)) score += 20;
   }
   // Industry boost
-  if (['logistics', 'manufacturing', 'border-tech'].includes(s.industry)) score += 15;
+  if (['logistics', 'manufacturing', 'border-tech', 'defense', 'ai-ml', 'cybersecurity', 'energy', 'space'].includes(s.industry)) score += 15;
   if (s.problem_category) score += 10;
   return Math.min(score, 100);
 }
@@ -261,6 +276,7 @@ export async function GET() {
   // Filter junk
   const clean = signals
     .filter(s => !isJunk(s.source, s.title))
+    .filter(s => !signalTitleExclusion(s.title))
     .filter(s => s.industry !== 'other' && s.industry !== 'general');
 
   // Pre-score all signals (without cluster context yet)
@@ -539,6 +555,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   // Score by query relevance + impact
   const scored = signals
     .filter(s => !isJunk(s.source, s.title))
+    .filter(s => !signalTitleExclusion(s.title))
     .map(s => {
       const hay = `${s.title} ${s.evidence || ''} ${s.problem_category || ''} ${s.company || ''}`.toLowerCase();
       let relevance = 0;

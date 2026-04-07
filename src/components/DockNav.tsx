@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: '/intel', label: 'Signals' },
   { href: '/map', label: 'Map' },
   { href: '/solve', label: 'Solve' },
+  { href: '/discover', label: 'Discover', icon: '🔍' },
   { href: '/vendors', label: 'Vendors' },
   { href: '/products', label: 'Products' },
   { href: '/industry', label: 'Industries' },

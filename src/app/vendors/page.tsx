@@ -39,19 +39,48 @@ function scoreColor(s: number | null): string {
   return COLORS.muted;
 }
 
+
+function CompanyLogo({ url, name }: { url: string | null; name: string }) {
+  const [imgError, setImgError] = useState(false);
+  const domain = url ? (() => { try { return new URL(url).hostname.replace('www.',''); } catch { return null; } })() : null;
+  const initials = name.split(' ').slice(0,2).map((w: string) => w[0] || '').join('').toUpperCase();
+  
+  if (domain && !imgError) {
+    return (
+      <img
+        src={`https://logo.clearbit.com/${domain}`}
+        alt={name}
+        width={44}
+        height={44}
+        className="w-11 h-11 rounded-lg object-contain"
+        style={{ background: 'rgba(255,255,255,0.06)', padding: '4px' }}
+        onError={() => setImgError(true)}
+      />
+    );
+  }
+  return (
+    <div className="w-11 h-11 rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
+         style={{ background: 'rgba(14,165,233,0.12)', color: '#0EA5E9' }}>
+      {initials}
+    </div>
+  );
+}
+
 function VendorCard({ v }: { v: Vendor }) {
   const sColor = SECTOR_COLORS[v.sector || ''] || COLORS.muted;
 
   return (
     <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5" style={{ borderLeftWidth: 3, borderLeftColor: sColor }}>
       <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
+        <div className="flex items-start gap-3 min-w-0">
+          <CompanyLogo url={v.company_url} name={v.company_name} />
+          <div className="min-w-0">
           {v.company_url ? (
-            <a href={v.company_url} target="_blank" rel="noopener noreferrer" className="text-[18px] font-semibold text-nxt-text transition-colors duration-200 hover:text-nxt-accent-light">
+            <a href={v.company_url} target="_blank" rel="noopener noreferrer" className="text-[16px] font-semibold text-nxt-text transition-colors duration-200 hover:text-nxt-accent-light">
               {v.company_name}
             </a>
           ) : (
-            <div className="text-[18px] font-semibold text-nxt-text">{v.company_name}</div>
+            <div className="text-[16px] font-semibold text-nxt-text">{v.company_name}</div>
           )}
           <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-nxt-dim">
             {v.sector && <span style={{ color: sColor }}>{v.sector}</span>}
