@@ -121,6 +121,7 @@ const QUICK_NAV = [
   { href: '/intel',    label: 'Signal Feed',   icon: '📡', desc: 'Live ranked signals' },
   { href: '/map',      label: 'Brain Map',     icon: '🌐', desc: 'Place-based clusters' },
   { href: '/vendors',  label: 'Vendors',       icon: '🏢', desc: 'Browse by category' },
+  { href: '/products', label: 'Products',      icon: '📦', desc: 'Solution marketplace' },
   { href: '/industry', label: 'Industries',    icon: '🏭', desc: 'Sector intelligence' },
 ];
 
@@ -525,7 +526,7 @@ export default function Home() {
                 >
                   Navigate
                 </motion.h2>
-                <motion.div variants={stagger} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                <motion.div variants={stagger} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
                   {QUICK_NAV.map((item) => (
                     <motion.div key={item.href} variants={fadeUp}>
                       <Link

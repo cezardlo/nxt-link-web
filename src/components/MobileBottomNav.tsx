@@ -8,6 +8,7 @@ import {
   Globe,
   Lightbulb,
   Building2,
+  Package,
   Factory,
 } from 'lucide-react';
 
@@ -18,6 +19,7 @@ const NAV_ITEMS = [
   { name: 'MAP', url: '/map', icon: Globe },
   { name: 'SOLVE', url: '/solve', icon: Lightbulb },
   { name: 'VENDORS', url: '/vendors', icon: Building2 },
+  { name: 'PRODUCTS', url: '/products', icon: Package },
   { name: 'INDUSTRY', url: '/industry', icon: Factory },
 ];
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { COLORS } from '@/lib/tokens';
 import { PageTransition } from '@/components/PageTransition';
 
@@ -126,12 +127,12 @@ export default function VendorsPage() {
             <div>
               <p className="section-kicker mb-3">Vendor Directory</p>
               <h1 className="max-w-[760px] text-[clamp(2.8rem,6vw,5.4rem)] font-bold leading-[0.95] tracking-[-0.04em] text-nxt-text">
-                Find the companies
+                Global tech vendors
                 <br />
-                behind the movement.
+                ranked by signal.
               </h1>
               <p className="mt-5 max-w-[680px] text-base leading-8 text-nxt-secondary">
-                A ranked field guide to the vendors showing up across supply chain, logistics, and industrial activity.
+                A worldwide directory of technology vendors across defense, AI, cybersecurity, logistics, energy, and industrial innovation — scored by real-time signal intelligence.
               </p>
             </div>
             <div className="grid gap-px overflow-hidden border border-[rgba(138,160,255,0.12)] bg-[rgba(138,160,255,0.12)] sm:grid-cols-2">
@@ -149,6 +150,12 @@ export default function VendorsPage() {
             </div>
           </div>
         </section>
+
+        <div className="mt-4 flex items-center gap-3">
+          <Link href="/products" className="text-[11px] font-mono uppercase tracking-wider text-nxt-accent hover:text-nxt-accent-light transition-colors">
+            View Product Marketplace →
+          </Link>
+        </div>
 
         <section className="mb-6 grid gap-4 grid-cols-1 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">

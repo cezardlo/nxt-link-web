@@ -22,14 +22,11 @@ export function SortBar({ active, onChange }: Props) {
         <button
           key={opt.key}
           onClick={() => onChange(opt.key)}
-          className="font-mono text-[9px] tracking-[0.1em] px-3 py-1.5 rounded-full border transition-all duration-150 uppercase"
-          style={{
-            borderColor:
-              active === opt.key ? '#00d4ff' : 'rgba(255,255,255,0.06)',
-            color: active === opt.key ? '#00d4ff' : 'rgba(255,255,255,0.3)',
-            backgroundColor:
-              active === opt.key ? '#00d4ff0f' : 'transparent',
-          }}
+          className={`font-mono text-[9px] tracking-[0.1em] px-3 py-1.5 rounded-full border transition-all duration-300 uppercase ${
+            active === opt.key
+              ? 'border-nxt-cyan text-nxt-cyan bg-nxt-cyan/[0.06]'
+              : 'border-white/[0.06] text-nxt-dim hover:text-nxt-muted hover:border-white/[0.12]'
+          }`}
         >
           {opt.label}
         </button>
