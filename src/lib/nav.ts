@@ -13,6 +13,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/map',         label: 'MAP',         icon: '◇', color: '#ffd700', description: 'Global signal map' },
   { href: '/conferences', label: 'EVENTS',      icon: '◆', color: '#00ff88', description: 'Industry conferences' },
   { href: '/industry',    label: 'INDUSTRY',    icon: '◫', color: '#a855f7', description: 'Sector intelligence' },
+  { href: '/discoveries', label: 'DISCOVERIES', icon: '◉', color: '#E8AF34', description: 'Research breakthroughs & innovation' },
   { href: '/vendors',     label: 'VENDORS',     icon: '▦', color: '#3b82f6', description: 'Vendor intelligence' },
 ];
 

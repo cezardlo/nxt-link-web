@@ -15,6 +15,10 @@
     {
       "path": "/api/brain/sync/cron?limit=150",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/agents/research-discovery",
+      "schedule": "0 8 * * *"
     }
   ]
 }

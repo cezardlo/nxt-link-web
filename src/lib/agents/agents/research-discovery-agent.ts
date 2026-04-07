@@ -5,6 +5,7 @@
 import { fetchWithRetry } from '@/lib/http/fetch-with-retry';
 import { parseAnyFeed } from '@/lib/rss/parser';
 import type { QualityFeedSource } from '@/lib/feeds/quality-source-feeds';
+import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -206,4 +207,88 @@ export async function runResearchDiscoveryAgent(): Promise<ResearchDiscoveryResu
   _cached = result;
   _cachedAt = Date.now();
   return result;
+}
+
+// ── Persist to Supabase ────────────────────────────────────────────────────────
+
+/**
+ * Save research signals to the kg_discoveries table.
+ * Uses ON CONFLICT DO NOTHING on title to avoid duplicates.
+ * Only runs if Supabase is configured.
+ */
+export async function persistDiscoveries(result: ResearchDiscoveryResult): Promise<{
+  saved: number;
+  skipped: number;
+  errors: number;
+}> {
+  if (!isSupabaseConfigured()) {
+    console.warn('[research-discovery] Supabase not configured — skipping persist.');
+    return { saved: 0, skipped: 0, errors: 0 };
+  }
+
+  const db = getSupabaseClient({ admin: true });
+  let saved = 0;
+  let skipped = 0;
+  let errors = 0;
+
+  // Batch upsert in chunks of 50
+  const BATCH_SIZE = 50;
+  const signals = result.signals;
+
+  for (let i = 0; i < signals.length; i += BATCH_SIZE) {
+    const batch = signals.slice(i, i + BATCH_SIZE);
+
+    const rows = batch.map((signal) => ({
+      title: signal.title.slice(0, 500),
+      discovery_type: signal.researchType,
+      source_url: signal.url || null,
+      source_name: signal.source || null,
+      research_institution: signal.institution || null,
+      // Map confidence (0–1) to iker_impact_score (0–100)
+      iker_impact_score: Math.round(signal.confidence * 100),
+      published_at: signal.discoveredAt || new Date().toISOString(),
+      // summary not available from RSS signals — leave null
+      summary: null as string | null,
+      country_id: signal.country || null,
+    }));
+
+    try {
+      // Upsert with ON CONFLICT DO NOTHING on title
+      const { data, error } = await db
+        .from('kg_discoveries')
+        .upsert(rows, {
+          onConflict: 'title',
+          ignoreDuplicates: true,
+        })
+        .select('id');
+
+      if (error) {
+        console.error('[research-discovery] upsert error:', error.message);
+        errors += batch.length;
+      } else {
+        const insertedCount = data?.length ?? 0;
+        saved += insertedCount;
+        skipped += batch.length - insertedCount;
+      }
+    } catch (err) {
+      console.error('[research-discovery] batch error:', err instanceof Error ? err.message : err);
+      errors += batch.length;
+    }
+  }
+
+  console.log(`[research-discovery] persisted: saved=${saved}, skipped=${skipped}, errors=${errors}`);
+  return { saved, skipped, errors };
+}
+
+/**
+ * Run the research discovery agent and persist all signals to kg_discoveries.
+ * This is the main entry point for cron jobs and manual triggers.
+ */
+export async function runAndPersistResearchDiscoveryAgent(): Promise<{
+  result: ResearchDiscoveryResult;
+  persist: { saved: number; skipped: number; errors: number };
+}> {
+  const result = await runResearchDiscoveryAgent();
+  const persist = await persistDiscoveries(result);
+  return { result, persist };
 }
