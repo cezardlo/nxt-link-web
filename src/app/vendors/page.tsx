@@ -88,6 +88,7 @@ function VendorCard({ v }: { v: Vendor }) {
             {(v.hq_city || v.hq_country) && <span>{v.hq_city ? `${v.hq_city}, ${v.hq_country}` : v.hq_country}</span>}
             {v.employee_count_range && <span>{v.employee_count_range}</span>}
           </div>
+          </div>
         </div>
         <div className="text-right">
           <div className="text-2xl font-mono font-bold" style={{ color: scoreColor(v.iker_score) }}>{v.iker_score ?? '-'}</div>
@@ -96,6 +97,10 @@ function VendorCard({ v }: { v: Vendor }) {
       </div>
 
       {v.description && <p className="mt-4 text-[13px] leading-7 text-nxt-secondary">{v.description}</p>}
+      <div className="mt-4 flex gap-2">
+        <a href={`/vendor/${v.id}`} className="text-[11px] px-3 py-1.5 rounded-lg border border-white/[0.08] text-nxt-accent hover:border-nxt-accent/30 transition-colors">View Profile →</a>
+        {v.company_url && <a href={v.company_url} target="_blank" rel="noopener noreferrer" className="text-[11px] px-3 py-1.5 rounded-lg border border-white/[0.08] text-nxt-muted hover:text-nxt-text transition-colors">Website ↗</a>}
+      </div>
 
       {v.tags && v.tags.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-2">
