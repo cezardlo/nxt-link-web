@@ -3,10 +3,23 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { COLORS } from '@/lib/tokens';
 import { INDUSTRIES } from '@/lib/data/nav';
 import { AppShell } from '@/components/AppShell';
-import { CausalGraph } from '@/components/CausalGraph';
+
+// Dynamic import for heavy D3 causal graph visualization
+const CausalGraph = dynamic(
+  () => import('@/components/CausalGraph').then(m => ({ default: m.CausalGraph })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[320px] flex items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950">
+        <div className="w-10 h-10 border-4 border-zinc-700 border-t-emerald-500 rounded-full animate-spin" />
+      </div>
+    ),
+  }
+);
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -201,9 +214,9 @@ function SolveInner() {
   const selectedIndustry = INDUSTRIES.find(i => i.id === industry);
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="min-h-screen bg-nxt-bg pb-24">
       {/* ── Header + Search ───────────────────────────────────────── */}
-      <div className="max-w-[720px] mx-auto px-6 pt-8">
+      <div className="max-w-[720px] mx-auto px-4 sm:px-6 pt-8">
         <div className="mb-6">
           <h1
             className="text-xl sm:text-2xl font-bold leading-tight"
@@ -324,7 +337,7 @@ function SolveInner() {
         {searchResult && (
           <button
             onClick={clearSearch}
-            className="text-[10px] tracking-[0.08em] mb-4 py-1"
+            className="text-[10px] tracking-[0.08em] mb-4 py-1 transition-colors duration-200"
             style={{ color: COLORS.muted, background: 'none', border: 'none', cursor: 'pointer' }}
           >
             ← Back to Top 3
@@ -356,35 +369,23 @@ function SolveInner() {
 
       {/* ── TOP 3 DECISIONS (default view) ────────────────────────── */}
       {!loading && !searching && !searchResult && top3 && (
-        <div className="max-w-[720px] mx-auto px-6 flex flex-col gap-4">
+        <div className="max-w-[720px] mx-auto px-4 sm:px-6 flex flex-col gap-4">
           {top3.map(d => (
             <DecisionCard key={d.signal_id} decision={d} />
           ))}
 
           {/* Footer links */}
-          <div className="flex gap-3 mt-4">
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
             <Link
               href="/briefing"
-              className="flex-1 p-3 text-center"
-              style={{
-                background: COLORS.surface,
-                border: `1px solid ${COLORS.border}`,
-                borderRadius: '12px',
-                textDecoration: 'none',
-              }}
+              className="flex-1 p-3 text-center rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5 no-underline"
             >
               <div className="text-[12px] font-semibold" style={{ color: COLORS.text }}>Full Briefing</div>
               <div className="text-[10px]" style={{ color: COLORS.dim }}>Detailed signal analysis</div>
             </Link>
             <Link
               href="/vendors"
-              className="flex-1 p-3 text-center"
-              style={{
-                background: COLORS.surface,
-                border: `1px solid ${COLORS.border}`,
-                borderRadius: '12px',
-                textDecoration: 'none',
-              }}
+              className="flex-1 p-3 text-center rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5 no-underline"
             >
               <div className="text-[12px] font-semibold" style={{ color: COLORS.text }}>All Vendors</div>
               <div className="text-[10px]" style={{ color: COLORS.dim }}>Browse by category</div>
@@ -395,11 +396,10 @@ function SolveInner() {
 
       {/* ── SEARCH RESULTS ────────────────────────────────────────── */}
       {!searching && searchResult && (
-        <div className="max-w-[720px] mx-auto px-6">
+        <div className="max-w-[720px] mx-auto px-4 sm:px-6">
           {/* AI Answer */}
           <div
-            className="p-5 mb-4"
-            style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: '14px' }}
+            className="p-5 mb-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5"
           >
             {/* Urgency badge */}
             <div className="mb-3">
@@ -478,8 +478,7 @@ function SolveInner() {
                 {searchResult.signals.map(s => (
                   <div
                     key={s.id}
-                    className="p-3"
-                    style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: '10px' }}
+                    className="p-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]"
                   >
                     <div className="text-[11px] font-medium" style={{ color: COLORS.text }}>
                       {s.title}
@@ -510,13 +509,7 @@ function DecisionCard({ decision: d }: { decision: Decision }) {
 
   return (
     <div
-      className="transition-all"
-      style={{
-        background: COLORS.card,
-        border: `1px solid ${COLORS.border}`,
-        borderRadius: '14px',
-        overflow: 'hidden',
-      }}
+      className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5 overflow-hidden"
     >
       {/* Header — always visible */}
       <button

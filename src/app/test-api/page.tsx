@@ -2,10 +2,15 @@
 
 import { useEffect, useState } from 'react';
 
+type ApiData = {
+  signals?: unknown[];
+  totalCount?: number;
+};
+
 type TestResult = {
   ok: boolean;
   status?: number;
-  data?: unknown;
+  data?: ApiData;
   error?: string;
   latencyMs?: number;
 };
@@ -47,8 +52,8 @@ export default function TestApiPage() {
           {result.data && (
             <div>
               <p style={{ color: '#888' }}>
-                Signals: <strong style={{ color: '#00ff88' }}>{(result.data as { signals?: unknown[] }).signals?.length ?? 0}</strong>
-                {' / '}Total: <strong style={{ color: '#00ff88' }}>{(result.data as { totalCount?: number }).totalCount ?? '?'}</strong>
+                Signals: <strong style={{ color: '#00ff88' }}>{result.data.signals?.length ?? 0}</strong>
+                {' / '}Total: <strong style={{ color: '#00ff88' }}>{result.data.totalCount ?? '?'}</strong>
               </p>
               <details>
                 <summary style={{ cursor: 'pointer', color: '#888' }}>Raw response</summary>

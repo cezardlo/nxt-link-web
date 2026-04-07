@@ -4,6 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import './globals.css';
 import { Analytics } from '@vercel/analytics/react';
 import { DockNav } from '@/components/DockNav';
+import { MobileNav } from '@/components/MobileBottomNav';
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -46,9 +47,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to content
         </a>
         <DockNav />
-        <main id="main-content" className="pt-24 lg:pt-14">
+        <main id="main-content" className="pt-24 lg:pt-14 pb-16 lg:pb-0">
           {children}
         </main>
+        <MobileNav />
         <Analytics />
       </body>
     </html>

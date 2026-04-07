@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { COLORS } from '@/lib/tokens';
+import { PageTransition } from '@/components/PageTransition';
 
 const SIGNAL_TYPE_COLORS: Record<string, { label: string; color: string }> = {
   market_shift:       { label: 'Market Shift',     color: COLORS.amber },
@@ -171,24 +172,25 @@ export default function IndustryPage() {
   useEffect(() => { fetchData(activeIndustry); }, [activeIndustry, fetchData]);
 
   return (
-    <div className="min-h-screen">
+    <PageTransition>
+    <div className="min-h-screen bg-nxt-bg">
       <div className="max-w-[1000px] mx-auto px-6 py-10 pb-20">
 
         {/* Header */}
         <div className="mb-6 slide-up">
-          <h1 className="text-xl font-semibold text-nxt-text mb-1">Industry Intelligence</h1>
+          <h1 className="text-2xl font-bold text-nxt-text mb-1">Industry Intelligence</h1>
           <p className="text-sm text-nxt-muted">
             Signal activity, investment tracking, and market trends by industry.
           </p>
         </div>
 
         {/* Industry tabs */}
-        <div className="flex items-center gap-2 mb-8">
+        <div className="flex items-center gap-2 mb-8 flex-wrap">
           {INDUSTRIES.map((ind) => (
             <button
               key={ind.id}
               onClick={() => setActiveIndustry(ind.id)}
-              className={`text-sm font-medium px-5 py-2 rounded-lg border transition-all duration-150 ${
+              className={`text-sm font-medium px-5 py-2 rounded-lg border transition-colors duration-200 ${
                 activeIndustry === ind.id
                   ? 'bg-nxt-accent/10 text-nxt-accent-light border-nxt-accent/20'
                   : 'text-nxt-muted border-nxt-border hover:text-nxt-secondary hover:border-nxt-muted'
@@ -212,7 +214,7 @@ export default function IndustryPage() {
           <div className="space-y-5">
 
             {/* Key metrics */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 slide-up">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 slide-up">
               {[
                 { label: 'Total Signals', sublabel: 'Last 90 days', value: data.total_signals.toLocaleString(), color: COLORS.accent },
                 { label: 'Investment Tracked', sublabel: 'Across all signals', value: data.total_investment > 0 ? formatUSD(data.total_investment) : '—', color: COLORS.green },
@@ -221,7 +223,7 @@ export default function IndustryPage() {
               ].map((stat, i) => (
                 <div
                   key={i}
-                  className="bg-nxt-surface border border-nxt-border rounded-nxt-md p-4"
+                  className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5"
                 >
                   <div className="text-[11px] text-nxt-muted mb-1">{stat.label}</div>
                   <div className="text-2xl font-bold font-mono" style={{ color: stat.color }}>
@@ -235,14 +237,14 @@ export default function IndustryPage() {
             {/* Volume + Signal types */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               {/* Volume chart */}
-              <div className="bg-nxt-surface border border-nxt-border rounded-nxt-md p-5">
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
                 <h3 className="text-sm font-semibold text-nxt-text mb-1">Signal Volume</h3>
                 <p className="text-[11px] text-nxt-dim mb-4">Daily signal count over the last 14 days</p>
                 <VolumeChart data={data.daily_volume} />
               </div>
 
               {/* Signal type breakdown */}
-              <div className="bg-nxt-surface border border-nxt-border rounded-nxt-md p-5">
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
                 <h3 className="text-sm font-semibold text-nxt-text mb-1">Signal Types</h3>
                 <p className="text-[11px] text-nxt-dim mb-4">What kinds of signals are being detected</p>
                 <TypeBar breakdown={data.type_breakdown} />
@@ -250,7 +252,7 @@ export default function IndustryPage() {
             </div>
 
             {/* Market themes (clusters) */}
-            <div className="bg-nxt-surface border border-nxt-border rounded-nxt-md p-5">
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
               <h3 className="text-sm font-semibold text-nxt-text mb-1">Market Themes</h3>
               <p className="text-[11px] text-nxt-dim mb-4">
                 Groups of related signals forming trends — shows what topics are gaining or losing momentum
@@ -269,7 +271,7 @@ export default function IndustryPage() {
                   return (
                     <div
                       key={c.id}
-                      className="bg-nxt-card border border-nxt-border-subtle rounded-lg p-4"
+                      className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5"
                       style={{ borderLeftWidth: 3, borderLeftColor: typeInfo.color }}
                     >
                       <div className="flex items-start justify-between gap-2 mb-3">
@@ -323,7 +325,7 @@ export default function IndustryPage() {
             {/* Companies + Recent signals */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               {/* Top companies */}
-              <div className="bg-nxt-surface border border-nxt-border rounded-nxt-md p-5">
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
                 <h3 className="text-sm font-semibold text-nxt-text mb-1">Top Companies</h3>
                 <p className="text-[11px] text-nxt-dim mb-4">Most frequently mentioned in signals</p>
                 {data.top_companies.length === 0 ? (
@@ -331,7 +333,7 @@ export default function IndustryPage() {
                 ) : (
                   <div className="space-y-1">
                     {data.top_companies.map((co, i) => (
-                      <div key={co.name} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-nxt-card transition-colors">
+                      <div key={co.name} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-nxt-card transition-colors duration-200">
                         <div
                           className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-mono font-bold"
                           style={{ background: COLORS.accent + '14', color: COLORS.accent }}
@@ -360,7 +362,7 @@ export default function IndustryPage() {
               </div>
 
               {/* Recent signals */}
-              <div className="lg:col-span-2 bg-nxt-surface border border-nxt-border rounded-nxt-md p-5">
+              <div className="lg:col-span-2 rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
                 <h3 className="text-sm font-semibold text-nxt-text mb-1">Recent Signals</h3>
                 <p className="text-[11px] text-nxt-dim mb-4">Latest intelligence signals in {activeIndustry}</p>
                 <div className="space-y-2 max-h-[500px] overflow-y-auto">
@@ -369,7 +371,7 @@ export default function IndustryPage() {
                     return (
                       <div
                         key={sig.id}
-                        className="p-3 rounded-lg bg-nxt-card border border-nxt-border-subtle card-hover"
+                        className="p-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]"
                         style={{ borderLeftWidth: 3, borderLeftColor: info.color }}
                       >
                         <div className="flex items-center gap-2 mb-1.5">
@@ -409,5 +411,6 @@ export default function IndustryPage() {
         ) : null}
       </div>
     </div>
+    </PageTransition>
   );
 }

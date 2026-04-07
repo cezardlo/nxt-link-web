@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { COLORS } from '@/lib/tokens';
+import { PageTransition } from '@/components/PageTransition';
 
 type Signal = {
   id: string;
@@ -246,7 +247,8 @@ export default function IntelPage() {
   }, [signals]);
 
   return (
-    <div className="min-h-screen">
+    <PageTransition>
+    <div className="min-h-screen bg-nxt-bg">
       <div className="mx-auto max-w-[1120px] px-6 py-10 pb-20">
         <section className="slide-up mb-8 border-b border-[rgba(138,160,255,0.12)] pb-8">
           <div className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
@@ -270,7 +272,7 @@ export default function IntelPage() {
                   setPage(0);
                   setTab('high');
                 }}
-                className="rounded-full border border-[rgba(39,209,127,0.24)] bg-[rgba(14,39,30,0.72)] px-3 py-1.5 text-xs font-medium text-nxt-green"
+                className="rounded-full border border-[rgba(39,209,127,0.24)] bg-[rgba(14,39,30,0.72)] px-3 py-1.5 text-xs font-medium text-nxt-green transition-colors duration-200"
               >
                 Highest-priority first
               </button>
@@ -279,7 +281,7 @@ export default function IntelPage() {
                   setPage(0);
                   setMinScore(70);
                 }}
-                className="rounded-full border border-nxt-border bg-nxt-surface px-3 py-1.5 text-xs font-medium text-nxt-secondary"
+                className="rounded-full border border-nxt-border bg-nxt-surface px-3 py-1.5 text-xs font-medium text-nxt-secondary transition-colors duration-200"
               >
                 Show stronger evidence only
               </button>
@@ -324,7 +326,7 @@ export default function IntelPage() {
                     setPage(0);
                     setSearch(searchInput.trim());
                   }}
-                  className="rounded-xl bg-nxt-accent px-4 py-3 text-sm font-semibold text-white"
+                  className="rounded-xl bg-nxt-accent px-4 py-3 text-sm font-semibold text-white transition-colors duration-200"
                 >
                   Apply
                 </button>
@@ -337,7 +339,7 @@ export default function IntelPage() {
                     setMinScore(0);
                     setTab('all');
                   }}
-                  className="rounded-xl border border-nxt-border bg-nxt-card px-4 py-3 text-sm text-nxt-muted"
+                  className="rounded-xl border border-nxt-border bg-nxt-card px-4 py-3 text-sm text-nxt-muted transition-colors duration-200"
                 >
                   Reset
                 </button>
@@ -405,8 +407,8 @@ export default function IntelPage() {
           </div>
         </section>
 
-        <section className="mb-6 grid gap-4 lg:grid-cols-3">
-          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-4">
+        <section className="mb-6 grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
             <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Brain read</div>
             <div className="mt-3 space-y-3 text-sm text-nxt-secondary">
               <div>
@@ -424,14 +426,14 @@ export default function IntelPage() {
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-4">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
             <div className="mb-3 flex items-center justify-between">
               <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Top industries</div>
               <div className="text-[11px] font-mono text-nxt-dim">brain momentum</div>
             </div>
             <div className="space-y-2">
               {(learning?.industryMomentum ?? []).slice(0, 4).map((item) => (
-                <div key={item.name} className="flex items-center justify-between rounded-[16px] border border-nxt-border bg-nxt-card p-3">
+                <div key={item.name} className="flex items-center justify-between rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-3 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
                   <div>
                     <div className="text-sm font-medium text-nxt-text">{item.name}</div>
                     <div className="text-[11px] text-nxt-dim">{item.signalCount} signals</div>
@@ -445,14 +447,14 @@ export default function IntelPage() {
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-4">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
             <div className="mb-3 flex items-center justify-between">
               <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Top sources</div>
               <div className="text-[11px] font-mono text-nxt-dim">trust score</div>
             </div>
             <div className="space-y-2">
               {(learning?.sourceScores ?? []).slice(0, 4).map((item) => (
-                <div key={item.source} className="flex items-center justify-between rounded-[16px] border border-nxt-border bg-nxt-card p-3">
+                <div key={item.source} className="flex items-center justify-between rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-3 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
                   <div>
                     <div className="text-sm font-medium text-nxt-text">{sourceName(item.source)}</div>
                     <div className="text-[11px] text-nxt-dim">{item.signalCount} signals</div>
@@ -467,8 +469,8 @@ export default function IntelPage() {
           </div>
         </section>
 
-        <section className="mb-6 grid gap-4 lg:grid-cols-3">
-          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-4">
+        <section className="mb-6 grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
             <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Pipeline quality</div>
             <div className="mt-3 space-y-3 text-sm text-nxt-secondary">
               <div>Duplicates filtered: <span className="font-semibold text-nxt-text">{pipeline?.duplicatesFiltered ?? 0}</span></div>
@@ -476,18 +478,18 @@ export default function IntelPage() {
               <div>Noisy source signals: <span className="font-semibold text-nxt-text">{pipeline?.noisySourceSignals ?? 0}</span></div>
             </div>
           </div>
-          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-4">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
             <div className="mb-3 text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Weakest sources</div>
             <div className="space-y-2">
               {(pipeline?.weakestSources ?? []).slice(0, 3).map((item) => (
-                <div key={item.source} className="flex items-center justify-between rounded-[16px] border border-nxt-border bg-nxt-card p-3">
+                <div key={item.source} className="flex items-center justify-between rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-3 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
                   <div className="text-sm font-medium text-nxt-text">{sourceName(item.source)}</div>
                   <div className="text-sm font-mono text-nxt-muted">{Math.round(item.trustScore * 100)}</div>
                 </div>
               ))}
             </div>
           </div>
-          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-4">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
             <div className="mb-3 text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Intake health</div>
             <div className="space-y-2 text-sm text-nxt-secondary">
               <div>Accepted signals: <span className="font-semibold text-nxt-text">{pipeline?.acceptedSignals ?? filteredCount}</span></div>
@@ -513,7 +515,7 @@ export default function IntelPage() {
               <div className="text-sm text-nxt-red">{error}</div>
               <button
                 onClick={() => setPage(0)}
-                className="rounded-lg border border-nxt-accent/20 px-5 py-2 text-sm font-medium text-nxt-accent-light"
+                className="rounded-lg border border-nxt-accent/20 px-5 py-2 text-sm font-medium text-nxt-accent-light transition-colors duration-200"
               >
                 Retry
               </button>
@@ -535,7 +537,7 @@ export default function IntelPage() {
                   href={signal.url ?? '#'}
                   target={signal.url ? '_blank' : undefined}
                   rel="noopener noreferrer"
-                  className="block rounded-[24px] border border-nxt-border bg-[linear-gradient(180deg,rgba(15,19,32,0.94),rgba(9,12,22,0.96))] p-5 transition-all hover:border-[rgba(138,160,255,0.22)] hover:shadow-[0_18px_48px_rgba(3,8,21,0.32)]"
+                  className="block rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5"
                   style={{ borderLeftWidth: 3, borderLeftColor: accent }}
                 >
                   <div className="grid gap-4 lg:grid-cols-[76px_1fr_210px]">
@@ -594,7 +596,7 @@ export default function IntelPage() {
                       </div>
 
                       <div className="mt-4 grid gap-2 md:grid-cols-2">
-                        <div className="rounded-[16px] border border-nxt-border bg-nxt-card/70 p-3">
+                        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-3 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
                           <div className="text-[10px] uppercase tracking-[0.16em] text-nxt-dim">El Paso relevance</div>
                           <div className="mt-2 flex items-center justify-between">
                             <div className="text-base font-semibold text-nxt-text">{scorePercent(signal.el_paso_relevance)}</div>
@@ -604,7 +606,7 @@ export default function IntelPage() {
                             {signal.local_pathway ?? 'Local pathway still being determined.'}
                           </p>
                         </div>
-                        <div className="rounded-[16px] border border-nxt-border bg-nxt-card/70 p-3">
+                        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-3 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
                           <div className="text-[10px] uppercase tracking-[0.16em] text-nxt-dim">Why now</div>
                           <div className="mt-2 text-[12px] leading-5 text-nxt-secondary">
                             {signal.why_now ?? 'This is still an early read.'}
@@ -680,7 +682,7 @@ export default function IntelPage() {
             <button
               onClick={() => setPage((current) => current + 1)}
               disabled={loading}
-              className="rounded-lg border border-nxt-border px-6 py-2.5 text-sm font-medium text-nxt-secondary hover:border-nxt-accent/20 hover:text-nxt-text"
+              className="rounded-xl border border-nxt-border px-6 py-2.5 text-sm font-medium text-nxt-secondary transition-colors duration-200 hover:border-nxt-accent/20 hover:text-nxt-text hover:bg-nxt-surface"
             >
               {loading ? 'Loading...' : 'Load more signals'}
             </button>
@@ -688,5 +690,6 @@ export default function IntelPage() {
         )}
       </div>
     </div>
+    </PageTransition>
   );
 }
