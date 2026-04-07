@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { COLORS } from '@/lib/tokens';
+import { PageTransition } from '@/components/PageTransition';
 
 // Lazy-load maplibre-gl to keep it out of the initial server bundle
 const maplibreglPromise = typeof window !== 'undefined'
@@ -297,31 +298,32 @@ export default function MapPage() {
   const topOpportunities = opportunities?.topOpportunities?.slice(0, 4) ?? [];
 
   return (
+    <PageTransition>
     <div className="min-h-screen bg-nxt-bg text-nxt-text">
       <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-6 sm:px-6">
         <section className="mb-8 border-b border-[rgba(138,160,255,0.12)] pb-8">
           <div className="grid gap-4 xl:grid-cols-[320px_1fr_320px]">
           <div className="p-0">
             <p className="section-kicker mb-3">Brain Map</p>
-            <h1 className="max-w-[320px] text-[clamp(2.4rem,4vw,4rem)] font-bold leading-[0.95] tracking-[-0.04em] text-nxt-text">See where the system is clustering.</h1>
+            <h1 className="max-w-[320px] text-[clamp(2.4rem,4vw,4rem)] font-bold leading-[0.95] tracking-[-0.04em] text-nxt-text">Global signal map.</h1>
             <p className="mt-4 text-sm leading-7 text-nxt-secondary">
               This view now shows where global industry movement turns into El Paso relevance. The map is weighted by trust, local fit, and opportunity pressure.
             </p>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-              <div className="rounded-[18px] border border-nxt-border bg-nxt-surface/70 p-4">
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
                 <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Mapped places</div>
                 <div className="mt-2 text-2xl font-mono font-bold">{filteredPoints.length}</div>
               </div>
-              <div className="rounded-[18px] border border-nxt-border bg-nxt-surface/70 p-4">
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
                 <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Signals scanned</div>
                 <div className="mt-2 text-2xl font-mono font-bold">{brainStats.scannedSignals}</div>
               </div>
-              <div className="rounded-[18px] border border-nxt-border bg-nxt-surface/70 p-4">
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
                 <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Memory notes</div>
                 <div className="mt-2 text-2xl font-mono font-bold">{noteCount}</div>
               </div>
-              <div className="rounded-[18px] border border-nxt-border bg-nxt-surface/70 p-4">
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
                 <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Locally ranked</div>
                 <div className="mt-2 text-2xl font-mono font-bold">{signalAssessments.length}</div>
               </div>
@@ -378,7 +380,7 @@ export default function MapPage() {
           <div className="border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-5">
             <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Knowledge summary</div>
             <div className="mt-4 space-y-3">
-              <div className="rounded-[18px] border border-nxt-border bg-nxt-surface/70 p-4">
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
                 <div className="text-xs text-nxt-muted">Tracked companies</div>
                 <div className="mt-1 text-2xl font-mono font-bold">{companyCount}</div>
               </div>
@@ -409,7 +411,7 @@ export default function MapPage() {
                   </div>
                 </div>
               )}
-              <div className="rounded-[18px] border border-nxt-border bg-nxt-surface/70 p-4">
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
                 <div className="text-xs text-nxt-muted">Obsidian memory</div>
                 <div className="mt-1 text-sm font-semibold text-nxt-text">
                   {brainStats.obsidianReady ? 'Connected' : 'Not connected yet'}
@@ -649,5 +651,6 @@ export default function MapPage() {
         )}
       </div>
     </div>
+    </PageTransition>
   );
 }

@@ -127,12 +127,12 @@ export default function VendorsPage() {
             <div>
               <p className="section-kicker mb-3">Vendor Directory</p>
               <h1 className="max-w-[760px] text-[clamp(2.8rem,6vw,5.4rem)] font-bold leading-[0.95] tracking-[-0.04em] text-nxt-text">
-                Find the companies
+                Global tech vendors
                 <br />
-                behind the movement.
+                ranked by signal.
               </h1>
               <p className="mt-5 max-w-[680px] text-base leading-8 text-nxt-secondary">
-                A ranked field guide to the vendors showing up across supply chain, logistics, and industrial activity.
+                A worldwide directory of technology vendors across defense, AI, cybersecurity, logistics, energy, and industrial innovation — scored by real-time signal intelligence.
               </p>
             </div>
             <div className="grid gap-px overflow-hidden border border-[rgba(138,160,255,0.12)] bg-[rgba(138,160,255,0.12)] sm:grid-cols-2">

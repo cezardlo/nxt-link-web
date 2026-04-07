@@ -22,8 +22,14 @@ const SIGNAL_TYPE_COLORS: Record<string, { label: string; color: string }> = {
 };
 
 const INDUSTRIES = [
-  { id: 'manufacturing', label: 'Manufacturing' },
-  { id: 'logistics', label: 'Logistics' },
+  { id: 'ai-ml',         label: 'AI / ML',        color: '#60a5fa', icon: '🤖', desc: 'Generative AI, edge inference, autonomous systems' },
+  { id: 'cybersecurity',  label: 'Cybersecurity',  color: '#00d4ff', icon: '🔐', desc: 'Zero trust, threat intel, OT/ICS security' },
+  { id: 'defense',        label: 'Defense',        color: '#ff6400', icon: '🛡️', desc: 'ISR, C4ISR, hypersonics, directed energy' },
+  { id: 'border-tech',    label: 'Border Tech',    color: '#f97316', icon: '🚧', desc: 'Biometrics, cargo scanning, trade compliance' },
+  { id: 'manufacturing',  label: 'Manufacturing',  color: '#06b6d4', icon: '🏭', desc: 'Industry 4.0, digital twins, cobots' },
+  { id: 'energy',         label: 'Energy',         color: '#eab308', icon: '⚡', desc: 'Smart grid, battery storage, microgrids' },
+  { id: 'healthcare',     label: 'Healthcare',     color: '#22c55e', icon: '🏥', desc: 'Telemedicine, medical imaging AI, remote monitoring' },
+  { id: 'logistics',      label: 'Logistics',      color: '#f59e0b', icon: '🚛', desc: 'Route optimization, warehouse automation, fleet mgmt' },
 ];
 
 interface TypeBreakdown { type: string; count: number; total_usd: number; avg_importance: number; }
@@ -178,27 +184,47 @@ export default function IndustryPage() {
 
         {/* Header */}
         <div className="mb-6 slide-up">
-          <h1 className="text-2xl font-bold text-nxt-text mb-1">Industry Intelligence</h1>
+          <h1 className="text-2xl font-bold text-nxt-text mb-1 font-grotesk">Industry Intelligence</h1>
           <p className="text-sm text-nxt-muted">
-            Signal activity, investment tracking, and market trends by industry.
+            Global signal activity, investment tracking, and technology trends across 8 sectors.
           </p>
         </div>
 
-        {/* Industry tabs */}
-        <div className="flex items-center gap-2 mb-8 flex-wrap">
-          {INDUSTRIES.map((ind) => (
-            <button
-              key={ind.id}
-              onClick={() => setActiveIndustry(ind.id)}
-              className={`text-sm font-medium px-5 py-2 rounded-lg border transition-colors duration-200 ${
-                activeIndustry === ind.id
-                  ? 'bg-nxt-accent/10 text-nxt-accent-light border-nxt-accent/20'
-                  : 'text-nxt-muted border-nxt-border hover:text-nxt-secondary hover:border-nxt-muted'
-              }`}
-            >
-              {ind.label}
-            </button>
-          ))}
+        {/* Industry Selector Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+          {INDUSTRIES.map((ind) => {
+            const isActive = activeIndustry === ind.id;
+            return (
+              <button
+                key={ind.id}
+                onClick={() => setActiveIndustry(ind.id)}
+                className={`group relative text-left p-4 rounded-2xl border transition-all duration-300 ${
+                  isActive
+                    ? 'border-white/[0.15] bg-white/[0.06] shadow-lg'
+                    : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04]'
+                } backdrop-blur-sm`}
+                style={isActive ? { boxShadow: `0 0 24px ${ind.color}15` } : undefined}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-lg">{ind.icon}</span>
+                  <span className={`text-[13px] font-semibold transition-colors duration-200 ${isActive ? 'text-white' : 'text-nxt-secondary group-hover:text-nxt-text'}`}>
+                    {ind.label}
+                  </span>
+                </div>
+                <p className="text-[10px] text-nxt-dim leading-relaxed">{ind.desc}</p>
+                {isActive && (
+                  <div className="absolute top-2 right-2 w-2 h-2 rounded-full" style={{ backgroundColor: ind.color, boxShadow: `0 0 8px ${ind.color}80` }} />
+                )}
+                <a
+                  href={`/industry/${ind.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-2 inline-block text-[9px] font-mono uppercase tracking-wider text-nxt-accent hover:text-nxt-accent-light transition-colors"
+                >
+                  Full dossier →
+                </a>
+              </button>
+            );
+          })}
         </div>
 
         {loading ? (
