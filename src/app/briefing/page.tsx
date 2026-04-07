@@ -439,7 +439,7 @@ export default function BriefingPage() {
           </div>
         </section>
 
-        <section className="mb-8 grid gap-4 xl:grid-cols-4">
+        <section className="mb-8 grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
           {[
             ['Hottest industry', learning?.summary?.hottestIndustry ?? 'Loading...', learning?.industryMomentum?.[0] ? `${learning.industryMomentum[0].signalCount} signals behind it` : ''],
             ['Hottest place', learning?.summary?.hottestLocation ?? 'Loading...', learning?.locationMomentum?.[0] ? `${learning.locationMomentum[0].signalCount} signals behind it` : ''],
@@ -454,8 +454,8 @@ export default function BriefingPage() {
           ))}
         </section>
 
-        <section className="mb-8 grid gap-4 xl:grid-cols-3">
-          <div className="rounded-[20px] border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-5">
+        <section className="mb-8 grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+          <div className="rounded-[20px] border border-[rgba(138,160,255,0.12)] bg-[rgba(10,13,22,0.96)] p-5 shadow-lg shadow-black/20">
             <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Source quality</div>
             <div className="mt-3 text-xl font-semibold text-nxt-text">{briefing.source_ops?.strongest_source ?? 'Loading...'}</div>
             <div className="mt-2 text-xs text-nxt-muted">Strongest source feeding the current briefing set</div>
@@ -498,7 +498,7 @@ export default function BriefingPage() {
         </section>
 
         {/* TOP 3 INSIGHTS */}
-        <div className="mb-8 grid gap-4 xl:grid-cols-3">
+        <div className="mb-8 grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
           {briefing.top_insights.slice(0, 3).map((insight, i) => {
             const accent = insightAccents[i] || COLORS.accent;
             return (
@@ -660,14 +660,14 @@ export default function BriefingPage() {
         {/* Two-column: Regions + Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
           {/* REGIONS */}
-          <div className="bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5">
+          <div className="rounded-xl bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5 shadow-lg shadow-black/20">
             <h3 className="text-sm font-semibold text-nxt-text mb-1">Supply Chain Risk by Region</h3>
             <p className="text-[11px] text-nxt-dim mb-4">Based on signal volume, disruptions, and regulatory activity</p>
             <div className="space-y-2">
               {mergedRegions.slice(0, 6).map((r) => {
                 const riskColor = riskColorMap[r.risk_level] || COLORS.green;
                 return (
-                  <div key={r.name} className="flex items-center justify-between p-3 rounded-lg bg-nxt-card border border-nxt-border-subtle">
+                  <div key={r.name} className="flex items-center justify-between p-3 rounded-xl bg-nxt-card border border-nxt-border-subtle transition-colors duration-200 hover:bg-nxt-elevated">
                     <div className="flex items-center gap-3">
                       <div className="w-1 h-8 rounded-full" style={{ background: riskColor }} />
                       <div>
@@ -686,7 +686,7 @@ export default function BriefingPage() {
           </div>
 
           {/* SIGNAL STATS */}
-          <div className="bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5">
+          <div className="rounded-xl bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5 shadow-lg shadow-black/20">
             <h3 className="text-sm font-semibold text-nxt-text mb-4">Signal Breakdown</h3>
             <div className="mb-5">
               <div className="text-[10px] font-mono text-nxt-dim tracking-wider mb-3 uppercase">By Type</div>
@@ -733,8 +733,8 @@ export default function BriefingPage() {
         {/* TREND CHART */}
         {briefing.trends && <TrendChart trends={briefing.trends} />}
 
-        <section className="mt-5 grid gap-5 lg:grid-cols-3">
-          <div className="bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5">
+        <section className="mt-5 grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-xl bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5 shadow-lg shadow-black/20">
             <h3 className="text-sm font-semibold text-nxt-text mb-4">Top opportunities</h3>
             <div className="space-y-3">
               {(briefing.top_opportunities ?? []).slice(0, 4).map((item) => (
@@ -746,7 +746,7 @@ export default function BriefingPage() {
               ))}
             </div>
           </div>
-          <div className="bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5">
+          <div className="rounded-xl bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5 shadow-lg shadow-black/20">
             <h3 className="text-sm font-semibold text-nxt-text mb-4">Recurring companies</h3>
             <div className="space-y-2">
               {(briefing.memory?.recurringCompanies ?? []).slice(0, 5).map((item) => (
@@ -757,7 +757,7 @@ export default function BriefingPage() {
               ))}
             </div>
           </div>
-          <div className="bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5">
+          <div className="rounded-xl bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5 shadow-lg shadow-black/20">
             <h3 className="text-sm font-semibold text-nxt-text mb-4">Recurring technologies</h3>
             <div className="space-y-2">
               {(briefing.memory?.recurringTechnologies ?? []).slice(0, 5).map((item) => (
@@ -771,7 +771,7 @@ export default function BriefingPage() {
         </section>
 
         {/* RECENT SIGNALS */}
-        <div className="bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5">
+        <div className="rounded-xl bg-[rgba(10,13,22,0.96)] border border-[rgba(138,160,255,0.12)] p-5 shadow-lg shadow-black/20">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-semibold text-nxt-text">Recent Signals</h3>
             <span className="text-xs text-nxt-muted">{briefing.recent_signals.length} latest</span>

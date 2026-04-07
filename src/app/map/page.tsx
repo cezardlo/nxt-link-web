@@ -1,8 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import maplibregl from 'maplibre-gl';
+import dynamic from 'next/dynamic';
 import { COLORS } from '@/lib/tokens';
+
+// Lazy-load maplibre-gl to keep it out of the initial server bundle
+const maplibreglPromise = typeof window !== 'undefined'
+  ? import('maplibre-gl').then(m => m.default)
+  : null;
 
 type MapPoint = {
   slug: string;
@@ -115,8 +120,10 @@ function relTime(dateStr: string): string {
 
 export default function MapPage() {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
-  const markersRef = useRef<maplibregl.Marker[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mapRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const markersRef = useRef<any[]>([]);
   const [points, setPoints] = useState<MapPoint[]>([]);
   const [entities, setEntities] = useState<BrainEntity[]>([]);
   const [signals, setSignals] = useState<RecentSignal[]>([]);
@@ -177,7 +184,11 @@ export default function MapPage() {
   }, [includeMemory]);
 
   useEffect(() => {
-    if (!mapContainer.current || mapRef.current) return;
+    if (!mapContainer.current || mapRef.current || !maplibreglPromise) return;
+
+    let cancelled = false;
+    maplibreglPromise.then((maplibregl) => {
+      if (cancelled || !mapContainer.current || mapRef.current) return;
 
     const map = new maplibregl.Map({
       container: mapContainer.current,
@@ -209,65 +220,72 @@ export default function MapPage() {
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
     mapRef.current = map;
 
+    });
+
     return () => {
-      map.remove();
-      mapRef.current = null;
+      cancelled = true;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
     };
   }, []);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !maplibreglPromise) return;
 
-    markersRef.current.forEach((marker) => marker.remove());
+    markersRef.current.forEach((marker: { remove: () => void }) => marker.remove());
     markersRef.current = [];
 
     const filteredPoints = showHighOnly ? points.filter((point) => point.avgImportance >= 0.75) : points;
 
-    for (const point of filteredPoints) {
-      const score = Math.round(point.avgImportance * 100);
-      const color = score >= 80 ? COLORS.green : score >= 65 ? COLORS.accent : COLORS.amber;
-      const size = Math.max(26, Math.min(58, 20 + Math.sqrt(point.signalCount) * 8));
+    maplibreglPromise.then((maplibregl) => {
+      for (const point of filteredPoints) {
+        const score = Math.round(point.avgImportance * 100);
+        const color = score >= 80 ? COLORS.green : score >= 65 ? COLORS.accent : COLORS.amber;
+        const size = Math.max(26, Math.min(58, 20 + Math.sqrt(point.signalCount) * 8));
 
-      const core = document.createElement('button');
-      core.style.cssText = `
-        width:${size}px;
-        height:${size}px;
-        border-radius:999px;
-        border:1px solid ${color}88;
-        background:radial-gradient(circle, ${color}cc, ${color}30);
-        box-shadow:0 0 ${size * 0.75}px ${color}40;
-        color:white;
-        font:600 11px "IBM Plex Mono", monospace;
-        cursor:pointer;
-      `;
-      core.textContent = String(point.signalCount);
-      core.onclick = () => {
-        setSelectedPoint(point);
-        map.flyTo({ center: [point.longitude, point.latitude], zoom: 5, duration: 1000 });
-      };
+        const core = document.createElement('button');
+        core.style.cssText = `
+          width:${size}px;
+          height:${size}px;
+          border-radius:999px;
+          border:1px solid ${color}88;
+          background:radial-gradient(circle, ${color}cc, ${color}30);
+          box-shadow:0 0 ${size * 0.75}px ${color}40;
+          color:white;
+          font:600 11px "IBM Plex Mono", monospace;
+          cursor:pointer;
+        `;
+        core.textContent = String(point.signalCount);
+        core.onclick = () => {
+          setSelectedPoint(point);
+          map.flyTo({ center: [point.longitude, point.latitude], zoom: 5, duration: 1000 });
+        };
 
-      const label = document.createElement('div');
-      label.style.cssText = `
-        margin-top:6px;
-        text-align:center;
-        white-space:nowrap;
-        font:500 10px "IBM Plex Mono", monospace;
-        color:${COLORS.secondary};
-        text-shadow:0 1px 3px rgba(0,0,0,0.9);
-      `;
-      label.textContent = point.name;
+        const label = document.createElement('div');
+        label.style.cssText = `
+          margin-top:6px;
+          text-align:center;
+          white-space:nowrap;
+          font:500 10px "IBM Plex Mono", monospace;
+          color:${COLORS.secondary};
+          text-shadow:0 1px 3px rgba(0,0,0,0.9);
+        `;
+        label.textContent = point.name;
 
-      const wrapper = document.createElement('div');
-      wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;';
-      wrapper.appendChild(core);
-      wrapper.appendChild(label);
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;';
+        wrapper.appendChild(core);
+        wrapper.appendChild(label);
 
-      const marker = new maplibregl.Marker({ element: wrapper, anchor: 'center' })
-        .setLngLat([point.longitude, point.latitude])
-        .addTo(map);
-      markersRef.current.push(marker);
-    }
+        const marker = new maplibregl.Marker({ element: wrapper, anchor: 'center' })
+          .setLngLat([point.longitude, point.latitude])
+          .addTo(map);
+        markersRef.current.push(marker);
+      }
+    });
   }, [points, showHighOnly]);
 
   const filteredPoints = showHighOnly ? points.filter((point) => point.avgImportance >= 0.75) : points;
@@ -312,13 +330,13 @@ export default function MapPage() {
             <div className="mt-5 flex flex-wrap gap-2">
               <button
                 onClick={() => setShowHighOnly((current) => !current)}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium ${showHighOnly ? 'bg-nxt-accent/12 text-nxt-accent-light' : 'border border-nxt-border text-nxt-muted'}`}
+                className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-200 ${showHighOnly ? 'bg-nxt-accent/12 text-nxt-accent-light' : 'border border-nxt-border text-nxt-muted hover:text-nxt-secondary'}`}
               >
                 {showHighOnly ? 'Showing strong clusters' : 'Show stronger clusters only'}
               </button>
               <button
                 onClick={() => setIncludeMemory((current) => !current)}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium ${includeMemory ? 'bg-nxt-green/12 text-nxt-green' : 'border border-nxt-border text-nxt-muted'}`}
+                className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-200 ${includeMemory ? 'bg-nxt-green/12 text-nxt-green' : 'border border-nxt-border text-nxt-muted hover:text-nxt-secondary'}`}
               >
                 {includeMemory ? 'Obsidian memory on' : 'Obsidian memory off'}
               </button>
@@ -412,7 +430,7 @@ export default function MapPage() {
           </div>
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+        <section className="grid gap-4 grid-cols-1 xl:grid-cols-[0.9fr_1.1fr]">
           <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-5">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-semibold">Top mapped places</h2>
@@ -441,7 +459,7 @@ export default function MapPage() {
             </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
             <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-5">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-sm font-semibold">Recent signals</h2>
@@ -489,8 +507,8 @@ export default function MapPage() {
           </div>
         </section>
 
-        <section className="mt-4 grid gap-4 lg:grid-cols-2">
-          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-5">
+        <section className="mt-4 grid gap-4 grid-cols-1 md:grid-cols-2">
+          <div className="rounded-xl border border-nxt-border bg-nxt-surface/82 p-5 shadow-lg shadow-black/20">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-semibold">El Paso opportunity queue</h2>
               <span className="text-[11px] font-mono text-nxt-dim">map to action</span>
@@ -513,7 +531,7 @@ export default function MapPage() {
               ))}
             </div>
           </div>
-          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-5">
+          <div className="rounded-xl border border-nxt-border bg-nxt-surface/82 p-5 shadow-lg shadow-black/20">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-semibold">Recurring pattern memory</h2>
               <span className="text-[11px] font-mono text-nxt-dim">longitudinal read</span>
@@ -539,8 +557,8 @@ export default function MapPage() {
           </div>
         </section>
 
-        <section className="mt-4 grid gap-4 lg:grid-cols-2">
-          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-5">
+        <section className="mt-4 grid gap-4 grid-cols-1 md:grid-cols-2">
+          <div className="rounded-xl border border-nxt-border bg-nxt-surface/82 p-5 shadow-lg shadow-black/20">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-semibold">Industry momentum</h2>
               <span className="text-[11px] font-mono text-nxt-dim">what is heating up</span>
@@ -563,7 +581,7 @@ export default function MapPage() {
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-5">
+          <div className="rounded-xl border border-nxt-border bg-nxt-surface/82 p-5 shadow-lg shadow-black/20">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-semibold">Location momentum</h2>
               <span className="text-[11px] font-mono text-nxt-dim">where activity is rising</span>
@@ -588,8 +606,8 @@ export default function MapPage() {
         </section>
 
         {pipeline && (
-          <section className="mt-4 grid gap-4 lg:grid-cols-2">
-            <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-5">
+          <section className="mt-4 grid gap-4 grid-cols-1 md:grid-cols-2">
+            <div className="rounded-xl border border-nxt-border bg-nxt-surface/82 p-5 shadow-lg shadow-black/20">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-sm font-semibold">Top trusted sources</h2>
                 <span className="text-[11px] font-mono text-nxt-dim">map weighting</span>
@@ -608,7 +626,7 @@ export default function MapPage() {
                 ))}
               </div>
             </div>
-            <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-5">
+            <div className="rounded-xl border border-nxt-border bg-nxt-surface/82 p-5 shadow-lg shadow-black/20">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-sm font-semibold">Weakest sources</h2>
                 <span className="text-[11px] font-mono text-nxt-dim">noise watch</span>

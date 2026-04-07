@@ -246,7 +246,7 @@ export default function IntelPage() {
   }, [signals]);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-nxt-bg">
       <div className="mx-auto max-w-[1120px] px-6 py-10 pb-20">
         <section className="slide-up mb-8 border-b border-[rgba(138,160,255,0.12)] pb-8">
           <div className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
@@ -405,8 +405,8 @@ export default function IntelPage() {
           </div>
         </section>
 
-        <section className="mb-6 grid gap-4 lg:grid-cols-3">
-          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-4">
+        <section className="mb-6 grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-xl border border-nxt-border bg-nxt-surface/82 p-4 shadow-lg shadow-black/20 transition-all duration-200 hover:border-nxt-border/80">
             <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Brain read</div>
             <div className="mt-3 space-y-3 text-sm text-nxt-secondary">
               <div>
@@ -424,7 +424,7 @@ export default function IntelPage() {
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-4">
+          <div className="rounded-xl border border-nxt-border bg-nxt-surface/82 p-4 shadow-lg shadow-black/20 transition-all duration-200 hover:border-nxt-border/80">
             <div className="mb-3 flex items-center justify-between">
               <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Top industries</div>
               <div className="text-[11px] font-mono text-nxt-dim">brain momentum</div>
@@ -445,7 +445,7 @@ export default function IntelPage() {
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-4">
+          <div className="rounded-xl border border-nxt-border bg-nxt-surface/82 p-4 shadow-lg shadow-black/20 transition-all duration-200 hover:border-nxt-border/80">
             <div className="mb-3 flex items-center justify-between">
               <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Top sources</div>
               <div className="text-[11px] font-mono text-nxt-dim">trust score</div>
@@ -467,8 +467,8 @@ export default function IntelPage() {
           </div>
         </section>
 
-        <section className="mb-6 grid gap-4 lg:grid-cols-3">
-          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-4">
+        <section className="mb-6 grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-xl border border-nxt-border bg-nxt-surface/82 p-4 shadow-lg shadow-black/20">
             <div className="text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Pipeline quality</div>
             <div className="mt-3 space-y-3 text-sm text-nxt-secondary">
               <div>Duplicates filtered: <span className="font-semibold text-nxt-text">{pipeline?.duplicatesFiltered ?? 0}</span></div>
@@ -476,7 +476,7 @@ export default function IntelPage() {
               <div>Noisy source signals: <span className="font-semibold text-nxt-text">{pipeline?.noisySourceSignals ?? 0}</span></div>
             </div>
           </div>
-          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-4">
+          <div className="rounded-xl border border-nxt-border bg-nxt-surface/82 p-4 shadow-lg shadow-black/20">
             <div className="mb-3 text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Weakest sources</div>
             <div className="space-y-2">
               {(pipeline?.weakestSources ?? []).slice(0, 3).map((item) => (
@@ -487,7 +487,7 @@ export default function IntelPage() {
               ))}
             </div>
           </div>
-          <div className="rounded-[24px] border border-nxt-border bg-nxt-surface/82 p-4">
+          <div className="rounded-xl border border-nxt-border bg-nxt-surface/82 p-4 shadow-lg shadow-black/20">
             <div className="mb-3 text-[11px] uppercase tracking-[0.18em] text-nxt-dim">Intake health</div>
             <div className="space-y-2 text-sm text-nxt-secondary">
               <div>Accepted signals: <span className="font-semibold text-nxt-text">{pipeline?.acceptedSignals ?? filteredCount}</span></div>
@@ -680,7 +680,7 @@ export default function IntelPage() {
             <button
               onClick={() => setPage((current) => current + 1)}
               disabled={loading}
-              className="rounded-lg border border-nxt-border px-6 py-2.5 text-sm font-medium text-nxt-secondary hover:border-nxt-accent/20 hover:text-nxt-text"
+              className="rounded-xl border border-nxt-border px-6 py-2.5 text-sm font-medium text-nxt-secondary transition-colors duration-200 hover:border-nxt-accent/20 hover:text-nxt-text hover:bg-nxt-surface"
             >
               {loading ? 'Loading...' : 'Load more signals'}
             </button>

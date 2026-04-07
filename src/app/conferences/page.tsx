@@ -463,11 +463,12 @@ export default function ConferencesPage() {
 
 function pillStyle(active: boolean, color: string): React.CSSProperties {
   return {
-    fontSize: '10px', fontFamily: FONT, padding: '5px 12px', borderRadius: '6px',
+    fontSize: '10px', fontFamily: FONT, padding: '5px 12px', borderRadius: '20px',
     border: 'none', cursor: 'pointer',
     background: active ? color + '25' : COLORS.card,
     color: active ? color : COLORS.muted,
     letterSpacing: '0.06em',
+    transition: 'all 0.2s',
   };
 }
 
@@ -481,8 +482,9 @@ function ConferenceCard({ conference: c, isPast = false }: { conference: Confere
     <div style={{
       background: COLORS.surface, border: `1px solid ${COLORS.border}`,
       borderLeft: `3px solid ${isPast ? COLORS.dim : catColor}`,
-      borderRadius: '12px', padding: '20px 24px', marginBottom: '10px',
+      borderRadius: '16px', padding: '20px 24px', marginBottom: '10px',
       opacity: isPast ? 0.5 : 1, transition: 'all 0.2s',
+      boxShadow: '0 10px 15px -3px rgba(0,0,0,0.2), 0 4px 6px -4px rgba(0,0,0,0.1)',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
         <div style={{ flex: 1 }}>

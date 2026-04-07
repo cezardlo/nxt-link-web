@@ -13,19 +13,51 @@ import {
 import { COUNTRY_TECH_MAP } from '@/lib/data/country-tech-map';
 import type { CountryTechProfile } from '@/lib/data/country-tech-map';
 import { CONFERENCES } from '@/lib/data/conferences';
+import dynamic from 'next/dynamic';
 import { PageTopBar } from '@/components/PageTopBar';
 import { SectionNav } from '@/components/SectionNav';
-import { ProblemSolver } from '@/components/ProblemSolver';
 import { BottomNav } from '@/components/ui';
 import { HeroSection } from './components/HeroSection';
-import TrajectoryMatrix from './components/TrajectoryMatrix';
 import { RecommendedMoves } from './components/RecommendedMoves';
 import { KeyMetrics } from './components/KeyMetrics';
 import { TechnologyCatalog } from './components/TechnologyCatalog';
 import { CountriesSection } from './components/CountriesSection';
 import { ConferencesSection } from './components/ConferencesSection';
 import { LiveSignals } from './components/LiveSignals';
-import { KeyPlayers } from './components/KeyPlayers';
+
+// Dynamic imports for heavy components (keeps initial bundle smaller)
+const TrajectoryMatrix = dynamic(() => import('./components/TrajectoryMatrix'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[320px] flex items-center justify-center rounded-xl border border-nxt-border bg-nxt-surface">
+      <div className="w-10 h-10 border-4 border-zinc-700 border-t-emerald-500 rounded-full animate-spin" />
+    </div>
+  ),
+});
+
+const ProblemSolver = dynamic(
+  () => import('@/components/ProblemSolver').then(m => ({ default: m.ProblemSolver })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[200px] flex items-center justify-center rounded-xl border border-nxt-border bg-nxt-surface">
+        <span className="text-xs text-nxt-dim font-mono tracking-widest">LOADING SOLVER...</span>
+      </div>
+    ),
+  }
+);
+
+const KeyPlayers = dynamic(
+  () => import('./components/KeyPlayers').then(m => ({ default: m.KeyPlayers })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[200px] flex items-center justify-center rounded-xl border border-nxt-border bg-nxt-surface">
+        <span className="text-xs text-nxt-dim font-mono tracking-widest">LOADING PLAYERS...</span>
+      </div>
+    ),
+  }
+);
 
 // ─── Types for API responses ────────────────────────────────────────────────
 
@@ -502,7 +534,7 @@ export default function IndustryCommandCenter() {
           />
         </div>
 
-        <div className="pt-8 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="pt-8 grid gap-4 grid-cols-1 lg:grid-cols-[1.1fr_0.9fr]">
           <div
             className="rounded-xl p-6"
             style={{
@@ -564,7 +596,7 @@ export default function IndustryCommandCenter() {
           </div>
         </div>
 
-        <div className="pt-8 grid gap-4 lg:grid-cols-3">
+        <div className="pt-8 grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-xl p-6" style={{ background: COLORS.card, border: `1px solid ${COLORS.border}` }}>
             <div className="font-mono text-[10px] tracking-[0.2em] mb-4" style={{ color: `${COLORS.text}80` }}>
               TOP OPPORTUNITIES
