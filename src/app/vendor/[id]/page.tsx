@@ -8,6 +8,27 @@ import { TopBar, BottomNav } from '@/components/ui';
 import { EL_PASO_VENDORS } from '@/lib/data/el-paso-vendors';
 import { supabase } from '@/lib/supabase';
 
+// ── Relationship types for the connections panel ────────────────────────────
+
+type KGConnection = {
+  id: string;
+  name: string;
+  slug: string;
+  entity_type: string;
+  relationship_type: string;
+};
+
+const ENTITY_TYPE_CONFIG: Record<string, { color: string; icon: string; label: string }> = {
+  industry:   { color: '#6366f1', icon: '🏭', label: 'Industry' },
+  company:    { color: '#22c55e', icon: '🏢', label: 'Company' },
+  technology: { color: '#06b6d4', icon: '⚡', label: 'Technology' },
+  product:    { color: '#f59e0b', icon: '📦', label: 'Product' },
+  problem:    { color: '#ef4444', icon: '⚠️', label: 'Problem' },
+  signal:     { color: '#8b5cf6', icon: '📡', label: 'Signal' },
+  location:   { color: '#14b8a6', icon: '📍', label: 'Location' },
+  opportunity:{ color: '#eab308', icon: '💡', label: 'Opportunity' },
+};
+
 /* ─── Types ───────────────────────────────────────────────────────────── */
 
 type VendorDetail = {
@@ -538,6 +559,9 @@ export default function VendorPage() {
               </Card>
             )}
 
+            {/* ── Knowledge Graph Connections ───────────────────────── */}
+            <ConnectionsPanel vendorName={vendor.name || ''} vendorId={id} />
+
             {/* ── Related Vendors Card ──────────────────────────────── */}
             {vendor.category && !loading && (
               <Card className="mb-4">
@@ -627,6 +651,122 @@ export default function VendorPage() {
       </main>
 
       <BottomNav />
+    </div>
+  );
+}
+
+// ── Knowledge Graph Connections Panel ────────────────────────────────────────
+
+function ConnectionsPanel({ vendorName, vendorId }: { vendorName: string; vendorId: string }) {
+  const [connections, setConnections] = useState<KGConnection[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!vendorName) { setLoading(false); return; }
+    async function fetchConnections() {
+      try {
+        // Try to find this vendor in the knowledge graph and get its connections
+        const res = await fetch(`/api/explore?type=company&limit=300`);
+        const data = await res.json();
+        if (data.entities && data.relationships) {
+          // Find this vendor entity
+          const vendorEntity = data.entities.find(
+            (e: { name: string; slug: string }) =>
+              e.name.toLowerCase() === vendorName.toLowerCase() ||
+              e.slug === vendorId
+          );
+          if (vendorEntity) {
+            // Find connected entities via relationships
+            const connectedIds = new Set<string>();
+            const relMap = new Map<string, string>();
+            for (const rel of data.relationships) {
+              if (rel.source_entity_id === vendorEntity.id) {
+                connectedIds.add(rel.target_entity_id);
+                relMap.set(rel.target_entity_id, rel.relationship_type);
+              } else if (rel.target_entity_id === vendorEntity.id) {
+                connectedIds.add(rel.source_entity_id);
+                relMap.set(rel.source_entity_id, rel.relationship_type);
+              }
+            }
+            const conns: KGConnection[] = data.entities
+              .filter((e: { id: string }) => connectedIds.has(e.id))
+              .map((e: { id: string; name: string; slug: string; entity_type: string }) => ({
+                id: e.id,
+                name: e.name,
+                slug: e.slug,
+                entity_type: e.entity_type,
+                relationship_type: relMap.get(e.id) || 'related_to',
+              }));
+            setConnections(conns);
+          }
+        }
+      } catch {
+        // silent
+      }
+      setLoading(false);
+    }
+    fetchConnections();
+  }, [vendorName, vendorId]);
+
+  if (loading || connections.length === 0) return null;
+
+  // Group by type
+  const grouped: Record<string, KGConnection[]> = {};
+  for (const c of connections) {
+    if (!grouped[c.entity_type]) grouped[c.entity_type] = [];
+    grouped[c.entity_type].push(c);
+  }
+
+  return (
+    <div className="mb-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-[11px] font-mono uppercase tracking-[0.18em]" style={{ color: COLORS.dim }}>
+          Knowledge Graph ({connections.length})
+        </h3>
+        <Link
+          href="/explore"
+          className="text-[10px] font-mono uppercase tracking-wider no-underline transition-colors duration-200"
+          style={{ color: COLORS.accent }}
+        >
+          View full graph →
+        </Link>
+      </div>
+      <div className="space-y-4">
+        {Object.entries(grouped).map(([type, items]) => {
+          const cfg = ENTITY_TYPE_CONFIG[type] || { color: '#666', icon: '•', label: type };
+          return (
+            <div key={type}>
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="text-sm">{cfg.icon}</span>
+                <span className="text-[10px] font-mono uppercase tracking-wider" style={{ color: cfg.color }}>
+                  {cfg.label}s ({items.length})
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {items.slice(0, 8).map((item) => (
+                  <Link
+                    key={item.id}
+                    href={`/entity/${item.slug || item.id}`}
+                    className="text-[11px] px-2.5 py-1 rounded-full border no-underline transition-all duration-200 hover:bg-white/[0.04]"
+                    style={{
+                      borderColor: cfg.color + '25',
+                      color: cfg.color,
+                      background: cfg.color + '08',
+                    }}
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+                {items.length > 8 && (
+                  <span className="text-[10px] px-2.5 py-1 rounded-full" style={{ color: COLORS.dim }}>
+                    +{items.length - 8} more
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
