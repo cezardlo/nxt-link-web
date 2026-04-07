@@ -14,8 +14,7 @@
     },
     {
       "path": "/api/brain/sync/cron?limit=150",
-      "schedule": "0 * * * *"
+      "schedule": "0 10 * * *"
     }
   ]
 }
-
