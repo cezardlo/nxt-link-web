@@ -1,62 +1,54 @@
 # NXT LINK — Current State
-_Updated: April 8, 2026 @ 12:30 AM MDT_
+_Updated: April 8, 2026 @ 1:00 AM MDT_
 
-## What's Live / Built
-
-### Database (Supabase: yvykselwehxjwsqercjg)
-- `intel_signals`: 10,415 total (7,363 clean after arXiv filter) — **0 enriched** (pipeline ready)
-- `vendors`: 442 (IKER scored)
-- `kg_discoveries`: 973
-- `conferences`: 1,040
-- `products`: 1,041
-- `entities`: 3,575 (may have RLS, vendor fallback now in place)
-- `entity_relationships`: 3,953
-
-### New columns on intel_signals (need enrichment to populate):
-`subsystem | capability_layer | meaning | direction | enriched_at | el_paso_score | el_paso_angle`
+## SITE IS LIVE ✅
+https://nxt-link-real-jn0k25gpv-cezardlos-projects.vercel.app (latest deploy)
+https://nxt-link-web.vercel.app (production domain)
 
 ---
 
-## What Computer Built This Session
+## What's Built (Complete)
 
-### New API Routes (all deployed)
-- `/api/agents/enrich-signals-v2` — GET (status) + POST (batch enrich signals with Gemini)
-  - POST body: `{ batch_size: 25 }` (max 50)
-  - Returns: meaning, direction, subsystem, capability_layer, el_paso_score, el_paso_angle per signal
-- `/api/intelligence/morning-brief` — GET (existing brief) + **new POST** (Jarvis narrative)
-  - POST returns: `{ world_headline, situation, accelerating[], emerging[], for_el_paso, top_3_moves[], signals_analyzed }`
-- `/api/explore` — Added vendor fallback: if entities table returns 0, serve top 150 vendors as nodes
+### Backend APIs
+- `/api/agents/enrich-signals-v2` — POST batches 25 signals to Gemini, writes back meaning/direction/el_paso_score/el_paso_angle
+- `/api/intelligence/morning-brief` GET (existing) + POST (Jarvis narrative: world_headline, situation, accelerating, emerging, for_el_paso, top_3_moves)
+- `/api/explore` — vendor fallback when entities=0
+- `/api/intelligence/convergence` — convergence events
+- `/api/agents/world-feed-ingest` — 137 RSS/Atom sources, daily
+- Full ingest pipeline across all 13 sectors
 
-### Fixes
-- `vercel.json` — Reduced to daily-only crons (Hobby plan compatible), deployment triggered
-- Explore graph blank canvas → vendor fallback guarantees always shows content
+### UI Components (new)
+- `src/components/JarvisBriefPanel.tsx` — 3-tab panel (overview/EP/moves), Jarvis morning brief
+- `src/components/ConvergenceAlertBanner.tsx` — multi-event navigator with dismiss
+- `src/components/ElPasoSignalBadge.tsx` — EP DIRECT/RELEVANT/CONTEXT + DirectionBadge
+- `/sector/[slug]` — signal cards now show: meaning, direction badge, EP badge
+- Home page (`/`) — JarvisBriefPanel + ConvergenceAlertBanner above Top 3 cards
+
+### Data
+- `intel_signals`: 7,363 clean signals — **0 enriched** (pipeline at `/api/agents/enrich-signals-v2` is ready to run)
+- `vendors`: 442 IKER-scored
+- `conferences`: 1,040 with exhibitors
+- `kg_discoveries`: 973 breakthroughs
+- `entities`: 3,575 / `entity_relationships`: 3,953
 
 ---
 
-## What's Still Needed (Claude's Job)
+## What Claude Should Build Next
 
 See `_collab/inbox/for-claude/task-april8-ui-sprint.md` for full spec.
 
-**TL;DR Claude needs to build:**
-1. `JarvisBriefPanel.tsx` — UI for POST /api/intelligence/morning-brief
-2. `ElPasoSignalBadge.tsx` — EP relevance badge component
-3. Signal feed improvements (country flags + el_paso_score display)
-4. `ConvergenceAlert.tsx` — improved convergence banner (current one is basic)
-5. Home page wiring — insert JarvisBriefPanel + improved ConvergenceAlert
+**Still needed:**
+1. `fix-signal-feed-regions.tsx` — add country flags + meaning + EP badges to intel/radar signal feed
+2. Personalization layer — user can select sectors they care about, feed filters accordingly
+
+**For enrichment:** Computer will POST to `/api/agents/enrich-signals-v2` to start processing signals.
+Run: `POST https://nxt-link-web.vercel.app/api/agents/enrich-signals-v2` with `{ "batch_size": 50 }`
 
 ---
 
-## Architecture Reminders (CRITICAL for Claude)
-- `createClient()` from `@/lib/supabase/client` — NOT getSupabaseClient()
-- `export const dynamic = 'force-dynamic'` at TOP of all API files (before imports)
-- Teal `#0EA5E9` = primary accent. NO purple buttons anywhere
+## Architecture Reminders
+- `createClient()` from `@/lib/supabase/client` — always
+- `export const dynamic = 'force-dynamic'` at TOP of API files (before imports!)
+- Teal `#0EA5E9` — primary. No purple buttons.
+- No localStorage/sessionStorage (blocked in Next.js edge)
 - `runParallelJsonEnsemble` from `@/lib/llm/parallel-router`
-- All pages are Next.js 14 App Router, TypeScript, Tailwind CSS
-- For 'use client' pages: no localStorage, no sessionStorage (blocked)
-- Images via Clearbit: `https://logo.clearbit.com/{domain}`
-
-## Vercel
-- Project: nxt-link-real
-- Deployment QUEUED as of 12:30 AM MDT (dpl_4EXJ3sCPquTyj4FqNWu57vE8Edpc)
-- Live URL: https://nxt-link-real-g4b17xtiq-cezardlos-projects.vercel.app (when ready)
-- Production: https://nxt-link-web.vercel.app
