@@ -91,8 +91,30 @@ export async function GET(req: NextRequest) {
     supabase.from('entities').select('entity_type', { count: 'exact' }),
   ]);
 
-  const entities = entitiesRes.data || [];
+  let entities = entitiesRes.data || [];
   const relationships = relsRes.data || [];
+
+  // ── Vendor fallback: if entities table returns 0 rows (RLS / empty), ───────
+  // populate from vendors table so the knowledge graph always renders.
+  if (entities.length === 0) {
+    const { data: vendors } = await supabase
+      .from('vendors')
+      .select('"ID", company_name, sector, iker_score, description')
+      .not('iker_score', 'is', null)
+      .order('iker_score', { ascending: false })
+      .limit(150);
+
+    if (vendors && vendors.length > 0) {
+      entities = vendors.map((v: Record<string, unknown>) => ({
+        id: String(v['ID']),
+        name: String(v['company_name'] ?? 'Unknown'),
+        slug: String(v['company_name'] ?? '').toLowerCase().replace(/\s+/g, '-'),
+        entity_type: 'company',
+        description: String(v['description'] ?? v['sector'] ?? ''),
+        metadata: { iker_score: v['iker_score'], sector: v['sector'] },
+      }));
+    }
+  }
 
   // Build type counts
   const typeCounts: Record<string, number> = {};
@@ -102,11 +124,16 @@ export async function GET(req: NextRequest) {
       typeCounts[t] = (typeCounts[t] || 0) + 1;
     }
   }
+  // If using vendor fallback, set type counts manually
+  if (!typeCounts['company'] && entities.length > 0) {
+    typeCounts['company'] = entities.length;
+  }
 
   // Filter relationships to only include entities we have
-  const entityIds = new Set(entities.map(e => e.id));
+  const entityIds = new Set(entities.map((e: { id: string }) => e.id));
   const validRels = relationships.filter(
-    r => entityIds.has(r.source_entity_id) && entityIds.has(r.target_entity_id)
+    (r: { source_entity_id: string; target_entity_id: string }) =>
+      entityIds.has(r.source_entity_id) && entityIds.has(r.target_entity_id)
   );
 
   return NextResponse.json({

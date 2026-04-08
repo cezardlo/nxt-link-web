@@ -489,3 +489,191 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json({ ok: false, message }, { status: 500 });
   }
 }
+
+// ─── POST /api/intelligence/morning-brief — Jarvis Narrative Brief ─────────────
+
+export const maxDuration = 120;
+
+interface JarvisBrief {
+  date: string;
+  world_headline: string;
+  situation: string;
+  accelerating: Array<{ sector: string; headline: string; signal_count: number }>;
+  emerging: Array<{ pattern: string; evidence: string }>;
+  for_el_paso: {
+    narrative: string;
+    top_opportunity: string;
+    watch_for: string[];
+  };
+  top_3_moves: Array<{
+    action: string;
+    why: string;
+    who: string;
+    urgency: 'immediate' | 'this_week' | 'this_month';
+  }>;
+  signals_analyzed: number;
+  generated_at: string;
+}
+
+const JARVIS_FALLBACK: JarvisBrief = {
+  date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+  world_headline: 'Global defense AI and autonomous systems investment accelerating across US, Israel, and UK.',
+  situation: 'The convergence of AI and defense is no longer theoretical — it\'s operational. Fort Bliss is positioned at the center of the DoD\'s autonomous systems test corridor, with SpaceX Starbase 45 minutes away creating a dual-use technology pipeline. The nearshoring wave continues to transform Juárez manufacturing capacity with advanced automation.',
+  accelerating: [
+    { sector: 'Defense / AI', headline: 'Autonomous systems moving from R&D to deployment contracts', signal_count: 0 },
+    { sector: 'Border Tech', headline: 'CBP digital infrastructure modernization accelerating post-2025 budget', signal_count: 0 },
+    { sector: 'Cybersecurity', headline: 'Critical infrastructure protection mandates driving enterprise spend', signal_count: 0 },
+  ],
+  emerging: [
+    { pattern: 'Dual-use space-defense economy forming around SpaceX Starbase corridor', evidence: 'Multiple defense contractors establishing regional presence within 100 miles of Starbase' },
+    { pattern: 'Juárez maquiladora automation tier-2 suppliers entering AI quality control', evidence: 'Ford and Foxconn supply chain digitization creating downstream vendor opportunities' },
+  ],
+  for_el_paso: {
+    narrative: 'El Paso sits at the intersection of three accelerating forces: Fort Bliss AI modernization, the SpaceX commercial space economy, and $126B in annual US-Mexico trade demanding smarter infrastructure. The window to position local companies as vendors to these programs is open now.',
+    top_opportunity: 'CBP autonomous inspection technology — contracts opening Q2 2026 for AI-powered cargo screening at BOTA crossing.',
+    watch_for: ['Fort Bliss AI autonomy RFP releases', 'Juárez automotive tier-1 supplier digitization contracts'],
+  },
+  top_3_moves: [
+    { action: 'Register on SAM.gov and monitor Fort Bliss AI autonomy solicitations', why: 'DoD AI test programs at Fort Bliss are moving to contract phase', who: 'Defense-adjacent tech vendors', urgency: 'immediate' },
+    { action: 'Connect with UTEP\'s NSF-funded AI research program for co-development opportunities', why: 'Federal grants flowing through UTEP create vendor partnerships', who: 'AI and robotics companies', urgency: 'this_week' },
+    { action: 'Evaluate CBP automated cargo inspection vendor list for partnership', why: '$126B trade corridor needs AI inspection tech at scale', who: 'Logistics and AI companies', urgency: 'this_month' },
+  ],
+  signals_analyzed: 0,
+  generated_at: new Date().toISOString(),
+};
+
+export async function POST(request: Request): Promise<NextResponse> {
+  const ip = (request.headers.get('x-forwarded-for') ?? 'unknown').split(',')[0].trim();
+  const rl = checkRateLimit({ key: `morning-brief-jarvis:${ip}`, maxRequests: 5, windowMs: 60_000 });
+  if (!rl.allowed) {
+    return NextResponse.json({ ok: false, message: 'Rate limit exceeded.' }, { status: 429 });
+  }
+
+  try {
+    // Fetch signals from Supabase
+    let signals: NormalizedSignal[] = [];
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    if (isSupabaseConfigured()) {
+      // Import createClient only when Supabase is configured
+      const { createClient: supabaseCreate } = await import('@/lib/supabase/client');
+      const supabase = supabaseCreate();
+
+      const { data: rawSignals } = await supabase
+        .from('intel_signals')
+        .select('id, title, signal_type, industry, company, evidence, source, importance_score, meaning, direction, el_paso_score')
+        .gte('discovered_at', since24h)
+        .not('source', 'ilike', '%arxiv%')
+        .not('title', 'ilike', '%drug%')
+        .not('title', 'ilike', '%murder%')
+        .not('title', 'ilike', '%shooting%')
+        .not('title', 'ilike', '%arrest%')
+        .not('industry', 'eq', 'crime')
+        .order('importance_score', { ascending: false })
+        .limit(50);
+
+      if (rawSignals && rawSignals.length > 0) {
+        signals = rawSignals.map((s: Record<string, unknown>) => ({
+          id: String(s['id']),
+          title: String(s['title'] ?? ''),
+          industry: String(s['industry'] ?? 'general'),
+          company: s['company'] ? String(s['company']) : null,
+          type: String(s['signal_type'] ?? 'general'),
+          importance: Number(s['importance_score'] ?? 0.5),
+        }));
+      }
+    }
+
+    // Fallback if no signals
+    if (signals.length < 3) {
+      return NextResponse.json({
+        ok: true,
+        data: { ...JARVIS_FALLBACK, signals_analyzed: signals.length },
+        source: 'fallback',
+      });
+    }
+
+    // Group by sector for acceleration analysis
+    const sectorGroups: Record<string, NormalizedSignal[]> = {};
+    for (const s of signals) {
+      const key = s.industry || 'general';
+      if (!sectorGroups[key]) sectorGroups[key] = [];
+      sectorGroups[key].push(s);
+    }
+
+    const signalSummary = signals.slice(0, 20)
+      .map((s, i) => `${i + 1}. [${s.industry}] ${s.title}${s.company ? ` (${s.company})` : ''}`)
+      .join('\n');
+
+    const sectorCounts = Object.entries(sectorGroups)
+      .sort((a, b) => b[1].length - a[1].length)
+      .slice(0, 6)
+      .map(([sector, sigs]) => `${sector}: ${sigs.length} signals`)
+      .join(', ');
+
+    const { result } = await runParallelJsonEnsemble<JarvisBrief>({
+      systemPrompt: `You are the Jarvis intelligence analyst for NXT LINK — the global tech intelligence platform for El Paso's Space Valley and Borderplex ecosystem.
+
+Your job: write a strategic morning brief that tells decision-makers what the world did overnight and what they should do about it.
+
+El Paso context you must always consider:
+- Fort Bliss: 1st Armored Division, THAAD missile defense, AI autonomy test programs
+- UTEP: NSF research, Space Valley positioning, cross-border engineering
+- SpaceX Starbase: 45 min away — commercial space economy emerging
+- Juárez: 300+ maquiladoras (Ford, Foxconn, Bosch, Lear) — nearshoring accelerating
+- CBP/DHS/USBP: largest border infrastructure in Western Hemisphere
+- $126B annual US-Mexico trade through BOTA/BOTE/Santa Teresa
+
+RULES:
+- Never report what happened. Explain what it INDICATES.
+- Every point connects to El Paso somehow.
+- Think in PATTERNS, not events.
+- Be specific: name companies, name dollar amounts, name timeframes.
+- The tone is confident, strategic, no filler. Like a McKinsey partner briefing a general.
+- world_headline must be ONE sentence maximum, present tense.
+
+Return ONLY valid JSON with this exact structure:
+{
+  "date": "April 8, 2026",
+  "world_headline": "one sentence present tense",
+  "situation": "3-4 sentences strategic narrative",
+  "accelerating": [{"sector": "name", "headline": "what is speeding up", "signal_count": number}],
+  "emerging": [{"pattern": "pattern nobody sees yet", "evidence": "why you believe it"}],
+  "for_el_paso": {
+    "narrative": "2-3 sentences EP/Fort Bliss/Borderplex specific",
+    "top_opportunity": "single most actionable thing right now",
+    "watch_for": ["signal 1", "signal 2"]
+  },
+  "top_3_moves": [{"action": "specific action", "why": "reason", "who": "who should do this", "urgency": "immediate|this_week|this_month"}],
+  "signals_analyzed": ${signals.length},
+  "generated_at": "${new Date().toISOString()}"
+}`,
+      userPrompt: `Today's signals (${signals.length} total):\nSector breakdown: ${sectorCounts}\n\nTop signals:\n${signalSummary}\n\nGenerate the Jarvis morning brief for El Paso's tech leadership. Return only valid JSON.`,
+      temperature: 0.3,
+      preferredProviders: ['gemini'],
+      budget: { maxProviders: 1, preferLowCostProviders: true },
+      parse: (content) => {
+        const cleaned = content
+          .replace(/```json\n?/g, '')
+          .replace(/```\n?/g, '')
+          .trim();
+        const parsed = JSON.parse(cleaned);
+        return { ...JARVIS_FALLBACK, ...parsed, signals_analyzed: signals.length };
+      },
+    });
+
+    return NextResponse.json({
+      ok: true,
+      data: result,
+      source: 'live',
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Jarvis brief generation failed.';
+    console.warn('[morning-brief] Jarvis POST failed:', message);
+    return NextResponse.json({
+      ok: true,
+      data: { ...JARVIS_FALLBACK, signals_analyzed: 0 },
+      source: 'fallback',
+    });
+  }
+}
