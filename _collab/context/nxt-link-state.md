@@ -1,97 +1,62 @@
-# NXT LINK — Current Platform State
-_Last updated: 2026-04-07 by Perplexity Computer_
+# NXT LINK — Current State
+_Updated: April 8, 2026 @ 12:30 AM MDT_
+
+## What's Live / Built
+
+### Database (Supabase: yvykselwehxjwsqercjg)
+- `intel_signals`: 10,415 total (7,363 clean after arXiv filter) — **0 enriched** (pipeline ready)
+- `vendors`: 442 (IKER scored)
+- `kg_discoveries`: 973
+- `conferences`: 1,040
+- `products`: 1,041
+- `entities`: 3,575 (may have RLS, vendor fallback now in place)
+- `entity_relationships`: 3,953
+
+### New columns on intel_signals (need enrichment to populate):
+`subsystem | capability_layer | meaning | direction | enriched_at | el_paso_score | el_paso_angle`
 
 ---
 
-## What the Platform Is
+## What Computer Built This Session
 
-NXT LINK is a technology intelligence platform for El Paso's Space Valley / U.S.-Mexico Borderplex ecosystem.
-It reads global signals (news, patents, research, government contracts, startups) across 8 sectors,
-connects the dots between them, and tells El Paso operators what matters and what to do next.
+### New API Routes (all deployed)
+- `/api/agents/enrich-signals-v2` — GET (status) + POST (batch enrich signals with Gemini)
+  - POST body: `{ batch_size: 25 }` (max 50)
+  - Returns: meaning, direction, subsystem, capability_layer, el_paso_score, el_paso_angle per signal
+- `/api/intelligence/morning-brief` — GET (existing brief) + **new POST** (Jarvis narrative)
+  - POST returns: `{ world_headline, situation, accelerating[], emerging[], for_el_paso, top_3_moves[], signals_analyzed }`
+- `/api/explore` — Added vendor fallback: if entities table returns 0, serve top 150 vendors as nodes
 
-**Owner:** César / Next Link Solutions LLC  
-**Live site:** https://nxt-link-web.vercel.app  
-**GitHub:** https://github.com/cezardlo/nxt-link-web  
-**Stack:** Next.js 14 App Router · TypeScript · Tailwind · Supabase (Postgres) · Gemini AI  
-**Supabase project ID:** yvykselwehxjwsqercjg  
-
----
-
-## Database — What's Alive
-
-| Table | Rows | Status |
-|-------|------|--------|
-| intel_signals | 10,415 | Active — cron feeds daily |
-| entities | 3,575 | Populated |
-| entity_relationships | 3,953 | Populated |
-| vendors | 442 | Active, IKER scored |
-| products | 1,041 | Populated |
-| signal_clusters | 494 | Active |
-| daily_briefings | 12 | Cron runs daily at 6am UTC |
-| kg_companies | 209 | Populated |
-| kg_technologies | 64 | Populated |
-| kg_discoveries | 973 | Populated |
-| **patents** | **0** | **EMPTY — not yet populated** |
-| **companies** | **0** | **EMPTY** |
-| **opportunities** | **0** | **EMPTY** |
-| top_insights | 3 | Static, stale since Apr 5 |
-| causal_chains | 6 | Too few — needs expansion |
-| decision_log | 1 | Barely used |
+### Fixes
+- `vercel.json` — Reduced to daily-only crons (Hobby plan compatible), deployment triggered
+- Explore graph blank canvas → vendor fallback guarantees always shows content
 
 ---
 
-## Pages — What Works vs What's Broken
+## What's Still Needed (Claude's Job)
 
-| Page | URL | Status |
-|------|-----|--------|
-| Home / Mission Control | / | Works — loads Top 3, search bar, stats |
-| Briefing | /briefing | Works — full daily brief with AI analysis |
-| Signal Desk | /intel | **BROKEN — shows 0 signals** |
-| Brain Map | /map | Works — 6 place clusters, EP visible |
-| Vendors | /vendors | Works — 442 vendors, filterable |
-| Industries | /industry | Partially works — cards load, bottom skeletons frozen |
-| Explore | /explore | **BROKEN — knowledge graph renders as black canvas** |
-| Solve | /solve | Works — same engine as home + causal graph |
-| Products | /products | Likely works |
-| Command | /command | Redirects to /map |
+See `_collab/inbox/for-claude/task-april8-ui-sprint.md` for full spec.
+
+**TL;DR Claude needs to build:**
+1. `JarvisBriefPanel.tsx` — UI for POST /api/intelligence/morning-brief
+2. `ElPasoSignalBadge.tsx` — EP relevance badge component
+3. Signal feed improvements (country flags + el_paso_score display)
+4. `ConvergenceAlert.tsx` — improved convergence banner (current one is basic)
+5. Home page wiring — insert JarvisBriefPanel + improved ConvergenceAlert
 
 ---
 
-## Known Data Quality Issues
+## Architecture Reminders (CRITICAL for Claude)
+- `createClient()` from `@/lib/supabase/client` — NOT getSupabaseClient()
+- `export const dynamic = 'force-dynamic'` at TOP of all API files (before imports)
+- Teal `#0EA5E9` = primary accent. NO purple buttons anywhere
+- `runParallelJsonEnsemble` from `@/lib/llm/parallel-router`
+- All pages are Next.js 14 App Router, TypeScript, Tailwind CSS
+- For 'use client' pages: no localStorage, no sessionStorage (blocked)
+- Images via Clearbit: `https://logo.clearbit.com/{domain}`
 
-1. **arXiv contamination** — 2,932 arXiv academic papers (28%) misclassified as manufacturing/funding events
-2. **Industry taxonomy broken** — `ai-ml`, `artificial intelligence`, `tech`, `technology` are all separate buckets  
-3. **Briefing only covers manufacturing + logistics** — Defense, AI, Cybersecurity never appear
-4. **El Paso specific signals = 0.4%** — only ~40 of 10,415 signals are tagged El Paso
-5. **"Top Company: Before"** — bad data showing through to Briefing page
-
----
-
-## Daily Cron Schedule (Vercel)
-
-| Time (UTC) | Job |
-|------------|-----|
-| 6:00am | intel-discovery agent |
-| 7:00am | assembly/run |
-| 9:00am | vendor-pipeline agent |
-| 10:00am | brain/sync/cron |
-
----
-
-## Active AI Systems Inside NXT LINK
-
-- **Gemini** (current) — used in /api/decide, /api/briefing for explanation layer
-- **Claude** (target) — should replace/augment Gemini for intelligence quality
-- 40+ agents in /src/lib/agents/ — most built but not regularly triggered
-
----
-
-## The 7-Layer Intelligence Loop
-
-1. **Ingest** → 25+ RSS/API sources → intel_signals table ✓
-2. **Classify** → signal_type, industry, region tagging ⚠️ (taxonomy broken)
-3. **Cluster** → signal_clusters + cluster_signals ✓
-4. **Reason** → causal_chains templates ⚠️ (only 6 templates)
-5. **Narrate** → Gemini generates plain-English explanations ✓
-6. **Surface** → pages show users the intelligence ⚠️ (2/9 pages broken)
-7. **Learn** → decision_log tracks outcomes ✗ (barely used)
+## Vercel
+- Project: nxt-link-real
+- Deployment QUEUED as of 12:30 AM MDT (dpl_4EXJ3sCPquTyj4FqNWu57vE8Edpc)
+- Live URL: https://nxt-link-real-g4b17xtiq-cezardlos-projects.vercel.app (when ready)
+- Production: https://nxt-link-web.vercel.app
