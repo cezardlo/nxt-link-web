@@ -173,6 +173,42 @@ export const SECTORS: Sector[] = [
     ep_why: 'SpaceX Starbase is 45 minutes away. Fort Bliss manages Space Domain Awareness. El Paso is positioning itself in the emerging Space Valley corridor.',
     subsectors: ['Commercial Launch', 'Lunar / Mars', 'Space Manufacturing', 'Satellite Constellations', 'Space Mining', 'Space Tourism'],
   },
+
+
+  {
+    id: 'industrial-tech',
+    label: 'Industrial Tech',
+    emoji: '⚙️',
+    color: '#78716C',
+    description: 'Smart factories, IIoT, robotics, automation, digital twins, additive manufacturing, and industrial AI.',
+    humanity_impact: 'significant' as const,
+    ep_relevance: 80,
+    ep_why: 'Juárez maquiladoras for Ford, Foxconn, Bosch, and Lear are adopting Industry 4.0. Nearshoring wave is bringing automated manufacturing to the Borderplex.',
+    subsectors: ['IIoT', 'Robotics', 'Digital Twin', '3D Printing', 'Smart Factory', 'Industrial AI', 'SCADA/OT'],
+  },
+  {
+    id: 'commercial-tech',
+    label: 'Commercial Tech',
+    emoji: '🏪',
+    color: '#0D9488',
+    description: 'Retail technology, e-commerce, fleet management, warehouse automation, B2B SaaS, payments, and trade compliance.',
+    humanity_impact: 'moderate' as const,
+    ep_relevance: 75,
+    ep_why: 'El Paso is a major commercial hub for US-Mexico trade. Cross-border e-commerce, freight, and retail serve millions on both sides of the border.',
+    subsectors: ['E-commerce', 'Fleet Tech', 'Warehouse Automation', 'Payments', 'Trade Compliance', 'B2B SaaS'],
+  },
+  {
+    id: 'semiconductor',
+    label: 'Semiconductors',
+    emoji: '💾',
+    color: '#7C3AED',
+    description: 'Chip design and manufacturing, photonics, advanced packaging, CHIPS Act, and hardware innovation.',
+    humanity_impact: 'transformative' as const,
+    ep_relevance: 50,
+    ep_why: 'CHIPS Act is reshaping US manufacturing. Fort Bliss and defense contractors require secure domestic chip supply. Potential for Borderplex manufacturing expansion.',
+    subsectors: ['Chip Design', 'Advanced Packaging', 'Photonics', 'CHIPS Act', 'Memory', 'GPU/AI Chips'],
+  },
+
 ];
 
 // ─── Derived exports ──────────────────────────────────────────────────────────

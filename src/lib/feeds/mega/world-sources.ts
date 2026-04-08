@@ -243,6 +243,57 @@ export const WORLD_SOURCES: WorldSource[] = [
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // INDUSTRIAL TECH — Smart Factory, IIoT, Robotics, Automation, 3D Printing
+  // ══════════════════════════════════════════════════════════════════════════
+  { id: 'industry-week', name: 'Industry Week', url: 'https://www.industryweek.com/rss', country: 'United States', country_code: 'US', region: 'North America', sectors: ['manufacturing', 'industrial-tech', 'ai-ml'], type: 'news', tier: 1, humanity_impact: 'significant', active: true },
+  { id: 'automation-world', name: 'Automation World', url: 'https://www.automationworld.com/rss.xml', country: 'United States', country_code: 'US', region: 'North America', sectors: ['industrial-tech', 'manufacturing'], type: 'news', tier: 1, humanity_impact: 'significant', active: true },
+  { id: 'control-engineering', name: 'Control Engineering', url: 'https://www.controleng.com/feed/', country: 'United States', country_code: 'US', region: 'North America', sectors: ['industrial-tech', 'cybersecurity'], type: 'news', tier: 1, humanity_impact: 'significant', active: true },
+  { id: 'the-robot-report', name: 'The Robot Report', url: 'https://www.therobotreport.com/feed/', country: 'United States', country_code: 'US', region: 'North America', sectors: ['industrial-tech', 'manufacturing', 'ai-ml'], type: 'news', tier: 1, humanity_impact: 'significant', active: true },
+  { id: 'robotics-biz', name: 'Robotics Business Review', url: 'https://www.roboticsbusinessreview.com/feed/', country: 'United States', country_code: 'US', region: 'North America', sectors: ['industrial-tech', 'manufacturing', 'logistics'], type: 'news', tier: 1, humanity_impact: 'significant', active: true },
+  { id: 'iiot-world', name: 'IIoT World', url: 'https://iiot-world.com/feed/', country: 'United States', country_code: 'US', region: 'North America', sectors: ['industrial-tech', 'cybersecurity', 'ai-ml'], type: 'news', tier: 2, humanity_impact: 'significant', active: true },
+  { id: 'machine-design', name: 'Machine Design', url: 'https://www.machinedesign.com/rss', country: 'United States', country_code: 'US', region: 'North America', sectors: ['industrial-tech', 'manufacturing'], type: 'news', tier: 2, humanity_impact: 'moderate', active: true },
+  { id: 'design-news', name: 'Design News', url: 'https://www.designnews.com/rss.xml', country: 'United States', country_code: 'US', region: 'North America', sectors: ['industrial-tech', 'manufacturing'], type: 'news', tier: 2, humanity_impact: 'moderate', active: true },
+  { id: '3dp-industry', name: '3D Printing Industry', url: 'https://3dprintingindustry.com/feed/', country: 'United Kingdom', country_code: 'GB', region: 'Europe', sectors: ['industrial-tech', 'manufacturing', 'life-sciences'], type: 'news', tier: 1, humanity_impact: 'significant', active: true },
+  { id: 'additive-mfg', name: 'Additive Manufacturing Media', url: 'https://www.additivemanufacturing.media/rss', country: 'United States', country_code: 'US', region: 'North America', sectors: ['industrial-tech', 'manufacturing', 'defense'], type: 'news', tier: 1, humanity_impact: 'significant', active: true },
+  { id: 'manufacturing-dive', name: 'Manufacturing Dive', url: 'https://www.manufacturingdive.com/feeds/news/', country: 'United States', country_code: 'US', region: 'North America', sectors: ['manufacturing', 'industrial-tech', 'logistics'], type: 'news', tier: 1, humanity_impact: 'significant', active: true },
+  { id: 'iot-analytics', name: 'IoT Analytics Research', url: 'https://iot-analytics.com/feed/', country: 'Germany', country_code: 'DE', region: 'Europe', sectors: ['industrial-tech', 'ai-ml', 'logistics'], type: 'institution', tier: 1, humanity_impact: 'significant', active: true },
+  { id: 'siemens-press', name: 'Siemens Press Releases', url: 'https://press.siemens.com/global/en/featuredstorycategories/press-releases?format=rss', country: 'Germany', country_code: 'DE', region: 'Europe', sectors: ['industrial-tech', 'manufacturing', 'energy', 'ai-ml'], type: 'institution', tier: 1, humanity_impact: 'significant', active: true },
+  { id: 'abb-press', name: 'ABB News', url: 'https://news.abb.com/rss.xml', country: 'Switzerland', country_code: 'CH', region: 'Europe', sectors: ['industrial-tech', 'energy', 'manufacturing'], type: 'institution', tier: 1, humanity_impact: 'significant', active: true },
+  { id: 'fanuc-news', name: 'FANUC Robotics', url: 'https://news.google.com/rss/search?q=FANUC+robotics+automation&hl=en-US&gl=US&ceid=US:en', country: 'Japan', country_code: 'JP', region: 'East Asia', sectors: ['industrial-tech', 'manufacturing'], type: 'institution', tier: 2, humanity_impact: 'moderate', active: true },
+  { id: 'kuka-news', name: 'KUKA Robotics', url: 'https://news.google.com/rss/search?q=KUKA+robotics+automation+industrial&hl=en-US&gl=US&ceid=US:en', country: 'Germany', country_code: 'DE', region: 'Europe', sectors: ['industrial-tech', 'manufacturing'], type: 'institution', tier: 2, humanity_impact: 'moderate', active: true },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // COMMERCIAL TECH — Retail, E-commerce, Fleet, Warehouse, SaaS, Fintech
+  // ══════════════════════════════════════════════════════════════════════════
+  { id: 'supply-chain-dive', name: 'Supply Chain Dive', url: 'https://www.supplychaindive.com/feeds/news/', country: 'United States', country_code: 'US', region: 'North America', sectors: ['logistics', 'commercial-tech', 'industrial-tech'], type: 'news', tier: 1, humanity_impact: 'significant', active: true },
+  { id: 'retail-dive', name: 'Retail Dive', url: 'https://www.retaildive.com/feeds/news/', country: 'United States', country_code: 'US', region: 'North America', sectors: ['commercial-tech', 'logistics', 'ai-ml'], type: 'news', tier: 1, humanity_impact: 'moderate', active: true },
+  { id: 'fleet-owner', name: 'Fleet Owner', url: 'https://www.fleetowner.com/rss', country: 'United States', country_code: 'US', region: 'North America', sectors: ['logistics', 'commercial-tech'], type: 'news', tier: 1, humanity_impact: 'moderate', active: true },
+  { id: 'dc-velocity', name: 'DC Velocity Warehouse', url: 'https://www.dcvelocity.com/rss.xml', country: 'United States', country_code: 'US', region: 'North America', sectors: ['logistics', 'commercial-tech', 'industrial-tech'], type: 'news', tier: 1, humanity_impact: 'moderate', active: true },
+  { id: 'cio-mag', name: 'CIO Magazine', url: 'https://www.cio.com/feed/', country: 'United States', country_code: 'US', region: 'North America', sectors: ['commercial-tech', 'ai-ml', 'cybersecurity'], type: 'news', tier: 1, humanity_impact: 'moderate', active: true },
+  { id: 'pymnts', name: 'PYMNTS Payments Tech', url: 'https://www.pymnts.com/feed/', country: 'United States', country_code: 'US', region: 'North America', sectors: ['commercial-tech', 'border-tech', 'finance'], type: 'news', tier: 1, humanity_impact: 'moderate', active: true },
+  { id: 'global-trade-mag', name: 'Global Trade Magazine', url: 'https://www.globaltrademag.com/feed/', country: 'United States', country_code: 'US', region: 'North America', sectors: ['logistics', 'commercial-tech', 'border-tech'], type: 'news', tier: 2, humanity_impact: 'significant', active: true },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // NEARSHORING & MAQUILADORA — Critical for El Paso / Borderplex
+  // ══════════════════════════════════════════════════════════════════════════
+  { id: 'mexico-now-mfg', name: 'MexicoNow Manufacturing', url: 'https://mexiconow.com.mx/feed/', country: 'Mexico', country_code: 'MX', region: 'North America', sectors: ['manufacturing', 'logistics', 'industrial-tech', 'border-tech'], type: 'news', tier: 1, humanity_impact: 'significant', active: true },
+  { id: 'nearshore-americas', name: 'Nearshore Americas', url: 'https://nearshoreamericas.com/feed/', country: 'Global', country_code: 'XX', region: 'North America', sectors: ['manufacturing', 'commercial-tech', 'border-tech'], type: 'news', tier: 1, humanity_impact: 'significant', active: true },
+  { id: 'maquilaportal', name: 'MaquilaPortal', url: 'https://www.maquilaportal.com/feed/', country: 'Mexico', country_code: 'MX', region: 'North America', sectors: ['manufacturing', 'border-tech', 'industrial-tech'], type: 'news', tier: 1, humanity_impact: 'significant', active: true },
+  { id: 'mexico-business-news', name: 'Mexico Business News', url: 'https://mexicobusiness.news/feed/', country: 'Mexico', country_code: 'MX', region: 'North America', sectors: ['manufacturing', 'logistics', 'commercial-tech', 'border-tech'], type: 'news', tier: 1, humanity_impact: 'significant', active: true },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // SEMICONDUCTOR & HARDWARE — Chips, Photonics, Advanced Electronics
+  // ══════════════════════════════════════════════════════════════════════════
+  { id: 'eetimes', name: 'EE Times', url: 'https://www.eetimes.com/rss.xml', country: 'United States', country_code: 'US', region: 'North America', sectors: ['industrial-tech', 'ai-ml', 'manufacturing'], type: 'news', tier: 1, humanity_impact: 'transformative', active: true },
+  { id: 'semiconductor-eng', name: 'Semiconductor Engineering', url: 'https://semiengineering.com/feed/', country: 'United States', country_code: 'US', region: 'North America', sectors: ['industrial-tech', 'ai-ml', 'manufacturing'], type: 'news', tier: 1, humanity_impact: 'transformative', active: true },
+  { id: 'digitimes-semi', name: 'DigiTimes Semiconductors', url: 'https://www.digitimes.com/rss/news.rss', country: 'Taiwan', country_code: 'TW', region: 'East Asia', sectors: ['industrial-tech', 'manufacturing', 'ai-ml'], type: 'news', tier: 1, humanity_impact: 'transformative', active: true },
+  { id: 'chips-alliance', name: 'CHIPS Act Industry', url: 'https://news.google.com/rss/search?q=CHIPS+Act+semiconductor+manufacturing&hl=en-US&gl=US&ceid=US:en', country: 'United States', country_code: 'US', region: 'North America', sectors: ['industrial-tech', 'manufacturing', 'defense'], type: 'news', tier: 1, humanity_impact: 'transformative', active: true },
+
+];
+
+
 export const WORLD_SOURCE_COUNT = WORLD_SOURCES.length;
 
 export function getSourcesBySector(sector: string): WorldSource[] {
