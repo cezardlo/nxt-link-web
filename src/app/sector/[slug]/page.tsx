@@ -85,6 +85,11 @@ interface Signal {
   url: string | null;
   company: string | null;
   region: string | null;
+  // Enriched fields (from enrich-signals-v2)
+  meaning: string | null;
+  direction: string | null;
+  el_paso_score: number | null;
+  el_paso_angle: string | null;
 }
 
 interface Vendor {
@@ -520,9 +525,42 @@ export default function SectorPage() {
                             <span className="ml-auto text-[11px] font-mono text-[#4b5563]">{relTime(signal.discovered_at)}</span>
                           </div>
                           <div className="text-sm font-medium leading-snug text-[#D4D8DC]">{signal.title}</div>
-                          {signal.company && (
-                            <span className="mt-1 text-[11px] text-[#0EA5E9]">{signal.company}</span>
+                          {/* Enriched meaning — show instead of raw evidence if available */}
+                          {(signal.meaning || signal.evidence) && (
+                            <p className="mt-1 text-[11px] leading-4 text-[#6b7280] line-clamp-2">
+                              {signal.meaning ?? signal.evidence}
+                            </p>
                           )}
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            {signal.company && (
+                              <span className="text-[11px] text-[#0EA5E9]">{signal.company}</span>
+                            )}
+                            {/* Direction badge */}
+                            {signal.direction && (
+                              <span className={`px-1.5 py-0.5 rounded font-mono text-[9px] uppercase tracking-wide ${
+                                signal.direction === 'growing' ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20' :
+                                signal.direction === 'emerging' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                                signal.direction === 'converging' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
+                                signal.direction === 'declining' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+                                'bg-gray-500/10 text-gray-400 border border-gray-500/20'
+                              }`}>
+                                {signal.direction === 'growing' ? '↑' : signal.direction === 'declining' ? '↓' : signal.direction === 'emerging' ? '⚡' : signal.direction === 'converging' ? '⊕' : '→'} {signal.direction}
+                              </span>
+                            )}
+                            {/* EP relevance badge */}
+                            {signal.el_paso_score && signal.el_paso_score >= 60 && (
+                              <span
+                                className={`px-1.5 py-0.5 rounded font-mono text-[9px] uppercase tracking-wide ${
+                                  signal.el_paso_score >= 80
+                                    ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                                    : 'bg-teal-500/10 text-teal-400 border border-teal-500/20'
+                                }`}
+                                title={signal.el_paso_angle ?? undefined}
+                              >
+                                {signal.el_paso_score >= 80 ? '🎯 EP DIRECT' : '📡 EP RELEVANT'}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </a>
                     );

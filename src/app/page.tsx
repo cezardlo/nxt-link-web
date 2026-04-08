@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { motion, type Variants, useInView } from 'framer-motion';
 import { COLORS } from '@/lib/tokens';
+import { JarvisBriefPanel } from '@/components/JarvisBriefPanel';
+import { ConvergenceAlertBanner } from '@/components/ConvergenceAlertBanner';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -824,46 +826,11 @@ export default function Home() {
         <section ref={storyRef} className="py-16 sm:py-20 border-b border-white/[0.06]">
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
 
-            {/* ── CONVERGENCE DETECTED banner ──────────────────────────────── */}
-            {convergenceAlerts.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                className="mb-6 space-y-2"
-              >
-                {convergenceAlerts.map((alert) => {
-                  const sectorLabels = alert.signals
-                    .map(s => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))
-                    .join(' × ');
-                  const pct = Math.round(alert.confidence * 100);
-                  return (
-                    <div
-                      key={alert.id}
-                      className="flex items-start gap-3 rounded-xl px-4 py-3 bg-amber-400/10 border border-amber-400/25"
-                    >
-                      <div className="mt-0.5 shrink-0">
-                        <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-amber-400">
-                            CONVERGENCE DETECTED
-                          </span>
-                          <span className="text-[10px] text-amber-400/60 font-mono">{pct}% confidence</span>
-                        </div>
-                        <p className="text-[13px] font-semibold text-amber-100 mt-0.5 leading-snug">
-                          {alert.industry} — {sectorLabels} — unusual co-movement detected
-                        </p>
-                        <p className="text-[11px] text-amber-400/70 mt-0.5">
-                          {alert.signalCount} signals spiked · {alert.region} · {new Date(alert.detectedAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </motion.div>
-            )}
+            {/* ── JARVIS INTELLIGENCE BRIEF ────────────────────────────────── */}
+            <JarvisBriefPanel />
+
+            {/* ── CONVERGENCE DETECTED banner (upgraded) ───────────────────── */}
+            <ConvergenceAlertBanner />
 
             <motion.div
               variants={stagger}
