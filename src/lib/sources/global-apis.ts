@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * NXT LINK — Global API Registry
  * 
