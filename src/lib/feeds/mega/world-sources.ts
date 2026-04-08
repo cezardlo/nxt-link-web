@@ -239,9 +239,6 @@ export const WORLD_SOURCES: WorldSource[] = [
   { id: 'ep-matters', name: 'El Paso Matters', url: 'https://elpasomatters.org/feed/', country: 'United States', country_code: 'US', region: 'El Paso', sectors: ['border-tech', 'defense', 'manufacturing'], type: 'news', tier: 1, humanity_impact: 'significant', active: true },
   { id: 'mexico-news-daily', name: 'Mexico News Daily', url: 'https://mexiconewsdaily.com/feed/', country: 'Mexico', country_code: 'MX', region: 'North America', sectors: ['manufacturing', 'logistics', 'border-tech', 'agriculture'], type: 'news', tier: 1, humanity_impact: 'significant', active: true },
   { id: 'el-financiero', name: 'El Financiero — Tech', url: 'https://elfinanciero.com.mx/rss/feed/', country: 'Mexico', country_code: 'MX', region: 'North America', sectors: ['manufacturing', 'logistics', 'renewable-energy'], type: 'news', tier: 2, humanity_impact: 'significant', active: true },
-];
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -290,6 +287,10 @@ export const WORLD_SOURCES: WorldSource[] = [
   { id: 'semiconductor-eng', name: 'Semiconductor Engineering', url: 'https://semiengineering.com/feed/', country: 'United States', country_code: 'US', region: 'North America', sectors: ['industrial-tech', 'ai-ml', 'manufacturing'], type: 'news', tier: 1, humanity_impact: 'transformative', active: true },
   { id: 'digitimes-semi', name: 'DigiTimes Semiconductors', url: 'https://www.digitimes.com/rss/news.rss', country: 'Taiwan', country_code: 'TW', region: 'East Asia', sectors: ['industrial-tech', 'manufacturing', 'ai-ml'], type: 'news', tier: 1, humanity_impact: 'transformative', active: true },
   { id: 'chips-alliance', name: 'CHIPS Act Industry', url: 'https://news.google.com/rss/search?q=CHIPS+Act+semiconductor+manufacturing&hl=en-US&gl=US&ceid=US:en', country: 'United States', country_code: 'US', region: 'North America', sectors: ['industrial-tech', 'manufacturing', 'defense'], type: 'news', tier: 1, humanity_impact: 'transformative', active: true },
+
+];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 ];
 
