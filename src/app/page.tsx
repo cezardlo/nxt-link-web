@@ -85,6 +85,23 @@ type BrainResponse = {
   entities?: Array<{ id: string; type: string; name: string }>;
 };
 
+type ConvergenceEvent = {
+  id: string;
+  industry: string;
+  signals: string[];
+  confidence: number;
+  summary: string;
+  signalCount: number;
+  region: string;
+  detectedAt: string;
+};
+
+type ConvergenceResponse = {
+  ok: boolean;
+  convergenceCount: number;
+  data: ConvergenceEvent[];
+};
+
 // ── Static Data ──────────────────────────────────────────────────────────────
 
 const SECTOR_BARS = [
@@ -544,12 +561,14 @@ export default function Home() {
   const [inputFocused, setInputFocused] = useState(false);
 
   const [tickerSignals, setTickerSignals] = useState<TickerSignal[]>([]);
+  const [convergenceAlerts, setConvergenceAlerts] = useState<ConvergenceEvent[]>([]);
 
   const storyRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     loadTop3();
     loadTicker();
+    loadConvergence();
   }, []);
 
   async function loadTop3() {
@@ -578,6 +597,19 @@ export default function Home() {
       }
     } catch {
       // non-critical
+    }
+  }
+
+  async function loadConvergence() {
+    try {
+      const res = await fetch('/api/intelligence/convergence?window=24h&min_confidence=0.7');
+      const data: ConvergenceResponse = await res.json();
+      if (data?.ok && data.data?.length > 0) {
+        // Show only high-confidence alerts (top 3)
+        setConvergenceAlerts(data.data.slice(0, 3));
+      }
+    } catch {
+      // non-critical — convergence is bonus intel
     }
   }
 
@@ -759,6 +791,48 @@ export default function Home() {
         ═══════════════════════════════════════════════════════════════════════ */}
         <section ref={storyRef} className="py-16 sm:py-20 border-b border-white/[0.06]">
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
+
+            {/* ── CONVERGENCE DETECTED banner ──────────────────────────────── */}
+            {convergenceAlerts.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="mb-6 space-y-2"
+              >
+                {convergenceAlerts.map((alert) => {
+                  const sectorLabels = alert.signals
+                    .map(s => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))
+                    .join(' × ');
+                  const pct = Math.round(alert.confidence * 100);
+                  return (
+                    <div
+                      key={alert.id}
+                      className="flex items-start gap-3 rounded-xl px-4 py-3 bg-amber-400/10 border border-amber-400/25"
+                    >
+                      <div className="mt-0.5 shrink-0">
+                        <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-amber-400">
+                            CONVERGENCE DETECTED
+                          </span>
+                          <span className="text-[10px] text-amber-400/60 font-mono">{pct}% confidence</span>
+                        </div>
+                        <p className="text-[13px] font-semibold text-amber-100 mt-0.5 leading-snug">
+                          {alert.industry} — {sectorLabels} — unusual co-movement detected
+                        </p>
+                        <p className="text-[11px] text-amber-400/70 mt-0.5">
+                          {alert.signalCount} signals spiked · {alert.region} · {new Date(alert.detectedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </motion.div>
+            )}
+
             <motion.div
               variants={stagger}
               initial="hidden"
