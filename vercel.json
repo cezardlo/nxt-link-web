@@ -27,6 +27,14 @@
     {
       "path": "/api/agents/patent-discovery",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/agents/worldwide-ingest",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/agents/worldwide-ingest?sectors=defense,border-tech",
+      "schedule": "0 */4 * * *"
     }
   ]
 }
