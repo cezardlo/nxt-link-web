@@ -9,7 +9,7 @@ const NAV_ITEMS = [
   { href: '/discover', label: 'Discover' },
   { href: '/intel', label: 'Radar' },
   { href: '/sector', label: 'Sectors' },
-  { href: '/trajectory', label: 'Trajectory' },
+  { href: '/observe', label: 'Observer' },
   { href: '/vendors', label: 'Vendors' },
   { href: '/map', label: 'Map' },
   { href: '/explore', label: 'Explore' },
