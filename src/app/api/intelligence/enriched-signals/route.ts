@@ -6,6 +6,7 @@
 //
 // Cache strategy: 15-minute in-memory cache. Rate limited at 30 req/min per IP.
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -16,7 +17,6 @@ import { enrichSignals, type EnrichedSignal } from '@/lib/engines/signal-enrichm
 import { getIntelSignals } from '@/db/queries/intel-signals';
 import { isSupabaseConfigured } from '@/db/client';
 
-export const dynamic = 'force-dynamic';
 
 // ─── 15-minute in-process cache ───────────────────────────────────────────────
 

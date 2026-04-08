@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -6,7 +7,6 @@ import { getIndustryBySlug } from '@/lib/data/technology-catalog';
 import { runIndustryScan, type IndustryScanResult } from '@/lib/intelligence/industry-scan';
 import { upsertDynamicIndustry, bumpIndustryPopularity } from '@/db/queries/dynamic-industries';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
 // ── In-memory cache (1-hour TTL, keyed by slug) ───────────────────────────────

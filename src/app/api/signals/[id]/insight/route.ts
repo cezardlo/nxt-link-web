@@ -1,12 +1,12 @@
 // src/app/api/signals/[id]/insight/route.ts
 // Step 8: Insight Generation API
 
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateInsight, shouldGenerateInsight, type Connection } from '@/lib/insights';
 import { findConnections } from '@/lib/graph';
 
-export const dynamic = 'force-dynamic';
 
 // Cache insights for 24 hours
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;

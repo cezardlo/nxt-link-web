@@ -9,11 +9,11 @@
  * but a system that converts information into understanding.
  */
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { runParallelJsonEnsemble } from '@/lib/llm/parallel-router';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
 // ── Structured signal schema ────────────────────────────────────────────────

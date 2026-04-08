@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
@@ -5,7 +6,6 @@ import { TECHNOLOGY_CATALOG } from '@/lib/data/technology-catalog';
 import { EL_PASO_VENDORS } from '@/lib/data/el-paso-vendors';
 import { getKnowledgeNode } from '@/lib/data/technology-knowledge-graph';
 
-export const dynamic = 'force-dynamic';
 
 type RouteContext = { params: Promise<{ id: string }> };
 

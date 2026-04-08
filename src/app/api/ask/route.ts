@@ -2,11 +2,11 @@
 // Full Jarvis-style answer: queries Supabase intel_signals, vendors, and kg_discoveries,
 // then synthesizes with Gemini into a structured strategic intelligence report.
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/client';
 import { runParallelJsonEnsemble } from '@/lib/llm/parallel-router';
 
-export const dynamic = 'force-dynamic';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

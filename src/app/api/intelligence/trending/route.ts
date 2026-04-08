@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -5,7 +6,6 @@ import { getClientIp } from '@/lib/http/request-context';
 import { getStoredFeedItems, runFeedAgent } from '@/lib/agents/feed-agent';
 import { getTrending, type WindowSpec, type TrendingItemType } from '@/lib/engines/trending-engine';
 
-export const dynamic = 'force-dynamic';
 
 const VALID_WINDOWS: WindowSpec[] = ['2h', '6h', '12h', '24h'];
 const VALID_TYPES = ['technology', 'company', 'topic', 'keyword', 'all'] as const;

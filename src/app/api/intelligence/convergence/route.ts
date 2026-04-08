@@ -10,6 +10,7 @@
 //   region       — 'el-paso' | 'texas' | 'national' | 'global' | 'all'  (default: 'all')
 //   min_confidence — 0.0 – 1.0  (default: 0.5)
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -21,7 +22,6 @@ import {
   type Region,
 } from '@/lib/engines/convergence-engine';
 
-export const dynamic = 'force-dynamic';
 
 const VALID_WINDOWS: TimeWindow[] = ['1h', '6h', '24h', '7d'];
 const VALID_REGIONS: Region[] = ['el-paso', 'texas', 'national', 'global', 'all'];

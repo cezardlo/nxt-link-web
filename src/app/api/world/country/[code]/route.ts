@@ -1,9 +1,9 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
 
-export const dynamic = 'force-dynamic';
 
 // Country name lookup — ISO 3166-1 alpha-2 to display name
 const COUNTRY_NAMES: Record<string, string> = {

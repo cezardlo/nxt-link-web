@@ -3,13 +3,13 @@
 // Safe to call multiple times — uses upsert (no duplicates).
 // Protected by CRON_SECRET to prevent abuse.
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { NXT_ENTITIES } from '@/lib/intelligence/nxt-entities';
 import { upsertEntity, addRelationship, resolveEntity } from '@/db/queries/knowledge-graph';
 import { isSupabaseConfigured } from '@/db/client';
 import { requireCronSecret } from '@/lib/http/cron-auth';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 // Map entity categories to canonical industry slugs

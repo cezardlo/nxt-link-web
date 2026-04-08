@@ -1,6 +1,6 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
-export const dynamic = 'force-dynamic';
 
 import { getClientIp, getRequestId } from '@/lib/http/request-context';
 import { checkRateLimit } from '@/lib/http/rate-limit';

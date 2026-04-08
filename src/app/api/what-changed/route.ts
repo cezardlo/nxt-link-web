@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -5,7 +6,6 @@ import { getClientIp } from '@/lib/http/request-context';
 import { getIntelSignals, type IntelSignalRow } from '@/db/queries/intel-signals';
 import { runInsightAgent } from '@/lib/agents/agents/insight-agent';
 
-export const dynamic = 'force-dynamic';
 
 // ── Time window helpers ────────────────────────────────────────────────────────
 

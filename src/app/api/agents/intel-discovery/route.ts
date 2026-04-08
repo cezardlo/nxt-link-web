@@ -2,6 +2,7 @@
 // GET: Returns discovered intelligence signals (cached 45 min)
 // POST: Forces a fresh discovery scan across all industries
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -12,7 +13,6 @@ import {
   getIntelStats,
 } from '@/lib/agents/agents/intel-discovery-agent';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 export async function GET(request: Request): Promise<NextResponse> {

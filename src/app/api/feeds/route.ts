@@ -1,10 +1,10 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
 import { getStoredFeedItems, runFeedAgent } from '@/lib/agents/feed-agent';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // allow up to 60s for RSS fetching
 
 // GET /api/feeds?timeRange=7d

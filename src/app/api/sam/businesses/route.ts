@@ -1,9 +1,9 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
 
-export const dynamic = 'force-dynamic';
 
 // SAM.gov Entity Management API v3 — active registered businesses in El Paso, TX
 // Uses multiple parallel queries (city + congressional district + ZIP) for broader coverage

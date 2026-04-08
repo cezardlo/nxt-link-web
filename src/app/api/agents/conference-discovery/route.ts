@@ -1,10 +1,10 @@
 // POST /api/agents/conference-discovery — Run conference discovery agent
 // GET  /api/agents/conference-discovery — Get last discovery report
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import {
 
-export const dynamic = 'force-dynamic';
   runConferenceDiscovery,
   type ConferenceDiscoveryReport,
 } from '@/lib/agents/agents/conference-discovery-agent';

@@ -2,12 +2,12 @@
 // GET: Generate or return today's daily intelligence briefing
 // Called by Vercel cron at 7 AM daily
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { generateDailyBriefing } from '@/lib/agents/agents/briefing-generator-agent';
 import { getRecentBriefings } from '@/db/queries/daily-briefings';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 export async function GET() {

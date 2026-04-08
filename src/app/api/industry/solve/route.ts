@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { TECHNOLOGY_CATALOG, getIndustryBySlug } from '@/lib/data/technology-catalog';
@@ -6,7 +7,6 @@ import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
 import { getConfiguredProviders } from '@/lib/llm/parallel-router';
 
-export const dynamic = 'force-dynamic';
 
 // ── Industry slug → vendor category mapping ───────────────────────────────────
 // Mirrors the mapping used on the industries page (SECTOR_TO_CATEGORIES + tech catalog categories)

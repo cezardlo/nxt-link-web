@@ -3,6 +3,7 @@
 // weekly briefing. Bloomberg Terminal / Palantir AIP analytical style.
 // No LLM required — template-based generation from live signal engine output.
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -13,7 +14,6 @@ import { getStoredFeedItems, type EnrichedFeedItem } from '@/lib/agents/feed-age
 import { CONFERENCES } from '@/lib/data/conferences';
 import type { ConferenceRecord } from '@/lib/data/conferences/types';
 
-export const dynamic = 'force-dynamic';
 
 // ─── Response types ───────────────────────────────────────────────────────────
 

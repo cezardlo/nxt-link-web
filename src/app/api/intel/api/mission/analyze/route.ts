@@ -1,10 +1,10 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
 import { getConfiguredProviders } from '@/lib/llm/parallel-router';
 
-export const dynamic = 'force-dynamic';
 
 // WorldMonitor-style 4-tier fallback chain for mission intelligence briefings:
 // Tier 1: Ollama (local — fastest, free, private)

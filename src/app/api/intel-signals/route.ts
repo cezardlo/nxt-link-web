@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -7,7 +8,6 @@ import { runSignalEngine } from '@/lib/intelligence/signal-engine';
 import { getIntelSignals, getIntelSignalStats } from '@/db/queries/intel-signals';
 import { isSupabaseConfigured } from '@/db/client';
 
-export const dynamic = 'force-dynamic';
 
 const STALE_MS = 4 * 60 * 60 * 1000;
 

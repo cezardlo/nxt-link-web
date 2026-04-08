@@ -4,6 +4,7 @@
 // Runs the Cross-Industry Intelligence Engine and returns insights that
 // connect signals from multiple distinct industries. Cached 15 minutes.
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -14,7 +15,6 @@ import { getStoredFeedItems, runFeedAgent } from '@/lib/agents/feed-agent';
 import { runSignalEngine } from '@/lib/intelligence/signal-engine';
 import { runCrossIntelEngine, type CrossIntelSignalInput } from '@/lib/engines/cross-intel-engine';
 
-export const dynamic = 'force-dynamic';
 
 // In-memory 15-minute result cache (survives across requests within same server instance)
 type CacheEntry = {

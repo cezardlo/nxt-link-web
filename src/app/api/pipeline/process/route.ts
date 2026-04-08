@@ -2,11 +2,11 @@
 // Accepts a raw signal and runs it through the 5-stage processing pipeline.
 // Protected by X-Pipeline-Key header.
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { processSignal } from '@/lib/pipeline';
 import type { RawSignal } from '@/lib/pipeline';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 30; // Allow up to 30s for full pipeline
 
 const PIPELINE_KEY = process.env.PIPELINE_API_KEY;

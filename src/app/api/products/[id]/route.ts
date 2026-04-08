@@ -1,7 +1,7 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllMarketplaceProductsWithVendors } from '@/lib/data/marketplace-adapter';
 
-export const dynamic = 'force-dynamic';
 
 export async function GET(
   _req: NextRequest,

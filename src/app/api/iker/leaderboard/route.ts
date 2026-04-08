@@ -3,12 +3,12 @@
 // Sources: Supabase knowledge graph entities (with iker_score in metadata)
 // + ml_patterns persisted IKER scores from the learning loop.
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getDb, isSupabaseConfigured } from '@/db/client';
 import { loadAllPatterns } from '@/db/queries/ml-patterns';
 import { NXT_ENTITIES } from '@/lib/intelligence/nxt-entities';
 
-export const dynamic = 'force-dynamic';
 
 export type IkerEntry = {
   id: string;

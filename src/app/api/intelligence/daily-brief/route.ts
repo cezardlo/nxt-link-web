@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -5,7 +6,6 @@ import { getClientIp } from '@/lib/http/request-context';
 import { getStoredFeedItems, runFeedAgent } from '@/lib/agents/feed-agent';
 import { generateDailyBrief } from '@/lib/engines/daily-brief-engine';
 
-export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request): Promise<NextResponse> {
   const ip = getClientIp(request.headers);

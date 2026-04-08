@@ -1,10 +1,10 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
 import { EL_PASO_VENDORS, vendorsToMapPoints } from '@/lib/data/el-paso-vendors';
 
-export const dynamic = 'force-dynamic';
 
 // GET /api/intel/api/map/layers?timeRange=168&layers=vendors,funding,momentum
 // Native Vercel replacement for the Python Intel backend map layers endpoint.

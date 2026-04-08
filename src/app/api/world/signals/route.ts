@@ -1,9 +1,9 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
 
-export const dynamic = 'force-dynamic';
 
 const COUNTRY_NAMES: Record<string, string> = {
   US: 'United States', CN: 'China', DE: 'Germany', JP: 'Japan',

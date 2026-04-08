@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import {
@@ -9,7 +10,6 @@ import {
 import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
 
-export const dynamic = 'force-dynamic';
 
 // GET /api/industries
 // Query params:

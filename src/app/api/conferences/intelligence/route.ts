@@ -1,9 +1,9 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { CONFERENCES } from '@/lib/data/conference-intel';
 import type { ConferenceRecord } from '@/lib/data/conference-intel';
 
-export const dynamic = 'force-dynamic';
 
 // GET /api/conferences/intelligence
 // Returns scored conference data, optionally filtered by ?category= and ?limit=

@@ -2,10 +2,10 @@
 // POST /api/alerts — create a new alert rule
 // DELETE /api/alerts?id=xxx — delete an alert rule
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getDb, isSupabaseConfigured } from '@/db/client';
 
-export const dynamic = 'force-dynamic';
 
 type AlertRule = {
   id: string;

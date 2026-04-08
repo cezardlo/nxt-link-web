@@ -1,10 +1,10 @@
 // GET /api/leads/conference — Query conference leads with filters
 // Supports: tier, category, conference, search, el_paso, limit, offset
 
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb, isSupabaseConfigured } from '@/db/client';
 
-export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   if (!isSupabaseConfigured()) {

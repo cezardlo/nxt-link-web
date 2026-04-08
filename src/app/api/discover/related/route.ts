@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -6,7 +7,6 @@ import { EL_PASO_VENDORS, VendorRecord } from '@/lib/data/el-paso-vendors';
 import { TECHNOLOGY_CATALOG, Technology } from '@/lib/data/technology-catalog';
 import { GLOBAL_TECH_HUBS, TechHub } from '@/lib/data/global-tech-hubs';
 
-export const dynamic = 'force-dynamic';
 
 type EntityType = 'vendor' | 'tech' | 'hub';
 

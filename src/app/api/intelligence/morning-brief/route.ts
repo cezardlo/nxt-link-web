@@ -6,6 +6,7 @@
 // LLM chain: Groq → Gemini → algorithmic fallback.
 // Cached 2 hours in memory.
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -15,7 +16,6 @@ import { isSupabaseConfigured } from '@/db/client';
 import { getStoredFeedItems, runFeedAgent } from '@/lib/agents/feed-agent';
 import { runSignalEngine } from '@/lib/intelligence/signal-engine';
 
-export const dynamic = 'force-dynamic';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

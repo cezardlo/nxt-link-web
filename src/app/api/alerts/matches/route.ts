@@ -2,11 +2,11 @@
 // POST /api/alerts/matches/scan                  — scan latest signals against all rules
 // PATCH /api/alerts/matches?id=xxx               — mark as read
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getDb, isSupabaseConfigured } from '@/db/client';
 import { getIntelSignals } from '@/db/queries/intel-signals';
 
-export const dynamic = 'force-dynamic';
 
 type AlertRule = {
   id: string;

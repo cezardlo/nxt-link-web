@@ -8,11 +8,11 @@
  * POST — runs collection and saves to Supabase
  */
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import type { GlobalSignal } from '@/lib/sources/global-apis';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

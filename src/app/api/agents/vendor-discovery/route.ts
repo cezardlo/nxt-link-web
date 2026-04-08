@@ -2,6 +2,7 @@
 // GET: Returns recently discovered vendors/signals (cached 30 min)
 // POST: Forces a fresh discovery scan
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -14,7 +15,6 @@ import {
   getDiscoveryStats,
 } from '@/lib/agents/agents/vendor-discovery-agent';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 export async function GET(request: Request): Promise<NextResponse> {

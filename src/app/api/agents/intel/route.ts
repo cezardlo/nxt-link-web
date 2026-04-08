@@ -1,6 +1,6 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 
-export const dynamic = 'force-dynamic';
 
 // NXT LINK Intelligence Agent — lightweight tool-based handler
 // Wraps key platform engines as callable tools via JSON POST

@@ -1,7 +1,7 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { runEntityExtractionAgent } from '@/lib/agents/agents/entity-extraction-agent';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
 export async function GET() {

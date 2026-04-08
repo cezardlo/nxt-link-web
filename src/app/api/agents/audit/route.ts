@@ -2,6 +2,7 @@
 // GET: Returns cached audit report (1hr TTL)
 // POST: Forces a fresh audit run
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -11,7 +12,6 @@ import {
   runAuditAgent,
 } from '@/lib/agents/agents/audit-agent';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
 export async function GET(request: Request): Promise<NextResponse> {

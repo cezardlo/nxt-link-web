@@ -1,10 +1,10 @@
 // POST /api/agents/vendor-pipeline — Run the full vendor discovery pipeline
 // GET  /api/agents/vendor-pipeline — Get pipeline status and recent results
 
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import {
 
-export const dynamic = 'force-dynamic';
   runVendorPipeline,
   runVendorMaintenance,
   runVendorEnrichmentCycle,

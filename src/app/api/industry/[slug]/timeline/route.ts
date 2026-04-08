@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -5,7 +6,6 @@ import { getClientIp } from '@/lib/http/request-context';
 import { TECHNOLOGY_CATALOG, getIndustryBySlug } from '@/lib/data/technology-catalog';
 import { EL_PASO_VENDORS } from '@/lib/data/el-paso-vendors';
 
-export const dynamic = 'force-dynamic';
 
 // Vendor categories that map to each TechCategory for local vendor counting.
 // A vendor's category field is a loose keyword — we check if any entry in the

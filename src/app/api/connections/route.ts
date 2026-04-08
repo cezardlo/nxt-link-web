@@ -8,10 +8,10 @@
  * Returns: { nodes, edges, chains }
  */
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/client';
 
-export const dynamic = 'force-dynamic';
 
 interface GraphNode {
   id: string;

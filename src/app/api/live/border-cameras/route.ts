@@ -1,9 +1,9 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
 
-export const dynamic = 'force-dynamic';
 
 // TxDOT DriveTexas traffic cameras — best-effort, no auth required
 // Unofficial API; graceful empty-array fallback on any failure

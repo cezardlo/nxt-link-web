@@ -6,11 +6,11 @@
 //
 // Body: { limit?: number }  (default 100 signals, max 500)
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { detectSignalConnections, type RawSignal } from '@/lib/engines/signal-connections-engine';
 import { isSupabaseConfigured, getDb } from '@/db/client';
 
-export const dynamic = 'force-dynamic';
 
 const FALLBACK_SIGNALS: RawSignal[] = [
   { title: 'Army AI/ML pilot program lead awarded at Fort Bliss', signal_type: 'contract_award', industry: 'defense', company: 'Booz Allen Hamilton', importance_score: 0.85, discovered_at: new Date().toISOString() },

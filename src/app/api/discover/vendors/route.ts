@@ -1,10 +1,10 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
 import { EL_PASO_VENDORS, VendorRecord } from '@/lib/data/el-paso-vendors';
 
-export const dynamic = 'force-dynamic';
 
 // Unique sorted list of all categories and tags present in the vendor dataset
 function buildFilterMeta(vendors: VendorRecord[]) {

@@ -1,10 +1,10 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
 import { getConfiguredProviders } from '@/lib/llm/parallel-router';
 
-export const dynamic = 'force-dynamic';
 
 // 4-tier LLM fallback chain for industry topic explanations:
 // Tier 1: Ollama   (local — fastest, free, private)

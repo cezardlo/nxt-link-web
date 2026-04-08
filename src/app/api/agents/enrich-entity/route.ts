@@ -3,13 +3,13 @@
 // haven't been enriched yet, then uses Gemini to build a profile summary,
 // updates the knowledge graph entity with enriched metadata.
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getDb, isSupabaseConfigured, upsertEntity, getEntityBySlug } from '@/db';
 import { getClientIp } from '@/lib/http/request-context';
 import { checkRateLimitDurable } from '@/lib/http/rate-limit-distributed';
 import { authorizeAgentMutation } from '@/lib/http/agent-auth';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 55;
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY ?? '';

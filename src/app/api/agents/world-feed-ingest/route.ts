@@ -10,11 +10,11 @@
  * POST: Runs ingestion (pass ?sectors= to filter)
  */
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { WORLD_SOURCES, SOURCE_STATS } from '@/lib/feeds/mega/world-sources';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
 const TIMEOUT = 15_000;

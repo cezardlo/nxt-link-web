@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -10,7 +11,6 @@ import {
   type ContractAward,
 } from '@/lib/contracts/fetchers';
 
-export const dynamic = 'force-dynamic';
 
 // Aggregates live contract intelligence from 3 free government APIs:
 //   1. USASpending.gov  — federal awards to El Paso vendors

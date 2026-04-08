@@ -2,6 +2,7 @@
 // GET: Returns swarm status (memory, events, reliability, coordinator).
 // POST: Triggers a full swarm cycle via SwarmCoordinator.runPlatformPipeline().
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -13,7 +14,6 @@ import { swarmGetAgentReliability } from '@/lib/agents/swarm/learning';
 import { swarmCoordinator } from '@/lib/agents/swarm/coordinator';
 import { authorizeAgentMutation } from '@/lib/http/agent-auth';
 
-export const dynamic = 'force-dynamic';
 // POST pipeline can take up to ~60 s; this applies to the entire route segment.
 export const maxDuration = 60;
 

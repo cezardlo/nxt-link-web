@@ -11,11 +11,11 @@
 //   tools/list   - List available tools
 //   tools/call   - Execute a tool
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { validateAuth, processRawBody } from '@/lib/mcp/server';
 import { RPC_ERRORS } from '@/lib/mcp/types';
 
-export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request): Promise<NextResponse> {
   const auth = validateAuth(request.headers);

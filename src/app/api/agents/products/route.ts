@@ -2,6 +2,7 @@
 // GET: Query the persistent product catalog with filters
 // POST: Force a fresh product discovery scan
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -9,7 +10,6 @@ import { getClientIp } from '@/lib/http/request-context';
 import { getProducts, getProductStats } from '@/db/queries/products';
 import { runProductDiscoveryAgent } from '@/lib/agents/agents/product-discovery-agent';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 export async function GET(request: Request): Promise<NextResponse> {

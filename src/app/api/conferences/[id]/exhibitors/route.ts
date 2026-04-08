@@ -6,11 +6,11 @@
  * Also returns top products for those companies.
  */
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { CONFERENCES } from '@/lib/data/conferences';
 
-export const dynamic = 'force-dynamic';
 
 // Map conference categories → vendor sectors
 const CATEGORY_TO_SECTOR: Record<string, string[]> = {

@@ -6,12 +6,12 @@
 //
 // Protected by CRON_SECRET (same header used by /api/agents/cron).
 
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { isSupabaseConfigured } from '@/db/client';
 import { runIkerScoringAgent, type IkerScoringResult } from '@/lib/agents/agents/iker-scoring-agent';
 import { requireCronSecret } from '@/lib/http/cron-auth';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 export async function POST(request: NextRequest): Promise<NextResponse> {

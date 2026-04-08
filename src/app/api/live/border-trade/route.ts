@@ -1,9 +1,9 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
 
-export const dynamic = 'force-dynamic';
 
 // BTS (Bureau of Transportation Statistics) — El Paso border crossing data
 // Free public API: https://www.bts.gov/topics/freight-transportation/border-crossing-entry-data

@@ -3,11 +3,11 @@
 // Triggers the research discovery agent and persists results to kg_discoveries.
 // Secured with CRON_SECRET (optional — if not configured, all POSTs are allowed).
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { checkCronSecret } from '@/lib/http/cron-auth';
 import { runAndPersistResearchDiscoveryAgent } from '@/lib/agents/agents/research-discovery-agent';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
 export async function POST(request: Request): Promise<NextResponse> {

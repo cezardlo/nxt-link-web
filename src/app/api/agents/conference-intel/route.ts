@@ -2,6 +2,7 @@
 // GET: Query persisted conference intelligence
 // POST: Force a fresh conference analysis scan
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -9,7 +10,6 @@ import { getClientIp } from '@/lib/http/request-context';
 import { getConferenceIntel, getConferenceIntelStats } from '@/db/queries/conference-intel';
 import { runConferenceIntelAgent } from '@/lib/agents/agents/conference-intel-agent';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 export async function GET(request: Request): Promise<NextResponse> {

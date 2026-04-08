@@ -5,10 +5,10 @@
  * Hit this to see if the pipeline is actually running.
  */
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getDb, isSupabaseConfigured } from '@/db/client';
 
-export const dynamic = 'force-dynamic';
 
 type TableHealth = {
   table: string;

@@ -1,8 +1,8 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { FALLBACK_INTEL_SIGNALS } from '@/lib/intelligence/fallback-signals';
 
-export const dynamic = 'force-dynamic';
 
 // Canonical industry labels — normalizes messy DB values
 const INDUSTRY_MAP: Record<string, string> = {

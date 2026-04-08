@@ -2,10 +2,10 @@
 // Returns full detail for a single intel signal by ID.
 // Used by the signal detail modal/page.
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getDb, isSupabaseConfigured } from '@/db/client';
 
-export const dynamic = 'force-dynamic';
 
 export async function GET(
   _request: Request,

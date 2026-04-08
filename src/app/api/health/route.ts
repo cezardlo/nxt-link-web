@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { isSupabaseConfigured, getSupabaseClient } from '@/lib/supabase/client';
@@ -5,7 +6,6 @@ import { isVectorEnabled } from '@/lib/vector';
 import { isGraphEnabled } from '@/lib/graph';
 import { isEmbeddingEnabled } from '@/lib/embeddings';
 
-export const dynamic = 'force-dynamic';
 
 // ---------------------------------------------------------------------------
 // Env-var inventory — report which keys are present without exposing values

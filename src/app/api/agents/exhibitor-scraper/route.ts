@@ -1,6 +1,7 @@
 // POST /api/agents/exhibitor-scraper — Scrape exhibitor pages from conferences
 // GET  /api/agents/exhibitor-scraper — Get exhibitors from DB
 
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import {
   runExhibitorScraper,
@@ -8,7 +9,6 @@ import {
 } from '@/lib/agents/agents/exhibitor-scraper-agent';
 import {
 
-export const dynamic = 'force-dynamic';
   getExhibitors,
   upsertExhibitors,
   type ExhibitorInsert,

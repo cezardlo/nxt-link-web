@@ -3,12 +3,12 @@
  * POST /api/assembly — Manually trigger assembly pipeline
  */
 
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { buildClusters, detectTrends, persistAssembly } from '@/lib/engines/assembly-engine';
 import { generateNarratives, persistNarratives } from '@/lib/engines/narrative-engine';
 import { createClient } from '@/lib/supabase/client';
 
-export const dynamic = 'force-dynamic';
 
 // ─── GET: Read assembled intelligence ───────────────────────────────
 

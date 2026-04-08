@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -7,7 +8,6 @@ import {
   persistObsidianImportReport,
 } from '@/lib/intelligence/obsidian-import';
 
-export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request): Promise<NextResponse> {
   const ip = getClientIp(new Headers(request.headers));

@@ -23,10 +23,10 @@
  *     vendor-scrape, vendor-enrich, vendor-maintain
  */
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { requireCronSecret } from '@/lib/http/cron-auth';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 export async function GET(request: Request) {

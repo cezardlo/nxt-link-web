@@ -1,8 +1,8 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getCountryActivity, getCountrySignalCounts, updateCountryActivity } from '@/db/queries/country-activity';
 import { isSupabaseConfigured } from '@/db/client';
 
-export const dynamic = 'force-dynamic';
 
 // GET /api/country-activity
 // Returns country signal counts for the global heat map.

@@ -1,10 +1,10 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
 import { runOpportunityEngine } from '@/lib/engines/opportunity-engine';
 
-export const dynamic = 'force-dynamic';
 
 // ── GET /api/opportunities ──────────────────────────────────────────────────
 

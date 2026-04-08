@@ -1,6 +1,7 @@
 // POST /api/agents/vendor-enrichment — Enrich vendors with website + AI extraction
 // GET  /api/agents/vendor-enrichment — Query enriched vendors
 
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import {
   runVendorEnrichment,
@@ -8,7 +9,6 @@ import {
 } from '@/lib/agents/agents/vendor-enrichment-agent';
 import {
 
-export const dynamic = 'force-dynamic';
   getEnrichedVendors,
   getEnrichedVendorById,
   getUnenrichedExhibitorNames,

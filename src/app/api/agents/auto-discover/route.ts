@@ -3,12 +3,12 @@
 // from 2+ distinct sources that don't exist in the knowledge graph, then creates them.
 // This is how NXT LINK finds new companies without anyone telling it to.
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getDb, isSupabaseConfigured } from '@/db/client';
 import { upsertEntity, resolveEntity } from '@/db/queries/knowledge-graph';
 import { NXT_ENTITIES } from '@/lib/intelligence/nxt-entities';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
 // All known entity IDs/names for dedup check

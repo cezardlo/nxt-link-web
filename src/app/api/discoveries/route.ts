@@ -3,10 +3,10 @@
 // Queries kg_discoveries from Supabase with filters + pagination.
 // Falls back to mock data when Supabase is unavailable.
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 
-export const dynamic = 'force-dynamic';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

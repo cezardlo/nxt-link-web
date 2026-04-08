@@ -3,11 +3,11 @@
 // Supports ?severity=P0,P1 to filter by importance tiers.
 // Sends heartbeat comments every 30s to keep the connection alive.
 
+export const dynamic = 'force-dynamic';
 import { getIntelSignals } from '@/db/queries/intel-signals';
 import { isSupabaseConfigured } from '@/db/client';
 import { getSupabaseClient } from '@/lib/supabase/client';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 min max (Vercel limit)
 
 // ─── Severity → importance_score mapping ────────────────────────────────────

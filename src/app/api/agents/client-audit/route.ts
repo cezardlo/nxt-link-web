@@ -4,6 +4,7 @@
 // - scan: One persona scans for what matters to them (8-15 intel items)
 // - sweep: All 8 personas scan in parallel — full USA intelligence sweep
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
@@ -14,7 +15,6 @@ import {
   type PersonaId,
 } from '@/lib/agents/agents/client-persona-agent';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
 export async function POST(request: Request): Promise<NextResponse> {

@@ -8,6 +8,7 @@
 // Safe to call multiple times — all writes use upsert (slug + entity_type unique key).
 // Protected by CRON_SECRET.
 
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { isSupabaseConfigured } from '@/db/client';
 import { upsertEntity, addRelationship } from '@/db/queries/knowledge-graph';
@@ -15,7 +16,6 @@ import { TECHNOLOGY_CATALOG, INDUSTRIES } from '@/lib/data/technology-catalog';
 import { EL_PASO_VENDORS } from '@/lib/data/el-paso-vendors';
 import { requireCronSecret } from '@/lib/http/cron-auth';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 // Maps vendor / technology categories to canonical industry slugs (from INDUSTRIES)

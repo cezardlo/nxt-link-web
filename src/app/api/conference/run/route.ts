@@ -2,13 +2,13 @@
 // Runs the full conference intelligence pipeline for a given URL.
 // Body: { "url": "https://example-conference.com" }
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
 import { runConferencePipeline } from '@/lib/pipeline/run-conference-pipeline';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 120; // Pipeline can take time with Playwright + LLM
 
 export async function POST(request: Request): Promise<NextResponse> {

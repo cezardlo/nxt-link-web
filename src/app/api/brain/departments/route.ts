@@ -1,6 +1,7 @@
 // GET /api/brain/departments — Department status dashboard
 // POST /api/brain/departments — Run full pipeline or specific department
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
@@ -11,7 +12,6 @@ import {
   generateDailyBrief,
 } from '@/lib/agents/departments';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 export async function GET(request: Request): Promise<NextResponse> {

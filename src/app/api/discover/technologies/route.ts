@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -10,7 +11,6 @@ import {
   CATALOG_SUMMARY,
 } from '@/lib/data/technology-catalog';
 
-export const dynamic = 'force-dynamic';
 
 const VALID_MATURITIES: TechMaturity[] = ['emerging', 'growing', 'mature'];
 const VALID_RELEVANCE = ['high', 'medium', 'low'] as const;

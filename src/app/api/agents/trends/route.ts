@@ -1,10 +1,10 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
 import { runTrendAgent } from '@/lib/agents/agents/trend-agent';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
 // GET /api/agents/trends — detect emerging trends from signal clusters

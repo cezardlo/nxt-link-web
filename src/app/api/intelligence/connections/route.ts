@@ -7,6 +7,7 @@
 // Cache: 15 minutes (server + CDN).
 // Falls back gracefully if Supabase is unavailable (uses in-memory feed cache).
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -14,7 +15,6 @@ import { getClientIp } from '@/lib/http/request-context';
 import { buildConnectionsFromApiResponse, type ConnectionReport } from '@/lib/engines/connection-engine';
 import { isSupabaseConfigured } from '@/db/client';
 
-export const dynamic = 'force-dynamic';
 
 const CACHE_SECONDS = 15 * 60; // 15 minutes
 

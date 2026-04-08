@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -7,7 +8,6 @@ import {
   persistUnifiedBrainReport,
 } from '@/lib/intelligence/brain-orchestrator';
 
-export const dynamic = 'force-dynamic';
 
 function parseLimit(value: unknown): number {
   return Math.min(Math.max(Number(value ?? 100), 1), 500);

@@ -7,10 +7,10 @@
  * Powers the sector momentum board and the grouped intelligence view.
  */
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 
-export const dynamic = 'force-dynamic';
 
 const CANONICAL_INDUSTRIES = [
   'ai-ml', 'defense', 'cybersecurity', 'logistics',

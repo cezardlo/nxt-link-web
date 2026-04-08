@@ -1,12 +1,12 @@
 // GET /api/brain — El Paso Brain snapshot
 // Returns the full intelligence state: signals, predictions, sectors, zones, connections
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
 import { generateBrainSnapshot, EP_ENTITIES, getEntity, getConnected } from '@/lib/intelligence/el-paso-brain';
 
-export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request): Promise<NextResponse> {
   const ip = getClientIp(new Headers(request.headers));

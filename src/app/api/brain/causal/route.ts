@@ -7,10 +7,10 @@
  * structured causal maps that come from Obsidian notes.
  */
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getAllCausalMaps, addCausalMap, updateCausalMap, type CausalMap } from '@/lib/causal-engine';
 
-export const dynamic = 'force-dynamic';
 
 // GET: List all active causal maps
 export async function GET() {

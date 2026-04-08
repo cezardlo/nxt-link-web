@@ -1,7 +1,7 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getDb, isSupabaseConfigured } from '@/db/client';
 
-export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/products/cleanup

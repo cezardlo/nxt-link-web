@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -11,7 +12,6 @@ import {
 } from '@/db/queries/knowledge-graph';
 import type { EntityType, RelationshipType } from '@/db/queries/knowledge-graph';
 
-export const dynamic = 'force-dynamic';
 
 // GET /api/knowledge-graph
 // Query modes:

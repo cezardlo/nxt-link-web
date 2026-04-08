@@ -1,13 +1,13 @@
 // src/app/api/agents/intel-signals/route.ts
 // GET: Query persisted intel signals from Supabase (with filters)
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
 import { getIntelSignals, getIntelSignalStats } from '@/db/queries/intel-signals';
 
-export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request): Promise<NextResponse> {
   const ip = getClientIp(new Headers(request.headers));

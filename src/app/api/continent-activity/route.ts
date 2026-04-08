@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import {
   getContinentActivity,
@@ -6,7 +7,6 @@ import {
 import { CONTINENT_DEPARTMENTS } from '@/lib/data/continent-departments';
 import type { ContinentId } from '@/lib/data/continent-departments';
 
-export const dynamic = 'force-dynamic';
 export const revalidate = 300; // 5 min cache
 
 /**

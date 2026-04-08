@@ -1,9 +1,9 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/client';
 import { runParallelJsonEnsemble } from '@/lib/llm/parallel-router';
 import { analyzeCausality, type CausalAnalysis } from '@/lib/causal-engine';
 
-export const dynamic = 'force-dynamic';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

@@ -1,8 +1,8 @@
 // src/app/api/agents/status/route.ts
 // Returns full multi-agent system status: health, agent roster, last run metadata.
 
-import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
+import { NextResponse } from 'next/server';
 
 export async function GET() {
   const { checkPlatformHealth } = await import('@/lib/agents/monitor-agent');

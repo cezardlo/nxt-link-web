@@ -1,9 +1,9 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
 import { getClientIp } from '@/lib/http/request-context';
 
-export const dynamic = 'force-dynamic';
 
 // El Paso / Fort Bliss bounding box (±1.5° around city center)
 const BBOX = { lamin: 30.3, lamax: 33.1, lomin: -108.0, lomax: -104.9 };

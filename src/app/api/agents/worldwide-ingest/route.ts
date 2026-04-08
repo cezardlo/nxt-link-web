@@ -12,11 +12,11 @@
  * Covers: US, EU, China, Israel, India, South Korea, Japan, Global
  */
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { runWorldwideCollector, type WorldSignal } from '@/lib/sources/worldwide-collector';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes for comprehensive collection
 
 // El Paso relevance keywords — boost signals mentioning these

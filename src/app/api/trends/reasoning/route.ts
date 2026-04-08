@@ -4,6 +4,7 @@
 // things are heading — in plain English. Works without any LLM key.
 // Cached 10 minutes. Rate-limited to 30 req/min per IP.
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -12,7 +13,6 @@ import { getIntelSignals } from '@/db/queries/intel-signals';
 import { runTrendReasoningEngine } from '@/lib/engines/trend-reasoning-engine';
 import type { TrendAnalysis } from '@/lib/engines/trend-reasoning-engine';
 
-export const dynamic = 'force-dynamic';
 
 // ─── In-process 10-minute cache ───────────────────────────────────────────────
 

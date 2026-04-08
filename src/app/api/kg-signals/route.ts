@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
@@ -6,7 +7,6 @@ import { getKgSignals } from '@/db/queries/kg-signals';
 import type { KgSignalPriority } from '@/db/queries/kg-signals';
 import { isSupabaseConfigured } from '@/db/client';
 
-export const dynamic = 'force-dynamic';
 
 const VALID_PRIORITIES = new Set<string>(['P0', 'P1', 'P2', 'P3']);
 

@@ -1,7 +1,7 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 
-export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/explore

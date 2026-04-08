@@ -7,6 +7,7 @@
  * 4. Calls Gemini once to analyze El Paso impact
  */
 
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { runParallelJsonEnsemble } from '@/lib/llm/parallel-router';
@@ -15,7 +16,6 @@ import { FALLBACK_INTEL_SIGNALS } from '@/lib/intelligence/fallback-signals';
 import { buildElPasoAssessmentReport } from '@/lib/intelligence/el-paso-relevance';
 import type { IntelSignalRow } from '@/db/queries/intel-signals';
 
-export const dynamic = 'force-dynamic';
 
 type SignalRow = {
   id: string;

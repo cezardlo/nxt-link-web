@@ -1,7 +1,7 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getKgTechnologies } from '@/db/queries/kg-technologies';
 
-export const dynamic = 'force-dynamic';
 import { getKgIndustries } from '@/db/queries/kg-industries';
 import { getKgCompanies } from '@/db/queries/kg-companies';
 

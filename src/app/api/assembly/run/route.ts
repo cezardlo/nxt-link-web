@@ -4,11 +4,11 @@
  * Schedule: every 30 minutes via vercel.json
  */
 
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { buildClusters, detectTrends, persistAssembly } from '@/lib/engines/assembly-engine';
 import { generateNarratives, persistNarratives } from '@/lib/engines/narrative-engine';
 
-export const dynamic = 'force-dynamic';
 
 export const maxDuration = 60; // Allow up to 60s for assembly
 
