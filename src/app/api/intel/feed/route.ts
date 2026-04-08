@@ -70,6 +70,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   const { searchParams } = new URL(request.url);
   const tab        = searchParams.get('tab') ?? 'all';
   const industry   = searchParams.get('industry') ?? 'ALL';
+  const regionParam = searchParams.get('region') ?? 'ALL';
   const signalType = searchParams.get('signal_type') ?? 'ALL';
   const queryText  = (searchParams.get('q') ?? '').trim();
   const minScore   = Number(searchParams.get('min_score') ?? 0);
@@ -122,6 +123,22 @@ export async function GET(request: Request): Promise<NextResponse> {
     // Signal type filter
     if (signalType !== 'ALL') {
       query = query.eq('signal_type', signalType);
+    }
+
+    // Region filter
+    if (regionParam !== 'ALL') {
+      const regionVariants: Record<string, string[]> = {
+        'United States': ['United States', 'US', 'North America', 'Texas', 'Texas / El Paso'],
+        'China':         ['China', 'East Asia'],
+        'Europe':        ['Europe', 'EU', 'Germany', 'France', 'UK', 'United Kingdom'],
+        'Israel':        ['Israel', 'Middle East'],
+        'India':         ['India', 'South Asia'],
+        'South Korea':   ['South Korea', 'Korea', 'East Asia'],
+        'Japan':         ['Japan', 'East Asia'],
+        'Emerging':      ['Africa', 'South America', 'Southeast Asia', 'Latin America', 'Global'],
+      };
+      const variants = regionVariants[regionParam] ?? [regionParam];
+      query = query.in('region', variants);
     }
 
     // Min score filter

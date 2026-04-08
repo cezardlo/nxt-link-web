@@ -1,3 +1,4 @@
+// Last build: 2026-04-07T23:12:00.000Z
 import path from 'path';
 import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

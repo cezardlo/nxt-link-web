@@ -16,6 +16,7 @@ type Signal = {
   url: string | null;
   signal_type: string | null;
   company: string | null;
+  region?: string | null;
   source_trust?: number | null;
   evidence_quality?: number | null;
   quality_score?: number | null;
@@ -57,6 +58,31 @@ type PipelineQuality = {
   topTrustedSources?: Array<{ source: string; trustScore: number; signalCount: number }>;
   weakestSources?: Array<{ source: string; trustScore: number; signalCount: number }>;
 };
+
+const REGIONS = [
+  { value: 'ALL',           label: 'Global',    flag: '🌍' },
+  { value: 'United States', label: 'US',        flag: '🇺🇸' },
+  { value: 'China',         label: 'China',     flag: '🇨🇳' },
+  { value: 'Europe',        label: 'Europe',    flag: '🇪🇺' },
+  { value: 'Israel',        label: 'Israel',    flag: '🇮🇱' },
+  { value: 'India',         label: 'India',     flag: '🇮🇳' },
+  { value: 'South Korea',   label: 'Korea',     flag: '🇰🇷' },
+  { value: 'Japan',         label: 'Japan',     flag: '🇯🇵' },
+  { value: 'Emerging',      label: 'Emerging',  flag: '🌍' },
+];
+
+function regionFlag(region: string | null | undefined): string {
+  if (!region) return '🌍';
+  const r = region.toLowerCase();
+  if (r.includes('united states') || r === 'us' || r.includes('north america') || r.includes('texas')) return '🇺🇸';
+  if (r.includes('china') || r.includes('east asia') || r.includes('cnipa')) return '🇨🇳';
+  if (r.includes('europe') || r === 'eu' || r.includes('germany') || r.includes('france') || r.includes('uk')) return '🇪🇺';
+  if (r.includes('israel') || r.includes('middle east')) return '🇮🇱';
+  if (r.includes('india') || r.includes('south asia')) return '🇮🇳';
+  if (r.includes('south korea') || r.includes('korea') || r.includes('kipo')) return '🇰🇷';
+  if (r.includes('japan') || r.includes('jpo') || r.includes('jaxa')) return '🇯🇵';
+  return '🌍';
+}
 
 const INDUSTRIES = [
   { value: 'ALL',           label: 'All Sectors',     emoji: '🌐' },
@@ -180,6 +206,7 @@ export default function IntelPage() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('all');
   const [industry, setIndustry] = useState('ALL');
+  const [region, setRegion] = useState('ALL');
   const [signalType, setSignalType] = useState('ALL');
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -207,6 +234,7 @@ export default function IntelPage() {
           page_size: String(PAGE_SIZE),
           min_score: String(minScore),
         });
+        if (region !== 'ALL') params.set('region', region);
         const response = await fetch(`/api/intel/feed?${params.toString()}`);
         if (!response.ok) throw new Error(`API returned ${response.status}`);
         const json = await response.json();
@@ -230,7 +258,7 @@ export default function IntelPage() {
     return () => {
       ignore = true;
     };
-  }, [tab, industry, signalType, search, minScore, page]);
+  }, [tab, industry, region, signalType, search, minScore, page]);
 
   useEffect(() => {
     let ignore = false;
@@ -363,6 +391,7 @@ export default function IntelPage() {
                     setSearch('');
                     setSearchInput('');
                     setIndustry('ALL');
+                    setRegion('ALL');
                     setSignalType('ALL');
                     setMinScore(0);
                     setTab('all');
@@ -371,6 +400,27 @@ export default function IntelPage() {
                 >
                   Reset
                 </button>
+              </div>
+
+              {/* Region filter row */}
+              <div className="flex flex-wrap gap-1.5">
+                <span className="self-center text-[10px] uppercase tracking-[0.14em] text-nxt-dim pr-1">Region</span>
+                {REGIONS.map((item) => (
+                  <button
+                    key={item.value}
+                    onClick={() => {
+                      setPage(0);
+                      setRegion(item.value);
+                    }}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+                      region === item.value
+                        ? 'border-[#0EA5E9]/20 bg-[#0EA5E9]/10 text-[#38bdf8]'
+                        : 'border-nxt-border text-nxt-muted'
+                    }`}
+                  >
+                    {item.flag} {item.label}
+                  </button>
+                ))}
               </div>
 
               <div className="flex flex-wrap gap-1.5">
@@ -616,6 +666,9 @@ export default function IntelPage() {
                           </span>
                         )}
                         <span className="text-[11px] text-nxt-dim">{sourceName(signal.source)}</span>
+                        {signal.region && (
+                          <span className="text-sm" title={signal.region}>{regionFlag(signal.region)}</span>
+                        )}
                         <span className="ml-auto text-[11px] font-mono text-nxt-dim">{relTime(signal.discovered_at)}</span>
                       </div>
 

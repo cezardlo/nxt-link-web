@@ -35,6 +35,10 @@
     {
       "path": "/api/agents/worldwide-ingest?sectors=defense,border-tech",
       "schedule": "0 */4 * * *"
+    },
+    {
+      "path": "/api/agents/global-ingest",
+      "schedule": "0 */3 * * *"
     }
   ]
 }
