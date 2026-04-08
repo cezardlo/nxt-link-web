@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { href: '/', label: 'Home' },
   { href: '/briefing', label: 'Briefing' },
   { href: '/intel', label: 'Signals' },
+  { href: '/trajectory', label: '🌍 Trajectory' },
   { href: '/map', label: 'Map' },
   { href: '/solve', label: 'Solve' },
   { href: '/discover', label: 'Discover', icon: '🔍' },

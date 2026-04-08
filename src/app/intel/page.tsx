@@ -85,18 +85,26 @@ function regionFlag(region: string | null | undefined): string {
 }
 
 const INDUSTRIES = [
-  { value: 'ALL',           label: 'All Sectors',     emoji: '🌐' },
-  { value: 'ai-ml',         label: 'AI / ML',         emoji: '🤖' },
-  { value: 'defense',       label: 'Defense',         emoji: '🛡️' },
-  { value: 'cybersecurity', label: 'Cybersecurity',   emoji: '🔐' },
-  { value: 'logistics',     label: 'Logistics',       emoji: '🚚' },
-  { value: 'manufacturing', label: 'Manufacturing',   emoji: '🏭' },
-  { value: 'border-tech',   label: 'Border Tech',     emoji: '🌉' },
-  { value: 'energy',        label: 'Energy',          emoji: '⚡' },
-  { value: 'healthcare',    label: 'Healthcare',      emoji: '🏥' },
-  { value: 'space',         label: 'Space',           emoji: '🚀' },
-  { value: 'finance',       label: 'Finance',         emoji: '💹' },
-  { value: 'startup',       label: 'Startups',        emoji: '💡' },
+  { value: 'ALL',              label: 'All Sectors',     emoji: '🌐' },
+  { value: 'ai-ml',            label: 'AI / ML',         emoji: '🤖' },
+  { value: 'defense',          label: 'Defense',         emoji: '🛡️' },
+  { value: 'cybersecurity',    label: 'Cybersecurity',   emoji: '🔐' },
+  { value: 'logistics',        label: 'Logistics',       emoji: '🚚' },
+  { value: 'manufacturing',    label: 'Manufacturing',   emoji: '🏭' },
+  { value: 'border-tech',      label: 'Border Tech',     emoji: '🌉' },
+  { value: 'energy',           label: 'Energy',          emoji: '⚡' },
+  { value: 'healthcare',       label: 'Healthcare',      emoji: '🏥' },
+  { value: 'space',            label: 'Space',           emoji: '🚀' },
+  { value: 'finance',          label: 'Finance',         emoji: '💹' },
+  { value: 'startup',          label: 'Startups',        emoji: '💡' },
+  // Earth Tracker sectors
+  { value: 'renewable-energy', label: 'Renewable',       emoji: '☀️' },
+  { value: 'agriculture',      label: 'Agriculture',     emoji: '🌾' },
+  { value: 'life-sciences',    label: 'Life Sciences',   emoji: '🧬' },
+  { value: 'climate-tech',     label: 'Climate',         emoji: '🌍' },
+  { value: 'quantum',          label: 'Quantum',         emoji: '⚛️' },
+  { value: 'neural-tech',      label: 'Neural Tech',     emoji: '🧠' },
+  { value: 'synthetic-bio',    label: 'Synth Bio',       emoji: '🔬' },
 ];
 
 const SIGNAL_TYPES = [
