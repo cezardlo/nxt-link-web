@@ -39,6 +39,22 @@
     {
       "path": "/api/agents/global-ingest",
       "schedule": "0 */3 * * *"
+    },
+    {
+      "path": "/api/agents/world-feed-ingest",
+      "schedule": "0 */2 * * *"
+    },
+    {
+      "path": "/api/agents/world-feed-ingest?sectors=defense,cybersecurity&tier=1",
+      "schedule": "0 */1 * * *"
+    },
+    {
+      "path": "/api/agents/world-feed-ingest?sectors=ai-ml,life-sciences,quantum&tier=1",
+      "schedule": "30 */2 * * *"
+    },
+    {
+      "path": "/api/agents/world-feed-ingest?sectors=agriculture,renewable-energy,climate-tech&tier=1",
+      "schedule": "0 */4 * * *"
     }
   ]
 }
