@@ -292,9 +292,6 @@ export const WORLD_SOURCES: WorldSource[] = [
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-];
-
-
 export const WORLD_SOURCE_COUNT = WORLD_SOURCES.length;
 
 export function getSourcesBySector(sector: string): WorldSource[] {
