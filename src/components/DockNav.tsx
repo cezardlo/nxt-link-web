@@ -5,16 +5,13 @@ import { usePathname } from 'next/navigation';
 import { TranslateButton } from './TranslateButton';
 
 const NAV_ITEMS = [
-  { href: '/', label: 'Home' },
-  { href: '/briefing', label: 'Briefing' },
-  { href: '/intel', label: 'Signals' },
-  { href: '/trajectory', label: '🌍 Trajectory' },
-  { href: '/map', label: 'Map' },
-  { href: '/solve', label: 'Solve' },
-  { href: '/discover', label: 'Discover', icon: '🔍' },
+  { href: '/', label: 'Today' },
+  { href: '/discover', label: 'Discover' },
+  { href: '/intel', label: 'Radar' },
+  { href: '/sector', label: 'Sectors' },
+  { href: '/trajectory', label: 'Trajectory' },
   { href: '/vendors', label: 'Vendors' },
-  { href: '/products', label: 'Products' },
-  { href: '/industry', label: 'Industries' },
+  { href: '/map', label: 'Map' },
   { href: '/explore', label: 'Explore' },
 ];
 
@@ -41,7 +38,7 @@ export function DockNav() {
               NXT<span className="mx-0.5 text-nxt-muted">{'//'}</span>LINK
             </div>
             <div className="hidden font-mono text-[10px] uppercase tracking-[0.22em] text-nxt-dim sm:block">
-              Market intelligence
+              Global intelligence
             </div>
           </div>
         </Link>

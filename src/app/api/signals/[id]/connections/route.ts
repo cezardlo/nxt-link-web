@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export type ConnectionNodeType =

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getDb, isSupabaseConfigured } from '@/db/client';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/products/cleanup
  * Purges low-quality products from the database:

@@ -8,6 +8,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { buildClusters, detectTrends, persistAssembly } from '@/lib/engines/assembly-engine';
 import { generateNarratives, persistNarratives } from '@/lib/engines/narrative-engine';
 
+export const dynamic = 'force-dynamic';
+
 export const maxDuration = 60; // Allow up to 60s for assembly
 
 export async function GET(request: NextRequest) {

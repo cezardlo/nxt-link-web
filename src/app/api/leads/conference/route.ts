@@ -4,6 +4,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb, isSupabaseConfigured } from '@/db/client';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ leads: [], total: 0, filters: {} });

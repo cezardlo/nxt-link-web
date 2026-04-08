@@ -3,6 +3,8 @@
 
 import { NextResponse } from 'next/server';
 import {
+
+export const dynamic = 'force-dynamic';
   runConferenceDiscovery,
   type ConferenceDiscoveryReport,
 } from '@/lib/agents/agents/conference-discovery-agent';

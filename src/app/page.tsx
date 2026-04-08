@@ -109,11 +109,17 @@ const SECTOR_BARS = [
   { name: 'AI / ML', pct: 94, trend: 'up', color: 'teal' },
   { name: 'Defense', pct: 81, trend: 'up', color: 'teal' },
   { name: 'Cybersecurity', pct: 76, trend: 'up', color: 'teal' },
-  { name: 'Border Tech', pct: 68, trend: 'up', color: 'teal' },
   { name: 'Logistics', pct: 62, trend: 'neutral', color: 'dim' },
   { name: 'Manufacturing', pct: 54, trend: 'down', color: 'muted' },
+  { name: 'Border Tech', pct: 68, trend: 'up', color: 'teal' },
   { name: 'Energy', pct: 47, trend: 'neutral', color: 'dim' },
   { name: 'Space', pct: 38, trend: 'up', color: 'teal' },
+  { name: 'Industrial Tech', pct: 55, trend: 'up', color: 'teal' },
+  { name: 'Renewable Energy', pct: 61, trend: 'up', color: 'teal' },
+  { name: 'Semiconductors', pct: 72, trend: 'up', color: 'teal' },
+  { name: 'Agriculture', pct: 33, trend: 'neutral', color: 'dim' },
+  { name: 'Life Sciences', pct: 58, trend: 'up', color: 'teal' },
+  { name: 'Climate Tech', pct: 44, trend: 'up', color: 'teal' },
 ] as const;
 
 const FORWARD_CARDS = [
@@ -730,7 +736,7 @@ export default function Home() {
                   <div className="text-4xl font-bold font-mono text-white tabular-nums">
                     {totalAnalyzed > 0 ? totalAnalyzed.toLocaleString() : '—'}
                   </div>
-                  <div className="text-[11px] text-nxt-muted mt-1">signals monitored</div>
+                  <div className="text-[11px] text-nxt-muted mt-1">Watching 137 sources · 40+ countries · every sector that matters</div>
                   <div className="mt-4 flex items-center justify-center gap-1.5">
                     <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     <span className="text-[10px] text-emerald-400/70">Live feed active</span>
@@ -763,11 +769,11 @@ export default function Home() {
               <motion.div variants={fadeUp as any} className="mb-8">
                 <div className="text-[10px] tracking-[0.18em] uppercase font-bold text-nxt-accent/60 mb-1">Sector Pulse</div>
                 <h2 className="text-2xl sm:text-3xl font-bold text-white font-grotesk">
-                  Where is tech moving right now?
+                  What's moving on Earth right now?
                 </h2>
               </motion.div>
 
-              <motion.div variants={fadeUp as any} className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-4">
+              <motion.div variants={fadeUp as any} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-4">
                 {SECTOR_BARS.map((bar, i) => (
                   <SectorBar
                     key={bar.name}
@@ -784,6 +790,31 @@ export default function Home() {
                 Signal activity relative to 90-day baseline · Rising = teal · Falling = dim
               </motion.p>
             </motion.div>
+          </div>
+        </section>
+
+        {/* ════════════════════════════════════════════════════════════════════
+            INTELLIGENCE NETWORK STAT BAR
+        ═══════════════════════════════════════════════════════════════════════ */}
+        <section className="py-8 border-b border-white/[0.06] bg-[rgba(7,9,10,0.8)]">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <div className="text-[10px] tracking-[0.18em] uppercase font-bold text-nxt-accent/60 mb-5">Intelligence Network</div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { value: '137', label: 'Sources Active' },
+                { value: '40+', label: 'Countries' },
+                { value: '6', label: 'Cron Jobs' },
+                { value: 'Every 2h', label: 'Feed Updates' },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className="rounded-xl border border-nxt-border bg-[rgba(9,14,26,0.7)] p-4 text-center"
+                >
+                  <div className="text-2xl font-mono font-bold text-white tabular-nums">{stat.value}</div>
+                  <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-nxt-dim">{stat.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 

@@ -7,6 +7,8 @@ import {
 } from '@/lib/data/marketplace-adapter';
 import type { MarketplaceFilters, SortKey } from '@/types/marketplace';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
 

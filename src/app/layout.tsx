@@ -24,8 +24,8 @@ export const viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'NXT//LINK | Supply Chain Intelligence',
-  description: 'Supply chain intelligence platform for tracking signals, vendors, products, and market opportunities.',
+  title: 'NXT LINK - Global Tech Intelligence',
+  description: 'Track technology, research, and innovation happening across the planet. From Silicon Valley to Shenzhen, Fort Bliss to Juárez.',
   robots: { index: true, follow: true },
   appleWebApp: {
     capable: true,

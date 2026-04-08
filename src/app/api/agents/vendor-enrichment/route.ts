@@ -7,6 +7,8 @@ import {
   type VendorEnrichmentOptions,
 } from '@/lib/agents/agents/vendor-enrichment-agent';
 import {
+
+export const dynamic = 'force-dynamic';
   getEnrichedVendors,
   getEnrichedVendorById,
   getUnenrichedExhibitorNames,

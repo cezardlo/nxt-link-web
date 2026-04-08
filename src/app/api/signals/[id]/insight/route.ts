@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/server';
 import { generateInsight, shouldGenerateInsight, type Connection } from '@/lib/insights';
 import { findConnections } from '@/lib/graph';
 
+export const dynamic = 'force-dynamic';
+
 // Cache insights for 24 hours
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 

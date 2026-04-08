@@ -8,6 +8,8 @@ import { buildClusters, detectTrends, persistAssembly } from '@/lib/engines/asse
 import { generateNarratives, persistNarratives } from '@/lib/engines/narrative-engine';
 import { createClient } from '@/lib/supabase/client';
 
+export const dynamic = 'force-dynamic';
+
 // ─── GET: Read assembled intelligence ───────────────────────────────
 
 export async function GET(request: NextRequest) {

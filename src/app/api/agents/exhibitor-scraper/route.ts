@@ -7,6 +7,8 @@ import {
   type ExhibitorScrapeOptions,
 } from '@/lib/agents/agents/exhibitor-scraper-agent';
 import {
+
+export const dynamic = 'force-dynamic';
   getExhibitors,
   upsertExhibitors,
   type ExhibitorInsert,

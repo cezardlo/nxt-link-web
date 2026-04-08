@@ -66,14 +66,17 @@ const TABS: { key: Tab; label: string; icon: React.ComponentType<{ className?: s
   { key: 'discoveries',  label: 'Discoveries',  icon: Zap,       count: 973 },
 ];
 
-const SECTORS = ['All', 'Defense', 'AI/ML', 'Cybersecurity', 'Logistics', 'Manufacturing', 'Border Tech', 'Energy', 'Space', 'Healthcare'];
+const SECTORS = ['All', 'Defense', 'AI/ML', 'Cybersecurity', 'Logistics', 'Manufacturing', 'Border Tech', 'Energy', 'Space', 'Industrial', 'Commercial', 'Renewables', 'Agriculture', 'Life Sciences', 'Climate', 'Quantum'];
 
 const SECTOR_API_MAP: Record<string, string> = {
   'AI/ML': 'ai-ml', 'Border Tech': 'border-tech',
   'Cybersecurity': 'cybersecurity', 'Defense': 'defense',
   'Energy': 'energy', 'Healthcare': 'healthcare',
   'Logistics': 'logistics', 'Manufacturing': 'manufacturing',
-  'Space': 'space',
+  'Space': 'space', 'Industrial': 'industrial-tech',
+  'Commercial': 'commercial-tech', 'Renewables': 'renewable-energy',
+  'Agriculture': 'agriculture', 'Life Sciences': 'life-sciences',
+  'Climate': 'climate-tech', 'Quantum': 'quantum',
 };
 
 // ── Logo Component ────────────────────────────────────────────────────────────
@@ -404,7 +407,7 @@ export default function DiscoverPage() {
           </div>
 
           {/* Sector chips */}
-          <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+          <div className="flex flex-wrap gap-2 mb-4">
             {SECTORS.map(s => (
               <button key={s} onClick={() => setSector(s)}
                 className="px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all"

@@ -98,7 +98,10 @@ const INDUSTRIES = [
   { value: 'finance',          label: 'Finance',         emoji: '💹' },
   { value: 'startup',          label: 'Startups',        emoji: '💡' },
   // Earth Tracker sectors
-  { value: 'renewable-energy', label: 'Renewable',       emoji: '☀️' },
+  { value: 'industrial-tech', label: 'Industrial',      emoji: '⚙️' },
+  { value: 'commercial-tech', label: 'Commercial',      emoji: '🏪' },
+  { value: 'semiconductor',   label: 'Semiconductors',  emoji: '💾' },
+  { value: 'renewable-energy', label: 'Renewable',      emoji: '☀️' },
   { value: 'agriculture',      label: 'Agriculture',     emoji: '🌾' },
   { value: 'life-sciences',    label: 'Life Sciences',   emoji: '🧬' },
   { value: 'climate-tech',     label: 'Climate',         emoji: '🌍' },
