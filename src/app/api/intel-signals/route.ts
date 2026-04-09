@@ -42,11 +42,17 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json({ ok: false, message: 'Rate limit exceeded.' }, { status: 429 });
   }
 
+  const { searchParams } = new URL(request.url);
+  const industryParam = searchParams.get('industry') || undefined;
+  const limitParam = Math.min(parseInt(searchParams.get('limit') ?? '100'), 500);
+  const signalTypeParam = searchParams.get('signal_type') || undefined;
+  const minImportance = searchParams.get('min_importance') ? parseFloat(searchParams.get('min_importance')!) : undefined;
+
   try {
     // 1. Supabase first (persisted, survives restarts)
     if (isSupabaseConfigured()) {
       const [dbSignals, stats] = await Promise.all([
-        getIntelSignals({ limit: 50 }),
+        getIntelSignals({ limit: limitParam, industry: industryParam, signal_type: signalTypeParam, min_importance: minImportance }),
         getIntelSignalStats(),
       ]);
 
