@@ -8,6 +8,7 @@ import { COLORS } from '@/lib/tokens';
 import { JarvisBriefPanel } from '@/components/JarvisBriefPanel';
 import { ConvergenceAlertBanner } from '@/components/ConvergenceAlertBanner';
 import { SignalCard } from '@/components/SignalCard';
+import { IntelTreemap } from '@/components/IntelTreemap';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -837,6 +838,15 @@ export default function Home() {
                 Signal activity relative to 90-day baseline · Rising = teal · Falling = dim
               </motion.p>
             </motion.div>
+          </div>
+        </section>
+
+        {/* ════════════════════════════════════════════════════════════════════
+            SIGNAL INTELLIGENCE TREEMAP
+        ═══════════════════════════════════════════════════════════════════════ */}
+        <section className="py-14 border-b border-white/[0.06]">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <IntelTreemap />
           </div>
         </section>
 
