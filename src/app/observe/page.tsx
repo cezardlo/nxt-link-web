@@ -258,6 +258,7 @@ export default function ObservePage() {
     setError(null);
     setAnalysis(null);
     try {
+      // Try AI-powered observer first
       const res = await fetch('/api/observer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -268,7 +269,19 @@ export default function ObservePage() {
         setAnalysis(data.analysis);
         setSignalsMeta({ signals_used: data.signals_used, generated_at: data.generated_at });
       } else {
-        setError(data.error ?? 'Analysis failed');
+        // Fallback: rule-based analysis from DB (no AI key needed)
+        const fallbackRes = await fetch('/api/observer-fallback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ industry }),
+        });
+        const fallbackData = await fallbackRes.json();
+        if (fallbackData.ok && fallbackData.analysis) {
+          setAnalysis(fallbackData.analysis);
+          setSignalsMeta({ signals_used: fallbackData.analysis.signals_used, generated_at: fallbackData.analysis.observation_timestamp });
+        } else {
+          setError('Analysis unavailable — no signals found for this sector');
+        }
       }
     } catch (e) {
       setError('Connection error');
