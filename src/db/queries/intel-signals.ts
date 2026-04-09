@@ -162,8 +162,9 @@ export async function getIntelSignals(
   let query = db
     .from('intel_signals')
     .select('*')
-    .order('created_at', { ascending: false })
+    .eq('is_noise', false)
     .order('importance_score', { ascending: false })
+    .order('discovered_at', { ascending: false })
     .limit(limit);
 
   if (options.signal_type) query = query.eq('signal_type', options.signal_type);

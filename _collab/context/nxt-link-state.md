@@ -1,54 +1,60 @@
 # NXT LINK — Current State
-_Updated: April 8, 2026 @ 1:00 AM MDT_
+_Updated: April 8, 2026 @ 11:45 PM MDT_
 
 ## SITE IS LIVE ✅
-https://nxt-link-real-jn0k25gpv-cezardlos-projects.vercel.app (latest deploy)
 https://nxt-link-web.vercel.app (production domain)
 
 ---
 
-## What's Built (Complete)
+## What Computer Just Fixed (April 8 Night)
 
-### Backend APIs
-- `/api/agents/enrich-signals-v2` — POST batches 25 signals to Gemini, writes back meaning/direction/el_paso_score/el_paso_angle
-- `/api/intelligence/morning-brief` GET (existing) + POST (Jarvis narrative: world_headline, situation, accelerating, emerging, for_el_paso, top_3_moves)
-- `/api/explore` — vendor fallback when entities=0
-- `/api/intelligence/convergence` — convergence events
-- `/api/agents/world-feed-ingest` — 137 RSS/Atom sources, daily
-- Full ingest pipeline across all 13 sectors
+### Data Quality — FIXED
+- `getIntelSignals()` now filters `is_noise = false` ← was showing garbage
+- 577 KVIA/KTSM non-tech stories marked as noise
+- ~200+ Bloomberg off-topic financial stories marked as noise
+- arxiv AI papers reclassified → `industry = 'ai-ml'`
+- arxiv robotics reclassified → `industry = 'robotics'`
+- Defense One reclassified → `industry = 'defense'`
+- **Clean signal count: 5,779** (was 11,869 with garbage mixed in)
 
-### UI Components (new)
-- `src/components/JarvisBriefPanel.tsx` — 3-tab panel (overview/EP/moves), Jarvis morning brief
-- `src/components/ConvergenceAlertBanner.tsx` — multi-event navigator with dismiss
-- `src/components/ElPasoSignalBadge.tsx` — EP DIRECT/RELEVANT/CONTEXT + DirectionBadge
-- `/sector/[slug]` — signal cards now show: meaning, direction badge, EP badge
-- Home page (`/`) — JarvisBriefPanel + ConvergenceAlertBanner above Top 3 cards
+### New Files (pushed to GitHub)
+- `src/lib/intelligence/keyword-enrichment-worker.ts` — rule-based enrichment, no AI key
+- `src/app/api/agents/batch-keyword-enrich/route.ts` — POST to enrich 200 signals at a time
+- `src/db/queries/intel-signals.ts` — now filters `is_noise = false` always
 
-### Data
-- `intel_signals`: 7,363 clean signals — **0 enriched** (pipeline at `/api/agents/enrich-signals-v2` is ready to run)
+### Enrichment Pipeline
+- No AI key = keyword enrichment runs instead
+- `POST /api/agents/batch-keyword-enrich` → enriches 200 signals per call
+- Run it 29 times to cover all 5,779 signals
+- Adds: `meaning`, `direction`, `el_paso_score`, `el_paso_angle` to every signal
+
+---
+
+## Data Now
+- `intel_signals`: 11,869 total, **5,779 clean** (is_noise=false), 0 enriched yet
 - `vendors`: 442 IKER-scored
 - `conferences`: 1,040 with exhibitors
 - `kg_discoveries`: 973 breakthroughs
-- `entities`: 3,575 / `entity_relationships`: 3,953
+- Top clean sources: arxiv AI (2,317), arxiv robotics (788), TechCrunch (204), DefenseOne (56)
 
 ---
 
 ## What Claude Should Build Next
 
-See `_collab/inbox/for-claude/task-april8-ui-sprint.md` for full spec.
+See `_collab/inbox/for-claude/task-sprint-apr8-night.md` for full spec.
 
-**Still needed:**
-1. `fix-signal-feed-regions.tsx` — add country flags + meaning + EP badges to intel/radar signal feed
-2. Personalization layer — user can select sectors they care about, feed filters accordingly
-
-**For enrichment:** Computer will POST to `/api/agents/enrich-signals-v2` to start processing signals.
-Run: `POST https://nxt-link-web.vercel.app/api/agents/enrich-signals-v2` with `{ "batch_size": 50 }`
+**4 UI components needed:**
+1. `keyword-enrichment-worker.ts` — Computer already built this, Claude doesn't need to
+2. `SignalCard.tsx` — reusable card with direction badge, EP badge, meaning line
+3. `ObserverIntelPanel.tsx` — sector intelligence summary panel
+4. *(Optional)* Sector page update to use ObserverIntelPanel
 
 ---
 
 ## Architecture Reminders
-- `createClient()` from `@/lib/supabase/client` — always
-- `export const dynamic = 'force-dynamic'` at TOP of API files (before imports!)
-- Teal `#0EA5E9` — primary. No purple buttons.
-- No localStorage/sessionStorage (blocked in Next.js edge)
-- `runParallelJsonEnsemble` from `@/lib/llm/parallel-router`
+- `export const dynamic = 'force-dynamic'` — FIRST line of every API route file
+- Use `createClient()` from `@/lib/supabase/client`
+- Teal `#0EA5E9` — primary. No purple.
+- No localStorage/sessionStorage
+- TypeScript strict — no `any`
+- Tailwind CSS only
