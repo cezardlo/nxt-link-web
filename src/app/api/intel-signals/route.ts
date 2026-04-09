@@ -62,14 +62,22 @@ export async function GET(request: Request): Promise<NextResponse> {
         }
 
         const signals = dbSignals.map(s => ({
+          id: s.id,
           title: s.title,
           signal_type: s.signal_type,
           industry: s.industry,
           company: s.company,
           importance: s.importance_score,
+          importance_score: s.importance_score,
           discovered_at: s.discovered_at,
           url: s.url,
           confidence: s.confidence,
+          source_domain: (s as any).source_domain,
+          direction: (s as any).direction,
+          meaning: (s as any).meaning,
+          el_paso_score: (s as any).el_paso_score,
+          el_paso_angle: (s as any).el_paso_angle,
+          region: (s as any).region,
         }));
 
         return NextResponse.json(

@@ -685,6 +685,32 @@ export default function IntelPage() {
 
                       <div className="text-[16px] font-medium leading-snug text-nxt-text">{signal.title}</div>
 
+                      {/* Enriched Intelligence Row */}
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        {(signal as any).direction && (signal as any).direction !== 'stable' && (
+                          <span className={`text-[10px] font-bold tracking-wide ${
+                            (signal as any).direction === 'rising' ? 'text-emerald-400' :
+                            (signal as any).direction === 'falling' ? 'text-red-400' :
+                            (signal as any).direction === 'emerging' ? 'text-cyan-400' :
+                            (signal as any).direction === 'disrupting' ? 'text-orange-400' : 'text-gray-500'
+                          }`}>
+                            {(signal as any).direction === 'rising' ? '↑ RISING' :
+                             (signal as any).direction === 'falling' ? '↓ FALLING' :
+                             (signal as any).direction === 'emerging' ? '◆ EMERGING' :
+                             (signal as any).direction === 'disrupting' ? '⚡ DISRUPTING' : ''}
+                          </span>
+                        )}
+                        {typeof (signal as any).el_paso_score === 'number' && (signal as any).el_paso_score >= 60 && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 tracking-wide">EP DIRECT</span>
+                        )}
+                        {typeof (signal as any).el_paso_score === 'number' && (signal as any).el_paso_score >= 25 && (signal as any).el_paso_score < 60 && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 tracking-wide">EP RELEVANT</span>
+                        )}
+                        {(signal as any).meaning && (
+                          <span className="text-[11px] text-gray-500 italic">{(signal as any).meaning}</span>
+                        )}
+                      </div>
+
                       {signal.evidence && (
                         <p className="mt-2 text-[13px] leading-6 text-nxt-muted">{signal.evidence}</p>
                       )}
