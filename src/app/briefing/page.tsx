@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { COLORS } from '@/lib/tokens';
-import { PageTransition } from '@/components/PageTransition';
+import Link from 'next/link';
+import { COLORS, FONT } from '@/lib/tokens';
 
-/* --- types --- */
+/* ─── types ─── */
 interface RelatedSignal {
   id: string;
   title: string;
@@ -14,51 +14,17 @@ interface RelatedSignal {
   relevance_score: number;
 }
 
-interface InsightVendor {
-  name: string;
-  category: string;
-  iker_score: number | null;
-}
-
-interface InsightProblem {
-  key: string;
-  label: string;
-  count: number;
-}
-
 interface TopInsight {
-  id?: string;
   rank: number;
   title: string;
   what_is_happening: string;
   why_it_matters: string;
   where_its_going: string;
-  el_paso_impact?: string[];
-  watch_for?: string[];
-  action_bullets?: string[];
   signal_count: number;
   avg_score: number;
   industry: string;
   signal_type: string;
-  problem_category?: string | null;
-  problem_label?: string | null;
   related_signals: RelatedSignal[];
-  vendors?: InsightVendor[];
-  problems?: InsightProblem[];
-  source?: string;
-  discovered_at?: string;
-  opportunity_type?: string;
-  opportunity_score?: number;
-  urgency_score?: number;
-  el_paso_relevance?: number;
-  why_now?: string;
-  who_it_matters_to?: string[];
-  local_pathway?: string;
-  suggested_targets?: string[];
-  tracked_technologies?: string[];
-  confidence_explanation?: string;
-  reason_for_ranking?: string[];
-  what_changed_vs_last_week?: string;
 }
 
 interface Region {
@@ -106,51 +72,10 @@ interface BriefingData {
     signal_stats: { by_type: Record<string, number>; by_industry: Record<string, number> };
     regions: Region[];
     recent_signals: RecentSignal[];
-    source_ops?: {
-      duplicates_filtered?: number;
-      low_evidence_discarded?: number;
-      strongest_source?: string | null;
-    };
-    local_relevance_summary?: string[];
-    top_opportunities?: Array<{
-      signalId: string;
-      title: string;
-      opportunityType: string;
-      opportunityScore: number;
-      elPasoRelevance: number;
-      urgencyScore: number;
-      localPathway: string;
-      recommendedActions: string[];
-    }>;
-    action_queue?: Array<{
-      signalId: string;
-      title: string;
-      action: string;
-      whyNow: string;
-      suggestedTargets: string[];
-    }>;
-    memory?: {
-      recurringCompanies?: Array<{ name: string; repeatCount: number; score: number }>;
-      recurringTechnologies?: Array<{ name: string; repeatCount: number; score: number }>;
-      risingIndustries?: Array<{ name: string; score: number; change: number }>;
-    };
     trends?: {
       snapshot: TrendSnapshot[];
       time_series: TrendTimeSeries[];
     };
-  };
-}
-
-interface BrainLearning {
-  sourceScores?: Array<{ source: string; trustScore: number; signalCount: number }>;
-  industryMomentum?: Array<{ name: string; momentumScore: number; signalCount: number }>;
-  locationMomentum?: Array<{ name: string; momentumScore: number; signalCount: number }>;
-  companyPriority?: Array<{ name: string; priorityScore: number; signalCount: number }>;
-  summary?: {
-    strongestSource: string | null;
-    hottestIndustry: string | null;
-    hottestLocation: string | null;
-    highestPriorityCompany: string | null;
   };
 }
 
@@ -160,30 +85,16 @@ function formatDate(dateString: string): string {
   const diff = now.getTime() - date.getTime();
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  if (hours < 1) return 'just now';
+  if (hours < 1) return 'now';
   if (hours < 24) return `${hours}h ago`;
   if (days < 7) return `${days}d ago`;
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-/* --- Signal type badge color --- */
-function signalTypeColor(type: string): string {
-  const map: Record<string, string> = {
-    contract_award: COLORS.green,
-    funding_round: COLORS.purple,
-    patent_filing: COLORS.cyan,
-    partnership: COLORS.amber,
-    product_launch: COLORS.orange,
-    regulation: COLORS.red,
-    market_expansion: COLORS.emerald,
-  };
-  return map[type] || COLORS.muted;
-}
+/* ─── Tendency Detection Canvas Graph ─── */
+const TREND_COLORS = [COLORS.cyan, COLORS.green, COLORS.gold, COLORS.amber, COLORS.red, '#a78bfa'];
 
-/* --- Trend Chart --- */
-const TREND_COLORS = ['#818cf8', '#22c55e', '#eab308', '#f59e0b', '#ef4444', '#a855f7'];
-
-function TrendChart({ trends }: { trends: { snapshot: TrendSnapshot[]; time_series: TrendTimeSeries[] } }) {
+function TendencyDetection({ trends }: { trends: { snapshot: TrendSnapshot[]; time_series: TrendTimeSeries[] } }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -194,7 +105,7 @@ function TrendChart({ trends }: { trends: { snapshot: TrendSnapshot[]; time_seri
 
     const dpr = window.devicePixelRatio || 1;
     const w = container.clientWidth;
-    const h = 200;
+    const h = 220;
     canvas.width = w * dpr;
     canvas.height = h * dpr;
     canvas.style.width = `${w}px`;
@@ -207,7 +118,7 @@ function TrendChart({ trends }: { trends: { snapshot: TrendSnapshot[]; time_seri
     const series = trends.time_series;
     if (series.length === 0) return;
 
-    const pad = { top: 16, right: 16, bottom: 28, left: 40 };
+    const pad = { top: 20, right: 16, bottom: 32, left: 44 };
     const gw = w - pad.left - pad.right;
     const gh = h - pad.top - pad.bottom;
 
@@ -229,7 +140,9 @@ function TrendChart({ trends }: { trends: { snapshot: TrendSnapshot[]; time_seri
 
     ctx.clearRect(0, 0, w, h);
 
-    // Grid lines
+    const fontName = FONT.split(',')[0].replace(/'/g, '');
+
+    // Grid
     ctx.strokeStyle = COLORS.border;
     ctx.lineWidth = 0.5;
     for (let i = 0; i <= 4; i++) {
@@ -240,9 +153,9 @@ function TrendChart({ trends }: { trends: { snapshot: TrendSnapshot[]; time_seri
       ctx.stroke();
       const val = maxScore - (i / 4) * range;
       ctx.fillStyle = COLORS.dim;
-      ctx.font = '10px IBM Plex Mono';
+      ctx.font = `9px ${fontName}`;
       ctx.textAlign = 'right';
-      ctx.fillText(val.toFixed(1), pad.left - 8, y + 3);
+      ctx.fillText(val.toFixed(1), pad.left - 6, y + 3);
     }
 
     // Zero line
@@ -260,11 +173,11 @@ function TrendChart({ trends }: { trends: { snapshot: TrendSnapshot[]; time_seri
 
     // Date labels
     ctx.fillStyle = COLORS.dim;
-    ctx.font = '10px IBM Plex Mono';
+    ctx.font = `9px ${fontName}`;
     ctx.textAlign = 'center';
     const step = Math.max(1, Math.floor(allDates.length / 6));
     for (let i = 0; i < allDates.length; i += step) {
-      ctx.fillText(allDates[i].slice(5), xScale(allDates[i]), h - 4);
+      ctx.fillText(allDates[i].slice(5), xScale(allDates[i]), h - pad.bottom + 16);
     }
 
     // Series lines
@@ -273,17 +186,6 @@ function TrendChart({ trends }: { trends: { snapshot: TrendSnapshot[]; time_seri
       const pts = s.points;
       if (pts.length < 2) return;
 
-      // Area fill
-      ctx.beginPath();
-      ctx.moveTo(xScale(pts[0].date), yScale(pts[0].score));
-      for (let i = 1; i < pts.length; i++) ctx.lineTo(xScale(pts[i].date), yScale(pts[i].score));
-      ctx.lineTo(xScale(pts[pts.length - 1].date), pad.top + gh);
-      ctx.lineTo(xScale(pts[0].date), pad.top + gh);
-      ctx.closePath();
-      ctx.fillStyle = color + '08';
-      ctx.fill();
-
-      // Line
       ctx.beginPath();
       ctx.moveTo(xScale(pts[0].date), yScale(pts[0].score));
       for (let i = 1; i < pts.length; i++) ctx.lineTo(xScale(pts[i].date), yScale(pts[i].score));
@@ -307,19 +209,19 @@ function TrendChart({ trends }: { trends: { snapshot: TrendSnapshot[]; time_seri
   }, [draw]);
 
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 mb-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-sm font-semibold text-nxt-text">Trend Detection</h3>
-        <span className="text-[10px] font-mono text-nxt-dim tracking-widest uppercase">14 day window</span>
+    <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 20, marginBottom: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>Trend Detection</div>
+        <div style={{ fontSize: 9, fontFamily: FONT, color: COLORS.dim, letterSpacing: 1 }}>14 DAY WINDOW</div>
       </div>
-      <div ref={containerRef} className="w-full">
+      <div ref={containerRef} style={{ width: '100%' }}>
         <canvas ref={canvasRef} />
       </div>
-      <div className="flex flex-wrap gap-4 mt-3">
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 10 }}>
         {trends.time_series.map((s, idx) => (
-          <div key={s.cluster_id} className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-sm" style={{ background: TREND_COLORS[idx % TREND_COLORS.length] }} />
-            <span className="text-xs text-nxt-muted">{s.label.replace(/in (Manufacturing|Logistics)/i, '').trim()}</span>
+          <div key={s.cluster_id} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: TREND_COLORS[idx % TREND_COLORS.length] }} />
+            <span style={{ fontSize: 10, color: COLORS.muted }}>{s.label.replace(/in (Manufacturing|Logistics)/i, '').trim()}</span>
           </div>
         ))}
       </div>
@@ -327,43 +229,19 @@ function TrendChart({ trends }: { trends: { snapshot: TrendSnapshot[]; time_seri
   );
 }
 
-/* --- Loading skeleton --- */
-function BriefingSkeleton() {
-  return (
-    <div className="max-w-[900px] mx-auto px-6 py-10">
-      <div className="h-4 w-32 rounded bg-nxt-card shimmer mb-8" />
-      {[1, 2, 3].map(i => (
-        <div key={i} className="bg-nxt-surface border border-nxt-border rounded-nxt-md p-6 mb-4">
-          <div className="h-3 w-48 rounded bg-nxt-card shimmer mb-4" />
-          <div className="h-4 w-full rounded bg-nxt-card shimmer mb-3" />
-          <div className="h-4 w-3/4 rounded bg-nxt-card shimmer" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/* --- Main Briefing Page --- */
+/* ─── Main Briefing Page ─── */
 export default function BriefingPage() {
   const [data, setData] = useState<BriefingData | null>(null);
-  const [learning, setLearning] = useState<BrainLearning | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchBriefing = async () => {
       try {
-        const [briefingResponse, brainResponse] = await Promise.all([
-          fetch('/api/briefing'),
-          fetch('/api/brain/sync?limit=120'),
-        ]);
-        if (!briefingResponse.ok) throw new Error('Failed to fetch briefing');
-        const json = await briefingResponse.json();
+        const response = await fetch('/api/briefing');
+        if (!response.ok) throw new Error('Failed to fetch briefing');
+        const json = await response.json();
         setData(json);
-        if (brainResponse.ok) {
-          const brainJson = await brainResponse.json();
-          setLearning(brainJson.learning ?? null);
-        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
@@ -373,24 +251,27 @@ export default function BriefingPage() {
     fetchBriefing();
   }, []);
 
-  if (loading) return <BriefingSkeleton />;
+  if (loading) {
+    return (
+      <div style={{ background: COLORS.bg, color: COLORS.text, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ fontFamily: FONT, fontSize: 13, color: COLORS.muted }}>loading briefing...</div>
+      </div>
+    );
+  }
 
   if (error || !data) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-nxt-red text-sm mb-2">Unable to load briefing</div>
-          <div className="text-nxt-muted text-xs">{error}</div>
-        </div>
+      <div style={{ background: COLORS.bg, color: COLORS.text, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ fontFamily: FONT, fontSize: 13, color: COLORS.red }}>{error || 'unable to load briefing'}</div>
       </div>
     );
   }
 
   const briefing = data.briefing;
-  const insightAccents = [COLORS.accent, COLORS.green, COLORS.amber];
+  const sectionColors = [COLORS.cyan, COLORS.gold, COLORS.green];
 
   // Merge regions
-  const riskColorMap: Record<string, string> = { critical: '#ef4444', high: '#f97316', elevated: '#f59e0b', moderate: '#eab308', low: '#22c55e' };
+  const riskColorMap: Record<string, string> = { critical: '#ff4444', high: '#ff8800', elevated: '#ffb800', moderate: '#ffd700', low: '#00ff88' };
   const regionMap: Record<string, { name: string; signal_count: number; risk_level: string; industries: string[] }> = {};
   for (const r of briefing.regions) {
     if (!regionMap[r.name]) {
@@ -405,253 +286,91 @@ export default function BriefingPage() {
   const mergedRegions = Object.values(regionMap).sort((a, b) => b.signal_count - a.signal_count);
 
   return (
-    <PageTransition>
-    <div className="min-h-screen bg-nxt-bg">
-      <div className="max-w-[1240px] mx-auto px-6 py-10 pb-20">
+    <div style={{ background: COLORS.bg, color: COLORS.text, minHeight: '100vh' }}>
+      {/* ── Nav bar ── */}
+      <div style={{
+        position: 'sticky', top: 0, zIndex: 100,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '12px 24px', borderBottom: `1px solid ${COLORS.border}`,
+        background: 'rgba(10,14,20,0.9)', backdropFilter: 'blur(12px)',
+        fontFamily: FONT,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <span style={{ color: COLORS.cyan, fontSize: 11, letterSpacing: 1, borderBottom: `1px solid ${COLORS.cyan}` }}>
+            ◎ BRIEFING
+          </span>
+          <Link href="/map" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>◇ MAP</Link>
+          <Link href="/conferences" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>◆ EVENTS</Link>
+          <Link href="/industry" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>◫ INDUSTRY</Link>
+          <Link href="/vendors" style={{ color: COLORS.dim, fontSize: 11, textDecoration: 'none', letterSpacing: 1 }}>▦ VENDORS</Link>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <span style={{ fontSize: 10, color: COLORS.dim }}>{briefing.total_signals} signals</span>
+          <span style={{ fontSize: 10, color: COLORS.dim, letterSpacing: 2 }}>{'NXT'} {'//'} {'LINK'}</span>
+        </div>
+      </div>
 
-        <section className="mb-10 border-b border-[rgba(138,160,255,0.12)] pb-8">
-          <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr] xl:items-end">
-            <div className="slide-up">
-              <p className="section-kicker mb-4">Daily Briefing</p>
-              <h1 className="max-w-[820px] text-[clamp(2.8rem,6vw,5.6rem)] font-bold leading-[0.95] tracking-[-0.04em] text-nxt-text">
-                Start with the short
-                <br />
-                operating read.
-              </h1>
-              <p className="mt-5 max-w-[640px] text-base leading-8 text-nxt-secondary">
-                This is the plain-language layer of NXT//LINK. It turns global industrial and tech movement into El Paso relevance, local opportunity, and the next move to make.
-              </p>
-            </div>
-            <div className="slide-up grid gap-px overflow-hidden border border-[rgba(138,160,255,0.12)] bg-[rgba(138,160,255,0.12)]" style={{ animationDelay: '0.08s' }}>
-              {[
-                ['Signals tracked', briefing.total_signals.toLocaleString()],
-                ['Last update', formatDate(briefing.generated_at)],
-                ['Top stories', String(briefing.top_insights.slice(0, 3).length)],
-              ].map(([label, value]) => (
-                <div key={label} className="bg-[rgba(10,13,22,0.96)] px-5 py-4">
-                  <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">{label}</div>
-                  <div className="mt-2 text-xl font-mono font-bold text-nxt-text">{value}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="mt-6 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[rgba(12,30,23,0.58)] border border-[rgba(39,209,127,0.16)] w-fit">
-            <div className="w-1.5 h-1.5 rounded-full bg-nxt-green live-pulse" />
-            <span className="text-xs font-mono text-nxt-muted uppercase tracking-[0.18em]">Monitoring live</span>
-          </div>
-        </section>
+      {/* ── Content ── */}
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px 80px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
-        <section className="mb-8 grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            ['Hottest industry', learning?.summary?.hottestIndustry ?? 'Loading...', learning?.industryMomentum?.[0] ? `${learning.industryMomentum[0].signalCount} signals behind it` : ''],
-            ['Hottest place', learning?.summary?.hottestLocation ?? 'Loading...', learning?.locationMomentum?.[0] ? `${learning.locationMomentum[0].signalCount} signals behind it` : ''],
-            ['Top company', learning?.summary?.highestPriorityCompany ?? 'Loading...', learning?.companyPriority?.[0] ? `${learning.companyPriority[0].signalCount} linked signals` : ''],
-            ['Strongest source', learning?.summary?.strongestSource ?? 'Loading...', learning?.sourceScores?.[0] ? `${Math.round(learning.sourceScores[0].trustScore * 100)} trust score` : ''],
-          ].map(([label, value, hint]) => (
-            <div key={label} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
-              <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">{label}</div>
-              <div className="mt-3 text-xl font-semibold text-nxt-text break-words">{value}</div>
-              <div className="mt-2 text-xs text-nxt-muted">{hint}</div>
-            </div>
-          ))}
-        </section>
+        {/* ── TOP 3 INSIGHTS ── */}
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: 10, fontFamily: FONT, color: COLORS.cyan, letterSpacing: 2, marginBottom: 20, fontWeight: 600 }}>
+            TODAY&apos;S BRIEFING
+          </div>
 
-        <section className="mb-8 grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
-            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Source quality</div>
-            <div className="mt-3 text-xl font-semibold text-nxt-text">{briefing.source_ops?.strongest_source ?? 'Loading...'}</div>
-            <div className="mt-2 text-xs text-nxt-muted">Strongest source feeding the current briefing set</div>
-          </div>
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
-            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Duplicates filtered</div>
-            <div className="mt-3 text-xl font-semibold text-nxt-text">{briefing.source_ops?.duplicates_filtered ?? 0}</div>
-            <div className="mt-2 text-xs text-nxt-muted">Repeated or near-duplicate signals removed before briefing selection</div>
-          </div>
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
-            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Low evidence discarded</div>
-            <div className="mt-3 text-xl font-semibold text-nxt-text">{briefing.source_ops?.low_evidence_discarded ?? 0}</div>
-            <div className="mt-2 text-xs text-nxt-muted">Thin signals downgraded or dropped before they reached the top stories</div>
-          </div>
-        </section>
-
-        <section className="mb-8 grid gap-4 xl:grid-cols-3">
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 xl:col-span-2 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
-            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Local relevance summary</div>
-            <div className="mt-4 space-y-3">
-              {(briefing.local_relevance_summary ?? []).map((item) => (
-                <div key={item} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 text-sm leading-6 text-nxt-secondary transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
-                  {item}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
-            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-nxt-dim">Action queue</div>
-            <div className="mt-4 space-y-3">
-              {(briefing.action_queue ?? []).slice(0, 4).map((item) => (
-                <div key={`${item.signalId}-${item.action}`} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
-                  <div className="text-xs uppercase tracking-[0.16em] text-nxt-green">{item.action.replace(/-/g, ' ')}</div>
-                  <div className="mt-2 text-sm font-semibold text-nxt-text">{item.title}</div>
-                  <div className="mt-2 text-[11px] leading-5 text-nxt-secondary">{item.whyNow}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* TOP 3 INSIGHTS */}
-        <div className="mb-8 grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
           {briefing.top_insights.slice(0, 3).map((insight, i) => {
-            const accent = insightAccents[i] || COLORS.accent;
+            const accent = sectionColors[i] || COLORS.cyan;
             return (
               <div
                 key={insight.rank}
-                className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-6 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5 slide-up"
-                style={{ animationDelay: `${i * 0.08}s`, borderLeftWidth: 3, borderLeftColor: accent }}
+                style={{
+                  background: COLORS.surface,
+                  border: `1px solid ${COLORS.border}`,
+                  borderLeft: `3px solid ${accent}`,
+                  borderRadius: 10,
+                  padding: '24px 24px 20px',
+                  marginBottom: 16,
+                }}
               >
-                {/* Meta row */}
-                <div className="flex items-center gap-3 mb-4">
-                  <div
-                    className="w-7 h-7 rounded-md flex items-center justify-center text-sm font-bold font-mono"
-                    style={{ background: accent + '14', color: accent }}
-                  >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: 6,
+                    background: accent + '18', color: accent,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 14, fontWeight: 700, fontFamily: FONT,
+                  }}>
                     {insight.rank}
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-nxt-muted">
-                    <span className="px-2 py-0.5 rounded-full bg-nxt-card border border-nxt-border text-nxt-secondary">
-                      {insight.industry}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full text-nxt-dim" style={{ background: signalTypeColor(insight.signal_type) + '14', color: signalTypeColor(insight.signal_type) }}>
-                      {insight.signal_type.replace(/_/g, ' ')}
-                    </span>
-                    <span className="text-nxt-dim font-mono">{insight.signal_count} signals</span>
+                  <div style={{ fontSize: 10, fontFamily: FONT, color: COLORS.muted, letterSpacing: 1, textTransform: 'uppercase' }}>
+                    {insight.industry} &middot; {insight.signal_type.replace(/_/g, ' ')} &middot; {insight.signal_count} signals
                   </div>
                 </div>
 
-                {/* Full news headline */}
-                <h3 className="text-base font-semibold text-nxt-text leading-snug mb-2">
-                  {insight.title}
-                </h3>
-
-                {/* Source + problem tag */}
-                <div className="flex items-center gap-2 mb-4">
-                  {insight.source && (
-                    <span className="text-[11px] text-nxt-muted">
-                      {insight.source} &middot; {formatDate(insight.discovered_at || '')}
-                    </span>
-                  )}
-                  {insight.problem_label && (
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-nxt-card border border-nxt-border text-nxt-red">
-                      {insight.problem_label}
-                    </span>
-                  )}
-                </div>
-
-                {/* What's happening — the real summary */}
-                <p className="text-[13px] leading-relaxed text-nxt-secondary mb-4 pl-3 border-l-2 border-nxt-border">
+                <div style={{ fontSize: 14, lineHeight: 1.6, color: COLORS.text, marginBottom: 16 }}>
                   {insight.what_is_happening}
-                </p>
+                </div>
 
-                {/* 4-section grid */}
-                <div className="grid grid-cols-1 gap-3">
-                  {/* El Paso Impact */}
-                  <div className="p-4 bg-[rgba(13,18,30,0.42)] border border-[rgba(138,160,255,0.08)]">
-                    <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-amber mb-3 uppercase">El Paso Impact</div>
-                    <ul className="space-y-2">
-                      {(insight.el_paso_impact || [insight.why_it_matters]).map((bullet, idx) => (
-                        <li key={idx} className="flex items-start gap-2">
-                          <span className="text-nxt-amber mt-0.5 shrink-0 text-[10px]">&#x25B6;</span>
-                          <span className="text-[12px] leading-snug text-nxt-secondary">{bullet}</span>
-                        </li>
-                      ))}
-                    </ul>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                  <div>
+                    <div style={{ fontSize: 9, fontFamily: FONT, color: COLORS.amber, letterSpacing: 1, marginBottom: 6, fontWeight: 600 }}>WHY IT MATTERS</div>
+                    <div style={{ fontSize: 12, lineHeight: 1.6, color: COLORS.text, opacity: 0.85 }}>{insight.why_it_matters}</div>
                   </div>
-
-                  {/* Watch For */}
-                  <div className="p-4 bg-[rgba(13,18,30,0.42)] border border-[rgba(138,160,255,0.08)]">
-                    <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-purple mb-3 uppercase">Watch For</div>
-                    <ul className="space-y-2">
-                      {(insight.watch_for || ['Follow up in 1-2 weeks']).map((bullet, idx) => (
-                        <li key={idx} className="flex items-start gap-2">
-                          <span className="text-nxt-purple mt-0.5 shrink-0 text-[10px]">&#x25B6;</span>
-                          <span className="text-[12px] leading-snug text-nxt-secondary">{bullet}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* What To Do */}
-                  <div className="p-4 bg-[rgba(13,18,30,0.42)] border border-[rgba(138,160,255,0.08)]">
-                    <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-green mb-3 uppercase">What To Do</div>
-                    <ul className="space-y-2">
-                      {(insight.action_bullets || [insight.where_its_going]).map((bullet, idx) => (
-                        <li key={idx} className="flex items-start gap-2">
-                          <span className="text-nxt-green mt-0.5 shrink-0 text-[10px]">&#x25B6;</span>
-                          <span className="text-[12px] leading-snug text-nxt-secondary">{bullet}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="p-4 bg-[rgba(13,18,30,0.42)] border border-[rgba(138,160,255,0.08)]">
-                    <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-accent mb-3 uppercase">Why NXT//LINK ranked this</div>
-                    <div className="space-y-2 text-[12px] leading-snug text-nxt-secondary">
-                      <div>El Paso relevance {Math.round((insight.el_paso_relevance ?? 0) * 100)}</div>
-                      <div>Opportunity score {Math.round((insight.opportunity_score ?? 0) * 100)}</div>
-                      <div>Urgency {Math.round((insight.urgency_score ?? 0) * 100)}</div>
-                      <div>{insight.confidence_explanation}</div>
-                      {insight.what_changed_vs_last_week && <div className="text-nxt-dim">{insight.what_changed_vs_last_week}</div>}
-                    </div>
-                  </div>
-
-                  {/* Who Can Help */}
-                  <div className="p-4 bg-[rgba(13,18,30,0.42)] border border-[rgba(138,160,255,0.08)]">
-                    <div className="text-[10px] font-mono font-semibold tracking-wider text-nxt-cyan mb-3 uppercase">Who Can Help</div>
-                    {insight.vendors && insight.vendors.length > 0 ? (
-                      <ul className="space-y-2">
-                        {insight.vendors.map((v) => (
-                          <li key={v.name} className="flex items-start gap-2">
-                            <span className="text-nxt-cyan mt-0.5 shrink-0 text-[10px]">&#x25B6;</span>
-                            <span className="text-[12px] leading-snug text-nxt-secondary">
-                              <span className="font-medium text-nxt-text">{v.name}</span>
-                              <span className="text-nxt-dim ml-1">{v.category}</span>
-                              {v.iker_score && <span className="text-nxt-accent font-mono ml-1">IKER {v.iker_score}</span>}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-[12px] text-nxt-dim italic">No vendors linked — potential gap</p>
-                    )}
+                  <div>
+                    <div style={{ fontSize: 9, fontFamily: FONT, color: COLORS.green, letterSpacing: 1, marginBottom: 6, fontWeight: 600 }}>WHERE IT&apos;S GOING</div>
+                    <div style={{ fontSize: 12, lineHeight: 1.6, color: COLORS.text, opacity: 0.85 }}>{insight.where_its_going}</div>
                   </div>
                 </div>
 
-                {(insight.tracked_technologies?.length || insight.suggested_targets?.length || insight.who_it_matters_to?.length) ? (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {(insight.tracked_technologies ?? []).slice(0, 3).map((item) => (
-                      <span key={item} className="rounded-full bg-nxt-card px-2.5 py-1 text-[11px] text-nxt-secondary">{item}</span>
-                    ))}
-                    {(insight.suggested_targets ?? []).slice(0, 3).map((item) => (
-                      <span key={item} className="rounded-full border border-[rgba(39,209,127,0.16)] bg-[rgba(12,30,23,0.4)] px-2.5 py-1 text-[11px] text-nxt-green">{item}</span>
-                    ))}
-                    {(insight.who_it_matters_to ?? []).slice(0, 2).map((item) => (
-                      <span key={item} className="rounded-full border border-nxt-border px-2.5 py-1 text-[11px] text-nxt-dim">{item}</span>
-                    ))}
-                  </div>
-                ) : null}
-
-                {/* Source signals */}
                 {insight.related_signals.length > 0 && (
-                  <div className="border-t border-nxt-border mt-5 pt-4">
-                    <div className="text-[10px] font-mono text-nxt-dim tracking-wider mb-3 uppercase">Source signals</div>
-                    <div className="space-y-1.5">
-                      {insight.related_signals.slice(0, 3).map((sig) => (
-                        <div key={sig.id} className="flex justify-between items-center">
-                          <span className="text-xs text-nxt-muted truncate max-w-[80%]">{sig.title}</span>
-                          <span className="text-[10px] font-mono text-nxt-dim ml-3 shrink-0">{formatDate(sig.discovered_at)}</span>
-                        </div>
-                      ))}
-                    </div>
+                  <div style={{ borderTop: `1px solid ${COLORS.border}`, paddingTop: 12, marginTop: 16 }}>
+                    <div style={{ fontSize: 9, fontFamily: FONT, color: COLORS.dim, letterSpacing: 1, marginBottom: 8 }}>SOURCE SIGNALS</div>
+                    {insight.related_signals.slice(0, 3).map((sig) => (
+                      <div key={sig.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{ fontSize: 11, color: COLORS.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80%' }}>{sig.title}</span>
+                        <span style={{ fontSize: 10, fontFamily: FONT, color: COLORS.dim, whiteSpace: 'nowrap', marginLeft: 8 }}>{formatDate(sig.discovered_at)}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -659,151 +378,70 @@ export default function BriefingPage() {
           })}
         </div>
 
-        {/* Two-column: Regions + Stats */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          {/* REGIONS */}
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
-            <h3 className="text-sm font-semibold text-nxt-text mb-1">Supply Chain Risk by Region</h3>
-            <p className="text-[11px] text-nxt-dim mb-4">Based on signal volume, disruptions, and regulatory activity</p>
-            <div className="space-y-2">
-              {mergedRegions.slice(0, 6).map((r) => {
-                const riskColor = riskColorMap[r.risk_level] || COLORS.green;
-                return (
-                  <div key={r.name} className="flex items-center justify-between p-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
-                    <div className="flex items-center gap-3">
-                      <div className="w-1 h-8 rounded-full" style={{ background: riskColor }} />
-                      <div>
-                        <div className="text-sm font-medium text-nxt-text">{r.name}</div>
-                        <div className="text-[11px] text-nxt-muted">{r.industries.slice(0, 2).join(', ')}</div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm font-mono font-semibold text-nxt-text">{r.signal_count}</div>
-                      <div className="text-[10px] font-mono uppercase" style={{ color: riskColor }}>{r.risk_level}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+        {/* ── REGIONS — clear labels ── */}
+        <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 20, marginBottom: 20 }}>
+          <div style={{ fontSize: 10, fontFamily: FONT, color: COLORS.dim, letterSpacing: 2, marginBottom: 14, fontWeight: 600 }}>
+            REGIONAL SUPPLY CHAIN RISK
           </div>
-
-          {/* SIGNAL STATS */}
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
-            <h3 className="text-sm font-semibold text-nxt-text mb-4">Signal Breakdown</h3>
-            <div className="mb-5">
-              <div className="text-[10px] font-mono text-nxt-dim tracking-wider mb-3 uppercase">By Type</div>
-              <div className="space-y-2">
-                {Object.entries(briefing.signal_stats.by_type)
-                  .sort(([, a], [, b]) => b - a)
-                  .slice(0, 6)
-                  .map(([type, count]) => {
-                    const max = Math.max(...Object.values(briefing.signal_stats.by_type));
-                    return (
-                      <div key={type}>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="text-nxt-secondary">{type.replace(/_/g, ' ')}</span>
-                          <span className="font-mono text-nxt-muted">{count}</span>
-                        </div>
-                        <div className="h-1.5 rounded-full bg-nxt-card overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all duration-500"
-                            style={{ width: `${(count / max) * 100}%`, background: COLORS.accent }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            </div>
-            <div>
-              <div className="text-[10px] font-mono text-nxt-dim tracking-wider mb-3 uppercase">By Industry</div>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(briefing.signal_stats.by_industry)
-                  .sort(([, a], [, b]) => b - a)
-                  .slice(0, 8)
-                  .map(([ind, count]) => (
-                    <div key={ind} className="px-2.5 py-1 rounded-md bg-nxt-card border border-nxt-border-subtle text-xs">
-                      <span className="text-nxt-secondary">{ind}</span>
-                      <span className="text-nxt-dim font-mono ml-1.5">{count}</span>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
+            {mergedRegions.map((r) => {
+              const riskColor = riskColorMap[r.risk_level] || COLORS.green;
+              return (
+                <div key={r.name} style={{
+                  background: COLORS.card, borderRadius: 8, padding: '14px 16px',
+                  borderLeft: `3px solid ${riskColor}`,
+                }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, marginBottom: 8 }}>{r.name}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, fontFamily: FONT, color: COLORS.dim }}>SIGNALS</span>
+                    <span style={{ fontSize: 13, fontFamily: FONT, color: COLORS.cyan, fontWeight: 600 }}>{r.signal_count}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 10, fontFamily: FONT, color: COLORS.dim }}>RISK LEVEL</span>
+                    <span style={{ fontSize: 10, fontFamily: FONT, color: riskColor, fontWeight: 700, textTransform: 'uppercase' }}>{r.risk_level}</span>
+                  </div>
+                  {r.industries.length > 0 && (
+                    <div style={{ fontSize: 10, color: COLORS.muted, marginTop: 8, borderTop: `1px solid ${COLORS.border}`, paddingTop: 6 }}>
+                      {r.industries.slice(0, 3).join(', ')}
                     </div>
-                  ))}
-              </div>
-            </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* TREND CHART */}
-        {briefing.trends && <TrendChart trends={briefing.trends} />}
+        {/* ── TREND CHART ── */}
+        {briefing.trends && <TendencyDetection trends={briefing.trends} />}
 
-        <section className="mt-5 grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
-            <h3 className="text-sm font-semibold text-nxt-text mb-4">Top opportunities</h3>
-            <div className="space-y-3">
-              {(briefing.top_opportunities ?? []).slice(0, 4).map((item) => (
-                <div key={item.signalId} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
-                  <div className="text-[10px] uppercase tracking-[0.16em] text-nxt-green">{item.opportunityType.replace(/-/g, ' ')}</div>
-                  <div className="mt-2 text-sm font-semibold text-nxt-text">{item.title}</div>
-                  <div className="mt-2 text-[11px] text-nxt-secondary">{item.localPathway}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
-            <h3 className="text-sm font-semibold text-nxt-text mb-4">Recurring companies</h3>
-            <div className="space-y-2">
-              {(briefing.memory?.recurringCompanies ?? []).slice(0, 5).map((item) => (
-                <div key={item.name} className="flex items-center justify-between rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-3 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
-                  <div className="text-sm text-nxt-text">{item.name}</div>
-                  <div className="text-xs font-mono text-nxt-dim">{item.repeatCount}x</div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
-            <h3 className="text-sm font-semibold text-nxt-text mb-4">Recurring technologies</h3>
-            <div className="space-y-2">
-              {(briefing.memory?.recurringTechnologies ?? []).slice(0, 5).map((item) => (
-                <div key={item.name} className="flex items-center justify-between rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-3 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
-                  <div className="text-sm text-nxt-text">{item.name}</div>
-                  <div className="text-xs font-mono text-nxt-dim">{item.repeatCount}x</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* RECENT SIGNALS */}
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-nxt-accent/5">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-semibold text-nxt-text">Recent Signals</h3>
-            <span className="text-xs text-nxt-muted">{briefing.recent_signals.length} latest</span>
-          </div>
-          <div className="max-h-[400px] overflow-y-auto scrollbar-thin space-y-1.5">
+        {/* ── RECENT SIGNALS ── */}
+        <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14, color: COLORS.text }}>Recent Signals</div>
+          <div style={{ maxHeight: 400, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
             {briefing.recent_signals.slice(0, 15).map((signal) => (
               <div
                 key={signal.id}
-                className="flex items-center justify-between p-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]"
-                style={{ borderLeftWidth: 3, borderLeftColor: signalTypeColor(signal.signal_type) }}
+                style={{
+                  background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 6,
+                  padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                }}
               >
-                <div className="flex-1 min-w-0 mr-3">
-                  <div className="text-[13px] font-medium text-nxt-text truncate">{signal.title}</div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span
-                      className="text-[10px] px-1.5 py-0.5 rounded"
-                      style={{ background: signalTypeColor(signal.signal_type) + '14', color: signalTypeColor(signal.signal_type) }}
-                    >
-                      {signal.signal_type.replace(/_/g, ' ')}
-                    </span>
-                    <span className="text-[11px] text-nxt-dim">{signal.industry}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: COLORS.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {signal.title}
+                  </div>
+                  <div style={{ fontSize: 10, fontFamily: FONT, color: COLORS.dim }}>
+                    {signal.signal_type.replace(/_/g, ' ')} &middot; {signal.industry}
                   </div>
                 </div>
-                <div className="text-[11px] font-mono text-nxt-dim shrink-0">{formatDate(signal.discovered_at)}</div>
+                <div style={{ textAlign: 'right', marginLeft: 12, whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: 10, fontFamily: FONT, color: COLORS.dim }}>{formatDate(signal.discovered_at)}</div>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </div>
     </div>
-    </PageTransition>
   );
 }
