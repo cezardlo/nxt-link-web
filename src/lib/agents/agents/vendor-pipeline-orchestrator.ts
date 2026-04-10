@@ -29,6 +29,7 @@ import {
 } from '@/db/queries/exhibitors';
 import { getDb, isSupabaseConfigured } from '@/db/client';
 import { matchExhibitorsToVendors } from './vendor-matcher';
+import { syncEnrichedToVendors, createVendorsFromUnmatchedExhibitors } from '@/db/queries/vendors';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -37,9 +38,11 @@ export type PipelinePhase =
   | 'scrape_exhibitors'
   | 'persist_exhibitors'
   | 'match_vendors'
+  | 'create_new_vendors'
   | 'clean_data'
   | 'enrich_vendors'
   | 'persist_vendors'
+  | 'sync_to_vendors'
   | 'score_vendors'
   | 'score_logistics_leads'
   | 'link_kg'
@@ -59,7 +62,9 @@ export type PipelineReport = {
   marketplace_sync: SyncReport | null;
   exhibitors_persisted: number;
   vendors_matched: number;
+  vendors_created_from_exhibitors: number;
   vendors_persisted: number;
+  vendors_synced_to_main: number;
   stale_data_cleaned: number;
   total_duration_ms: number;
   started_at: string;
@@ -81,9 +86,11 @@ const ALL_PHASES: PipelinePhase[] = [
   'scrape_exhibitors',
   'persist_exhibitors',
   'match_vendors',
+  'create_new_vendors',
   'clean_data',
   'enrich_vendors',
   'persist_vendors',
+  'sync_to_vendors',
   'score_vendors',
   'score_logistics_leads',
   'link_kg',
@@ -118,7 +125,9 @@ export async function runVendorPipeline(
   let syncReport: SyncReport | null = null;
   let exhibitorsPersisted = 0;
   let vendorsMatched = 0;
+  let vendorsCreatedFromExhibitors = 0;
   let vendorsPersisted = 0;
+  let vendorsSyncedToMain = 0;
   let staleDataCleaned = 0;
 
   // ── Phase 0: Discover new conferences ──────────────────────────────────────
@@ -192,6 +201,14 @@ export async function runVendorPipeline(
       return 0;
     });
     console.log(`[vendor-pipeline] Matched ${vendorsMatched} exhibitor-vendor links`);
+  }
+
+  // ── Phase 2c: Create vendors from unmatched exhibitors ───────────────────
+
+  if (phases.includes('create_new_vendors') && !dryRun) {
+    console.log('[vendor-pipeline] Phase 2c: Creating vendors from unmatched exhibitors...');
+    vendorsCreatedFromExhibitors = await createVendorsFromUnmatchedExhibitors();
+    console.log(`[vendor-pipeline] Created ${vendorsCreatedFromExhibitors} new vendors from exhibitors`);
   }
 
   // ── Phase 3: Clean data ────────────────────────────────────────────────────
@@ -271,6 +288,14 @@ export async function runVendorPipeline(
     console.log(`[vendor-pipeline] Persisted ${vendorsPersisted} enriched vendors`);
   }
 
+  // ── Phase 5b: Sync enriched vendors → main vendors table ─────────────────
+
+  if (phases.includes('sync_to_vendors') && !dryRun) {
+    console.log('[vendor-pipeline] Phase 5b: Syncing enriched vendors to main vendors table...');
+    vendorsSyncedToMain = await syncEnrichedToVendors();
+    console.log(`[vendor-pipeline] Synced ${vendorsSyncedToMain} enriched vendors to main table`);
+  }
+
   // ── Phase 6: Score vendors ─────────────────────────────────────────────────
 
   if (phases.includes('score_vendors') && !dryRun) {
@@ -330,7 +355,9 @@ export async function runVendorPipeline(
     marketplace_sync: syncReport,
     exhibitors_persisted: exhibitorsPersisted,
     vendors_matched: vendorsMatched,
+    vendors_created_from_exhibitors: vendorsCreatedFromExhibitors,
     vendors_persisted: vendorsPersisted,
+    vendors_synced_to_main: vendorsSyncedToMain,
     stale_data_cleaned: staleDataCleaned,
     total_duration_ms: Date.now() - start,
     started_at: startedAt,
@@ -367,7 +394,7 @@ export async function runVendorMaintenance(): Promise<PipelineReport> {
 
 export async function runVendorEnrichmentCycle(max = 20): Promise<PipelineReport> {
   return runVendorPipeline({
-    phases: ['enrich_vendors', 'persist_vendors', 'score_vendors', 'score_logistics_leads', 'sync_marketplace'],
+    phases: ['enrich_vendors', 'persist_vendors', 'sync_to_vendors', 'score_vendors', 'score_logistics_leads', 'sync_marketplace'],
     maxEnrichments: max,
     enrichOnlyNew: true,
   });

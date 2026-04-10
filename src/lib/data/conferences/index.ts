@@ -20,6 +20,7 @@ import { LOGISTICS_TRANSPORT_CONFERENCES } from './logistics-transport';
 import { FINANCE_PRO_CONFERENCES } from './finance-pro';
 import { CONSUMER_AGRI_CONFERENCES } from './consumer-agri';
 import { GLOBAL_ADDITION_CONFERENCES } from './global-additions';
+import { WORLDWIDE_SCRAPE_CONFERENCES } from './worldwide-scrape-targets';
 import { classifyAll } from './geo-classifier';
 import type { Continent } from './types';
 
@@ -36,6 +37,7 @@ const RAW_CONFERENCES = [
   ...FINANCE_PRO_CONFERENCES,
   ...CONSUMER_AGRI_CONFERENCES,
   ...GLOBAL_ADDITION_CONFERENCES,
+  ...WORLDWIDE_SCRAPE_CONFERENCES,
 ];
 
 // ── Deduplicate by ID ───────────────────────────────────────────────────────

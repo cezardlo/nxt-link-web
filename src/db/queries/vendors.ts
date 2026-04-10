@@ -149,6 +149,152 @@ export async function getVendorById(id: string): Promise<VendorRecord | null> {
   }
 }
 
+/**
+ * Sync enriched_vendors → vendors table.
+ * Promotes enriched vendor data into the main vendors table that the UI reads.
+ * Sets status to 'approved' so they appear in queries.
+ * Returns number of vendors synced.
+ */
+export async function syncEnrichedToVendors(): Promise<number> {
+  if (!isSupabaseConfigured()) return 0;
+
+  const db = getDb({ admin: true });
+
+  // Fetch all enriched vendors
+  const { data: enriched, error: fetchErr } = await db
+    .from('enriched_vendors')
+    .select('*')
+    .gte('confidence', 0.3)
+    .order('confidence', { ascending: false });
+
+  if (fetchErr || !enriched || enriched.length === 0) return 0;
+
+  // Get existing vendor IDs to avoid overwriting manually curated data
+  const { data: existing } = await db
+    .from('vendors')
+    .select('id');
+  const existingIds = new Set((existing ?? []).map((v: { id: string }) => v.id));
+
+  let synced = 0;
+
+  for (let i = 0; i < enriched.length; i += 50) {
+    const batch = enriched.slice(i, i + 50).map((ev) => {
+      const id = ev.id as string;
+      const isExisting = existingIds.has(id);
+
+      return {
+        id,
+        company_name: ev.canonical_name,
+        company_url: ev.official_domain ? `https://${ev.official_domain.replace(/^https?:\/\//, '')}` : null,
+        description: ev.description || null,
+        primary_category: (ev.industries as string[])?.[0] || ev.vendor_type || 'General',
+        sector: ev.vendor_type || 'General',
+        tags: ev.products || [],
+        industries: ev.industries || [],
+        hq_country: ev.country || null,
+        employee_count_range: ev.employee_estimate || null,
+        confidence: ev.confidence ?? 0.5,
+        // Only set status to approved for new records; leave existing status unchanged
+        ...(!isExisting ? { status: 'approved' } : {}),
+      };
+    });
+
+    const { error } = await db
+      .from('vendors')
+      .upsert(batch, { onConflict: 'id' });
+
+    if (error) {
+      console.error('[vendors] sync error:', error.message);
+    } else {
+      synced += batch.length;
+    }
+  }
+
+  console.log(`[vendors] Synced ${synced} enriched vendors to main vendors table`);
+  return synced;
+}
+
+/**
+ * Create vendor stubs for unmatched exhibitors.
+ * When an exhibitor doesn't match any existing vendor, create a new
+ * vendor record with status='discovered' so it enters the enrichment pipeline.
+ * Returns number of new vendors created.
+ */
+export async function createVendorsFromUnmatchedExhibitors(): Promise<number> {
+  if (!isSupabaseConfigured()) return 0;
+
+  const db = getDb({ admin: true });
+
+  // Get all exhibitor names
+  const { data: exhibitors } = await db
+    .from('exhibitors')
+    .select('normalized_name, website, category, description, conference_name')
+    .gte('confidence', 0.4)
+    .order('confidence', { ascending: false });
+
+  if (!exhibitors || exhibitors.length === 0) return 0;
+
+  // Get existing vendor names for dedup
+  const { data: existingVendors } = await db
+    .from('vendors')
+    .select('company_name');
+  const existingNames = new Set(
+    (existingVendors ?? []).map((v: { company_name: string }) => v.company_name.toLowerCase().trim()),
+  );
+
+  // Get enriched vendor names too
+  const { data: enrichedVendors } = await db
+    .from('enriched_vendors')
+    .select('canonical_name');
+  const enrichedNames = new Set(
+    (enrichedVendors ?? []).map((v: { canonical_name: string }) => v.canonical_name.toLowerCase().trim()),
+  );
+
+  // Deduplicate exhibitors and filter out already-known vendors
+  const seen = new Set<string>();
+  const newVendors: Array<Record<string, unknown>> = [];
+
+  for (const exh of exhibitors) {
+    const name = (exh.normalized_name as string).trim();
+    const key = name.toLowerCase();
+    if (seen.has(key) || existingNames.has(key) || enrichedNames.has(key)) continue;
+    if (name.length < 3) continue; // skip garbage
+    seen.add(key);
+
+    const id = `exh-${key.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
+    newVendors.push({
+      id,
+      company_name: name,
+      company_url: (exh.website as string) || null,
+      description: (exh.description as string) || `Discovered at ${exh.conference_name}`,
+      primary_category: (exh.category as string) || 'General',
+      sector: (exh.category as string) || 'General',
+      tags: [],
+      confidence: 0.4,
+      status: 'approved',
+    });
+  }
+
+  if (newVendors.length === 0) return 0;
+
+  let created = 0;
+  for (let i = 0; i < newVendors.length; i += 50) {
+    const batch = newVendors.slice(i, i + 50);
+    const { error } = await db
+      .from('vendors')
+      .upsert(batch, { onConflict: 'id' });
+
+    if (error) {
+      console.error('[vendors] create-from-exhibitors error:', error.message);
+    } else {
+      created += batch.length;
+    }
+  }
+
+  console.log(`[vendors] Created ${created} new vendors from unmatched exhibitors`);
+  return created;
+}
+
 /** Upsert vendors into Supabase (for seed script) */
 export async function upsertVendors(vendors: VendorRecord[]): Promise<number> {
   if (!isSupabaseConfigured()) return 0;
