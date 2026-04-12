@@ -1,0 +1,29 @@
+# NxtLink Pipeline — Python Scraping Toolkit
+# Install: pip install -r requirements.txt
+
+# Web Scraping
+httpx[http2]>=0.28
+beautifulsoup4>=4.12
+lxml>=5.0
+
+# Browser Rendering (JS-heavy sites)
+playwright>=1.49
+
+# Anti-Detection & Retry
+fake-useragent>=2.0
+tenacity>=9.0
+
+# Data Extraction
+extruct>=0.17
+
+# Fuzzy Matching (vendor dedup)
+rapidfuzz>=3.10
+
+# PDF Parsing
+pymupdf>=1.24
+
+# Supabase
+supabase>=2.0
+
+# Logging
+loguru>=0.7
