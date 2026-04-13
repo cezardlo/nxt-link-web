@@ -33,8 +33,7 @@ export async function POST(req: Request) {
     const signalSummary = (signals || []).map(s => s.title).join('; ');
     const recentMemory = (memories || []).map(m => JSON.stringify(m.content)).join(' ');
 
-    const prompt = 'You are the Observer — NXT LINK intelligence system in El Paso TX. ' +
-      'Analyze these recent signals and provide: 1) Top 3 patterns you see, ' +
+    const userPrompt = 'Analyze these recent signals and provide: 1) Top 3 patterns you see, ' +
       '2) What this means for El Paso cross-border logistics, ' +
       '3) One emerging opportunity, 4) One risk to watch. ' +
       'Previous observations: ' + recentMemory.substring(0, 500) + '. ' +
@@ -42,16 +41,20 @@ export async function POST(req: Request) {
       'Return JSON with fields: patterns (array of {title, detail}), ' +
       'el_paso_impact (string), opportunity (string), risk (string), confidence (0-100).';
 
-    const analysis = await askJarvis(prompt);
+    const result = await askJarvis({
+      agent: 'observer-v2',
+      systemPrompt: 'You are the Observer, the NXT LINK intelligence system in El Paso TX. You analyze signals and find patterns.',
+      userPrompt,
+    });
 
     await db.from('swarm_memory').insert({
       agent_name: 'observer-v2',
       entry_type: 'observation',
-      content: { analysis: analysis.substring(0, 1000), signal_count: (signals || []).length, industry, timestamp: new Date().toISOString() },
+      content: { analysis: result.text.substring(0, 1000), signal_count: (signals || []).length, industry, timestamp: new Date().toISOString() },
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     });
 
-    return NextResponse.json({ ok: true, analysis, signal_count: (signals || []).length });
+    return NextResponse.json({ ok: true, analysis: result.text, signal_count: (signals || []).length });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ error: msg }, { status: 500 });
