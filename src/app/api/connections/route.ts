@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     const { data: vendors } = await db
       .from('vendors')
       .select('company_name, description, industries, hq_country')
-      .eq('status', 'approved')
+      .eq('status', 'active')
       .limit(20);
 
     const signalList = (signals || []).map(s => s.industry + ': ' + s.title).join('; ');
