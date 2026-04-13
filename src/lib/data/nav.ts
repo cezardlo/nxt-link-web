@@ -9,11 +9,9 @@ export type NavItem = {
 };
 
 export const NAV_ITEMS: NavItem[] = [
-  { href: '/briefing',    label: 'BRIEFING',    icon: '◎', color: '#00d4ff', description: 'Supply chain intelligence' },
-  { href: '/map',         label: 'MAP',         icon: '◇', color: '#ffd700', description: 'Global signal map' },
-  { href: '/conferences', label: 'EVENTS',      icon: '◆', color: '#00ff88', description: 'Industry conferences' },
-  { href: '/industry',    label: 'INDUSTRY',    icon: '◫', color: '#a855f7', description: 'Sector intelligence' },
-  { href: '/vendors',     label: 'VENDORS',     icon: '▦', color: '#3b82f6', description: 'Vendor intelligence' },
+  { href: '/briefing', label: 'BRIEFING', icon: '◎', color: '#00d4ff', description: 'Top 3 intelligence today' },
+  { href: '/intel',    label: 'SIGNALS',  icon: '◇', color: '#ffd700', description: 'Browse all signals' },
+  { href: '/vendors',  label: 'VENDORS',  icon: '▦', color: '#3b82f6', description: 'Vendor directory' },
 ];
 
 export const INDUSTRIES = [

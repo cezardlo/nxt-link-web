@@ -5,18 +5,13 @@ import { usePathname } from 'next/navigation';
 import { TranslateButton } from './TranslateButton';
 
 const NAV_ITEMS = [
-  { href: '/', label: 'Today' },
-  { href: '/discover', label: 'Discover' },
-  { href: '/intel', label: 'Radar' },
-  { href: '/sector', label: 'Sectors' },
-  { href: '/observe', label: 'Observer' },
+  { href: '/briefing', label: 'Briefing' },
+  { href: '/intel', label: 'Signals' },
   { href: '/vendors', label: 'Vendors' },
-  { href: '/map', label: 'Map' },
-  { href: '/explore', label: 'Explore' },
 ];
 
 function isActive(pathname: string, href: string): boolean {
-  if (href === '/') return pathname === '/';
+  if (href === '/briefing') return pathname === '/' || pathname === '/briefing';
   return pathname === href || pathname.startsWith(href + '/');
 }
 
@@ -65,12 +60,6 @@ export function DockNav() {
         <div className="flex shrink-0 items-center gap-3">
           <TranslateButton />
           <div className="hidden h-5 w-px bg-nxt-border sm:block" />
-          <Link
-            href="/command"
-            className="hidden rounded-full border border-[rgba(138,160,255,0.16)] bg-[rgba(88,113,255,0.1)] px-3 py-1.5 text-[12px] font-medium text-nxt-accent-light md:inline-flex"
-          >
-            Command
-          </Link>
           <div className="flex items-center gap-2 rounded-full border border-[rgba(39,209,127,0.18)] bg-[rgba(39,209,127,0.08)] px-2.5 py-1">
             <div className="h-2 w-2 rounded-full bg-nxt-green live-pulse" />
             <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-nxt-secondary">Live</span>
