@@ -10,6 +10,7 @@ export type NavItem = {
 
 export const NAV_ITEMS: NavItem[] = [
   { href: '/briefing', label: 'BRIEFING', icon: '◎', color: '#00d4ff', description: 'Top 3 intelligence today' },
+  { href: '/markets',  label: 'MARKETS',  icon: '◫', color: '#10b981', description: 'Where markets are heading' },
   { href: '/intel',    label: 'SIGNALS',  icon: '◇', color: '#ffd700', description: 'Browse all signals' },
   { href: '/vendors',  label: 'VENDORS',  icon: '▦', color: '#3b82f6', description: 'Vendor directory' },
 ];

@@ -6,6 +6,7 @@ import { TranslateButton } from './TranslateButton';
 
 const NAV_ITEMS = [
   { href: '/briefing', label: 'Briefing' },
+  { href: '/markets', label: 'Markets' },
   { href: '/intel', label: 'Signals' },
   { href: '/vendors', label: 'Vendors' },
 ];
