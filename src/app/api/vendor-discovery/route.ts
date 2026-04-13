@@ -51,6 +51,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
+
 export async function POST(req: Request) {
   try {
     const db = getSupabase();
@@ -78,21 +79,21 @@ export async function POST(req: Request) {
 
     if (allVendors.length > 0) {
       const rows = allVendors.map(v => ({
-        name: v.name,
-        country: v.country,
-        website: v.website || null,
+        company_name: v.name,
+        hq_country: v.country,
+        company_url: v.website || null,
         description: v.problem_solved,
-        sectors: v.sectors,
+        industries: v.sectors,
         nxt_link_fit: v.nxt_link_fit,
         fit_reason: v.fit_reason,
         source: 'startus-insights',
         status: 'discovered',
       }));
-      await db.from('vendors').upsert(rows, { onConflict: 'name' });
+      await db.from('vendors').upsert(rows, { onConflict: 'company_name' });
 
       await db.from('swarm_memory').insert({
-        agent: 'vendor-discovery',
-        memory_type: 'discovery_run',
+        agent_name: 'vendor-discovery',
+        entry_type: 'discovery_run',
         content: { vendors_found: allVendors.length, sources: sources.length, timestamp: new Date().toISOString() },
         expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
       });
