@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { askJarvis } from '@/lib/ai/provider';
+import { getCache, setCache, logQuota } from '@/lib/cache';
 
 function getSupabase() {
   return createClient(
@@ -9,8 +10,22 @@ function getSupabase() {
   );
 }
 
-export async function GET() {
+const CACHE_KEY = 'jarvis-briefing';
+const CACHE_TTL = 240; // 4 hours in minutes
+
+export async function GET(req: Request) {
   try {
+    const url = new URL(req.url);
+    const fresh = url.searchParams.get('fresh') === 'true';
+
+    // Check cache first (unless cron asks for fresh)
+    if (!fresh) {
+      const cached = await getCache<{ briefing: string; meta: Record<string, unknown> }>(CACHE_KEY);
+      if (cached) {
+        return NextResponse.json({ ok: true, ...cached, from_cache: true });
+      }
+    }
+
     const db = getSupabase();
 
     const { data: signals } = await db
@@ -29,13 +44,13 @@ export async function GET() {
     const { count } = await db
       .from('vendors')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'approved');
+      .eq('status', 'active');
 
     const signalBrief = (signals || []).map(s => s.industry + ': ' + s.title + ' [' + (s.direction || '?') + ']').join('; ');
     const memoryBrief = (memories || []).map(m => m.agent_name + ': ' + JSON.stringify(m.content).substring(0, 200)).join('; ');
 
     const userPrompt = 'Cover: 1) Top 3 things happening right now, 2) What the swarm agents found, ' +
-      '3) One thing to act on today, 4) Vendor pipeline status (' + (count || 0) + ' approved vendors). ' +
+      '3) One thing to act on today, 4) Vendor pipeline status (' + (count || 0) + ' active vendors). ' +
       'Recent signals: ' + signalBrief.substring(0, 2000) + '. ' +
       'Agent memories: ' + memoryBrief.substring(0, 1000) + '. ' +
       'Keep it under 300 words. Start with Good morning/afternoon based on El Paso time (MST).';
@@ -46,8 +61,9 @@ export async function GET() {
       userPrompt,
     });
 
-    return NextResponse.json({
-      ok: true,
+    await logQuota('jarvis-briefing', '/api/jarvis-briefing', result.input_tokens || 0, result.output_tokens || 0);
+
+    const response = {
       briefing: result.text,
       meta: {
         signals_analyzed: (signals || []).length,
@@ -55,7 +71,11 @@ export async function GET() {
         agent_memories: (memories || []).length,
         generated_at: new Date().toISOString(),
       },
-    });
+    };
+
+    await setCache(CACHE_KEY, response, CACHE_TTL);
+
+    return NextResponse.json({ ok: true, ...response });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ error: msg }, { status: 500 });
