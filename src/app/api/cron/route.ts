@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getTodayQuotaCount } from '@/lib/cache';
 
 export const maxDuration = 60;
 
@@ -21,19 +22,23 @@ export async function GET(req: Request) {
   }
 
   const base = process.env.NEXT_PUBLIC_SITE_URL || 'https://nxt-link-real.vercel.app';
-  const results = [];
+  const quotaUsed = await getTodayQuotaCount();
+    if (quotaUsed > 40) {
+      return NextResponse.json({ error: 'Daily quota limit reached (' + quotaUsed + ' calls). Skipping cron to save free tier.', ran_at: new Date().toISOString() });
+    }
+    const results: string[] = [];
 
   // Step 1: Observer scans for patterns
-  results.push(await callEndpoint(base, '/api/observer-v2', 'POST', { industry: 'logistics', limit: 20 }));
+  results.push(await callEndpoint(base, '/api/observer-v2?fresh=true', 'POST', { industry: 'logistics', limit: 20 }));
 
   // Step 2: Scrape new sources for vendors (5 at a time)
   results.push(await callEndpoint(base, '/api/scrape-sources', 'POST', { limit: 5 }));
 
   // Step 3: Connection engine finds matches
-  results.push(await callEndpoint(base, '/api/connections', 'POST', { domain: 'logistics' }));
+  results.push(await callEndpoint(base, '/api/connections?fresh=true', 'POST', { domain: 'logistics' }));
 
   // Step 4: Generate morning briefing
-  results.push(await callEndpoint(base, '/api/jarvis-briefing'));
+  results.push(await callEndpoint(base, '/api/jarvis-briefing?fresh=true'));
 
   return NextResponse.json({
     ok: true,
