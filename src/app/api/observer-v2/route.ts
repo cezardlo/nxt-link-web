@@ -16,10 +16,11 @@ export async function POST(req: Request) {
     const fresh = url.searchParams.get('fresh') === 'true';
     if (!fresh) {
       const cached = await getCache<Record<string, unknown>>('observer-v2');
-      if (cached) const _resp = NextResponse.json({ ok: true, ...cached, from_cache: true });
-    await setCache('observer-v2', _resp, 240);
+      if (cached) return NextResponse.json({ ok: true, ...cached, from_cache: true });
     await logQuota('observer-v2', '/api/observer-v2', result.input_tokens || 0, result.output_tokens || 0);
-    return NextResponse.json(_resp);
+    const responseData = { ok: true, analysis: result.text, generated_at: new Date().toISOString() };
+    await setCache('observer-v2', responseData, 240);
+    return NextResponse.json(responseData);
     }
     const db = getSupabase();
     const body = await req.json().catch(() => ({}));
