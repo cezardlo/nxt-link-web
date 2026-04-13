@@ -13,7 +13,6 @@ export async function POST(req: Request) {
   try {
     const db = getSupabase();
     const body = await req.json().catch(() => ({}));
-    const signalId = body.signal_id;
     const domain = body.domain || 'logistics';
 
     const { data: signals } = await db
@@ -32,15 +31,19 @@ export async function POST(req: Request) {
     const signalList = (signals || []).map(s => s.industry + ': ' + s.title).join('; ');
     const vendorList = (vendors || []).map(v => v.company_name + ' (' + v.hq_country + '): ' + (v.description || '')).join('; ');
 
-    const prompt = 'You are the Connection Engine for NXT LINK. ' +
-      'Find cross-domain connections between these signals and vendors. ' +
+    const userPrompt = 'Find cross-domain connections between these signals and vendors. ' +
       'Signals: ' + signalList.substring(0, 2000) + '. ' +
       'Vendors: ' + vendorList.substring(0, 1000) + '. ' +
       'Return JSON array of connections: [{signal_title, vendor_name, connection_type, ' +
       'explanation, strength (1-10), action_suggestion}]. Find at least 3 connections.';
 
-    const result = await askJarvis(prompt);
-    const connections = parseJarvisJSON(result);
+    const result = await askJarvis({
+      agent: 'connection-engine',
+      systemPrompt: 'You are the Connection Engine for NXT LINK. You find cross-domain connections between intelligence signals and vendor capabilities.',
+      userPrompt,
+    });
+
+    const connections = parseJarvisJSON(result.text, []);
 
     await db.from('swarm_memory').insert({
       agent_name: 'connection-engine',
