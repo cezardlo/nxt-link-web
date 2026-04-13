@@ -69,8 +69,12 @@ export async function POST(req: Request) {
         'Return ONLY the JSON array, no markdown.';
 
       try {
-        const aiResult = await askJarvis(prompt);
-        const vendors = parseJarvisJSON(aiResult) as DiscoveredVendor[];
+        const aiResult = await askJarvis({
+          agent: 'vendor-discovery',
+          systemPrompt: 'You are a venture scout for NXT LINK. Analyze URLs and extract company data as JSON arrays.',
+          userPrompt: prompt,
+        });
+        const vendors = parseJarvisJSON(aiResult.text, []) as DiscoveredVendor[];
         if (Array.isArray(vendors)) {
           allVendors.push(...vendors.filter(v => v.nxt_link_fit !== 'skip'));
         }
