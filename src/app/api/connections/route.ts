@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { askJarvis, parseJarvisJSON } from '@/lib/ai/provider';
+import { getCache, setCache, logQuota } from '@/lib/cache';
 
 function getSupabase() {
   return createClient(
@@ -11,6 +12,12 @@ function getSupabase() {
 
 export async function POST(req: Request) {
   try {
+    const url = new URL(req.url);
+    const fresh = url.searchParams.get('fresh') === 'true';
+    if (!fresh) {
+      const cached = await getCache<Record<string, unknown>>('connections');
+      if (cached) return NextResponse.json({ ok: true, ...cached, from_cache: true });
+    }
     const db = getSupabase();
     const body = await req.json().catch(() => ({}));
     const domain = body.domain || 'logistics';
