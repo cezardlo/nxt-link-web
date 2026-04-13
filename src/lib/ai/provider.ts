@@ -40,6 +40,22 @@ export interface JarvisAIResponse {
   request_count_today: number;
 }
 
+
+async function withRetry<T>(fn: () => Promise<T>, retries = 3, delayMs = 2000): Promise<T> {
+  for (let i = 0; i < retries; i++) {
+    try { return await fn(); }
+    catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (i < retries - 1 && (msg.includes('503') || msg.includes('UNAVAILABLE') || msg.includes('high demand'))) {
+        await new Promise(r => setTimeout(r, delayMs * Math.pow(2, i)));
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw new Error('withRetry exhausted');
+}
+
 export async function askJarvis(req: JarvisAIRequest): Promise<JarvisAIResponse> {
   if (!GEMINI_KEY) {
     throw new Error('GEMINI_API_KEY not set. Get a free key at https://aistudio.google.com/apikey');
@@ -51,7 +67,7 @@ export async function askJarvis(req: JarvisAIRequest): Promise<JarvisAIResponse>
   }
   const ai = new GoogleGenAI({ apiKey: GEMINI_KEY });
   const model = req.model || DEFAULT_MODEL;
-  const response = await ai.models.generateContent({
+  const response = await withRetry(() => ai.models.generateContent({
     model,
     contents: req.userPrompt,
     config: {
@@ -59,7 +75,7 @@ export async function askJarvis(req: JarvisAIRequest): Promise<JarvisAIResponse>
       maxOutputTokens: req.maxTokens || 2000,
       temperature: req.temperature ?? 0.7,
     },
-  });
+  }));
   incrementRequestCount(req.agent);
   const text = response.text || '';
   const usage = response.usageMetadata;
