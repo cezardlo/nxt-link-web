@@ -34,19 +34,21 @@ export async function GET() {
     const signalBrief = (signals || []).map(s => s.industry + ': ' + s.title + ' [' + (s.direction || '?') + ']').join('; ');
     const memoryBrief = (memories || []).map(m => m.agent_name + ': ' + JSON.stringify(m.content).substring(0, 200)).join('; ');
 
-    const prompt = 'You are Jarvis, the AI briefing voice for NXT LINK — a logistics intelligence startup in El Paso TX. ' +
-      'Give Cessar (the founder) his daily briefing. Be direct, insightful, slightly witty. ' +
-      'Cover: 1) Top 3 things happening right now, 2) What the swarm agents found, ' +
+    const userPrompt = 'Cover: 1) Top 3 things happening right now, 2) What the swarm agents found, ' +
       '3) One thing to act on today, 4) Vendor pipeline status (' + (count || 0) + ' approved vendors). ' +
       'Recent signals: ' + signalBrief.substring(0, 2000) + '. ' +
       'Agent memories: ' + memoryBrief.substring(0, 1000) + '. ' +
       'Keep it under 300 words. Start with Good morning/afternoon based on El Paso time (MST).';
 
-    const briefing = await askJarvis(prompt);
+    const result = await askJarvis({
+      agent: 'jarvis-briefing',
+      systemPrompt: 'You are Jarvis, the AI briefing voice for NXT LINK, a logistics intelligence startup in El Paso TX. Give Cessar (the founder) his daily briefing. Be direct, insightful, slightly witty.',
+      userPrompt,
+    });
 
     return NextResponse.json({
       ok: true,
-      briefing,
+      briefing: result.text,
       meta: {
         signals_analyzed: (signals || []).length,
         vendor_count: count || 0,
