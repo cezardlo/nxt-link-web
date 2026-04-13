@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { askJarvis, parseJarvisJSON } from '@/lib/ai/provider';
+import { getCache, setCache, logQuota } from '@/lib/cache';
 
 function getSupabase() {
   return createClient(
@@ -74,7 +75,8 @@ export async function POST(req: Request) {
           systemPrompt: 'You are a venture scout for NXT LINK. Analyze URLs and extract company data as JSON arrays.',
           userPrompt: prompt,
         });
-        const vendors = parseJarvisJSON(aiResult.text, []) as DiscoveredVendor[];
+        await logQuota('vendor-discovery', '/api/vendor-discovery', aiResult.input_tokens || 0, aiResult.output_tokens || 0);
+    const vendors = parseJarvisJSON(aiResult.text, []) as DiscoveredVendor[];
         if (Array.isArray(vendors)) {
           allVendors.push(...vendors.filter(v => v.nxt_link_fit !== 'skip'));
         }
