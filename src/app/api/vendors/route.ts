@@ -1,10 +1,10 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/client';
+import { getSupabaseClient } from '@/lib/supabase/client';
 
 
 export async function GET(request: Request) {
-  const supabase = createClient();
+  const supabase = getSupabaseClient({ admin: true });
   const { searchParams } = new URL(request.url);
 
   const sector = searchParams.get('sector');
@@ -28,33 +28,31 @@ export async function GET(request: Request) {
 
   query = query.range(offset, offset + limit - 1);
 
+  // Use count queries with proper limits for aggregation
   const [vendorsResult, countResult, sectorsResult, geoResult] = await Promise.allSettled([
     query,
-    supabase.from('vendors').select('id', { count: 'exact', head: true }),
-    supabase.from('vendors').select('sector').not('sector', 'is', null),
-    supabase.from('vendors').select('continent, hq_country').not('continent', 'is', null),
+    supabase.from('vendors').select('*', { count: 'exact', head: true }),
+    supabase.rpc('get_vendor_sector_counts'),
+    supabase.rpc('get_vendor_geo_counts'),
   ]);
 
   const vendors = vendorsResult.status === 'fulfilled' ? vendorsResult.value.data || [] : [];
   const total = countResult.status === 'fulfilled' ? countResult.value.count || 0 : 0;
 
-  // Sector counts
+  // Sector counts from RPC
   const sectorRows = sectorsResult.status === 'fulfilled' ? sectorsResult.value.data || [] : [];
-  const sectorCounts: Record<string, number> = {};
-  for (const row of sectorRows) {
-    if (row.sector) sectorCounts[row.sector] = (sectorCounts[row.sector] || 0) + 1;
-  }
-  const sectors = Object.entries(sectorCounts)
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count);
+  const sectors = sectorRows.map((r: { sector: string; count: number }) => ({
+    name: r.sector,
+    count: Number(r.count),
+  }));
 
-  // Geo counts
+  // Geo counts from RPC
   const geoRows = geoResult.status === 'fulfilled' ? geoResult.value.data || [] : [];
   const continentCounts: Record<string, number> = {};
   const countryCounts: Record<string, number> = {};
   for (const row of geoRows) {
-    if (row.continent) continentCounts[row.continent] = (continentCounts[row.continent] || 0) + 1;
-    if (row.hq_country) countryCounts[row.hq_country] = (countryCounts[row.hq_country] || 0) + 1;
+    if (row.continent) continentCounts[row.continent] = (continentCounts[row.continent] || 0) + Number(row.count);
+    if (row.country) countryCounts[row.country] = (countryCounts[row.country] || 0) + Number(row.count);
   }
 
   return NextResponse.json({
