@@ -23,7 +23,7 @@ export function DockNav() {
 
   return (
     <nav className={`fixed left-0 right-0 top-0 z-[100] ${isHome ? 'px-4 pt-4 sm:px-6' : 'glass'}`}>
-      <div className={`${isHome ? 'mx-auto max-w-[1110px] rounded-full border border-[#e2e6f2] bg-white/92 px-5 shadow-[0_18px_55px_rgba(52,64,110,0.14)] backdrop-blur-xl sm:px-6' : 'mx-auto max-w-[1240px] px-4 sm:px-6'}`}>
+      <div className={`${isHome ? 'mx-auto max-w-[1110px] rounded-full border border-[#e2e6f2] bg-white/[0.92] px-5 shadow-[0_18px_55px_rgba(52,64,110,0.14)] backdrop-blur-xl sm:px-6' : 'mx-auto max-w-[1240px] px-4 sm:px-6'}`}>
         <div className="flex h-16 items-center justify-between">
         <Link href="/" className="flex shrink-0 items-center gap-3">
           <div className={`flex h-9 w-9 items-center justify-center rounded-xl border ${isHome ? 'border-[#dbe1f2] bg-[#f4f6fb]' : 'border-[rgba(138,160,255,0.22)] bg-[linear-gradient(180deg,rgba(88,113,255,0.26),rgba(88,113,255,0.12))]'}`}>
