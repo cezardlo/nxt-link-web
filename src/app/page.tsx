@@ -5,7 +5,6 @@ import {
   ClipboardCheck,
   Compass,
   Factory,
-  Microscope,
   Radar,
   Search,
   ShieldCheck,
@@ -30,7 +29,7 @@ const processSteps = [
   {
     icon: Radar,
     title: 'Hunt down the market',
-    body: 'We scan beyond Google, trade shows, and the vendors already in someone&apos;s inbox to find machines, apps, AI tools, robotics, and automation that actually fit.',
+    body: "We scan beyond Google, trade shows, and the vendors already in someone's inbox to find machines, apps, AI tools, robotics, and automation that actually fit.",
   },
   {
     icon: SlidersHorizontal,
@@ -198,7 +197,7 @@ export default function Home() {
                 <div key={step.title} className="border border-nxt-border bg-[rgba(14,19,34,0.78)] p-6">
                   <Icon className="h-7 w-7 text-nxt-cyan" />
                   <h3 className="mt-5 text-xl font-semibold text-white">{step.title}</h3>
-                  <p className="mt-3 text-sm leading-7 text-nxt-secondary" dangerouslySetInnerHTML={{ __html: step.body }} />
+                  <p className="mt-3 text-sm leading-7 text-nxt-secondary">{step.body}</p>
                 </div>
               );
             })}
