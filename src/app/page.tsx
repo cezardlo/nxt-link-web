@@ -59,6 +59,25 @@ const audiences = [
 
 const shortlist = ['Machine vision', 'Warehouse robotics', 'AI forecasting', 'IoT sensors', 'Workflow software'];
 
+const messySources = [
+  'Google tabs',
+  'Trade shows',
+  'Sales emails',
+  'Old vendors',
+  'Random demos',
+  'Spreadsheets',
+  'Internal opinions',
+  'Pitch decks',
+];
+
+const vendorPack = [
+  { name: 'Vendor 01', type: 'Best technical fit', score: 94, color: '#11155f' },
+  { name: 'Vendor 02', type: 'Fastest pilot path', score: 89, color: '#d15aa5' },
+  { name: 'Vendor 03', type: 'Best integration', score: 86, color: '#27a56f' },
+  { name: 'Vendor 04', type: 'Best cost control', score: 82, color: '#f47543' },
+  { name: 'Vendor 05', type: 'Strong backup option', score: 78, color: '#36a9d6' },
+];
+
 export default function Home() {
   return (
     <div className="min-h-screen bg-[#f7f8fb] text-[#111641]">
@@ -142,6 +161,46 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="bg-white px-4 py-20 text-[#111641] sm:px-6 lg:px-8">
+        <div className="mx-auto grid max-w-[1120px] gap-10 lg:grid-cols-[0.78fr_1fr]">
+          <div>
+            <div className="font-mono text-[11px] uppercase tracking-[0.24em] text-[#7f86a8]">Visual summary</div>
+            <h2 className="mt-4 text-4xl font-semibold text-[#11155f] sm:text-5xl">The market is messy. The shortlist is clean.</h2>
+            <p className="mt-5 text-base leading-8 text-[#5c6486]">
+              Your team should not have to sort through random tabs, pitches, and spreadsheets. NXT Link does the hunt and brings back a decision-ready vendor pack.
+            </p>
+          </div>
+          <div className="rounded-[28px] border border-[#e1e5f0] bg-[#f8f9fd] p-5 shadow-[0_26px_80px_rgba(52,64,110,0.12)]">
+            <div className="grid gap-4 lg:grid-cols-[1fr_auto_1fr]">
+              <div className="rounded-2xl bg-white p-4">
+                <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.22em] text-[#a0a8c4]">Before NXT Link</div>
+                <div className="flex flex-wrap gap-2">
+                  {messySources.map((item) => (
+                    <span key={item} className="rounded-full border border-[#e5e8f2] bg-[#fbfcff] px-3 py-2 text-xs font-medium text-[#6c7392]">
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="grid place-items-center px-2 text-[#d15aa5]">
+                <ArrowRight className="h-8 w-8" />
+              </div>
+              <div className="rounded-2xl bg-[#11155f] p-4 text-white shadow-[0_20px_50px_rgba(17,21,95,0.22)]">
+                <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.22em] text-white/50">After NXT Link</div>
+                <div className="space-y-2">
+                  {['Top 5 vendors', 'Scorecard', 'Pilot plan', 'Demo script', 'Decision guide'].map((item, index) => (
+                    <div key={item} className="flex items-center justify-between rounded-lg bg-white/10 px-3 py-2 text-sm">
+                      <span>{item}</span>
+                      <span className="font-mono text-[#ffb8df]">0{index + 1}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="bg-[#070812] px-4 py-20 text-nxt-text sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-[1120px] gap-10 lg:grid-cols-[0.78fr_1fr]">
           <div>
@@ -199,6 +258,38 @@ export default function Home() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-[#f8f9fd] px-4 py-20 text-[#111641] sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1120px]">
+          <div className="mb-10 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+            <div>
+              <div className="font-mono text-[11px] uppercase tracking-[0.24em] text-[#7f86a8]">What you receive</div>
+              <h2 className="mt-4 text-4xl font-semibold text-[#11155f] sm:text-5xl">A Top 5 vendor pack your team can actually use.</h2>
+            </div>
+            <p className="max-w-md text-sm leading-7 text-[#5c6486]">
+              More visuals, less mystery: each vendor comes with a role, fit score, and next test so the team knows what to do next.
+            </p>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-5">
+            {vendorPack.map((vendor) => (
+              <div key={vendor.name} className="rounded-[22px] border border-[#e1e5f0] bg-white p-4 shadow-[0_18px_50px_rgba(52,64,110,0.1)]">
+                <div className="mb-5 h-24 rounded-2xl border border-[#edf0f7] bg-[linear-gradient(135deg,#ffffff,#eef3ff)] p-3">
+                  <div className="h-full rounded-xl" style={{ background: `linear-gradient(135deg, ${vendor.color}, #ffffff)` }} />
+                </div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#9aa2bd]">{vendor.name}</div>
+                <h3 className="mt-2 text-base font-semibold text-[#11155f]">{vendor.type}</h3>
+                <div className="mt-4 h-2 overflow-hidden rounded-full bg-[#eef1f8]">
+                  <div className="h-full rounded-full" style={{ width: `${vendor.score}%`, backgroundColor: vendor.color }} />
+                </div>
+                <div className="mt-2 flex items-center justify-between text-xs text-[#6c7392]">
+                  <span>Fit score</span>
+                  <span className="font-mono font-semibold text-[#11155f]">{vendor.score}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
