@@ -1,8 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { MouseEvent } from 'react';
 import { usePathname } from 'next/navigation';
 import { TranslateButton } from './TranslateButton';
+
+const PRIVATE_PATHS = ['/markets', '/intel'];
+const ACCESS_CODE = '4444';
+const STORAGE_KEY = 'nxt-link-private-access';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Home' },
@@ -15,6 +20,23 @@ const NAV_ITEMS = [
 function isActive(pathname: string, href: string): boolean {
   if (href === '/') return pathname === '/';
   return pathname === href || pathname.startsWith(href + '/');
+}
+
+function requestPrivateAccess(event: MouseEvent<HTMLAnchorElement>, href: string) {
+  if (!PRIVATE_PATHS.includes(href)) return;
+  if (window.localStorage.getItem(STORAGE_KEY) === ACCESS_CODE) return;
+
+  event.preventDefault();
+  const password = window.prompt('Enter password to open this private section');
+  if (password?.trim() === ACCESS_CODE) {
+    window.localStorage.setItem(STORAGE_KEY, ACCESS_CODE);
+    window.location.href = href;
+    return;
+  }
+
+  if (password !== null) {
+    window.alert('Wrong password.');
+  }
 }
 
 export function DockNav() {
@@ -48,6 +70,7 @@ export function DockNav() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={(event) => requestPrivateAccess(event, item.href)}
                 className={`rounded-full px-3 py-1.5 text-[13px] font-medium transition-all duration-150 ${
                   isHome
                     ? active
@@ -90,6 +113,7 @@ export function DockNav() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={(event) => requestPrivateAccess(event, item.href)}
                 className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-medium transition-all ${
                   isHome
                     ? active
