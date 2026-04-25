@@ -1,16 +1,38 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { MouseEvent, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 // icons passed as props via NavItem.icon — no lucide import needed here
+
+const PRIVATE_PATHS = ['/markets', '/intel'];
+const ACCESS_CODE = '4444';
+const STORAGE_KEY = 'nxt-link-private-access';
 
 export type NavItem = {
   name: string;
   url: string;
   icon: React.ElementType;
 };
+
+function requestPrivateAccess(event: MouseEvent<HTMLAnchorElement>, url: string): boolean {
+  if (!PRIVATE_PATHS.includes(url)) return true;
+  if (window.localStorage.getItem(STORAGE_KEY) === ACCESS_CODE) return true;
+
+  event.preventDefault();
+  const password = window.prompt('Enter password to open this private section');
+  if (password?.trim() === ACCESS_CODE) {
+    window.localStorage.setItem(STORAGE_KEY, ACCESS_CODE);
+    window.location.href = url;
+    return true;
+  }
+
+  if (password !== null) {
+    window.alert('Wrong password.');
+  }
+  return false;
+}
 
 export function NavBar({ items, className }: { items: NavItem[]; className?: string }) {
   const [activeTab, setActiveTab] = useState(items[0]?.name ?? '');
@@ -50,7 +72,9 @@ export function NavBar({ items, className }: { items: NavItem[]; className?: str
             <Link
               key={item.name}
               href={item.url}
-              onClick={() => setActiveTab(item.name)}
+              onClick={(event) => {
+                if (requestPrivateAccess(event, item.url)) setActiveTab(item.name);
+              }}
               className="relative flex-1 flex flex-col items-center justify-center h-full cursor-pointer"
               style={{ textDecoration: 'none' }}
             >
