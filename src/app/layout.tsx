@@ -23,10 +23,23 @@ export const viewport = {
   maximumScale: 1,
 };
 
+const siteDescription = 'NXT Link helps industrial and logistics teams hunt down the right technology, narrow the market to 5 vendors, and test before buying.';
+
 export const metadata: Metadata = {
-  title: 'NXT LINK - Global Tech Intelligence',
-  description: 'Track technology, research, and innovation happening across the planet. From Silicon Valley to Shenzhen, Fort Bliss to Juárez.',
+  title: 'NXT Link - We Hunt. You Test. You Buy Smarter.',
+  description: siteDescription,
   robots: { index: true, follow: true },
+  openGraph: {
+    title: 'NXT Link - We Hunt. You Test. You Buy Smarter.',
+    description: siteDescription,
+    siteName: 'NXT Link',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'NXT Link - We Hunt. You Test. You Buy Smarter.',
+    description: siteDescription,
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
