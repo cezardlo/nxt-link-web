@@ -63,7 +63,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#f7f8fb] text-[#111641]">
       <section className="relative overflow-hidden bg-[linear-gradient(135deg,#f8f9fd_0%,#eef3ff_46%,#f8fbf7_100%)] px-4 pb-20 pt-16 sm:px-6 lg:px-8">
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(17,22,65,0.055)_1px,transparent_1px),linear-gradient(180deg,rgba(17,22,65,0.045)_1px,transparent_1px)] bg-[size:72px_72px]" aria-hidden="true" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(17,22,65,0.055)_1px,transparent_1px),linear-gradient(180deg,rgba(17,22,65,0.045)_1px,transparent_1px)] [background-size:72px_72px]" aria-hidden="true" />
         <div className="relative mx-auto grid min-h-[calc(100vh-8rem)] max-w-[1240px] items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="max-w-3xl pb-8 pt-12 lg:pt-0">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#d9def1] bg-white/80 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.22em] text-[#666fb0] shadow-sm backdrop-blur">
