@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { TranslateButton } from './TranslateButton';
 
 const NAV_ITEMS = [
+  { href: '/', label: 'Home' },
   { href: '/briefing', label: 'Briefing' },
   { href: '/markets', label: 'Markets' },
   { href: '/intel', label: 'Signals' },
@@ -12,7 +13,7 @@ const NAV_ITEMS = [
 ];
 
 function isActive(pathname: string, href: string): boolean {
-  if (href === '/briefing') return pathname === '/' || pathname === '/briefing';
+  if (href === '/') return pathname === '/';
   return pathname === href || pathname.startsWith(href + '/');
 }
 
@@ -34,7 +35,7 @@ export function DockNav() {
               NXT<span className="mx-0.5 text-nxt-muted">{'//'}</span>LINK
             </div>
             <div className="hidden font-mono text-[10px] uppercase tracking-[0.22em] text-nxt-dim sm:block">
-              Global intelligence
+              Tech selection guide
             </div>
           </div>
         </Link>
