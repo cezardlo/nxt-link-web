@@ -2,9 +2,7 @@
 
 import { FormEvent, ReactNode, useEffect, useState } from 'react';
 import { LockKeyhole, ShieldCheck } from 'lucide-react';
-
-const ACCESS_CODE = '4444';
-const STORAGE_KEY = 'nxt-link-private-access';
+import { PRIVATE_ACCESS_CODE, grantPrivateAccess, hasPrivateAccess } from '@/lib/privateAccess';
 
 type AccessGateProps = {
   children: ReactNode;
@@ -18,14 +16,14 @@ export function AccessGate({ children, title = 'Private NXT Link workspace' }: A
   const [error, setError] = useState('');
 
   useEffect(() => {
-    setUnlocked(window.localStorage.getItem(STORAGE_KEY) === ACCESS_CODE);
+    setUnlocked(hasPrivateAccess());
     setReady(true);
   }, []);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (code.trim() === ACCESS_CODE) {
-      window.localStorage.setItem(STORAGE_KEY, ACCESS_CODE);
+    if (code.trim() === PRIVATE_ACCESS_CODE) {
+      grantPrivateAccess();
       setUnlocked(true);
       setError('');
       return;
