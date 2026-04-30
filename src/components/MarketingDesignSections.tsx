@@ -39,7 +39,7 @@ export function MarketingDesignSections() {
               <div className="font-mono text-[11px] uppercase tracking-[0.24em] text-[#7f86a8]">The offer</div>
               <h2 className="mt-4 text-4xl font-semibold text-[#11155f] sm:text-5xl">A guided sprint from problem to proof.</h2>
               <p className="mt-5 text-base leading-8 text-[#5c6486]">
-                NXT Link is not just a list of vendors. It is a structured evaluation engagement that helps operators move from “we need better tech” to “these are the 5 options worth testing.”
+                NXT Link is not just a list of vendors. It is a structured evaluation engagement that helps operators move from "we need better tech" to "these are the 5 options worth testing."
               </p>
             </div>
             <a
