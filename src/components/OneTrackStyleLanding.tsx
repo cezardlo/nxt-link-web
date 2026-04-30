@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -37,7 +38,7 @@ const workflow = [
   {
     step: '1 Capture',
     title: 'Define the buying problem',
-    body: 'We turn “we need better tech” into a clear operational outcome, constraints, and test criteria.',
+    body: 'We turn "we need better tech" into a clear operational outcome, constraints, and test criteria.',
     icon: ClipboardCheck,
   },
   {
@@ -107,7 +108,7 @@ const security = [
   'Clear vendor risk notes',
 ];
 
-function CtaButton({ children, dark = false }: { children: React.ReactNode; dark?: boolean }) {
+function CtaButton({ children, dark = false }: { children: ReactNode; dark?: boolean }) {
   return (
     <Link
       href="mailto:hello@nxtlinktech.com?subject=Find%20my%20Top%205%20vendors"
