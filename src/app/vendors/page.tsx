@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -169,7 +170,7 @@ function SectorTile({ sector, active, onClick }: { sector: CountOption; active: 
   );
 }
 
-function FilterPill({ active, children, onClick }: { active: boolean; children: React.ReactNode; onClick: () => void }) {
+function FilterPill({ active, children, onClick }: { active: boolean; children: ReactNode; onClick: () => void }) {
   return (
     <button
       type="button"
@@ -254,7 +255,7 @@ function TopVendorCard({ vendor, rank }: { vendor: Vendor; rank: number }) {
   );
 }
 
-function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
+function FilterGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="border-b border-white/[0.06] pb-5 last:border-0 last:pb-0">
       <h3 className="mb-3 font-mono text-[10px] uppercase tracking-[0.18em] text-nxt-dim">{title}</h3>
