@@ -30,12 +30,29 @@ export function VendorHuntForm() {
   const [timeline, setTimeline] = useState(timelines[0]);
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const mailto = useMemo(() => encodeMailto(category, problem, timeline, email), [category, problem, timeline, email]);
 
-  function submitRequest() {
-    setSubmitted(true);
-    window.location.href = mailto;
+  async function submitRequest() {
+    setSubmitting(true);
+    setSubmitted(false);
+
+    try {
+      const response = await fetch('/api/vendor-hunt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category, problem, timeline, email }),
+      });
+      const data = await response.json().catch(() => null) as { mailto?: string } | null;
+      setSubmitted(true);
+      window.location.href = data?.mailto || mailto;
+    } catch {
+      setSubmitted(true);
+      window.location.href = mailto;
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -86,9 +103,10 @@ export function VendorHuntForm() {
       <button
         type="button"
         onClick={submitRequest}
-        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#101810] px-5 py-3 text-sm font-semibold text-[#f6f1e8] transition hover:bg-[#233022]"
+        disabled={submitting}
+        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#101810] px-5 py-3 text-sm font-semibold text-[#f6f1e8] transition hover:bg-[#233022] disabled:cursor-wait disabled:opacity-70"
       >
-        Start the hunt
+        {submitting ? 'Starting...' : 'Start the hunt'}
         <ArrowRight className="h-4 w-4" />
       </button>
 
