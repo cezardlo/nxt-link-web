@@ -13,7 +13,6 @@ import {
   Radar,
   Search,
   ShieldCheck,
-  Sparkles,
   Truck,
   Wifi,
 } from 'lucide-react';
