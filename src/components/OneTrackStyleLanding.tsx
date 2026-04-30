@@ -6,7 +6,6 @@ import {
   Bot,
   Boxes,
   BrainCircuit,
-  Building2,
   Camera,
   CheckCircle2,
   Factory,
@@ -29,9 +28,9 @@ const reportRows = [
 ];
 
 const workflow = [
-  { step: '01', title: 'Tell us the problem', body: 'One operation. One goal. One buying decision.', icon: Radar },
-  { step: '02', title: 'We hunt the market', body: 'We find the strongest vendors beyond the obvious names.', icon: Search },
-  { step: '03', title: 'You test the Top 5', body: 'Your team pilots before the budget is locked.', icon: BadgeCheck },
+  { step: '01', title: 'Problem', body: 'One operation. One goal.', icon: Radar },
+  { step: '02', title: 'Hunt', body: 'Scan the market.', icon: Search },
+  { step: '03', title: 'Test', body: 'Pilot the Top 5.', icon: BadgeCheck },
 ];
 
 const useCases = [
@@ -44,6 +43,8 @@ const useCases = [
 ];
 
 const trustItems = ['Transparent criteria', 'Buyer-first guidance', 'Pilot before purchase', 'Top 5 shortlist'];
+const marketDots = ['ERP', 'AMR', 'WMS', 'AI', 'IoT', 'Vision', 'MES', 'TMS', 'RPA', 'AGV', 'CMMS', 'PLC'];
+const pilotSteps = ['Demo script', 'Floor test', 'Scorecard', 'Decision'];
 
 function CtaButton({ children, dark = false, href = 'mailto:hello@nxtlinktech.com?subject=Find%20my%20Top%205%20vendors' }: { children: ReactNode; dark?: boolean; href?: string }) {
   return (
@@ -63,6 +64,129 @@ function CtaButton({ children, dark = false, href = 'mailto:hello@nxtlinktech.co
 
 function SectionLabel({ children, dark = false }: { children: ReactNode; dark?: boolean }) {
   return <p className={`font-mono text-[11px] uppercase tracking-[0.24em] ${dark ? 'text-[#9eaa98]' : 'text-[#65705f]'}`}>{children}</p>;
+}
+
+function RadarVisual() {
+  return (
+    <div className="relative min-h-[430px] overflow-hidden rounded-[2rem] border border-[#c8d6bf]/20 bg-[#172116] p-5 shadow-[0_35px_110px_rgba(0,0,0,0.3)]">
+      <div className="absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#c8d6bf]/10" />
+      <div className="absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#c8d6bf]/14" />
+      <div className="absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#c8d6bf]/20" />
+      <div className="absolute left-1/2 top-1/2 h-px w-[140%] -translate-x-1/2 bg-[#c8d6bf]/10" />
+      <div className="absolute left-1/2 top-1/2 h-[140%] w-px -translate-y-1/2 bg-[#c8d6bf]/10" />
+
+      {marketDots.map((item, index) => {
+        const positions = [
+          'left-[12%] top-[18%]', 'left-[36%] top-[10%]', 'left-[68%] top-[18%]', 'left-[82%] top-[42%]',
+          'left-[72%] top-[72%]', 'left-[42%] top-[82%]', 'left-[15%] top-[68%]', 'left-[24%] top-[43%]',
+          'left-[52%] top-[30%]', 'left-[58%] top-[58%]', 'left-[36%] top-[60%]', 'left-[50%] top-[47%]',
+        ];
+        const selected = index > 6;
+        return (
+          <div key={item} className={`absolute ${positions[index]} -translate-x-1/2 -translate-y-1/2`}>
+            <div className={`rounded-full border px-3 py-1.5 font-mono text-[10px] ${selected ? 'border-[#c8d6bf] bg-[#f6f1e8] text-[#101810]' : 'border-[#c8d6bf]/20 bg-[#f6f1e8]/6 text-[#c8d6bf]'}`}>
+              {item}
+            </div>
+          </div>
+        );
+      })}
+
+      <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-[#c8d6bf]/14 bg-[#101810]/80 p-4 backdrop-blur">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#9eaa98]">Market scan</p>
+            <h3 className="mt-1 font-serif text-3xl text-[#f6f1e8]">Noise filtered</h3>
+          </div>
+          <span className="rounded-full bg-[#c8d6bf] px-3 py-1 font-mono text-sm font-bold text-[#101810]">Top 5</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ShortlistPanel() {
+  return (
+    <div className="rounded-[2rem] border border-[#c8d6bf]/20 bg-[#172116] p-4 shadow-[0_35px_110px_rgba(0,0,0,0.3)]">
+      <div className="mb-4 flex items-center justify-between px-2 pt-2">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#9eaa98]">Shortlist</p>
+          <h2 className="mt-2 font-serif text-4xl text-[#f6f1e8]">Top 5</h2>
+        </div>
+        <FileSearch className="h-6 w-6 text-[#c8d6bf]" />
+      </div>
+      <div className="space-y-3">
+        {reportRows.map((row) => (
+          <div key={row.vendor} className="rounded-2xl bg-[#f6f1e8]/8 p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#9eaa98]">{row.vendor}</p>
+                <h3 className="mt-1 font-semibold text-[#f6f1e8]">{row.role}</h3>
+              </div>
+              <span className="rounded-full bg-[#f6f1e8] px-3 py-1 font-mono text-sm font-semibold text-[#101810]">{row.fit}%</span>
+            </div>
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#f6f1e8]/10">
+              <div className="h-full rounded-full bg-[#c8d6bf]" style={{ width: `${row.fit}%` }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ChaosToFiveVisual() {
+  return (
+    <div className="grid gap-4 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
+      <div className="rounded-[2rem] border border-[#ded7c9] bg-white/60 p-6">
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#65705f]">Before</p>
+        <div className="mt-5 grid grid-cols-4 gap-2">
+          {Array.from({ length: 24 }).map((_, index) => (
+            <div key={index} className="h-10 rounded-xl border border-[#ded7c9] bg-[#f6f1e8]" style={{ opacity: 0.35 + (index % 5) * 0.12 }} />
+          ))}
+        </div>
+        <h3 className="mt-6 font-serif text-4xl leading-none">Too many options.</h3>
+      </div>
+
+      <div className="hidden h-px w-16 bg-[#101810]/20 lg:block" />
+
+      <div className="rounded-[2rem] bg-[#101810] p-6 text-[#f6f1e8]">
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#9eaa98]">After</p>
+        <div className="mt-5 space-y-3">
+          {reportRows.map((row) => (
+            <div key={row.vendor} className="flex items-center justify-between rounded-2xl bg-[#f6f1e8]/8 p-3">
+              <span className="font-semibold">{row.vendor}</span>
+              <span className="rounded-full bg-[#c8d6bf] px-3 py-1 font-mono text-xs font-bold text-[#101810]">{row.fit}%</span>
+            </div>
+          ))}
+        </div>
+        <h3 className="mt-6 font-serif text-4xl leading-none">Five to test.</h3>
+      </div>
+    </div>
+  );
+}
+
+function PilotVisual() {
+  return (
+    <div className="rounded-[2rem] border border-[#c8d6bf]/14 bg-[#172116] p-5">
+      <div className="grid gap-3 sm:grid-cols-4">
+        {pilotSteps.map((step, index) => (
+          <div key={step} className="rounded-2xl bg-[#f6f1e8]/8 p-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#c8d6bf] font-mono text-sm font-bold text-[#101810]">{index + 1}</div>
+            <p className="mt-8 text-sm font-semibold text-[#f6f1e8]">{step}</p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 rounded-2xl bg-[#101810] p-4">
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-sm text-[#c8d6bf]">Purchase confidence</span>
+          <span className="font-mono text-xl font-bold text-[#f6f1e8]">94%</span>
+        </div>
+        <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#f6f1e8]/10">
+          <div className="h-full w-[94%] rounded-full bg-[#c8d6bf]" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function OneTrackStyleLanding() {
@@ -99,7 +223,7 @@ export function OneTrackStyleLanding() {
               We hunt. You test. Buy smarter.
             </h1>
             <p className="mt-7 max-w-xl text-xl leading-8 text-[#c8d6bf] sm:text-2xl">
-              We find the Top 5 vendors for machines, robotics, AI, software, and industrial solutions.
+              Top 5 vendors. Real pilots. Less guessing.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <CtaButton>Find My Top 5</CtaButton>
@@ -109,7 +233,7 @@ export function OneTrackStyleLanding() {
             </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[0.86fr_1.14fr]">
+          <div className="grid gap-4 lg:grid-cols-[0.78fr_1.22fr]">
             <div id="intake" className="rounded-[2rem] bg-[#f6f1e8] p-5 text-[#101810] shadow-[0_35px_110px_rgba(0,0,0,0.28)]">
               <SectionLabel>Start</SectionLabel>
               <h2 className="mt-3 font-serif text-4xl leading-none">What are you buying?</h2>
@@ -122,30 +246,7 @@ export function OneTrackStyleLanding() {
                 ))}
               </div>
             </div>
-
-            <div className="rounded-[2rem] border border-[#c8d6bf]/20 bg-[#172116] p-4 shadow-[0_35px_110px_rgba(0,0,0,0.3)]">
-              <div className="mb-4 flex items-center justify-between px-2 pt-2">
-                <div>
-                  <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#9eaa98]">Shortlist</p>
-                  <h2 className="mt-2 font-serif text-4xl text-[#f6f1e8]">Top 5</h2>
-                </div>
-                <FileSearch className="h-6 w-6 text-[#c8d6bf]" />
-              </div>
-              <div className="space-y-3">
-                {reportRows.map((row) => (
-                  <div key={row.vendor} className="rounded-2xl bg-[#f6f1e8]/8 p-4">
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#9eaa98]">{row.vendor}</p>
-                        <h3 className="mt-1 font-semibold text-[#f6f1e8]">{row.role}</h3>
-                      </div>
-                      <span className="rounded-full bg-[#f6f1e8] px-3 py-1 font-mono text-sm font-semibold text-[#101810]">{row.fit}%</span>
-                    </div>
-                    <p className="mt-2 text-xs text-[#c8d6bf]">Pilot: {row.pilot}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <RadarVisual />
           </div>
         </div>
       </section>
@@ -162,16 +263,10 @@ export function OneTrackStyleLanding() {
 
       <section className="bg-[#f6f1e8] px-4 py-24 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-[1120px]">
-          <SectionLabel>The problem</SectionLabel>
-          <div className="mt-5 grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
-            <h2 className="font-serif text-5xl font-semibold leading-none tracking-[-0.04em] sm:text-7xl">Too many vendors. Not enough proof.</h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {['Google overload', 'Spreadsheet chaos', 'Sales demos', 'Wrong purchases'].map((item) => (
-                <div key={item} className="rounded-[1.5rem] border border-[#ded7c9] bg-white/60 p-5 text-lg font-semibold">
-                  {item}
-                </div>
-              ))}
-            </div>
+          <SectionLabel>The shift</SectionLabel>
+          <h2 className="mt-4 max-w-3xl font-serif text-5xl font-semibold leading-none tracking-[-0.04em] sm:text-7xl">From noise to a clean shortlist.</h2>
+          <div className="mt-10">
+            <ChaosToFiveVisual />
           </div>
         </div>
       </section>
@@ -179,7 +274,7 @@ export function OneTrackStyleLanding() {
       <section className="bg-[#101810] px-4 py-24 text-[#f6f1e8] sm:px-6 lg:px-8">
         <div className="mx-auto max-w-[1120px]">
           <SectionLabel dark>How it works</SectionLabel>
-          <h2 className="mt-4 max-w-3xl font-serif text-5xl font-semibold leading-none tracking-[-0.04em] sm:text-7xl">From market chaos to five real options.</h2>
+          <h2 className="mt-4 max-w-3xl font-serif text-5xl font-semibold leading-none tracking-[-0.04em] sm:text-7xl">Three moves.</h2>
           <div className="mt-10 grid gap-4 md:grid-cols-3">
             {workflow.map((item) => {
               const Icon = item.icon;
@@ -195,6 +290,16 @@ export function OneTrackStyleLanding() {
               );
             })}
           </div>
+        </div>
+      </section>
+
+      <section className="bg-[#f6f1e8] px-4 py-24 sm:px-6 lg:px-8">
+        <div className="mx-auto grid max-w-[1120px] gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div>
+            <SectionLabel>Output</SectionLabel>
+            <h2 className="mt-4 font-serif text-5xl font-semibold leading-none tracking-[-0.04em] sm:text-7xl">The Top 5 pack.</h2>
+          </div>
+          <ShortlistPanel />
         </div>
       </section>
 
@@ -229,17 +334,10 @@ export function OneTrackStyleLanding() {
       <section className="bg-[#101810] px-4 py-24 text-[#f6f1e8] sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-[1120px] gap-10 lg:grid-cols-[0.85fr_1fr] lg:items-center">
           <div>
-            <SectionLabel dark>Trust</SectionLabel>
+            <SectionLabel dark>Pilot</SectionLabel>
             <h2 className="mt-4 font-serif text-5xl font-semibold leading-none tracking-[-0.04em] sm:text-7xl">Test before it eats your budget.</h2>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {trustItems.map((item) => (
-              <div key={item} className="flex min-h-28 items-start gap-3 rounded-[1.5rem] border border-[#c8d6bf]/14 bg-[#172116] p-5">
-                <ShieldCheck className="h-5 w-5 shrink-0 text-[#c8d6bf]" />
-                <span className="text-sm font-semibold leading-7 text-[#f6f1e8]">{item}</span>
-              </div>
-            ))}
-          </div>
+          <PilotVisual />
         </div>
       </section>
 
@@ -248,7 +346,14 @@ export function OneTrackStyleLanding() {
           <div>
             <SectionLabel>Get started</SectionLabel>
             <h2 className="mt-4 font-serif text-5xl font-semibold leading-none tracking-[-0.04em] sm:text-7xl">Send one problem.</h2>
-            <p className="mt-5 max-w-xl text-lg leading-8 text-[#4d5648]">We will return the hunt path and the Top 5 shortlist direction.</p>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              {trustItems.map((item) => (
+                <div key={item} className="flex items-center gap-3 rounded-2xl bg-[#f6f1e8] px-4 py-4 text-sm font-semibold">
+                  <CheckCircle2 className="h-5 w-5" />
+                  {item}
+                </div>
+              ))}
+            </div>
           </div>
           <div className="flex flex-col gap-3">
             <CtaButton dark>Start Vendor Hunt</CtaButton>
