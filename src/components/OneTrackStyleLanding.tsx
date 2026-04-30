@@ -17,8 +17,7 @@ import {
   Truck,
   Wifi,
 } from 'lucide-react';
-
-const techTypes = ['Robots', 'AI tools', 'Vision systems', 'Warehouse tech', 'IoT sensors', 'Factory software'];
+import { VendorHuntForm } from '@/components/VendorHuntForm';
 
 const reportRows = [
   { vendor: 'Vendor 01', role: 'Best fit', fit: 94, pilot: '2 weeks' },
@@ -75,6 +74,7 @@ function RadarVisual() {
       <div className="absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#c8d6bf]/20" />
       <div className="absolute left-1/2 top-1/2 h-px w-[140%] -translate-x-1/2 bg-[#c8d6bf]/10" />
       <div className="absolute left-1/2 top-1/2 h-[140%] w-px -translate-y-1/2 bg-[#c8d6bf]/10" />
+      <div className="absolute left-1/2 top-1/2 h-1/2 w-1/2 origin-top-left animate-[spin_16s_linear_infinite] bg-[conic-gradient(from_0deg,rgba(200,214,191,0.26),transparent_36%)] opacity-80" />
 
       {marketDots.map((item, index) => {
         const positions = [
@@ -85,7 +85,7 @@ function RadarVisual() {
         const selected = index > 6;
         return (
           <div key={item} className={`absolute ${positions[index]} -translate-x-1/2 -translate-y-1/2`}>
-            <div className={`rounded-full border px-3 py-1.5 font-mono text-[10px] ${selected ? 'border-[#c8d6bf] bg-[#f6f1e8] text-[#101810]' : 'border-[#c8d6bf]/20 bg-[#f6f1e8]/6 text-[#c8d6bf]'}`}>
+            <div className={`rounded-full border px-3 py-1.5 font-mono text-[10px] transition ${selected ? 'animate-pulse border-[#c8d6bf] bg-[#f6f1e8] text-[#101810] shadow-[0_0_28px_rgba(200,214,191,0.35)]' : 'border-[#c8d6bf]/20 bg-[#f6f1e8]/6 text-[#c8d6bf]'}`}>
               {item}
             </div>
           </div>
@@ -116,8 +116,8 @@ function ShortlistPanel() {
         <FileSearch className="h-6 w-6 text-[#c8d6bf]" />
       </div>
       <div className="space-y-3">
-        {reportRows.map((row) => (
-          <div key={row.vendor} className="rounded-2xl bg-[#f6f1e8]/8 p-4">
+        {reportRows.map((row, index) => (
+          <div key={row.vendor} className="rounded-2xl bg-[#f6f1e8]/8 p-4 animate-fade-up" style={{ animationDelay: `${index * 80}ms` }}>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#9eaa98]">{row.vendor}</p>
@@ -126,7 +126,7 @@ function ShortlistPanel() {
               <span className="rounded-full bg-[#f6f1e8] px-3 py-1 font-mono text-sm font-semibold text-[#101810]">{row.fit}%</span>
             </div>
             <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#f6f1e8]/10">
-              <div className="h-full rounded-full bg-[#c8d6bf]" style={{ width: `${row.fit}%` }} />
+              <div className="h-full rounded-full bg-[#c8d6bf] transition-all duration-700" style={{ width: `${row.fit}%` }} />
             </div>
           </div>
         ))}
@@ -142,7 +142,7 @@ function ChaosToFiveVisual() {
         <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#65705f]">Before</p>
         <div className="mt-5 grid grid-cols-4 gap-2">
           {Array.from({ length: 24 }).map((_, index) => (
-            <div key={index} className="h-10 rounded-xl border border-[#ded7c9] bg-[#f6f1e8]" style={{ opacity: 0.35 + (index % 5) * 0.12 }} />
+            <div key={index} className="h-10 rounded-xl border border-[#ded7c9] bg-[#f6f1e8] transition hover:scale-90 hover:opacity-20" style={{ opacity: 0.35 + (index % 5) * 0.12 }} />
           ))}
         </div>
         <h3 className="mt-6 font-serif text-4xl leading-none">Tech soup.</h3>
@@ -154,7 +154,7 @@ function ChaosToFiveVisual() {
         <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#9eaa98]">After</p>
         <div className="mt-5 space-y-3">
           {reportRows.map((row) => (
-            <div key={row.vendor} className="flex items-center justify-between rounded-2xl bg-[#f6f1e8]/8 p-3">
+            <div key={row.vendor} className="flex items-center justify-between rounded-2xl bg-[#f6f1e8]/8 p-3 transition hover:translate-x-1 hover:bg-[#f6f1e8]/12">
               <span className="font-semibold">{row.vendor}</span>
               <span className="rounded-full bg-[#c8d6bf] px-3 py-1 font-mono text-xs font-bold text-[#101810]">{row.fit}%</span>
             </div>
@@ -171,7 +171,7 @@ function PilotVisual() {
     <div className="rounded-[2rem] border border-[#c8d6bf]/14 bg-[#172116] p-5">
       <div className="grid gap-3 sm:grid-cols-4">
         {pilotSteps.map((step, index) => (
-          <div key={step} className="rounded-2xl bg-[#f6f1e8]/8 p-4">
+          <div key={step} className="rounded-2xl bg-[#f6f1e8]/8 p-4 transition hover:-translate-y-1 hover:bg-[#f6f1e8]/12">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#c8d6bf] font-mono text-sm font-bold text-[#101810]">{index + 1}</div>
             <p className="mt-8 text-sm font-semibold text-[#f6f1e8]">{step}</p>
           </div>
@@ -196,7 +196,7 @@ export function OneTrackStyleLanding() {
       <div className="fixed bottom-16 left-1/2 z-[80] w-[min(520px,calc(100%-1rem))] -translate-x-1/2 rounded-2xl border border-[#d7d0c2] bg-[#f6f1e8]/92 p-2 shadow-[0_18px_60px_rgba(16,24,16,0.18)] backdrop-blur-xl md:bottom-4 md:rounded-full">
         <div className="flex items-center justify-between gap-3">
           <p className="truncate pl-3 text-sm font-semibold">Buying tech?</p>
-          <CtaButton dark>Find Top 5</CtaButton>
+          <CtaButton dark href="#intake">Find Top 5</CtaButton>
         </div>
       </div>
 
@@ -210,7 +210,7 @@ export function OneTrackStyleLanding() {
         </div>
 
         <div className="relative mx-auto grid min-h-[calc(100vh-8rem)] max-w-[1240px] gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-          <div>
+          <div className="animate-fade-up">
             <div className="mb-10 flex items-center gap-4 text-[#c8d6bf]">
               <div className="relative h-9 w-14">
                 <span className="absolute left-0 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full border border-[#c8d6bf]" />
@@ -227,26 +227,15 @@ export function OneTrackStyleLanding() {
               Stop doom-scrolling vendors. We bring you the Top 5.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <CtaButton>Find My Top 5</CtaButton>
+              <CtaButton href="#intake">Find My Top 5</CtaButton>
               <Link href="/vendors" className="inline-flex items-center justify-center rounded-full border border-[#c8d6bf]/45 px-5 py-3 text-sm font-semibold text-[#f6f1e8] transition hover:border-[#f6f1e8]">
                 Browse Vendors
               </Link>
             </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[0.78fr_1.22fr]">
-            <div id="intake" className="rounded-[2rem] bg-[#f6f1e8] p-5 text-[#101810] shadow-[0_35px_110px_rgba(0,0,0,0.28)]">
-              <SectionLabel>Pick your hunt</SectionLabel>
-              <h2 className="mt-3 font-serif text-4xl leading-none">What do you need?</h2>
-              <div className="mt-5 grid gap-2">
-                {techTypes.map((type) => (
-                  <Link key={type} href={`mailto:hello@nxtlinktech.com?subject=Find%20my%20Top%205%20${encodeURIComponent(type)}%20vendors`} className="flex items-center justify-between rounded-2xl border border-[#ded7c9] bg-white/60 px-4 py-3 text-sm font-semibold transition hover:bg-white">
-                    <span>{type}</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                ))}
-              </div>
-            </div>
+          <div id="intake" className="grid gap-4 lg:grid-cols-[0.78fr_1.22fr]">
+            <VendorHuntForm />
             <RadarVisual />
           </div>
         </div>
@@ -280,7 +269,7 @@ export function OneTrackStyleLanding() {
             {workflow.map((item) => {
               const Icon = item.icon;
               return (
-                <div key={item.title} className="rounded-[1.5rem] border border-[#c8d6bf]/14 bg-[#172116] p-6">
+                <div key={item.title} className="rounded-[1.5rem] border border-[#c8d6bf]/14 bg-[#172116] p-6 transition hover:-translate-y-1 hover:bg-[#1d2a1b]">
                   <div className="mb-10 flex items-center justify-between">
                     <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#9eaa98]">{item.step}</span>
                     <Icon className="h-6 w-6 text-[#c8d6bf]" />
@@ -358,7 +347,7 @@ export function OneTrackStyleLanding() {
             </div>
           </div>
           <div className="flex flex-col gap-3">
-            <CtaButton dark>Start Vendor Hunt</CtaButton>
+            <CtaButton dark href="#intake">Start Vendor Hunt</CtaButton>
             <Link href="/briefing" className="inline-flex items-center justify-center gap-2 rounded-full border border-[#101810]/20 px-5 py-3 text-sm font-semibold">
               Briefing <Truck className="h-4 w-4" />
             </Link>
