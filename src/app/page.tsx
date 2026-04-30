@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import {
   ArrowRight,
-  BadgeCheck,
   ClipboardCheck,
   Compass,
   Factory,
@@ -13,6 +12,8 @@ import {
   Target,
   Wrench,
 } from 'lucide-react';
+import { StickyLandingCta } from '@/components/StickyLandingCta';
+import { TechFitQuiz } from '@/components/TechFitQuiz';
 
 const stats = [
   { value: '40%', label: 'of manufacturers still rely on spreadsheets for complex sourcing.' },
@@ -78,22 +79,32 @@ const vendorPack = [
   { name: 'Vendor 05', type: 'Strong backup option', score: 78, color: '#36a9d6' },
 ];
 
+const platformPillars = [
+  'Discover vendors',
+  'Compare fit',
+  'Run pilots',
+  'Manage rollout',
+  'Track results',
+];
+
 export default function Home() {
   return (
     <div className="min-h-screen bg-[#f7f8fb] text-[#111641]">
+      <StickyLandingCta />
+
       <section className="relative overflow-hidden bg-[linear-gradient(135deg,#f8f9fd_0%,#eef3ff_46%,#f8fbf7_100%)] px-4 pb-20 pt-16 sm:px-6 lg:px-8">
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(17,22,65,0.055)_1px,transparent_1px),linear-gradient(180deg,rgba(17,22,65,0.045)_1px,transparent_1px)] [background-size:72px_72px]" aria-hidden="true" />
         <div className="relative mx-auto grid min-h-[calc(100vh-8rem)] max-w-[1240px] items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="max-w-3xl pb-8 pt-12 lg:pt-0">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#d9def1] bg-white/80 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.22em] text-[#666fb0] shadow-sm backdrop-blur">
               <Sparkles className="h-3.5 w-3.5 text-[#d15aa5]" />
-              Industrial tech selection, minus the chaos
+              The technology hunter for industrial teams
             </div>
             <h1 className="max-w-4xl text-5xl font-semibold leading-[0.98] text-[#11155f] sm:text-6xl lg:text-7xl">
               We Hunt. You Test. Then You Buy Smarter.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-[#4d557b] sm:text-xl">
-              NXT Link helps industrial and logistics companies find the right technology, narrow the market to 5 best-fit vendors, and test before making an expensive purchase.
+              NXT Link helps companies find the right machines, software, robotics, AI tools, and industrial solutions. We narrow the market to 5 best-fit vendors so your team can test before buying.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
@@ -109,6 +120,13 @@ export default function Home() {
               >
                 See How It Works
               </Link>
+            </div>
+            <div className="mt-7 grid max-w-xl gap-2 text-sm text-[#5c6486] sm:grid-cols-3">
+              {['No endless research', 'Top 5 shortlist', 'Test before buying'].map((item) => (
+                <div key={item} className="rounded-full border border-[#dfe4f3] bg-white/70 px-3 py-2 text-center font-semibold">
+                  {item}
+                </div>
+              ))}
             </div>
           </div>
 
@@ -201,6 +219,8 @@ export default function Home() {
         </div>
       </section>
 
+      <TechFitQuiz />
+
       <section className="bg-[#070812] px-4 py-20 text-nxt-text sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-[1120px] gap-10 lg:grid-cols-[0.78fr_1fr]">
           <div>
@@ -209,10 +229,10 @@ export default function Home() {
           </div>
           <div className="space-y-5 text-base leading-8 text-nxt-secondary">
             <p>
-              A few years ago at Johnson & Johnson MedTech, the problem was painfully clear: life-saving cardiovascular needles were being inspected through outdated manual microscopes. The company did not lack advanced technology. It lacked a structured way to evaluate and buy the right technology safely.
+              At Johnson & Johnson MedTech, life-saving cardiovascular needles were being inspected through outdated manual microscopes. The company did not lack advanced technology. It lacked a safe process to evaluate and buy the right technology.
             </p>
             <p>
-              By building an evaluation framework, the team secured more than $300,000 in automated Keyence machines in 3 months. NXT Link turns that lesson into a repeatable service for industrial companies: find the right tools, narrow the field, test before buying, and guide the decision like a project manager who understands the stakes.
+              By building an evaluation framework, the team secured more than $300,000 in automated Keyence machines in 3 months. NXT Link turns that lesson into a repeatable service: find the right tools, narrow the field, test before buying, and guide the decision like a project manager who understands the stakes.
             </p>
           </div>
         </div>
@@ -290,6 +310,28 @@ export default function Home() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white px-4 py-20 text-[#111641] sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1120px] rounded-[28px] border border-[#e1e5f0] bg-[#f8f9fd] p-6 shadow-[0_26px_80px_rgba(52,64,110,0.12)] sm:p-10">
+          <div className="grid gap-10 lg:grid-cols-[0.85fr_1fr] lg:items-center">
+            <div>
+              <div className="font-mono text-[11px] uppercase tracking-[0.24em] text-[#7f86a8]">The bigger vision</div>
+              <h2 className="mt-4 text-4xl font-semibold text-[#11155f] sm:text-5xl">The operating system for buying industrial technology.</h2>
+              <p className="mt-5 text-base leading-8 text-[#5c6486]">
+                Today, NXT Link helps companies find and test the right vendor. Over time, it becomes the trusted platform companies use to discover, compare, test, buy, finance, implement, and measure serious technology.
+              </p>
+            </div>
+            <div className="grid gap-3">
+              {platformPillars.map((item, index) => (
+                <div key={item} className="flex items-center justify-between rounded-2xl bg-white px-4 py-4 shadow-sm">
+                  <span className="font-semibold text-[#11155f]">{item}</span>
+                  <span className="font-mono text-sm text-[#d15aa5]">0{index + 1}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -380,17 +422,17 @@ export default function Home() {
           <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto]">
             <div>
               <div className="section-kicker">Next step</div>
-              <h2 className="mt-4 text-3xl font-semibold text-white sm:text-4xl">Make your next technology decision evidence-based.</h2>
+              <h2 className="mt-4 text-3xl font-semibold text-white sm:text-4xl">Stop researching alone. Let us bring you the right 5 options.</h2>
               <p className="mt-4 max-w-2xl text-base leading-8 text-nxt-secondary">
                 For operators evaluating automation, AI, robotics, logistics software, inspection systems, or supplier technology.
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
               <Link
-                href="mailto:hello@nxtlinktech.com?subject=Start%20a%20Technology%20Fit%20Call"
+                href="mailto:hello@nxtlinktech.com?subject=Start%20my%20vendor%20hunt"
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-nxt-cyan px-5 py-3 text-sm font-semibold text-[#061018] transition hover:bg-[#7ee4ff]"
               >
-                Start a Technology Fit Call
+                Start My Vendor Hunt
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
