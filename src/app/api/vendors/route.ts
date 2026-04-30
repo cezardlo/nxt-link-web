@@ -68,24 +68,53 @@ export async function GET(request: Request) {
     .not('sector', 'is', null)
     .neq('sector', '');
 
-  const applySharedFilters = <T extends typeof vendorsQuery>(query: T): T => {
-    let next = query;
-    if (sector) next = next.eq('sector', sector) as T;
-    if (category) next = next.eq('primary_category', category) as T;
-    if (search) next = next.ilike('company_name', `%${search}%`) as T;
-    if (continent) next = next.eq('continent', continent) as T;
-    if (country) next = next.eq('hq_country', country) as T;
-    if (employee) next = next.eq('employee_count_range', employee) as T;
-    if (funding) next = next.eq('funding_stage', funding) as T;
-    if (scoreRange) {
-      next = next.gte('iker_score', scoreRange.min).lte('iker_score', scoreRange.max) as T;
-    }
-    return next;
-  };
+  if (sector) {
+    vendorsQuery = vendorsQuery.eq('sector', sector);
+    countQuery = countQuery.eq('sector', sector);
+    topQuery = topQuery.eq('sector', sector);
+  }
 
-  vendorsQuery = applySharedFilters(vendorsQuery);
-  countQuery = applySharedFilters(countQuery as typeof vendorsQuery) as typeof countQuery;
-  topQuery = applySharedFilters(topQuery);
+  if (category) {
+    vendorsQuery = vendorsQuery.eq('primary_category', category);
+    countQuery = countQuery.eq('primary_category', category);
+    topQuery = topQuery.eq('primary_category', category);
+  }
+
+  if (search) {
+    vendorsQuery = vendorsQuery.ilike('company_name', `%${search}%`);
+    countQuery = countQuery.ilike('company_name', `%${search}%`);
+    topQuery = topQuery.ilike('company_name', `%${search}%`);
+  }
+
+  if (continent) {
+    vendorsQuery = vendorsQuery.eq('continent', continent);
+    countQuery = countQuery.eq('continent', continent);
+    topQuery = topQuery.eq('continent', continent);
+  }
+
+  if (country) {
+    vendorsQuery = vendorsQuery.eq('hq_country', country);
+    countQuery = countQuery.eq('hq_country', country);
+    topQuery = topQuery.eq('hq_country', country);
+  }
+
+  if (employee) {
+    vendorsQuery = vendorsQuery.eq('employee_count_range', employee);
+    countQuery = countQuery.eq('employee_count_range', employee);
+    topQuery = topQuery.eq('employee_count_range', employee);
+  }
+
+  if (funding) {
+    vendorsQuery = vendorsQuery.eq('funding_stage', funding);
+    countQuery = countQuery.eq('funding_stage', funding);
+    topQuery = topQuery.eq('funding_stage', funding);
+  }
+
+  if (scoreRange) {
+    vendorsQuery = vendorsQuery.gte('iker_score', scoreRange.min).lte('iker_score', scoreRange.max);
+    countQuery = countQuery.gte('iker_score', scoreRange.min).lte('iker_score', scoreRange.max);
+    topQuery = topQuery.gte('iker_score', scoreRange.min).lte('iker_score', scoreRange.max);
+  }
 
   if (sort === 'az') {
     vendorsQuery = vendorsQuery.order('company_name', { ascending: true });
