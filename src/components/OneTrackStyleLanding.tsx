@@ -13,38 +13,39 @@ import {
   Radar,
   Search,
   ShieldCheck,
+  Sparkles,
   Truck,
   Wifi,
 } from 'lucide-react';
 
-const techTypes = ['Robotics', 'AI software', 'Machine vision', 'Warehouse tech', 'IoT sensors', 'Manufacturing systems'];
+const techTypes = ['Robots', 'AI tools', 'Vision systems', 'Warehouse tech', 'IoT sensors', 'Factory software'];
 
 const reportRows = [
   { vendor: 'Vendor 01', role: 'Best fit', fit: 94, pilot: '2 weeks' },
-  { vendor: 'Vendor 02', role: 'Fast pilot', fit: 90, pilot: '10 days' },
-  { vendor: 'Vendor 03', role: 'Best integration', fit: 86, pilot: '3 weeks' },
-  { vendor: 'Vendor 04', role: 'Cost control', fit: 82, pilot: '2 weeks' },
-  { vendor: 'Vendor 05', role: 'Backup', fit: 78, pilot: '4 weeks' },
+  { vendor: 'Vendor 02', role: 'Fast test', fit: 90, pilot: '10 days' },
+  { vendor: 'Vendor 03', role: 'Easy setup', fit: 86, pilot: '3 weeks' },
+  { vendor: 'Vendor 04', role: 'Best value', fit: 82, pilot: '2 weeks' },
+  { vendor: 'Vendor 05', role: 'Backup pick', fit: 78, pilot: '4 weeks' },
 ];
 
 const workflow = [
-  { step: '01', title: 'Problem', body: 'One operation. One goal.', icon: Radar },
-  { step: '02', title: 'Hunt', body: 'Scan the market.', icon: Search },
-  { step: '03', title: 'Test', body: 'Pilot the Top 5.', icon: BadgeCheck },
+  { step: '01', title: 'Tell us', body: 'What hurts? What are you trying to fix?', icon: Radar },
+  { step: '02', title: 'We hunt', body: 'We find the tech worth looking at.', icon: Search },
+  { step: '03', title: 'You test', body: 'Try the best options before buying.', icon: BadgeCheck },
 ];
 
 const useCases = [
-  { title: 'Robotics', icon: Bot },
+  { title: 'Robots', icon: Bot },
   { title: 'Machine vision', icon: Camera },
-  { title: 'AI software', icon: BrainCircuit },
+  { title: 'AI tools', icon: BrainCircuit },
   { title: 'Warehouse tech', icon: Boxes },
-  { title: 'IoT sensors', icon: Wifi },
-  { title: 'Manufacturing systems', icon: Factory },
+  { title: 'Sensors', icon: Wifi },
+  { title: 'Factory systems', icon: Factory },
 ];
 
-const trustItems = ['Transparent criteria', 'Buyer-first guidance', 'Pilot before purchase', 'Top 5 shortlist'];
+const trustItems = ['Clear scorecard', 'No mystery picks', 'Test first', 'Top 5 only'];
 const marketDots = ['ERP', 'AMR', 'WMS', 'AI', 'IoT', 'Vision', 'MES', 'TMS', 'RPA', 'AGV', 'CMMS', 'PLC'];
-const pilotSteps = ['Demo script', 'Floor test', 'Scorecard', 'Decision'];
+const pilotSteps = ['Script', 'Demo', 'Test', 'Pick'];
 
 function CtaButton({ children, dark = false, href = 'mailto:hello@nxtlinktech.com?subject=Find%20my%20Top%205%20vendors' }: { children: ReactNode; dark?: boolean; href?: string }) {
   return (
@@ -95,7 +96,7 @@ function RadarVisual() {
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#9eaa98]">Market scan</p>
-            <h3 className="mt-1 font-serif text-3xl text-[#f6f1e8]">Noise filtered</h3>
+            <h3 className="mt-1 font-serif text-3xl text-[#f6f1e8]">Good stuff found</h3>
           </div>
           <span className="rounded-full bg-[#c8d6bf] px-3 py-1 font-mono text-sm font-bold text-[#101810]">Top 5</span>
         </div>
@@ -110,7 +111,7 @@ function ShortlistPanel() {
       <div className="mb-4 flex items-center justify-between px-2 pt-2">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#9eaa98]">Shortlist</p>
-          <h2 className="mt-2 font-serif text-4xl text-[#f6f1e8]">Top 5</h2>
+          <h2 className="mt-2 font-serif text-4xl text-[#f6f1e8]">Top 5 picks</h2>
         </div>
         <FileSearch className="h-6 w-6 text-[#c8d6bf]" />
       </div>
@@ -144,7 +145,7 @@ function ChaosToFiveVisual() {
             <div key={index} className="h-10 rounded-xl border border-[#ded7c9] bg-[#f6f1e8]" style={{ opacity: 0.35 + (index % 5) * 0.12 }} />
           ))}
         </div>
-        <h3 className="mt-6 font-serif text-4xl leading-none">Too many options.</h3>
+        <h3 className="mt-6 font-serif text-4xl leading-none">Tech soup.</h3>
       </div>
 
       <div className="hidden h-px w-16 bg-[#101810]/20 lg:block" />
@@ -159,7 +160,7 @@ function ChaosToFiveVisual() {
             </div>
           ))}
         </div>
-        <h3 className="mt-6 font-serif text-4xl leading-none">Five to test.</h3>
+        <h3 className="mt-6 font-serif text-4xl leading-none">Clean Top 5.</h3>
       </div>
     </div>
   );
@@ -178,7 +179,7 @@ function PilotVisual() {
       </div>
       <div className="mt-4 rounded-2xl bg-[#101810] p-4">
         <div className="flex items-center justify-between gap-4">
-          <span className="text-sm text-[#c8d6bf]">Purchase confidence</span>
+          <span className="text-sm text-[#c8d6bf]">Ready to buy</span>
           <span className="font-mono text-xl font-bold text-[#f6f1e8]">94%</span>
         </div>
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#f6f1e8]/10">
@@ -194,7 +195,7 @@ export function OneTrackStyleLanding() {
     <div className="min-h-screen bg-[#f6f1e8] text-[#101810]">
       <div className="fixed bottom-16 left-1/2 z-[80] w-[min(520px,calc(100%-1rem))] -translate-x-1/2 rounded-2xl border border-[#d7d0c2] bg-[#f6f1e8]/92 p-2 shadow-[0_18px_60px_rgba(16,24,16,0.18)] backdrop-blur-xl md:bottom-4 md:rounded-full">
         <div className="flex items-center justify-between gap-3">
-          <p className="truncate pl-3 text-sm font-semibold">Need the right vendor?</p>
+          <p className="truncate pl-3 text-sm font-semibold">Buying tech?</p>
           <CtaButton dark>Find Top 5</CtaButton>
         </div>
       </div>
@@ -218,12 +219,12 @@ export function OneTrackStyleLanding() {
               <span className="font-serif text-xl tracking-tight">NXT LINK</span>
             </div>
 
-            <SectionLabel dark>Industrial tech buying</SectionLabel>
+            <SectionLabel dark>Tech matchmaker for industry</SectionLabel>
             <h1 className="mt-5 max-w-5xl font-serif text-[clamp(4rem,11vw,10rem)] font-semibold leading-[0.82] tracking-[-0.06em]">
               We hunt. You test. Buy smarter.
             </h1>
             <p className="mt-7 max-w-xl text-xl leading-8 text-[#c8d6bf] sm:text-2xl">
-              Top 5 vendors. Real pilots. Less guessing.
+              Stop doom-scrolling vendors. We bring you the Top 5.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <CtaButton>Find My Top 5</CtaButton>
@@ -235,8 +236,8 @@ export function OneTrackStyleLanding() {
 
           <div className="grid gap-4 lg:grid-cols-[0.78fr_1.22fr]">
             <div id="intake" className="rounded-[2rem] bg-[#f6f1e8] p-5 text-[#101810] shadow-[0_35px_110px_rgba(0,0,0,0.28)]">
-              <SectionLabel>Start</SectionLabel>
-              <h2 className="mt-3 font-serif text-4xl leading-none">What are you buying?</h2>
+              <SectionLabel>Pick your hunt</SectionLabel>
+              <h2 className="mt-3 font-serif text-4xl leading-none">What do you need?</h2>
               <div className="mt-5 grid gap-2">
                 {techTypes.map((type) => (
                   <Link key={type} href={`mailto:hello@nxtlinktech.com?subject=Find%20my%20Top%205%20${encodeURIComponent(type)}%20vendors`} className="flex items-center justify-between rounded-2xl border border-[#ded7c9] bg-white/60 px-4 py-3 text-sm font-semibold transition hover:bg-white">
@@ -253,18 +254,18 @@ export function OneTrackStyleLanding() {
 
       <section className="bg-[#f6f1e8] px-4 py-10 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-center gap-x-8 gap-y-3 text-center font-mono text-[11px] uppercase tracking-[0.18em] text-[#65705f]">
-          <span>Logistics</span>
-          <span>Manufacturing</span>
           <span>Warehouses</span>
-          <span>Supply chain</span>
+          <span>Factories</span>
+          <span>Logistics</span>
           <span>Operations</span>
+          <span>Supply chain</span>
         </div>
       </section>
 
       <section className="bg-[#f6f1e8] px-4 py-24 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-[1120px]">
-          <SectionLabel>The shift</SectionLabel>
-          <h2 className="mt-4 max-w-3xl font-serif text-5xl font-semibold leading-none tracking-[-0.04em] sm:text-7xl">From noise to a clean shortlist.</h2>
+          <SectionLabel>The vibe</SectionLabel>
+          <h2 className="mt-4 max-w-3xl font-serif text-5xl font-semibold leading-none tracking-[-0.04em] sm:text-7xl">Less vendor chaos. More good choices.</h2>
           <div className="mt-10">
             <ChaosToFiveVisual />
           </div>
@@ -274,7 +275,7 @@ export function OneTrackStyleLanding() {
       <section className="bg-[#101810] px-4 py-24 text-[#f6f1e8] sm:px-6 lg:px-8">
         <div className="mx-auto max-w-[1120px]">
           <SectionLabel dark>How it works</SectionLabel>
-          <h2 className="mt-4 max-w-3xl font-serif text-5xl font-semibold leading-none tracking-[-0.04em] sm:text-7xl">Three moves.</h2>
+          <h2 className="mt-4 max-w-3xl font-serif text-5xl font-semibold leading-none tracking-[-0.04em] sm:text-7xl">Easy mode for serious tech.</h2>
           <div className="mt-10 grid gap-4 md:grid-cols-3">
             {workflow.map((item) => {
               const Icon = item.icon;
@@ -297,7 +298,8 @@ export function OneTrackStyleLanding() {
         <div className="mx-auto grid max-w-[1120px] gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div>
             <SectionLabel>Output</SectionLabel>
-            <h2 className="mt-4 font-serif text-5xl font-semibold leading-none tracking-[-0.04em] sm:text-7xl">The Top 5 pack.</h2>
+            <h2 className="mt-4 font-serif text-5xl font-semibold leading-none tracking-[-0.04em] sm:text-7xl">Your Top 5 pack.</h2>
+            <p className="mt-5 max-w-md text-lg leading-8 text-[#4d5648]">The shortlist your team can actually test.</p>
           </div>
           <ShortlistPanel />
         </div>
@@ -307,8 +309,8 @@ export function OneTrackStyleLanding() {
         <div className="mx-auto max-w-[1120px]">
           <div className="mb-10 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
             <div>
-              <SectionLabel>Categories</SectionLabel>
-              <h2 className="mt-4 font-serif text-5xl font-semibold leading-none tracking-[-0.04em] sm:text-7xl">What we hunt.</h2>
+              <SectionLabel>We find</SectionLabel>
+              <h2 className="mt-4 font-serif text-5xl font-semibold leading-none tracking-[-0.04em] sm:text-7xl">The right kind of tech.</h2>
             </div>
             <Link href="/vendors" className="inline-flex w-fit items-center gap-2 rounded-full border border-[#d7d0c2] px-5 py-3 text-sm font-semibold">
               Vendor catalog <ArrowRight className="h-4 w-4" />
@@ -334,8 +336,8 @@ export function OneTrackStyleLanding() {
       <section className="bg-[#101810] px-4 py-24 text-[#f6f1e8] sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-[1120px] gap-10 lg:grid-cols-[0.85fr_1fr] lg:items-center">
           <div>
-            <SectionLabel dark>Pilot</SectionLabel>
-            <h2 className="mt-4 font-serif text-5xl font-semibold leading-none tracking-[-0.04em] sm:text-7xl">Test before it eats your budget.</h2>
+            <SectionLabel dark>Try first</SectionLabel>
+            <h2 className="mt-4 font-serif text-5xl font-semibold leading-none tracking-[-0.04em] sm:text-7xl">Play with it before you pay for it.</h2>
           </div>
           <PilotVisual />
         </div>
@@ -344,7 +346,7 @@ export function OneTrackStyleLanding() {
       <section className="bg-[#f6f1e8] px-4 py-24 sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-[1120px] gap-8 rounded-[2rem] border border-[#ded7c9] bg-white/60 p-8 lg:grid-cols-[1fr_auto] lg:items-center lg:p-12">
           <div>
-            <SectionLabel>Get started</SectionLabel>
+            <SectionLabel>Start</SectionLabel>
             <h2 className="mt-4 font-serif text-5xl font-semibold leading-none tracking-[-0.04em] sm:text-7xl">Send one problem.</h2>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {trustItems.map((item) => (
