@@ -8,7 +8,6 @@ import {
   BrainCircuit,
   Camera,
   CheckCircle2,
-  ClipboardCheck,
   Eye,
   Factory,
   FileSearch,
@@ -17,11 +16,7 @@ import {
   Play,
   Radar,
   Route,
-  ScanLine,
   Search,
-  ShieldCheck,
-  SlidersHorizontal,
-  Timer,
   Truck,
   Wifi,
   Zap,
@@ -72,7 +67,7 @@ const trustItems = ['Transparent criteria', 'Real pilots', 'Buyer-first guidance
 const marketDots = ['ERP', 'AMR', 'WMS', 'AI', 'IoT', 'Vision', 'MES', 'TMS', 'RPA', 'AGV', 'CMMS', 'PLC'];
 const pilotSteps = ['Script', 'Demo', 'Test', 'Pick'];
 
-function CtaButton({ children, dark = false, href = 'mailto:hello@nxtlinktech.com?subject=Find%20my%20Top%205%20vendors' }: { children: ReactNode; dark?: boolean; href?: string }) {
+function CtaButton({ children, dark = false, href = '#intake' }: { children: ReactNode; dark?: boolean; href?: string }) {
   return (
     <Link
       href={href}
@@ -90,18 +85,6 @@ function CtaButton({ children, dark = false, href = 'mailto:hello@nxtlinktech.co
 
 function SectionLabel({ children, dark = false }: { children: ReactNode; dark?: boolean }) {
   return <p className={`font-mono text-[11px] uppercase tracking-[0.24em] ${dark ? 'text-[#9eaa98]' : 'text-[#65705f]'}`}>{children}</p>;
-}
-
-function NxtMark() {
-  return (
-    <div className="flex items-center gap-3 text-[#c8d6bf]">
-      <div className="relative h-9 w-14">
-        <span className="absolute left-0 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full border border-[#c8d6bf]" />
-        <span className="absolute left-6 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full border border-[#c8d6bf]" />
-      </div>
-      <span className="font-serif text-xl">NXT LINK</span>
-    </div>
-  );
 }
 
 function RadarVisual() {
@@ -139,7 +122,7 @@ function RadarVisual() {
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#9eaa98]">Market chaos reduced</p>
-            <h3 className="mt-1 font-serif text-3xl text-[#f6f1e8]">12,840 matches to 5</h3>
+            <h3 className="mt-1 font-serif text-3xl text-[#f6f1e8]">Thousands to 5</h3>
           </div>
           <span className="rounded-full bg-[#c8d6bf] px-3 py-1 font-mono text-sm font-bold text-[#101810]">Top 5</span>
         </div>
@@ -163,7 +146,7 @@ function ShortlistPanel() {
           <div key={row.vendor} className="rounded-2xl bg-[#f6f1e8]/8 p-4 animate-fade-up" style={{ animationDelay: `${index * 80}ms` }}>
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#9eaa98]">{row.vendor} · {row.pilot}</p>
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#9eaa98]">{row.vendor} - {row.pilot}</p>
                 <h3 className="mt-1 font-semibold text-[#f6f1e8]">{row.role}</h3>
               </div>
               <span className="rounded-full bg-[#f6f1e8] px-3 py-1 font-mono text-sm font-semibold text-[#101810]">{row.fit}%</span>
@@ -267,14 +250,14 @@ function ActionArchive() {
 export function OneTrackStyleLanding() {
   return (
     <div className="min-h-screen bg-[#f6f1e8] text-[#101810]">
-      <div className="fixed bottom-16 left-1/2 z-[80] w-[min(520px,calc(100%-1rem))] -translate-x-1/2 rounded-2xl border border-[#d7d0c2] bg-[#f6f1e8]/92 p-2 shadow-[0_18px_60px_rgba(16,24,16,0.18)] backdrop-blur-xl md:bottom-4 md:rounded-full">
+      <div className="fixed bottom-4 left-1/2 z-[80] hidden w-[min(520px,calc(100%-1rem))] -translate-x-1/2 rounded-full border border-[#d7d0c2] bg-[#f6f1e8]/92 p-2 shadow-[0_18px_60px_rgba(16,24,16,0.18)] backdrop-blur-xl md:block">
         <div className="flex items-center justify-between gap-3">
           <p className="truncate pl-3 text-sm font-semibold">Need better tech?</p>
-          <CtaButton dark href="#intake">Find Top 5</CtaButton>
+          <CtaButton dark>Find Top 5</CtaButton>
         </div>
       </div>
 
-      <section className="relative overflow-hidden bg-[#101810] px-4 pb-16 pt-6 text-[#f6f1e8] sm:px-6 lg:px-8">
+      <section className="relative overflow-hidden bg-[#101810] px-4 pb-16 pt-14 text-[#f6f1e8] sm:px-6 lg:px-8">
         <div className="absolute inset-0 opacity-[0.14]" aria-hidden="true">
           <div className="absolute left-[9%] top-0 h-full w-px bg-[#c8d6bf]" />
           <div className="absolute right-[12%] top-0 h-full w-px bg-[#c8d6bf]" />
@@ -283,17 +266,7 @@ export function OneTrackStyleLanding() {
           <div className="absolute right-[8%] top-[28%] h-64 w-64 rounded-full border border-[#c8d6bf]" />
         </div>
 
-        <nav className="relative mx-auto flex max-w-[1240px] items-center justify-between rounded-full border border-[#c8d6bf]/12 bg-[#f6f1e8]/6 px-4 py-3 backdrop-blur">
-          <NxtMark />
-          <div className="hidden items-center gap-6 text-sm text-[#c8d6bf] md:flex">
-            <Link href="#how">How it works</Link>
-            <Link href="/vendors">Vendors</Link>
-            <Link href="/briefing">Briefing</Link>
-          </div>
-          <CtaButton href="#intake">Start</CtaButton>
-        </nav>
-
-        <div className="relative mx-auto grid min-h-[calc(100vh-7rem)] max-w-[1240px] gap-12 pt-16 lg:grid-cols-[0.88fr_1.12fr] lg:items-center">
+        <div className="relative mx-auto grid min-h-[calc(100vh-7rem)] max-w-[1240px] gap-12 lg:grid-cols-[0.88fr_1.12fr] lg:items-center">
           <div className="animate-fade-up">
             <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-[#c8d6bf]/18 bg-[#f6f1e8]/7 px-4 py-2 text-sm text-[#c8d6bf]">
               <Zap className="h-4 w-4" />
@@ -304,17 +277,17 @@ export function OneTrackStyleLanding() {
               We hunt. You test. Buy smarter.
             </h1>
             <p className="mt-7 max-w-xl text-xl leading-8 text-[#c8d6bf] sm:text-2xl">
-              Tell us what you need. We find the right tech and narrow it to 5 vendors worth trying.
+              We find the vendors. You test the best 5 before buying.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <CtaButton href="#intake">Find My Top 5</CtaButton>
+              <CtaButton>Find My Top 5</CtaButton>
               <Link href="/vendors" className="inline-flex items-center justify-center rounded-full border border-[#c8d6bf]/45 px-5 py-3 text-sm font-semibold text-[#f6f1e8] transition hover:border-[#f6f1e8]">
                 Browse Vendors
               </Link>
             </div>
           </div>
 
-          <div id="intake" className="grid gap-4 lg:grid-cols-[0.78fr_1.22fr]">
+          <div id="intake" className="grid gap-4 scroll-mt-32 lg:grid-cols-[0.78fr_1.22fr]">
             <VendorHuntForm />
             <RadarVisual />
           </div>
@@ -415,7 +388,7 @@ export function OneTrackStyleLanding() {
             {useCases.map((item) => {
               const Icon = item.icon;
               return (
-                <Link key={item.title} href={`mailto:hello@nxtlinktech.com?subject=Start%20a%20${encodeURIComponent(item.title)}%20vendor%20hunt`} className="group rounded-[1.5rem] border border-[#ded7c9] bg-white/55 p-6 transition hover:-translate-y-1 hover:bg-white">
+                <Link key={item.title} href="#intake" className="group rounded-[1.5rem] border border-[#ded7c9] bg-white/55 p-6 transition hover:-translate-y-1 hover:bg-white">
                   <Icon className="h-7 w-7 text-[#101810]" />
                   <h3 className="mt-10 font-serif text-3xl text-[#101810]">{item.title}</h3>
                   <p className="mt-2 text-sm text-[#65705f]">{item.caption}</p>
@@ -455,7 +428,7 @@ export function OneTrackStyleLanding() {
             </div>
           </div>
           <div className="flex flex-col gap-3">
-            <CtaButton dark href="#intake">Start Vendor Hunt</CtaButton>
+            <CtaButton dark>Start Vendor Hunt</CtaButton>
             <Link href="/briefing" className="inline-flex items-center justify-center gap-2 rounded-full border border-[#101810]/20 px-5 py-3 text-sm font-semibold">
               Briefing <Truck className="h-4 w-4" />
             </Link>
