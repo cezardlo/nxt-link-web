@@ -137,7 +137,11 @@ function bucketTeamSize(n?: number): string | null {
   return '5001+';
 }
 
-async function fetchYcPage(page: number): Promise<AlgoliaResponse | null> {
+type AlgoliaFacetResponse = AlgoliaResponse & {
+  facets?: Record<string, Record<string, number>>;
+};
+
+async function fetchYcQuery(rawParams: string): Promise<AlgoliaFacetResponse | null> {
   const app = process.env.YC_ALGOLIA_APP || '45BWZJ1SGC';
   // Default key is the current public secured search key from YC's
   // www.ycombinator.com/companies HTML (window.AlgoliaOpts.key as of
@@ -148,9 +152,7 @@ async function fetchYcPage(page: number): Promise<AlgoliaResponse | null> {
   const index = process.env.YC_ALGOLIA_INDEX || 'YCCompany_production';
   const url = `https://${app.toLowerCase()}-dsn.algolia.net/1/indexes/${encodeURIComponent(index)}/query`;
 
-  const body = JSON.stringify({
-    params: `hitsPerPage=1000&page=${page}`,
-  });
+  const body = JSON.stringify({ params: rawParams });
 
   // YC's Algolia key enforces an allowed-origin check, so we have to send
   // Origin and Referer headers matching ycombinator.com. Node's built-in
@@ -160,7 +162,7 @@ async function fetchYcPage(page: number): Promise<AlgoliaResponse | null> {
   // adding a dependency.
   const https = await import('node:https');
   const u = new URL(url);
-  return await new Promise<AlgoliaResponse | null>((resolve) => {
+  return await new Promise<AlgoliaFacetResponse | null>((resolve) => {
     const req = https.request(
       {
         method: 'POST',
@@ -187,7 +189,7 @@ async function fetchYcPage(page: number): Promise<AlgoliaResponse | null> {
           }
           const text = Buffer.concat(chunks).toString('utf8');
           try {
-            resolve(JSON.parse(text) as AlgoliaResponse);
+            resolve(JSON.parse(text) as AlgoliaFacetResponse);
           } catch {
             resolve(null);
           }
@@ -236,21 +238,49 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // 2. Fetch YC companies, paging through Algolia.
+  // 2. Fetch YC companies. Algolia's secured search caps any single query
+  //    at 1000 results (paginationLimitedTo). To cover all ~5,800 YC
+  //    companies we issue one query per batch (W22, S22, W23, F24, etc.).
+  //    First fetch the list of batches via the facet endpoint, then pull
+  //    each batch separately. Each batch is well under 1000 companies.
+  const batchListResp = await fetchYcQuery('hitsPerPage=0&facets=%5B%22batch%22%5D');
+  if (!batchListResp) {
+    return NextResponse.json({
+      ok: false,
+      message: 'YC Algolia facet fetch failed. Verify YC_ALGOLIA_APP / YC_ALGOLIA_SEARCH_KEY / YC_ALGOLIA_INDEX env vars are current.',
+      fetched: 0,
+    }, { status: 502 });
+  }
+  const batchCounts = batchListResp.facets?.batch ?? {};
+  const batches = Object.keys(batchCounts);
+  const seenIds = new Set<string>();
   const allHits: AlgoliaHit[] = [];
-  for (let page = 0; page < 12; page++) { // up to 12k YC companies, plenty of headroom
-    const r = await fetchYcPage(page);
+  let batchesFetched = 0;
+  let batchesFailed = 0;
+  for (const batch of batches) {
+    const filter = encodeURIComponent(JSON.stringify([`batch:${batch}`]));
+    const params = `hitsPerPage=1000&facetFilters=${filter}`;
+    const r = await fetchYcQuery(params);
     if (!r) {
-      return NextResponse.json({
-        ok: false,
-        message: `YC Algolia fetch failed on page ${page}. Verify YC_ALGOLIA_APP / YC_ALGOLIA_SEARCH_KEY / YC_ALGOLIA_INDEX env vars are current.`,
-        fetched: allHits.length,
-      }, { status: 502 });
+      batchesFailed += 1;
+      continue;
     }
-    if (!r.hits || r.hits.length === 0) break;
-    allHits.push(...r.hits);
-    if (r.nbPages !== undefined && page + 1 >= r.nbPages) break;
-    if (r.hits.length < (r.hitsPerPage ?? 1000)) break;
+    batchesFetched += 1;
+    for (const hit of r.hits ?? []) {
+      // Algolia objectID is a stable per-row identifier; use it to
+      // dedupe across overlapping facet results.
+      const key = (hit as AlgoliaHit & { objectID?: string }).objectID
+        || `${hit.name ?? ''}::${hit.website ?? ''}`;
+      if (seenIds.has(key)) continue;
+      seenIds.add(key);
+      allHits.push(hit);
+    }
+  }
+  // Fallback if facets returned nothing — try the old single-query path
+  // so we at least insert the first 1000 results.
+  if (allHits.length === 0) {
+    const r = await fetchYcQuery('hitsPerPage=1000&page=0');
+    if (r && r.hits) allHits.push(...r.hits);
   }
 
   // 3a. The vendors table has a quirky schema: a text `id` column and a
@@ -336,7 +366,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if (toInsert.length === 0) {
     return NextResponse.json({
       ok: true,
-      version: 'v3-id-fix',
+      version: 'v4-batches',
       durationMs: Date.now() - start,
       ycCompaniesFetched: allHits.length,
       skippedNoUrl,
@@ -353,7 +383,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if (probeError) {
     return NextResponse.json({
       ok: false,
-      version: 'v3-id-fix',
+      version: 'v4-batches',
       message: `Probe insert failed: ${probeError.message}`,
       probeKeys: Object.keys(probe),
       probeIdValue: typeof probe.id,
@@ -371,7 +401,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (error) {
       return NextResponse.json({
         ok: false,
-        version: 'v3-id-fix',
+        version: 'v4-batches',
         message: `Insert batch failed at offset ${i}: ${error.message}`,
         inserted,
       }, { status: 500 });
@@ -381,9 +411,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   return NextResponse.json({
     ok: true,
-    version: 'v3-id-fix',
+    version: 'v4-batches',
     durationMs: Date.now() - start,
     ycCompaniesFetched: allHits.length,
+    batchesAvailable: batches.length,
+    batchesFetched,
+    batchesFailed,
     skippedNoUrl,
     skippedClosed,
     skippedDuplicate: skippedDup,
