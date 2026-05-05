@@ -43,6 +43,14 @@
     {
       "path": "/api/cron",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/admin/dedup-vendors",
+      "schedule": "30 14 * * *"
+    },
+    {
+      "path": "/api/admin/import-yc",
+      "schedule": "0 15 * * 1"
     }
   ]
 }
