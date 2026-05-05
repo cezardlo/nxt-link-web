@@ -126,6 +126,28 @@ function pickIndustry(hit: AlgoliaHit): IndustrySlug | null {
   return mapToCanonicalIndustry(blob);
 }
 
+function pickCountry(hit: AlgoliaHit): string | null {
+  // YC's `country` field is empty for almost every company. The location
+  // info is stored in `regions`, e.g. ["United States of America",
+  // "America / Canada", "Remote"]. Take the first concrete country.
+  const c = hit.country?.trim();
+  if (c) return c;
+  for (const r of hit.regions ?? []) {
+    if (!r) continue;
+    const low = r.toLowerCase();
+    if (low === 'remote' || low.includes('remote') || low.includes('america / canada') || low === 'global') continue;
+    return r;
+  }
+  return null;
+}
+
+function pickCity(hit: AlgoliaHit): string | null {
+  // Similar to pickCountry but lower priority — most "regions" entries are
+  // continent/country labels, not cities. Skip them. Cities aren't reliably
+  // surfaced by YC's API.
+  return null;
+}
+
 function bucketTeamSize(n?: number): string | null {
   if (!n || n <= 0) return null;
   if (n <= 10) return '1-10';
@@ -328,9 +350,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const industrySlug = pickIndustry(hit);
     const industryMeta = industrySlug ? INDUSTRIES.find((i) => i.slug === industrySlug) : null;
-    const sectorLabel = industrySlug === 'ai-ml'
-      ? 'AI/ML'
-      : industryMeta?.label ?? 'AI/ML';
+    // Don't default unmatched industries to AI/ML — that buried Stripe,
+    // Airbnb, Coinbase, etc. inside the AI tile. "Other" is honest.
+    const sectorLabel = !industrySlug
+      ? 'Other'
+      : industrySlug === 'ai-ml'
+        ? 'AI/ML'
+        : (industryMeta?.label ?? 'Other');
 
     const tags = Array.from(new Set([
       hit.batch ? `YC ${hit.batch}` : null,
@@ -348,8 +374,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       description: hit.long_description || hit.one_liner || null,
       sector: sectorLabel,
       primary_category: sectorLabel,
-      hq_country: hit.country || null,
-      hq_city: hit.regions?.[0] || null,
+      hq_country: pickCountry(hit),
+      hq_city: pickCity(hit),
       employee_count_range: bucketTeamSize(hit.team_size),
       tags,
       status: 'active',
@@ -409,6 +435,79 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     inserted += count ?? slice.length;
   }
 
+  // 5. Re-classify existing source='yc' rows whose sector or country are
+  //    stale (e.g. previously-defaulted-to-AI/ML). Group by destination
+  //    (sector, country) so we issue ~10-20 UPDATEs instead of one per row.
+  const ycHitMap = new Map<string, AlgoliaHit>();
+  for (const hit of allHits) {
+    if (!hit.website) continue;
+    const norm = normalizeVendorUrl(hit.website);
+    if (norm) ycHitMap.set(norm, hit);
+  }
+
+  type ExistingRow = { id: string; sector: string | null; hq_country: string | null; company_url: string | null };
+  const existingYc: ExistingRow[] = [];
+  {
+    const PAGE = 1000;
+    let from = 0;
+    for (;;) {
+      const { data, error } = await supabase
+        .from('vendors')
+        .select('id, sector, hq_country, company_url')
+        .eq('source', 'yc')
+        .range(from, from + PAGE - 1);
+      if (error) break;
+      if (!data || data.length === 0) break;
+      existingYc.push(...(data as ExistingRow[]));
+      if (data.length < PAGE) break;
+      from += PAGE;
+    }
+  }
+
+  const updateGroups = new Map<string, string[]>();
+  for (const row of existingYc) {
+    if (!row.company_url) continue;
+    const norm = normalizeVendorUrl(row.company_url);
+    if (!norm) continue;
+    const hit = ycHitMap.get(norm);
+    if (!hit) continue;
+
+    const slug = pickIndustry(hit);
+    const meta = slug ? INDUSTRIES.find((i) => i.slug === slug) : null;
+    const newSector = !slug
+      ? 'Other'
+      : slug === 'ai-ml'
+        ? 'AI/ML'
+        : (meta?.label ?? 'Other');
+    const newCountry = pickCountry(hit);
+
+    if (row.sector === newSector && row.hq_country === newCountry) continue;
+    const key = `${newSector}|||${newCountry ?? ''}`;
+    const arr = updateGroups.get(key) ?? [];
+    arr.push(row.id);
+    updateGroups.set(key, arr);
+  }
+
+  let updated = 0;
+  let updateBatches = 0;
+  for (const [key, ids] of updateGroups) {
+    const [newSector, newCountryRaw] = key.split('|||');
+    const newCountry = newCountryRaw === '' ? null : newCountryRaw;
+    for (let i = 0; i < ids.length; i += 200) {
+      const slice = ids.slice(i, i + 200);
+      const { error, count } = await supabase
+        .from('vendors')
+        .update({
+          sector: newSector,
+          primary_category: newSector,
+          hq_country: newCountry,
+        }, { count: 'exact' })
+        .in('id', slice);
+      updateBatches += 1;
+      if (!error) updated += count ?? slice.length;
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     version: 'v4-batches',
@@ -421,6 +520,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     skippedClosed,
     skippedDuplicate: skippedDup,
     inserted,
+    existingYcReclassified: updated,
+    reclassifyGroups: updateGroups.size,
+    reclassifyBatches: updateBatches,
   });
 }
 
