@@ -114,16 +114,21 @@ function pickIndustry(hit: AlgoliaHit): IndustrySlug | null {
     hit.subindustry,
   ].filter(Boolean) as string[];
 
+  // Try the exact YC-industry → canonical map first (case-insensitive).
   for (const c of candidates) {
     if (YC_INDUSTRY_MAP[c]) return YC_INDUSTRY_MAP[c];
+    const found = Object.entries(YC_INDUSTRY_MAP).find(([k]) => k.toLowerCase() === c.toLowerCase());
+    if (found) return found[1];
   }
+  // Then try the broader sector-mapping keyword rules on the YC industry
+  // string itself — but NOT on the long description blob. Description
+  // matching produced too many false positives (Stripe/DoorDash hit on
+  // "infrastructure"/"platform" keywords and got mislabeled AI/ML).
   for (const c of candidates) {
     const slug = mapToCanonicalIndustry(c);
     if (slug) return slug;
   }
-  // Fall back to keyword matching against name + descriptions.
-  const blob = [hit.one_liner, hit.long_description, hit.name].filter(Boolean).join(' ');
-  return mapToCanonicalIndustry(blob);
+  return null;
 }
 
 function pickCountry(hit: AlgoliaHit): string | null {
