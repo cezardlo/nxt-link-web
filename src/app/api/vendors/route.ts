@@ -68,7 +68,8 @@ export async function GET(request: Request) {
     .select(VENDOR_SELECT)
     .not('sector', 'is', null)
     .neq('sector', '')
-    .neq('status', 'duplicate');
+    .neq('status', 'duplicate')
+    .neq('status', 'junk');
   if (!includeUnverified) vendorsQuery = vendorsQuery.or(VERIFIED_FILTER);
 
   let countQuery = supabase
@@ -76,7 +77,8 @@ export async function GET(request: Request) {
     .select('*', { count: 'exact', head: true })
     .not('sector', 'is', null)
     .neq('sector', '')
-    .neq('status', 'duplicate');
+    .neq('status', 'duplicate')
+    .neq('status', 'junk');
   if (!includeUnverified) countQuery = countQuery.or(VERIFIED_FILTER);
 
   let topQuery = supabase
@@ -84,7 +86,8 @@ export async function GET(request: Request) {
     .select(VENDOR_SELECT)
     .not('sector', 'is', null)
     .neq('sector', '')
-    .neq('status', 'duplicate');
+    .neq('status', 'duplicate')
+    .neq('status', 'junk');
   if (!includeUnverified) topQuery = topQuery.or(VERIFIED_FILTER);
 
   if (sector) {
@@ -169,7 +172,8 @@ export async function GET(request: Request) {
         .select('sector, hq_country, funding_stage, employee_count_range, iker_score', { count: 'exact' })
         .not('sector', 'is', null)
         .neq('sector', '')
-        .neq('status', 'duplicate');
+        .neq('status', 'duplicate')
+    .neq('status', 'junk');
       if (!includeUnverified) q = q.or(VERIFIED_FILTER);
       return q.range(0, 49999);
     })(),

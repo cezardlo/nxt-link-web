@@ -15,7 +15,7 @@ type JobResult = {
 };
 
 type Job = {
-  id: 'dedup' | 'yc';
+  id: 'dedup' | 'yc' | 'junk';
   title: string;
   endpoint: string;
   description: string;
@@ -25,6 +25,13 @@ type Job = {
 
 const JOBS: Job[] = [
   {
+    id: 'junk',
+    title: 'Clean junk vendors',
+    endpoint: '/api/admin/clean-junk',
+    description: 'Marks scraping artefacts (mid-sentence text, sponsor labels, page chrome strings, JS variable names) as status=junk so they disappear from the catalog. Never touches YC vendors or anything you marked active/approved. Idempotent.',
+    expected: '~1,500 cleaned on first run.',
+  },
+  {
     id: 'dedup',
     title: 'Dedup vendors',
     endpoint: '/api/admin/dedup-vendors',
@@ -33,10 +40,10 @@ const JOBS: Job[] = [
   },
   {
     id: 'yc',
-    title: 'Import Y Combinator companies',
+    title: 'Import / re-classify Y Combinator companies',
     endpoint: '/api/admin/import-yc',
-    description: 'Pulls the public Y Combinator company directory and inserts new tech vendors into your catalog with status=active. Skips vendors whose URL is already in your table.',
-    expected: '~3,000–5,000 inserted on first run, much fewer on subsequent runs.',
+    description: 'Pulls the public Y Combinator company directory, inserts new tech vendors with status=active, and re-classifies any existing YC rows whose sector or country are stale. Skips vendors whose URL is already in your table.',
+    expected: '~3,000–5,000 inserted on first run, ~0 on subsequent runs (just re-classifies).',
     longRunning: true,
   },
 ];
@@ -57,6 +64,7 @@ function JsonBlock({ value }: { value: unknown }) {
 
 export default function AdminPage() {
   const [results, setResults] = useState<Record<string, JobResult>>({
+    junk: { status: 'idle' },
     dedup: { status: 'idle' },
     yc: { status: 'idle' },
   });

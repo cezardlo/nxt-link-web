@@ -45,6 +45,10 @@
       "schedule": "0 14 * * *"
     },
     {
+      "path": "/api/admin/clean-junk",
+      "schedule": "20 14 * * *"
+    },
+    {
       "path": "/api/admin/dedup-vendors",
       "schedule": "30 14 * * *"
     },
