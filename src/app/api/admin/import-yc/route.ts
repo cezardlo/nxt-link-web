@@ -158,6 +158,10 @@ async function fetchYcPage(page: number): Promise<AlgoliaResponse | null> {
       'X-Algolia-Application-Id': app,
       'X-Algolia-API-Key': key,
       'Content-Type': 'application/json',
+      // YC's secured Algolia key enforces an allowed-origin / referer
+      // check. Without these we get a 403 even with valid keys.
+      'Origin': 'https://www.ycombinator.com',
+      'Referer': 'https://www.ycombinator.com/companies',
     },
     body,
   });
