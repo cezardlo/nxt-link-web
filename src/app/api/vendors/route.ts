@@ -2,6 +2,12 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { INDUSTRIES } from '@/lib/data/technology-catalog';
+import {
+  industryToRawSectors,
+  isCanonicalIndustryToken,
+  mapToCanonicalIndustry,
+} from '@/lib/data/sector-mapping';
 
 const VENDOR_SELECT = 'id, company_name, company_url, description, primary_category, sector, hq_country, hq_city, continent, iker_score, credibility_score, tags, funding_stage, employee_count_range, industries, created_at';
 
@@ -69,9 +75,22 @@ export async function GET(request: Request) {
     .neq('sector', '');
 
   if (sector) {
-    vendorsQuery = vendorsQuery.eq('sector', sector);
-    countQuery = countQuery.eq('sector', sector);
-    topQuery = topQuery.eq('sector', sector);
+    // If the user passed a canonical industry name (e.g. "Logistics"), expand
+    // it to all underlying raw sector strings the catalog uses for that
+    // industry. Otherwise treat it as an exact raw-sector filter.
+    const canonicalSlug = isCanonicalIndustryToken(sector);
+    if (canonicalSlug) {
+      const rawSectors = industryToRawSectors(canonicalSlug);
+      if (rawSectors.length > 0) {
+        vendorsQuery = vendorsQuery.in('sector', rawSectors);
+        countQuery = countQuery.in('sector', rawSectors);
+        topQuery = topQuery.in('sector', rawSectors);
+      }
+    } else {
+      vendorsQuery = vendorsQuery.eq('sector', sector);
+      countQuery = countQuery.eq('sector', sector);
+      topQuery = topQuery.eq('sector', sector);
+    }
   }
 
   if (category) {
@@ -145,14 +164,29 @@ export async function GET(request: Request) {
   const facetRows = facetsResult.status === 'fulfilled' ? (facetsResult.value.data || []) as VendorFacetRow[] : [];
   const catalogTotal = facetsResult.status === 'fulfilled' ? facetsResult.value.count || facetRows.length : facetRows.length;
 
+  // The /vendors page tiles look up colors and icons under the key "AI/ML"
+  // (no spaces), but the canonical INDUSTRIES label is "AI / ML". Alias to
+  // keep the lookups consistent on the client.
+  const labelForSlug = (slug: string): string => {
+    if (slug === 'ai-ml') return 'AI/ML';
+    return INDUSTRIES.find((i) => i.slug === slug)?.label || 'Other';
+  };
+
+  // Pre-seed every canonical industry at 0 so the catalog always renders the
+  // same 8 tiles even when a particular industry has no vendors yet.
   const sectorCounts: CountMap = {};
+  for (const ind of INDUSTRIES) sectorCounts[labelForSlug(ind.slug)] = 0;
   const countryCounts: CountMap = {};
   const fundingCounts: CountMap = {};
   const employeeCounts: CountMap = {};
   const scoreCounts: CountMap = { '90-100': 0, '75-89': 0, '60-74': 0, '0-59': 0 };
 
   for (const row of facetRows) {
-    addCount(sectorCounts, row.sector);
+    // Aggregate raw sector strings under their canonical industry label.
+    // Vendors that don't map to one of the 8 industries fall into "Other".
+    const slug = mapToCanonicalIndustry(row.sector);
+    const industryLabel = slug ? labelForSlug(slug) : 'Other';
+    addCount(sectorCounts, industryLabel);
     addCount(countryCounts, row.hq_country);
     addCount(fundingCounts, row.funding_stage);
     addCount(employeeCounts, row.employee_count_range);
