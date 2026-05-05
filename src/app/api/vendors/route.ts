@@ -155,7 +155,7 @@ export async function GET(request: Request) {
       .select('sector, hq_country, funding_stage, employee_count_range, iker_score', { count: 'exact' })
       .not('sector', 'is', null)
       .neq('sector', '')
-      .range(0, 9999),
+      .range(0, 49999),
   ]);
 
   const vendors = vendorsResult.status === 'fulfilled' ? vendorsResult.value.data || [] : [];
