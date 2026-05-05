@@ -440,7 +440,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (error) {
       return NextResponse.json({
         ok: false,
-        version: 'v4-batches',
+        version: 'v5-tiles',
         message: `Insert batch failed at offset ${i}: ${error.message}`,
         inserted,
       }, { status: 500 });
