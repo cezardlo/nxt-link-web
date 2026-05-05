@@ -61,6 +61,25 @@ Each job prints progress and a JSON summary at the end. All three are
 | `dedup` | Finds companies appearing under the same URL multiple times (e.g. exhibitors at multiple conferences). Picks the highest-quality copy of each, marks the rest `status='duplicate'`. |
 | `yc` | Pulls the public YC company directory, inserts new tech vendors, and re-classifies any existing YC rows whose sector or country are stale. |
 
+## Run it without installing anything (GitHub Actions)
+
+If you don't want to install Python on your laptop, you can run this
+script in GitHub's cloud:
+
+1. Open your repo on GitHub: https://github.com/cezardlo/nxt-link-web
+2. Click the **Actions** tab.
+3. In the left sidebar, click **"Catalog Jobs (Python)"**.
+4. Click **"Run workflow"** (top right) → pick a job (`all`, `junk`,
+   `dedup`, `yc`) → click the green **Run workflow** button.
+5. Wait ~1 minute. Click the run that appears to see live logs.
+
+This requires the repo secrets `NEXT_PUBLIC_SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY` to be set in GitHub → Settings → Secrets
+and variables → Actions. The other Python pipelines in this repo
+already use them, so they're probably already there.
+
+The same workflow also runs automatically every day at **03:30 UTC**.
+
 ## Notes
 
 - The script connects directly to Supabase — it does **not** go through your

@@ -1,0 +1,62 @@
+name: Catalog Jobs (Python)
+
+# Runs the same three catalog-maintenance jobs as the /api/admin/* Vercel
+# endpoints, but in GitHub's cloud Python runtime — no need for the user
+# to install Python locally.
+#
+# Trigger options:
+#   • Manual: Actions tab → "Catalog Jobs (Python)" → "Run workflow"
+#     → optionally pick a single job, then click the green button.
+#   • Scheduled: runs daily at 03:30 UTC (offset from the existing
+#     14:30 UTC Vercel dedup so they don't clash).
+
+on:
+  schedule:
+    # 03:30 UTC daily ≈ 21:30 El Paso (CT) the night before
+    - cron: '30 3 * * *'
+  workflow_dispatch:
+    inputs:
+      job:
+        description: 'Which job to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - junk
+          - dedup
+          - yc
+
+env:
+  SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+jobs:
+  catalog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: scripts/python/requirements.txt
+
+      - name: Install minimum dependencies
+        # The full requirements.txt is broad (60+ packages) and slow to
+        # install in CI. The catalog script itself only needs supabase.
+        run: pip install "supabase>=2.0,<3"
+
+      - name: Run catalog job(s)
+        run: |
+          JOB="${{ github.event.inputs.job || 'all' }}"
+          cd scripts/python
+          if [ "$JOB" = "all" ]; then
+            python run_catalog_jobs.py
+          else
+            python run_catalog_jobs.py "$JOB"
+          fi
