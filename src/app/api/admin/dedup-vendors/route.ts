@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { getSupabaseClient, hasSupabaseAdmin, isSupabaseConfigured } from '@/lib/supabase/client';
 import { requireCronSecret } from '@/lib/http/cron-auth';
 import { normalizeVendorUrl } from '@/lib/vendors/normalize-url';
 import { PRIVATE_ACCESS_CODE } from '@/lib/privateAccess';
@@ -52,6 +52,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!auth.ok) return NextResponse.json({ ok: false, message: auth.message }, { status: auth.status });
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ ok: false, message: 'Supabase not configured' }, { status: 503 });
+  }
+  if (!hasSupabaseAdmin()) {
+    return NextResponse.json({
+      ok: false,
+      message: 'SUPABASE_SERVICE_ROLE_KEY is not set in Vercel. Dedup needs UPDATE access on the vendors table, which the anon key cannot provide. Add the service role key from your Supabase dashboard (Settings → API → service_role) to your Vercel project env (Settings → Environment Variables → Production), then redeploy.',
+    }, { status: 503 });
   }
 
   const supabase = getSupabaseClient({ admin: true });

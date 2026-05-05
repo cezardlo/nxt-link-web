@@ -19,7 +19,15 @@ export function isSupabaseConfigured(): boolean {
 }
 
 export function getSupabaseClient(options?: { admin?: boolean }): SupabaseClient {
-  const key = options?.admin ? supabaseServiceRoleKey : supabaseAnonKey;
+  // When admin is requested but the service role key is missing in the
+  // environment, fall back to the anon key so read-only routes still
+  // function. RLS policies determine what actually succeeds. Write paths
+  // (UPDATE / DELETE) will surface a row-level-security error, which is
+  // a much cleaner failure than a 500 thrown at client construction time.
+  const adminWanted = options?.admin === true;
+  const key = adminWanted && supabaseServiceRoleKey
+    ? supabaseServiceRoleKey
+    : supabaseAnonKey;
   const resolved = resolveSupabaseEnv(supabaseUrl, key);
 
   return createSupabaseJsClient(resolved.url, resolved.key, {
@@ -28,6 +36,10 @@ export function getSupabaseClient(options?: { admin?: boolean }): SupabaseClient
       autoRefreshToken: false,
     },
   });
+}
+
+export function hasSupabaseAdmin(): boolean {
+  return Boolean(supabaseUrl && supabaseServiceRoleKey);
 }
 
 export function createClient(): SupabaseClient {
