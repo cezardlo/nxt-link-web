@@ -232,7 +232,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (r.hits.length < (r.hitsPerPage ?? 1000)) break;
   }
 
-  // 3. Build the rows to insert.
+  // 3a. The vendors table has a quirky schema: a text `id` column and a
+  //     bigint `ID` column, both NOT NULL with no default. Generate UUIDs
+  //     for `id` and increment from current max for `ID`.
+  let nextNumericId: number;
+  {
+    const { data: maxRow, error: maxErr } = await supabase
+      .from('vendors')
+      .select('ID')
+      .order('ID', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (maxErr) {
+      return NextResponse.json({ ok: false, message: `Couldn't read max ID: ${maxErr.message}` }, { status: 500 });
+    }
+    nextNumericId = (((maxRow as { ID?: number } | null)?.ID ?? 0) + 1);
+  }
+
+  // 3b. Build the rows to insert.
   const toInsert: Record<string, unknown>[] = [];
   let skippedNoUrl = 0;
   let skippedDup = 0;
@@ -273,6 +290,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     ].filter(Boolean) as string[]));
 
     toInsert.push({
+      id: crypto.randomUUID(),
+      ID: nextNumericId++,
       company_name: hit.name,
       company_url: hit.website,
       description: hit.long_description || hit.one_liner || null,
