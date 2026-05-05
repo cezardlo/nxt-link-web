@@ -154,30 +154,51 @@ async function fetchYcPage(page: number): Promise<AlgoliaResponse | null> {
 
   // YC's Algolia key enforces an allowed-origin check, so we have to send
   // Origin and Referer headers matching ycombinator.com. Node's built-in
-  // `fetch` (via undici) silently strips those — they're on the Fetch
-  // spec's forbidden-header list. Use undici's lower-level request() which
-  // does NOT enforce the forbidden-header rule.
-  const { request } = await import('undici');
-  const res = await request(url, {
-    method: 'POST',
-    headers: {
-      'X-Algolia-Application-Id': app,
-      'X-Algolia-API-Key': key,
-      'Content-Type': 'application/json',
-      'Origin': 'https://www.ycombinator.com',
-      'Referer': 'https://www.ycombinator.com/companies',
-    },
-    body,
+  // fetch (via undici) silently strips both — they're on the Fetch spec's
+  // forbidden-header list. Using Node's lower-level node:https module
+  // bypasses that restriction and works in any Vercel runtime without
+  // adding a dependency.
+  const https = await import('node:https');
+  const u = new URL(url);
+  return await new Promise<AlgoliaResponse | null>((resolve) => {
+    const req = https.request(
+      {
+        method: 'POST',
+        host: u.hostname,
+        path: u.pathname + (u.search || ''),
+        port: 443,
+        headers: {
+          'X-Algolia-Application-Id': app,
+          'X-Algolia-API-Key': key,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+          'Origin': 'https://www.ycombinator.com',
+          'Referer': 'https://www.ycombinator.com/companies',
+          'User-Agent': 'nxtlink-import/1.0',
+        },
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (c) => chunks.push(c));
+        res.on('end', () => {
+          if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+            resolve(null);
+            return;
+          }
+          const text = Buffer.concat(chunks).toString('utf8');
+          try {
+            resolve(JSON.parse(text) as AlgoliaResponse);
+          } catch {
+            resolve(null);
+          }
+        });
+        res.on('error', () => resolve(null));
+      },
+    );
+    req.on('error', () => resolve(null));
+    req.write(body);
+    req.end();
   });
-  if (res.statusCode < 200 || res.statusCode >= 300) {
-    return null;
-  }
-  const text = await res.body.text();
-  try {
-    return JSON.parse(text) as AlgoliaResponse;
-  } catch {
-    return null;
-  }
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
