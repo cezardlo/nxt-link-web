@@ -152,21 +152,32 @@ async function fetchYcPage(page: number): Promise<AlgoliaResponse | null> {
     params: `hitsPerPage=1000&page=${page}`,
   });
 
-  const res = await fetch(url, {
+  // YC's Algolia key enforces an allowed-origin check, so we have to send
+  // Origin and Referer headers matching ycombinator.com. Node's built-in
+  // `fetch` (via undici) silently strips those — they're on the Fetch
+  // spec's forbidden-header list. Use undici's lower-level request() which
+  // does NOT enforce the forbidden-header rule.
+  const { request } = await import('undici');
+  const res = await request(url, {
     method: 'POST',
     headers: {
       'X-Algolia-Application-Id': app,
       'X-Algolia-API-Key': key,
       'Content-Type': 'application/json',
-      // YC's secured Algolia key enforces an allowed-origin / referer
-      // check. Without these we get a 403 even with valid keys.
       'Origin': 'https://www.ycombinator.com',
       'Referer': 'https://www.ycombinator.com/companies',
     },
     body,
   });
-  if (!res.ok) return null;
-  return (await res.json()) as AlgoliaResponse;
+  if (res.statusCode < 200 || res.statusCode >= 300) {
+    return null;
+  }
+  const text = await res.body.text();
+  try {
+    return JSON.parse(text) as AlgoliaResponse;
+  } catch {
+    return null;
+  }
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
