@@ -1,1 +1,115 @@
+# nxtlink Python toolkit — broad set of packages for catalog ops, scraping,
+# data work, and AI integration. The minimal script (run_catalog_jobs.py)
+# only needs `supabase`. Everything else is here so you can pip install
+# once and have a full toolbox available for future work.
+#
+# Install everything:        pip install -r requirements.txt
+# Install only the minimum:  pip install supabase>=2.0,<3
+#
+# Heavy / sometimes-fails packages are at the bottom. If pip errors out,
+# comment those lines and try again.
+
+# ─── Supabase / Database ───────────────────────────────────────────────
 supabase>=2.0,<3
+psycopg2-binary>=2.9            # raw Postgres if you ever need it
+sqlalchemy>=2.0                 # ORM for complex queries
+
+# ─── HTTP / Networking ─────────────────────────────────────────────────
+requests>=2.31
+httpx>=0.27
+aiohttp>=3.9
+urllib3>=2.0
+
+# ─── Web scraping (lightweight) ────────────────────────────────────────
+beautifulsoup4>=4.12
+lxml>=5.0
+html5lib>=1.1
+feedparser>=6.0                  # RSS/Atom feeds
+trafilatura>=1.6                 # clean article text from HTML
+
+# ─── Data / spreadsheets ───────────────────────────────────────────────
+pandas>=2.0
+numpy>=1.26
+openpyxl>=3.1                    # .xlsx read/write
+xlrd>=2.0                        # legacy .xls read
+pyarrow>=14                      # parquet, columnar IO
+tabulate>=0.9                    # pretty-print tables
+
+# ─── LLM / AI ──────────────────────────────────────────────────────────
+openai>=1.30
+anthropic>=0.34
+google-generativeai>=0.7
+tiktoken>=0.7                    # token counting for OpenAI / Anthropic
+mistralai>=1.0
+groq>=0.9
+ollama>=0.3                      # local model proxy
+
+# ─── Vector / search ───────────────────────────────────────────────────
+chromadb>=0.5
+qdrant-client>=1.9
+rapidfuzz>=3                     # fast fuzzy string matching
+sentence-transformers>=3        # embeddings (heavy — see notes below)
+
+# ─── Env / config ──────────────────────────────────────────────────────
+python-dotenv>=1.0
+pyyaml>=6
+tomli>=2; python_version < '3.11'
+
+# ─── CLI / output ──────────────────────────────────────────────────────
+rich>=13
+tqdm>=4.66
+typer>=0.12
+click>=8.1
+
+# ─── Validation / parsing ──────────────────────────────────────────────
+pydantic>=2
+email-validator>=2
+phonenumbers>=8                  # phone normalisation
+python-dateutil>=2.9
+pytz>=2024.1
+
+# ─── Utilities ─────────────────────────────────────────────────────────
+tenacity>=8.2                    # retry decorators
+cachetools>=5
+loguru>=0.7                      # nicer logging
+orjson>=3.9                      # fast JSON
+ujson>=5
+backoff>=2.2
+ratelimit>=2.2
+
+# ─── File / image / pdf ────────────────────────────────────────────────
+pillow>=10                       # images
+pypdf>=4                         # pdf reading
+python-magic-bin>=0.4; sys_platform == 'win32'   # mime detection (Windows wheels)
+
+# ─── Testing ───────────────────────────────────────────────────────────
+pytest>=8
+pytest-asyncio>=0.23
+
+# ─── Notebook / exploration ────────────────────────────────────────────
+ipython>=8.12
+jupyter>=1.0
+matplotlib>=3.8
+seaborn>=0.13
+
+# ─── Heavy / optional (uncomment as needed) ────────────────────────────
+# These often need extra system dependencies; comment them out if pip fails.
+#
+# Headless browser scraping (after install run: `playwright install`):
+#   playwright>=1.40
+#
+# Full scraping framework:
+#   scrapy>=2.11
+#
+# Selenium-style browser automation:
+#   selenium>=4.20
+#   webdriver-manager>=4
+#
+# Faster async HTML parser (compiled C):
+#   selectolax>=0.3
+#
+# Llama / local model runners:
+#   llama-cpp-python>=0.2
+#
+# OpenCV / heavy image work:
+#   opencv-python>=4.9

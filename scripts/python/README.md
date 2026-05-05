@@ -14,8 +14,17 @@ python -m venv .venv
 # macOS / Linux:
 source .venv/bin/activate
 
+# Full toolkit (Supabase, scraping, AI, data, etc):
 pip install -r requirements.txt
+
+# Or just the minimum to run this script:
+pip install "supabase>=2.0,<3"
 ```
+
+**If `pip install -r requirements.txt` errors out** on some heavy package
+(e.g. `psycopg2-binary` or `sentence-transformers`), open
+`requirements.txt` in any text editor and comment out the offending line
+with a `#`, then re-run. The script itself only needs `supabase`.
 
 ## Configure
 
