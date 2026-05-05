@@ -105,6 +105,45 @@ const YC_INDUSTRY_MAP: Record<string, IndustrySlug> = {
   'AI': 'ai-ml',
   'Artificial Intelligence': 'ai-ml',
   'Machine Learning': 'ai-ml',
+
+  // Fintech / financial services
+  'Fintech': 'fintech',
+  'FinTech': 'fintech',
+  'Finance': 'fintech',
+  'Banking and Insurance': 'fintech',
+  'Banking': 'fintech',
+  'Insurance': 'fintech',
+  'Crypto / Web3': 'fintech',
+  'Crypto': 'fintech',
+  'Payments': 'fintech',
+
+  // Consumer / marketplaces
+  'Consumer': 'consumer',
+  'Marketplace': 'consumer',
+  'Food and Beverage': 'consumer',
+  'E-commerce': 'consumer',
+  'Ecommerce': 'consumer',
+  'Travel': 'consumer',
+  'Lifestyle': 'consumer',
+  'Apparel and Cosmetics': 'consumer',
+  'Sports and Fitness': 'consumer',
+  'Gaming': 'consumer',
+  'Dating': 'consumer',
+
+  // Real estate / construction
+  'Real Estate and Construction': 'real-estate',
+  'Real Estate': 'real-estate',
+  'Construction': 'real-estate',
+
+  // Education
+  'Education': 'education',
+  'EdTech': 'education',
+
+  // Media / creator economy
+  'Media': 'media',
+  'Entertainment': 'media',
+  'Music': 'media',
+  'Video': 'media',
 };
 
 function pickIndustry(hit: AlgoliaHit): IndustrySlug | null {

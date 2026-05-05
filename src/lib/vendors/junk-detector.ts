@@ -66,3 +66,48 @@ export function looksLikeSponsorTemplateUrl(url: string | null | undefined): boo
   if (!url) return false;
   return SPONSOR_URL_PATTERNS.some((re) => re.test(url));
 }
+
+// ---------------------------------------------------------------------------
+// Junk descriptions: scraping artefacts where a vendor row ended up with text
+// from an unrelated page — Microsoft sign-in chrome, hotel booking
+// boilerplate, sponsor-event blurbs, etc. Better to blank than to mislead.
+
+const JUNK_DESC_PATTERNS = [
+  /^posted on\s*[.!]?$/i,
+  /^lorem ipsum/i,
+  /kostenlose e-mail-?adresse/i,        // German Microsoft sign-in template
+  /book direct with .*\.com/i,           // Hotel booking boilerplate
+  /find your stay from our economic/i,
+  /save now!/i,
+  /create a free .* account/i,
+  /sign in with (your|microsoft|google|apple)/i,
+  /benefit from our special rates/i,
+  /congresos? eventos y ferias/i,        // Spanish event mgmt boilerplate
+  /^the leader in american-made/i,
+  /^see attached/i,
+  /^click here/i,
+  /^read more/i,
+  /^learn more/i,
+  /^visit (us|our)/i,
+  /^[•·\-*]\s/,                          // bullet list fragments
+];
+
+export function isJunkDescription(desc: string | null | undefined): boolean {
+  if (!desc) return false; // null is NOT junk — it just means no description
+  const d = desc.trim();
+  if (d.length < 10) return true;        // too short
+  if (d.length > 5000) return true;       // probably a page dump
+  if (JUNK_DESC_PATTERNS.some((re) => re.test(d))) return true;
+  return false;
+}
+
+// Strip common HTML entities from a description in place. Cheap pass.
+export function decodeHtmlEntities(s: string): string {
+  return s
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ');
+}

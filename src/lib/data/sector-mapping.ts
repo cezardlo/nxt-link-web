@@ -88,15 +88,15 @@ const RAW_SECTOR_TO_INDUSTRY: Record<string, IndustrySlug> = {
   'ERP/SCM': 'logistics',
   'Industrial ERP': 'logistics',
   'Industry Related Services': 'logistics',
-  'Retail & eCommerce': 'logistics',
-  'Retail Technology': 'logistics',
-  'Consumer Goods': 'logistics',
-  'Food': 'logistics',
-  'Fresh Produce & Food': 'logistics',
-  'FinTech': 'logistics',
-  'Fintech & Insurance': 'logistics',
-  'Latin America Payments': 'logistics',
-  'Payments Technology': 'logistics',
+  'Retail & eCommerce': 'consumer',
+  'Retail Technology': 'consumer',
+  'Consumer Goods': 'consumer',
+  'Food': 'consumer',
+  'Fresh Produce & Food': 'consumer',
+  'FinTech': 'fintech',
+  'Fintech & Insurance': 'fintech',
+  'Latin America Payments': 'fintech',
+  'Payments Technology': 'fintech',
 
   // Manufacturing
   'Manufacturing Technology': 'manufacturing',
@@ -167,8 +167,8 @@ const RAW_SECTOR_TO_INDUSTRY: Record<string, IndustrySlug> = {
   'Border & Trade': 'border-tech',
   'Border Tech': 'border-tech',
   'Cross-Border Technology': 'border-tech',
-  'Cross-Border Payments': 'border-tech',
-  'Cross-Border Fintech': 'border-tech',
+  'Cross-Border Payments': 'fintech',
+  'Cross-Border Fintech': 'fintech',
 
   // AI/ML
   'AI & Computing': 'ai-ml',
@@ -258,6 +258,25 @@ export function mapToCanonicalIndustry(rawSector: string | null | undefined): In
     || lower.includes('biotech') || lower.includes('medtech')) {
     if (lower.includes('logistic') || lower.includes('supply')) return 'logistics';
     return 'healthcare';
+  }
+  if (lower.includes('fintech') || lower.includes('finance') || lower.includes('banking')
+    || lower.includes('insurance') || lower.includes('payment') || lower.includes('crypto')
+    || lower.includes('lending')) {
+    return 'fintech';
+  }
+  if (lower.includes('ecommerce') || lower.includes('e-commerce') || lower.includes('retail')
+    || lower.includes('consumer goods') || lower.includes('marketplace') || lower.includes('food')) {
+    return 'consumer';
+  }
+  if (lower.includes('real estate') || lower.includes('proptech') || lower.includes('construction')) {
+    return 'real-estate';
+  }
+  if (lower.includes('education') || lower.includes('edtech') || lower.includes('learning')) {
+    return 'education';
+  }
+  if (lower.includes('media') || lower.includes('content') || lower.includes('entertainment')
+    || lower.includes('publishing') || lower.includes('streaming')) {
+    return 'media';
   }
   return null;
 }

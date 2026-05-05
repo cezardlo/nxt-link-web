@@ -611,7 +611,12 @@ export type IndustrySlug =
   | 'manufacturing'
   | 'energy'
   | 'healthcare'
-  | 'logistics';
+  | 'logistics'
+  | 'fintech'
+  | 'consumer'
+  | 'real-estate'
+  | 'education'
+  | 'media';
 
 export type IndustryMeta = {
   slug: IndustrySlug;
@@ -630,6 +635,11 @@ export const INDUSTRIES: IndustryMeta[] = [
   { slug: 'energy',         label: 'Energy',           category: 'Energy',         color: '#ffd700', description: 'Smart grid, utility solar, battery storage, microgrids, and AI grid operations.' },
   { slug: 'healthcare',     label: 'Healthcare',       category: 'Healthcare',     color: '#00ff88', description: 'Telemedicine, EHR systems, medical imaging AI, remote patient monitoring.' },
   { slug: 'logistics',      label: 'Logistics',        category: 'Logistics',      color: '#ffb800', description: 'Route optimization, warehouse automation, fleet management, supply chain visibility.' },
+  { slug: 'fintech',        label: 'Fintech',          category: 'AI/ML',          color: '#10b981', description: 'Payments, banking, lending, crypto, insurance, and financial infrastructure.' },
+  { slug: 'consumer',       label: 'Consumer',         category: 'AI/ML',          color: '#ec4899', description: 'Marketplaces, e-commerce, social, food delivery, and consumer SaaS.' },
+  { slug: 'real-estate',    label: 'Real Estate',      category: 'Manufacturing',  color: '#a855f7', description: 'Proptech, construction tech, property management, and real-estate marketplaces.' },
+  { slug: 'education',      label: 'Education',        category: 'AI/ML',          color: '#0ea5e9', description: 'EdTech, online learning, training platforms, and education tooling.' },
+  { slug: 'media',          label: 'Media',            category: 'AI/ML',          color: '#fb7185', description: 'Content creation, publishing, streaming, video tooling, and creator platforms.' },
 ];
 
 export function getIndustryBySlug(slug: string): IndustryMeta | undefined {
