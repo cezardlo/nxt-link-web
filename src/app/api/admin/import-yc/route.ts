@@ -22,6 +22,12 @@ import { requireCronSecret } from '@/lib/http/cron-auth';
 import { normalizeVendorUrl } from '@/lib/vendors/normalize-url';
 import { mapToCanonicalIndustry } from '@/lib/data/sector-mapping';
 import { INDUSTRIES, type IndustrySlug } from '@/lib/data/technology-catalog';
+import { PRIVATE_ACCESS_CODE } from '@/lib/privateAccess';
+
+function authorize(headers: Headers): { ok: true } | { ok: false; status: number; message: string } {
+  if (headers.get('x-access-code') === PRIVATE_ACCESS_CODE) return { ok: true };
+  return requireCronSecret(headers);
+}
 
 type AlgoliaHit = {
   name?: string;
@@ -155,7 +161,7 @@ async function fetchYcPage(page: number): Promise<AlgoliaResponse | null> {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const auth = requireCronSecret(request.headers);
+  const auth = authorize(request.headers);
   if (!auth.ok) return NextResponse.json({ ok: false, message: auth.message }, { status: auth.status });
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ ok: false, message: 'Supabase not configured' }, { status: 503 });

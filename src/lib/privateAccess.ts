@@ -1,6 +1,6 @@
 export const PRIVATE_ACCESS_CODE = '4444';
 export const PRIVATE_ACCESS_STORAGE_KEY = 'nxt-link-private-access';
-export const PRIVATE_PATHS = ['/markets', '/intel'];
+export const PRIVATE_PATHS = ['/markets', '/intel', '/admin'];
 
 export function isPrivatePath(path: string): boolean {
   return PRIVATE_PATHS.some((privatePath) => path === privatePath || path.startsWith(`${privatePath}/`));

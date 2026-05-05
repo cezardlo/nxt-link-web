@@ -19,6 +19,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { requireCronSecret } from '@/lib/http/cron-auth';
 import { normalizeVendorUrl } from '@/lib/vendors/normalize-url';
+import { PRIVATE_ACCESS_CODE } from '@/lib/privateAccess';
+
+function authorize(headers: Headers): { ok: true } | { ok: false; status: number; message: string } {
+  if (headers.get('x-access-code') === PRIVATE_ACCESS_CODE) return { ok: true };
+  return requireCronSecret(headers);
+}
 
 type Row = {
   id: string;
@@ -42,7 +48,7 @@ function qualityRank(r: Row): number {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const auth = requireCronSecret(request.headers);
+  const auth = authorize(request.headers);
   if (!auth.ok) return NextResponse.json({ ok: false, message: auth.message }, { status: auth.status });
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ ok: false, message: 'Supabase not configured' }, { status: 503 });
