@@ -139,7 +139,12 @@ function bucketTeamSize(n?: number): string | null {
 
 async function fetchYcPage(page: number): Promise<AlgoliaResponse | null> {
   const app = process.env.YC_ALGOLIA_APP || '45BWZJ1SGC';
-  const key = process.env.YC_ALGOLIA_SEARCH_KEY || 'NhCFs69RWrPKa1UxA0GOj3KNFIJI8';
+  // Default key is the current public secured search key from YC's
+  // www.ycombinator.com/companies HTML (window.AlgoliaOpts.key as of
+  // 2026-05-04). YC rotates this; if it stops working, scrape the page
+  // again or override via the env var.
+  const key = process.env.YC_ALGOLIA_SEARCH_KEY
+    || 'NzllNTY5MzJiZGM2OTY2ZTQwMDEzOTNhYWZiZGRjODlhYzVkNjBmOGRjNzJiMWM4ZTU0ZDlhYTZjOTJiMjlhMWFuYWx5dGljc1RhZ3M9eWNkYyZyZXN0cmljdEluZGljZXM9WUNDb21wYW55X3Byb2R1Y3Rpb24lMkNZQ0NvbXBhbnlfQnlfTGF1bmNoX0RhdGVfcHJvZHVjdGlvbiZ0YWdGaWx0ZXJzPSU1QiUyMnljZGNfcHVibGljJTIyJTVE';
   const index = process.env.YC_ALGOLIA_INDEX || 'YCCompany_production';
   const url = `https://${app.toLowerCase()}-dsn.algolia.net/1/indexes/${encodeURIComponent(index)}/query`;
 
