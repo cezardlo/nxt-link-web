@@ -141,14 +141,26 @@ export default function VendorDetailPage() {
       }
 
       const supabase = createClient();
-      const numId = Number(id);
 
-      // Load vendor — the column is "ID" (uppercase bigint)
-      const { data: vendorData } = await supabase
+      // Cards link by the text `id` column (e.g. UUID or short hex hash),
+      // but legacy/external links sometimes carry the numeric "ID". Query
+      // by text id first; if that misses and the URL looks numeric, fall
+      // back to the bigint column.
+      const SELECT = '"ID", id, company_name, company_url, description, primary_category, sector, hq_country, hq_city, iker_score, tags, funding_stage, employee_count_range, industries, credibility_score';
+      let { data: vendorData } = await supabase
         .from('vendors')
-        .select('"ID", company_name, company_url, description, primary_category, sector, hq_country, hq_city, iker_score, tags, funding_stage, employee_count_range, industries, credibility_score')
-        .eq('"ID"', numId)
-        .single();
+        .select(SELECT)
+        .eq('id', id)
+        .maybeSingle();
+
+      if (!vendorData && /^\d+$/.test(id)) {
+        const r = await supabase
+          .from('vendors')
+          .select(SELECT)
+          .eq('"ID"', Number(id))
+          .maybeSingle();
+        vendorData = r.data;
+      }
 
       if (!vendorData) {
         setNotFound(true);
