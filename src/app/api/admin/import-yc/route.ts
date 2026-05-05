@@ -384,42 +384,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
   }
 
-  // 4. Insert in batches.
+  // 4. Insert in batches (skip cleanly if nothing new — flow continues to
+  //    the reclassify pass below either way).
   const BATCH = 200;
   let inserted = 0;
-  // Smoke-test: send the very first row alone first so we can see exactly
-  // what fields it's carrying back when something goes wrong.
-  if (toInsert.length === 0) {
-    return NextResponse.json({
-      ok: true,
-      version: 'v4-batches',
-      durationMs: Date.now() - start,
-      ycCompaniesFetched: allHits.length,
-      skippedNoUrl,
-      skippedClosed,
-      skippedDuplicate: skippedDup,
-      inserted: 0,
-      note: 'Nothing new to insert.',
-    });
-  }
-  const probe = toInsert[0];
-  const { error: probeError } = await supabase
-    .from('vendors')
-    .insert([probe]);
-  if (probeError) {
-    return NextResponse.json({
-      ok: false,
-      version: 'v4-batches',
-      message: `Probe insert failed: ${probeError.message}`,
-      probeKeys: Object.keys(probe),
-      probeIdValue: typeof probe.id,
-      probeIdLen: typeof probe.id === 'string' ? probe.id.length : null,
-      probeNumericId: probe['ID'] ?? null,
-    }, { status: 500 });
-  }
-  inserted += 1;
-
-  for (let i = 1; i < toInsert.length; i += BATCH) {
+  for (let i = 0; i < toInsert.length; i += BATCH) {
     const slice = toInsert.slice(i, i + BATCH);
     const { error, count } = await supabase
       .from('vendors')
