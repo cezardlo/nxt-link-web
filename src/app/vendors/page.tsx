@@ -203,10 +203,12 @@ function VendorCard({ vendor }: { vendor: Vendor }) {
             </div>
           </div>
         </div>
-        <div className="shrink-0 text-right">
-          <div className="font-mono text-2xl font-bold" style={{ color: scoreColor(score) }}>{score ?? '-'}</div>
-          <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-nxt-dim">Score</div>
-        </div>
+        {score != null && score > 0 && (
+          <div className="shrink-0 text-right">
+            <div className="font-mono text-2xl font-bold" style={{ color: scoreColor(score) }}>{score}</div>
+            <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-nxt-dim">Score</div>
+          </div>
+        )}
       </div>
 
       {vendor.description && <p className="mt-4 line-clamp-3 text-sm leading-7 text-nxt-secondary">{vendor.description}</p>}
@@ -240,9 +242,11 @@ function TopVendorCard({ vendor, rank }: { vendor: Vendor; rank: number }) {
     <Link href={`/vendor/${vendor.id}`} className="min-w-[260px] rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4 transition hover:-translate-y-0.5 hover:border-white/[0.16]">
       <div className="flex items-center justify-between">
         <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-nxt-dim">Top {rank}</span>
-        <span className="rounded-full px-2.5 py-1 font-mono text-xs font-bold" style={{ background: `${color}18`, color }}>
-          {vendor.iker_score ?? '-'}
-        </span>
+        {vendor.iker_score != null && vendor.iker_score > 0 && (
+          <span className="rounded-full px-2.5 py-1 font-mono text-xs font-bold" style={{ background: `${color}18`, color }}>
+            {vendor.iker_score}
+          </span>
+        )}
       </div>
       <div className="mt-4 flex items-center gap-3">
         <CompanyLogo url={vendor.company_url} name={vendor.company_name} color={color} />
@@ -275,7 +279,7 @@ export default function VendorsPage() {
   const [score, setScore] = useState(ALL);
   const [employee, setEmployee] = useState(ALL);
   const [funding, setFunding] = useState(ALL);
-  const [sort, setSort] = useState('score');
+  const [sort, setSort] = useState('newest');
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [offset, setOffset] = useState(0);
@@ -346,7 +350,7 @@ export default function VendorsPage() {
                   Find the vendors worth testing.
                 </h1>
                 <p className="mt-5 max-w-2xl text-base leading-8 text-nxt-secondary sm:text-lg">
-                  Browse real technology vendors by sector, score, country, employee size, and funding stage. Junk records without a sector stay hidden.
+                  Browse real technology vendors by industry, country, employee size, and funding stage. Junk records without an industry stay hidden.
                 </p>
               </div>
 
@@ -354,8 +358,8 @@ export default function VendorsPage() {
                 {[
                   ['Real vendors', catalogTotal.toLocaleString()],
                   ['Showing', total.toLocaleString()],
-                  ['Sectors', String(data?.sectors.length || 0)],
-                  ['Top score', topVendors[0]?.iker_score ? String(topVendors[0].iker_score) : '-'],
+                  ['Industries', String(data?.sectors.length || 0)],
+                  ['Countries', String(data?.filters.countries.length || 0)],
                 ].map(([label, value]) => (
                   <div key={label} className="bg-nxt-bg/90 p-5 text-center">
                     <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-nxt-dim">{label}</div>
@@ -390,14 +394,14 @@ export default function VendorsPage() {
             </div>
           </section>
 
-          {topVendors.length > 0 && (
+          {topVendors.some((v) => v.iker_score && v.iker_score > 0) && (
             <section className="mt-8">
               <div className="mb-3 flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-nxt-accent-light" />
                 <h2 className="text-sm font-semibold text-white">Top vendors</h2>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2">
-                {topVendors.map((vendor, index) => <TopVendorCard key={vendor.id} vendor={vendor} rank={index + 1} />)}
+                {topVendors.filter((v) => v.iker_score && v.iker_score > 0).map((vendor, index) => <TopVendorCard key={vendor.id} vendor={vendor} rank={index + 1} />)}
               </div>
             </section>
           )}
@@ -422,17 +426,6 @@ export default function VendorsPage() {
                       <option key={option.name} value={option.name}>{option.name} ({option.count})</option>
                     ))}
                   </select>
-                </FilterGroup>
-
-                <FilterGroup title="Score range">
-                  <div className="flex flex-wrap gap-2">
-                    <FilterPill active={!score} onClick={() => { setScore(ALL); setOffset(0); }}>All</FilterPill>
-                    {(data?.filters.scoreRanges || []).map((option) => (
-                      <FilterPill key={option.name} active={score === option.name} onClick={() => { setScore(option.name); setOffset(0); }}>
-                        {option.name} ({option.count})
-                      </FilterPill>
-                    ))}
-                  </div>
                 </FilterGroup>
 
                 <FilterGroup title="Employee size">
@@ -482,9 +475,8 @@ export default function VendorsPage() {
                   <div className="relative">
                     <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-nxt-dim" />
                     <select value={sort} onChange={(e) => { setSort(e.target.value); setOffset(0); }} className="w-full appearance-none rounded-xl border border-nxt-border bg-nxt-bg py-3 pl-10 pr-4 text-sm text-nxt-text outline-none focus:border-nxt-accent/50">
-                      <option value="score">Top score</option>
-                      <option value="az">A-Z</option>
                       <option value="newest">Newest</option>
+                      <option value="az">A-Z</option>
                     </select>
                   </div>
                 </div>

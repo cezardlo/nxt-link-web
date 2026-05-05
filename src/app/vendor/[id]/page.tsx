@@ -258,11 +258,13 @@ export default function VendorDetailPage() {
                   <p className="text-sm leading-6 text-[#9CA3AF]">{vendor.description}</p>
                 )}
               </div>
-              {/* Score */}
-              <div className="shrink-0 text-center">
-                <div className="text-3xl font-mono font-bold" style={{ color: sc }}>{score ?? '—'}</div>
-                <div className="text-[9px] font-mono text-[#4A5568] tracking-widest mt-0.5">IKER SCORE</div>
-              </div>
+              {/* Score — only render when actually scored */}
+              {score != null && score > 0 && (
+                <div className="shrink-0 text-center">
+                  <div className="text-3xl font-mono font-bold" style={{ color: sc }}>{score}</div>
+                  <div className="text-[9px] font-mono text-[#4A5568] tracking-widest mt-0.5">IKER SCORE</div>
+                </div>
+              )}
             </div>
 
             {/* Tags */}
