@@ -52,5 +52,6 @@
       "path": "/api/admin/import-yc",
       "schedule": "0 15 * * 1"
     }
-  ]
+  ],
+  "$schema": "https://openapi.vercel.sh/vercel.json"
 }
