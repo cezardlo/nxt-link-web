@@ -55,24 +55,34 @@ export async function GET(request: Request) {
   const sort = searchParams.get('sort') || 'score';
   const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 200);
   const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10), 0);
+  // Quality gate: by default, hide entries that have neither a company URL
+  // nor a description — those are mostly conference-page scraping artifacts
+  // (booth numbers, sponsor tier labels, generic topic strings, country
+  // names). Roughly 62% of rows fall into this bucket. Pass
+  // ?include_unverified=true to see them anyway.
+  const includeUnverified = searchParams.get('include_unverified') === 'true';
+  const VERIFIED_FILTER = 'company_url.not.is.null,description.not.is.null';
 
   let vendorsQuery = supabase
     .from('vendors')
     .select(VENDOR_SELECT)
     .not('sector', 'is', null)
     .neq('sector', '');
+  if (!includeUnverified) vendorsQuery = vendorsQuery.or(VERIFIED_FILTER);
 
   let countQuery = supabase
     .from('vendors')
     .select('*', { count: 'exact', head: true })
     .not('sector', 'is', null)
     .neq('sector', '');
+  if (!includeUnverified) countQuery = countQuery.or(VERIFIED_FILTER);
 
   let topQuery = supabase
     .from('vendors')
     .select(VENDOR_SELECT)
     .not('sector', 'is', null)
     .neq('sector', '');
+  if (!includeUnverified) topQuery = topQuery.or(VERIFIED_FILTER);
 
   if (sector) {
     // If the user passed a canonical industry name (e.g. "Logistics"), expand
@@ -150,12 +160,15 @@ export async function GET(request: Request) {
     vendorsQuery,
     countQuery,
     topQuery,
-    supabase
-      .from('vendors')
-      .select('sector, hq_country, funding_stage, employee_count_range, iker_score', { count: 'exact' })
-      .not('sector', 'is', null)
-      .neq('sector', '')
-      .range(0, 49999),
+    (() => {
+      let q = supabase
+        .from('vendors')
+        .select('sector, hq_country, funding_stage, employee_count_range, iker_score', { count: 'exact' })
+        .not('sector', 'is', null)
+        .neq('sector', '');
+      if (!includeUnverified) q = q.or(VERIFIED_FILTER);
+      return q.range(0, 49999);
+    })(),
   ]);
 
   const vendors = vendorsResult.status === 'fulfilled' ? vendorsResult.value.data || [] : [];
