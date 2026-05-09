@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>NXT//LINK — Technology Discovery for Modern Supply Chains</title>
+<meta name="description" content="NXT LINK helps logistics and supply chain companies discover, compare, and connect with innovative technology vendors faster."/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%237C5CFC'/><text x='16' y='22' font-family='Georgia' font-size='18' font-weight='700' fill='white' text-anchor='middle'>N</text></svg>"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0A0A0F;--bg2:#111118;--bg3:#1A1A26;--surf:rgba(255,255,255,.04);--surf2:rgba(255,255,255,.07);--ink:#F0F0F5;--ink2:#C0C0D0;--muted:#8080A0;--muted2:#505068;--line:rgba(255,255,255,.08);--p:#7C5CFC;--p2:#A78BFA;--p3:#C4B5FD;--pbg:rgba(124,92,252,.12);--pd:#6344DF;--glow:rgba(124,92,252,.15);--glow2:rgba(124,92,252,.08);--green:#34D399;--sans:'Outfit',system-ui,sans-serif;--serif:'Instrument Serif',Georgia,serif}
+*{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}
+body{font-family:var(--sans);color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;line-height:1.6;font-size:16px;overflow-x:hidden}
+.c{max-width:1200px;margin:0 auto;padding:0 32px}::selection{background:var(--p);color:#fff}
+
+/* Lang popup */
+.lang-popup{position:fixed;inset:0;z-index:200;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);display:flex;align-items:center;justify-content:center;opacity:1;transition:opacity .4s}
+.lang-popup.hide{opacity:0;pointer-events:none}
+.lang-popup-box{background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:48px;text-align:center;max-width:420px;width:90%}
+.lang-popup-box h2{font-size:28px;font-weight:700;margin-bottom:8px}
+.lang-popup-box p{font-size:16px;color:var(--muted);margin-bottom:32px}
+.lang-popup-btns{display:flex;gap:16px;justify-content:center}
+.lang-popup-btns button{font-family:var(--sans);font-size:16px;font-weight:600;padding:14px 36px;border-radius:99px;border:none;cursor:pointer;transition:.25s}
+.lang-popup-btns .lp-en{background:var(--p);color:#fff;box-shadow:0 0 24px var(--glow)}
+.lang-popup-btns .lp-es{background:var(--surf);color:var(--ink);border:1.5px solid var(--line)}
+.lang-popup-btns button:hover{transform:translateY(-2px)}
+
+/* Nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,10,15,.75);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid var(--line)}
+nav .inner{display:flex;align-items:center;justify-content:space-between;padding:16px 0}
+.brand{font-size:22px;font-weight:700;color:var(--ink);text-decoration:none;letter-spacing:-.02em}.brand span{color:var(--p)}
+nav ul{display:flex;gap:28px;list-style:none}
+nav ul a{font-size:14px;font-weight:500;color:var(--muted);text-decoration:none;transition:.2s}nav ul a:hover{color:var(--ink)}
+.nr{display:flex;align-items:center;gap:14px}
+.lt{display:flex;border:1px solid var(--line);border-radius:99px;overflow:hidden}
+.lt button{border:none;background:0;padding:5px 13px;font-family:var(--sans);font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;transition:.15s}
+.lt button.on{background:var(--p);color:#fff}
+.ncta{font-size:14px;font-weight:600;padding:10px 22px;background:var(--p);color:#fff;text-decoration:none;border-radius:99px;transition:.25s;box-shadow:0 0 24px var(--glow)}
+.ncta:hover{background:var(--pd);transform:translateY(-1px)}
+
+/* Hero */
+.hero{position:relative;min-height:100vh;display:flex;align-items:center;padding:140px 0 100px;overflow:hidden}
+.hero-mesh{position:absolute;inset:0;overflow:hidden;z-index:0}
+.hero-mesh .orb{position:absolute;border-radius:50%;filter:blur(140px);opacity:.3;animation:orbF 14s ease-in-out infinite}
+.hero-mesh .o1{width:700px;height:700px;background:var(--p);top:-20%;left:-10%}
+.hero-mesh .o2{width:500px;height:500px;background:#4F46E5;top:30%;right:-12%;animation-delay:-5s}
+.hero-mesh .o3{width:450px;height:450px;background:#7C3AED;bottom:-10%;left:25%;animation-delay:-9s}
+@keyframes orbF{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(50px,-40px) scale(1.12)}66%{transform:translate(-40px,30px) scale(.93)}}
+.hero-mesh::after{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px);background-size:80px 80px;pointer-events:none}
+.hero-spot{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:0;transition:opacity .4s}.hero:hover .hero-spot{opacity:1}
+.hero-ct{position:relative;z-index:2}
+.hero-badge{display:inline-flex;align-items:center;gap:10px;padding:8px 20px;background:var(--surf);border:1px solid var(--line);border-radius:99px;font-size:14px;font-weight:500;color:var(--p3);margin-bottom:32px}
+.hero-badge .dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.4)}}
+.hero h1{font-weight:800;font-size:clamp(44px,6.5vw,84px);line-height:1.04;letter-spacing:-.04em;max-width:900px;margin-bottom:24px}
+.hero h1 em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--p2)}
+.hero-sub{font-size:21px;line-height:1.6;color:var(--ink2);max-width:620px;margin-bottom:44px;font-weight:300}
+.hero-btns{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:64px}
+.bp{font-size:16px;font-weight:600;padding:16px 32px;background:var(--p);color:#fff;text-decoration:none;border-radius:99px;transition:.25s;display:inline-flex;align-items:center;gap:10px;box-shadow:0 0 28px var(--glow)}
+.bp:hover{background:var(--pd);transform:translateY(-2px);box-shadow:0 0 40px rgba(124,92,252,.35)}
+.bs{font-size:16px;font-weight:600;padding:16px 32px;background:transparent;color:var(--ink);text-decoration:none;border-radius:99px;border:1.5px solid rgba(255,255,255,.15);transition:.25s}
+.bs:hover{border-color:var(--p);color:var(--p2)}
+.hero-stats{display:flex;gap:20px;flex-wrap:wrap}
+.hst{background:var(--surf);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:16px;padding:28px 32px;min-width:170px;transition:.3s;cursor:default}
+.hst:hover{border-color:var(--p);box-shadow:0 0 28px var(--glow);transform:translateY(-3px)}
+.hst .n{font-family:var(--serif);font-style:italic;font-size:48px;line-height:1;color:var(--p2);display:block;margin-bottom:6px}
+.hst .l{font-size:13px;font-weight:500;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+
+.sl{font-size:12px;font-weight:600;color:var(--p2);letter-spacing:.18em;text-transform:uppercase;margin-bottom:14px}
+.sh{font-weight:700;font-size:clamp(32px,4.2vw,52px);line-height:1.1;letter-spacing:-.03em;max-width:740px;margin-bottom:16px}
+.sh em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--p2)}
+.slead{font-size:18px;color:var(--muted);max-width:580px;line-height:1.6;margin-bottom:48px;font-weight:300}
+
+/* Problem */
+.problem{padding:120px 0;border-top:1px solid var(--line)}
+.pgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+.pcard{background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:36px;transition:.3s;position:relative;overflow:hidden}
+.pcard::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,var(--glow2),transparent 60%);opacity:0;transition:.3s}
+.pcard:hover{border-color:rgba(124,92,252,.3);transform:translateY(-3px)}.pcard:hover::before{opacity:1}
+.pcard .ic{width:52px;height:52px;background:var(--pbg);border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:20px;position:relative;z-index:1}
+.pcard .ic svg{width:28px;height:28px}
+.si{stroke:var(--p2);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.pcard h3{font-size:20px;font-weight:600;margin-bottom:10px;position:relative;z-index:1}
+.pcard p{font-size:16px;color:var(--muted);line-height:1.6;position:relative;z-index:1}
+
+/* Process */
+.process{padding:120px 0;border-top:1px solid var(--line)}
+.pflo{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:48px}
+.pst{background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:40px 32px;transition:.3s;position:relative;overflow:hidden}
+.pst::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--p),var(--p2));transform:scaleX(0);transform-origin:left;transition:.4s}
+.pst:hover{border-color:rgba(124,92,252,.3);transform:translateY(-3px)}.pst:hover::after{transform:scaleX(1)}
+.pst .sn{font-family:var(--serif);font-style:italic;font-size:64px;color:var(--p);opacity:.2;line-height:1;margin-bottom:20px}
+.pst h3{font-size:22px;font-weight:600;margin-bottom:10px}
+.pst p{font-size:16px;color:var(--muted);line-height:1.6}
+
+/* Journey */
+.journey{padding:120px 0;border-top:1px solid var(--line)}
+.jboard{background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:48px 28px 28px;overflow-x:auto;position:relative;margin-top:40px}
+.jboard svg{width:100%;min-width:1060px;height:auto;display:block}
+.js2{stroke:var(--ink2);stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round}.jt2{stroke:var(--muted2);stroke-width:1;fill:none;stroke-linecap:round}.jf2{fill:var(--ink2)}.jp2{fill:var(--p)}
+.jl{font-family:Outfit;font-size:13px;font-weight:600;fill:var(--ink2);text-anchor:middle}.jl.pur{fill:var(--p2)}
+.jsl{font-family:'Instrument Serif';font-style:italic;font-size:12px;fill:var(--muted);text-anchor:middle}
+.jzn{fill:rgba(124,92,252,.06);stroke:var(--p);stroke-width:.8;stroke-dasharray:3 3;rx:4}.jzp{fill:rgba(255,255,255,.015);stroke:var(--line);stroke-width:.8;stroke-dasharray:3 3;rx:4}
+.jflo{stroke:var(--p);stroke-width:1.6;fill:none;stroke-dasharray:5 4}@keyframes jFl{from{stroke-dashoffset:18}to{stroke-dashoffset:0}}.jflo.a{animation:jFl 1s linear infinite}
+.jar2{fill:var(--p)}
+.jpn{cursor:pointer;transition:transform .2s}.jpn:hover{transform:scale(1.15)}
+.jpn .pb2{fill:var(--bg3);stroke:var(--ink2);stroke-width:1.5;transition:.2s}.jpn:hover .pb2{fill:var(--p);stroke:var(--p)}
+.jpn .pnt{font-family:'Instrument Serif';font-style:italic;font-size:14px;fill:var(--ink2);text-anchor:middle;pointer-events:none;transition:.15s}.jpn:hover .pnt{fill:#fff}
+@keyframes smk{0%{transform:translateY(0) scale(.6);opacity:0}25%{opacity:.4}100%{transform:translateY(-24px) scale(1.5);opacity:0}}.smk{transform-origin:center;transform-box:fill-box;animation:smk 3s ease-out infinite}.smk.s2{animation-delay:1s}.smk.s3{animation-delay:2s}
+@keyframes blnk{0%,100%{opacity:.2}50%{opacity:.9}}.blnk{animation:blnk 2s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.5px)}}.jbb{transform-origin:center;transform-box:fill-box;animation:bob .4s ease-in-out infinite}
+@keyframes whl{from{transform:rotate(0)}to{transform:rotate(360deg)}}.jwl{transform-origin:center;transform-box:fill-box;animation:whl .6s linear infinite}
+@keyframes flg{0%,100%{transform:skewY(0)}50%{transform:skewY(-4deg)}}.jfg{transform-origin:left center;transform-box:fill-box;animation:flg 2.5s ease-in-out infinite}
+@keyframes stm{0%,100%{transform:translateY(-6px) scale(1.15);opacity:0}25%,75%{transform:translateY(0) scale(1);opacity:.85}}.jsm{transform-origin:center;transform-box:fill-box;animation:stm 4s ease-in-out infinite}
+@keyframes bxb{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}.jbx{transform-origin:center;transform-box:fill-box;animation:bxb 2s ease-in-out infinite}.jbx.b2{animation-delay:.5s}
+.jtp{position:absolute;background:var(--bg2);color:#fff;font-size:14px;padding:10px 16px;border-radius:10px;pointer-events:none;opacity:0;transform:translate(-50%,calc(-100% - 12px));transition:opacity .15s;white-space:nowrap;z-index:10;font-weight:500;border:1px solid var(--line);box-shadow:0 8px 32px rgba(0,0,0,.5)}.jtp.show{opacity:1}.jtp strong{color:var(--p3);margin-right:8px}
+.journey.paused *{animation-play-state:paused!important}
+
+/* Solutions */
+.solutions{padding:120px 0;border-top:1px solid var(--line)}
+.sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:48px}
+.scard{background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:36px 28px;text-align:center;transition:.3s;cursor:default;position:relative;overflow:hidden}
+.scard::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,var(--glow2),transparent 60%);opacity:0;transition:.3s}
+.scard:hover{border-color:rgba(124,92,252,.3);transform:translateY(-4px)}.scard:hover::before{opacity:1}
+.scard .si-box{width:64px;height:64px;margin:0 auto 20px;background:var(--pbg);border-radius:16px;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;transition:.3s}
+.scard:hover .si-box{background:var(--p);box-shadow:0 0 28px var(--glow)}
+.scard .si-box svg{width:34px;height:34px}
+.si-s{stroke:var(--p2);stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round;transition:stroke .3s}
+.si-f{fill:var(--p2);transition:fill .3s}
+.scard:hover .si-s{stroke:#fff}.scard:hover .si-f{fill:#fff}
+.scard h3{font-size:18px;font-weight:600;margin-bottom:8px;position:relative;z-index:1}
+.scard p{font-size:14px;color:var(--muted);line-height:1.5;position:relative;z-index:1}
+@keyframes siArm{0%,100%{transform:rotate(-20deg)}50%{transform:rotate(25deg)}}.si-arm{transform-origin:50% 90%;transform-box:fill-box;animation:siArm 3s ease-in-out infinite}
+@keyframes siNode{0%,100%{opacity:.3}50%{opacity:1}}.si-node{animation:siNode 2s ease-in-out infinite}.si-node.d2{animation-delay:.5s}.si-node.d3{animation-delay:1s}.si-node.d4{animation-delay:1.5s}
+@keyframes siShut{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}.si-shut{transform-origin:center;transform-box:fill-box;animation:siShut 2.5s ease-in-out infinite}
+@keyframes siWhl{from{transform:rotate(0)}to{transform:rotate(360deg)}}.si-whl{transform-origin:center;transform-box:fill-box;animation:siWhl .7s linear infinite}
+@keyframes siPing{0%{opacity:.7}100%{opacity:0;transform:scale(2.2)}}.si-ping{transform-origin:center;transform-box:fill-box;animation:siPing 2s ease-out infinite}.si-ping.d2{animation-delay:.7s}
+@keyframes siStamp{0%,100%{transform:translateY(-5px);opacity:0}25%,75%{transform:translateY(0);opacity:.9}}.si-stamp{transform-origin:center;transform-box:fill-box;animation:siStamp 3.5s ease-in-out infinite}
+@keyframes siScan{0%,100%{transform:rotate(-12deg);opacity:.3}50%{transform:rotate(12deg);opacity:.7}}.si-scan{transform-origin:top center;transform-box:fill-box;animation:siScan 3s ease-in-out infinite}
+@keyframes siBar1{0%,100%{transform:scaleY(.4)}50%{transform:scaleY(1)}}.si-b1{transform-origin:bottom;transform-box:fill-box;animation:siBar1 2s ease-in-out infinite}
+@keyframes siBar2{0%,100%{transform:scaleY(.7)}50%{transform:scaleY(.3)}}.si-b2{transform-origin:bottom;transform-box:fill-box;animation:siBar2 2s ease-in-out infinite;animation-delay:.3s}
+@keyframes siBar3{0%,100%{transform:scaleY(.5)}50%{transform:scaleY(.9)}}.si-b3{transform-origin:bottom;transform-box:fill-box;animation:siBar3 2s ease-in-out infinite;animation-delay:.6s}
+.tbar{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:18px;overflow:hidden;margin-top:56px;background:var(--surf)}
+.tbar-i{padding:32px;text-align:center;border-right:1px solid var(--line)}.tbar-i:last-child{border-right:none}
+.tbar-i .tn{font-family:var(--serif);font-style:italic;font-size:44px;color:var(--p2);display:block;margin-bottom:6px}
+.tbar-i .tl{font-size:14px;color:var(--muted);font-weight:500}
+
+/* Categories */
+.cats{padding:120px 0;border-top:1px solid var(--line)}
+.cats-head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:44px;flex-wrap:wrap}
+.cr{display:grid;grid-template-columns:50px 1fr auto;gap:24px;padding:20px 16px;border-bottom:1px solid var(--line);align-items:baseline;text-decoration:none;color:inherit;transition:.2s;border-radius:10px;margin-bottom:2px}
+.cr:first-child{border-top:1px solid rgba(124,92,252,.2)}
+.cr:hover{background:var(--pbg);border-color:transparent}
+.cr .cn{font-family:var(--serif);font-style:italic;font-size:20px;color:var(--p2)}.cr .nm{font-weight:600;font-size:18px;margin-bottom:3px}
+.cr .tg{font-size:15px;color:var(--muted);font-family:var(--serif);font-style:italic}
+.cr .ac{font-size:14px;color:var(--p2);font-weight:600;opacity:0;transition:.15s;white-space:nowrap}.cr:hover .ac{opacity:1}
+
+/* Why */
+.why{padding:120px 0;border-top:1px solid var(--line)}
+.wgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:48px}
+.wcard{background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:36px;transition:.3s;position:relative;overflow:hidden}
+.wcard::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,var(--glow2),transparent 60%);opacity:0;transition:.3s}
+.wcard:hover{border-color:rgba(124,92,252,.3);transform:translateY(-3px)}.wcard:hover::before{opacity:1}
+.wcard .wi{width:48px;height:48px;background:var(--pbg);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;position:relative;z-index:1}.wcard .wi svg{width:26px;height:26px}
+.wcard h3{font-size:18px;font-weight:600;margin-bottom:8px;position:relative;z-index:1}
+.wcard p{font-size:15px;color:var(--muted);line-height:1.55;position:relative;z-index:1}
+
+/* CTA */
+.cta-band{padding:120px 0;text-align:center;position:relative;overflow:hidden}
+.cta-band::before{content:'';position:absolute;top:50%;left:50%;width:700px;height:700px;background:var(--p);border-radius:50%;filter:blur(220px);opacity:.08;transform:translate(-50%,-50%)}
+.cta-band h2{font-weight:800;font-size:clamp(34px,5vw,60px);line-height:1.08;letter-spacing:-.03em;margin-bottom:16px;position:relative}
+.cta-band h2 em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--p2)}
+.cta-band p{font-size:19px;color:var(--muted);margin-bottom:36px;position:relative;font-weight:300}
+.cta-band .btns{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;position:relative}
+
+/* Contact */
+.contact{padding:120px 0;border-top:1px solid var(--line)}
+.cg{display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:start}
+.contact h2{font-weight:700;font-size:clamp(32px,4vw,48px);line-height:1.1;letter-spacing:-.025em;margin-bottom:14px}
+.contact h2 em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--p2)}
+.clead{font-size:18px;color:var(--muted);margin-bottom:32px;line-height:1.6;font-weight:300}
+.cinfo{font-size:16px;color:var(--muted);line-height:2.4}.cinfo strong{color:var(--ink2);font-weight:500}.cinfo a{color:var(--p2);text-decoration:none}
+.fb{background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:36px;backdrop-filter:blur(8px)}
+.fb h3{font-size:20px;font-weight:600;margin-bottom:6px}.fb .fs{font-size:14px;color:var(--muted);margin-bottom:24px}
+.fd{margin-bottom:16px}.fd label{font-size:13px;font-weight:500;color:var(--muted);display:block;margin-bottom:5px}
+.fd input,.fd textarea,.fd select{width:100%;font-family:var(--sans);font-size:15px;padding:12px 16px;background:var(--bg2);border:1px solid var(--line);border-radius:10px;color:var(--ink);outline:none;transition:.2s}
+.fd input:focus,.fd textarea:focus,.fd select:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg)}
+.fd textarea{min-height:88px;resize:vertical}
+.fd select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%238080A0' stroke-width='1.5' fill='none'/></svg>");background-repeat:no-repeat;background-position:right 16px center}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fbtn{width:100%;margin-top:8px;padding:15px;background:var(--p);color:#fff;border:none;border-radius:99px;font-family:var(--sans);font-size:16px;font-weight:600;cursor:pointer;transition:.25s;box-shadow:0 0 24px var(--glow)}
+.fbtn:hover{background:var(--pd);box-shadow:0 0 36px rgba(124,92,252,.3)}
+.ffine{font-size:13px;color:var(--muted2);margin-top:12px;text-align:center}
+.form-success{display:none;text-align:center;padding:48px 24px}
+.form-success h3{font-size:24px;font-weight:700;margin-bottom:12px;color:var(--green)}
+.form-success p{font-size:16px;color:var(--muted)}
+
+/* Footer */
+footer{background:var(--bg2);border-top:1px solid var(--line);padding:56px 0 28px}
+.ft{display:grid;grid-template-columns:2fr 1fr 1fr;gap:48px;margin-bottom:48px;padding-bottom:36px;border-bottom:1px solid var(--line)}
+.fbrand{font-size:24px;font-weight:700;margin-bottom:12px}.fbrand span{color:var(--p2)}
+.ftag{font-size:15px;color:var(--muted);max-width:340px;line-height:1.6}
+.fc h5{font-size:11px;font-weight:600;color:var(--p2);letter-spacing:.14em;text-transform:uppercase;margin-bottom:14px}
+.fc a,.fc span{display:block;font-size:14px;color:var(--muted);text-decoration:none;margin-bottom:8px;transition:.15s}.fc a:hover{color:var(--ink)}
+.fbot{font-size:12px;color:var(--muted2);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
+.rv{opacity:0;transform:translateY(20px);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1)}.rv.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media(max-width:1024px){.pgrid,.wgrid{grid-template-columns:1fr 1fr}.pflo{grid-template-columns:1fr}.cg{grid-template-columns:1fr}.ft{grid-template-columns:1fr 1fr}.sgrid{grid-template-columns:1fr 1fr}.tbar{grid-template-columns:1fr 1fr}}
+@media(max-width:768px){.c{padding:0 20px}nav ul{display:none}.hero{padding:100px 0 64px;min-height:auto}.pgrid,.wgrid,.sgrid{grid-template-columns:1fr}.hero-stats{gap:12px}.hst{min-width:100px;padding:20px}.hst .n{font-size:36px}.fr{grid-template-columns:1fr}.ft{grid-template-columns:1fr}.problem,.process,.journey,.cats,.why,.contact,.cta-band,.solutions{padding:72px 0}.cats-head{flex-direction:column;align-items:flex-start}.tbar{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<!-- Language picker popup (first visit only) -->
+<div class="lang-popup" id="langPopup">
+  <div class="lang-popup-box">
+    <h2>🌐</h2>
+    <p id="lpText">Choose your language / Elige tu idioma</p>
+    <div class="lang-popup-btns">
+      <button class="lp-en" onclick="pickLang('en')">English</button>
+      <button class="lp-es" onclick="pickLang('es')">Español</button>
+    </div>
+  </div>
+</div>
+
+<nav><div class="c inner">
+  <a href="#" class="brand">NXT<span>//</span>LINK</a>
+  <ul>
+    <li><a href="#problem" data-i="navProblem">The problem</a></li>
+    <li><a href="#journey" data-i="navJourney">Supply chain</a></li>
+    <li><a href="#solutions" data-i="navSolutions">Solutions</a></li>
+    <li><a href="#cats" data-i="navCats">Categories</a></li>
+    <li><a href="#contact" data-i="navContact">Contact</a></li>
+  </ul>
+  <div class="nr"><div class="lt"><button class="on" data-l="en">EN</button><button data-l="es">ES</button></div><a href="#contact" class="ncta" data-i="navCta">Start Discovery</a></div>
+</div></nav>
+
+<section class="hero">
+  <div class="hero-mesh"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
+  <div class="hero-spot" id="hSpot"></div>
+  <div class="c hero-ct">
+    <div class="hero-badge rv"><span class="dot"></span><span data-i="heroBadge">197 vendors · 15 categories · Live catalog</span></div>
+    <h1 class="rv" data-i="heroH1">Technology discovery for <em>modern supply chains.</em></h1>
+    <p class="hero-sub rv" data-i="heroSub">NXT//LINK helps logistics and industrial companies discover, evaluate, and connect with innovative technology vendors — faster.</p>
+    <div class="hero-btns rv"><a href="#cats" class="bp" data-i="heroCta1">Explore Solutions →</a><a href="#contact" class="bs" data-i="heroCta2">Book a Discovery Call</a></div>
+    <div class="hero-stats rv">
+      <div class="hst"><span class="n">197</span><span class="l" data-i="statVendors">Vetted Vendors</span></div>
+      <div class="hst"><span class="n">15</span><span class="l" data-i="statCats">Categories</span></div>
+      <div class="hst"><span class="n">177</span><span class="l" data-i="statBorder">Border Ready</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="problem" id="problem"><div class="c">
+  <div class="sl rv" data-i="probLabel">The problem</div>
+  <h2 class="sh rv" data-i="probH">Finding the right technology <em>shouldn't take months.</em></h2>
+  <p class="slead rv" data-i="probLead">Most companies waste weeks researching vendors, sitting through demos, and still pick the wrong solution.</p>
+  <div class="pgrid">
+    <div class="pcard rv"><div class="ic"><svg viewBox="0 0 28 28"><circle cx="14" cy="14" r="10" class="si"/><line x1="21" y1="21" x2="26" y2="26" class="si"/></svg></div><h3 data-i="p1h">Too many vendors</h3><p data-i="p1p">Hundreds of options, no clear way to compare. Every vendor says they're the best.</p></div>
+    <div class="pcard rv"><div class="ic"><svg viewBox="0 0 28 28"><circle cx="14" cy="14" r="10" class="si"/><path d="M14 8v6l4 2" class="si"/></svg></div><h3 data-i="p2h">Research takes forever</h3><p data-i="p2p">Your team is running operations. Nobody has 3 months to evaluate warehouse robots.</p></div>
+    <div class="pcard rv"><div class="ic"><svg viewBox="0 0 28 28"><path d="M4 20l6-6 4 4 8-10" class="si"/><line x1="18" y1="8" x2="22" y2="8" class="si"/><line x1="22" y1="8" x2="22" y2="12" class="si"/></svg></div><h3 data-i="p3h">Expensive mistakes</h3><p data-i="p3p">Wrong automation can cost hundreds of thousands. Fear of choosing wrong paralyzes teams.</p></div>
+    <div class="pcard rv"><div class="ic"><svg viewBox="0 0 28 28"><path d="M14 4a10 10 0 1 0 0 20 10 10 0 1 0 0-20Z" class="si"/><path d="M10 12h8M10 16h5" class="si"/></svg></div><h3 data-i="p4h">Hard to know who's real</h3><p data-i="p4p">Which vendors actually work at the border? Which ones are vapor? You can't tell from a website.</p></div>
+  </div>
+</div></section>
+
+<section class="process" id="how"><div class="c">
+  <div class="sl rv" data-i="howLabel">How it works</div>
+  <h2 class="sh rv" data-i="howH">Three steps. <em>That's it.</em></h2>
+  <p class="slead rv" data-i="howLead">No long sales cycles. No commitments. Just a better way to find the right tech.</p>
+  <div class="pflo">
+    <div class="pst rv"><div class="sn">01</div><h3 data-i="s1h">Tell us your challenge.</h3><p data-i="s1p">"Picking errors are killing us." "We need robots but don't know who to call." One sentence is enough.</p></div>
+    <div class="pst rv"><div class="sn">02</div><h3 data-i="s2h">We research & match.</h3><p data-i="s2p">We've scouted 197 vendors across 15 categories. We send you the 3–5 best fits for your specific problem.</p></div>
+    <div class="pst rv"><div class="sn">03</div><h3 data-i="s3h">You evaluate & decide.</h3><p data-i="s3p">We coordinate introductions. You try the tech. Buy only if it works.</p></div>
+  </div>
+</div></section>
+
+<section class="journey" id="journey"><div class="c">
+  <div class="rv"><div class="sl" data-i="jLabel">The supply chain</div>
+  <h2 class="sh" data-i="jH">We have tech for <em>every step.</em></h2>
+  <p class="slead" data-i="jLead">Hover any pin to see the category. Click to jump to the list.</p></div>
+  <div class="jboard" id="jB">
+    <div class="jtp" id="jT"><strong></strong><span></span></div>
+    <svg viewBox="0 0 1060 340" xmlns="http://www.w3.org/2000/svg">
+      <g transform="translate(20,50)"><rect x="-6" y="-6" width="160" height="180" class="jzp"/><g transform="translate(20,28)"><circle cx="96" cy="-10" r="3" fill="rgba(255,255,255,.15)" class="smk"/><circle cx="96" cy="-10" r="3" fill="rgba(255,255,255,.15)" class="smk s2"/><circle cx="96" cy="-10" r="3" fill="rgba(255,255,255,.15)" class="smk s3"/><rect x="92" y="0" width="8" height="30" class="jf2"/><polygon points="0,30 16,14 32,30 48,14 64,30 80,14 96,30" class="jf2"/><rect x="0" y="30" width="96" height="72" fill="none" class="js2"/><rect x="38" y="72" width="20" height="30" class="jf2"/><rect x="8" y="44" width="10" height="10" class="jp2"/><rect x="24" y="44" width="10" height="10" class="jp2"/><rect x="62" y="44" width="10" height="10" class="jp2"/><rect x="78" y="44" width="10" height="10" class="jp2"/></g><text x="74" y="182" class="jl">FACTORY</text><text x="74" y="198" class="jsl" data-i="jStage1">Where stuff is made</text>
+      <g class="jpn" data-c="11" data-n="Vision, Sensors & Safety" transform="translate(34,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">11</text></g><g class="jpn" data-c="10" data-n="Conveyors & Robotics" transform="translate(74,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">10</text></g><g class="jpn" data-c="13" data-n="Agentic AI Orchestration" transform="translate(114,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">13</text></g></g>
+      <line x1="186" y1="140" x2="220" y2="140" class="jflo a"/><polygon points="220,136 228,140 220,144" class="jar2"/>
+      <g transform="translate(236,50)"><rect x="-6" y="-6" width="180" height="180" class="jzn"/><g transform="translate(14,28)"><polygon points="0,30 56,6 112,30" class="jf2"/><rect x="0" y="30" width="112" height="72" fill="none" class="js2"/><rect x="12" y="60" width="22" height="42" class="jf2"/><rect x="44" y="60" width="22" height="42" class="jf2"/><rect x="78" y="60" width="22" height="42" class="jf2"/><rect x="48" y="66" width="14" height="32" class="jp2 blnk"/></g><text x="84" y="182" class="jl pur">★ WAREHOUSE</text><text x="84" y="198" class="jsl" data-i="jStage2">Where stuff is stored</text>
+      <g class="jpn" data-c="2" data-n="Warehouse Management" transform="translate(24,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">02</text></g><g class="jpn" data-c="9" data-n="Forklifts & Material Handling" transform="translate(54,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">09</text></g><g class="jpn" data-c="14" data-n="Automated Storage & Retrieval" transform="translate(84,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">14</text></g><g class="jpn" data-c="6" data-n="Yard & Dock" transform="translate(114,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">06</text></g><g class="jpn" data-c="8" data-n="Pallets & Pooling" transform="translate(144,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">08</text></g></g>
+      <line x1="422" y1="140" x2="456" y2="140" class="jflo a"/><polygon points="456,136 464,140 456,144" class="jar2"/>
+      <g transform="translate(472,50)"><rect x="-6" y="-6" width="154" height="180" class="jzp"/><g transform="translate(16,64)" class="jbb"><line x1="-8" y1="44" x2="124" y2="44" stroke="var(--muted2)" stroke-width="1" stroke-dasharray="3 3"/><rect x="0" y="0" width="64" height="38" fill="none" class="js2"/><line x1="0" y1="18" x2="64" y2="18" class="jt2"/><path d="M64 38 L64 12 L82 6 L100 6 L100 38Z" class="jp2 js2"/><rect x="68" y="12" width="20" height="12" fill="var(--bg3)" class="jt2"/><circle cx="16" cy="38" r="7" class="jf2 jwl"/><circle cx="16" cy="38" r="3" class="jp2"/><circle cx="48" cy="38" r="7" class="jf2 jwl"/><circle cx="48" cy="38" r="3" class="jp2"/><circle cx="86" cy="38" r="7" class="jf2 jwl"/><circle cx="86" cy="38" r="3" class="jp2"/></g><text x="70" y="182" class="jl">TRUCKING</text><text x="70" y="198" class="jsl" data-i="jStage3">Moving stuff</text>
+      <g class="jpn" data-c="1" data-n="Transportation Management" transform="translate(30,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">01</text></g><g class="jpn" data-c="4" data-n="Telematics & ELD" transform="translate(70,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">04</text></g><g class="jpn" data-c="12" data-n="AI Freight Automation" transform="translate(110,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">12</text></g></g>
+      <line x1="632" y1="140" x2="666" y2="140" class="jflo a"/><polygon points="666,136 674,140 666,144" class="jar2"/>
+      <g transform="translate(682,50)"><rect x="-6" y="-6" width="140" height="180" class="jzn"/><g transform="translate(16,28)"><path d="M0 82 L0 22 Q44 -6 88 22 L88 82" fill="none" class="js2"/><line x1="44" y1="0" x2="44" y2="-18" class="jt2"/><g transform="translate(44,-18)" class="jfg"><rect x="0" y="0" width="16" height="11" class="jp2"/><line x1="0" y1="5.5" x2="16" y2="5.5" stroke="var(--bg)" stroke-width=".8"/></g><line x1="-8" y1="82" x2="96" y2="82" class="js2"/><rect x="28" y="44" width="32" height="32" fill="var(--bg3)" class="jt2"/><line x1="32" y1="52" x2="56" y2="52" stroke="var(--muted2)" stroke-width=".5"/><line x1="32" y1="58" x2="56" y2="58" stroke="var(--muted2)" stroke-width=".5"/><g class="jsm" transform="translate(44,60)"><rect x="-10" y="-8" width="20" height="16" rx="1" fill="rgba(124,92,252,.2)" stroke="var(--p)" stroke-width="1.5" transform="rotate(-8)"/><text x="0" y="2" font-family="Outfit" font-size="5" fill="var(--p2)" text-anchor="middle" font-weight="700" transform="rotate(-8)" pointer-events="none">OK</text></g></g><text x="64" y="182" class="jl pur">★ BORDER</text><text x="64" y="198" class="jsl">Juárez ↔ El Paso</text>
+      <g class="jpn" data-c="5" data-n="Customs & Cross-Border" transform="translate(44,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">05</text></g><g class="jpn" data-c="3" data-n="Real-Time Visibility" transform="translate(84,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">03</text></g></g>
+      <line x1="828" y1="140" x2="862" y2="140" class="jflo a"/><polygon points="862,136 870,140 862,144" class="jar2"/>
+      <g transform="translate(878,50)"><rect x="-6" y="-6" width="152" height="180" class="jzp"/><g transform="translate(20,30)"><rect x="0" y="20" width="100" height="72" fill="none" class="js2"/><polygon points="0,20 50,2 100,20" class="jf2"/><rect x="36" y="52" width="28" height="40" class="jf2"/><line x1="36" y1="64" x2="64" y2="64" stroke="var(--bg2)" stroke-width=".8"/><g class="jbx"><rect x="74" y="74" width="18" height="18" class="jp2 jt2"/></g><g class="jbx b2"><rect x="6" y="72" width="20" height="20" stroke="var(--p)" stroke-width="1" fill="var(--pbg)"/></g></g><text x="70" y="182" class="jl">DC · CUSTOMER</text><text x="70" y="198" class="jsl" data-i="jStage5">Where stuff goes out</text>
+      <g class="jpn" data-c="7" data-n="Cold Chain & IoT" transform="translate(44,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">07</text></g><g class="jpn" data-c="15" data-n="Supply Chain Planning" transform="translate(94,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">15</text></g></g>
+    </svg>
+  </div>
+</div></section>
+
+<section class="solutions" id="solutions"><div class="c">
+  <div class="sl rv" data-i="solLabel">Technology solutions</div>
+  <h2 class="sh rv" data-i="solH">The technologies <em>we scout.</em></h2>
+  <p class="slead rv" data-i="solLead">From $50K picking robots to enterprise AI platforms. We know which ones actually work.</p>
+  <div class="sgrid">
+    <div class="scard rv"><div class="si-box"><svg viewBox="0 0 34 34"><rect x="13" y="26" width="8" height="6" class="si-f"/><circle cx="17" cy="24" r="2" class="si-f" style="opacity:.5"/><g transform="translate(17,24)"><g class="si-arm"><line x1="0" y1="0" x2="0" y2="-14" class="si-s" stroke-width="2.5"/><circle cx="0" cy="-14" r="2" class="si-f"/><g transform="translate(0,-14)"><line x1="0" y1="0" x2="8" y2="-6" class="si-s" stroke-width="2"/><path d="M6,-8 L10,-8 L10,-4 L6,-4" class="si-s"/></g></g></g></svg></div><h3 data-i="sol1h">Robotics & AMRs</h3><p data-i="sol1p">Picking robots, sorting bots, goods-to-person. RaaS and capex models.</p></div>
+    <div class="scard rv"><div class="si-box"><svg viewBox="0 0 34 34"><circle cx="17" cy="8" r="3" class="si-f si-node"/><circle cx="8" cy="20" r="3" class="si-f si-node d2"/><circle cx="26" cy="20" r="3" class="si-f si-node d3"/><circle cx="12" cy="30" r="2.5" class="si-f si-node d4"/><circle cx="22" cy="30" r="2.5" class="si-f si-node"/><line x1="17" y1="8" x2="8" y2="20" class="si-s"/><line x1="17" y1="8" x2="26" y2="20" class="si-s"/><line x1="8" y1="20" x2="12" y2="30" class="si-s"/><line x1="26" y1="20" x2="22" y2="30" class="si-s"/></svg></div><h3 data-i="sol2h">AI & Analytics</h3><p data-i="sol2p">Demand planning, agentic AI, freight automation, predictive visibility.</p></div>
+    <div class="scard rv"><div class="si-box"><svg viewBox="0 0 34 34"><rect x="6" y="4" width="22" height="28" rx="1" class="si-s"/><line x1="6" y1="12" x2="28" y2="12" class="si-s"/><line x1="6" y1="20" x2="28" y2="20" class="si-s"/><line x1="17" y1="4" x2="17" y2="32" class="si-s"/><g class="si-shut"><rect x="20" y="22" width="6" height="4" rx="1" class="si-f"/></g></svg></div><h3 data-i="sol3h">Warehouse Systems</h3><p data-i="sol3p">WMS, AS/RS, vertical lifts, slotting optimization, labor management.</p></div>
+    <div class="scard rv"><div class="si-box"><svg viewBox="0 0 34 34"><rect x="3" y="12" width="16" height="12" rx="1" class="si-s"/><path d="M19 24 L19 14 L25 10 L30 10 L30 24Z" class="si-s"/><circle cx="10" cy="26" r="3" class="si-s si-whl"/><circle cx="10" cy="26" r="1" class="si-f"/><circle cx="26" cy="26" r="3" class="si-s si-whl"/><circle cx="26" cy="26" r="1" class="si-f"/></svg></div><h3 data-i="sol4h">Fleet & Transport</h3><p data-i="sol4p">TMS, telematics, ELD, route optimization, driver safety.</p></div>
+    <div class="scard rv"><div class="si-box"><svg viewBox="0 0 34 34"><circle cx="17" cy="17" r="4" class="si-f"/><circle cx="17" cy="17" r="8" class="si-s si-ping"/><circle cx="17" cy="17" r="8" class="si-s si-ping d2"/><circle cx="17" cy="17" r="13" class="si-s" style="opacity:.15"/></svg></div><h3 data-i="sol5h">Visibility & IoT</h3><p data-i="sol5p">Real-time tracking, cold chain sensors, condition monitoring, predictive ETAs.</p></div>
+    <div class="scard rv"><div class="si-box"><svg viewBox="0 0 34 34"><rect x="6" y="18" width="22" height="14" rx="1" class="si-s"/><line x1="10" y1="23" x2="24" y2="23" class="si-s" stroke-width="1"/><line x1="10" y1="27" x2="20" y2="27" class="si-s" stroke-width="1"/><g class="si-stamp"><rect x="10" y="6" width="14" height="10" rx="1" class="si-f" style="opacity:.6"/></g></svg></div><h3 data-i="sol6h">Cross-Border</h3><p data-i="sol6p">Customs compliance, ACE/ABI, IMMEX, trade documentation automation.</p></div>
+    <div class="scard rv"><div class="si-box"><svg viewBox="0 0 34 34"><rect x="8" y="12" width="14" height="10" rx="2" class="si-s" stroke-width="2"/><circle cx="15" cy="17" r="3" class="si-f"/><g class="si-scan"><path d="M15 22 L8 32 L22 32Z" class="si-s" fill="rgba(124,92,252,.1)"/></g></svg></div><h3 data-i="sol7h">Vision & Safety</h3><p data-i="sol7p">Machine vision, barcode systems, Andon, CMMS, safety wearables.</p></div>
+    <div class="scard rv"><div class="si-box"><svg viewBox="0 0 34 34"><line x1="6" y1="28" x2="28" y2="28" class="si-s"/><line x1="6" y1="28" x2="6" y2="6" class="si-s"/><rect x="10" y="14" width="4" height="14" class="si-f si-b1"/><rect x="16" y="10" width="4" height="18" class="si-f si-b2"/><rect x="22" y="16" width="4" height="12" class="si-f si-b3"/></svg></div><h3 data-i="sol8h">Planning & S&OP</h3><p data-i="sol8p">Demand forecasting, inventory optimization, network design.</p></div>
+  </div>
+  <div class="tbar rv">
+    <div class="tbar-i"><span class="tn">197</span><span class="tl" data-i="tb1">Vendors scouted</span></div>
+    <div class="tbar-i"><span class="tn">15</span><span class="tl" data-i="tb2">Categories covered</span></div>
+    <div class="tbar-i"><span class="tn">177</span><span class="tl" data-i="tb3">Border-ready</span></div>
+    <div class="tbar-i"><span class="tn">24/7</span><span class="tl" data-i="tb4">Updated daily</span></div>
+  </div>
+</div></section>
+
+<section class="cats" id="cats"><div class="c">
+  <div class="cats-head rv"><div><div class="sl" data-i="catsLabel">15 Categories</div><h2 class="sh" data-i="catsH">Every kind of tech <em>we cover.</em></h2><p style="font-size:16px;color:var(--muted);max-width:520px;margin-top:10px" data-i="catsLead">Tell us your problem — we'll point you to the right category.</p></div>
+  <div class="hst" style="min-width:130px"><span class="n">15</span><span class="l" data-i="catsStat">Categories</span></div></div>
+  <div>
+    <a class="cr rv" href="#contact"><span class="cn">01</span><div><div class="nm">Transportation Management</div><div class="tg">Move freight smarter. Bill faster. Win loads.</div></div><span class="ac" data-i="catAsk">Ask us →</span></a>
+    <a class="cr rv" href="#contact"><span class="cn">02</span><div><div class="nm">Warehouse Management</div><div class="tg">Run tighter inventory. Pick faster. Ship cleaner.</div></div><span class="ac" data-i="catAsk">Ask us →</span></a>
+    <a class="cr rv" href="#contact"><span class="cn">03</span><div><div class="nm">Real-Time Visibility</div><div class="tg">See every shipment. Predict every ETA.</div></div><span class="ac" data-i="catAsk">Ask us →</span></a>
+    <a class="cr rv" href="#contact"><span class="cn">04</span><div><div class="nm">Telematics & ELD</div><div class="tg">Compliance, safety, and fuel — all on one screen.</div></div><span class="ac" data-i="catAsk">Ask us →</span></a>
+    <a class="cr rv" href="#contact"><span class="cn">05</span><div><div class="nm">Customs & Cross-Border</div><div class="tg">Border-ready tech for the Borderplex economy.</div></div><span class="ac" data-i="catAsk">Ask us →</span></a>
+    <a class="cr rv" href="#contact"><span class="cn">06</span><div><div class="nm">Yard & Dock</div><div class="tg">Tame the chaos at the gate.</div></div><span class="ac" data-i="catAsk">Ask us →</span></a>
+    <a class="cr rv" href="#contact"><span class="cn">07</span><div><div class="nm">Cold Chain & IoT</div><div class="tg">Pharma-grade precision for high-value cargo.</div></div><span class="ac" data-i="catAsk">Ask us →</span></a>
+    <a class="cr rv" href="#contact"><span class="cn">08</span><div><div class="nm">Pallets & Pooling</div><div class="tg">ISPM 15 ready. Cross-border by design.</div></div><span class="ac" data-i="catAsk">Ask us →</span></a>
+    <a class="cr rv" href="#contact"><span class="cn">09</span><div><div class="nm">Forklifts & Material Handling</div><div class="tg">The iron — and the intelligence behind it.</div></div><span class="ac" data-i="catAsk">Ask us →</span></a>
+    <a class="cr rv" href="#contact"><span class="cn">10</span><div><div class="nm">Conveyors & Robotics</div><div class="tg">Automation from $50K bots to $5M sortation.</div></div><span class="ac" data-i="catAsk">Ask us →</span></a>
+    <a class="cr rv" href="#contact"><span class="cn">11</span><div><div class="nm">Vision, Sensors & Safety</div><div class="tg">Andon, vision systems, sensors, CMMS, the lean factory floor.</div></div><span class="ac" data-i="catAsk">Ask us →</span></a>
+    <a class="cr rv" href="#contact"><span class="cn">12</span><div><div class="nm">AI Freight Automation</div><div class="tg">AI agents that quote, dispatch, bill, and collect.</div></div><span class="ac" data-i="catAsk">Ask us →</span></a>
+    <a class="cr rv" href="#contact"><span class="cn">13</span><div><div class="nm">Agentic AI Orchestration</div><div class="tg">AI agents running the warehouse in real time.</div></div><span class="ac" data-i="catAsk">Ask us →</span></a>
+    <a class="cr rv" href="#contact"><span class="cn">14</span><div><div class="nm">Automated Storage & Retrieval</div><div class="tg">Cubic density. Goods-to-person. Zero pick errors.</div></div><span class="ac" data-i="catAsk">Ask us →</span></a>
+    <a class="cr rv" href="#contact"><span class="cn">15</span><div><div class="nm">Supply Chain Planning</div><div class="tg">Forecast demand. Optimize inventory. Plan with AI.</div></div><span class="ac" data-i="catAsk">Ask us →</span></a>
+  </div>
+</div></section>
+
+<section class="why"><div class="c">
+  <div class="sl rv" data-i="whyLabel">Why NXT//LINK</div>
+  <h2 class="sh rv" data-i="whyH">Not a software company. <em>Your technology scout.</em></h2>
+  <div class="wgrid">
+    <div class="wcard rv"><div class="wi"><svg viewBox="0 0 26 26"><circle cx="13" cy="13" r="10" stroke="var(--p2)" stroke-width="1.5" fill="none"/><circle cx="13" cy="6" r="1.5" fill="var(--p2)"/><circle cx="6" cy="17" r="1.5" fill="var(--p2)"/><circle cx="20" cy="17" r="1.5" fill="var(--p2)"/><line x1="13" y1="6" x2="6" y2="17" stroke="var(--p2)" stroke-width="1"/><line x1="13" y1="6" x2="20" y2="17" stroke="var(--p2)" stroke-width="1"/></svg></div><h3 data-i="w1h">Vendor-neutral</h3><p data-i="w1p">We don't sell tech. We scout globally and bring you options. No hidden incentives.</p></div>
+    <div class="wcard rv"><div class="wi"><svg viewBox="0 0 26 26"><path d="M13 4 L13 13 L19 13" stroke="var(--p2)" stroke-width="1.8" fill="none" stroke-linecap="round"/><circle cx="13" cy="13" r="10" stroke="var(--p2)" stroke-width="1.5" fill="none"/></svg></div><h3 data-i="w2h">Saves weeks</h3><p data-i="w2p">We've done the trade shows, demos, and calls. You get the shortlist.</p></div>
+    <div class="wcard rv"><div class="wi"><svg viewBox="0 0 26 26"><circle cx="13" cy="13" r="10" stroke="var(--p2)" stroke-width="1.5" fill="none"/><path d="M4 16 Q8 10,13 13 Q18 16,22 10" stroke="var(--p2)" stroke-width="1.5" fill="none"/></svg></div><h3 data-i="w3h">Global reach, local focus</h3><p data-i="w3p">Vendors from Japan to Norway. Every recommendation works at the border.</p></div>
+    <div class="wcard rv"><div class="wi"><svg viewBox="0 0 26 26"><path d="M8 13 L12 17 L19 9" stroke="var(--p2)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="13" cy="13" r="10" stroke="var(--p2)" stroke-width="1.5" fill="none"/></svg></div><h3 data-i="w4h">Structured evaluation</h3><p data-i="w4p">Each match includes pricing, features, border-readiness, and scoring.</p></div>
+    <div class="wcard rv"><div class="wi"><svg viewBox="0 0 26 26"><rect x="4" y="6" width="18" height="14" rx="2" stroke="var(--p2)" stroke-width="1.5" fill="none"/><line x1="8" y1="11" x2="18" y2="11" stroke="var(--p2)" stroke-width="1"/><line x1="8" y1="15" x2="14" y2="15" stroke="var(--p2)" stroke-width="1"/></svg></div><h3 data-i="w5h">197 vendors vetted</h3><p data-i="w5p">Across 15 categories, scouted from trade shows and direct evaluation worldwide.</p></div>
+    <div class="wcard rv"><div class="wi"><svg viewBox="0 0 26 26"><path d="M5 20 L5 10 L13 4 L21 10 L21 20Z" stroke="var(--p2)" stroke-width="1.5" fill="none" stroke-linejoin="round"/><rect x="10" y="14" width="6" height="6" stroke="var(--p2)" stroke-width="1" fill="none"/></svg></div><h3 data-i="w6h">Built for operations</h3><p data-i="w6p">We speak warehouse, trucking, maquiladora — in English and Spanish.</p></div>
+  </div>
+</div></section>
+
+<section class="cta-band"><div class="c">
+  <h2 class="rv" data-i="ctaH">Stop searching through <em>hundreds of vendors.</em></h2>
+  <p class="rv" data-i="ctaP">Start discovering better-fit solutions faster.</p>
+  <div class="btns rv"><a href="#contact" class="bp" data-i="ctaCta1">Schedule a Call →</a><a href="#cats" class="bs" data-i="ctaCta2">Explore Technologies</a></div>
+</div></section>
+
+<section class="contact" id="contact"><div class="c"><div class="cg">
+  <div class="rv"><div class="sl" data-i="conLabel">Let's talk</div><h2 data-i="conH">Tell us about <em>your operation.</em></h2>
+  <p class="clead" data-i="conLead">No commitment. No sales pitch. We just listen and write back fast — usually under 48 hours.</p>
+  <div class="cinfo">
+    <strong data-i="conWho">Who:</strong> <span data-i="conWhoV">Companies in Juárez or El Paso</span><br>
+    <strong data-i="conReply">Reply:</strong> <span data-i="conReplyV">Under 48 hours</span><br>
+    <strong data-i="conCall">Call:</strong> <a href="https://calendly.com/" data-i="conCallV">Book 15 min →</a><br>
+    <strong>WhatsApp:</strong> <span data-i="conWA">Available on request</span>
+  </div></div>
+  <div class="fb rv">
+    <!-- REAL FORM — sends to contact@nxtlinktech.com via FormSubmit -->
+    <form id="contactForm" action="https://formsubmit.co/contact@nxtlinktech.com" method="POST">
+      <input type="hidden" name="_subject" value="New NXT//LINK Website Inquiry"/>
+      <input type="hidden" name="_captcha" value="false"/>
+      <input type="hidden" name="_template" value="table"/>
+      <input type="hidden" name="_next" value="https://www.nxtlinktech.com/#contact"/>
+      <input type="text" name="_honey" style="display:none"/>
+      <h3 data-i="formTitle">Send us a message</h3><p class="fs" data-i="formSub">In English, en español, or both.</p>
+      <div class="fd"><label data-i="formCatL">What's the challenge?</label>
+        <select name="category" required><option value="" data-i="formCatP">— pick a category —</option><option>Transportation Management</option><option>Warehouse Management</option><option>Real-Time Visibility</option><option>Telematics & ELD</option><option>Customs & Cross-Border</option><option>Yard & Dock</option><option>Cold Chain & IoT</option><option>Pallets & Pooling</option><option>Forklifts & Material Handling</option><option>Conveyors & Robotics</option><option>Vision, Sensors & Safety</option><option>AI Freight Automation</option><option>Agentic AI Orchestration</option><option>Automated Storage & Retrieval</option><option>Supply Chain Planning</option><option data-i="formCatUnsure">Not sure yet</option></select></div>
+      <div class="fd"><label data-i="formMsgL">Tell us in your own words</label><textarea name="message" placeholder="e.g. Picking errors are killing us before peak season." required></textarea></div>
+      <div class="fr"><div class="fd"><label data-i="formNameL">Name</label><input type="text" name="name" placeholder="Jane Operator" required/></div><div class="fd"><label>Email</label><input type="email" name="email" placeholder="you@company.com" required/></div></div>
+      <button type="submit" class="fbtn" data-i="formBtn">Send →</button>
+      <div class="ffine" data-i="formFine">No spam · NDA available · Reply within 48h</div>
+    </form>
+    <div class="form-success" id="formOk"><h3>✓</h3><p data-i="formOkMsg">Message sent! We'll reply within 48 hours.</p></div>
+  </div>
+</div></div></section>
+
+<footer><div class="c">
+  <div class="ft"><div><div class="fbrand">NXT<span>//</span>LINK</div><div class="ftag" data-i="footTag">We help factories and warehouses find better tech. Born in El Paso. Working the Juárez border.</div></div>
+  <div class="fc"><h5 data-i="footReach">Reach us</h5><a href="mailto:contact@nxtlinktech.com">contact@nxtlinktech.com</a><a href="https://calendly.com/" data-i="footBook">Book 15 min</a><span data-i="footWA">WhatsApp on request</span></div>
+  <div class="fc"><h5 data-i="footWhere">Where</h5><span>Juárez ↔ El Paso</span><span>English · Español</span></div></div>
+  <div class="fbot"><span>© 2026 NXT//LINK</span><span data-i="footStatus">197 vendors · 15 categories</span></div>
+</div></footer>
+
+<script>
+// ===== FULL i18n SYSTEM =====
+const T={
+en:{
+  navProblem:'The problem',navJourney:'Supply chain',navSolutions:'Solutions',navCats:'Categories',navContact:'Contact',navCta:'Start Discovery',
+  heroBadge:'197 vendors · 15 categories · Live catalog',heroH1:'Technology discovery for <em>modern supply chains.</em>',heroSub:'NXT//LINK helps logistics and industrial companies discover, evaluate, and connect with innovative technology vendors — faster.',heroCta1:'Explore Solutions →',heroCta2:'Book a Discovery Call',statVendors:'Vetted Vendors',statCats:'Categories',statBorder:'Border Ready',
+  probLabel:'The problem',probH:'Finding the right technology <em>shouldn\'t take months.</em>',probLead:'Most companies waste weeks researching vendors, sitting through demos, and still pick the wrong solution.',
+  p1h:'Too many vendors',p1p:'Hundreds of options, no clear way to compare. Every vendor says they\'re the best.',p2h:'Research takes forever',p2p:'Your team is running operations. Nobody has 3 months to evaluate warehouse robots.',p3h:'Expensive mistakes',p3p:'Wrong automation can cost hundreds of thousands. Fear of choosing wrong paralyzes teams.',p4h:'Hard to know who\'s real',p4p:'Which vendors actually work at the border? Which ones are vapor? You can\'t tell from a website.',
+  howLabel:'How it works',howH:'Three steps. <em>That\'s it.</em>',howLead:'No long sales cycles. No commitments. Just a better way to find the right tech.',s1h:'Tell us your challenge.',s1p:'"Picking errors are killing us." "We need robots but don\'t know who to call." One sentence is enough.',s2h:'We research & match.',s2p:'We\'ve scouted 197 vendors across 15 categories. We send you the 3–5 best fits for your specific problem.',s3h:'You evaluate & decide.',s3p:'We coordinate introductions. You try the tech. Buy only if it works.',
+  jLabel:'The supply chain',jH:'We have tech for <em>every step.</em>',jLead:'Hover any pin to see the category. Click to jump to the list.',jStage1:'Where stuff is made',jStage2:'Where stuff is stored',jStage3:'Moving stuff',jStage5:'Where stuff goes out',
+  solLabel:'Technology solutions',solH:'The technologies <em>we scout.</em>',solLead:'From $50K picking robots to enterprise AI platforms. We know which ones actually work.',sol1h:'Robotics & AMRs',sol1p:'Picking robots, sorting bots, goods-to-person. RaaS and capex models.',sol2h:'AI & Analytics',sol2p:'Demand planning, agentic AI, freight automation, predictive visibility.',sol3h:'Warehouse Systems',sol3p:'WMS, AS/RS, vertical lifts, slotting optimization, labor management.',sol4h:'Fleet & Transport',sol4p:'TMS, telematics, ELD, route optimization, driver safety.',sol5h:'Visibility & IoT',sol5p:'Real-time tracking, cold chain sensors, condition monitoring, predictive ETAs.',sol6h:'Cross-Border',sol6p:'Customs compliance, ACE/ABI, IMMEX, trade documentation automation.',sol7h:'Vision & Safety',sol7p:'Machine vision, barcode systems, Andon, CMMS, safety wearables.',sol8h:'Planning & S&OP',sol8p:'Demand forecasting, inventory optimization, network design.',
+  tb1:'Vendors scouted',tb2:'Categories covered',tb3:'Border-ready',tb4:'Updated daily',
+  catsLabel:'15 Categories',catsH:'Every kind of tech <em>we cover.</em>',catsLead:'Tell us your problem — we\'ll point you to the right category.',catsStat:'Categories',catAsk:'Ask us →',
+  whyLabel:'Why NXT//LINK',whyH:'Not a software company. <em>Your technology scout.</em>',w1h:'Vendor-neutral',w1p:'We don\'t sell tech. We scout globally and bring you options. No hidden incentives.',w2h:'Saves weeks',w2p:'We\'ve done the trade shows, demos, and calls. You get the shortlist.',w3h:'Global reach, local focus',w3p:'Vendors from Japan to Norway. Every recommendation works at the border.',w4h:'Structured evaluation',w4p:'Each match includes pricing, features, border-readiness, and scoring.',w5h:'197 vendors vetted',w5p:'Across 15 categories, scouted from trade shows and direct evaluation worldwide.',w6h:'Built for operations',w6p:'We speak warehouse, trucking, maquiladora — in English and Spanish.',
+  ctaH:'Stop searching through <em>hundreds of vendors.</em>',ctaP:'Start discovering better-fit solutions faster.',ctaCta1:'Schedule a Call →',ctaCta2:'Explore Technologies',
+  conLabel:'Let\'s talk',conH:'Tell us about <em>your operation.</em>',conLead:'No commitment. No sales pitch. We just listen and write back fast — usually under 48 hours.',conWho:'Who:',conWhoV:'Companies in Juárez or El Paso',conReply:'Reply:',conReplyV:'Under 48 hours',conCall:'Call:',conCallV:'Book 15 min →',conWA:'Available on request',
+  formTitle:'Send us a message',formSub:'In English, en español, or both.',formCatL:'What\'s the challenge?',formCatP:'— pick a category —',formCatUnsure:'Not sure yet',formMsgL:'Tell us in your own words',formNameL:'Name',formBtn:'Send →',formFine:'No spam · NDA available · Reply within 48h',formOkMsg:'Message sent! We\'ll reply within 48 hours.',
+  footTag:'We help factories and warehouses find better tech. Born in El Paso. Working the Juárez border.',footReach:'Reach us',footBook:'Book 15 min',footWA:'WhatsApp on request',footWhere:'Where',footStatus:'197 vendors · 15 categories'
+},
+es:{
+  navProblem:'El problema',navJourney:'Cadena de suministro',navSolutions:'Soluciones',navCats:'Categorías',navContact:'Contacto',navCta:'Comenzar',
+  heroBadge:'197 proveedores · 15 categorías · Catálogo en vivo',heroH1:'Descubre tecnología para <em>cadenas de suministro modernas.</em>',heroSub:'NXT//LINK ayuda a empresas de logística e industria a descubrir, evaluar y conectar con proveedores de tecnología innovadora — más rápido.',heroCta1:'Explorar Soluciones →',heroCta2:'Agendar una Llamada',statVendors:'Proveedores Vetados',statCats:'Categorías',statBorder:'Listos para Frontera',
+  probLabel:'El problema',probH:'Encontrar la tecnología correcta <em>no debería tomar meses.</em>',probLead:'La mayoría de las empresas pierden semanas investigando proveedores, asistiendo a demos, y aún así eligen la solución equivocada.',
+  p1h:'Demasiados proveedores',p1p:'Cientos de opciones, sin forma clara de comparar. Todos dicen que son los mejores.',p2h:'La investigación toma demasiado',p2p:'Tu equipo está operando día a día. Nadie tiene 3 meses para evaluar robots de almacén.',p3h:'Errores costosos',p3p:'La automatización equivocada puede costar cientos de miles. El miedo a elegir mal paraliza equipos.',p4h:'Difícil saber quién es real',p4p:'¿Cuáles proveedores realmente funcionan en la frontera? ¿Cuáles solo venden humo? No se puede saber desde su sitio web.',
+  howLabel:'Cómo funciona',howH:'Tres pasos. <em>Eso es todo.</em>',howLead:'Sin ciclos de venta largos. Sin compromisos. Solo una mejor forma de encontrar la tecnología correcta.',s1h:'Cuéntanos tu reto.',s1p:'"Los errores de picking nos están matando." "Necesitamos robots pero no sabemos a quién llamar." Una frase basta.',s2h:'Investigamos y conectamos.',s2p:'Ya evaluamos 197 proveedores en 15 categorías. Te mandamos los 3–5 mejores para tu problema específico.',s3h:'Tú evalúas y decides.',s3p:'Coordinamos presentaciones. Pruebas la tecnología. Solo compras si funciona.',
+  jLabel:'La cadena de suministro',jH:'Tenemos tecnología para <em>cada paso.</em>',jLead:'Pasa el cursor por cualquier pin para ver la categoría. Haz clic para ir a la lista.',jStage1:'Donde se hace',jStage2:'Donde se guarda',jStage3:'Moviendo cosas',jStage5:'Donde llega al cliente',
+  solLabel:'Soluciones tecnológicas',solH:'Las tecnologías <em>que buscamos.</em>',solLead:'Desde robots de $50K hasta plataformas de IA empresarial. Sabemos cuáles realmente funcionan.',sol1h:'Robótica & AMRs',sol1p:'Robots de picking, clasificación, goods-to-person. Modelos RaaS y capex.',sol2h:'IA & Analítica',sol2p:'Planeación de demanda, IA agéntica, automatización de freight, visibilidad predictiva.',sol3h:'Sistemas de Almacén',sol3p:'WMS, AS/RS, elevadores verticales, optimización de slotting, gestión de mano de obra.',sol4h:'Flota & Transporte',sol4p:'TMS, telemática, ELD, optimización de rutas, seguridad de conductores.',sol5h:'Visibilidad & IoT',sol5p:'Rastreo en tiempo real, sensores de cadena de frío, monitoreo de condiciones, ETAs predictivas.',sol6h:'Cruce Fronterizo',sol6p:'Cumplimiento aduanal, ACE/ABI, IMMEX, automatización de documentación comercial.',sol7h:'Visión & Seguridad',sol7p:'Visión por computadora, sistemas de código de barras, Andon, CMMS, wearables de seguridad.',sol8h:'Planeación & S&OP',sol8p:'Pronóstico de demanda, optimización de inventario, diseño de red.',
+  tb1:'Proveedores evaluados',tb2:'Categorías cubiertas',tb3:'Listos para frontera',tb4:'Actualizado diario',
+  catsLabel:'15 Categorías',catsH:'Todos los tipos de tecnología <em>que cubrimos.</em>',catsLead:'Cuéntanos tu problema — te señalamos la categoría correcta.',catsStat:'Categorías',catAsk:'Pregúntanos →',
+  whyLabel:'Por qué NXT//LINK',whyH:'No somos una empresa de software. <em>Somos tu scout tecnológico.</em>',w1h:'Neutral ante proveedores',w1p:'No vendemos tecnología. Buscamos globalmente y te traemos opciones. Sin incentivos ocultos.',w2h:'Ahorra semanas',w2p:'Ya hicimos las expos, los demos y las llamadas. Tú recibes la lista corta.',w3h:'Alcance global, enfoque local',w3p:'Proveedores de Japón a Noruega. Cada recomendación funciona en la frontera.',w4h:'Evaluación estructurada',w4p:'Cada match incluye precios, características, compatibilidad fronteriza y puntuación.',w5h:'197 proveedores evaluados',w5p:'En 15 categorías, evaluados en expos y de forma directa alrededor del mundo.',w6h:'Hecho para operaciones',w6p:'Hablamos almacén, transporte y maquiladora — en inglés y español.',
+  ctaH:'Deja de buscar entre <em>cientos de proveedores.</em>',ctaP:'Descubre soluciones que realmente encajan, más rápido.',ctaCta1:'Agendar una Llamada →',ctaCta2:'Explorar Tecnologías',
+  conLabel:'Hablemos',conH:'Cuéntanos sobre <em>tu operación.</em>',conLead:'Sin compromiso. Sin pitch de ventas. Solo escuchamos y respondemos rápido — usualmente menos de 48 horas.',conWho:'Quién:',conWhoV:'Empresas en Juárez o El Paso',conReply:'Respuesta:',conReplyV:'Menos de 48 horas',conCall:'Llamada:',conCallV:'Agendar 15 min →',conWA:'Disponible al solicitar',
+  formTitle:'Mándanos un mensaje',formSub:'En español, in English, o ambos.',formCatL:'¿Cuál es el reto?',formCatP:'— elige una categoría —',formCatUnsure:'Aún no sé',formMsgL:'Cuéntanos en tus palabras',formNameL:'Nombre',formBtn:'Enviar →',formFine:'Sin spam · NDA disponible · Respuesta en 48h',formOkMsg:'¡Mensaje enviado! Respondemos en 48 horas.',
+  footTag:'Ayudamos a fábricas y almacenes a encontrar mejor tecnología. Nacido en El Paso. Trabajando la frontera de Juárez.',footReach:'Contáctanos',footBook:'Agendar 15 min',footWA:'WhatsApp al solicitar',footWhere:'Dónde',footStatus:'197 proveedores · 15 categorías'
+}};
+
+let lang='en';
+
+function applyLang(l){
+  lang=l;localStorage.setItem('nxt_lang',l);document.documentElement.lang=l;
+  document.querySelectorAll('.lt button').forEach(b=>b.classList.toggle('on',b.getAttribute('data-l')===l));
+  const d=T[l];
+  document.querySelectorAll('[data-i]').forEach(el=>{
+    const k=el.getAttribute('data-i');
+    if(d[k]!==undefined)el.innerHTML=d[k];
+  });
+}
+
+function pickLang(l){
+  localStorage.setItem('nxt_lang',l);localStorage.setItem('nxt_lang_picked','1');
+  document.getElementById('langPopup').classList.add('hide');
+  applyLang(l);
+}
+
+// Show popup if first visit
+if(!localStorage.getItem('nxt_lang_picked')){
+  document.getElementById('langPopup').classList.remove('hide');
+}else{
+  document.getElementById('langPopup').classList.add('hide');
+}
+
+// Auto-detect language if already picked or from browser
+const stored=localStorage.getItem('nxt_lang');
+if(stored){applyLang(stored)}else{
+  const bLangs=navigator.languages||[navigator.language||'en'];
+  for(const bl of bLangs){if(bl&&bl.toLowerCase().startsWith('es')){applyLang('es');break}}
+}
+
+// Nav lang toggle buttons
+document.querySelectorAll('.lt button').forEach(b=>{b.addEventListener('click',()=>{applyLang(b.getAttribute('data-l'))})});
+
+// Reveals
+const io=new IntersectionObserver(es=>{es.forEach((e,i)=>{if(e.isIntersecting){setTimeout(()=>e.target.classList.add('in'),i*80);io.unobserve(e.target)}})},{threshold:.1});
+document.querySelectorAll('.rv').forEach(el=>io.observe(el));
+
+// Journey pins
+const jB=document.getElementById('jB'),jT=document.getElementById('jT'),jS=document.querySelector('.journey');
+if(jB&&jT){jB.querySelectorAll('.jpn').forEach(g=>{const c=g.getAttribute('data-c'),n=g.getAttribute('data-n'),p=String(c).padStart(2,'0');
+g.addEventListener('mouseenter',()=>{const r=jB.getBoundingClientRect(),b=g.getBoundingClientRect();jT.style.left=(b.left+b.width/2-r.left)+'px';jT.style.top=(b.top-r.top)+'px';jT.querySelector('strong').textContent='#'+p;jT.querySelector('span').textContent=n;jT.classList.add('show')});
+g.addEventListener('mouseleave',()=>jT.classList.remove('show'));
+g.addEventListener('click',()=>{document.querySelectorAll('.cr').forEach(r=>{const x=r.querySelector('.cn');if(x&&x.textContent.trim()===p){r.scrollIntoView({behavior:'smooth',block:'center'});r.style.background='var(--pbg)';setTimeout(()=>r.style.background='',1400)}})})
+})}
+if(jS){new IntersectionObserver(es=>es.forEach(e=>jS.classList.toggle('paused',!e.isIntersecting)),{threshold:0}).observe(jS)}
+
+// Hero spotlight
+const hEl=document.querySelector('.hero'),hSp=document.getElementById('hSpot');
+if(hEl&&hSp){hEl.addEventListener('mousemove',e=>{const r=hEl.getBoundingClientRect();hSp.style.background=`radial-gradient(700px circle at ${e.clientX-r.left}px ${e.clientY-r.top}px, rgba(124,92,252,.07), transparent 60%)`})}
+
+// 3D tilt
+document.querySelectorAll('.pcard,.wcard,.hst,.pst,.scard').forEach(c=>{
+c.addEventListener('mousemove',e=>{const r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;c.style.transform=`translateY(-4px) perspective(600px) rotateY(${x*5}deg) rotateX(${-y*5}deg)`});
+c.addEventListener('mouseleave',()=>{c.style.transform=''})});
+
+// Form — handle submit with FormSubmit.co, show success state
+const cForm=document.getElementById('contactForm');
+if(cForm){
+  cForm.addEventListener('submit',function(e){
+    e.preventDefault();
+    const fd=new FormData(cForm);
+    fetch(cForm.action,{method:'POST',body:fd,headers:{'Accept':'application/json'}})
+    .then(r=>{
+      if(r.ok){
+        cForm.style.display='none';
+        document.getElementById('formOk').style.display='block';
+      }else{
+        alert(lang==='es'?'Error al enviar. Intenta de nuevo.':'Error sending. Please try again.');
+      }
+    }).catch(()=>{
+      alert(lang==='es'?'Error de red. Intenta de nuevo.':'Network error. Please try again.');
+    });
+  });
+}
+</script>
+</body>
+</html>
