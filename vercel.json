@@ -1,4 +1,33 @@
 {
+  "headers": [
+    {
+      "source": "/landing.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, s-maxage=3600, stale-while-revalidate=86400" },
+        { "key": "CDN-Cache-Control", "value": "max-age=3600" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" }
+      ]
+    },
+    {
+      "source": "/admin.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, s-maxage=3600, stale-while-revalidate=86400" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" }
+      ]
+    },
+    {
+      "source": "/(.*)\\.(?:js|css|woff2|woff|ttf|ico|svg|png|jpg|jpeg|webp|avif|gif)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, s-maxage=60, stale-while-revalidate=300" }
+      ]
+    }
+  ],
   "crons": [
     {
       "path": "/api/agents/cron-step?agent=intel-discovery",
