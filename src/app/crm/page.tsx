@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 const SB_URL = 'https://yvykselwehxjwsqercjg.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2eWtzZWx3ZWh4anducWVyY2pnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcwOTMwMTYsImV4cCI6MjA2MjY2OTAxNn0.8hRMIghMesGKGMFMmN8Wg8XMSBd4VfrFaXCRYuXxfHs';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2eWtzZWx3ZWh4andzcWVyY2pnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NTg3MzMsImV4cCI6MjA4NzQzNDczM30.e7NeSgWXlGkVgIOrRxivYwc9BaczCJ0QaA0XoNh0HqQ';
 const AUTH_URL = SB_URL + '/functions/v1/admin-auth';
 
 const STATUSES_LEAD = ['new', 'contacted', 'meeting_booked', 'qualified', 'closed_won', 'closed_lost'];
