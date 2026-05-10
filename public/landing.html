@@ -209,6 +209,73 @@ footer{background:var(--bg2);border-top:1px solid var(--line);padding:56px 0 28p
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media(max-width:1024px){.pgrid,.wgrid{grid-template-columns:1fr 1fr}.pflo{grid-template-columns:1fr}.cg{grid-template-columns:1fr}.ft{grid-template-columns:1fr 1fr}.sgrid{grid-template-columns:1fr 1fr}.tbar{grid-template-columns:1fr 1fr}}
 @media(max-width:768px){.c{padding:0 20px}nav ul{display:none}.hero{padding:100px 0 64px;min-height:auto}.pgrid,.wgrid,.sgrid{grid-template-columns:1fr}.hero-stats{gap:12px}.hst{min-width:100px;padding:20px}.hst .n{font-size:36px}.fr{grid-template-columns:1fr}.ft{grid-template-columns:1fr}.problem,.process,.journey,.cats,.why,.contact,.cta-band,.solutions{padding:72px 0}.cats-head{flex-direction:column;align-items:flex-start}.tbar{grid-template-columns:1fr 1fr}}
+/* Chat widget */
+.chat-fab{position:fixed;bottom:28px;right:28px;z-index:150;width:60px;height:60px;border-radius:50%;background:var(--p);border:none;cursor:pointer;box-shadow:0 4px 24px rgba(124,92,252,.4);display:flex;align-items:center;justify-content:center;transition:.3s}
+.chat-fab:hover{transform:scale(1.08);box-shadow:0 6px 32px rgba(124,92,252,.5)}
+.chat-fab svg{width:28px;height:28px;fill:#fff;transition:.3s}
+.chat-fab.open svg{transform:rotate(90deg)}
+.chat-box{position:fixed;bottom:100px;right:28px;z-index:150;width:360px;max-width:calc(100vw - 56px);height:460px;max-height:calc(100vh - 140px);background:var(--bg2);border:1px solid var(--line);border-radius:18px;display:flex;flex-direction:column;overflow:hidden;opacity:0;transform:translateY(12px) scale(.97);pointer-events:none;transition:opacity .2s,transform .2s;box-shadow:0 12px 48px rgba(0,0,0,.5)}
+.chat-box.open{opacity:1;transform:none;pointer-events:auto}
+.chat-head{padding:16px 18px;background:linear-gradient(135deg,var(--p),var(--pd));display:flex;align-items:center;gap:12px}
+.ch-avatar{width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ch-avatar svg{width:20px;height:20px;fill:#fff}
+.chat-head .ch-dot{width:8px;height:8px;background:var(--green);border-radius:50%;position:absolute;bottom:0;right:0;border:2px solid var(--pd)}
+.ch-av-wrap{position:relative}
+.chat-head .ch-title{font-size:15px;font-weight:600;color:#fff;flex:1}
+.chat-head .ch-sub{font-size:11px;color:rgba(255,255,255,.7);margin-top:1px}
+.chat-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.chat-msgs::-webkit-scrollbar{width:4px}.chat-msgs::-webkit-scrollbar-thumb{background:var(--muted2);border-radius:2px}
+.cm-bot-wrap{display:flex;gap:8px;align-items:flex-start;align-self:flex-start;max-width:88%}
+.cm-av{width:28px;height:28px;background:var(--pbg);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.cm-av svg{width:14px;height:14px;fill:var(--p2)}
+.cm-bot,.cm-user{max-width:100%;padding:12px 16px;border-radius:14px;font-size:14px;line-height:1.5}
+.cm-bot{background:var(--surf2);color:var(--ink);border-bottom-left-radius:4px}
+.cm-user{background:var(--p);color:#fff;align-self:flex-end;border-bottom-right-radius:4px;max-width:85%}
+.cm-typing-wrap{display:flex;gap:8px;align-items:flex-start;align-self:flex-start}
+.cm-typing{padding:12px 16px;background:var(--surf2);border-radius:14px;border-bottom-left-radius:4px;display:flex;gap:4px}
+.cm-typing span{width:6px;height:6px;background:var(--muted);border-radius:50%;animation:bTyp 1.2s infinite}
+.cm-typing span:nth-child(2){animation-delay:.2s}.cm-typing span:nth-child(3){animation-delay:.4s}
+@keyframes bTyp{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-4px)}}
+.chat-input{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:10px;background:var(--bg2)}
+.chat-input input{flex:1;font-family:var(--sans);font-size:14px;padding:10px 14px;background:var(--bg);border:1px solid var(--line);border-radius:99px;color:var(--ink);outline:none}
+.chat-input input:focus{border-color:var(--p)}
+.chat-input button{width:38px;height:38px;border-radius:50%;background:var(--p);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s;flex-shrink:0}
+.chat-input button:hover{background:var(--pd)}
+.chat-input button svg{width:18px;height:18px;fill:#fff}
+.cm-lead{background:var(--pbg);border:1px solid rgba(124,92,252,.2);border-radius:14px;padding:14px 16px;align-self:flex-start;max-width:90%}
+.cm-lead p{font-size:13px;color:var(--ink2);margin-bottom:10px}
+.cm-lead input{width:100%;font-family:var(--sans);font-size:13px;padding:8px 12px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--ink);outline:none;margin-bottom:6px}
+.cm-lead input:focus{border-color:var(--p)}
+.cm-lead button{width:100%;padding:8px;background:var(--p);color:#fff;border:none;border-radius:8px;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;margin-top:4px}
+@media(max-width:768px){.chat-box{bottom:88px;right:12px;width:320px;max-width:calc(100vw - 24px);height:420px;max-height:calc(100vh - 120px)}.chat-fab{bottom:20px;right:20px;width:52px;height:52px}.chat-fab svg{width:24px;height:24px}}
+/* Booking popup */
+.book-overlay{position:fixed;inset:0;z-index:200;background:rgba(10,10,15,.8);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:.25s}
+.book-overlay.open{opacity:1;pointer-events:auto}
+.book-frame{background:var(--bg2);border:1px solid var(--line);border-radius:18px;overflow:hidden;width:480px;max-width:calc(100vw - 32px);max-height:calc(100vh - 60px);display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,.6)}
+.book-frame-head{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line)}
+.book-frame-head h3{font-size:16px;font-weight:600}
+.book-frame-head button{background:0;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:0 4px;line-height:1}
+.book-frame iframe{width:100%;height:560px;border:none}
+@media(max-width:768px){.book-frame{width:100%;max-width:100%;border-radius:12px}.book-frame iframe{height:480px}}
+/* Chat book button */
+.cm-book-btn{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:8px 16px;background:var(--p);color:#fff;border:none;border-radius:99px;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;transition:.2s}
+.cm-book-btn:hover{background:var(--pd);transform:translateY(-1px)}
+.cm-starters{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.cm-starters button{padding:7px 14px;background:var(--pbg);border:1px solid rgba(124,92,252,.25);border-radius:99px;color:var(--p2);font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;transition:.2s;white-space:nowrap}
+.cm-starters button:hover{background:var(--p);color:#fff;border-color:var(--p)}
+.captcha-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.captcha-row label{font-size:14px;color:var(--ink);white-space:nowrap}
+.captcha-row input{font-family:var(--sans)}
+.vendor-signup{padding:80px 0;border-top:1px solid var(--line)}
+.vendor-form .fr{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.vendor-form .fd{margin-bottom:16px}
+.vendor-form label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--ink2)}
+.vendor-form input,.vendor-form select,.vendor-form textarea{width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-family:var(--sans);font-size:14px;outline:none;box-sizing:border-box}
+.vendor-form input:focus,.vendor-form select:focus,.vendor-form textarea:focus{border-color:var(--p)}
+.vendor-form textarea{resize:vertical}
+.vcb{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink2);margin-bottom:20px;cursor:pointer}
+.vcb input{accent-color:var(--p);width:auto}
+@media(max-width:600px){.vendor-form .fr{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -233,6 +300,7 @@ footer{background:var(--bg2);border-top:1px solid var(--line);padding:56px 0 28p
     <li><a href="#solutions" data-i="navSolutions">Solutions</a></li>
     <li><a href="#cats" data-i="navCats">Categories</a></li>
     <li><a href="#contact" data-i="navContact">Contact</a></li>
+    <li><a href="#vendor-signup" data-i="navVendors">Vendors</a></li>
   </ul>
   <div class="nr"><div class="lt"><button class="on" data-l="en">EN</button><button data-l="es">ES</button></div><a href="#contact" class="ncta" data-i="navCta">Start Discovery</a></div>
 </div></nav>
@@ -289,7 +357,7 @@ footer{background:var(--bg2);border-top:1px solid var(--line);padding:56px 0 28p
       <g transform="translate(236,50)"><rect x="-6" y="-6" width="180" height="180" class="jzn"/><g transform="translate(14,28)"><polygon points="0,30 56,6 112,30" class="jf2"/><rect x="0" y="30" width="112" height="72" fill="none" class="js2"/><rect x="12" y="60" width="22" height="42" class="jf2"/><rect x="44" y="60" width="22" height="42" class="jf2"/><rect x="78" y="60" width="22" height="42" class="jf2"/><rect x="48" y="66" width="14" height="32" class="jp2 blnk"/></g><text x="84" y="182" class="jl pur">★ WAREHOUSE</text><text x="84" y="198" class="jsl" data-i="jStage2">Where stuff is stored</text>
       <g class="jpn" data-c="2" data-n="Warehouse Management" transform="translate(24,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">02</text></g><g class="jpn" data-c="9" data-n="Forklifts & Material Handling" transform="translate(54,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">09</text></g><g class="jpn" data-c="14" data-n="Automated Storage & Retrieval" transform="translate(84,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">14</text></g><g class="jpn" data-c="6" data-n="Yard & Dock" transform="translate(114,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">06</text></g><g class="jpn" data-c="8" data-n="Pallets & Pooling" transform="translate(144,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">08</text></g></g>
       <line x1="422" y1="140" x2="456" y2="140" class="jflo a"/><polygon points="456,136 464,140 456,144" class="jar2"/>
-      <g transform="translate(472,50)"><rect x="-6" y="-6" width="154" height="180" class="jzp"/><g transform="translate(16,64)" class="jbb"><line x1="-8" y1="44" x2="124" y2="44" stroke="var(--muted2)" stroke-width="1" stroke-dasharray="3 3"/><rect x="0" y="0" width="64" height="38" fill="none" class="js2"/><line x1="0" y1="18" x2="64" y2="18" class="jt2"/><path d="M64 38 L64 12 L82 6 L100 6 L100 38Z" class="jp2 js2"/><rect x="68" y="12" width="20" height="12" fill="var(--bg3)" class="jt2"/><circle cx="16" cy="38" r="7" class="jf2 jwl"/><circle cx="16" cy="38" r="3" class="jp2"/><circle cx="48" cy="38" r="7" class="jf2 jwl"/><circle cx="48" cy="38" r="3" class="jp2"/><circle cx="86" cy="38" r="7" class="jf2 jwl"/><circle cx="86" cy="38" r="3" class="jp2"/></g><text x="70" y="182" class="jl">TRUCKING</text><text x="70" y="198" class="jsl" data-i="jStage3">Moving stuff</text>
+      <g transform="translate(472,50)"><rect x="-6" y="-6" width="154" height="180" class="jzp"/><g transform="translate(16,28)"><!-- truck, positioned to match other stages vertically --><g transform="translate(0,40)" class="jbb"><!-- road --><line x1="-8" y1="50" x2="130" y2="50" stroke="var(--muted2)" stroke-width="1.2" stroke-dasharray="4 6"/><!-- cargo box --><rect x="0" y="4" width="62" height="36" rx="2" fill="var(--bg3)" class="js2"/><!-- cargo lines --><line x1="20" y1="4" x2="20" y2="40" class="jt2"/><line x1="40" y1="4" x2="40" y2="40" class="jt2"/><!-- cab --><path d="M62 40 L62 16 L78 8 L100 8 L100 40Z" fill="var(--bg3)" class="js2"/><!-- windshield --><rect x="66" y="14" width="18" height="14" rx="2" fill="var(--p)" style="opacity:.3"/><!-- wheels --><circle cx="18" cy="44" r="7" class="jf2 jwl"/><circle cx="18" cy="44" r="3" class="jp2"/><circle cx="48" cy="44" r="7" class="jf2 jwl"/><circle cx="48" cy="44" r="3" class="jp2"/><circle cx="88" cy="44" r="7" class="jf2 jwl"/><circle cx="88" cy="44" r="3" class="jp2"/></g></g><text x="70" y="182" class="jl">TRUCKING</text><text x="70" y="198" class="jsl" data-i="jStage3">Moving stuff</text>
       <g class="jpn" data-c="1" data-n="Transportation Management" transform="translate(30,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">01</text></g><g class="jpn" data-c="4" data-n="Telematics & ELD" transform="translate(70,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">04</text></g><g class="jpn" data-c="12" data-n="AI Freight Automation" transform="translate(110,224)"><circle r="15" class="pb2"/><text y="5" class="pnt">12</text></g></g>
       <line x1="632" y1="140" x2="666" y2="140" class="jflo a"/><polygon points="666,136 674,140 666,144" class="jar2"/>
       <g transform="translate(682,50)"><rect x="-6" y="-6" width="140" height="180" class="jzn"/><g transform="translate(16,28)"><path d="M0 82 L0 22 Q44 -6 88 22 L88 82" fill="none" class="js2"/><line x1="44" y1="0" x2="44" y2="-18" class="jt2"/><g transform="translate(44,-18)" class="jfg"><rect x="0" y="0" width="16" height="11" class="jp2"/><line x1="0" y1="5.5" x2="16" y2="5.5" stroke="var(--bg)" stroke-width=".8"/></g><line x1="-8" y1="82" x2="96" y2="82" class="js2"/><rect x="28" y="44" width="32" height="32" fill="var(--bg3)" class="jt2"/><line x1="32" y1="52" x2="56" y2="52" stroke="var(--muted2)" stroke-width=".5"/><line x1="32" y1="58" x2="56" y2="58" stroke="var(--muted2)" stroke-width=".5"/><g class="jsm" transform="translate(44,60)"><rect x="-10" y="-8" width="20" height="16" rx="1" fill="rgba(124,92,252,.2)" stroke="var(--p)" stroke-width="1.5" transform="rotate(-8)"/><text x="0" y="2" font-family="Outfit" font-size="5" fill="var(--p2)" text-anchor="middle" font-weight="700" transform="rotate(-8)" pointer-events="none">OK</text></g></g><text x="64" y="182" class="jl pur">★ BORDER</text><text x="64" y="198" class="jsl">Juárez ↔ El Paso</text>
@@ -309,7 +377,7 @@ footer{background:var(--bg2);border-top:1px solid var(--line);padding:56px 0 28p
     <div class="scard rv"><div class="si-box"><svg viewBox="0 0 34 34"><rect x="13" y="26" width="8" height="6" class="si-f"/><circle cx="17" cy="24" r="2" class="si-f" style="opacity:.5"/><g transform="translate(17,24)"><g class="si-arm"><line x1="0" y1="0" x2="0" y2="-14" class="si-s" stroke-width="2.5"/><circle cx="0" cy="-14" r="2" class="si-f"/><g transform="translate(0,-14)"><line x1="0" y1="0" x2="8" y2="-6" class="si-s" stroke-width="2"/><path d="M6,-8 L10,-8 L10,-4 L6,-4" class="si-s"/></g></g></g></svg></div><h3 data-i="sol1h">Robotics & AMRs</h3><p data-i="sol1p">Picking robots, sorting bots, goods-to-person. RaaS and capex models.</p></div>
     <div class="scard rv"><div class="si-box"><svg viewBox="0 0 34 34"><circle cx="17" cy="8" r="3" class="si-f si-node"/><circle cx="8" cy="20" r="3" class="si-f si-node d2"/><circle cx="26" cy="20" r="3" class="si-f si-node d3"/><circle cx="12" cy="30" r="2.5" class="si-f si-node d4"/><circle cx="22" cy="30" r="2.5" class="si-f si-node"/><line x1="17" y1="8" x2="8" y2="20" class="si-s"/><line x1="17" y1="8" x2="26" y2="20" class="si-s"/><line x1="8" y1="20" x2="12" y2="30" class="si-s"/><line x1="26" y1="20" x2="22" y2="30" class="si-s"/></svg></div><h3 data-i="sol2h">AI & Analytics</h3><p data-i="sol2p">Demand planning, agentic AI, freight automation, predictive visibility.</p></div>
     <div class="scard rv"><div class="si-box"><svg viewBox="0 0 34 34"><rect x="6" y="4" width="22" height="28" rx="1" class="si-s"/><line x1="6" y1="12" x2="28" y2="12" class="si-s"/><line x1="6" y1="20" x2="28" y2="20" class="si-s"/><line x1="17" y1="4" x2="17" y2="32" class="si-s"/><g class="si-shut"><rect x="20" y="22" width="6" height="4" rx="1" class="si-f"/></g></svg></div><h3 data-i="sol3h">Warehouse Systems</h3><p data-i="sol3p">WMS, AS/RS, vertical lifts, slotting optimization, labor management.</p></div>
-    <div class="scard rv"><div class="si-box"><svg viewBox="0 0 34 34"><rect x="3" y="12" width="16" height="12" rx="1" class="si-s"/><path d="M19 24 L19 14 L25 10 L30 10 L30 24Z" class="si-s"/><circle cx="10" cy="26" r="3" class="si-s si-whl"/><circle cx="10" cy="26" r="1" class="si-f"/><circle cx="26" cy="26" r="3" class="si-s si-whl"/><circle cx="26" cy="26" r="1" class="si-f"/></svg></div><h3 data-i="sol4h">Fleet & Transport</h3><p data-i="sol4p">TMS, telematics, ELD, route optimization, driver safety.</p></div>
+    <div class="scard rv"><div class="si-box"><svg viewBox="0 0 34 34"><!-- cargo --><rect x="3" y="12" width="15" height="12" rx="1.5" class="si-s"/><line x1="10" y1="12" x2="10" y2="24" class="si-s" stroke-width="1"/><!-- cab --><path d="M18 24 L18 14 L24 10 L30 10 L30 24Z" class="si-s"/><rect x="20" y="12" width="6" height="5" rx="1" class="si-f" style="opacity:.3"/><!-- wheels --><circle cx="10" cy="27" r="3" class="si-s si-whl"/><circle cx="10" cy="27" r="1" class="si-f"/><circle cx="26" cy="27" r="3" class="si-s si-whl"/><circle cx="26" cy="27" r="1" class="si-f"/></svg></div><h3 data-i="sol4h">Fleet & Transport</h3><p data-i="sol4p">TMS, telematics, ELD, route optimization, driver safety.</p></div>
     <div class="scard rv"><div class="si-box"><svg viewBox="0 0 34 34"><circle cx="17" cy="17" r="4" class="si-f"/><circle cx="17" cy="17" r="8" class="si-s si-ping"/><circle cx="17" cy="17" r="8" class="si-s si-ping d2"/><circle cx="17" cy="17" r="13" class="si-s" style="opacity:.15"/></svg></div><h3 data-i="sol5h">Visibility & IoT</h3><p data-i="sol5p">Real-time tracking, cold chain sensors, condition monitoring, predictive ETAs.</p></div>
     <div class="scard rv"><div class="si-box"><svg viewBox="0 0 34 34"><rect x="6" y="18" width="22" height="14" rx="1" class="si-s"/><line x1="10" y1="23" x2="24" y2="23" class="si-s" stroke-width="1"/><line x1="10" y1="27" x2="20" y2="27" class="si-s" stroke-width="1"/><g class="si-stamp"><rect x="10" y="6" width="14" height="10" rx="1" class="si-f" style="opacity:.6"/></g></svg></div><h3 data-i="sol6h">Cross-Border</h3><p data-i="sol6p">Customs compliance, ACE/ABI, IMMEX, trade documentation automation.</p></div>
     <div class="scard rv"><div class="si-box"><svg viewBox="0 0 34 34"><rect x="8" y="12" width="14" height="10" rx="2" class="si-s" stroke-width="2"/><circle cx="15" cy="17" r="3" class="si-f"/><g class="si-scan"><path d="M15 22 L8 32 L22 32Z" class="si-s" fill="rgba(124,92,252,.1)"/></g></svg></div><h3 data-i="sol7h">Vision & Safety</h3><p data-i="sol7p">Machine vision, barcode systems, Andon, CMMS, safety wearables.</p></div>
@@ -370,7 +438,7 @@ footer{background:var(--bg2);border-top:1px solid var(--line);padding:56px 0 28p
   <div class="cinfo">
     <strong data-i="conWho">Who:</strong> <span data-i="conWhoV">Companies in Juárez or El Paso</span><br>
     <strong data-i="conReply">Reply:</strong> <span data-i="conReplyV">Under 48 hours</span><br>
-    <strong data-i="conCall">Call:</strong> <a href="https://calendly.com/" data-i="conCallV">Book 15 min →</a><br>
+    <strong data-i="conCall">Call:</strong> <a href="#" onclick="openBooking();return false" data-i="conCallV">Book 15 min →</a><br>
     <strong>WhatsApp:</strong> <span data-i="conWA">Available on request</span>
   </div></div>
   <div class="fb rv">
@@ -386,6 +454,7 @@ footer{background:var(--bg2);border-top:1px solid var(--line);padding:56px 0 28p
         <select name="category" required><option value="" data-i="formCatP">— pick a category —</option><option>Transportation Management</option><option>Warehouse Management</option><option>Real-Time Visibility</option><option>Telematics & ELD</option><option>Customs & Cross-Border</option><option>Yard & Dock</option><option>Cold Chain & IoT</option><option>Pallets & Pooling</option><option>Forklifts & Material Handling</option><option>Conveyors & Robotics</option><option>Vision, Sensors & Safety</option><option>AI Freight Automation</option><option>Agentic AI Orchestration</option><option>Automated Storage & Retrieval</option><option>Supply Chain Planning</option><option data-i="formCatUnsure">Not sure yet</option></select></div>
       <div class="fd"><label data-i="formMsgL">Tell us in your own words</label><textarea name="message" placeholder="e.g. Picking errors are killing us before peak season." required></textarea></div>
       <div class="fr"><div class="fd"><label data-i="formNameL">Name</label><input type="text" name="name" placeholder="Jane Operator" required/></div><div class="fd"><label>Email</label><input type="email" name="email" placeholder="you@company.com" required/></div></div>
+      <div class="fd captcha-row"><label id="captchaQ"></label><input type="text" id="captchaA" placeholder="?" required autocomplete="off" style="width:80px;text-align:center"/></div>
       <button type="submit" class="fbtn" data-i="formBtn">Send →</button>
       <div class="ffine" data-i="formFine">No spam · NDA available · Reply within 48h</div>
     </form>
@@ -393,10 +462,50 @@ footer{background:var(--bg2);border-top:1px solid var(--line);padding:56px 0 28p
   </div>
 </div></div></section>
 
+<!-- Vendor Signup Section -->
+<section class="sec vendor-signup" id="vendor-signup">
+<div class="c" style="max-width:680px">
+  <div style="text-align:center;margin-bottom:40px">
+    <div class="badge" style="margin-bottom:12px" data-i="vendorBadge">FOR TECHNOLOGY VENDORS</div>
+    <h2 class="sh" data-i="vendorH">List Your Solution</h2>
+    <p class="sp" data-i="vendorP">Join 197+ vendors in our catalog. Get matched with factories, warehouses, and logistics companies across the Borderplex.</p>
+  </div>
+  <form id="vendorForm" class="vendor-form" onsubmit="return submitVendorForm(event)">
+    <div class="fr">
+      <div class="fd"><label data-i="vendorCompany">Company Name</label><input type="text" name="company_name" required/></div>
+      <div class="fd"><label data-i="vendorContact">Contact Name</label><input type="text" name="contact_name" required/></div>
+    </div>
+    <div class="fr">
+      <div class="fd"><label>Email</label><input type="email" name="email" required/></div>
+      <div class="fd"><label data-i="vendorPhone">Phone</label><input type="tel" name="phone"/></div>
+    </div>
+    <div class="fr">
+      <div class="fd"><label data-i="vendorWebsite">Website</label><input type="url" name="website" placeholder="https://"/></div>
+      <div class="fd"><label data-i="vendorCat">Technology Category</label>
+        <select name="category" required>
+          <option value="" data-i="vendorCatP">— select —</option>
+          <option>Transportation Management</option><option>Warehouse Management</option><option>Real-Time Visibility</option>
+          <option>Telematics & ELD</option><option>Customs & Cross-Border</option><option>Yard & Dock</option>
+          <option>Cold Chain & IoT</option><option>Pallets & Pooling</option><option>Forklifts & Material Handling</option>
+          <option>Conveyors & Robotics</option><option>Vision, Sensors & Safety</option><option>Agentic AI Orchestration</option>
+          <option>AI Freight Automation</option><option>Automated Storage & Retrieval</option><option>Supply Chain Planning</option>
+        </select>
+      </div>
+    </div>
+    <div class="fd"><label data-i="vendorDesc">Describe your solution</label><textarea name="description" rows="3" placeholder="" data-i-placeholder="vendorDescP"></textarea></div>
+    <label class="vcb"><input type="checkbox" name="cross_border_ready"/> <span data-i="vendorCross">Cross-border ready (El Paso ↔ Juárez)</span></label>
+    <div class="fd captcha-row"><label id="vendorCaptchaQ"></label><input type="text" id="vendorCaptchaA" placeholder="?" required autocomplete="off" style="width:80px;text-align:center"/></div>
+    <button type="submit" class="fbtn" data-i="vendorBtn">Submit Application →</button>
+    <div class="ffine" data-i="vendorFine">We review applications within 48 hours.</div>
+  </form>
+  <div class="form-success" id="vendorOk" style="display:none"><h3>✓</h3><p data-i="vendorOkMsg">Application received! We'll review and reach out within 48 hours.</p></div>
+</div>
+</section>
+
 <footer><div class="c">
   <div class="ft"><div><div class="fbrand">NXT<span>//</span>LINK</div><div class="ftag" data-i="footTag">We help factories and warehouses find better tech. Born in El Paso. Working the Juárez border.</div></div>
-  <div class="fc"><h5 data-i="footReach">Reach us</h5><a href="mailto:contact@nxtlinktech.com">contact@nxtlinktech.com</a><a href="https://calendly.com/" data-i="footBook">Book 15 min</a><span data-i="footWA">WhatsApp on request</span></div>
-  <div class="fc"><h5 data-i="footWhere">Where</h5><span>Juárez ↔ El Paso</span><span>English · Español</span></div></div>
+  <div class="fc"><h5 data-i="footReach">Reach us</h5><a href="mailto:contact@nxtlinktech.com">contact@nxtlinktech.com</a><a href="#" onclick="openBooking();return false" data-i="footBook">Book 15 min</a><span data-i="footWA">WhatsApp on request</span></div>
+  <div class="fc"><h5 data-i="footWhere">Where</h5><span>Juárez ↔ El Paso</span><span>English · Español</span><a href="#vendor-signup" style="color:var(--p2);font-size:14px;margin-top:8px;display:inline-block" data-i="footVendor">Are you a vendor? List your solution →</a></div></div>
   <div class="fbot"><span>© 2026 NXT//LINK</span><span data-i="footStatus">197 vendors · 15 categories</span></div>
 </div></footer>
 
@@ -417,7 +526,9 @@ en:{
   ctaH:'Stop searching through <em>hundreds of vendors.</em>',ctaP:'Start discovering better-fit solutions faster.',ctaCta1:'Schedule a Call →',ctaCta2:'Explore Technologies',
   conLabel:'Let\'s talk',conH:'Tell us about <em>your operation.</em>',conLead:'No commitment. No sales pitch. We just listen and write back fast — usually under 48 hours.',conWho:'Who:',conWhoV:'Companies in Juárez or El Paso',conReply:'Reply:',conReplyV:'Under 48 hours',conCall:'Call:',conCallV:'Book 15 min →',conWA:'Available on request',
   formTitle:'Send us a message',formSub:'In English, en español, or both.',formCatL:'What\'s the challenge?',formCatP:'— pick a category —',formCatUnsure:'Not sure yet',formMsgL:'Tell us in your own words',formNameL:'Name',formBtn:'Send →',formFine:'No spam · NDA available · Reply within 48h',formOkMsg:'Message sent! We\'ll reply within 48 hours.',
-  footTag:'We help factories and warehouses find better tech. Born in El Paso. Working the Juárez border.',footReach:'Reach us',footBook:'Book 15 min',footWA:'WhatsApp on request',footWhere:'Where',footStatus:'197 vendors · 15 categories'
+  footTag:'We help factories and warehouses find better tech. Born in El Paso. Working the Juárez border.',footReach:'Reach us',footBook:'Book 15 min',footWA:'WhatsApp on request',footWhere:'Where',footStatus:'197 vendors · 15 categories',
+  chatTitle:'NXT//LINK Scout',chatSub:'Online · Replies instantly',chatWelcome:'Hey! 👋 Welcome to NXT//LINK. I help Borderplex companies find the right supply chain tech. What can I help you with?',chatPlaceholder:'Ask me anything...',bookTitle:'Schedule a Discovery Call',
+  navVendors:'Vendors',vendorBadge:'FOR TECHNOLOGY VENDORS',vendorH:'List Your Solution',vendorP:'Join 197+ vendors in our catalog. Get matched with factories, warehouses, and logistics companies across the Borderplex.',vendorCompany:'Company Name',vendorContact:'Contact Name',vendorPhone:'Phone',vendorWebsite:'Website',vendorCat:'Technology Category',vendorCatP:'— select —',vendorDesc:'Describe your solution',vendorDescP:'What does your product do? Who is it for?',vendorCross:'Cross-border ready (El Paso ↔ Juárez)',vendorBtn:'Submit Application →',vendorFine:'We review applications within 48 hours.',vendorOkMsg:'Application received! We\'ll review and reach out within 48 hours.',footVendor:'Are you a vendor? List your solution →'
 },
 es:{
   navProblem:'El problema',navJourney:'Cadena de suministro',navSolutions:'Soluciones',navCats:'Categorías',navContact:'Contacto',navCta:'Comenzar',
@@ -433,7 +544,9 @@ es:{
   ctaH:'Deja de buscar entre <em>cientos de proveedores.</em>',ctaP:'Descubre soluciones que realmente encajan, más rápido.',ctaCta1:'Agendar una Llamada →',ctaCta2:'Explorar Tecnologías',
   conLabel:'Hablemos',conH:'Cuéntanos sobre <em>tu operación.</em>',conLead:'Sin compromiso. Sin pitch de ventas. Solo escuchamos y respondemos rápido — usualmente menos de 48 horas.',conWho:'Quién:',conWhoV:'Empresas en Juárez o El Paso',conReply:'Respuesta:',conReplyV:'Menos de 48 horas',conCall:'Llamada:',conCallV:'Agendar 15 min →',conWA:'Disponible al solicitar',
   formTitle:'Mándanos un mensaje',formSub:'En español, in English, o ambos.',formCatL:'¿Cuál es el reto?',formCatP:'— elige una categoría —',formCatUnsure:'Aún no sé',formMsgL:'Cuéntanos en tus palabras',formNameL:'Nombre',formBtn:'Enviar →',formFine:'Sin spam · NDA disponible · Respuesta en 48h',formOkMsg:'¡Mensaje enviado! Respondemos en 48 horas.',
-  footTag:'Ayudamos a fábricas y almacenes a encontrar mejor tecnología. Nacido en El Paso. Trabajando la frontera de Juárez.',footReach:'Contáctanos',footBook:'Agendar 15 min',footWA:'WhatsApp al solicitar',footWhere:'Dónde',footStatus:'197 proveedores · 15 categorías'
+  footTag:'Ayudamos a fábricas y almacenes a encontrar mejor tecnología. Nacido en El Paso. Trabajando la frontera de Juárez.',footReach:'Contáctanos',footBook:'Agendar 15 min',footWA:'WhatsApp al solicitar',footWhere:'Dónde',footStatus:'197 proveedores · 15 categorías',
+  chatTitle:'NXT//LINK Scout',chatSub:'En línea · Responde al instante',chatWelcome:'¡Hola! 👋 Bienvenido a NXT//LINK. Ayudo a empresas del Borderplex a encontrar la tecnología correcta. ¿En qué te ayudo?',chatPlaceholder:'Pregúntame lo que sea...',bookTitle:'Agendar una Llamada',
+  navVendors:'Proveedores',vendorBadge:'PARA PROVEEDORES DE TECNOLOGÍA',vendorH:'Registra tu Solución',vendorP:'Únete a 197+ proveedores en nuestro catálogo. Conéctate con fábricas, almacenes y empresas de logística en el Borderplex.',vendorCompany:'Nombre de la Empresa',vendorContact:'Nombre de Contacto',vendorPhone:'Teléfono',vendorWebsite:'Sitio Web',vendorCat:'Categoría de Tecnología',vendorCatP:'— seleccionar —',vendorDesc:'Describe tu solución',vendorDescP:'¿Qué hace tu producto? ¿Para quién es?',vendorCross:'Listo para cruce fronterizo (El Paso ↔ Juárez)',vendorBtn:'Enviar Solicitud →',vendorFine:'Revisamos solicitudes en 48 horas.',vendorOkMsg:'¡Solicitud recibida! Revisaremos y te contactaremos en 48 horas.',footVendor:'¿Eres proveedor? Registra tu solución →'
 }};
 
 let lang='en';
@@ -445,6 +558,16 @@ function applyLang(l){
   document.querySelectorAll('[data-i]').forEach(el=>{
     const k=el.getAttribute('data-i');
     if(d[k]!==undefined)el.innerHTML=d[k];
+  });
+  // Translate starter buttons
+  document.querySelectorAll('.cm-starters button').forEach(btn=>{
+    const key=l==='es'?'es':'en';
+    if(btn.dataset[key])btn.textContent=btn.dataset[key];
+  });
+  // Translate placeholders
+  document.querySelectorAll('[data-i-placeholder]').forEach(el=>{
+    const k=el.getAttribute('data-i-placeholder');
+    if(d[k]!==undefined)el.placeholder=d[k];
   });
 }
 
@@ -493,17 +616,89 @@ document.querySelectorAll('.pcard,.wcard,.hst,.pst,.scard').forEach(c=>{
 c.addEventListener('mousemove',e=>{const r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;c.style.transform=`translateY(-4px) perspective(600px) rotateY(${x*5}deg) rotateX(${-y*5}deg)`});
 c.addEventListener('mouseleave',()=>{c.style.transform=''})});
 
-// Form — handle submit with FormSubmit.co, show success state
+// CAPTCHA
+let captchaAnswer=0;
+function genCaptcha(){
+  const a=Math.floor(Math.random()*10)+1;
+  const b=Math.floor(Math.random()*10)+1;
+  captchaAnswer=a+b;
+  const q=document.getElementById('captchaQ');
+  if(q)q.textContent=(lang==='es'?`🔒 ¿Cuánto es ${a} + ${b}?`:`🔒 What is ${a} + ${b}?`);
+}
+genCaptcha();
+
+// Vendor CAPTCHA
+let vendorCaptchaAnswer=0;
+function genVendorCaptcha(){
+  const a=Math.floor(Math.random()*10)+1;
+  const b=Math.floor(Math.random()*10)+1;
+  vendorCaptchaAnswer=a+b;
+  const q=document.getElementById('vendorCaptchaQ');
+  if(q)q.textContent=(lang==='es'?`🔒 ¿Cuánto es ${a} + ${b}?`:`🔒 What is ${a} + ${b}?`);
+}
+genVendorCaptcha();
+
+// Vendor form submission
+function submitVendorForm(e){
+  e.preventDefault();
+  const ans=parseInt(document.getElementById('vendorCaptchaA').value);
+  if(ans!==vendorCaptchaAnswer){
+    alert(lang==='es'?'Respuesta incorrecta. Intenta de nuevo.':'Wrong answer. Please try again.');
+    genVendorCaptcha();
+    document.getElementById('vendorCaptchaA').value='';
+    return false;
+  }
+  const f=document.getElementById('vendorForm');
+  const fd=new FormData(f);
+  const data={
+    company_name:fd.get('company_name'),
+    contact_name:fd.get('contact_name'),
+    email:fd.get('email'),
+    phone:fd.get('phone')||null,
+    website:fd.get('website')||null,
+    category:fd.get('category'),
+    description:fd.get('description')||null,
+    cross_border_ready:!!fd.get('cross_border_ready')
+  };
+  fetch('https://yvykselwehxjwsqercjg.supabase.co/rest/v1/vendor_applications',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2eWtzZWx3ZWh4anducWVyY2pnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcwOTMwMTYsImV4cCI6MjA2MjY2OTAxNn0.8hRMIghMesGKGMFMmN8Wg8XMSBd4VfrFaXCRYuXxfHs','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2eWtzZWx3ZWh4anducWVyY2pnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcwOTMwMTYsImV4cCI6MjA2MjY2OTAxNn0.8hRMIghMesGKGMFMmN8Wg8XMSBd4VfrFaXCRYuXxfHs'},
+    body:JSON.stringify(data)
+  }).then(()=>{
+    f.style.display='none';
+    document.getElementById('vendorOk').style.display='block';
+    fetch(CHAT_API,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'capture_lead',name:data.contact_name,email:data.email,transcript:`VENDOR APPLICATION\nCompany: ${data.company_name}\nCategory: ${data.category}\nCross-border: ${data.cross_border_ready?'Yes':'No'}\nDescription: ${data.description||'N/A'}`})
+    }).catch(()=>{});
+  }).catch(()=>{
+    alert(lang==='es'?'Error al enviar.':'Error submitting.');
+  });
+  return false;
+}
+
+// Form — handle submit with CAPTCHA check
 const cForm=document.getElementById('contactForm');
 if(cForm){
   cForm.addEventListener('submit',function(e){
     e.preventDefault();
+    // Verify CAPTCHA
+    const ans=parseInt(document.getElementById('captchaA').value);
+    if(ans!==captchaAnswer){
+      alert(lang==='es'?'Respuesta incorrecta. Intenta de nuevo.':'Wrong answer. Please try again.');
+      genCaptcha();
+      document.getElementById('captchaA').value='';
+      return;
+    }
     const fd=new FormData(cForm);
     fetch(cForm.action,{method:'POST',body:fd,headers:{'Accept':'application/json'}})
     .then(r=>{
       if(r.ok){
         cForm.style.display='none';
         document.getElementById('formOk').style.display='block';
+        // Also save to leads table
+        fetch(CHAT_API,{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({action:'capture_lead',name:fd.get('name'),email:fd.get('email'),transcript:'Contact form: '+fd.get('category')+' — '+fd.get('message')})
+        }).catch(()=>{});
       }else{
         alert(lang==='es'?'Error al enviar. Intenta de nuevo.':'Error sending. Please try again.');
       }
@@ -511,6 +706,180 @@ if(cForm){
       alert(lang==='es'?'Error de red. Intenta de nuevo.':'Network error. Please try again.');
     });
   });
+}
+</script>
+<!-- Booking Popup -->
+<div class="book-overlay" id="bookOverlay" onclick="if(event.target===this)closeBooking()">
+<div class="book-frame">
+<div class="book-frame-head"><h3>📅 <span data-i="bookTitle">Schedule a Discovery Call</span></h3><button onclick="closeBooking()">&times;</button></div>
+<div id="book-embed-container" style="width:100%;height:560px;overflow-y:auto"></div>
+</div>
+</div>
+<script src="https://bookings.nimbuspop.com/assets/embed.js"></script>
+
+<!-- Chat Widget -->
+<button class="chat-fab" id="chatFab" onclick="toggleChat()" aria-label="Open chat">
+<svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.2L4 17.2V4h16v12z"/></svg>
+</button>
+<div class="chat-box" id="chatBox">
+<div class="chat-head"><div class="ch-av-wrap"><div class="ch-avatar"><svg viewBox="0 0 24 24"><circle cx="8" cy="14" r="4" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="16" cy="14" r="4" fill="none" stroke="#fff" stroke-width="1.8"/><path d="M12 14 L12 10 M8 10 L16 10" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg></div><span class="ch-dot"></span></div><div><div class="ch-title" data-i="chatTitle">NXT//LINK Scout</div><div class="ch-sub" data-i="chatSub">Online · Replies instantly</div></div></div>
+<div class="chat-msgs" id="chatMsgs">
+<div class="cm-bot-wrap"><div class="cm-av"><svg viewBox="0 0 24 24"><circle cx="8" cy="14" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="16" cy="14" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 14 L12 10 M8 10 L16 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><div><div class="cm-bot" data-i="chatWelcome">Hey! 👋 Welcome to NXT//LINK. I help Borderplex companies find the right supply chain tech. What can I help you with?</div>
+<div class="cm-starters" id="chatStarters">
+<button onclick="quickChat(this)" data-en="I need warehouse tech" data-es="Necesito tecnología de almacén">I need warehouse tech</button>
+<button onclick="quickChat(this)" data-en="Cross-border logistics help" data-es="Ayuda con logística transfronteriza">Cross-border logistics help</button>
+<button onclick="quickChat(this)" data-en="I'm a vendor — list my solution" data-es="Soy proveedor — registrar mi solución">I'm a vendor — list my solution</button>
+</div></div></div>
+</div>
+<div class="chat-input"><input type="text" id="chatIn" placeholder="Ask me anything..." data-i-placeholder="chatPlaceholder" onkeydown="if(event.key==='Enter')sendChat()"/><button onclick="sendChat()" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button></div>
+</div>
+
+<script>
+// Chat widget
+const CHAT_API='https://yvykselwehxjwsqercjg.supabase.co/functions/v1/nxtlink-chat';
+let chatHistory=[];
+let leadCaptured=false;
+let msgCount=0;
+
+function toggleChat(){
+const box=document.getElementById('chatBox'),fab=document.getElementById('chatFab');
+box.classList.toggle('open');fab.classList.toggle('open');
+if(box.classList.contains('open'))document.getElementById('chatIn').focus();
+}
+
+const SCOUT_ICON='<svg viewBox="0 0 24 24"><circle cx="8" cy="14" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="16" cy="14" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 14 L12 10 M8 10 L16 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+
+function quickChat(btn){
+const text=lang==='es'?(btn.dataset.es||btn.textContent):(btn.dataset.en||btn.textContent);
+// If vendor signup, redirect
+if(text.includes('vendor')||text.includes('proveedor')){
+addMsg(text,true);
+setTimeout(()=>{
+addMsg(lang==='es'?'¡Genial! Te llevo al formulario de registro.':'Awesome! Let me take you to the signup form.',false);
+setTimeout(()=>{
+  toggleChat();
+  document.getElementById('vendor-signup').scrollIntoView({behavior:'smooth'});
+},800);
+},500);
+}else{
+document.getElementById('chatIn').value=text;
+sendChat();
+}
+// Hide starters after click
+const s=document.getElementById('chatStarters');
+if(s)s.style.display='none';
+}
+
+// ===== BOOKING =====
+// REPLACE THIS URL with your Zoho Bookings page URL
+const ZOHO_BOOKING_URL='https://nxtlink.zohobookings.com/portal-embed#/nxtlink';
+
+function openBooking(){
+const container=document.getElementById('book-embed-container');
+container.innerHTML='';
+if(typeof Bookings!=='undefined'){
+Bookings.inlineEmbed({url:ZOHO_BOOKING_URL,parent:'#book-embed-container',height:'560px'});
+}else{
+container.innerHTML='<iframe src="'+ZOHO_BOOKING_URL+'" style="width:100%;height:560px;border:none"></iframe>';
+}
+document.getElementById('bookOverlay').classList.add('open');
+}
+function closeBooking(){
+document.getElementById('bookOverlay').classList.remove('open');
+setTimeout(()=>{document.getElementById('book-embed-container').innerHTML=''},300);
+}
+
+function addMsg(text,isUser,showBookBtn){
+if(isUser){
+const d=document.createElement('div');
+d.className='cm-user';
+d.textContent=text;
+document.getElementById('chatMsgs').appendChild(d);
+}else{
+const wrap=document.createElement('div');
+wrap.className='cm-bot-wrap';
+const bookHtml=showBookBtn?`<button class="cm-book-btn" onclick="openBooking()">📅 ${lang==='es'?'Agendar llamada':'Book a call'}</button>`:'';
+wrap.innerHTML=`<div class="cm-av">${SCOUT_ICON}</div><div><div class="cm-bot"></div>${bookHtml}</div>`;
+wrap.querySelector('.cm-bot').textContent=text;
+document.getElementById('chatMsgs').appendChild(wrap);
+}
+document.getElementById('chatMsgs').scrollTop=99999;
+}
+
+function showTyping(){
+const wrap=document.createElement('div');
+wrap.className='cm-typing-wrap';wrap.id='typing';
+wrap.innerHTML=`<div class="cm-av">${SCOUT_ICON}</div><div class="cm-typing"><span></span><span></span><span></span></div>`;
+document.getElementById('chatMsgs').appendChild(wrap);
+document.getElementById('chatMsgs').scrollTop=99999;
+}
+function hideTyping(){const t=document.getElementById('typing');if(t)t.remove()}
+
+function showLeadForm(){
+const ca=Math.floor(Math.random()*9)+1,cb=Math.floor(Math.random()*9)+1;
+window._leadCaptcha=ca+cb;
+const d=document.createElement('div');
+d.className='cm-bot-wrap';
+d.innerHTML=`<div class="cm-av">${SCOUT_ICON}</div><div class="cm-lead"><p>${lang==='es'?'😊 ¡Te puedo mandar opciones! ¿Me compartes tu info?':'😊 I can send you tailored options — mind sharing your info?'}</p>
+<input type="text" id="leadName" placeholder="${lang==='es'?'Tu nombre':'Your name'}"/>
+<input type="email" id="leadEmail" placeholder="${lang==='es'?'Tu email':'your@company.com'}"/>
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><span style="font-size:12px;color:#9CA3AF;white-space:nowrap">🔒 ${ca} + ${cb} =</span><input type="text" id="leadCaptcha" placeholder="?" style="width:50px;text-align:center"/></div>
+<button onclick="submitLead()">${lang==='es'?'¡Enviar!':'Send it!'} 🚀</button></div>`;
+document.getElementById('chatMsgs').appendChild(d);
+document.getElementById('chatMsgs').scrollTop=99999;
+}
+
+async function submitLead(){
+const name=document.getElementById('leadName').value;
+const email=document.getElementById('leadEmail').value;
+const captchaInput=document.getElementById('leadCaptcha');
+if(!name||!email){return}
+if(!captchaInput||parseInt(captchaInput.value)!==window._leadCaptcha){
+addMsg(lang==='es'?'Respuesta incorrecta. Intenta de nuevo.':'Wrong answer. Try again.',false);
+return;
+}
+leadCaptured=true;
+// Build transcript
+const transcript=chatHistory.map(m=>`${m.role==='user'?'VISITOR':'SCOUT'}: ${m.content}`).join('\n');
+// Send to edge function → email
+try{
+await fetch(CHAT_API,{method:'POST',headers:{'Content-Type':'application/json'},
+body:JSON.stringify({action:'capture_lead',name,email,transcript})});
+}catch(e){console.error(e)}
+// Remove form, add thank you
+const forms=document.querySelectorAll('.cm-lead');
+forms.forEach(f=>f.remove());
+addMsg(lang==='es'?`¡Gracias ${name}! Te enviaremos una lista personalizada de proveedores a ${email} en menos de 48 horas. — NXT//LINK Scout`:`Thanks ${name}! We'll send a personalized vendor shortlist to ${email} within 48 hours. — NXT//LINK Scout`,false);
+}
+
+async function sendChat(){
+const input=document.getElementById('chatIn');
+const text=input.value.trim();
+if(!text)return;
+input.value='';
+addMsg(text,true);
+chatHistory.push({role:'user',content:text});
+msgCount++;
+showTyping();
+try{
+const r=await fetch(CHAT_API,{method:'POST',headers:{'Content-Type':'application/json'},
+body:JSON.stringify({messages:chatHistory})});
+hideTyping();
+if(r.ok){
+const data=await r.json();
+const reply=data.reply||'Hey! Tell me more about what you need — I\'m here to help 😊';
+const wantsBook=/\b(book|call|schedule|meeting|agendar|llamada|reunión|platicar)\b/i.test(reply);
+addMsg(reply,false,wantsBook);
+chatHistory.push({role:'assistant',content:reply});
+}else{
+addMsg(lang==='es'?'Hmm, algo falló 😅 Intenta de nuevo o escríbenos a contact@nxtlinktech.com':'Hmm, something hiccuped 😅 Try again or email us at contact@nxtlinktech.com',false);
+}
+if(msgCount>=3&&!leadCaptured){showLeadForm();leadCaptured=true}
+}catch(e){
+hideTyping();
+console.error('Chat error:',e);
+addMsg(lang==='es'?'No puedo conectarme ahora 😅 Escríbenos a contact@nxtlinktech.com — respondemos en 48h!':'Can\'t connect right now 😅 Email us at contact@nxtlinktech.com — we reply within 48 hours!',false);
+}
 }
 </script>
 </body>

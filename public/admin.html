@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>NXT//LINK Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0A0A0F;--bg2:#111118;--bg3:#1A1A24;--line:#2A2A35;--ink:#F3F4F6;--ink2:#D1D5DB;--muted:#9CA3AF;--muted2:#6B7280;--p:#7C5CFC;--p2:#A78BFA;--pbg:rgba(124,92,252,.08);--green:#10B981;--yellow:#F59E0B;--blue:#3B82F6;--red:#EF4444}
+body{background:var(--bg);color:var(--ink);font-family:'Outfit',-apple-system,sans-serif;min-height:100vh}
+
+/* Login */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-box{background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:48px 40px;width:400px;max-width:100%;text-align:center}
+.login-box .logo{font-size:24px;font-weight:800;margin-bottom:8px;letter-spacing:-1px}
+.login-box .logo span{color:var(--p)}
+.login-box .sub{color:var(--muted);font-size:14px;margin-bottom:32px}
+.login-box input{width:100%;padding:14px 18px;background:var(--bg);border:1px solid var(--line);border-radius:12px;color:var(--ink);font-family:inherit;font-size:15px;outline:none;margin-bottom:16px;text-align:center;letter-spacing:2px}
+.login-box input:focus{border-color:var(--p)}
+.login-box button{width:100%;padding:14px;background:var(--p);color:#fff;border:none;border-radius:12px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;transition:.2s}
+.login-box button:hover{background:#6B4FE0}
+.login-box .err{color:var(--red);font-size:13px;margin-top:12px;display:none}
+
+/* Dashboard */
+.dash{display:none}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid var(--bg3)}
+.topbar .logo{font-size:18px;font-weight:800;letter-spacing:-1px}
+.topbar .logo span{color:var(--p)}
+.topbar .badge{font-size:11px;font-weight:700;color:var(--muted);background:var(--bg3);padding:4px 10px;border-radius:6px;margin-left:12px}
+.topbar .right{display:flex;align-items:center;gap:12px}
+.topbar .logout{padding:8px 16px;background:var(--bg3);border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:13px;cursor:pointer;font-family:inherit}
+.topbar .logout:hover{color:var(--ink)}
+
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--bg3);padding:0 24px}
+.tabs button{padding:14px 24px;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--muted2);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--p)}
+
+.content{padding:24px}
+
+/* Stats */
+.stats{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap}
+.stat{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:20px 24px;flex:1;min-width:140}
+.stat .num{font-size:28px;font-weight:800}
+.stat .label{font-size:13px;color:var(--muted);margin-top:4px}
+
+/* Filters */
+.filters{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.filters button{padding:6px 14px;border-radius:99px;border:1px solid var(--line);background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;text-transform:capitalize}
+.filters button.on{border-color:var(--p);background:var(--pbg);color:var(--p2)}
+
+/* Table */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;padding:10px 12px;color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--line)}
+.tbl td{padding:10px 12px;border-bottom:1px solid var(--bg3)}
+.tbl .name{color:var(--ink);font-weight:600}
+.tbl .dim{color:var(--muted)}
+.tbl .cat{color:var(--p2);font-size:12px}
+.tbl .date{color:var(--muted2);font-size:12px}
+.badge-s{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.tbl select{padding:4px 8px;background:var(--bg2);border:1px solid var(--line);border-radius:6px;color:var(--ink2);font-size:11px;cursor:pointer;font-family:inherit}
+.empty{padding:40px;text-align:center;color:var(--muted2);font-size:14px}
+
+/* Conversations */
+.convos{display:grid;gap:20px}
+.convos.split{grid-template-columns:300px 1fr}
+.conv-list-item{padding:14px 16px;border-bottom:1px solid var(--bg3);cursor:pointer;border-left:3px solid transparent;transition:.15s}
+.conv-list-item:hover{background:var(--pbg)}
+.conv-list-item.on{background:var(--pbg);border-left-color:var(--p)}
+.conv-list-item .cname{font-weight:600;font-size:14px}
+.conv-list-item .cmeta{font-size:12px;color:var(--muted2);margin-top:2px}
+.conv-detail{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:20px;max-height:500px;overflow-y:auto}
+.conv-detail h3{font-size:16px;font-weight:700;margin-bottom:4px}
+.conv-detail .meta{font-size:12px;color:var(--muted);margin-bottom:16px}
+.msg-bubble{max-width:80%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5;margin-bottom:10px}
+.msg-user{background:var(--p);color:#fff;margin-left:auto}
+.msg-bot{background:var(--bg3);color:var(--ink2)}
+
+/* Responsive */
+@media(max-width:768px){
+  .stats{flex-direction:column}.stat{min-width:auto}
+  .tbl{font-size:12px}.tbl th,.tbl td{padding:8px}
+  .convos.split{grid-template-columns:1fr}
+  .content{padding:16px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-box">
+    <div class="logo">NXT<span>//</span>LINK</div>
+    <div class="sub">Admin Dashboard</div>
+    <input type="password" id="pwInput" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <button onclick="doLogin()">Sign In</button>
+    <div class="err" id="loginErr">Wrong password. Try again.</div>
+  </div>
+</div>
+
+<!-- DASHBOARD (hidden until login) -->
+<div class="dash" id="dashboard">
+  <div class="topbar">
+    <div style="display:flex;align-items:center">
+      <div class="logo">NXT<span>//</span>LINK</div>
+      <span class="badge">CRM</span>
+    </div>
+    <div class="right">
+      <span style="font-size:13px;color:var(--muted)" id="adminTime"></span>
+      <button class="logout" onclick="doLogout()">Sign Out</button>
+    </div>
+  </div>
+  <div class="tabs" id="tabBar">
+    <button class="on" onclick="switchTab('leads',this)">📋 Leads</button>
+    <button onclick="switchTab('vendors',this)">🏢 Vendors</button>
+    <button onclick="switchTab('convos',this)">💬 Conversations</button>
+  </div>
+  <div class="content" id="mainContent"></div>
+</div>
+
+<script>
+const SB_URL='https://yvykselwehxjwsqercjg.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2eWtzZWx3ZWh4anducWVyY2pnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcwOTMwMTYsImV4cCI6MjA2MjY2OTAxNn0.8hRMIghMesGKGMFMmN8Wg8XMSBd4VfrFaXCRYuXxfHs';
+const AUTH_URL=SB_URL+'/functions/v1/admin-auth';
+
+// === AUTH ===
+async function doLogin(){
+  const pw=document.getElementById('pwInput').value;
+  if(!pw)return;
+  try{
+    const r=await fetch(AUTH_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+    const d=await r.json();
+    if(d.ok){
+      sessionStorage.setItem('nxt_admin',d.token);
+      showDash();
+    }else{
+      document.getElementById('loginErr').style.display='block';
+      document.getElementById('pwInput').value='';
+    }
+  }catch(e){
+    document.getElementById('loginErr').style.display='block';
+  }
+}
+
+function doLogout(){
+  sessionStorage.removeItem('nxt_admin');
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('loginWrap').style.display='flex';
+  document.getElementById('pwInput').value='';
+  document.getElementById('loginErr').style.display='none';
+}
+
+function showDash(){
+  document.getElementById('loginWrap').style.display='none';
+  document.getElementById('dashboard').style.display='block';
+  document.getElementById('adminTime').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
+  switchTab('leads',document.querySelector('.tabs button'));
+}
+
+// Check session on load
+if(sessionStorage.getItem('nxt_admin')){showDash()}
+
+// === SUPABASE FETCH ===
+async function sb(table,method='GET',body=null,filters=''){
+  const opts={method,headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'}};
+  if(method==='PATCH')opts.headers['Prefer']='return=representation';
+  if(method==='POST')opts.headers['Prefer']='return=representation';
+  if(body)opts.body=JSON.stringify(body);
+  const r=await fetch(SB_URL+'/rest/v1/'+table+filters,opts);
+  return r.json();
+}
+
+// === UTILS ===
+const STATUS_COLORS={new:'#7C5CFC',contacted:'#F59E0B',meeting_booked:'#3B82F6',qualified:'#8B5CF6',closed_won:'#10B981',closed_lost:'#EF4444',pending:'#F59E0B',approved:'#10B981',rejected:'#EF4444',listed:'#3B82F6',chatbot:'#7C5CFC',contact_form:'#3B82F6',manual:'#6B7280',vendor_signup:'#10B981'};
+
+function badge(status){
+  const c=STATUS_COLORS[status]||'#6B7280';
+  return `<span class="badge-s" style="background:${c}22;color:${c}">${(status||'').replace(/_/g,' ')}</span>`;
+}
+
+function fdate(d){return d?new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'—'}
+
+// === TABS ===
+let currentTab='leads';
+function switchTab(tab,btn){
+  currentTab=tab;
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('on'));
+  if(btn)btn.classList.add('on');
+  if(tab==='leads')loadLeads();
+  else if(tab==='vendors')loadVendors();
+  else if(tab==='convos')loadConvos();
+}
+
+// === LEADS ===
+let allLeads=[];
+let leadFilter='all';
+async function loadLeads(){
+  const data=await sb('leads','GET',null,'?order=created_at.desc&limit=200');
+  allLeads=Array.isArray(data)?data:[];
+  renderLeads();
+}
+
+function renderLeads(){
+  const f=leadFilter;
+  const filtered=f==='all'?allLeads:allLeads.filter(l=>l.status===f);
+  const counts={all:allLeads.length,new:allLeads.filter(l=>l.status==='new').length,meeting_booked:allLeads.filter(l=>l.status==='meeting_booked').length,closed_won:allLeads.filter(l=>l.status==='closed_won').length};
+
+  let html=`
+  <div class="stats">
+    <div class="stat"><div class="num" style="color:var(--p)">${counts.all}</div><div class="label">Total Leads</div></div>
+    <div class="stat"><div class="num" style="color:var(--yellow)">${counts.new}</div><div class="label">New</div></div>
+    <div class="stat"><div class="num" style="color:var(--blue)">${counts.meeting_booked}</div><div class="label">Meetings Booked</div></div>
+    <div class="stat"><div class="num" style="color:var(--green)">${counts.closed_won}</div><div class="label">Closed Won</div></div>
+  </div>
+  <div class="filters">${['all','new','contacted','meeting_booked','qualified','closed_won','closed_lost'].map(s=>`<button class="${f===s?'on':''}" onclick="leadFilter='${s}';renderLeads()">${s.replace(/_/g,' ')}</button>`).join('')}</div>
+  <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Source</th><th>Category</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody>`;
+
+  if(filtered.length===0){
+    html+=`<tr><td colspan="8" class="empty">No leads yet</td></tr>`;
+  }else{
+    filtered.forEach(l=>{
+      html+=`<tr>
+        <td class="name">${l.name||'—'}</td>
+        <td class="dim">${l.email||'—'}</td>
+        <td>${l.company||'—'}</td>
+        <td>${badge(l.source)}</td>
+        <td class="cat">${l.category_interest||'—'}</td>
+        <td>${badge(l.status)}</td>
+        <td class="date">${fdate(l.created_at)}</td>
+        <td><select onchange="updateLead('${l.id}',this.value)">${['new','contacted','meeting_booked','qualified','closed_won','closed_lost'].map(s=>`<option value="${s}" ${l.status===s?'selected':''}>${s.replace(/_/g,' ')}</option>`).join('')}</select></td>
+      </tr>`;
+    });
+  }
+  html+=`</tbody></table></div>`;
+  document.getElementById('mainContent').innerHTML=html;
+}
+
+async function updateLead(id,status){
+  await sb('leads','PATCH',{status,updated_at:new Date().toISOString()},'?id=eq.'+id);
+  loadLeads();
+}
+
+// === VENDORS ===
+async function loadVendors(){
+  const data=await sb('vendor_applications','GET',null,'?order=created_at.desc&limit=200');
+  const vendors=Array.isArray(data)?data:[];
+  const counts={total:vendors.length,pending:vendors.filter(v=>v.status==='pending').length,approved:vendors.filter(v=>v.status==='approved').length,listed:vendors.filter(v=>v.status==='listed').length};
+
+  let html=`
+  <div class="stats">
+    <div class="stat"><div class="num" style="color:var(--p)">${counts.total}</div><div class="label">Total Applications</div></div>
+    <div class="stat"><div class="num" style="color:var(--yellow)">${counts.pending}</div><div class="label">Pending</div></div>
+    <div class="stat"><div class="num" style="color:var(--green)">${counts.approved}</div><div class="label">Approved</div></div>
+    <div class="stat"><div class="num" style="color:var(--blue)">${counts.listed}</div><div class="label">Listed</div></div>
+  </div>
+  <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Company</th><th>Contact</th><th>Email</th><th>Category</th><th>Cross-Border</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody>`;
+
+  if(vendors.length===0){
+    html+=`<tr><td colspan="8" class="empty">No vendor applications yet</td></tr>`;
+  }else{
+    vendors.forEach(v=>{
+      html+=`<tr>
+        <td class="name">${v.company_name}</td>
+        <td>${v.contact_name}</td>
+        <td class="dim">${v.email}</td>
+        <td class="cat">${v.category}</td>
+        <td>${v.cross_border_ready?'<span style="color:var(--green)">✓ Yes</span>':'<span class="dim">No</span>'}</td>
+        <td>${badge(v.status)}</td>
+        <td class="date">${fdate(v.created_at)}</td>
+        <td><select onchange="updateVendor('${v.id}',this.value)">${['pending','approved','rejected','listed'].map(s=>`<option value="${s}" ${v.status===s?'selected':''}>${s}</option>`).join('')}</select></td>
+      </tr>`;
+    });
+  }
+  html+=`</tbody></table></div>`;
+  document.getElementById('mainContent').innerHTML=html;
+}
+
+async function updateVendor(id,status){
+  await sb('vendor_applications','PATCH',{status,updated_at:new Date().toISOString()},'?id=eq.'+id);
+  loadVendors();
+}
+
+// === CONVERSATIONS ===
+let allConvos=[];
+let selectedConvo=null;
+async function loadConvos(){
+  const data=await sb('chat_conversations','GET',null,'?order=created_at.desc&limit=50');
+  allConvos=Array.isArray(data)?data:[];
+  renderConvos();
+}
+
+function renderConvos(){
+  if(allConvos.length===0){
+    document.getElementById('mainContent').innerHTML=`<div class="empty" style="padding:60px"><p style="font-size:18px">No conversations logged yet</p><p style="font-size:13px;margin-top:8px;color:var(--muted2)">Chatbot conversations will appear here once logged.</p></div>`;
+    return;
+  }
+
+  let html=`<div class="convos ${selectedConvo?'split':''}"><div>`;
+  allConvos.forEach(c=>{
+    html+=`<div class="conv-list-item ${selectedConvo?.id===c.id?'on':''}" onclick="selectConvo('${c.id}')">
+      <div class="cname">${c.visitor_name||'Anonymous'}</div>
+      <div class="cmeta">${c.message_count||0} messages · ${fdate(c.created_at)}</div>
+      <div style="margin-top:6px">${c.lead_captured?badge('qualified'):''} ${c.booking_clicked?badge('meeting_booked'):''}</div>
+    </div>`;
+  });
+  html+=`</div>`;
+
+  if(selectedConvo){
+    const msgs=selectedConvo.messages||[];
+    html+=`<div class="conv-detail">
+      <h3>${selectedConvo.visitor_name||'Anonymous'}</h3>
+      <div class="meta">${selectedConvo.visitor_email||'No email'} · ${new Date(selectedConvo.created_at).toLocaleString()}</div>`;
+    msgs.forEach(m=>{
+      html+=`<div class="msg-bubble ${m.role==='user'?'msg-user':'msg-bot'}" style="display:block;width:fit-content;${m.role==='user'?'margin-left:auto':''}">${m.content||''}</div>`;
+    });
+    html+=`</div>`;
+  }
+
+  html+=`</div>`;
+  document.getElementById('mainContent').innerHTML=html;
+}
+
+function selectConvo(id){
+  selectedConvo=allConvos.find(c=>c.id===id)||null;
+  renderConvos();
+}
+</script>
+</body>
+</html>
