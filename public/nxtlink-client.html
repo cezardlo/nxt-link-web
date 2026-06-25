@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NXT//LINK — Client Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0A0712;--charcoal:#15101F;--card:#1A1428;--line:#2A2140;--white:#F6F4FB;--gray:#A39FB5;--dim:#6E6885;
+    --purple:#8B5CF6;--purple2:#A855F7;--violet:#C4B5FD;--glow:rgba(139,92,246,.45);--green:#34D399;--amber:#FBBF24;--blue:#60A5FA;}
+  *{box-sizing:border-box;}body{margin:0;background:var(--bg);color:var(--white);font-family:'Inter',system-ui,sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased;}
+  .gk{font-family:'Space Grotesk',sans-serif;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(60% 50% at 12% -5%,rgba(139,92,246,.16),transparent 60%);}
+  .app{position:relative;z-index:1;}
+  nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 24px;background:rgba(10,7,18,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);}
+  .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--white);}.logo .mk{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:linear-gradient(135deg,var(--purple),var(--purple2));box-shadow:0 0 16px var(--glow);}
+  .logo b{font:700 18px/1 'Space Grotesk';letter-spacing:-.5px;}.logo b i{color:var(--violet);font-style:normal;}.logo .sub{font-size:11px;color:var(--gray);margin-left:2px;}
+  .navr{display:flex;align-items:center;gap:12px;}.navlink{color:var(--gray);text-decoration:none;font-size:13px;}
+  .seg{display:flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;}.seg button{border:none;background:none;color:var(--gray);font:700 12px/1 'Space Grotesk';padding:6px 8px;border-radius:6px;cursor:pointer;}.seg button.on{background:var(--purple);color:#fff;}
+  .wrap{max-width:1000px;margin:0 auto;padding:24px 20px 80px;}
+  .two{display:grid;grid-template-columns:1.1fr 1.5fr;gap:16px;}@media(max-width:820px){.two{grid-template-columns:1fr;}}
+  .card{background:linear-gradient(180deg,var(--card),var(--charcoal));border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:16px;}
+  h2.gk{font-size:18px;margin:0 0 4px;}.note{color:var(--dim);font-size:12.5px;}
+  .kv{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;}.kv:last-child{border:none;}.kv span{color:var(--gray);}.kv b{text-align:right;font-weight:600;}
+  .track{position:relative;}
+  .tstep{display:flex;gap:12px;align-items:flex-start;padding:9px 0;}
+  .tstep .dot{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;border:2px solid var(--line);background:var(--charcoal);color:var(--dim);}
+  .tstep.done .dot{background:rgba(52,211,153,.18);border-color:var(--green);color:var(--green);}
+  .tstep.now .dot{background:linear-gradient(135deg,var(--purple),var(--purple2));border-color:var(--purple);color:#fff;box-shadow:0 0 12px var(--glow);}
+  .tstep .lab{font-size:14px;color:var(--gray);padding-top:2px;}.tstep.done .lab{color:var(--white);}.tstep.now .lab{color:#fff;font-weight:600;}
+  .tstep .nowtag{margin-left:8px;font:700 10px/1 'Space Grotesk';color:var(--violet);}
+  .btn{border:none;cursor:pointer;font:600 13px/1 'Inter';border-radius:10px;padding:11px 15px;background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;box-shadow:0 8px 22px -10px var(--glow);}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--white);box-shadow:none;}
+  .btn.green{background:linear-gradient(135deg,#10B981,#34D399);}
+  .acts{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;}
+  .upd{background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.3);border-radius:12px;padding:13px 15px;font-size:14px;}
+  .upd .when{color:var(--dim);font-size:11px;margin-bottom:3px;}
+  .file{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gray);padding:6px 0;}
+  .optcard{background:var(--charcoal);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:12px;}
+  .optcard.rec{border-color:rgba(139,92,246,.6);box-shadow:0 0 0 1px rgba(139,92,246,.3);}
+  .chip{display:inline-block;font:600 11px/1 'Inter';padding:4px 9px;border-radius:100px;background:rgba(139,92,246,.18);color:var(--violet);}
+  .fitbar{height:7px;background:#241B38;border-radius:6px;overflow:hidden;margin-top:5px;}.fitbar i{display:block;height:100%;background:linear-gradient(90deg,var(--purple),var(--purple2));}
+  .hideinfo{margin-top:12px;background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.3);border-radius:10px;padding:11px 14px;color:var(--blue);font-size:12px;}
+</style>
+</head>
+<body>
+<div class="app">
+<nav>
+  <a class="logo" href="index.html"><span class="mk"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h12"/><path d="m13 8 4 4-4 4"/></svg></span><b>NXT<i>//</i>LINK</b><span class="sub" id="asub">Client Dashboard</span></a>
+  <div class="navr"><a class="navlink" href="index.html" id="homeLink">← Home</a><div class="seg"><button id="en" class="on" onclick="setLang('EN')">EN</button><button id="es" onclick="setLang('ES')">ES</button></div></div>
+</nav>
+<div class="wrap">
+  <div class="two">
+    <!-- LEFT: summary + status -->
+    <div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center"><h2 class="gk" data-t="reqH">Your request</h2><span class="chip" id="ref">REQ-4815</span></div>
+        <div style="margin-top:10px" id="summary"></div>
+      </div>
+      <div class="card">
+        <h2 class="gk" data-t="statusH">Progress</h2>
+        <p class="note" id="nextLine"></p>
+        <div class="track" id="track" style="margin-top:8px"></div>
+      </div>
+    </div>
+    <!-- RIGHT: update + options + actions -->
+    <div>
+      <div class="card">
+        <h2 class="gk" data-t="updH">Latest update from NXT//LINK</h2>
+        <div class="upd" id="update" style="margin-top:10px"></div>
+        <div class="acts" style="margin-top:14px">
+          <button class="btn ghost" onclick="modal('addinfo')" data-t="addInfo">Add more information</button>
+          <button class="btn ghost" onclick="modal('msg')" data-t="msgUs">Message NXT//LINK</button>
+          <button class="btn ghost" onclick="modal('pause')" data-t="pause">Pause request</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="gk" data-t="optH">Your options</h2>
+        <p class="note" data-t="optP">Anonymous options prepared by NXT//LINK. Vendor names are revealed only after you request an introduction.</p>
+        <div id="options" style="margin-top:12px"></div>
+        <div class="hideinfo" data-t="hideInfo">For your protection, you won't see vendor names, contact info, or pricing details from other vendors until NXT//LINK approves an introduction.</div>
+      </div>
+      <div class="card">
+        <h2 class="gk" data-t="filesH">Your uploaded files</h2>
+        <div id="files" style="margin-top:8px"></div>
+        <button class="btn ghost" style="margin-top:10px" onclick="modal('addinfo')" data-t="uploadMore">Upload more</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+let LANG='EN';
+const D={EN:{asub:'Client Dashboard',homeLink:'← Home',reqH:'Your request',statusH:'Progress',updH:'Latest update from NXT//LINK',
+  addInfo:'Add more information',msgUs:'Message NXT//LINK',pause:'Pause request',optH:'Your options',
+  optP:'Anonymous options prepared by NXT//LINK. Vendor names are revealed only after you request an introduction.',
+  hideInfo:"For your protection, you won't see vendor names, contact info, or pricing details from other vendors until NXT//LINK approves an introduction.",
+  filesH:'Your uploaded files',uploadMore:'Upload more',reqIntro:'Request Introduction',introDone:'✓ Introduction requested — NXT//LINK will reveal the vendor once approved.',
+  next:'Next step: ',nextVal:'NXT//LINK is comparing quotes — options ready soon.',window:'Estimated response window: 24–48h',
+  summary:[['Need','Forklift preventive maintenance'],['Quantity','6 units'],['Location','El Paso, TX'],['Timeline','Next week'],['Priority','High'],['Budget','Hidden (your choice)']],
+  steps:['Request received','Reviewing details','Searching vendors','Contacting vendors','Collecting quotes','Comparing options','Options ready','Next step pending','Vendor selected','Closed'],
+  current:5,
+  update:['NXT//LINK','We have 3 quotes in and are finalizing your anonymous comparison. Your options will be ready within 24–48 hours. You can add photos of the forklift data plates any time to sharpen the quotes.'],
+  files:['forklift-dataplate-1.jpg','warehouse-layout.pdf'],
+  opts:[['Option A — Local maintenance provider','$2.4K–$3.1K','3–5 days',95,'Fast local response, bilingual team','Limited weekend availability',true],
+        ['Option B — Regional network','$2.1K–$2.8K','5–7 days',88,'Lower price, recurring PM plans','Slower first response',false],
+        ['Option C — Premium full-service','$3.4K–$4.2K','1–3 days',82,'24/7 emergency, loaner units','Higher cost',false]],
+  pros:'Pros',risk:'Risk',fit:'Fit',
+  modals:{addinfo:'Add information / upload files — a simple form would open here (demo).',msg:'Message NXT//LINK — a secure message thread would open here (demo).',pause:'Pause request — NXT//LINK would hold your search and notify you (demo).'}},
+ ES:{asub:'Panel del Cliente',homeLink:'← Inicio',reqH:'Tu solicitud',statusH:'Progreso',updH:'Última actualización de NXT//LINK',
+  addInfo:'Agregar información',msgUs:'Mensaje a NXT//LINK',pause:'Pausar solicitud',optH:'Tus opciones',
+  optP:'Opciones anónimas preparadas por NXT//LINK. Los nombres de proveedores se revelan solo cuando solicitas una introducción.',
+  hideInfo:'Para tu protección, no verás nombres de proveedores, contacto ni precios de otros proveedores hasta que NXT//LINK apruebe una introducción.',
+  filesH:'Tus archivos subidos',uploadMore:'Subir más',reqIntro:'Solicitar Introducción',introDone:'✓ Introducción solicitada — NXT//LINK revelará al proveedor al aprobar.',
+  next:'Próximo paso: ',nextVal:'NXT//LINK está comparando cotizaciones — opciones pronto.',window:'Ventana de respuesta estimada: 24–48h',
+  summary:[['Necesidad','Mantenimiento preventivo de montacargas'],['Cantidad','6 unidades'],['Ubicación','El Paso, TX'],['Tiempo','Próxima semana'],['Prioridad','Alta'],['Presupuesto','Oculto (tu decisión)']],
+  steps:['Solicitud recibida','Revisando detalles','Buscando proveedores','Contactando proveedores','Recolectando cotizaciones','Comparando opciones','Opciones listas','Próximo paso pendiente','Proveedor seleccionado','Cerrado'],
+  current:5,
+  update:['NXT//LINK','Tenemos 3 cotizaciones y estamos finalizando tu comparación anónima. Tus opciones estarán listas en 24–48 horas. Puedes subir fotos de las placas de datos en cualquier momento para afinar las cotizaciones.'],
+  files:['placa-montacargas-1.jpg','layout-almacen.pdf'],
+  opts:[['Opción A — Proveedor local','$2.4K–$3.1K','3–5 días',95,'Respuesta local rápida, equipo bilingüe','Disponibilidad limitada en fin de semana',true],
+        ['Opción B — Red regional','$2.1K–$2.8K','5–7 días',88,'Precio más bajo, planes recurrentes','Primera respuesta más lenta',false],
+        ['Opción C — Servicio premium','$3.4K–$4.2K','1–3 días',82,'Emergencia 24/7, unidades de préstamo','Costo más alto',false]],
+  pros:'Ventajas',risk:'Riesgo',fit:'Ajuste',
+  modals:{addinfo:'Agregar información / subir archivos — aquí abriría un formulario (demo).',msg:'Mensaje a NXT//LINK — aquí abriría un hilo seguro (demo).',pause:'Pausar solicitud — NXT//LINK pausaría tu búsqueda y te avisaría (demo).'}}};
+const d=()=>D[LANG];const $=id=>document.getElementById(id);const esc=s=>String(s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+function render(){
+ $('asub').textContent=d().asub;$('homeLink').textContent=d().homeLink;
+ document.querySelectorAll('[data-t]').forEach(e=>{const k=e.dataset.t;if(d()[k]!==undefined&&typeof d()[k]==='string')e.textContent=d()[k];});
+ $('summary').innerHTML=d().summary.map(r=>'<div class="kv"><span>'+r[0]+'</span><b>'+esc(r[1])+'</b></div>').join('');
+ $('nextLine').textContent=d().next+d().nextVal+' · '+d().window;
+ $('track').innerHTML=d().steps.map((s,i)=>{const cls=i<d().current?'done':i===d().current?'now':'';return '<div class="tstep '+cls+'"><span class="dot">'+(i<d().current?'✓':(i+1))+'</span><span class="lab">'+s+(i===d().current?'<span class="nowtag">'+(LANG==='ES'?'AHORA':'NOW')+'</span>':'')+'</span></div>';}).join('');
+ $('update').innerHTML='<div class="when">'+esc(d().update[0])+'</div>'+esc(d().update[1]);
+ $('files').innerHTML=d().files.map(f=>'<div class="file">📎 '+esc(f)+'</div>').join('');
+ $('options').innerHTML=d().opts.map((o,i)=>'<div class="optcard'+(o[6]?' rec':'')+'">'+(o[6]?'<span class="chip">★ '+(LANG==='ES'?'Recomendado':'Recommended')+'</span><br>':'')+'<h3 class="gk" style="margin:8px 0 6px;font-size:16px">'+esc(o[0])+'</h3><div style="display:flex;gap:14px;font-weight:700"><span>'+o[1]+'</span><span style="color:var(--dim)">·</span><span>'+o[2]+'</span></div><div style="margin:10px 0 6px"><span class="note">'+d().fit+': '+o[3]+'%</span><div class="fitbar"><i style="width:'+o[3]+'%"></i></div></div><p style="margin:8px 0 2px;color:var(--gray);font-size:13px"><b style="color:#fff">'+d().pros+':</b> '+esc(o[4])+'</p><p style="margin:2px 0 10px;color:var(--amber);font-size:13px"><b>'+d().risk+':</b> '+esc(o[5])+'</p><button class="btn green" onclick="reqIntro(this)">'+d().reqIntro+'</button> <span class="imk note" style="margin-left:6px"></span></div>').join('');
+}
+function reqIntro(b){b.nextElementSibling.innerHTML='<span style="color:var(--green);font-weight:700">'+d().introDone+'</span>';b.disabled=true;}
+function modal(k){alert(d().modals[k]);}
+function setLang(l){LANG=l;$('en').classList.toggle('on',l==='EN');$('es').classList.toggle('on',l==='ES');render();}
+render();
+</script>
+</body>
+</html>
