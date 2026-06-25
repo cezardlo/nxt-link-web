@@ -61,7 +61,9 @@
   </div>
   <div class="tabs">
     <button class="tab active" data-tab="client" onclick="showTab('client')" id="t-client">Client Intake</button>
+    <button class="tab" data-tab="admin" onclick="showTab('admin')" id="t-admin">Admin Console</button>
     <button class="tab" data-tab="vendor" onclick="showTab('vendor')" id="t-vendor">Vendor Quote + Terms</button>
+    <button class="tab" data-tab="options" onclick="showTab('options')" id="t-options">Client Options</button>
   </div>
 
   <!-- ================= CLIENT INTAKE ================= -->
@@ -98,6 +100,32 @@
     <div id="termsout"></div>
     <div class="foot">AI drafts are suggestions. You review and approve before anything is submitted. Client identity stays hidden.</div>
   </div>
+
+  <!-- ================= ADMIN CONSOLE ================= -->
+  <div id="tab-admin" class="hidden">
+    <div class="card">
+      <span class="note">Admin · access controlled</span>
+      <h3 style="margin:6px 0" id="adm-title">Admin AI Console</h3>
+      <p class="note" id="adm-intro">Turn a client request into quote-ready, approved drafts. AI drafts only — you control what is sent. Nothing is sent automatically.</p>
+      <div class="card" style="background:#15151d;margin-top:12px">
+        <b id="adm-ref">REQ-SAMPLE1</b> · <span id="adm-cat">Forklift &amp; Material Handling</span>
+        <p class="note" id="adm-prob" style="margin:6px 0 0">Maintenance for 6 forklifts · El Paso, TX · needed next week · NDA: No</p>
+      </div>
+      <div class="row"><button class="btn" onclick="adminGen()" id="adm-btn">✦ Generate quote-ready drafts</button></div>
+    </div>
+    <div id="adminout"></div>
+    <div class="foot">AI never reveals client or vendor identity, never sends anything automatically, and respects NDA/MNDA. All outputs are drafts until you approve.</div>
+  </div>
+
+  <!-- ================= CLIENT OPTIONS ================= -->
+  <div id="tab-options" class="hidden">
+    <div class="card">
+      <h3 style="margin:0 0 4px" id="opt-title">Your options</h3>
+      <p class="note" id="opt-intro">Anonymous options prepared by NXT//LINK. Vendor names are revealed only after you request an introduction.</p>
+    </div>
+    <div id="optionsout"></div>
+    <div class="foot">You choose. NXT//LINK controls when a vendor's identity is revealed.</div>
+  </div>
 </div>
 
 <script>
@@ -107,7 +135,10 @@ const STR={
   aname:{en:'NXT//LINK Assistant',es:'Asistente NXT//LINK'},
   asub:{en:'AI assistant · a human follows up',es:'Asistente de AI · un humano dará seguimiento'},
   tclient:{en:'Client Intake',es:'Intake de Cliente'},
+  tadmin:{en:'Admin Console',es:'Consola Admin'},
+  toptions:{en:'Client Options',es:'Opciones del Cliente'},
   tvendor:{en:'Vendor Quote + Terms',es:'Cotización + Términos'},
+  tracker:{en:'Your progress',es:'Su progreso'},
   send:{en:'Send',es:'Enviar'},
   restart:{en:'Restart',es:'Reiniciar'},
   lblinput:{en:'Your answer',es:'Su respuesta'},
@@ -201,11 +232,22 @@ function renderSummary(){
   h+='<div class="row"><button class="btn green" onclick="submitReq()">'+tr('submit')+'</button><button class="btn ghost" onclick="resetIntake()">'+tr('restart')+'</button></div>';
   const c=document.createElement('div');c.className='card';c.innerHTML=h;chatEl().appendChild(c);window.scrollTo(0,document.body.scrollHeight);
 }
+const TRACK=[['Request received','Solicitud recibida'],['Reviewing details','Revisando detalles'],['Searching vendors','Buscando proveedores'],['Contacting vendors','Contactando proveedores'],['Collecting quotes','Recolectando cotizaciones'],['Comparing options','Comparando opciones'],['Options ready','Opciones listas'],['Next step pending','Próximo paso pendiente'],['Vendor selected','Proveedor seleccionado'],['Closed','Cerrado']];
+function trackerHTML(cur){
+  let h='<h4 style="margin:0 0 10px;color:#C4B5FD">'+tr('tracker')+'</h4>';
+  TRACK.forEach((s,i)=>{const done=i<cur,now=i===cur;
+    const dot=done?'<span style="color:var(--green)">●</span>':now?'<span style="color:var(--accent)">◉</span>':'<span style="color:#3a3a46">○</span>';
+    const col=now?'#fff':done?'var(--muted)':'#5a5a66';const fw=now?'700':'400';
+    h+='<div style="display:flex;gap:10px;align-items:center;padding:5px 0;color:'+col+';font-weight:'+fw+'">'+dot+' <span>'+(L==='es'?s[1]:s[0])+'</span>'+(now?' <span class="note" style="margin-left:auto">'+(L==='es'?'· actual':'· current')+'</span>':'')+'</div>';});
+  return h;
+}
 function submitReq(){
   const ref='REQ-'+Math.random().toString(36).slice(2,10).toUpperCase();
   const c=document.createElement('div');c.className='card';c.style.borderColor='rgba(16,185,129,.5)';
   c.innerHTML='<div style="font-size:30px">✅</div><h3>'+tr('submitted')+' <span style="color:var(--green)">'+ref+'</span></h3><p class="note">A human at NXT//LINK reviews before anything is shared. / Un humano de NXT//LINK revisa antes de compartir.</p>';
-  chatEl().appendChild(c);window.scrollTo(0,document.body.scrollHeight);
+  chatEl().appendChild(c);
+  const tk=document.createElement('div');tk.className='card';tk.innerHTML=trackerHTML(0);chatEl().appendChild(tk);
+  window.scrollTo(0,document.body.scrollHeight);
 }
 function esc(s){return String(s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));}
 
@@ -254,14 +296,62 @@ function aiTerms(){
   h+='</div>';document.getElementById('termsout').innerHTML=h;
 }
 
+/* ---------------- admin console ---------------- */
+function adminGen(){
+  const es=L==='es';
+  const card=(title,pillNote,bodyHtml,sec)=>'<div class="card"><span class="pill">DRAFT</span> <span class="note no-print">'+pillNote+'</span><h3 style="margin:8px 0 12px">'+title+'</h3>'+bodyHtml+
+    '<div class="row"><button class="btn green" onclick="approve(this,\''+sec+'\')">'+(es?'Aprobar':'Approve')+'</button><button class="btn ghost" onclick="reject(this,\''+sec+'\')">'+(es?'Rechazar':'Reject')+'</button><span class="amark" style="margin-left:6px"></span></div></div>';
+  const kv=(k,v)=>'<div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid #1d1d28"><span class="note">'+k+'</span><span style="text-align:right;font-weight:600">'+esc(v)+'</span></div>';
+  const sum=es?
+    kv('Necesidad','Mantenimiento de 6 montacargas')+kv('Ubicación','El Paso, TX')+kv('Plazo','Próxima semana')+kv('Urgencia','Alta')+kv('Confidencialidad','Identidad y presupuesto ocultos')+'<p style="margin-top:10px"><b>Falta:</b> <span class="miss">Confirmar rango de presupuesto</span></p><p><b>Mejores categorías:</b><br><span class="chip">Montacargas y Manejo</span><span class="chip">Servicio de Campo</span></p><p class="note" style="margin-top:8px">Siguiente acción sugerida: aprobar el paquete y enrutar a proveedores que coincidan.</p>'
+    :kv('Client need','Maintenance for 6 forklifts')+kv('Location','El Paso, TX')+kv('Timeline','Next week')+kv('Urgency','High')+kv('Confidentiality','Identity & budget hidden')+'<p style="margin-top:10px"><b>Missing:</b> <span class="miss">Confirm budget range</span></p><p><b>Best categories:</b><br><span class="chip">Forklifts & Material Handling</span><span class="chip">Field Service</span></p><p class="note" style="margin-top:8px">Suggested next action: approve the packet and route to matching vendors.</p>';
+  const packet=es?
+    'OPP-3F9K2 · Almacén / logística · El Paso (general)\nProblema: mantenimiento preventivo de 6 montacargas.\nAlcance: PM de montacargas, 6 unidades\nPlazo: próxima semana · Urgencia: alta\nRequisitos: cobertura del área, disponibilidad por fecha\nPreguntas al proveedor: ¿Puede atender la ubicación? ¿Rango de precio? ¿Tiempo de respuesta?\nIdentidad del cliente: OCULTA · Presupuesto: OCULTO'
+    :'OPP-3F9K2 · Warehouse / logistics · El Paso (general)\nProblem: preventive maintenance for 6 forklifts.\nScope: forklift PM, 6 units\nTimeline: next week · Urgency: high\nRequirements: service-area coverage, availability by date\nQuestions for vendor: Can you serve this location? Price range? Response time?\nClient identity: HIDDEN · Budget: HIDDEN';
+  const outEn='NXT//LINK has a protected warehouse opportunity that may fit your service area. A warehouse operation in El Paso is looking for forklift preventive maintenance for 6 units. Client identity is protected at this stage. Please confirm availability, estimated price range, response time, and any information needed to quote.';
+  const outEs='NXT//LINK tiene una oportunidad protegida de almacén que puede encajar en su área de servicio. Una operación de almacén en El Paso busca mantenimiento preventivo para 6 montacargas. La identidad del cliente está protegida en esta etapa. Por favor confirme disponibilidad, rango de precio estimado, tiempo de respuesta y la información necesaria para cotizar.';
+  let h=card(es?'Resumen Interno':'Internal Request Summary','offline draft · provider: fallback',sum,'sum');
+  h+=card(es?'Paquete de Cotización Protegido':'Protected Quote Packet','client identity hidden · budget hidden','<textarea rows="9">'+esc(packet)+'</textarea>','pkt');
+  h+=card(es?'Mensaje al Proveedor (EN/ES)':'Vendor Outreach (EN/ES)','editable before sending','<label>EN</label><textarea rows="4">'+esc(outEn)+'</textarea><label>ES</label><textarea rows="4">'+esc(outEs)+'</textarea>','out');
+  document.getElementById('adminout').innerHTML=h;
+}
+function approve(btn,sec){const m=btn.parentElement.querySelector('.amark');m.innerHTML='<span style="color:var(--green);font-weight:700">✓ '+(L==='es'?'Aprobado (listo para enviar — un humano envía)':'Approved (ready to send — a human sends)')+'</span>';}
+function reject(btn,sec){const m=btn.parentElement.querySelector('.amark');m.innerHTML='<span style="color:var(--red);font-weight:700">✕ '+(L==='es'?'Rechazado':'Rejected')+'</span>';}
+
+/* ---------------- client options (anonymous) ---------------- */
+const OPTS=[
+  {label:{en:'Option A — Local maintenance provider',es:'Opción A — Proveedor de mantenimiento local'},price:'$2.4K–$3.1K',time:{en:'3–5 days',es:'3–5 días'},fit:95,pros:{en:'Fast local response, bilingual team',es:'Respuesta local rápida, equipo bilingüe'},risk:{en:'Limited weekend availability',es:'Disponibilidad limitada en fin de semana'},rec:true},
+  {label:{en:'Option B — Regional service network',es:'Opción B — Red de servicio regional'},price:'$2.1K–$2.8K',time:{en:'5–7 days',es:'5–7 días'},fit:88,pros:{en:'Lower price, recurring PM plans',es:'Precio más bajo, planes de PM recurrente'},risk:{en:'Slower first response',es:'Primera respuesta más lenta'},rec:false},
+  {label:{en:'Option C — Premium full-service',es:'Opción C — Servicio premium completo'},price:'$3.4K–$4.2K',time:{en:'1–3 days',es:'1–3 días'},fit:82,pros:{en:'24/7 emergency, loaner units',es:'Emergencia 24/7, unidades de préstamo'},risk:{en:'Higher cost',es:'Costo más alto'},rec:false},
+];
+function renderOptions(){
+  const es=L==='es';
+  let h='';
+  OPTS.forEach((o,i)=>{
+    h+='<div class="card"'+(o.rec?' style="border-color:rgba(124,92,252,.6)"':'')+'>'+
+      (o.rec?'<span class="chip" style="background:rgba(124,92,252,.25)">★ '+(es?'Recomendado por NXT//LINK':'NXT//LINK recommends')+'</span><br>':'')+
+      '<h3 style="margin:8px 0 6px">'+o.label[L]+'</h3>'+
+      '<div style="display:flex;gap:18px;flex-wrap:wrap;font-weight:700"><span>'+o.price+'</span><span class="note">·</span><span>'+o.time[L]+'</span></div>'+
+      '<div style="margin:12px 0 6px"><div class="note">'+(es?'Ajuste':'Fit score')+': '+o.fit+'%</div><div style="height:8px;background:#1d1d28;border-radius:6px;overflow:hidden;margin-top:4px"><div style="height:100%;width:'+o.fit+'%;background:var(--accent)"></div></div></div>'+
+      '<p style="margin:8px 0 2px"><b>'+(es?'Ventajas':'Pros')+':</b> '+o.pros[L]+'</p>'+
+      '<p style="margin:2px 0 8px;color:var(--amber)"><b>'+(es?'Riesgo':'Risk')+':</b> '+o.risk[L]+'</p>'+
+      '<button class="btn" onclick="reqIntro(this)">'+(es?'Solicitar Introducción':'Request Introduction')+'</button> <span class="imark" style="margin-left:6px"></span></div>';
+  });
+  document.getElementById('optionsout').innerHTML=h;
+}
+function reqIntro(btn){btn.nextElementSibling.innerHTML='<span style="color:var(--green);font-weight:700">✓ '+(L==='es'?'Introducción solicitada — NXT//LINK revelará al proveedor cuando se apruebe.':'Introduction requested — NXT//LINK will reveal the vendor once approved.')+'</span>';btn.disabled=true;}
+
 /* ---------------- shell ---------------- */
-function showTab(n){document.getElementById('tab-client').classList.toggle('hidden',n!=='client');document.getElementById('tab-vendor').classList.toggle('hidden',n!=='vendor');
-  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===n));}
+function showTab(n){['client','admin','vendor','options'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('hidden',t!==n));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===n));
+  if(n==='options'&&!document.getElementById('optionsout').innerHTML)renderOptions();}
 function setLocale(l){L=l;document.getElementById('en').classList.toggle('on',l==='en');document.getElementById('es').classList.toggle('on',l==='es');
   document.getElementById('aname').textContent=tr('aname');document.getElementById('asub').textContent=tr('asub');
   document.getElementById('t-client').textContent=tr('tclient');document.getElementById('t-vendor').textContent=tr('tvendor');
+  document.getElementById('t-admin').textContent=tr('tadmin');document.getElementById('t-options').textContent=tr('toptions');
   document.getElementById('sendbtn').textContent=tr('send');document.getElementById('restartbtn').textContent=tr('restart');
   document.getElementById('lbl-input').textContent=tr('lblinput');document.getElementById('cfoot').textContent=tr('cfoot');
+  if(document.getElementById('optionsout').innerHTML)renderOptions();
   if(!state.done&&state.answers.length===0&&!state.initial)startIntake();}
 startIntake();
 </script>
