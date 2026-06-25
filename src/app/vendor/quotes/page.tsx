@@ -96,6 +96,20 @@ interface AiDraft {
   attachments_needed: string;
 }
 
+interface TermsDraft {
+  quote_validity: string;
+  payment_terms: string;
+  warranty: string;
+  exclusions: string;
+  lead_time: string;
+  emergency_service: string;
+  liability_insurance: string;
+  confidentiality: string;
+  introduction_agreement: string;
+  terms_and_conditions: string;
+  disclaimer: string;
+}
+
 // ---------- Defaults ----------
 const emptyTemplate = (): Template => ({
   id: '', created_at: '', name: '', category: '', description: '', pricing_model: '',
@@ -124,7 +138,7 @@ const genId = () => Date.now().toString() + Math.random().toString(36).slice(2, 
 // ---------- Component ----------
 export default function VendorQuotesPage() {
   const [locale, setLocale] = useState<Locale>('en');
-  const [tab, setTab] = useState<1 | 2 | 3>(1);
+  const [tab, setTab] = useState<1 | 2 | 3 | 4>(1);
   const [toast, setToast] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -144,6 +158,15 @@ export default function VendorQuotesPage() {
 
   const [filter, setFilter] = useState<string>('Draft');
   const [expandedId, setExpandedId] = useState<string>('');
+
+  // ---------- Terms & Agreement tab state ----------
+  const [termsVendorName, setTermsVendorName] = useState<string>('Your Company');
+  const [termsWarrantyMonths, setTermsWarrantyMonths] = useState<number>(12);
+  const [termsEmergency, setTermsEmergency] = useState<boolean>(false);
+  const [termsNda, setTermsNda] = useState<boolean>(false);
+  const [termsDraft, setTermsDraft] = useState<TermsDraft | null>(null);
+  const [termsProvider, setTermsProvider] = useState<string>('');
+  const [termsLoading, setTermsLoading] = useState(false);
 
   const T = (en: string, es: string) => (locale === 'es' ? es : en);
 
@@ -302,6 +325,41 @@ export default function VendorQuotesPage() {
     }
     setAiLoading(false);
   };
+
+  const aiDraftTerms = async () => {
+    setErrorMsg('');
+    setTermsLoading(true);
+    try {
+      const res = await fetch('/api/assistant/terms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendorName: termsVendorName,
+          category: 'Forklift maintenance',
+          warrantyMonths: termsWarrantyMonths,
+          emergency: termsEmergency,
+          nda: termsNda,
+          locale,
+        }),
+      });
+      const data = (await res.json()) as { ok?: boolean; is_draft?: boolean; provider?: string; terms?: TermsDraft };
+      if (!res.ok || !data || !data.terms) {
+        throw new Error('No terms returned');
+      }
+      setTermsDraft(data.terms);
+      setTermsProvider(data.provider || 'unknown');
+      flash(T('Terms drafted — review before sending.', 'Términos redactados — revise antes de enviar.'));
+    } catch {
+      setErrorMsg(T(
+        'Could not reach the assistant. Please try again or fill the terms manually.',
+        'No se pudo contactar al asistente. Intente de nuevo o complete los términos manualmente.',
+      ));
+    }
+    setTermsLoading(false);
+  };
+
+  const setTermsField = (k: keyof TermsDraft, v: string) =>
+    setTermsDraft((prev) => (prev ? { ...prev, [k]: v } : prev));
 
   const saveResponseAsTemplate = () => {
     const nt: Template = {
@@ -502,8 +560,9 @@ export default function VendorQuotesPage() {
             [1, T('Quote Template Library', 'Biblioteca de Plantillas de Cotización')],
             [2, T('Quote Response', 'Respuesta de Cotización')],
             [3, T('Saved Quotes', 'Cotizaciones Guardadas')],
+            [4, T('Terms & Agreement', 'Términos y Acuerdo')],
           ] as [number, string][]).map(([n, label]) => (
-            <button key={n} onClick={() => setTab(n as 1 | 2 | 3)} style={{ padding: '10px 16px', background: tab === n ? C.accent : C.card, color: tab === n ? '#fff' : C.sec2, border: `1px solid ${tab === n ? C.accent : C.border}`, borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+            <button key={n} onClick={() => setTab(n as 1 | 2 | 3 | 4)} style={{ padding: '10px 16px', background: tab === n ? C.accent : C.card, color: tab === n ? '#fff' : C.sec2, border: `1px solid ${tab === n ? C.accent : C.border}`, borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
               {label}
             </button>
           ))}
@@ -804,6 +863,104 @@ export default function VendorQuotesPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+            {footerNote}
+          </>
+        )}
+
+        {/* ---------------- TAB 4 ---------------- */}
+        {tab === 4 && (
+          <>
+            <div style={cardStyle}>
+              <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 0 }}>
+                {T('Terms & Agreement', 'Términos y Acuerdo')}
+              </h2>
+              <p style={{ color: C.sec, fontSize: 13, marginTop: 0 }}>
+                {T(
+                  'Draft quote terms and the NXT//LINK introduction / commission agreement with AI. Review before sending.',
+                  'Redacte los términos de la cotización y el acuerdo de introducción / comisión de NXT//LINK con AI. Revise antes de enviar.',
+                )}
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div>
+                  <label style={labelStyle}>{T('Your company name', 'Nombre de su empresa')}</label>
+                  <input value={termsVendorName} onChange={(e) => setTermsVendorName(e.target.value)} style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>{T('Warranty (months)', 'Garantía (meses)')}</label>
+                  <input
+                    type="number"
+                    value={termsWarrantyMonths}
+                    onChange={(e) => setTermsWarrantyMonths(Number(e.target.value))}
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: C.sec2, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={termsEmergency} onChange={(e) => setTermsEmergency(e.target.checked)} style={{ accentColor: C.accent }} />
+                  {T('Offer 24/7 emergency service', 'Ofrecer servicio de emergencia 24/7')}
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: C.sec2, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={termsNda} onChange={(e) => setTermsNda(e.target.checked)} style={{ accentColor: C.accent }} />
+                  {T('NDA / MNDA in place', 'NDA / MNDA establecido')}
+                </label>
+              </div>
+
+              <div style={{ marginTop: 20 }}>
+                <button onClick={aiDraftTerms} disabled={termsLoading} style={btn(termsLoading ? '#4A3D8F' : C.accent)}>
+                  {termsLoading
+                    ? T('✦ Drafting…', '✦ Redactando…')
+                    : T('✦ AI: Draft Terms & Agreement', '✦ AI: Redactar Términos y Acuerdo')}
+                </button>
+              </div>
+            </div>
+
+            {/* Terms draft output */}
+            {termsDraft && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ background: '#F59E0B18', border: `1px solid ${C.amber}`, color: C.amber, padding: '12px 16px', borderRadius: 12, fontSize: 13, fontWeight: 700 }}>
+                  {T('DRAFT — review before sending', 'BORRADOR — revise antes de enviar')}
+                </div>
+                {termsProvider && (
+                  <p style={{ color: C.muted, fontSize: 11, margin: '8px 0 0' }}>
+                    {T('Provider', 'Proveedor')}: {termsProvider}
+                  </p>
+                )}
+
+                <div style={{ ...cardStyle, marginTop: 12, borderColor: `${C.amber}55` }}>
+                  {([
+                    ['quote_validity', T('Quote validity', 'Validez de la cotización')],
+                    ['payment_terms', T('Payment terms', 'Términos de pago')],
+                    ['warranty', T('Warranty', 'Garantía')],
+                    ['exclusions', T('Exclusions', 'Exclusiones')],
+                    ['lead_time', T('Lead time', 'Tiempo de entrega')],
+                    ['emergency_service', T('Emergency service', 'Servicio de emergencia')],
+                    ['liability_insurance', T('Insurance & liability', 'Seguro y responsabilidad')],
+                    ['confidentiality', T('Confidentiality', 'Confidencialidad')],
+                    ['introduction_agreement', T('NXT//LINK introduction agreement', 'Acuerdo de introducción NXT//LINK')],
+                    ['terms_and_conditions', T('Terms & conditions', 'Términos y condiciones')],
+                  ] as [keyof TermsDraft, string][]).map(([k, label]) => (
+                    <div key={k} style={{ marginBottom: 16 }}>
+                      <label style={labelStyle}>{label}</label>
+                      <textarea
+                        value={termsDraft[k]}
+                        onChange={(e) => setTermsField(k, e.target.value)}
+                        rows={3}
+                        style={taStyle}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {termsDraft.disclaimer && (
+                  <div style={{ background: '#F59E0B18', border: `1px solid ${C.amber}`, color: C.amber, padding: '14px 18px', borderRadius: 12, fontSize: 13, lineHeight: 1.6, marginTop: 16, whiteSpace: 'pre-wrap' }}>
+                    {termsDraft.disclaimer}
+                  </div>
+                )}
               </div>
             )}
             {footerNote}
