@@ -14,7 +14,7 @@ export type IndustryStory = {
   techMap: { name: string; children: string[] }[];
 };
 
-export const INDUSTRY_STORIES: Record<IndustrySlug, IndustryStory> = {
+export const INDUSTRY_STORIES: Partial<Record<IndustrySlug, IndustryStory>> = {
   'ai-ml': {
     slug: 'ai-ml',
     headline: 'AI is transforming every industry at once',

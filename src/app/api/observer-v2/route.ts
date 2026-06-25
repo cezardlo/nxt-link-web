@@ -17,10 +17,6 @@ export async function POST(req: Request) {
     if (!fresh) {
       const cached = await getCache<Record<string, unknown>>('observer-v2');
       if (cached) return NextResponse.json({ ok: true, ...cached, from_cache: true });
-    await logQuota('observer-v2', '/api/observer-v2', result.input_tokens || 0, result.output_tokens || 0);
-    const responseData = { ok: true, analysis: result.text, generated_at: new Date().toISOString() };
-    await setCache('observer-v2', responseData, 240);
-    return NextResponse.json(responseData);
     }
     const db = getSupabase();
     const body = await req.json().catch(() => ({}));
@@ -65,7 +61,10 @@ export async function POST(req: Request) {
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     });
 
-    return NextResponse.json({ ok: true, analysis: result.text, signal_count: (signals || []).length });
+    await logQuota('observer-v2', '/api/observer-v2', result.input_tokens || 0, result.output_tokens || 0);
+    const responseData = { ok: true, analysis: result.text, signal_count: (signals || []).length, generated_at: new Date().toISOString() };
+    await setCache('observer-v2', responseData, 240);
+    return NextResponse.json(responseData);
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ error: msg }, { status: 500 });

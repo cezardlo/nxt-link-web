@@ -10,6 +10,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 import { checkRateLimit } from '@/lib/http/rate-limit';
+import { runParallelJsonEnsemble } from '@/lib/llm/parallel-router';
 import { getClientIp } from '@/lib/http/request-context';
 import { getIntelSignals } from '@/db/queries/intel-signals';
 import { isSupabaseConfigured } from '@/db/client';
@@ -652,7 +653,7 @@ Return ONLY valid JSON with this exact structure:
       temperature: 0.3,
       preferredProviders: ['gemini'],
       budget: { maxProviders: 1, preferLowCostProviders: true },
-      parse: (content) => {
+      parse: (content: string) => {
         const cleaned = content
           .replace(/```json\n?/g, '')
           .replace(/```\n?/g, '')

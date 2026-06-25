@@ -67,7 +67,6 @@ const YC_INDUSTRY_MAP: Record<string, IndustrySlug> = {
   'Aviation and Space': 'manufacturing',
   'Aerospace': 'manufacturing',
   'Manufacturing and Robotics': 'manufacturing',
-  'Construction': 'manufacturing',
   'Healthcare': 'healthcare',
   'Healthcare and Diagnostics': 'healthcare',
   'Healthcare IT': 'healthcare',

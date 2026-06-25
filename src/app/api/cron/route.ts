@@ -26,7 +26,7 @@ export async function GET(req: Request) {
     if (quotaUsed > 40) {
       return NextResponse.json({ error: 'Daily quota limit reached (' + quotaUsed + ' calls). Skipping cron to save free tier.', ran_at: new Date().toISOString() });
     }
-    const results: string[] = [];
+    const results: unknown[] = [];
 
   // Step 1: Observer scans for patterns
   results.push(await callEndpoint(base, '/api/observer-v2?fresh=true', 'POST', { industry: 'logistics', limit: 20 }));

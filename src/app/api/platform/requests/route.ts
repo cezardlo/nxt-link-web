@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { logAudit } from '@/lib/assistant/llm';
-import { PRIVATE_ACCESS_CODE } from '@/lib/privateAccess';
+import { isAdminRequest } from '@/lib/assistant/auth';
 
 export async function POST(req: Request) {
   let body: Record<string, unknown>;
@@ -64,8 +64,7 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
-  const code = req.headers.get('x-access-code');
-  if (code !== PRIVATE_ACCESS_CODE) {
+  if (!(await isAdminRequest(req))) {
     return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
   }
   if (!isSupabaseConfigured()) {

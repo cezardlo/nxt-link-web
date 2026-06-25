@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { ADMIN_PROMPT } from '@/lib/assistant/prompts';
 import { aiDraft, logAiDraft } from '@/lib/assistant/llm';
-import { PRIVATE_ACCESS_CODE } from '@/lib/privateAccess';
+import { isAdminRequest } from '@/lib/assistant/auth';
 
 interface AdminDraft {
   internal_summary: {
@@ -39,7 +39,7 @@ interface AdminDraft {
 }
 
 export async function POST(req: Request) {
-  if (req.headers.get('x-access-code') !== PRIVATE_ACCESS_CODE) {
+  if (!(await isAdminRequest(req))) {
     return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
   }
 
