@@ -73,6 +73,7 @@
     <button class="tab" data-tab="money" onclick="tab('money')" id="t-money">Revenue &amp; Cost</button>
     <button class="tab" data-tab="reveal" onclick="tab('reveal')" id="t-reveal">Reveal Controls</button>
     <button class="tab" data-tab="proof" onclick="tab('proof')" id="t-proof">Comms &amp; Proof</button>
+    <button class="tab" data-tab="vintel" onclick="tab('vintel')" id="t-vintel">Vendor Intel</button>
   </div>
 
   <!-- ===== CONSOLE ===== -->
@@ -120,13 +121,24 @@
       <div class="card"><h2 class="gk" data-t="powH">Proof of Work</h2><p class="note" data-t="powP">What NXT//LINK did to earn the match.</p><div id="powList" style="margin-top:10px"></div></div>
     </div>
   </div>
+  <div id="tab-vintel" class="hidden">
+    <div class="card"><h2 class="gk" data-t="vintelH">Vendor intelligence</h2><p class="note" data-t="vintelP">Private performance history.</p>
+      <div style="overflow-x:auto;margin-top:12px"><table id="perfTable"></table></div>
+    </div>
+    <div class="card"><h2 class="gk" data-t="learnH">Learning loop</h2><p class="note" data-t="learnP">Every request makes the platform smarter.</p><div id="learnList" style="margin-top:10px"></div></div>
+  </div>
 </div>
 </div>
 
 <script>
 let LANG='EN';
 const D={
- EN:{asub:'Admin Operating Console',tConsole:'Console',tMoney:'Revenue & Cost',tReveal:'Reveal Controls',tProof:'Comms & Proof',
+ EN:{asub:'Admin Operating Console',tConsole:'Console',tMoney:'Revenue & Cost',tReveal:'Reveal Controls',tProof:'Comms & Proof',tVintel:'Vendor Intel',
+  vintelH:'Vendor intelligence',vintelP:'Private performance history. Click a status to mark a vendor Approved, Preferred, Watchlist, or Do-not-use.',
+  perfTh:['Vendor','Response','Quote complete','Win rate','Revisions','Trust','Agreement','Status'],
+  learnH:'Learning loop',learnP:'Every request makes the platform smarter — this is your moat.',
+  learn:['Most requested: Forklift maintenance, Staffing, Transportation (last 30 days).','Fastest responders: V-118 (2.1h), V-204 (3.4h). Slowest: V-339 (28h) — watchlist.','Clients most often chose the fastest local option, not the cheapest.','Top lost reason: vendor quote incomplete (missing warranty/expiration).','Cross-border transport demand up 22% vs last month.'],
+  vstatus:['Approved','Preferred','Watchlist','Do not use'],
   opH:'Operating console',opP:'Everything that needs attention, in one place. NXT//LINK sits in the middle of every request.',
   nbaH:'Next best actions',notifH:'Notifications',notifP:'In-app · Email · SMS (urgent). Each user can opt in or out.',
   bizH:'Business dashboard',bizP:'Operating cost vs. commission revenue — your net platform profit.',
@@ -149,7 +161,12 @@ const D={
   emailStat:'Sent · Delivered · Opened',
   poi:[['Vendor matched','Jun 22'],['Quote packet sent','Jun 22'],['Vendor accepted terms','Jun 22'],['Vendor viewed opportunity','Jun 23'],['Quote submitted','Jun 24'],['Identity revealed','Pending'],['Client requested introduction','Jun 25'],['Client selected vendor','Pending'],['Commission terms version','v1.2'],['Agreement status','Active']],
   pow:['Client intake completed','Missing info resolved','Vendors filtered (8 → 3)','Vendors contacted','Quotes collected (3)','Quotes compared','Client summary delivered','Introduction managed','Commission tracked']},
- ES:{asub:'Consola de Operaciones',tConsole:'Consola',tMoney:'Ingresos y Costos',tReveal:'Controles de Revelación',tProof:'Comunicación y Prueba',
+ ES:{asub:'Consola de Operaciones',tConsole:'Consola',tMoney:'Ingresos y Costos',tReveal:'Controles de Revelación',tProof:'Comunicación y Prueba',tVintel:'Inteligencia',
+  vintelH:'Inteligencia de proveedores',vintelP:'Historial privado de desempeño. Haz clic en un estado para marcar Aprobado, Preferido, Vigilancia o No usar.',
+  perfTh:['Proveedor','Respuesta','Cotización compl.','Tasa de éxito','Revisiones','Confianza','Acuerdo','Estado'],
+  learnH:'Ciclo de aprendizaje',learnP:'Cada solicitud hace la plataforma más inteligente — esta es tu ventaja.',
+  learn:['Más solicitados: Montacargas, Personal, Transporte (últimos 30 días).','Más rápidos: V-118 (2.1h), V-204 (3.4h). Más lento: V-339 (28h) — vigilancia.','Los clientes eligen la opción local más rápida, no la más barata.','Razón principal de pérdida: cotización incompleta (falta garantía/expiración).','Demanda de transporte transfronterizo +22% vs. mes pasado.'],
+  vstatus:['Aprobado','Preferido','Vigilancia','No usar'],
   opH:'Consola de operaciones',opP:'Todo lo que necesita atención, en un solo lugar. NXT//LINK está en medio de cada solicitud.',
   nbaH:'Próximas mejores acciones',notifH:'Notificaciones',notifP:'En la app · Correo · SMS (urgente). Cada usuario decide.',
   bizH:'Tablero de negocio',bizP:'Costo operativo vs. ingresos por comisión — tu ganancia neta.',
@@ -207,11 +224,19 @@ function renderProof(){
  $('poiList').innerHTML=d().poi.map(p=>'<div class="proofrow"><span>'+esc(p[0])+'</span><b>'+esc(p[1])+'</b></div>').join('');
  $('powList').innerHTML=d().pow.map(p=>'<div class="check"><span class="c">✓</span>'+esc(p)+'</div>').join('');
 }
-function tab(n){['console','money','reveal','proof'].forEach(x=>$('tab-'+x).classList.toggle('hidden',x!==n));document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===n));window.scrollTo({top:0,behavior:'smooth'});}
+function tab(n){['console','money','reveal','proof','vintel'].forEach(x=>$('tab-'+x).classList.toggle('hidden',x!==n));document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===n));window.scrollTo({top:0,behavior:'smooth'});}
 function applyT(){document.querySelectorAll('[data-t]').forEach(e=>{const k=e.dataset.t;if(d()[k]!==undefined)e.textContent=d()[k];});
- $('asub').textContent=d().asub;$('t-console').textContent=d().tConsole;$('t-money').textContent=d().tMoney;$('t-reveal').textContent=d().tReveal;$('t-proof').textContent=d().tProof;}
-function setLang(l){LANG=l;$('en').classList.toggle('on',l==='EN');$('es').classList.toggle('on',l==='ES');applyT();renderConsole();renderMoney();$('revealLog').dataset.init='';renderReveal();renderProof();}
+ $('asub').textContent=d().asub;$('t-console').textContent=d().tConsole;$('t-money').textContent=d().tMoney;$('t-reveal').textContent=d().tReveal;$('t-proof').textContent=d().tProof;$('t-vintel').textContent=d().tVintel;}
+function setLang(l){LANG=l;$('en').classList.toggle('on',l==='EN');$('es').classList.toggle('on',l==='ES');applyT();renderConsole();renderMoney();$('revealLog').dataset.init='';renderReveal();renderProof();renderVintel();}
 applyT();renderConsole();renderMoney();renderReveal();renderProof();
+const PERF=[['V-118','2.1h','96%','58%','0.4','A','Active'],['V-204','3.4h','91%','47%','0.8','A','Active'],['V-276','6.0h','88%','39%','1.1','B','Active'],['V-301','9.2h','74%','22%','2.0','B','Renew soon'],['V-339','28h','61%','9%','3.2','C','Expired'],['V-355','4.1h','93%','51%','0.6','A','Active']];
+const vstate=[0,1,2,3,2,1];const VCOL=['#34D399','#A855F7','#FBBF24','#F87171'];
+function renderVintel(){var dd=D[LANG];var th=dd.perfTh;
+ document.getElementById('perfTable').innerHTML='<tr>'+th.map(function(h){return '<th>'+h+'</th>';}).join('')+'</tr>'+
+  PERF.map(function(r,i){return '<tr><td><b class="gk">'+r[0]+'</b></td><td>'+r[1]+'</td><td>'+r[2]+'</td><td>'+r[3]+'</td><td>'+r[4]+'</td><td>'+r[5]+'</td><td>'+r[6]+'</td><td><span class="stat" style="cursor:pointer;background:'+VCOL[vstate[i]]+'22;color:'+VCOL[vstate[i]]+'" onclick="cycleV('+i+')">'+dd.vstatus[vstate[i]]+'</span></td></tr>';}).join('');
+ document.getElementById('learnList').innerHTML=dd.learn.map(function(x){return '<div class="li"><span class="dot" style="background:var(--violet)"></span><div class="t">'+x+'</div></div>';}).join('');}
+function cycleV(i){vstate[i]=(vstate[i]+1)%4;renderVintel();}
+renderVintel();
 </script>
 </body>
 </html>
