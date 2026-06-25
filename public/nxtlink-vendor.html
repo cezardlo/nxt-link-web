@@ -67,6 +67,7 @@
 <nav>
   <div class="logo"><span class="mk"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h12"/><path d="m13 8 4 4-4 4"/></svg></span><b>NXT<i>//</i>LINK</b><span class="sub" id="asub">Quote Assistant</span></div>
   <div class="navr">
+    <a href="index.html" style="color:var(--gray);text-decoration:none;font-size:13px">← Home</a>
     <span class="save" id="saveStatus"></span>
     <div class="seg"><button id="en" class="on" onclick="setLang('EN')">EN</button><button id="es" onclick="setLang('ES')">ES</button></div>
   </div>
@@ -95,6 +96,7 @@
       </div>
     </div>
 
+    <div class="card" id="profileCard"></div>
     <div class="card" id="formCard">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <h2 class="gk" style="margin:0;font-size:18px" data-t="quoteResp">Quote response</h2>
@@ -266,7 +268,7 @@ function renderSaved(){const arr=getArr('nxt_saved');$('savedList').innerHTML=ar
 function renderLib(){const seed=Object.keys(TPL_NAMES).map(c=>({id:'seed-'+c,name:(LANG==='ES'?TPL_NAMES[c].es:TPL_NAMES[c].en),cat:c,seed:1}));const arr=getArr('nxt_tpl');const all=[...arr,...seed];$('libList').innerHTML=all.map(t=>'<div class="qrow"><div><b>'+esc(t.name)+'</b> <span class="stat s-tpl">'+esc(t.cat)+'</span>'+(t.seed?'':'<div class="meta">'+t.date+'</div>')+'</div><div style="display:flex;gap:6px"><button class="btn sm" onclick="insertTpl(\''+t.id+'\')">'+tr('insert')+'</button>'+(t.seed?'':'<button class="btn sm ghost" onclick="delItem(\'nxt_tpl\',\''+t.id+'\')">'+tr('del')+'</button>')+'</div></div>').join('');}
 function useSaved(id){const q=getArr('nxt_saved').find(x=>x.id===id);if(!q)return;tab('opp');loadData(q.data);scrollForm();}
 function insertTpl(id){if(id.startsWith('seed-')){draftAI();}else{const t=getArr('nxt_tpl').find(x=>x.id===id);if(t)loadData(t.data);}tab('opp');scrollForm();toast(LANG==='ES'?'Plantilla insertada':'Template inserted');}
-function delItem(k,id){setArr(k,getArr(k).filter(x=>x.id!==id));renderSaved();renderLib();}
+function delItem(k,id){setArr(k,getArr(k).filter(x=>x.id!==id));renderSaved();renderLib();renderProfile();}
 
 /* PDF */
 function genPDF(){const safe=$('clientSafe').checked;const es=LANG==='ES';
@@ -287,6 +289,17 @@ function applyT(){document.querySelectorAll('[data-t]').forEach(e=>{const k=e.da
 function setLang(l){LANG=l;$('en').classList.toggle('on',l==='EN');$('es').classList.toggle('on',l==='ES');
   const cur=snapshot();applyT();renderForm();loadData(cur);renderOpp();renderReco();renderSaved();renderLib();}
 applyT();renderForm();renderOpp();renderReco();renderSaved();renderLib();restore();
+
+const PROF={pct:68,EN:{h:'Profile',c:'complete',missLbl:'Missing — finish these to receive more opportunities:',cta:'Complete profile',
+  miss:['Service areas','Catalog','Insurance document','Quote template','Commission agreement','Bilingual support answer']},
+ ES:{h:'Perfil',c:'completo',missLbl:'Falta — completa esto para recibir más oportunidades:',cta:'Completar perfil',
+  miss:['Áreas de servicio','Catálogo','Documento de seguro','Plantilla de cotización','Acuerdo de comisión','Respuesta de soporte bilingüe']}};
+function renderProfile(){var p=PROF[LANG];var el=document.getElementById('profileCard');if(!el)return;
+ el.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h2 class="gk" style="margin:0;font-size:18px">'+p.h+' '+PROF.pct+'% '+p.c+'</h2><button class="btn sm ghost" onclick="alert(\''+(LANG==='ES'?'Completar perfil (demo)':'Complete profile (demo)')+'\')">'+p.cta+'</button></div>'+
+ '<div style="height:9px;background:#241B38;border-radius:6px;overflow:hidden;margin:12px 0"><i style="display:block;height:100%;width:'+PROF.pct+'%;background:linear-gradient(90deg,var(--purple),var(--purple2))"></i></div>'+
+ '<div class="note" style="margin-bottom:8px">'+p.missLbl+'</div>'+
+ '<div style="display:flex;flex-wrap:wrap;gap:7px">'+p.miss.map(function(m){return '<span style="font:600 12px/1 Inter;padding:5px 11px;border-radius:100px;background:rgba(251,191,36,.12);color:var(--amber);border:1px solid rgba(251,191,36,.35)">+ '+m+'</span>';}).join('')+'</div>';}
+renderProfile();
 </script>
 </body>
 </html>

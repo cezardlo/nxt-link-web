@@ -114,6 +114,10 @@
     <a class="hidem" onclick="go('search')" data-nav="search" data-t="forW">For Warehouses</a>
     <a class="hidem" onclick="go('vendors')" data-nav="vendors" data-t="forV">For Vendors</a>
     <a class="hidem" onclick="go('how')" data-nav="how" data-t="how">How It Works</a>
+    <a class="hidem" href="welcome.html" style="color:var(--gray);text-decoration:none;font-size:14px;font-weight:500;padding:8px 12px">Get Started</a>
+    <a class="hidem" href="vendor.html" style="color:var(--gray);text-decoration:none;font-size:14px;font-weight:500;padding:8px 12px">Vendor Portal</a>
+    <a class="hidem" href="client.html" style="color:var(--gray);text-decoration:none;font-size:14px;font-weight:500;padding:8px 12px">Track Request</a>
+    <a class="hidem" href="admin.html" style="color:var(--violet);text-decoration:none;font-size:14px;font-weight:600;padding:8px 12px">Admin</a>
     <div class="seg"><button id="en" class="on" onclick="setLang('EN')">EN</button><button id="es" onclick="setLang('ES')">ES</button></div>
     <button class="btn sm" onclick="go('search')" data-t="startBtn">Start My Search</button>
   </div>
@@ -127,7 +131,7 @@
     <p class="sub" data-t="sub">A private AI sourcing platform for warehouse services, products, and technology. You submit the problem — we search, filter, collect quotes, compare options, and protect every identity.</p>
     <div class="cta">
       <button class="btn" onclick="go('search')" data-t="startBtn2">Start My Search →</button>
-      <button class="btn ghost" onclick="go('vendors')" data-t="vendBtn">I'm a Vendor</button>
+      <button class="btn ghost" onclick="location.href='vendor.html'" data-t="vendBtn">I'm a Vendor</button>
     </div>
     <div class="badges" id="badges"></div>
   </div>
@@ -211,7 +215,7 @@
       <div class="vcard"><h3 class="gk" data-t="vc1H">What you get</h3><ul id="vget"></ul></div>
       <div class="vcard"><h3 class="gk" data-t="vc2H">What you control</h3><ul id="vctrl"></ul></div>
     </div>
-    <div style="text-align:center;margin-top:30px;"><button class="btn" onclick="alert(LANG==='ES'?'Registro de proveedor — demostración':'Vendor signup — demo')" data-t="vBtn">Create vendor account</button></div>
+    <div style="text-align:center;margin-top:30px;"><button class="btn" onclick="location.href='vendor.html'" data-t="vBtn">Create vendor account</button></div>
   </div>
   <div class="foot" data-t="vFoot">Vendors accept commission terms before receiving sensitive opportunity details. NXT//LINK is not a law firm; agreements should be reviewed by counsel.</div>
 </section>
