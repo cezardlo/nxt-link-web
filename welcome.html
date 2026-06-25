@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NXT//LINK — Welcome</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0A0712;--charcoal:#15101F;--card:#1A1428;--line:#2A2140;--white:#F6F4FB;--gray:#A39FB5;--dim:#6E6885;
+    --purple:#8B5CF6;--purple2:#A855F7;--violet:#C4B5FD;--glow:rgba(139,92,246,.45);--green:#34D399;}
+  *{box-sizing:border-box;}body{margin:0;background:var(--bg);color:var(--white);font-family:'Inter',system-ui,sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased;}
+  .gk{font-family:'Space Grotesk',sans-serif;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(60% 50% at 50% -10%,rgba(139,92,246,.20),transparent 60%);}
+  .app{position:relative;z-index:1;}
+  nav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 24px;border-bottom:1px solid var(--line);}
+  .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--white);}.logo .mk{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:linear-gradient(135deg,var(--purple),var(--purple2));box-shadow:0 0 16px var(--glow);}
+  .logo b{font:700 18px/1 'Space Grotesk';letter-spacing:-.5px;}.logo b i{color:var(--violet);font-style:normal;}
+  .seg{display:flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;}.seg button{border:none;background:none;color:var(--gray);font:700 12px/1 'Space Grotesk';padding:6px 8px;border-radius:6px;cursor:pointer;}.seg button.on{background:var(--purple);color:#fff;}
+  .wrap{max-width:980px;margin:0 auto;padding:60px 24px 80px;text-align:center;}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 13px;border-radius:100px;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.35);color:var(--violet);font:600 11px/1 'Space Grotesk';letter-spacing:.12em;text-transform:uppercase;}
+  h1{font:700 clamp(30px,4.4vw,46px)/1.08 'Space Grotesk';letter-spacing:-1px;margin:18px 0 10px;}
+  .sub{color:var(--gray);font-size:17px;max-width:620px;margin:0 auto 14px;}
+  .trust{display:inline-flex;align-items:center;gap:9px;margin:8px auto 0;padding:10px 16px;border-radius:100px;background:var(--charcoal);border:1px solid var(--line);font-size:13.5px;color:var(--violet);}
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:42px;text-align:left;}
+  @media(max-width:820px){.cards{grid-template-columns:1fr;}}
+  .role{background:linear-gradient(180deg,var(--card),var(--charcoal));border:1px solid var(--line);border-radius:18px;padding:26px;display:flex;flex-direction:column;transition:.18s;}
+  .role:hover{border-color:rgba(139,92,246,.5);transform:translateY(-3px);box-shadow:0 24px 50px -30px var(--glow);}
+  .role .ic{width:48px;height:48px;border-radius:13px;display:grid;place-items:center;font-size:23px;background:rgba(139,92,246,.14);border:1px solid rgba(139,92,246,.3);margin-bottom:14px;}
+  .role h3{font:600 21px/1.15 'Space Grotesk';margin:0 0 8px;}
+  .role p{color:var(--gray);font-size:14px;line-height:1.6;margin:0 0 18px;flex:1;}
+  .role ol{margin:0 0 20px;padding-left:18px;color:var(--gray);font-size:13.5px;line-height:1.9;}
+  .btn{border:none;cursor:pointer;font:600 14px/1 'Inter';border-radius:11px;padding:12px 16px;background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;box-shadow:0 8px 22px -10px var(--glow);text-decoration:none;text-align:center;display:block;}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--white);box-shadow:none;}
+  .foot{margin-top:40px;color:var(--dim);font-size:13px;}
+</style>
+</head>
+<body>
+<div class="app">
+<nav>
+  <a class="logo" href="index.html"><span class="mk"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h12"/><path d="m13 8 4 4-4 4"/></svg></span><b>NXT<i>//</i>LINK</b></a>
+  <div class="seg"><button id="en" class="on" onclick="setLang('EN')">EN</button><button id="es" onclick="setLang('ES')">ES</button></div>
+</nav>
+<div class="wrap">
+  <span class="eyebrow" data-k="ey">Welcome</span>
+  <h1 class="gk" data-k="h1">Let's get you to the right place</h1>
+  <p class="sub" data-k="sub">Pick how you'll use NXT//LINK. We'll guide you from here — no empty dashboards, no guessing.</p>
+  <div class="trust">🤝 <span data-k="trust">AI helps collect and organize information. NXT//LINK manages the relationship.</span></div>
+
+  <div class="cards" id="cards"></div>
+  <div class="foot" data-k="foot">You can switch roles anytime. Your data stays private and identities are protected.</div>
+</div>
+</div>
+<script>
+let LANG='EN';
+const D={EN:{ey:'Welcome',h1:"Let's get you to the right place",sub:"Pick how you'll use NXT//LINK. We'll guide you from here — no empty dashboards, no guessing.",
+  trust:'AI helps collect and organize information. NXT//LINK manages the relationship.',
+  foot:'You can switch roles anytime. Your data stays private and identities are protected.',
+  roles:[
+   ['🏭','Welcome to NXT//LINK','Submit your warehouse need. We\'ll ask the right questions, search vendors, and bring back options.',['Tell us what you need','Answer AI-guided questions','Get anonymous options'],'Start my search →','index.html'],
+   ['🛠️','Welcome to the Vendor Network','Complete your profile, add what you solve, accept terms, and get quote-ready opportunities.',['Build your profile','Accept commission terms','Receive protected opportunities'],'Go to vendor portal →','vendor.html'],
+   ['🛡️','Operating Console','Review requests, send quote packets, compare quotes, and control introductions.',['Review & qualify requests','Send protected packets','Compare & control reveal'],'Open admin console →','admin.html']
+  ]},
+ ES:{ey:'Bienvenido',h1:'Vamos a llevarte al lugar correcto',sub:'Elige cómo usarás NXT//LINK. Te guiamos desde aquí — sin paneles vacíos, sin adivinar.',
+  trust:'La AI ayuda a recopilar y organizar la información. NXT//LINK gestiona la relación.',
+  foot:'Puedes cambiar de rol en cualquier momento. Tus datos permanecen privados y las identidades protegidas.',
+  roles:[
+   ['🏭','Bienvenido a NXT//LINK','Envía la necesidad de tu almacén. Haremos las preguntas correctas, buscaremos proveedores y te traeremos opciones.',['Dinos qué necesitas','Responde preguntas guiadas por AI','Recibe opciones anónimas'],'Iniciar búsqueda →','index.html'],
+   ['🛠️','Bienvenido a la Red de Proveedores','Completa tu perfil, agrega lo que resuelves, acepta términos y recibe oportunidades listas para cotizar.',['Construye tu perfil','Acepta términos de comisión','Recibe oportunidades protegidas'],'Ir al portal de proveedor →','vendor.html'],
+   ['🛡️','Consola de Operaciones','Revisa solicitudes, envía paquetes, compara cotizaciones y controla las introducciones.',['Revisa y califica solicitudes','Envía paquetes protegidos','Compara y controla la revelación'],'Abrir consola admin →','admin.html']
+  ]}};
+const $=id=>document.getElementById(id);
+function render(){const d=D[LANG];
+ document.querySelectorAll('[data-k]').forEach(e=>{const k=e.dataset.k;if(d[k])e.textContent=d[k];});
+ $('cards').innerHTML=d.roles.map(r=>'<div class="role"><div class="ic">'+r[0]+'</div><h3 class="gk">'+r[1]+'</h3><p>'+r[2]+'</p><ol><li>'+r[3].join('</li><li>')+'</li></ol><a class="btn" href="'+r[5]+'">'+r[4]+'</a></div>').join('');}
+function setLang(l){LANG=l;$('en').classList.toggle('on',l==='EN');$('es').classList.toggle('on',l==='ES');render();}
+render();
+</script>
+</body>
+</html>
