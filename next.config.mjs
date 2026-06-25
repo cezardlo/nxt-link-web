@@ -11,6 +11,14 @@ const nextConfig = {
   },
   reactStrictMode: false,
   transpilePackages: ['@excalidraw/excalidraw'],
+  images: {
+    remotePatterns: [
+      // Tech logos used by the modern-animated-sign-in demo orbit
+      { protocol: 'https', hostname: 'cdn.jsdelivr.net' },
+      { protocol: 'https', hostname: 'cdn1.iconfinder.com' },
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+    ],
+  },
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
   async redirects() {

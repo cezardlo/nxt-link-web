@@ -43,6 +43,24 @@ html { scroll-behavior: smooth; }
 
 * { box-sizing: border-box; }
 
+/* ── modern-animated-sign-in tokens ──────────────────────────────────────────
+   Scoped to .signin-surface so they never affect the rest of the app.
+   The sign-in page carries `dark signin-surface` for the on-brand dark look. */
+.signin-surface {
+  --background: hsl(222, 94%, 5%);
+  --foreground: hsl(0, 0%, 100%);
+  --skeleton: hsl(218, 36%, 16%);
+  --btn-border: hsl(217, 32.6%, 17.5%);
+  --input: hsl(219, 63%, 16%);
+  --radius: 0.5rem;
+  background: var(--background);
+  color: var(--foreground);
+}
+.signin-surface .g-button {
+  border-radius: var(--radius);
+  border: 1px solid var(--btn-border);
+}
+
 body {
   background: var(--hero-glow);
   color: var(--text);

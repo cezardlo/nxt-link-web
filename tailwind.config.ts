@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: "class",
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -11,6 +12,10 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        // modern-animated-sign-in tokens (resolve via .signin-surface scope)
+        skeleton: "var(--skeleton)",
+        border: "var(--btn-border)",
+        input: "var(--input)",
         nxt: {
           bg:       '#0a0a0f',
           surface:  '#111118',
@@ -35,10 +40,18 @@ const config: Config = {
         },
       },
       borderRadius: {
+        DEFAULT: "0.5rem",
         'nxt-sm': '8px',
         'nxt-md': '12px',
         'nxt-lg': '16px',
         'nxt-xl': '20px',
+      },
+      boxShadow: {
+        input: [
+          "0px 2px 3px -1px rgba(0, 0, 0, 0.1)",
+          "0px 1px 0px 0px rgba(25, 28, 33, 0.02)",
+          "0px 0px 0px 1px rgba(25, 28, 33, 0.08)",
+        ].join(", "),
       },
       fontFamily: {
         grotesk: ['var(--font-space-grotesk)', 'system-ui', '-apple-system', 'sans-serif'],
@@ -61,8 +74,24 @@ const config: Config = {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.5' },
         },
+        ripple: {
+          '0%, 100%': { transform: 'translate(-50%, -50%) scale(1)' },
+          '50%': { transform: 'translate(-50%, -50%) scale(0.9)' },
+        },
+        orbit: {
+          '0%': {
+            transform:
+              'rotate(0deg) translateY(calc(var(--radius) * 1px)) rotate(0deg)',
+          },
+          '100%': {
+            transform:
+              'rotate(360deg) translateY(calc(var(--radius) * 1px)) rotate(-360deg)',
+          },
+        },
       },
       animation: {
+        ripple: 'ripple 2s ease calc(var(--i, 0) * 0.2s) infinite',
+        orbit: 'orbit calc(var(--duration) * 1s) linear infinite',
         'fade-up': 'fade-up 0.5s ease-out forwards',
         'fade-up-1': 'fade-up 0.5s ease-out 0.06s forwards',
         'fade-up-2': 'fade-up 0.5s ease-out 0.12s forwards',
