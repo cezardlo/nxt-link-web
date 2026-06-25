@@ -27,8 +27,8 @@
       r.ref = r.ref || ('REQ-' + Math.random().toString(36).slice(2, 7).toUpperCase());
       r.created = r.created || Date.now();
       r.status = r.status || 'request_received';
-      r.timeline = r.timeline || []; // activity timeline
-      r.timeline.unshift({ at: Date.now(), what: 'Request submitted' });
+      r.activity = r.activity || []; // activity timeline (separate from the deadline)
+      r.activity.unshift({ at: Date.now(), what: 'Request submitted' });
       d.requests.unshift(r);
       write(d); emit(); return r;
     },
@@ -37,7 +37,7 @@
       d.requests = d.requests.map(function (x) {
         if (x.ref !== ref) return x;
         var merged = Object.assign({}, x, patch);
-        if (note) { merged.timeline = (merged.timeline || []); merged.timeline.unshift({ at: Date.now(), what: note }); }
+        if (note) { merged.activity = (merged.activity || []); merged.activity.unshift({ at: Date.now(), what: note }); }
         return merged;
       });
       write(d); emit();
@@ -52,7 +52,7 @@
       // automation: a submitted quote moves the request forward
       d.requests = d.requests.map(function (x) {
         if (x.ref !== q.ref) return x;
-        x.timeline = (x.timeline || []); x.timeline.unshift({ at: Date.now(), what: 'Vendor quote received (' + (q.amount || 'quote') + ')' });
+        x.activity = (x.activity || []); x.activity.unshift({ at: Date.now(), what: 'Vendor quote received (' + (q.amount || 'quote') + ')' });
         x.status = 'collecting_quotes';
         return x;
       });
