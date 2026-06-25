@@ -104,6 +104,7 @@
   .vcard ul{margin:0;padding-left:18px;color:var(--gray);font-size:14px;line-height:1.8;}
   .note{color:var(--dim);font-size:12.5px;}
 </style>
+<script src="store.js"></script>
 </head>
 <body>
 <div class="app">
@@ -184,7 +185,8 @@
         <div style="overflow-x:auto;"><table id="adminTable"></table></div>
         <div id="missBlock" style="margin-top:14px;"></div>
         <p style="margin-top:14px;font-size:14px;color:#15101F;"><b data-t="recL">Recommended vendor category:</b> <span id="recOut" class="chip"></span></p>
-        <button class="submit" style="margin-top:18px;" onclick="go('options')" data-t="seeOpt">See sample anonymous options →</button>
+        <button class="submit" style="margin-top:18px;background:linear-gradient(135deg,#10B981,#34D399)" onclick="submitToNxt()" data-t="submitNxt">✓ Submit to NXT//LINK</button>
+        <button class="submit" style="margin-top:10px;" onclick="go('options')" data-t="seeOpt">See sample anonymous options →</button>
       </div>
       <p class="foot" style="border:none;" data-t="aiNote">AI-assisted draft. A human at NXT//LINK reviews before anything is shared. Vendor names are never shown here.</p>
     </div>
@@ -245,7 +247,7 @@ const UI={
    back:'Back',back2:'Back',catSub:'Answer what you can — we flag anything still missing before it reaches vendors. Your identity stays private.',
    detlbl:'Details',corelbl:'Logistics & permissions',makeBtn:'Create quote-ready summary',edit:'Edit answers',
    sumH:'Quote-ready summary',sumP:'This is the internal table NXT//LINK admin sees. Client identity stays hidden.',recL:'Recommended vendor category:',
-   seeOpt:'See sample anonymous options →',aiNote:'AI-assisted draft. A human at NXT//LINK reviews before anything is shared. Vendor names are never shown here.',
+   seeOpt:'See sample anonymous options →',submitNxt:'✓ Submit to NXT//LINK',aiNote:'AI-assisted draft. A human at NXT//LINK reviews before anything is shared. Vendor names are never shown here.',
    optEy:'Your options',optH:'Anonymous options, ready to choose',optP:'NXT//LINK prepares the options. Vendor names are revealed only after you request an introduction.',optFoot:"You choose. NXT//LINK controls when a vendor's identity is revealed.",
    vEy:'For vendors',vH:'List what you solve. Receive quote-ready opportunities.',vP:'No cold leads. NXT//LINK sends you protected, pre-qualified opportunities that match exactly what you provide — with the info you need to quote fast.',
    vc1H:'What you get',vc2H:'What you control',vBtn:'Create vendor account',vFoot:'Vendors accept commission terms before receiving sensitive opportunity details. NXT//LINK is not a law firm; agreements should be reviewed by counsel.',
@@ -272,7 +274,7 @@ const UI={
    back:'Atrás',back2:'Atrás',catSub:'Responde lo que puedas — marcamos lo que falte antes de enviarlo a proveedores. Tu identidad permanece privada.',
    detlbl:'Detalles',corelbl:'Logística y permisos',makeBtn:'Crear resumen listo para cotizar',edit:'Editar respuestas',
    sumH:'Resumen listo para cotizar',sumP:'Esta es la tabla interna que ve el admin de NXT//LINK. La identidad del cliente permanece oculta.',recL:'Categoría de proveedor recomendada:',
-   seeOpt:'Ver opciones anónimas de ejemplo →',aiNote:'Borrador asistido por AI. Un humano de NXT//LINK revisa antes de compartir. Los nombres de proveedores nunca se muestran aquí.',
+   seeOpt:'Ver opciones anónimas de ejemplo →',submitNxt:'✓ Enviar a NXT//LINK',aiNote:'Borrador asistido por AI. Un humano de NXT//LINK revisa antes de compartir. Los nombres de proveedores nunca se muestran aquí.',
    optEy:'Tus opciones',optH:'Opciones anónimas, listas para elegir',optP:'NXT//LINK prepara las opciones. Los nombres de proveedores se revelan solo cuando solicitas una introducción.',optFoot:'Tú eliges. NXT//LINK controla cuándo se revela la identidad de un proveedor.',
    vEy:'Para proveedores',vH:'Publica lo que resuelves. Recibe oportunidades listas para cotizar.',vP:'Sin leads fríos. NXT//LINK te envía oportunidades protegidas y precalificadas que coinciden exactamente con lo que ofreces — con la información para cotizar rápido.',
    vc1H:'Lo que recibes',vc2H:'Lo que controlas',vBtn:'Crear cuenta de proveedor',vFoot:'Los proveedores aceptan términos de comisión antes de recibir detalles sensibles. NXT//LINK no es un despacho legal; los acuerdos deben ser revisados por un abogado.',
@@ -421,6 +423,7 @@ function go(v){['home','search','vendors','how','options'].forEach(x=>$('view-'+
  if(v==='options')renderOptions();window.scrollTo({top:0,behavior:'smooth'});}
 function applyI18n(){const u=UI[LANG];document.querySelectorAll('[data-t]').forEach(el=>{const k=el.dataset.t;if(u[k]!==undefined&&typeof u[k]==='string')el.textContent=u[k];});}
 function setLang(l){LANG=l;$('en').classList.toggle('on',l==='EN');$('es').classList.toggle('on',l==='ES');applyI18n();renderHome();renderCats();if(current&&!$('s2').classList.contains('hidden'))pickCat(current.id);if($('view-options').classList.contains('on'))renderOptions();}
+function submitToNxt(){if(!window.NXT||!current)return;var r=NXT.addRequest({category:opt(current),location:(core.location||''),timeline:(core.timeline||''),urgency:(core.priority||''),problem:(answers[current.f[0].id]||opt(current))});alert((LANG==='ES'?'✓ Enviado a NXT//LINK. Referencia: ':'✓ Submitted to NXT//LINK. Reference: ')+r.ref+(LANG==='ES'?'  — aparecerá en la Consola Admin (Vendor/Admin).':'  — it now appears in the Admin Console.'));}
 applyI18n();renderHome();renderCats();
 </script>
 </body>

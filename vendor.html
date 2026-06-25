@@ -61,6 +61,7 @@
   @media print{body *{visibility:hidden;}#printArea,#printArea *{visibility:visible;}#printArea{display:block;position:absolute;inset:0;background:#fff;color:#111;padding:40px;font-family:Inter,sans-serif;}
     .pq h1{font-size:22px;margin:0;}.pq .muted{color:#555;}.pq table{width:100%;border-collapse:collapse;margin-top:14px;}.pq td{padding:6px 8px;border-bottom:1px solid #eee;font-size:13px;vertical-align:top;}.pq .sig{margin-top:40px;border-top:1px solid #999;width:240px;padding-top:6px;font-size:12px;color:#555;}}
 </style>
+<script src="store.js"></script>
 </head>
 <body>
 <div class="app">
@@ -116,6 +117,7 @@
         <div class="bar"><i id="scoreBar" style="width:0%"></i></div>
         <div class="flags" id="flags"></div>
       </div>
+      <div id="costBreak" class="meter" style="margin-top:12px"></div>
 
       <div class="actions">
         <button class="btn green" onclick="submitQuote()" id="b-submit" data-t="submit">Submit to NXT//LINK</button>
@@ -175,6 +177,7 @@ const COMMON_TOP=[
   F('qtype','Quote type','Tipo de cotización','s',{en:['Estimate','Price range','Formal quote','Requires site visit'],es:['Estimado','Rango de precio','Cotización formal','Requiere visita']}),
   F('serve','Can serve this location?','¿Puede atender esta ubicación?','s',{en:['Yes','No'],es:['Sí','No']}),
   F('bydeadline','Available by the deadline?','¿Disponible antes de la fecha límite?','s',{en:['Yes','No'],es:['Sí','No']}),
+  F('readiness','Quote readiness','Estado de la cotización','s',{en:['Can quote now','Need photos','Need site visit','Need NDA first','Need discovery call'],es:['Puedo cotizar ahora','Necesito fotos','Necesito visita al sitio','Necesito NDA primero','Necesito llamada']}),
 ];
 const COMMON_BOTTOM=[
   F('price','Price or price range','Precio o rango','t',null,1),
@@ -221,6 +224,7 @@ function onInput(){
   const missing=REQUIRED.filter(id=>!val(id)).map(id=>REQ_LABELS[id][LANG==='ES'?'es':'en']);
   $('flags').innerHTML=missing.length?('⚠ '+(LANG==='ES'?'Esta cotización está '+score+'% completa. Falta: ':'This quote is '+score+'% complete. Add: ')+missing.join(', ')):'✓ '+tr('allset');
   $('flags').style.color=missing.length?'var(--amber)':'var(--green)';
+  renderCostBreak();updateSubmitLabel();
   autosave();
 }
 /* autosave */
@@ -300,6 +304,13 @@ function renderProfile(){var p=PROF[LANG];var el=document.getElementById('profil
  '<div class="note" style="margin-bottom:8px">'+p.missLbl+'</div>'+
  '<div style="display:flex;flex-wrap:wrap;gap:7px">'+p.miss.map(function(m){return '<span style="font:600 12px/1 Inter;padding:5px 11px;border-radius:100px;background:rgba(251,191,36,.12);color:var(--amber);border:1px solid rgba(251,191,36,.35)">+ '+m+'</span>';}).join('')+'</div>';}
 renderProfile();
+function num(id){var v=val(id);var m=(v.match(/[0-9][0-9,.]*/g)||[]).map(function(x){return parseFloat(x.replace(/,/g,''));}).filter(function(n){return !isNaN(n)&&n>0;});return m.length?Math.max.apply(null,m):0;}
+function renderCostBreak(){var el=document.getElementById('costBreak');if(!el)return;var es=LANG==='ES';
+ var list=es?[['Mano de obra','labor'],['Cargo de servicio','service_fee'],['Cargo de viaje','travel'],['Partes/materiales','parts']]:[['Labor','labor'],['Service fee','service_fee'],['Travel fee','travel'],['Parts/materials','parts']];
+ var total=0;var rows=list.map(function(it){var n=num(it[1]);total+=n;return n?'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px"><span style="color:var(--gray)">'+it[0]+'</span><b>$'+n.toLocaleString()+'</b></div>':'';}).join('');
+ if(total<=0){el.innerHTML='<div class="note">'+(es?'Agrega costos (mano de obra, servicio, viaje, partes) para ver el desglose.':'Add costs (labor, service, travel, parts) to see a breakdown.')+'</div>';return;}
+ el.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><span style="font:600 14px Inter">'+(es?'Desglose de costos':'Cost breakdown')+'</span><span class="gk" style="color:var(--violet)">$'+total.toLocaleString()+'</span></div>'+rows+'<div style="display:flex;justify-content:space-between;padding:8px 0 0;font-weight:700"><span>'+(es?'Total estimado':'Estimated total')+'</span><span style="color:var(--violet)">$'+total.toLocaleString()+'</span></div>';}
+function updateSubmitLabel(){var sb=document.getElementById('b-submit');if(!sb)return;var rd=val('readiness');var canNow=(LANG==='ES'?'Puedo cotizar ahora':'Can quote now');if(rd&&rd!==canNow){sb.textContent=(LANG==='ES'?'Enviar — ':'Submit — ')+rd;}else{sb.textContent=tr('submit');}}
 </script>
 </body>
 </html>

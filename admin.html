@@ -60,6 +60,7 @@
   .check .c{width:20px;height:20px;border-radius:6px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.4);color:var(--green);display:grid;place-items:center;font-size:12px;flex:none;}
   .lawnote{margin-top:14px;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:11px 14px;color:var(--amber);font-size:12px;}
 </style>
+<script src="store.js"></script>
 </head>
 <body>
 <div class="app">
@@ -81,6 +82,7 @@
     <div class="card"><h2 class="gk" data-t="opH">Operating console</h2><p class="note" data-t="opP">Everything that needs attention, in one place. NXT//LINK sits in the middle of every request.</p>
       <div class="stats" id="statGrid" style="margin-top:14px"></div>
     </div>
+    <div class="card"><h2 class="gk" id="liveH">Live submitted requests</h2><p class="note" id="liveP">Synced from the client intake.</p><div id="liveReqs" style="margin-top:10px"></div></div>
     <div class="two">
       <div class="card"><h2 class="gk" data-t="nbaH">Next best actions</h2><div id="nbaList" style="margin-top:8px"></div></div>
       <div class="card"><h2 class="gk" data-t="notifH">Notifications</h2><p class="note" data-t="notifP">In-app · Email · SMS (urgent). Each user can opt in or out.</p><div id="notifList" style="margin-top:8px"></div></div>
@@ -227,7 +229,7 @@ function renderProof(){
 function tab(n){['console','money','reveal','proof','vintel'].forEach(x=>$('tab-'+x).classList.toggle('hidden',x!==n));document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===n));window.scrollTo({top:0,behavior:'smooth'});}
 function applyT(){document.querySelectorAll('[data-t]').forEach(e=>{const k=e.dataset.t;if(d()[k]!==undefined)e.textContent=d()[k];});
  $('asub').textContent=d().asub;$('t-console').textContent=d().tConsole;$('t-money').textContent=d().tMoney;$('t-reveal').textContent=d().tReveal;$('t-proof').textContent=d().tProof;$('t-vintel').textContent=d().tVintel;}
-function setLang(l){LANG=l;$('en').classList.toggle('on',l==='EN');$('es').classList.toggle('on',l==='ES');applyT();renderConsole();renderMoney();$('revealLog').dataset.init='';renderReveal();renderProof();renderVintel();}
+function setLang(l){LANG=l;$('en').classList.toggle('on',l==='EN');$('es').classList.toggle('on',l==='ES');applyT();renderConsole();renderMoney();$('revealLog').dataset.init='';renderReveal();renderProof();renderVintel();renderLive();}
 applyT();renderConsole();renderMoney();renderReveal();renderProof();
 const PERF=[['V-118','2.1h','96%','58%','0.4','A','Active'],['V-204','3.4h','91%','47%','0.8','A','Active'],['V-276','6.0h','88%','39%','1.1','B','Active'],['V-301','9.2h','74%','22%','2.0','B','Renew soon'],['V-339','28h','61%','9%','3.2','C','Expired'],['V-355','4.1h','93%','51%','0.6','A','Active']];
 const vstate=[0,1,2,3,2,1];const VCOL=['#34D399','#A855F7','#FBBF24','#F87171'];
@@ -237,6 +239,13 @@ function renderVintel(){var dd=D[LANG];var th=dd.perfTh;
  document.getElementById('learnList').innerHTML=dd.learn.map(function(x){return '<div class="li"><span class="dot" style="background:var(--violet)"></span><div class="t">'+x+'</div></div>';}).join('');}
 function cycleV(i){vstate[i]=(vstate[i]+1)%4;renderVintel();}
 renderVintel();
+function timeAgo(t){if(!t)return'';var s=Math.floor((Date.now()-t)/1000);if(s<60)return s+'s';if(s<3600)return Math.floor(s/60)+'m';return Math.floor(s/3600)+'h';}
+function renderLive(){var el=document.getElementById('liveReqs');if(!el||!window.NXT)return;var es=LANG==='ES';
+ document.getElementById('liveH').textContent=es?'Solicitudes en vivo':'Live submitted requests';
+ document.getElementById('liveP').textContent=es?'Sincronizado desde el intake del cliente — se actualiza solo, incluso entre pestañas.':'Synced from the client intake — updates automatically, even across browser tabs.';
+ var rs=NXT.getRequests();
+ el.innerHTML=rs.length?rs.map(function(r){return '<div class="li"><span class="dot" style="background:var(--green)"></span><div class="t"><b class="gk">'+esc(r.ref)+'</b> — '+esc(r.category||'')+'<small>'+esc(r.location||'')+' · '+esc(String(r.status||'').replace(/_/g,' '))+'</small></div><span class="time">'+timeAgo(r.created)+'</span></div>';}).join(''):'<p class="note">'+(es?'Aún no hay solicitudes. Envía una desde Inicio → Iniciar Búsqueda para verla aparecer aquí en vivo.':'No requests yet. Submit one from Home → Start My Search and watch it appear here live.')+'</p>';}
+if(window.NXT){renderLive();NXT.subscribe(renderLive);}
 </script>
 </body>
 </html>
