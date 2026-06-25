@@ -1,16 +1,21 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://yvykselwehxjwsqercjg.supabase.co',
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-);
+import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const industry = searchParams.get('industry') || 'manufacturing';
+
+  // Construct the client lazily inside the handler so the route module can be
+  // imported at build time (page-data collection) without Supabase env vars.
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json(
+      { error: 'Supabase is not configured', industry, total_signals: 0 },
+      { status: 503 },
+    );
+  }
+  const supabase = getSupabaseClient();
 
   // Parallel queries
   const [signalsRes, clustersRes, companiesRes, recentRes] = await Promise.all([
