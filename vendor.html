@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NXT//LINK — Vendor Quote Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0A0712;--charcoal:#15101F;--card:#1A1428;--line:#2A2140;--white:#F6F4FB;--gray:#A39FB5;--dim:#6E6885;
+    --purple:#8B5CF6;--purple2:#A855F7;--violet:#C4B5FD;--glow:rgba(139,92,246,.45);--green:#34D399;--amber:#FBBF24;--red:#F87171;}
+  *{box-sizing:border-box;}body{margin:0;background:var(--bg);color:var(--white);font-family:'Inter',system-ui,sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased;}
+  .gk{font-family:'Space Grotesk',sans-serif;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(60% 50% at 15% -5%,rgba(139,92,246,.18),transparent 60%),radial-gradient(50% 40% at 95% 0%,rgba(168,85,247,.10),transparent 55%);}
+  .app{position:relative;z-index:1;}
+  nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 24px;background:rgba(10,7,18,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);}
+  .logo{display:flex;align-items:center;gap:10px;}.logo .mk{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:linear-gradient(135deg,var(--purple),var(--purple2));box-shadow:0 0 16px var(--glow);}
+  .logo b{font:700 18px/1 'Space Grotesk';letter-spacing:-.5px;}.logo b i{color:var(--violet);font-style:normal;}
+  .logo .sub{font-size:11px;color:var(--gray);margin-left:2px;}
+  .navr{display:flex;align-items:center;gap:12px;}
+  .save{font-size:12px;color:var(--green);display:flex;align-items:center;gap:5px;}
+  .seg{display:flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;}
+  .seg button{border:none;background:none;color:var(--gray);font:700 12px/1 'Space Grotesk';padding:6px 8px;border-radius:6px;cursor:pointer;}.seg button.on{background:var(--purple);color:#fff;}
+  .wrap{max-width:1000px;margin:0 auto;padding:26px 20px 80px;}
+  .tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+  .tab{padding:9px 16px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--gray);cursor:pointer;font:600 14px/1 'Inter';}
+  .tab.on{background:var(--purple);border-color:var(--purple);color:#fff;}
+  .card{background:linear-gradient(180deg,var(--card),var(--charcoal));border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:16px;}
+  .opp{display:grid;grid-template-columns:1fr 1fr;gap:8px 22px;margin-top:12px;}
+  @media(max-width:620px){.opp{grid-template-columns:1fr;}}
+  .opp .row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px;}
+  .opp .row span{color:var(--gray);}.opp .row b{font-weight:600;text-align:right;}
+  .lock{color:var(--amber);font-size:12px;display:inline-flex;gap:5px;align-items:center;}
+  .btn{border:none;cursor:pointer;font:600 14px/1 'Inter';border-radius:11px;padding:12px 16px;background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;box-shadow:0 8px 22px -10px var(--glow);}
+  .btn:hover{filter:brightness(1.08);}.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--white);box-shadow:none;}
+  .btn.sm{padding:9px 13px;font-size:13px;}.btn.green{background:linear-gradient(135deg,#10B981,#34D399);}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
+  .reco{display:flex;align-items:center;gap:12px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.4);border-radius:12px;padding:12px 16px;margin-top:14px;}
+  .reco .t{flex:1;font-size:14px;}.reco .t b{color:var(--violet);}
+  .secLbl{font:700 12px/1 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:var(--violet);margin:22px 0 12px;}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}@media(max-width:600px){.grid{grid-template-columns:1fr;}}
+  label.f{display:flex;flex-direction:column;gap:6px;font:600 12px/1.2 'Inter';color:var(--gray);}
+  label.f.req span::after{content:' *';color:var(--purple2);}
+  .f input,.f select,.f textarea{padding:11px 13px;border-radius:10px;border:1px solid var(--line);background:#120D1E;color:var(--white);font:400 14px/1.3 'Inter';outline:none;width:100%;}
+  .f input:focus,.f select:focus,.f textarea:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(139,92,246,.18);}
+  .full{grid-column:1/-1;}
+  .meter{margin-top:18px;background:var(--charcoal);border:1px solid var(--line);border-radius:13px;padding:16px;}
+  .meter .top{display:flex;justify-content:space-between;align-items:center;font:600 14px/1 'Inter';}
+  .bar{height:9px;background:#241B38;border-radius:6px;overflow:hidden;margin:10px 0;}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--purple),var(--purple2));transition:width .3s;}
+  .flags{font-size:13px;color:var(--amber);}
+  .pill{display:inline-block;font:700 10px/1 'Space Grotesk';padding:4px 9px;border-radius:100px;background:rgba(251,191,36,.15);color:var(--amber);border:1px solid rgba(251,191,36,.4);letter-spacing:.05em;}
+  .qrow{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:var(--charcoal);}
+  .qrow .meta{font-size:13px;color:var(--gray);}.qrow .meta b{color:var(--white);}
+  .stat{font:700 11px/1 'Space Grotesk';padding:4px 9px;border-radius:100px;text-transform:uppercase;letter-spacing:.04em;}
+  .s-draft{background:rgba(163,159,181,.15);color:var(--gray);}.s-sub{background:rgba(52,211,153,.15);color:var(--green);}.s-tpl{background:rgba(139,92,246,.15);color:var(--violet);}
+  .hidden{display:none!important;}
+  .note{color:var(--dim);font-size:12.5px;}
+  .guard{margin-top:18px;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:12px 14px;color:var(--amber);font-size:12.5px;}
+  /* print quote */
+  #printArea{display:none;}
+  @media print{body *{visibility:hidden;}#printArea,#printArea *{visibility:visible;}#printArea{display:block;position:absolute;inset:0;background:#fff;color:#111;padding:40px;font-family:Inter,sans-serif;}
+    .pq h1{font-size:22px;margin:0;}.pq .muted{color:#555;}.pq table{width:100%;border-collapse:collapse;margin-top:14px;}.pq td{padding:6px 8px;border-bottom:1px solid #eee;font-size:13px;vertical-align:top;}.pq .sig{margin-top:40px;border-top:1px solid #999;width:240px;padding-top:6px;font-size:12px;color:#555;}}
+</style>
+</head>
+<body>
+<div class="app">
+<nav>
+  <div class="logo"><span class="mk"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h12"/><path d="m13 8 4 4-4 4"/></svg></span><b>NXT<i>//</i>LINK</b><span class="sub" id="asub">Quote Assistant</span></div>
+  <div class="navr">
+    <span class="save" id="saveStatus"></span>
+    <div class="seg"><button id="en" class="on" onclick="setLang('EN')">EN</button><button id="es" onclick="setLang('ES')">ES</button></div>
+  </div>
+</nav>
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab on" data-tab="opp" onclick="tab('opp')" id="t-opp">Opportunity &amp; Quote</button>
+    <button class="tab" data-tab="saved" onclick="tab('saved')" id="t-saved">Saved Quotes</button>
+    <button class="tab" data-tab="lib" onclick="tab('lib')" id="t-lib">Template Library</button>
+  </div>
+
+  <!-- ===== OPPORTUNITY & QUOTE ===== -->
+  <div id="tab-opp">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <h2 class="gk" style="margin:0;font-size:20px" id="oppH">Protected opportunity</h2>
+        <span class="lock">🔒 <span id="oppLock">Client identity hidden</span></span>
+      </div>
+      <div class="opp" id="oppGrid"></div>
+      <div class="reco"><span style="font-size:20px">✦</span><div class="t" id="recoText"></div><button class="btn sm" onclick="insertRecommended()" id="recoBtn">Insert Template</button></div>
+      <div class="actions">
+        <button class="btn" onclick="draftAI()" id="b-ai">✦ <span data-t="draftAI">Draft with AI</span></button>
+        <button class="btn ghost" onclick="tab('lib')" id="b-tpl" data-t="useTpl">Use Saved Template</button>
+        <button class="btn ghost" onclick="scrollForm()" id="b-man" data-t="manual">Create Manually</button>
+        <button class="btn ghost" onclick="alert(LANG==='ES'?'Mensaje enviado a NXT//LINK (demo)':'Message sent to NXT//LINK (demo)')" id="b-ask" data-t="askMore">Ask NXT//LINK for More Info</button>
+      </div>
+    </div>
+
+    <div class="card" id="formCard">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <h2 class="gk" style="margin:0;font-size:18px" data-t="quoteResp">Quote response</h2>
+        <span class="pill">DRAFT</span>
+      </div>
+      <form id="quoteForm" oninput="onInput()">
+        <div class="secLbl"><span data-t="basics">Basics</span> · <span class="note" id="catName"></span></div>
+        <div class="grid" id="commonTop"></div>
+        <div class="secLbl" id="catLbl" data-t="catFields">Category details</div>
+        <div class="grid" id="catFields"></div>
+        <div class="secLbl" data-t="pricing">Pricing & terms</div>
+        <div class="grid" id="commonBottom"></div>
+      </form>
+
+      <div class="meter">
+        <div class="top"><span data-t="complete">Quote completeness</span><span id="scoreNum" class="gk" style="color:var(--violet)">0%</span></div>
+        <div class="bar"><i id="scoreBar" style="width:0%"></i></div>
+        <div class="flags" id="flags"></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn green" onclick="submitQuote()" id="b-submit" data-t="submit">Submit to NXT//LINK</button>
+        <button class="btn ghost" onclick="saveDraft()" data-t="saveDraft">Save draft</button>
+        <button class="btn ghost" onclick="saveTemplate()" data-t="saveTpl">Save as template</button>
+        <button class="btn ghost" onclick="genPDF()" data-t="pdf">Generate Quote PDF</button>
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--gray)"><input type="checkbox" id="clientSafe" style="width:auto"> <span data-t="csafe">Client-safe PDF (hide my name → Option A)</span></label>
+      </div>
+      <div class="guard" id="guardText"></div>
+    </div>
+  </div>
+
+  <!-- ===== SAVED QUOTES ===== -->
+  <div id="tab-saved" class="hidden">
+    <div class="card"><h2 class="gk" style="margin:0 0 4px" data-t="savedH">Saved Quotes</h2><p class="note" data-t="savedP">Drafts, submitted quotes, and reusable items. Everything here is yours.</p><div id="savedList" style="margin-top:14px"></div></div>
+  </div>
+
+  <!-- ===== TEMPLATE LIBRARY ===== -->
+  <div id="tab-lib" class="hidden">
+    <div class="card"><h2 class="gk" style="margin:0 0 4px" data-t="libH">Quote Template Library</h2><p class="note" data-t="libP">Reusable templates by category. Insert one into a quote, then edit before submitting.</p><div id="libList" style="margin-top:14px"></div></div>
+  </div>
+</div>
+</div>
+
+<!-- print -->
+<div id="printArea"><div class="pq" id="pqBody"></div></div>
+
+<script>
+let LANG='EN';
+const T={EN:{asub:'Quote Assistant',draftAI:'Draft with AI',useTpl:'Use Saved Template',manual:'Create Manually',askMore:'Ask NXT//LINK for More Info',
+  quoteResp:'Quote response',basics:'Basics',catFields:'Category details',pricing:'Pricing & terms',complete:'Quote completeness',
+  submit:'Submit to NXT//LINK',saveDraft:'Save draft',saveTpl:'Save as template',pdf:'Generate Quote PDF',csafe:'Client-safe PDF (hide my name → Option A)',
+  savedH:'Saved Quotes',savedP:'Drafts, submitted quotes, and reusable items. Everything here is yours.',libH:'Quote Template Library',libP:'Reusable templates by category. Insert one into a quote, then edit before submitting.',
+  oppH:'Protected opportunity',oppLock:'Client identity hidden',recoBtn:'Insert Template',tOpp:'Opportunity & Quote',tSaved:'Saved Quotes',tLib:'Template Library',
+  reco:'Recommended template: ',saved:'Saved',submitted:'Submitted!',addBefore:'Add the highlighted fields before submitting.',allset:'All required fields complete — ready to submit.',
+  guard:'AI never submits automatically, never reveals client identity, never invents pricing or warranties, and marks everything as a draft. You review and approve before anything is sent. Suggest "requires site visit" if a quote can\'t be accurate.',
+  view:'View',edit:'Edit',dup:'Duplicate',usetpl:'Use as template',insert:'Insert',del:'Delete',none:'Nothing here yet.'},
+ ES:{asub:'Asistente de Cotización',draftAI:'Crear con AI',useTpl:'Usar Plantilla Guardada',manual:'Crear Manual',askMore:'Pedir Más Información a NXT//LINK',
+  quoteResp:'Respuesta de cotización',basics:'Básicos',catFields:'Detalles por categoría',pricing:'Precios y términos',complete:'Completitud de la cotización',
+  submit:'Enviar a NXT//LINK',saveDraft:'Guardar borrador',saveTpl:'Guardar como plantilla',pdf:'Generar PDF',csafe:'PDF seguro (ocultar mi nombre → Opción A)',
+  savedH:'Cotizaciones Guardadas',savedP:'Borradores, cotizaciones enviadas y elementos reutilizables. Todo aquí es tuyo.',libH:'Biblioteca de Plantillas',libP:'Plantillas reutilizables por categoría. Inserta una y edítala antes de enviar.',
+  oppH:'Oportunidad protegida',oppLock:'Identidad del cliente oculta',recoBtn:'Insertar Plantilla',tOpp:'Oportunidad y Cotización',tSaved:'Cotizaciones Guardadas',tLib:'Biblioteca',
+  reco:'Plantilla recomendada: ',saved:'Guardado',submitted:'¡Enviada!',addBefore:'Agrega los campos marcados antes de enviar.',allset:'Campos requeridos completos — lista para enviar.',
+  guard:'La AI nunca envía automáticamente, nunca revela la identidad del cliente, nunca inventa precios ni garantías, y marca todo como borrador. Tú revisas y apruebas antes de enviar. Sugiere "requiere visita" si la cotización no puede ser exacta.',
+  view:'Ver',edit:'Editar',dup:'Duplicar',usetpl:'Usar como plantilla',insert:'Insertar',del:'Eliminar',none:'Nada aquí todavía.'}};
+const tr=k=>T[LANG][k];
+
+/* opportunity */
+const OPP={ref:'OPP-3F9K2',category:'forklift',
+  en:[['Opportunity ID','OPP-3F9K2'],['General industry','Warehouse / logistics'],['General location','El Paso (general)'],['Need','Forklift preventive maintenance'],['Quantity','6 units'],['Timeline','Next week'],['Budget','Hidden until approved'],['NDA / MNDA','Not required'],['Quote deadline','In 3 days']],
+  es:[['ID de oportunidad','OPP-3F9K2'],['Industria general','Almacén / logística'],['Ubicación general','El Paso (general)'],['Necesidad','Mantenimiento preventivo de montacargas'],['Cantidad','6 unidades'],['Tiempo','Próxima semana'],['Presupuesto','Oculto hasta aprobar'],['NDA / MNDA','No requerido'],['Fecha límite','En 3 días']]};
+
+/* field configs */
+const F=(id,en,es,t,o,req)=>({id,en,es,t:t||'t',o,req});
+const COMMON_TOP=[
+  F('title','Quote title','Título de la cotización','t',null,0),
+  F('qtype','Quote type','Tipo de cotización','s',{en:['Estimate','Price range','Formal quote','Requires site visit'],es:['Estimado','Rango de precio','Cotización formal','Requiere visita']}),
+  F('serve','Can serve this location?','¿Puede atender esta ubicación?','s',{en:['Yes','No'],es:['Sí','No']}),
+  F('bydeadline','Available by the deadline?','¿Disponible antes de la fecha límite?','s',{en:['Yes','No'],es:['Sí','No']}),
+];
+const COMMON_BOTTOM=[
+  F('price','Price or price range','Precio o rango','t',null,1),
+  F('labor','Labor rate','Tarifa de mano de obra','t'),
+  F('service_fee','Service / call fee','Cargo de servicio','t'),
+  F('travel','Travel fee','Cargo de viaje','t'),
+  F('parts','Parts / materials cost','Costo de partes/materiales','t'),
+  F('lead','Lead time / timeline','Tiempo de entrega','t',null,1),
+  F('included','What is included','Qué incluye','a',null,1),
+  F('excluded','What is not included','Qué no incluye','a',null,0),
+  F('warranty','Warranty','Garantía','t',null,1),
+  F('payment','Payment terms','Términos de pago','t',null,1),
+  F('expiration','Quote expiration date','Fecha de expiración','t',null,1),
+  F('next','Required next information','Información requerida','a'),
+  F('questions','Questions for NXT//LINK / client','Preguntas para NXT//LINK / cliente','a'),
+  F('notes','Internal vendor notes','Notas internas (privadas)','a'),
+];
+const CAT_FIELDS={
+  forklift:[F('response','Response time','Tiempo de respuesta','t'),F('units','Forklifts covered','Montacargas cubiertos','t'),F('recurring','Recurring PM option?','¿Opción de PM recurrente?','s',{en:['Yes','No'],es:['Sí','No']}),F('battery','Battery/tire/charger available?','¿Batería/llantas/cargador?','s',{en:['Yes','No'],es:['Sí','No']})],
+  transport:[F('ratetype','Rate type','Tipo de tarifa','s',{en:['Per mile','Flat rate','Per load','Hourly','Custom'],es:['Por milla','Tarifa fija','Por carga','Por hora','Personalizado']}),F('fuel','Fuel surcharge','Recargo de combustible','t'),F('liftgate','Liftgate fee','Cargo de liftgate','t'),F('border','Border/crossing fee','Cargo de cruce','t'),F('pod','Proof of delivery?','¿Prueba de entrega?','s',{en:['Yes','No'],es:['Sí','No']})],
+  staffing:[F('bill','Hourly bill rate','Tarifa por hora','t'),F('minhrs','Minimum hours','Horas mínimas','t'),F('replace','Replacement policy','Política de reemplazo','t'),F('checks','Background/drug test available?','¿Background/drug test?','s',{en:['Both','Background only','Drug test only','None'],es:['Ambos','Solo background','Solo drug test','Ninguno']}),F('bil','Bilingual staff?','¿Personal bilingüe?','s',{en:['Yes','No'],es:['Sí','No']})],
+  parts:[F('exact','Exact part available?','¿Parte exacta disponible?','s',{en:['Yes','Equivalent','No'],es:['Sí','Equivalente','No']}),F('kind','OEM / aftermarket / used','OEM / aftermarket / usado','s',{en:['OEM','Aftermarket','Used','Refurbished'],es:['OEM','Aftermarket','Usado','Reacondicionado']}),F('unit','Unit price','Precio unitario','t'),F('moq','Minimum order qty','Cantidad mínima','t'),F('install','Installation available?','¿Instalación disponible?','s',{en:['Yes','No'],es:['Sí','No']})],
+  technology:[F('model','Pricing model','Modelo de precio','t'),F('demo','Demo available?','¿Demo disponible?','s',{en:['Yes','No'],es:['Sí','No']}),F('pilot','Pilot available?','¿Piloto disponible?','s',{en:['Free pilot','Paid pilot','Proof of concept','Demo only','No'],es:['Piloto gratis','Piloto pagado','Prueba de concepto','Solo demo','No']}),F('impl','Implementation timeline','Tiempo de implementación','t'),F('support','Support included?','¿Soporte incluido?','s',{en:['Yes','No'],es:['Sí','No']})]
+};
+const REQUIRED=['price','lead','included','warranty','payment','expiration'];
+const REQ_LABELS={price:{en:'price',es:'precio'},lead:{en:'lead time',es:'tiempo de entrega'},included:{en:'what is included',es:'qué incluye'},warranty:{en:'warranty',es:'garantía'},payment:{en:'payment terms',es:'términos de pago'},expiration:{en:'expiration date',es:'fecha de expiración'}};
+
+const $=id=>document.getElementById(id);
+const val=id=>{const e=$('q_'+id);return e?e.value.trim():'';};
+const lab=f=>LANG==='ES'?f.es:f.en;
+function fieldHTML(f){const id='q_'+f.id;let inner;
+  if(f.t==='s'){const arr=LANG==='ES'?f.o.es:f.o.en;inner='<select id="'+id+'"><option value="">—</option>'+arr.map(o=>'<option>'+o+'</option>').join('')+'</select>';}
+  else if(f.t==='a')inner='<textarea id="'+id+'" rows="2"></textarea>';else inner='<input id="'+id+'">';
+  return '<label class="f'+(f.req?' req':'')+(f.t==='a'?' full':'')+'"><span>'+lab(f)+'</span>'+inner+'</label>';}
+function renderForm(){
+  $('commonTop').innerHTML=COMMON_TOP.map(fieldHTML).join('');
+  $('catFields').innerHTML=(CAT_FIELDS[OPP.category]||[]).map(fieldHTML).join('');
+  $('commonBottom').innerHTML=COMMON_BOTTOM.map(fieldHTML).join('');
+}
+/* completeness */
+function onInput(){
+  const filled=REQUIRED.filter(id=>val(id));const score=Math.round(filled.length/REQUIRED.length*100);
+  $('scoreNum').textContent=score+'%';$('scoreBar').style.width=score+'%';
+  const missing=REQUIRED.filter(id=>!val(id)).map(id=>REQ_LABELS[id][LANG==='ES'?'es':'en']);
+  $('flags').innerHTML=missing.length?('⚠ '+(LANG==='ES'?'Esta cotización está '+score+'% completa. Falta: ':'This quote is '+score+'% complete. Add: ')+missing.join(', ')):'✓ '+tr('allset');
+  $('flags').style.color=missing.length?'var(--amber)':'var(--green)';
+  autosave();
+}
+/* autosave */
+let saveTimer=null;
+function autosave(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{
+  const data={};[...COMMON_TOP,...(CAT_FIELDS[OPP.category]||[]),...COMMON_BOTTOM].forEach(f=>data[f.id]=val(f.id));
+  try{localStorage.setItem('nxt_vendor_autosave',JSON.stringify(data));}catch(e){}
+  const d=new Date();$('saveStatus').innerHTML='✓ '+tr('saved')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');
+},600);}
+function restore(){try{const d=JSON.parse(localStorage.getItem('nxt_vendor_autosave')||'{}');Object.keys(d).forEach(k=>{const e=$('q_'+k);if(e&&d[k])e.value=d[k];});}catch(e){}onInput();}
+/* AI draft (deterministic) */
+function draftAI(){
+  const es=LANG==='ES';const set=(id,v)=>{const e=$('q_'+id);if(e&&!e.value)e.value=v;};
+  set('title',es?'Cotización — '+OPP.es[3][1]:'Quote — '+OPP.en[3][1]);
+  set('qtype',es?'Rango de precio':'Price range');set('serve',es?'Sí':'Yes');set('bydeadline',es?'Sí':'Yes');
+  set('price',es?'$2,400 – $3,100 (6 unidades, PM estándar)':'$2,400 – $3,100 (6 units, standard PM)');
+  set('labor',es?'$95/hora':'$95/hr');set('lead',es?'3–5 días hábiles tras cotización firmada':'3–5 business days after signed quote');
+  set('included',es?'Mano de obra, inspección de 30 puntos, fluidos básicos, reporte':'Labor, 30-point inspection, basic fluids, report');
+  set('excluded',es?'Partes mayores, impuestos, trabajo fuera de horario':'Major parts, taxes, after-hours work');
+  set('warranty',es?'90 días en mano de obra':'90 days on labor');set('payment',es?'Neto 30':'Net 30');
+  set('expiration',es?'30 días desde hoy':'30 days from today');
+  set('next',es?'Confirmar marca/modelo y si alguna unidad está detenida':'Confirm brand/model and whether any unit is down');
+  if(OPP.category==='forklift'){set('response',es?'24–48 horas':'24–48 hours');set('units','6');set('recurring',es?'Sí':'Yes');set('battery',es?'Sí':'Yes');}
+  onInput();flash($('b-ai'));
+}
+function flash(b){b.style.filter='brightness(1.4)';setTimeout(()=>b.style.filter='',250);}
+/* recommended template */
+const TPL_NAMES={forklift:{en:'Forklift PM Service Quote',es:'Cotización PM de Montacargas'},transport:{en:'Cross-Border FTL Quote',es:'Cotización FTL Transfronterizo'},staffing:{en:'Warehouse Staffing Quote',es:'Cotización de Personal de Almacén'},parts:{en:'Forklift Parts Supply Quote',es:'Cotización de Partes'},labels:{en:'Zebra 4x6 Label Supply Quote',es:'Cotización de Etiquetas Zebra 4x6'},technology:{en:'WMS Pilot Quote',es:'Cotización de Piloto WMS'}};
+function renderReco(){const n=TPL_NAMES[OPP.category]||{en:'Category template',es:'Plantilla'};$('recoText').innerHTML=tr('reco')+'<b>'+(LANG==='ES'?n.es:n.en)+'</b>';}
+function insertRecommended(){draftAI();tab('opp');scrollForm();}
+
+/* storage: saved quotes + templates */
+const getArr=k=>{try{return JSON.parse(localStorage.getItem(k)||'[]');}catch(e){return[];}};
+const setArr=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}};
+function snapshot(){const d={};[...COMMON_TOP,...(CAT_FIELDS[OPP.category]||[]),...COMMON_BOTTOM].forEach(f=>d[f.id]=val(f.id));return d;}
+function saveDraft(){const arr=getArr('nxt_saved');arr.unshift({id:'Q-'+Math.random().toString(36).slice(2,7).toUpperCase(),opp:OPP.ref,cat:OPP.category,desc:(LANG==='ES'?OPP.es[3][1]:OPP.en[3][1]),amount:val('price')||'—',status:'draft',exp:val('expiration')||'—',data:snapshot(),date:dateStr()});setArr('nxt_saved',arr);renderSaved();flash($('b-submit'));toast(LANG==='ES'?'Borrador guardado':'Draft saved');}
+function submitQuote(){const miss=REQUIRED.filter(id=>!val(id));if(miss.length){tab('opp');onInput();toast(tr('addBefore'));return;}const arr=getArr('nxt_saved');arr.unshift({id:'Q-'+Math.random().toString(36).slice(2,7).toUpperCase(),opp:OPP.ref,cat:OPP.category,desc:(LANG==='ES'?OPP.es[3][1]:OPP.en[3][1]),amount:val('price'),status:'submitted',exp:val('expiration'),data:snapshot(),date:dateStr()});setArr('nxt_saved',arr);renderSaved();toast(tr('submitted'));}
+function saveTemplate(){const name=prompt(LANG==='ES'?'Nombre de la plantilla:':'Template name:',(TPL_NAMES[OPP.category]||{en:'My template'}).en);if(!name)return;const arr=getArr('nxt_tpl');arr.unshift({id:'T-'+Math.random().toString(36).slice(2,7).toUpperCase(),name,cat:OPP.category,data:snapshot(),date:dateStr()});setArr('nxt_tpl',arr);renderLib();toast(LANG==='ES'?'Plantilla guardada':'Template saved');}
+function loadData(d){Object.keys(d||{}).forEach(k=>{const e=$('q_'+k);if(e)e.value=d[k];});onInput();}
+function dateStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function toast(m){const t=document.createElement('div');t.textContent=m;t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1A1428;border:1px solid var(--line);color:#fff;padding:12px 20px;border-radius:12px;z-index:99;box-shadow:0 14px 40px -10px #000;font-size:14px';document.body.appendChild(t);setTimeout(()=>t.remove(),2200);}
+
+const STAT_LABELS={draft:{en:'Draft',es:'Borrador',c:'s-draft'},submitted:{en:'Submitted',es:'Enviada',c:'s-sub'},template:{en:'Template',es:'Plantilla',c:'s-tpl'}};
+function renderSaved(){const arr=getArr('nxt_saved');$('savedList').innerHTML=arr.length?arr.map(q=>{const s=STAT_LABELS[q.status];return '<div class="qrow"><div><b class="gk">'+q.id+'</b> <span class="stat '+s.c+'">'+(LANG==='ES'?s.es:s.en)+'</span><div class="meta">'+q.opp+' · '+esc(q.desc)+' · <b>'+esc(q.amount)+'</b> · '+q.date+'</div></div><div style="display:flex;gap:6px"><button class="btn sm ghost" onclick="useSaved(\''+q.id+'\')">'+tr('edit')+'</button><button class="btn sm ghost" onclick="delItem(\'nxt_saved\',\''+q.id+'\')">'+tr('del')+'</button></div></div>';}).join(''):'<p class="note">'+tr('none')+'</p>';}
+function renderLib(){const seed=Object.keys(TPL_NAMES).map(c=>({id:'seed-'+c,name:(LANG==='ES'?TPL_NAMES[c].es:TPL_NAMES[c].en),cat:c,seed:1}));const arr=getArr('nxt_tpl');const all=[...arr,...seed];$('libList').innerHTML=all.map(t=>'<div class="qrow"><div><b>'+esc(t.name)+'</b> <span class="stat s-tpl">'+esc(t.cat)+'</span>'+(t.seed?'':'<div class="meta">'+t.date+'</div>')+'</div><div style="display:flex;gap:6px"><button class="btn sm" onclick="insertTpl(\''+t.id+'\')">'+tr('insert')+'</button>'+(t.seed?'':'<button class="btn sm ghost" onclick="delItem(\'nxt_tpl\',\''+t.id+'\')">'+tr('del')+'</button>')+'</div></div>').join('');}
+function useSaved(id){const q=getArr('nxt_saved').find(x=>x.id===id);if(!q)return;tab('opp');loadData(q.data);scrollForm();}
+function insertTpl(id){if(id.startsWith('seed-')){draftAI();}else{const t=getArr('nxt_tpl').find(x=>x.id===id);if(t)loadData(t.data);}tab('opp');scrollForm();toast(LANG==='ES'?'Plantilla insertada':'Template inserted');}
+function delItem(k,id){setArr(k,getArr(k).filter(x=>x.id!==id));renderSaved();renderLib();}
+
+/* PDF */
+function genPDF(){const safe=$('clientSafe').checked;const es=LANG==='ES';
+  const rows=[['#',OPP.ref+' / Q-'+Math.random().toString(36).slice(2,6).toUpperCase()],[es?'Fecha':'Date',dateStr()],[es?'Válido hasta':'Valid until',val('expiration')||'—'],[es?'Descripción':'Description',(es?OPP.es[3][1]:OPP.en[3][1])],[es?'Cantidad':'Quantity',(es?OPP.es[4][1]:OPP.en[4][1])],[es?'Precio':'Price',val('price')||'—'],[es?'Incluye':'Included',val('included')||'—'],[es?'No incluye':'Not included',val('excluded')||'—'],[es?'Tiempo':'Timeline',val('lead')||'—'],[es?'Garantía':'Warranty',val('warranty')||'—'],[es?'Términos de pago':'Payment terms',val('payment')||'—']];
+  const vendor=safe?(es?'Opción A — Proveedor (nombre oculto)':'Option A — Provider (name hidden)'):'Borderplex Forklift Services';
+  $('pqBody').innerHTML='<h1>'+vendor+'</h1><div class="muted">NXT//LINK '+(es?'cotización protegida':'protected quote')+'</div><table>'+rows.map(r=>'<tr><td style="width:160px;color:#666">'+r[0]+'</td><td>'+esc(r[1])+'</td></tr>').join('')+'</table><div class="sig">'+(es?'Firma autorizada':'Authorized signature')+'</div>';
+  window.print();
+}
+
+/* shell */
+function tab(n){['opp','saved','lib'].forEach(x=>$('tab-'+x).classList.toggle('hidden',x!==n));document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===n));window.scrollTo({top:0,behavior:'smooth'});}
+function scrollForm(){$('formCard').scrollIntoView({behavior:'smooth'});}
+function esc(s){return String(s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));}
+function renderOpp(){$('oppGrid').innerHTML=(LANG==='ES'?OPP.es:OPP.en).map(r=>'<div class="row"><span>'+r[0]+'</span><b>'+esc(r[1])+'</b></div>').join('');$('catName').textContent=(TPL_NAMES[OPP.category]?(LANG==='ES'?'':''):'')+OPP.category;}
+function applyT(){document.querySelectorAll('[data-t]').forEach(e=>{const k=e.dataset.t;if(T[LANG][k]!==undefined)e.textContent=T[LANG][k];});
+  $('asub').textContent=tr('asub');$('oppH').textContent=tr('oppH');$('oppLock').textContent=tr('oppLock');$('recoBtn').textContent=tr('recoBtn');
+  $('t-opp').textContent=tr('tOpp');$('t-saved').textContent=tr('tSaved');$('t-lib').textContent=tr('tLib');$('guardText').textContent=tr('guard');}
+function setLang(l){LANG=l;$('en').classList.toggle('on',l==='EN');$('es').classList.toggle('on',l==='ES');
+  const cur=snapshot();applyT();renderForm();loadData(cur);renderOpp();renderReco();renderSaved();renderLib();}
+applyT();renderForm();renderOpp();renderReco();renderSaved();renderLib();restore();
+</script>
+</body>
+</html>
