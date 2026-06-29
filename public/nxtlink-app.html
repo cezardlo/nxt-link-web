@@ -4,105 +4,117 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>NXT//LINK — Private AI Sourcing Desk for Warehouses</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --black:#08060F; --bg:#0A0712; --charcoal:#15101F; --card:#1A1428; --line:#2A2140;
-    --white:#F6F4FB; --gray:#A39FB5; --dim:#6E6885;
-    --purple:#8B5CF6; --purple2:#A855F7; --violet:#C4B5FD; --glow:rgba(139,92,246,.45);
-    --green:#34D399; --amber:#FBBF24; --red:#F87171;
+    --bg:#F8FAFC;--surface:#FFFFFF;--surface-2:#F1F5F9;--line:#E2E8F0;--line-2:#CBD5E1;
+    --ink:#0F172A;--ink-2:#475569;--ink-3:#94A3B8;
+    --brand:#2563EB;--brand-2:#1D4ED8;--brand-soft:#EFF4FF;--brand-line:#BFD4FF;
+    --green:#16A34A;--green-soft:#DCFCE7;--amber:#D97706;--amber-soft:#FEF3C7;--red:#DC2626;
+    --radius:14px;--radius-lg:20px;
+    --shadow-sm:0 1px 2px rgba(15,23,42,.04),0 1px 3px rgba(15,23,42,.06);
+    --shadow-md:0 4px 6px -2px rgba(15,23,42,.05),0 12px 24px -8px rgba(15,23,42,.10);
+    --shadow-lg:0 24px 50px -28px rgba(15,23,42,.28);
   }
   *{box-sizing:border-box;}
   html{scroll-behavior:smooth;}
-  body{margin:0;background:var(--bg);color:var(--white);font-family:'Inter',system-ui,sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased;}
-  .gk{font-family:'Space Grotesk',sans-serif;}
-  body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
-    background:radial-gradient(60% 50% at 20% -5%,rgba(139,92,246,.20),transparent 60%),radial-gradient(50% 40% at 95% 0%,rgba(168,85,247,.12),transparent 55%);}
-  .app{position:relative;z-index:1;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,-apple-system,sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3,h4{letter-spacing:-.02em;color:var(--ink);}
+  a{color:var(--brand);}
+  :focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
+  .app{position:relative;}
   /* nav */
   nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:20px;
-    padding:14px 28px;background:rgba(8,6,15,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);}
-  .logo{display:flex;align-items:center;gap:10px;cursor:pointer;text-decoration:none;color:var(--white);}
-  .logo .mk{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:linear-gradient(135deg,var(--purple),var(--purple2));box-shadow:0 0 18px var(--glow);}
-  .logo b{font:700 19px/1 'Space Grotesk';letter-spacing:-.5px;}.logo b i{color:var(--violet);font-style:normal;}
-  .navlinks{display:flex;gap:8px;align-items:center;}
-  .navlinks a{color:var(--gray);text-decoration:none;font-size:14px;font-weight:500;padding:8px 12px;border-radius:9px;cursor:pointer;}
-  .navlinks a:hover,.navlinks a.active{color:var(--white);background:rgba(139,92,246,.12);}
-  @media(max-width:860px){.navlinks .hidem{display:none;}}
-  .seg{display:flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;}
-  .seg button{border:none;background:none;color:var(--gray);font:700 12px/1 'Space Grotesk';padding:6px 8px;border-radius:6px;cursor:pointer;}
-  .seg button.on{background:var(--purple);color:#fff;}
-  .btn{border:none;cursor:pointer;font:600 14px/1 'Inter';border-radius:11px;padding:12px 18px;background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;box-shadow:0 8px 24px -8px var(--glow);}
-  .btn:hover{filter:brightness(1.08);}
-  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--white);box-shadow:none;}
+    padding:13px 28px;background:#fff;border-bottom:1px solid var(--line);box-shadow:var(--shadow-sm);}
+  .logo{display:flex;align-items:center;gap:10px;cursor:pointer;text-decoration:none;color:var(--ink);}
+  .logo .mk{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--brand);}
+  .logo b{font:800 19px/1 'Inter';letter-spacing:-.03em;}.logo b i{color:var(--brand);font-style:normal;}
+  .navlinks{display:flex;gap:6px;align-items:center;}
+  .navlinks a{color:var(--ink-2);text-decoration:none;font-size:14px;font-weight:500;padding:8px 12px;border-radius:8px;cursor:pointer;}
+  .navlinks a:hover,.navlinks a.active{color:var(--brand);background:var(--brand-soft);}
+  @media(max-width:900px){.navlinks .hidem{display:none;}}
+  .seg{display:flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;background:#fff;}
+  .seg button{border:none;background:none;color:var(--ink-2);font:600 12px/1 'Inter';padding:6px 9px;border-radius:6px;cursor:pointer;}
+  .seg button.on{background:var(--brand);color:#fff;}
+  .btn{border:none;cursor:pointer;font:600 14px/1 'Inter';border-radius:10px;padding:12px 18px;background:var(--brand);color:#fff;box-shadow:var(--shadow-sm);}
+  .btn:hover{background:var(--brand-2);}
+  .btn.ghost{background:#fff;border:1px solid var(--line-2);color:var(--ink);box-shadow:none;}
+  .btn.ghost:hover{border-color:var(--brand);color:var(--brand);}
   .btn.sm{padding:9px 14px;font-size:13px;}
   /* layout */
   section.view{display:none;}section.view.on{display:block;}
   .wrap{max-width:1080px;margin:0 auto;padding:0 24px;}
-  .eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 13px;border-radius:100px;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.35);color:var(--violet);font:600 11px/1 'Space Grotesk';letter-spacing:.12em;text-transform:uppercase;}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 13px;border-radius:100px;background:var(--brand-soft);border:1px solid var(--brand-line);color:var(--brand-2);font:600 11px/1 'Inter';letter-spacing:.1em;text-transform:uppercase;}
   /* hero */
-  .hero{padding:74px 0 40px;text-align:center;}
-  .hero h1{font:700 clamp(34px,5.4vw,62px)/1.05 'Space Grotesk';letter-spacing:-1.5px;margin:22px auto 0;max-width:880px;}
-  .hero h1 .pp{background:linear-gradient(120deg,var(--purple2),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent;}
-  .hero p.sub{color:var(--gray);font-size:18px;line-height:1.6;max-width:680px;margin:20px auto 0;}
+  .hero{padding:72px 0 36px;text-align:center;}
+  .hero h1{font:800 clamp(34px,5.2vw,60px)/1.05 'Inter';letter-spacing:-.035em;margin:22px auto 0;max-width:880px;}
+  .hero h1 .pp{color:var(--brand);}
+  .hero p.sub{color:var(--ink-2);font-size:18px;line-height:1.6;max-width:680px;margin:20px auto 0;}
   .cta{display:flex;gap:14px;justify-content:center;margin-top:30px;flex-wrap:wrap;}
   .badges{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:34px auto 0;max-width:760px;}
-  .badge{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--gray);background:var(--charcoal);border:1px solid var(--line);border-radius:100px;padding:8px 14px;}
-  .badge svg{color:var(--purple2);}
+  .badge{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-2);background:#fff;border:1px solid var(--line);border-radius:100px;padding:8px 14px;}
+  .badge svg{color:var(--green);}
   /* paths */
-  .paths{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:56px;}
+  .paths{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:52px;}
   @media(max-width:820px){.paths{grid-template-columns:1fr;}}
-  .path{background:linear-gradient(180deg,var(--card),var(--charcoal));border:1px solid var(--line);border-radius:18px;padding:26px;transition:.18s;}
-  .path:hover{border-color:rgba(139,92,246,.5);transform:translateY(-3px);box-shadow:0 24px 50px -30px var(--glow);}
-  .path .ic{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;font-size:22px;background:rgba(139,92,246,.14);border:1px solid rgba(139,92,246,.3);margin-bottom:14px;}
-  .path h3{font:600 20px/1.2 'Space Grotesk';margin:0 0 8px;}
-  .path p{color:var(--gray);font-size:14px;line-height:1.6;margin:0 0 12px;}
+  .path{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:26px;transition:.18s;box-shadow:var(--shadow-sm);}
+  .path:hover{border-color:var(--brand-line);transform:translateY(-3px);box-shadow:var(--shadow-md);}
+  .path .ic{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;background:var(--brand-soft);color:var(--brand);border:1px solid var(--brand-line);margin-bottom:14px;}
+  .path .ic svg{width:24px;height:24px;}
+  .path h3{font:700 20px/1.2 'Inter';margin:0 0 8px;}
+  .path p{color:var(--ink-2);font-size:14px;line-height:1.6;margin:0 0 12px;}
   .path ul{margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:6px;}
-  .path li{font-size:12px;color:var(--violet);background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.25);border-radius:7px;padding:4px 9px;}
+  .path li{font-size:12px;color:var(--brand-2);background:var(--brand-soft);border:1px solid var(--brand-line);border-radius:7px;padding:4px 9px;}
   /* steps */
   .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:24px;}
   @media(max-width:820px){.steps{grid-template-columns:1fr 1fr;}}
-  .step{background:var(--charcoal);border:1px solid var(--line);border-radius:14px;padding:20px;}
-  .step .n{font:700 13px/1 'Space Grotesk';color:#fff;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:linear-gradient(135deg,var(--purple),var(--purple2));margin-bottom:12px;}
-  .step h4{margin:0 0 5px;font:600 15px/1.2 'Space Grotesk';}.step p{margin:0;color:var(--gray);font-size:13px;line-height:1.5;}
+  .step{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-sm);}
+  .step .n{font:700 13px/1 'Inter';color:#fff;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--brand);margin-bottom:12px;}
+  .step h4{margin:0 0 5px;font:700 15px/1.2 'Inter';}.step p{margin:0;color:var(--ink-2);font-size:13px;line-height:1.5;}
   .sec-h{text-align:center;margin:64px 0 8px;}
-  .sec-h h2{font:700 clamp(26px,3.4vw,38px)/1.1 'Space Grotesk';letter-spacing:-.6px;margin:14px 0 6px;}
-  .sec-h p{color:var(--gray);font-size:16px;margin:0 auto;max-width:560px;}
-  /* INTAKE (white cards on dark) */
+  .sec-h h2{font:800 clamp(26px,3.4vw,38px)/1.1 'Inter';letter-spacing:-.03em;margin:14px 0 6px;}
+  .sec-h p{color:var(--ink-2);font-size:16px;margin:0 auto;max-width:560px;}
+  /* INTAKE */
   .cats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:30px;}
   @media(max-width:760px){.cats{grid-template-columns:repeat(2,1fr);}}@media(max-width:460px){.cats{grid-template-columns:1fr;}}
-  .cat{display:flex;align-items:center;gap:11px;text-align:left;padding:16px;border-radius:13px;border:1px solid var(--line);background:var(--card);color:var(--white);cursor:pointer;font:600 14px/1.3 'Inter';transition:.15s;}
-  .cat:hover{border-color:var(--purple);background:rgba(139,92,246,.1);transform:translateY(-1px);box-shadow:0 14px 30px -20px var(--glow);}
-  .cat .e{font-size:21px;}
-  .panel{background:#fff;color:#15101F;border-radius:20px;padding:28px;box-shadow:0 30px 70px -40px #000;}
-  .panel h2{font:700 24px/1.15 'Space Grotesk';margin:0 0 4px;color:#15101F;}
-  .panel .muted{color:#6B6580;font-size:14px;margin:0;}
-  .back{border:none;background:none;cursor:pointer;color:var(--violet);font:700 13px/1 'Space Grotesk';padding:0;margin:6px 0 14px;display:inline-flex;gap:6px;}
-  .secLbl{font:700 12px/1 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#8B5CF6;margin:20px 0 12px;}
+  .cat{display:flex;align-items:center;gap:12px;text-align:left;padding:15px;border-radius:var(--radius);border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;font:600 14px/1.3 'Inter';transition:.15s;box-shadow:var(--shadow-sm);}
+  .cat:hover{border-color:var(--brand-line);transform:translateY(-2px);box-shadow:var(--shadow-md);}
+  .ico{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;background:var(--brand-soft);color:var(--brand);border:1px solid var(--brand-line);flex:none;}
+  .ico svg{width:20px;height:20px;}
+  .panel{background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:var(--radius-lg);padding:28px;box-shadow:var(--shadow-md);}
+  .panel h2{font:800 24px/1.15 'Inter';margin:0 0 4px;color:var(--ink);}
+  .panel .muted{color:var(--ink-2);font-size:14px;margin:0;}
+  .back{border:none;background:none;cursor:pointer;color:var(--brand);font:600 13px/1 'Inter';padding:0;margin:6px 0 14px;display:inline-flex;gap:6px;}
+  .secLbl{font:700 11px/1 'Inter';letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:22px 0 12px;}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}@media(max-width:560px){.grid{grid-template-columns:1fr;}}
-  label.f{display:flex;flex-direction:column;gap:6px;font:600 12px/1.2 'Inter';color:#6B6580;}
-  label.f.req span::after{content:' *';color:#8B5CF6;}
-  .f input,.f select,.f textarea{padding:12px 13px;border-radius:11px;border:1px solid #E2DEEC;background:#FAF9FD;color:#15101F;font:400 15px/1.3 'Inter';outline:none;width:100%;}
-  .f input:focus,.f select:focus,.f textarea:focus{border-color:#8B5CF6;box-shadow:0 0 0 3px rgba(139,92,246,.15);}
+  label.f{display:flex;flex-direction:column;gap:6px;font:600 12px/1.2 'Inter';color:var(--ink-2);}
+  label.f.req span::after{content:' *';color:var(--brand);}
+  .f input,.f select,.f textarea{padding:11px 13px;border-radius:10px;border:1px solid var(--line-2);background:#fff;color:var(--ink);font:400 15px/1.3 'Inter';outline:none;width:100%;}
+  .f input:focus,.f select:focus,.f textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(37,99,235,.15);}
   .full{grid-column:1/-1;}
-  .submit{margin-top:22px;width:100%;padding:15px;border:none;border-radius:13px;background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;font:600 16px/1 'Inter';cursor:pointer;box-shadow:0 14px 30px -12px var(--glow);}
-  .badge2{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:100px;font:700 13px/1 'Space Grotesk';}
-  .ready{background:#D1FAE5;color:#047857;}.notready{background:#FEF3C7;color:#B45309;}
-  table{width:100%;border-collapse:collapse;margin-top:14px;font:400 13px/1.4 'Inter';color:#15101F;}
-  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid #EFEDF5;vertical-align:top;}
-  th{font:700 11px/1 'Space Grotesk';text-transform:uppercase;letter-spacing:.04em;color:#8478A0;background:#FAF9FD;}
-  .miss{color:#B45309;}.chip{display:inline-block;font:600 12px/1 'Inter';padding:4px 9px;border-radius:100px;background:#EDE9FE;color:#6D28D9;}
+  .submit{margin-top:22px;width:100%;padding:14px;border:none;border-radius:11px;background:var(--brand);color:#fff;font:600 16px/1 'Inter';cursor:pointer;box-shadow:var(--shadow-sm);}
+  .submit:hover{background:var(--brand-2);}
+  .submit.go{background:var(--green);}.submit.go:hover{background:#15803D;}
+  .badge2{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:100px;font:600 13px/1 'Inter';}
+  .ready{background:var(--green-soft);color:var(--green);}.notready{background:var(--amber-soft);color:var(--amber);}
+  table{width:100%;border-collapse:collapse;margin-top:14px;font:400 13px/1.4 'Inter';color:var(--ink);}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top;}
+  th{font:700 11px/1 'Inter';text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3);background:var(--surface-2);}
+  .miss{color:var(--amber);}.chip{display:inline-block;font:600 12px/1 'Inter';padding:4px 10px;border-radius:100px;background:var(--brand-soft);color:var(--brand-2);}
   .hidden{display:none!important;}
-  .optcard{background:linear-gradient(180deg,var(--card),var(--charcoal));border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:14px;}
-  .optcard.rec{border-color:rgba(139,92,246,.6);box-shadow:0 0 0 1px rgba(139,92,246,.3),0 20px 50px -30px var(--glow);}
-  .fitbar{height:8px;background:#241B38;border-radius:6px;overflow:hidden;margin-top:5px;}
-  .fitbar i{display:block;height:100%;background:linear-gradient(90deg,var(--purple),var(--purple2));}
-  .foot{margin-top:50px;border-top:1px solid var(--line);padding:26px 0 50px;color:var(--dim);font-size:13px;text-align:center;}
+  .optcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px;margin-bottom:14px;box-shadow:var(--shadow-sm);}
+  .optcard.rec{border-color:var(--brand-line);box-shadow:0 0 0 1px var(--brand-line),var(--shadow-md);}
+  .fitbar{height:8px;background:var(--surface-2);border-radius:6px;overflow:hidden;margin-top:5px;}
+  .fitbar i{display:block;height:100%;background:var(--brand);}
+  .foot{margin-top:50px;border-top:1px solid var(--line);padding:26px 0 50px;color:var(--ink-3);font-size:13px;text-align:center;}
+  .foot b{color:var(--ink);}
   .vgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:30px;}@media(max-width:760px){.vgrid{grid-template-columns:1fr;}}
-  .vcard{background:var(--charcoal);border:1px solid var(--line);border-radius:16px;padding:24px;}
-  .vcard h3{font:600 18px/1.2 'Space Grotesk';margin:0 0 10px;}
-  .vcard ul{margin:0;padding-left:18px;color:var(--gray);font-size:14px;line-height:1.8;}
-  .note{color:var(--dim);font-size:12.5px;}
+  .vcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow-sm);}
+  .vcard h3{font:700 18px/1.2 'Inter';margin:0 0 10px;}
+  .vcard ul{margin:0;padding-left:18px;color:var(--ink-2);font-size:14px;line-height:1.8;}
+  .note{color:var(--ink-3);font-size:12.5px;}
 </style>
 <script src="store.js"></script>
 </head>
@@ -115,10 +127,10 @@
     <a class="hidem" onclick="go('search')" data-nav="search" data-t="forW">For Warehouses</a>
     <a class="hidem" onclick="go('vendors')" data-nav="vendors" data-t="forV">For Vendors</a>
     <a class="hidem" onclick="go('how')" data-nav="how" data-t="how">How It Works</a>
-    <a class="hidem" href="welcome.html" style="color:var(--gray);text-decoration:none;font-size:14px;font-weight:500;padding:8px 12px">Get Started</a>
-    <a class="hidem" href="vendor.html" style="color:var(--gray);text-decoration:none;font-size:14px;font-weight:500;padding:8px 12px">Vendor Portal</a>
-    <a class="hidem" href="client.html" style="color:var(--gray);text-decoration:none;font-size:14px;font-weight:500;padding:8px 12px">Track Request</a>
-    <a class="hidem" href="admin.html" style="color:var(--violet);text-decoration:none;font-size:14px;font-weight:600;padding:8px 12px">Admin</a>
+    <a class="hidem" href="welcome.html">Get Started</a>
+    <a class="hidem" href="vendor.html">Vendor Portal</a>
+    <a class="hidem" href="client.html">Track Request</a>
+    <a class="hidem" href="admin.html" style="color:var(--brand);font-weight:600">Admin</a>
     <div class="seg"><button id="en" class="on" onclick="setLang('EN')">EN</button><button id="es" onclick="setLang('ES')">ES</button></div>
     <button class="btn sm" onclick="go('search')" data-t="startBtn">Start My Search</button>
   </div>
@@ -128,7 +140,7 @@
 <section class="view on" id="view-home">
   <div class="wrap hero">
     <span class="eyebrow" data-t="eyebrow">Private AI Sourcing Desk</span>
-    <h1 class="gk"><span data-t="h1a">Tell us what your warehouse needs.</span> <span class="pp" data-t="h1b">We'll find who can solve it.</span></h1>
+    <h1><span data-t="h1a">Tell us what your warehouse needs.</span> <span class="pp" data-t="h1b">We'll find who can solve it.</span></h1>
     <p class="sub" data-t="sub">A private AI sourcing platform for warehouse services, products, and technology. You submit the problem — we search, filter, collect quotes, compare options, and protect every identity.</p>
     <div class="cta">
       <button class="btn" onclick="go('search')" data-t="startBtn2">Start My Search →</button>
@@ -138,33 +150,31 @@
   </div>
 
   <div class="wrap">
-    <div class="sec-h"><span class="eyebrow" data-t="pathsEy">Three paths</span><h2 class="gk" data-t="pathsH">One desk for every warehouse need</h2><p data-t="pathsP">We route every request the right way — local hands, physical supply, or advanced technology.</p></div>
+    <div class="sec-h"><span class="eyebrow" data-t="pathsEy">Three paths</span><h2 data-t="pathsH">One desk for every warehouse need</h2><p data-t="pathsP">We route every request the right way — local hands, physical supply, or advanced technology.</p></div>
     <div class="paths" id="paths"></div>
   </div>
 
   <div class="wrap">
-    <div class="sec-h"><span class="eyebrow" data-t="howEy">How it works</span><h2 class="gk" data-t="howH">Simple for you. Powerful behind the scenes.</h2></div>
+    <div class="sec-h"><span class="eyebrow" data-t="howEy">How it works</span><h2 data-t="howH">Simple for you. Powerful behind the scenes.</h2></div>
     <div class="steps" id="steps"></div>
     <div style="text-align:center;margin-top:30px;"><button class="btn" onclick="go('search')" data-t="startBtn3">Start My Search →</button></div>
   </div>
-  <div class="foot"><b class="gk">NXT//LINK</b> · <span data-t="footTag">We connect problems to problem-solvers.</span><br><span class="note" data-t="footNote">Private matching · Identities protected · AI-guided intake · Bilingual · El Paso · Juárez · Borderplex</span></div>
+  <div class="foot"><b>NXT//LINK</b> · <span data-t="footTag">We connect problems to problem-solvers.</span><br><span class="note" data-t="footNote">Private matching · Identities protected · AI-guided intake · Bilingual · El Paso · Juárez · Borderplex</span></div>
 </section>
 
 <!-- ================= SEARCH / INTAKE ================= -->
 <section class="view" id="view-search">
   <div class="wrap" style="padding-top:40px;">
-    <!-- step 1 -->
     <div id="s1">
       <span class="eyebrow" data-t="reqEy">Start my search</span>
-      <h2 class="gk" data-t="reqH" style="font-size:34px;letter-spacing:-1px;margin:14px 0 6px;">What do you need help finding?</h2>
-      <p class="sub" data-t="reqP" style="margin:0;max-width:600px;font-size:16px;">Pick a category. The assistant asks only the questions a vendor needs to quote — once.</p>
+      <h2 data-t="reqH" style="font-size:34px;letter-spacing:-.03em;margin:14px 0 6px;">What does your warehouse need?</h2>
+      <p class="sub" data-t="reqP" style="margin:0;max-width:600px;font-size:16px;color:var(--ink-2);">Pick the area you need help with. The assistant asks only the questions a vendor needs to quote — once.</p>
       <div class="cats" id="catGrid"></div>
     </div>
-    <!-- step 2 -->
     <div id="s2" class="hidden">
       <button class="back" onclick="goHome2()">← <span data-t="back">Back</span></button>
       <div class="panel">
-        <h2 class="gk" id="catTitle"></h2>
+        <h2 id="catTitle"></h2>
         <p class="muted" data-t="catSub">Answer what you can — we flag anything still missing before it reaches vendors. Your identity stays private.</p>
         <form id="catForm" onsubmit="return submitCat(event)">
           <div class="secLbl" data-t="detlbl">Details</div>
@@ -175,17 +185,16 @@
         </form>
       </div>
     </div>
-    <!-- step 3 -->
     <div id="s3" class="hidden">
       <button class="back" onclick="editAgain()">← <span data-t="edit">Edit answers</span></button>
       <div class="panel">
         <div id="readyBadge"></div>
-        <h2 class="gk" style="margin:14px 0 2px;" data-t="sumH">Quote-ready summary</h2>
+        <h2 style="margin:14px 0 2px;" data-t="sumH">Quote-ready summary</h2>
         <p class="muted" data-t="sumP">This is the internal table NXT//LINK admin sees. Client identity stays hidden.</p>
         <div style="overflow-x:auto;"><table id="adminTable"></table></div>
         <div id="missBlock" style="margin-top:14px;"></div>
-        <p style="margin-top:14px;font-size:14px;color:#15101F;"><b data-t="recL">Recommended vendor category:</b> <span id="recOut" class="chip"></span></p>
-        <button class="submit" style="margin-top:18px;background:linear-gradient(135deg,#10B981,#34D399)" onclick="submitToNxt()" data-t="submitNxt">✓ Submit to NXT//LINK</button>
+        <p style="margin-top:14px;font-size:14px;color:var(--ink);"><b data-t="recL">Recommended vendor category:</b> <span id="recOut" class="chip"></span></p>
+        <button class="submit go" onclick="submitToNxt()" data-t="submitNxt">✓ Submit to NXT//LINK</button>
         <button class="submit" style="margin-top:10px;" onclick="go('options')" data-t="seeOpt">See sample anonymous options →</button>
       </div>
       <p class="foot" style="border:none;" data-t="aiNote">AI-assisted draft. A human at NXT//LINK reviews before anything is shared. Vendor names are never shown here.</p>
@@ -198,8 +207,8 @@
   <div class="wrap" style="padding-top:40px;">
     <button class="back" onclick="go('search')">← <span data-t="back2">Back</span></button>
     <span class="eyebrow" data-t="optEy">Your options</span>
-    <h2 class="gk" style="font-size:30px;letter-spacing:-.8px;margin:14px 0 4px;" data-t="optH">Anonymous options, ready to choose</h2>
-    <p class="sub" style="margin:0 0 8px;max-width:600px;font-size:15px;" data-t="optP">NXT//LINK prepares the options. Vendor names are revealed only after you request an introduction.</p>
+    <h2 style="font-size:30px;letter-spacing:-.03em;margin:14px 0 4px;" data-t="optH">Anonymous options, ready to choose</h2>
+    <p class="sub" style="margin:0 0 8px;max-width:600px;font-size:15px;color:var(--ink-2);" data-t="optP">NXT//LINK prepares the options. Vendor names are revealed only after you request an introduction.</p>
     <div id="optionsOut"></div>
   </div>
   <div class="foot" data-t="optFoot">You choose. NXT//LINK controls when a vendor's identity is revealed.</div>
@@ -210,12 +219,12 @@
   <div class="wrap" style="padding-top:48px;">
     <div style="text-align:center;">
       <span class="eyebrow" data-t="vEy">For vendors</span>
-      <h2 class="gk" style="font-size:38px;letter-spacing:-1px;margin:16px 0 8px;" data-t="vH">List what you solve. Receive quote-ready opportunities.</h2>
-      <p class="sub" style="margin:0 auto;max-width:620px;" data-t="vP">No cold leads. NXT//LINK sends you protected, pre-qualified opportunities that match exactly what you provide — with the info you need to quote fast.</p>
+      <h2 style="font-size:38px;letter-spacing:-.03em;margin:16px 0 8px;" data-t="vH">List what you solve. Receive quote-ready opportunities.</h2>
+      <p class="sub" style="margin:0 auto;max-width:620px;color:var(--ink-2);" data-t="vP">No cold leads. NXT//LINK sends you protected, pre-qualified opportunities that match exactly what you provide — with the info you need to quote fast.</p>
     </div>
     <div class="vgrid">
-      <div class="vcard"><h3 class="gk" data-t="vc1H">What you get</h3><ul id="vget"></ul></div>
-      <div class="vcard"><h3 class="gk" data-t="vc2H">What you control</h3><ul id="vctrl"></ul></div>
+      <div class="vcard"><h3 data-t="vc1H">What you get</h3><ul id="vget"></ul></div>
+      <div class="vcard"><h3 data-t="vc2H">What you control</h3><ul id="vctrl"></ul></div>
     </div>
     <div style="text-align:center;margin-top:30px;"><button class="btn" onclick="location.href='vendor.html'" data-t="vBtn">Create vendor account</button></div>
   </div>
@@ -225,15 +234,38 @@
 <!-- ================= HOW ================= -->
 <section class="view" id="view-how">
   <div class="wrap" style="padding-top:48px;">
-    <div style="text-align:center;"><span class="eyebrow" data-t="how2Ey">The flow</span><h2 class="gk" style="font-size:36px;letter-spacing:-1px;margin:16px 0 8px;" data-t="how2H">From problem to solved — privately</h2></div>
+    <div style="text-align:center;"><span class="eyebrow" data-t="how2Ey">The flow</span><h2 style="font-size:36px;letter-spacing:-.03em;margin:16px 0 8px;" data-t="how2H">From problem to solved — privately</h2></div>
     <div id="flowList" style="margin-top:30px;"></div>
     <div style="text-align:center;margin-top:30px;"><button class="btn" onclick="go('search')" data-t="startBtn4">Start My Search →</button></div>
   </div>
-  <div class="foot"><b class="gk">NXT//LINK</b> · <span data-t="footTag2">We connect problems to problem-solvers.</span></div>
+  <div class="foot"><b>NXT//LINK</b> · <span data-t="footTag2">We connect problems to problem-solvers.</span></div>
 </section>
 </div>
 
 <script>
+/* ---------- line-icon set (no emoji) ---------- */
+const ICONS={
+ forklift:'<path d="M3 17h11"/><circle cx="6" cy="19.5" r="1.8"/><circle cx="12.5" cy="19.5" r="1.8"/><path d="M3 17V7h4l3 4v6"/><path d="M18 4v13"/><path d="M18 8h3"/>',
+ copier:'<rect x="6" y="3" width="12" height="6" rx="1"/><path d="M6 14H5a3 3 0 0 1-3-3V9a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v2a3 3 0 0 1-3 3h-1"/><rect x="6" y="13" width="12" height="8" rx="1"/>',
+ waste:'<path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M5 6l1 14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1l1-14"/><path d="M10 11v6"/><path d="M14 11v6"/>',
+ transport:'<path d="M2 6h11v10H2z"/><path d="M13 9h4l4 4v3h-8"/><circle cx="6" cy="18" r="1.8"/><circle cx="17.5" cy="18" r="1.8"/>',
+ labels:'<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8Z"/><circle cx="7" cy="7" r="1.4"/>',
+ extinguisher:'<path d="M12 2c1.2 2.6 4 3.6 4 7.5a4 4 0 0 1-8 0c0-2 1-3.2 2-4 .2 1.4 1 2 2 2.2-.4-3 0-4.7 0-7.7Z"/>',
+ electrical:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+ pallets:'<path d="M12 2 2 7l10 5 10-5z"/><path d="M2 12l10 5 10-5"/><path d="M2 17l10 5 10-5"/>',
+ firedoor:'<path d="M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17"/><path d="M3 21h18"/><circle cx="15" cy="12" r="1"/>',
+ it:'<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/>',
+ maintenance:'<path d="M14.7 6.3a4 4 0 0 0 5 5l-8.4 8.4a2.1 2.1 0 0 1-3-3l8.4-8.4a4 4 0 0 0-2-2Z"/>',
+ propane:'<rect x="7" y="6" width="10" height="15" rx="2"/><path d="M10 6V4a2 2 0 0 1 4 0v2"/><path d="M10 10h4"/>',
+ pest:'<rect x="8" y="6" width="8" height="12" rx="4"/><path d="M12 6V3"/><path d="M4 9l3 1"/><path d="M4 15l3-1"/><path d="M20 9l-3 1"/><path d="M20 15l-3-1"/><path d="M5 5l2 2"/><path d="M19 5l-2 2"/>',
+ staffing:'<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 6a3 3 0 0 1 0 6"/><path d="M21 20a6 6 0 0 0-4-5.6"/>',
+ whtech:'<rect x="6" y="6" width="12" height="12" rx="1"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 3v3"/><path d="M15 3v3"/><path d="M9 18v3"/><path d="M15 18v3"/><path d="M3 9h3"/><path d="M3 15h3"/><path d="M18 9h3"/><path d="M18 15h3"/>',
+ whparts:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3"/><path d="M12 19v3"/><path d="M3.5 7l2.6 1.5"/><path d="M17.9 15.5l2.6 1.5"/><path d="M3.5 17l2.6-1.5"/><path d="M17.9 8.5l2.6-1.5"/>',
+ unsure:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.6 2.6 0 0 1 4.8 1.3c0 1.7-2.3 2-2.3 3.5"/><path d="M12 17.5h.01"/>',
+ package:'<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v9"/>'
+};
+function svg(id){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+(ICONS[id]||ICONS.unsure)+'</svg>';}
+
 /* ---------- i18n for the static chrome ---------- */
 let LANG='EN';
 const UI={
@@ -243,7 +275,7 @@ const UI={
    vendBtn:"I'm a Vendor",pathsEy:'Three paths',pathsH:'One desk for every warehouse need',pathsP:'We route every request the right way — local hands, physical supply, or advanced technology.',
    howEy:'How it works',howH:'Simple for you. Powerful behind the scenes.',footTag:'We connect problems to problem-solvers.',footTag2:'We connect problems to problem-solvers.',
    footNote:'Private matching · Identities protected · AI-guided intake · Bilingual · El Paso · Juárez · Borderplex',
-   reqEy:'Start my search',reqH:'What do you need help finding?',reqP:'Pick a category. The assistant asks only the questions a vendor needs to quote — once.',
+   reqEy:'Start my search',reqH:'What does your warehouse need?',reqP:'Pick the area you need help with. The assistant asks only the questions a vendor needs to quote — once.',
    back:'Back',back2:'Back',catSub:'Answer what you can — we flag anything still missing before it reaches vendors. Your identity stays private.',
    detlbl:'Details',corelbl:'Logistics & permissions',makeBtn:'Create quote-ready summary',edit:'Edit answers',
    sumH:'Quote-ready summary',sumP:'This is the internal table NXT//LINK admin sees. Client identity stays hidden.',recL:'Recommended vendor category:',
@@ -254,9 +286,9 @@ const UI={
    how2Ey:'The flow',how2H:'From problem to solved — privately',
    ready:'Quote-ready',notready:'Needs more info',missTitle:'Missing information',
    badges:['Private matching','Identities protected','AI-guided questions','Local services + global technology','Quote-ready intake','Bilingual support'],
-   paths:[['🛠️','Services','Local & regional operational help — quoted by vetted providers.',['Forklift maintenance','Staffing','Waste','Pest control','Electrical','Transportation']],
-          ['📦','Products','Physical supplies, parts & materials — matched on specs and supply.',['Pallets','Labels','Forklift parts','Racking','Scanners','Packaging']],
-          ['🤖','Technology','Software, automation & innovation — with demos and pilots.',['WMS','RFID','Dashboards','Robotics','Sensors','Computer vision']]],
+   paths:[['maintenance','Services','Local & regional operational help — quoted by vetted providers.',['Forklift maintenance','Staffing','Waste','Pest control','Electrical','Transportation']],
+          ['package','Products','Physical supplies, parts & materials — matched on specs and supply.',['Pallets','Labels','Forklift parts','Racking','Scanners','Packaging']],
+          ['whtech','Technology','Software, automation & innovation — with demos and pilots.',['WMS','RFID','Dashboards','Robotics','Sensors','Computer vision']]],
    steps:[['1','Tell us the need','Answer a few AI-guided questions for your exact category.'],['2','We source privately','We search, filter, and send protected quote packets to the right vendors.'],['3','We compare','Quotes come back; we build an anonymous comparison for you.'],['4','You choose','Pick an option; we control the introduction and protect every identity.']],
    vget:['Protected, pre-qualified opportunities','Only requests that match what you provide','The exact info needed to quote fast','A reusable quote-template library','AI-drafted quote responses to review'],
    vctrl:['Which leads you want (and which you don\'t)','Your service areas & capabilities','Your pricing, terms & warranty','When to accept an opportunity','Your identity until you\'re selected'],
@@ -270,7 +302,7 @@ const UI={
    vendBtn:'Soy Proveedor',pathsEy:'Tres caminos',pathsH:'Una mesa para cada necesidad de almacén',pathsP:'Dirigimos cada solicitud al lugar correcto — manos locales, suministro físico o tecnología avanzada.',
    howEy:'Cómo funciona',howH:'Simple para ti. Poderoso detrás de escena.',footTag:'Conectamos problemas con quienes los resuelven.',footTag2:'Conectamos problemas con quienes los resuelven.',
    footNote:'Conexión privada · Identidades protegidas · Intake con AI · Bilingüe · El Paso · Juárez · Borderplex',
-   reqEy:'Iniciar búsqueda',reqH:'¿Qué necesitas encontrar?',reqP:'Elige una categoría. El asistente hace solo las preguntas que un proveedor necesita para cotizar — una vez.',
+   reqEy:'Iniciar búsqueda',reqH:'¿Qué necesita tu almacén?',reqP:'Elige el área en la que necesitas ayuda. El asistente hace solo las preguntas que un proveedor necesita para cotizar — una vez.',
    back:'Atrás',back2:'Atrás',catSub:'Responde lo que puedas — marcamos lo que falte antes de enviarlo a proveedores. Tu identidad permanece privada.',
    detlbl:'Detalles',corelbl:'Logística y permisos',makeBtn:'Crear resumen listo para cotizar',edit:'Editar respuestas',
    sumH:'Resumen listo para cotizar',sumP:'Esta es la tabla interna que ve el admin de NXT//LINK. La identidad del cliente permanece oculta.',recL:'Categoría de proveedor recomendada:',
@@ -281,9 +313,9 @@ const UI={
    how2Ey:'El flujo',how2H:'Del problema a resuelto — en privado',
    ready:'Listo para cotizar',notready:'Falta información',missTitle:'Información faltante',
    badges:['Conexión privada','Identidades protegidas','Preguntas guiadas por AI','Servicios locales + tecnología global','Intake listo para cotizar','Soporte bilingüe'],
-   paths:[['🛠️','Servicios','Ayuda operativa local y regional — cotizada por proveedores verificados.',['Montacargas','Personal','Basura','Plagas','Eléctrico','Transporte']],
-          ['📦','Productos','Suministros, partes y materiales — emparejados por especificaciones.',['Tarimas','Etiquetas','Partes','Racks','Escáneres','Empaque']],
-          ['🤖','Tecnología','Software, automatización e innovación — con demos y pilotos.',['WMS','RFID','Tableros','Robótica','Sensores','Visión']]],
+   paths:[['maintenance','Servicios','Ayuda operativa local y regional — cotizada por proveedores verificados.',['Montacargas','Personal','Basura','Plagas','Eléctrico','Transporte']],
+          ['package','Productos','Suministros, partes y materiales — emparejados por especificaciones.',['Tarimas','Etiquetas','Partes','Racks','Escáneres','Empaque']],
+          ['whtech','Tecnología','Software, automatización e innovación — con demos y pilotos.',['WMS','RFID','Tableros','Robótica','Sensores','Visión']]],
    steps:[['1','Dinos la necesidad','Responde unas preguntas guiadas por AI para tu categoría exacta.'],['2','Buscamos en privado','Buscamos, filtramos y enviamos paquetes protegidos a los proveedores correctos.'],['3','Comparamos','Llegan las cotizaciones; construimos una comparación anónima para ti.'],['4','Tú eliges','Elige una opción; controlamos la introducción y protegemos cada identidad.']],
    vget:['Oportunidades protegidas y precalificadas','Solo solicitudes que coinciden con lo que ofreces','La información exacta para cotizar rápido','Una biblioteca de plantillas de cotización','Respuestas de cotización redactadas por AI para revisar'],
    vctrl:['Qué leads quieres (y cuáles no)','Tus áreas de servicio y capacidades','Tus precios, términos y garantía','Cuándo aceptar una oportunidad','Tu identidad hasta que te seleccionen'],
@@ -296,75 +328,75 @@ const UI={
 /* ---------- category intake data (17 categories) ---------- */
 const S=(en,es)=>({en,es});
 const CATS=[
- {id:'forklift',e:'🚜',en:'Forklift maintenance',es:'Mantenimiento de montacargas',rec:S('Forklifts & Material Handling','Montacargas y Manejo'),qty:'count',
+ {id:'forklift',en:'Forklift maintenance',es:'Mantenimiento de montacargas',rec:S('Forklifts & Material Handling','Montacargas y Manejo'),qty:'count',
   f:[{id:'count',t:'t',req:1,en:'How many forklifts?',es:'¿Cuántos montacargas?'},{id:'brand',t:'t',req:1,en:'Brand & model',es:'Marca y modelo'},
      {id:'power',t:'s',en:'Power type',es:'Energía',o:S(['Electric','Propane','Diesel','Gas'],['Eléctrico','Propano','Diésel','Gas'])},
      {id:'service',t:'s',req:1,en:'Service needed',es:'Servicio',o:S(['Preventive maintenance','Repair','Battery','Tires','Charger','Emergency'],['Preventivo','Reparación','Batería','Llantas','Cargador','Emergencia'])},
      {id:'down',t:'s',en:'Any unit down?',es:'¿Unidad detenida?',o:'yn'},{id:'recurring',t:'s',en:'One-time or recurring?',es:'¿Única o recurrente?',o:S(['One-time','Recurring'],['Única','Recurrente'])},
      {id:'docs',t:'s',en:'Insurance/cert required?',es:'¿Seguro/certificación?',o:'yn'}]},
- {id:'copier',e:'🖨️',en:'Copy machine service',es:'Servicio de copiadoras',rec:S('Office Equipment','Equipo de Oficina'),qty:'count',
+ {id:'copier',en:'Copy machine service',es:'Servicio de copiadoras',rec:S('Office Equipment','Equipo de Oficina'),qty:'count',
   f:[{id:'count',t:'t',req:1,en:'How many machines?',es:'¿Cuántas máquinas?'},{id:'brand',t:'t',en:'Brand & model',es:'Marca y modelo'},
      {id:'need',t:'s',req:1,en:'Need',es:'Necesidad',o:S(['Repair','Maintenance','Toner','Rental','Replacement','New'],['Reparación','Mantenimiento','Toner','Renta','Reemplazo','Nuevo'])},
      {id:'down',t:'s',en:'Currently down?',es:'¿Fuera de servicio?',o:'yn'},{id:'freq',t:'s',en:'Monthly or one-time?',es:'¿Mensual o única?',o:S(['Monthly','One-time'],['Mensual','Única'])}]},
- {id:'waste',e:'🗑️',en:'Waste collection',es:'Recolección de basura',rec:S('Waste & Recycling','Residuos y Reciclaje'),qty:'container',
+ {id:'waste',en:'Waste collection',es:'Recolección de basura',rec:S('Waste & Recycling','Residuos y Reciclaje'),qty:'container',
   f:[{id:'wtype',t:'s',req:1,en:'Waste type',es:'Tipo de residuo',o:S(['General','Cardboard','Pallets','Industrial','Recycling','Food','Hazardous'],['General','Cartón','Tarimas','Industrial','Reciclaje','Comida','Peligroso'])},
      {id:'container',t:'t',req:1,en:'Container size',es:'Tamaño de contenedor'},{id:'freq',t:'t',req:1,en:'Pickup frequency',es:'Frecuencia'},
      {id:'mode',t:'s',en:'One-time or recurring?',es:'¿Única o recurrente?',o:S(['One-time','Recurring'],['Única','Recurrente'])}]},
- {id:'transport',e:'🚚',en:'Transportation / FTL / LTL',es:'Transporte / FTL / LTL',rec:S('Transportation & Cross-Border','Transporte y Transfronterizo'),qty:'freq',
+ {id:'transport',en:'Transportation / FTL / LTL',es:'Transporte / FTL / LTL',rec:S('Transportation & Cross-Border','Transporte y Transfronterizo'),qty:'freq',
   f:[{id:'product',t:'t',req:1,en:'Products moving',es:'Mercancía'},{id:'freight',t:'s',req:1,en:'Freight type',es:'Tipo de carga',o:S(['Palletized','Boxed','Fragile','Refrigerated','Oversized','Hazardous','Standard'],['Tarimas','Cajas','Frágil','Refrigerada','Sobredimensionada','Peligrosa','Estándar'])},
      {id:'origin',t:'t',req:1,en:'Origin',es:'Origen'},{id:'dest',t:'t',req:1,en:'Destination',es:'Destino'},
      {id:'mode',t:'s',req:1,en:'FTL/LTL/local/cross-border?',es:'¿FTL/LTL/local/transfronterizo?',o:S(['FTL','LTL','Local','Same-day','Regional','National','Cross-border'],['FTL','LTL','Local','Same-day','Regional','Nacional','Transfronterizo'])},
      {id:'equip',t:'s',en:'Equipment',es:'Equipo',o:S(['Dry van','Refrigerated','Flatbed','Box truck','Sprinter','Liftgate'],['Caja seca','Refrigerado','Flatbed','Box truck','Sprinter','Liftgate'])},
      {id:'freq',t:'t',req:1,en:'Deliveries per week/month',es:'Entregas por semana/mes'},{id:'customs',t:'s',en:'Customs/border support?',es:'¿Aduana/cruce?',o:'yn'}]},
- {id:'labels',e:'🏷️',en:'Labels / Zebra',es:'Etiquetas / Zebra',rec:S('Labels & Supplies','Etiquetas y Suministros'),qty:'qty',
+ {id:'labels',en:'Labels / Zebra',es:'Etiquetas / Zebra',rec:S('Labels & Supplies','Etiquetas y Suministros'),qty:'qty',
   f:[{id:'qty',t:'t',req:1,en:'Labels per month',es:'Etiquetas por mes'},{id:'size',t:'t',req:1,en:'Label size (4x6?)',es:'Tamaño (4x6?)'},
      {id:'ribbon',t:'s',en:'Labels only or + ribbon?',es:'¿Solo etiquetas o + ribbon?',o:S(['Labels only','Labels + ribbon'],['Solo etiquetas','Etiquetas + ribbon'])},
      {id:'printer',t:'t',req:1,en:'Zebra printer model',es:'Modelo Zebra'},{id:'thermal',t:'s',en:'Thermal transfer/direct?',es:'¿Thermal transfer/direct?',o:S(['Thermal transfer','Direct thermal','Not sure'],['Thermal transfer','Direct thermal','No sé'])},
      {id:'material',t:'t',en:'Material / adhesive',es:'Material / adhesivo'}]},
- {id:'extinguisher',e:'🧯',en:'Fire extinguisher inspection',es:'Inspección de extintores',rec:S('Fire & Life Safety','Seguridad contra Incendios'),qty:'count',
+ {id:'extinguisher',en:'Fire extinguisher inspection',es:'Inspección de extintores',rec:S('Fire & Life Safety','Seguridad contra Incendios'),qty:'count',
   f:[{id:'count',t:'t',req:1,en:'How many extinguishers?',es:'¿Cuántos extintores?'},{id:'need',t:'s',req:1,en:'Need',es:'Necesidad',o:S(['Annual inspection','Recharge','Replacement','New'],['Inspección anual','Recarga','Reemplazo','Nuevos'])},
      {id:'expires',t:'t',en:'Inspection expires',es:'Vence inspección'},{id:'sites',t:'s',en:'One site or multiple?',es:'¿Una o varias?',o:S(['One','Multiple'],['Una','Varias'])},{id:'audit',t:'s',en:'Audit deadline?',es:'¿Auditoría próxima?',o:'yn'}]},
- {id:'electrical',e:'⚡',en:'Electrical service',es:'Servicio eléctrico',rec:S('Electrical & MEP','Eléctrico y MEP'),qty:'',
+ {id:'electrical',en:'Electrical service',es:'Servicio eléctrico',rec:S('Electrical & MEP','Eléctrico y MEP'),qty:'',
   f:[{id:'work',t:'s',req:1,en:'Type of work',es:'Tipo de trabajo',o:S(['Repair','Installation','Upgrade','Troubleshooting','Maintenance'],['Reparación','Instalación','Mejora','Diagnóstico','Mantenimiento'])},
      {id:'area',t:'s',en:'Area',es:'Área',o:S(['Office','Warehouse','Machinery','Dock','Lighting','Cameras','Panels','Exterior'],['Oficina','Bodega','Maquinaria','Dock','Iluminación','Cámaras','Paneles','Exterior'])},
      {id:'urgent',t:'s',en:'Urgent or planned?',es:'¿Urgente o planeado?',o:S(['Urgent','Planned'],['Urgente','Planeado'])},{id:'licensed',t:'s',en:'Licensed electrician?',es:'¿Con licencia?',o:'yn'},{id:'permit',t:'s',en:'Permit required?',es:'¿Permiso?',o:'yn'}]},
- {id:'pallets',e:'🪵',en:'Wooden pallets',es:'Tarimas de madera',rec:S('Pallets & Materials','Tarimas y Materiales'),qty:'qty',
+ {id:'pallets',en:'Wooden pallets',es:'Tarimas de madera',rec:S('Pallets & Materials','Tarimas y Materiales'),qty:'qty',
   f:[{id:'size',t:'t',req:1,en:'Pallet size (48x40?)',es:'Tamaño (48x40?)'},{id:'qty',t:'t',req:1,en:'Pallets per week/month',es:'Tarimas por semana/mes'},
      {id:'kind',t:'s',en:'Condition',es:'Condición',o:S(['New','Used','Recycled','Heat-treated','Custom'],['Nuevas','Usadas','Recicladas','Tratadas','Personalizadas'])},
      {id:'ispm',t:'s',en:'Export / ISPM-15?',es:'¿Exportación / ISPM-15?',o:'yn'},{id:'recurring',t:'s',en:'One-time or recurring?',es:'¿Única o recurrente?',o:S(['One-time','Recurring'],['Única','Recurrente'])}]},
- {id:'firedoor',e:'🚪',en:'Fire door maintenance',es:'Puertas contra incendio',rec:S('Fire & Life Safety','Seguridad contra Incendios'),qty:'count',
+ {id:'firedoor',en:'Fire door maintenance',es:'Puertas contra incendio',rec:S('Fire & Life Safety','Seguridad contra Incendios'),qty:'count',
   f:[{id:'count',t:'t',req:1,en:'How many fire doors?',es:'¿Cuántas puertas?'},{id:'need',t:'s',req:1,en:'Need',es:'Necesidad',o:S(['Inspection','Repair','Adjustment','Replacement','Certification'],['Inspección','Reparación','Ajuste','Reemplazo','Certificación'])},
      {id:'closes',t:'s',en:'Close properly?',es:'¿Cierran bien?',o:'yn'},{id:'report',t:'s',en:'Report after service?',es:'¿Reporte después?',o:'yn'}]},
- {id:'it',e:'💻',en:'IT support',es:'Soporte IT',rec:S('IT & Security','IT y Seguridad'),qty:'users',
+ {id:'it',en:'IT support',es:'Soporte IT',rec:S('IT & Security','IT y Seguridad'),qty:'users',
   f:[{id:'kind',t:'s',req:1,en:'Type of IT support',es:'Tipo de soporte',o:S(['Computers','Network','Cameras','Servers','Software','Cybersecurity','Access control','Phones'],['Computadoras','Red','Cámaras','Servidores','Software','Ciberseguridad','Control de acceso','Teléfonos'])},
      {id:'users',t:'t',req:1,en:'How many users/devices?',es:'¿Cuántos usuarios/equipos?'},{id:'freq',t:'s',en:'Support type',es:'Tipo',o:S(['One-time','Project','Monthly'],['Única','Proyecto','Mensual'])},
      {id:'onsite',t:'s',en:'On-site or remote?',es:'¿En sitio o remoto?',o:S(['On-site','Remote','Either'],['En sitio','Remoto','Cualquiera'])}]},
- {id:'maintenance',e:'🔧',en:'General maintenance',es:'Mantenimiento general',rec:S('Facility Maintenance','Mantenimiento'),qty:'',
+ {id:'maintenance',en:'General maintenance',es:'Mantenimiento general',rec:S('Facility Maintenance','Mantenimiento'),qty:'',
   f:[{id:'kind',t:'s',req:1,en:'Type',es:'Tipo',o:S(['Plumbing','Electrical','Construction','Ramps','Roll-up doors','Dock equipment','Flooring','Roof','Cleaning'],['Plomería','Eléctrico','Construcción','Rampas','Puertas roll-up','Equipo de dock','Piso','Techo','Limpieza'])},
      {id:'work',t:'s',req:1,en:'Repair/PM/inspection/project?',es:'¿Reparación/PM/inspección/proyecto?',o:S(['Repair','Preventive','Inspection','New project'],['Reparación','Preventivo','Inspección','Proyecto'])},
      {id:'count',t:'t',en:'How many areas/units?',es:'¿Cuántas áreas/unidades?'},{id:'urgent',t:'s',en:'Urgent?',es:'¿Urgente?',o:'yn'}]},
- {id:'propane',e:'🔥',en:'Propane gas',es:'Gas propano',rec:S('Propane & Fuel','Propano y Combustible'),qty:'amount',
+ {id:'propane',en:'Propane gas',es:'Gas propano',rec:S('Propane & Fuel','Propano y Combustible'),qty:'amount',
   f:[{id:'use',t:'s',req:1,en:'Propane use',es:'Uso',o:S(['Forklift','Heating','Process','Other'],['Montacargas','Calefacción','Proceso','Otro'])},
      {id:'amount',t:'t',req:1,en:'Consumption/week-month',es:'Consumo semana/mes'},{id:'form',t:'s',en:'Form',es:'Forma',o:S(['Cylinders','Stationary tank','Exchange','Refill'],['Cilindros','Tanque','Intercambio','Recarga'])},
      {id:'recurring',t:'s',en:'Recurring delivery?',es:'¿Entrega recurrente?',o:'yn'}]},
- {id:'pest',e:'🐀',en:'Pest control',es:'Control de plagas',rec:S('Pest Control','Control de Plagas'),qty:'size',
+ {id:'pest',en:'Pest control',es:'Control de plagas',rec:S('Pest Control','Control de Plagas'),qty:'size',
   f:[{id:'pest',t:'s',req:1,en:'Pest issue',es:'Tipo de plaga',o:S(['Rodents','Insects','Birds','Ants','Roaches','Termites','Unknown'],['Roedores','Insectos','Aves','Hormigas','Cucarachas','Termitas','No sé'])},
      {id:'area',t:'s',en:'Area',es:'Área',o:S(['Office','Warehouse','Exterior','Food area','Dock','Full facility'],['Oficina','Bodega','Exterior','Área de comida','Dock','Todo'])},
      {id:'size',t:'t',req:1,en:'Facility size',es:'Tamaño del lugar'},{id:'freq',t:'s',req:1,en:'Frequency',es:'Frecuencia',o:S(['Monthly','Quarterly','One-time','Emergency'],['Mensual','Trimestral','Única','Emergencia'])}]},
- {id:'staffing',e:'👷',en:'Staffing agency',es:'Agencia de personal',rec:S('Industrial Staffing','Personal Industrial'),qty:'count',
+ {id:'staffing',en:'Staffing agency',es:'Agencia de personal',rec:S('Industrial Staffing','Personal Industrial'),qty:'count',
   f:[{id:'role',t:'s',req:1,en:'Employee type',es:'Tipo de empleados',o:S(['Warehouse','Forklift operators','Machine operators','Packaging','Cleaning','Maintenance','Office','Drivers'],['Almacén','Montacarguistas','Operadores','Empaque','Limpieza','Mantenimiento','Oficina','Choferes'])},
      {id:'count',t:'t',req:1,en:'How many people?',es:'¿Cuántas personas?'},{id:'etype',t:'s',req:1,en:'Employment type',es:'Tipo de contratación',o:S(['Temporary','Temp-to-hire','Direct hire','Seasonal','Emergency'],['Temporal','Temp-to-hire','Directa','Temporada','Emergencia'])},
      {id:'shift',t:'t',req:1,en:'Shift / schedule',es:'Turno / horario'},{id:'start',t:'t',req:1,en:'Start date',es:'Fecha de inicio'},{id:'pay',t:'t',en:'Hourly pay range',es:'Pago por hora'},
      {id:'lang',t:'s',en:'Language',es:'Idioma',o:S(['English','Spanish','Bilingual'],['Inglés','Español','Bilingüe'])}]},
- {id:'whtech',e:'🤖',en:'Warehouse technology',es:'Tecnología para almacén',rec:S('Warehouse Management & Automation','Gestión y Automatización'),qty:'users',
+ {id:'whtech',en:'Warehouse technology',es:'Tecnología para almacén',rec:S('Warehouse Management & Automation','Gestión y Automatización'),qty:'users',
   f:[{id:'process',t:'t',req:1,en:'Process to improve',es:'Proceso a mejorar'},{id:'current',t:'t',en:'Current system',es:'Sistema actual'},
      {id:'cap',t:'s',req:1,en:'Capability needed',es:'Capacidad',o:S(['WMS','Inventory','Barcode','RFID','AI','Dashboards','Sensors','Automation','Robotics','Integrations'],['WMS','Inventario','Código de barras','RFID','AI','Tableros','Sensores','Automatización','Robótica','Integraciones'])},
      {id:'users',t:'t',en:'How many users?',es:'¿Cuántos usuarios?'},{id:'pilot',t:'s',en:'Open to demo/pilot?',es:'¿Abierto a demo/piloto?',o:S(['Demo','Pilot','Proof of concept','Trial','Not sure'],['Demo','Piloto','Prueba de concepto','Trial','No sé'])}]},
- {id:'whparts',e:'🔩',en:'Warehouse products / parts',es:'Productos / partes',rec:S('Warehouse Products & Parts','Productos y Partes'),qty:'qty',
+ {id:'whparts',en:'Warehouse products / parts',es:'Productos / partes',rec:S('Warehouse Products & Parts','Productos y Partes'),qty:'qty',
   f:[{id:'item',t:'t',req:1,en:'Product or part',es:'Producto o parte'},{id:'qty',t:'t',req:1,en:'Quantity',es:'Cantidad'},{id:'part',t:'t',en:'Part / model number',es:'Número de parte / modelo'},
      {id:'mfr',t:'t',en:'Manufacturer',es:'Fabricante'},{id:'kind',t:'s',en:'Type',es:'Tipo',o:S(['OEM','Aftermarket','Used','Refurbished','Equivalent'],['OEM','Aftermarket','Usado','Reacondicionado','Equivalente'])},
      {id:'down',t:'s',en:'Equipment down?',es:'¿Equipo detenido?',o:'yn'}]},
- {id:'unsure',e:'❓',en:'Not sure yet',es:'No estoy seguro',rec:S('NXT//LINK Discovery','Descubrimiento NXT//LINK'),qty:'',
+ {id:'unsure',en:'Not sure yet',es:'No estoy seguro',rec:S('NXT//LINK Discovery','Descubrimiento NXT//LINK'),qty:'',
   f:[{id:'problem',t:'t',req:1,en:'Main problem',es:'Problema principal'},{id:'slow',t:'t',en:'What slows your operation?',es:'¿Qué retrasa tu operación?'},
      {id:'rel',t:'s',en:'Related to',es:'Relacionado con',o:S(['Equipment','People','Technology','Transportation','Safety','Maintenance','Inventory'],['Equipo','Personas','Tecnología','Transporte','Seguridad','Mantenimiento','Inventario'])},
      {id:'result',t:'t',en:'Result you want',es:'Resultado deseado'}]}
@@ -386,13 +418,13 @@ const esc=s=>String(s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[
 function renderHome(){
  const u=UI[LANG];
  $('badges').innerHTML=u.badges.map(b=>'<span class="badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'+b+'</span>').join('');
- $('paths').innerHTML=u.paths.map(p=>'<div class="path"><div class="ic">'+p[0]+'</div><h3 class="gk">'+p[1]+'</h3><p>'+p[2]+'</p><ul>'+p[3].map(x=>'<li>'+x+'</li>').join('')+'</ul></div>').join('');
- $('steps').innerHTML=u.steps.map(s=>'<div class="step"><div class="n gk">'+s[0]+'</div><h4 class="gk">'+s[1]+'</h4><p>'+s[2]+'</p></div>').join('');
+ $('paths').innerHTML=u.paths.map(p=>'<div class="path"><div class="ic">'+svg(p[0])+'</div><h3>'+p[1]+'</h3><p>'+p[2]+'</p><ul>'+p[3].map(x=>'<li>'+x+'</li>').join('')+'</ul></div>').join('');
+ $('steps').innerHTML=u.steps.map(s=>'<div class="step"><div class="n">'+s[0]+'</div><h4>'+s[1]+'</h4><p>'+s[2]+'</p></div>').join('');
  $('vget').innerHTML=u.vget.map(x=>'<li>'+x+'</li>').join('');
  $('vctrl').innerHTML=u.vctrl.map(x=>'<li>'+x+'</li>').join('');
- $('flowList').innerHTML=u.flow.map((f,i)=>'<div style="display:flex;gap:14px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)"><span class="gk" style="flex:none;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:rgba(139,92,246,.14);border:1px solid rgba(139,92,246,.3);color:var(--violet);font-weight:700;font-size:13px">'+(i+1)+'</span><span style="font-size:15px">'+f+'</span></div>').join('');
+ $('flowList').innerHTML=u.flow.map((f,i)=>'<div style="display:flex;gap:14px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)"><span style="flex:none;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--brand-soft);border:1px solid var(--brand-line);color:var(--brand-2);font-weight:700;font-size:13px">'+(i+1)+'</span><span style="font-size:15px">'+f+'</span></div>').join('');
 }
-function renderCats(){$('catGrid').innerHTML=CATS.map(c=>'<button class="cat" onclick="pickCat(\''+c.id+'\')"><span class="e">'+c.e+'</span><span>'+opt(c)+'</span></button>').join('');}
+function renderCats(){$('catGrid').innerHTML=CATS.map(c=>'<button class="cat" onclick="pickCat(\''+c.id+'\')"><span class="ico">'+svg(c.id)+'</span><span>'+opt(c)+'</span></button>').join('');}
 function field(f){const id='fld_'+f.id;let inner;
  if(f.t==='s'){const arr=f.o==='yn'?UI[LANG].yn:(LANG==='ES'?f.o.es:f.o.en);inner='<select id="'+id+'"><option value="">'+UI[LANG].pick+'</option>'+arr.map(o=>'<option>'+o+'</option>').join('')+'</select>';}
  else if(f.t==='a')inner='<textarea id="'+id+'" rows="2"></textarea>';else inner='<input id="'+id+'">';
@@ -410,10 +442,10 @@ function submitCat(e){e.preventDefault();
  $('readyBadge').innerHTML='<span class="badge2 '+(ready?'ready':'notready')+'">'+(ready?'✓ '+UI[LANG].ready:'! '+UI[LANG].notready)+'</span>';
  const specs=current.f.filter(f=>answers[f.id]&&f.id!==current.qty).slice(0,4).map(f=>answers[f.id]).join(' · ')+(core.notes?' — '+core.notes:'');
  const qty=current.qty&&answers[current.qty]?answers[current.qty]:'—';const th=UI[LANG].th;
- $('adminTable').innerHTML='<tr>'+th.map(h=>'<th>'+h+'</th>').join('')+'</tr><tr><td><b>'+opt(current)+'</b></td><td>'+esc(qty)+'</td><td>'+esc(core.budget||'—')+'</td><td>'+esc(core.priority||'—')+'</td><td>'+esc(core.timeline||'—')+'</td><td>'+esc(core.location||'—')+'</td><td>'+esc(core.nda||'—')+'</td><td>'+esc(specs||'—')+'</td><td>'+(miss.length?'<span class="miss">'+miss.length+'</span>':'<span style="color:#047857">0</span>')+'</td><td>'+(ready?'<span style="color:#047857;font-weight:700">Yes</span>':'<span style="color:#B45309;font-weight:700">No</span>')+'</td></tr>';
+ $('adminTable').innerHTML='<tr>'+th.map(h=>'<th>'+h+'</th>').join('')+'</tr><tr><td><b>'+opt(current)+'</b></td><td>'+esc(qty)+'</td><td>'+esc(core.budget||'—')+'</td><td>'+esc(core.priority||'—')+'</td><td>'+esc(core.timeline||'—')+'</td><td>'+esc(core.location||'—')+'</td><td>'+esc(core.nda||'—')+'</td><td>'+esc(specs||'—')+'</td><td>'+(miss.length?'<span class="miss">'+miss.length+'</span>':'<span style="color:var(--green)">0</span>')+'</td><td>'+(ready?'<span style="color:var(--green);font-weight:700">Yes</span>':'<span style="color:var(--amber);font-weight:700">No</span>')+'</td></tr>';
  $('missBlock').innerHTML=miss.length?'<b class="miss">'+UI[LANG].missTitle+':</b> <span class="miss">'+miss.map(esc).join(', ')+'</span>':'';
  $('recOut').textContent=opt(current.rec);$('s2').classList.add('hidden');$('s3').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});return false;}
-function renderOptions(){$('optionsOut').innerHTML=OPTS.map(o=>'<div class="optcard'+(o.rec?' rec':'')+'">'+(o.rec?'<span class="chip" style="background:rgba(139,92,246,.25);color:#C4B5FD;border:1px solid rgba(139,92,246,.4)">★ '+(LANG==='ES'?'Recomendado':'Recommended')+'</span><br>':'')+'<h3 class="gk" style="margin:8px 0 6px;font-size:19px">'+opt(o.label)+'</h3><div style="display:flex;gap:16px;font-weight:700;color:#fff"><span>'+o.price+'</span><span style="color:var(--dim)">·</span><span>'+opt(o.time)+'</span></div><div style="margin:12px 0 6px"><span class="note">'+(LANG==='ES'?'Ajuste':'Fit')+': '+o.fit+'%</span><div class="fitbar"><i style="width:'+o.fit+'%"></i></div></div><p style="margin:8px 0 2px;color:var(--gray);font-size:14px"><b style="color:#fff">'+(LANG==='ES'?'Ventajas':'Pros')+':</b> '+opt(o.pros)+'</p><p style="margin:2px 0 12px;color:var(--amber);font-size:14px"><b>'+(LANG==='ES'?'Riesgo':'Risk')+':</b> '+opt(o.risk)+'</p><button class="btn sm" onclick="reqIntro(this)">'+(LANG==='ES'?'Solicitar Introducción':'Request Introduction')+'</button> <span class="imk note"></span></div>').join('');}
+function renderOptions(){$('optionsOut').innerHTML=OPTS.map(o=>'<div class="optcard'+(o.rec?' rec':'')+'">'+(o.rec?'<span class="chip">'+(LANG==='ES'?'Recomendado':'Recommended')+'</span><br>':'')+'<h3 style="margin:8px 0 6px;font-size:19px">'+opt(o.label)+'</h3><div style="display:flex;gap:16px;font-weight:700;color:var(--ink)"><span>'+o.price+'</span><span style="color:var(--ink-3)">·</span><span>'+opt(o.time)+'</span></div><div style="margin:12px 0 6px"><span class="note">'+(LANG==='ES'?'Ajuste':'Fit')+': '+o.fit+'%</span><div class="fitbar"><i style="width:'+o.fit+'%"></i></div></div><p style="margin:8px 0 2px;color:var(--ink-2);font-size:14px"><b style="color:var(--ink)">'+(LANG==='ES'?'Ventajas':'Pros')+':</b> '+opt(o.pros)+'</p><p style="margin:2px 0 12px;color:var(--amber);font-size:14px"><b>'+(LANG==='ES'?'Riesgo':'Risk')+':</b> '+opt(o.risk)+'</p><button class="btn sm" onclick="reqIntro(this)">'+(LANG==='ES'?'Solicitar Introducción':'Request Introduction')+'</button> <span class="imk note"></span></div>').join('');}
 function reqIntro(b){b.nextElementSibling.innerHTML='<span style="color:var(--green);font-weight:700">✓ '+(LANG==='ES'?'Introducción solicitada — NXT//LINK revelará al proveedor al aprobar.':'Introduction requested — NXT//LINK will reveal the vendor once approved.')+'</span>';b.disabled=true;}
 function goHome2(){$('s2').classList.add('hidden');$('s1').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});}
 function editAgain(){$('s3').classList.add('hidden');$('s2').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});}
@@ -423,7 +455,7 @@ function go(v){['home','search','vendors','how','options'].forEach(x=>$('view-'+
  if(v==='options')renderOptions();window.scrollTo({top:0,behavior:'smooth'});}
 function applyI18n(){const u=UI[LANG];document.querySelectorAll('[data-t]').forEach(el=>{const k=el.dataset.t;if(u[k]!==undefined&&typeof u[k]==='string')el.textContent=u[k];});}
 function setLang(l){LANG=l;$('en').classList.toggle('on',l==='EN');$('es').classList.toggle('on',l==='ES');applyI18n();renderHome();renderCats();if(current&&!$('s2').classList.contains('hidden'))pickCat(current.id);if($('view-options').classList.contains('on'))renderOptions();}
-function submitToNxt(){if(!window.NXT||!current)return;var r=NXT.addRequest({category:opt(current),location:(core.location||''),timeline:(core.timeline||''),urgency:(core.priority||''),problem:(answers[current.f[0].id]||opt(current))});alert((LANG==='ES'?'✓ Enviado a NXT//LINK. Referencia: ':'✓ Submitted to NXT//LINK. Reference: ')+r.ref+(LANG==='ES'?'  — aparecerá en la Consola Admin (Vendor/Admin).':'  — it now appears in the Admin Console.'));}
+function submitToNxt(){if(!window.NXT||!current)return;var r=NXT.addRequest({category:opt(current),category_id:current.id,location:(core.location||''),deadline:(core.timeline||''),timeline:(core.timeline||''),urgency:(core.priority||''),budget:(core.budget||''),problem:(answers[current.f[0].id]||opt(current)),recommended:opt(current.rec)});alert((LANG==='ES'?'✓ Enviado a NXT//LINK. Referencia: ':'✓ Submitted to NXT//LINK. Reference: ')+r.ref+(LANG==='ES'?'  — aparecerá en la Consola Admin.':'  — it now appears in the Admin Console.'));}
 applyI18n();renderHome();renderCats();
 </script>
 </body>
