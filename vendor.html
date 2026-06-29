@@ -4,58 +4,74 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>NXT//LINK — Vendor Quote Assistant</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#0A0712;--charcoal:#15101F;--card:#1A1428;--line:#2A2140;--white:#F6F4FB;--gray:#A39FB5;--dim:#6E6885;
-    --purple:#8B5CF6;--purple2:#A855F7;--violet:#C4B5FD;--glow:rgba(139,92,246,.45);--green:#34D399;--amber:#FBBF24;--red:#F87171;}
-  *{box-sizing:border-box;}body{margin:0;background:var(--bg);color:var(--white);font-family:'Inter',system-ui,sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased;}
-  .gk{font-family:'Space Grotesk',sans-serif;}
-  body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(60% 50% at 15% -5%,rgba(139,92,246,.18),transparent 60%),radial-gradient(50% 40% at 95% 0%,rgba(168,85,247,.10),transparent 55%);}
+  :root{--bg:#F8FAFC;--surface:#FFFFFF;--surface-2:#F1F5F9;--line:#E2E8F0;--line-2:#CBD5E1;
+    --ink:#0F172A;--ink-2:#475569;--ink-3:#94A3B8;
+    --brand:#2563EB;--brand-2:#1D4ED8;--brand-soft:#EFF4FF;--brand-line:#BFD4FF;
+    --green:#16A34A;--green-soft:#DCFCE7;--amber:#D97706;--amber-soft:#FEF3C7;--red:#DC2626;--red-soft:#FEE2E2;
+    --radius:14px;--radius-sm:10px;--radius-lg:20px;
+    --shadow-sm:0 1px 2px rgba(15,23,42,.04),0 1px 3px rgba(15,23,42,.06);
+    --shadow-md:0 4px 6px -2px rgba(15,23,42,.05),0 12px 24px -8px rgba(15,23,42,.10);
+    --shadow-lg:0 24px 50px -28px rgba(15,23,42,.28);}
+  *{box-sizing:border-box;}html{scroll-behavior:smooth;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,-apple-system,sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+  h1,h2,h3,h4{letter-spacing:-.02em;font-weight:700;color:var(--ink);}
+  a{color:var(--brand);}
+  :focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
+  .gk{font-family:'Inter',sans-serif;}
+  .ico{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;background:var(--brand-soft);color:var(--brand);border:1px solid var(--brand-line);flex:none;}
+  .ico svg{width:20px;height:20px;}
   .app{position:relative;z-index:1;}
-  nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 24px;background:rgba(10,7,18,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);}
-  .logo{display:flex;align-items:center;gap:10px;}.logo .mk{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:linear-gradient(135deg,var(--purple),var(--purple2));box-shadow:0 0 16px var(--glow);}
-  .logo b{font:700 18px/1 'Space Grotesk';letter-spacing:-.5px;}.logo b i{color:var(--violet);font-style:normal;}
-  .logo .sub{font-size:11px;color:var(--gray);margin-left:2px;}
+  nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 24px;background:#fff;border-bottom:1px solid var(--line);box-shadow:var(--shadow-sm);}
+  .logo{display:flex;align-items:center;gap:10px;}.logo .mk{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--brand);}
+  .logo b{font:800 19px/1 'Inter';letter-spacing:-.03em;color:var(--ink);}.logo b i{color:var(--brand);font-style:normal;}
+  .logo .sub{font-size:11px;color:var(--ink-2);margin-left:2px;}
   .navr{display:flex;align-items:center;gap:12px;}
   .save{font-size:12px;color:var(--green);display:flex;align-items:center;gap:5px;}
   .seg{display:flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;}
-  .seg button{border:none;background:none;color:var(--gray);font:700 12px/1 'Space Grotesk';padding:6px 8px;border-radius:6px;cursor:pointer;}.seg button.on{background:var(--purple);color:#fff;}
+  .seg button{border:none;background:none;color:var(--ink-2);font:600 12px/1 'Inter';padding:6px 8px;border-radius:6px;cursor:pointer;}.seg button.on{background:var(--brand);color:#fff;border-radius:6px;}
   .wrap{max-width:1000px;margin:0 auto;padding:26px 20px 80px;}
   .tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
-  .tab{padding:9px 16px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--gray);cursor:pointer;font:600 14px/1 'Inter';}
-  .tab.on{background:var(--purple);border-color:var(--purple);color:#fff;}
-  .card{background:linear-gradient(180deg,var(--card),var(--charcoal));border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:16px;}
+  .tab{padding:9px 16px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink-2);cursor:pointer;font:600 14px/1 'Inter';}
+  .tab.on{background:var(--brand);border-color:var(--brand);color:#fff;}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:22px;margin-bottom:16px;}
   .opp{display:grid;grid-template-columns:1fr 1fr;gap:8px 22px;margin-top:12px;}
   @media(max-width:620px){.opp{grid-template-columns:1fr;}}
   .opp .row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px;}
-  .opp .row span{color:var(--gray);}.opp .row b{font-weight:600;text-align:right;}
+  .opp .row span{color:var(--ink-2);}.opp .row b{font-weight:600;text-align:right;color:var(--ink);}
   .lock{color:var(--amber);font-size:12px;display:inline-flex;gap:5px;align-items:center;}
-  .btn{border:none;cursor:pointer;font:600 14px/1 'Inter';border-radius:11px;padding:12px 16px;background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;box-shadow:0 8px 22px -10px var(--glow);}
-  .btn:hover{filter:brightness(1.08);}.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--white);box-shadow:none;}
-  .btn.sm{padding:9px 13px;font-size:13px;}.btn.green{background:linear-gradient(135deg,#10B981,#34D399);}
+  .lock svg{width:14px;height:14px;}
+  .btn{border:none;cursor:pointer;font:600 14px/1 'Inter';border-radius:10px;padding:12px 16px;background:var(--brand);color:#fff;box-shadow:var(--shadow-sm);display:inline-flex;align-items:center;gap:6px;}
+  .btn:hover{background:var(--brand-2);}.btn.ghost{background:#fff;border:1px solid var(--line-2);color:var(--ink);box-shadow:none;}
+  .btn.ghost:hover{border-color:var(--brand);color:var(--brand);background:#fff;}
+  .btn.sm{padding:9px 13px;font-size:13px;}.btn.green{background:var(--green);}.btn.green:hover{background:#15803D;}
+  .btn svg{width:16px;height:16px;}
   .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
-  .reco{display:flex;align-items:center;gap:12px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.4);border-radius:12px;padding:12px 16px;margin-top:14px;}
-  .reco .t{flex:1;font-size:14px;}.reco .t b{color:var(--violet);}
-  .secLbl{font:700 12px/1 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:var(--violet);margin:22px 0 12px;}
+  .reco{display:flex;align-items:center;gap:12px;background:var(--brand-soft);border:1px solid var(--brand-line);border-radius:12px;padding:12px 16px;margin-top:14px;}
+  .reco .t{flex:1;font-size:14px;color:var(--ink);}.reco .t b{color:var(--brand-2);}
+  .secLbl{font:700 12px/1 'Inter';letter-spacing:.06em;text-transform:uppercase;color:var(--brand-2);margin:22px 0 12px;}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}@media(max-width:600px){.grid{grid-template-columns:1fr;}}
-  label.f{display:flex;flex-direction:column;gap:6px;font:600 12px/1.2 'Inter';color:var(--gray);}
-  label.f.req span::after{content:' *';color:var(--purple2);}
-  .f input,.f select,.f textarea{padding:11px 13px;border-radius:10px;border:1px solid var(--line);background:#120D1E;color:var(--white);font:400 14px/1.3 'Inter';outline:none;width:100%;}
-  .f input:focus,.f select:focus,.f textarea:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(139,92,246,.18);}
+  label.f{display:flex;flex-direction:column;gap:6px;font:600 12px/1.2 'Inter';color:var(--ink-2);}
+  label.f.req span::after{content:' *';color:var(--brand);}
+  .f input,.f select,.f textarea{padding:11px 13px;border-radius:10px;border:1px solid var(--line-2);background:#fff;color:var(--ink);font:400 14px/1.3 'Inter';outline:none;width:100%;}
+  .f input:focus,.f select:focus,.f textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(37,99,235,.15);}
   .full{grid-column:1/-1;}
-  .meter{margin-top:18px;background:var(--charcoal);border:1px solid var(--line);border-radius:13px;padding:16px;}
+  .meter{margin-top:18px;background:var(--surface-2);border:1px solid var(--line);border-radius:13px;padding:16px;}
   .meter .top{display:flex;justify-content:space-between;align-items:center;font:600 14px/1 'Inter';}
-  .bar{height:9px;background:#241B38;border-radius:6px;overflow:hidden;margin:10px 0;}
-  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--purple),var(--purple2));transition:width .3s;}
+  .bar{height:9px;background:#E2E8F0;border-radius:6px;overflow:hidden;margin:10px 0;}
+  .bar i{display:block;height:100%;background:var(--brand);transition:width .3s;}
   .flags{font-size:13px;color:var(--amber);}
-  .pill{display:inline-block;font:700 10px/1 'Space Grotesk';padding:4px 9px;border-radius:100px;background:rgba(251,191,36,.15);color:var(--amber);border:1px solid rgba(251,191,36,.4);letter-spacing:.05em;}
-  .qrow{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:var(--charcoal);}
-  .qrow .meta{font-size:13px;color:var(--gray);}.qrow .meta b{color:var(--white);}
-  .stat{font:700 11px/1 'Space Grotesk';padding:4px 9px;border-radius:100px;text-transform:uppercase;letter-spacing:.04em;}
-  .s-draft{background:rgba(163,159,181,.15);color:var(--gray);}.s-sub{background:rgba(52,211,153,.15);color:var(--green);}.s-tpl{background:rgba(139,92,246,.15);color:var(--violet);}
+  .pill{display:inline-block;font:700 10px/1 'Inter';padding:4px 9px;border-radius:100px;background:var(--amber-soft);color:var(--amber);border:1px solid #FCD34D;letter-spacing:.05em;}
+  .qrow{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:#fff;}
+  .qrow .meta{font-size:13px;color:var(--ink-2);}.qrow .meta b{color:var(--ink);}
+  .stat{font:700 11px/1 'Inter';padding:4px 9px;border-radius:100px;text-transform:uppercase;letter-spacing:.04em;}
+  .s-draft{background:var(--surface-2);color:var(--ink-2);}.s-sub{background:var(--green-soft);color:var(--green);}.s-tpl{background:var(--brand-soft);color:var(--brand-2);}
   .hidden{display:none!important;}
-  .note{color:var(--dim);font-size:12.5px;}
-  .guard{margin-top:18px;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:12px 14px;color:var(--amber);font-size:12.5px;}
+  .note{color:var(--ink-3);font-size:12.5px;}
+  .guard{margin-top:18px;background:var(--amber-soft);border:1px solid #FCD34D;border-radius:10px;padding:12px 14px;color:var(--amber);font-size:12.5px;}
   /* print quote */
   #printArea{display:none;}
   @media print{body *{visibility:hidden;}#printArea,#printArea *{visibility:visible;}#printArea{display:block;position:absolute;inset:0;background:#fff;color:#111;padding:40px;font-family:Inter,sans-serif;}
@@ -68,7 +84,7 @@
 <nav>
   <div class="logo"><span class="mk"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h12"/><path d="m13 8 4 4-4 4"/></svg></span><b>NXT<i>//</i>LINK</b><span class="sub" id="asub">Quote Assistant</span></div>
   <div class="navr">
-    <a href="index.html" style="color:var(--gray);text-decoration:none;font-size:13px">← Home</a>
+    <a href="index.html" style="color:var(--ink-2);text-decoration:none;font-size:13px">← Home</a>
     <span class="save" id="saveStatus"></span>
     <div class="seg"><button id="en" class="on" onclick="setLang('EN')">EN</button><button id="es" onclick="setLang('ES')">ES</button></div>
   </div>
@@ -85,12 +101,12 @@
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
         <h2 class="gk" style="margin:0;font-size:20px" id="oppH">Protected opportunity</h2>
-        <span class="lock">🔒 <span id="oppLock">Client identity hidden</span></span>
+        <span class="lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> <span id="oppLock">Client identity hidden</span></span>
       </div>
       <div class="opp" id="oppGrid"></div>
-      <div class="reco"><span style="font-size:20px">✦</span><div class="t" id="recoText"></div><button class="btn sm" onclick="insertRecommended()" id="recoBtn">Insert Template</button></div>
+      <div class="reco"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z"/></svg></span><div class="t" id="recoText"></div><button class="btn sm" onclick="insertRecommended()" id="recoBtn">Insert Template</button></div>
       <div class="actions">
-        <button class="btn" onclick="draftAI()" id="b-ai">✦ <span data-t="draftAI">Draft with AI</span></button>
+        <button class="btn" onclick="draftAI()" id="b-ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z"/></svg> <span data-t="draftAI">Draft with AI</span></button>
         <button class="btn ghost" onclick="tab('lib')" id="b-tpl" data-t="useTpl">Use Saved Template</button>
         <button class="btn ghost" onclick="scrollForm()" id="b-man" data-t="manual">Create Manually</button>
         <button class="btn ghost" onclick="alert(LANG==='ES'?'Mensaje enviado a NXT//LINK (demo)':'Message sent to NXT//LINK (demo)')" id="b-ask" data-t="askMore">Ask NXT//LINK for More Info</button>
@@ -113,7 +129,7 @@
       </form>
 
       <div class="meter">
-        <div class="top"><span data-t="complete">Quote completeness</span><span id="scoreNum" class="gk" style="color:var(--violet)">0%</span></div>
+        <div class="top"><span data-t="complete">Quote completeness</span><span id="scoreNum" class="gk" style="color:var(--brand-2)">0%</span></div>
         <div class="bar"><i id="scoreBar" style="width:0%"></i></div>
         <div class="flags" id="flags"></div>
       </div>
@@ -124,7 +140,7 @@
         <button class="btn ghost" onclick="saveDraft()" data-t="saveDraft">Save draft</button>
         <button class="btn ghost" onclick="saveTemplate()" data-t="saveTpl">Save as template</button>
         <button class="btn ghost" onclick="genPDF()" data-t="pdf">Generate Quote PDF</button>
-        <label style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--gray)"><input type="checkbox" id="clientSafe" style="width:auto"> <span data-t="csafe">Client-safe PDF (hide my name → Option A)</span></label>
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-2)"><input type="checkbox" id="clientSafe" style="width:auto"> <span data-t="csafe">Client-safe PDF (hide my name → Option A)</span></label>
       </div>
       <div class="guard" id="guardText"></div>
     </div>
@@ -222,7 +238,7 @@ function onInput(){
   const filled=REQUIRED.filter(id=>val(id));const score=Math.round(filled.length/REQUIRED.length*100);
   $('scoreNum').textContent=score+'%';$('scoreBar').style.width=score+'%';
   const missing=REQUIRED.filter(id=>!val(id)).map(id=>REQ_LABELS[id][LANG==='ES'?'es':'en']);
-  $('flags').innerHTML=missing.length?('⚠ '+(LANG==='ES'?'Esta cotización está '+score+'% completa. Falta: ':'This quote is '+score+'% complete. Add: ')+missing.join(', ')):'✓ '+tr('allset');
+  $('flags').innerHTML=missing.length?('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:-2px"><path d="M12 3 2 20h20z"/><path d="M12 10v5"/><path d="M12 18h.01"/></svg> '+(LANG==='ES'?'Esta cotización está '+score+'% completa. Falta: ':'This quote is '+score+'% complete. Add: ')+missing.join(', ')):'✓ '+tr('allset');
   $('flags').style.color=missing.length?'var(--amber)':'var(--green)';
   renderCostBreak();updateSubmitLabel();
   autosave();
@@ -265,7 +281,7 @@ function submitQuote(){const miss=REQUIRED.filter(id=>!val(id));if(miss.length){
 function saveTemplate(){const name=prompt(LANG==='ES'?'Nombre de la plantilla:':'Template name:',(TPL_NAMES[OPP.category]||{en:'My template'}).en);if(!name)return;const arr=getArr('nxt_tpl');arr.unshift({id:'T-'+Math.random().toString(36).slice(2,7).toUpperCase(),name,cat:OPP.category,data:snapshot(),date:dateStr()});setArr('nxt_tpl',arr);renderLib();toast(LANG==='ES'?'Plantilla guardada':'Template saved');}
 function loadData(d){Object.keys(d||{}).forEach(k=>{const e=$('q_'+k);if(e)e.value=d[k];});onInput();}
 function dateStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-function toast(m){const t=document.createElement('div');t.textContent=m;t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1A1428;border:1px solid var(--line);color:#fff;padding:12px 20px;border-radius:12px;z-index:99;box-shadow:0 14px 40px -10px #000;font-size:14px';document.body.appendChild(t);setTimeout(()=>t.remove(),2200);}
+function toast(m){const t=document.createElement('div');t.textContent=m;t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);border:1px solid var(--ink);color:#fff;padding:12px 20px;border-radius:12px;z-index:99;box-shadow:var(--shadow-lg);font-size:14px';document.body.appendChild(t);setTimeout(()=>t.remove(),2200);}
 
 const STAT_LABELS={draft:{en:'Draft',es:'Borrador',c:'s-draft'},submitted:{en:'Submitted',es:'Enviada',c:'s-sub'},template:{en:'Template',es:'Plantilla',c:'s-tpl'}};
 function renderSaved(){const arr=getArr('nxt_saved');$('savedList').innerHTML=arr.length?arr.map(q=>{const s=STAT_LABELS[q.status];return '<div class="qrow"><div><b class="gk">'+q.id+'</b> <span class="stat '+s.c+'">'+(LANG==='ES'?s.es:s.en)+'</span><div class="meta">'+q.opp+' · '+esc(q.desc)+' · <b>'+esc(q.amount)+'</b> · '+q.date+'</div></div><div style="display:flex;gap:6px"><button class="btn sm ghost" onclick="useSaved(\''+q.id+'\')">'+tr('edit')+'</button><button class="btn sm ghost" onclick="delItem(\'nxt_saved\',\''+q.id+'\')">'+tr('del')+'</button></div></div>';}).join(''):'<p class="note">'+tr('none')+'</p>';}
@@ -300,16 +316,16 @@ const PROF={pct:68,EN:{h:'Profile',c:'complete',missLbl:'Missing — finish thes
   miss:['Áreas de servicio','Catálogo','Documento de seguro','Plantilla de cotización','Acuerdo de comisión','Respuesta de soporte bilingüe']}};
 function renderProfile(){var p=PROF[LANG];var el=document.getElementById('profileCard');if(!el)return;
  el.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h2 class="gk" style="margin:0;font-size:18px">'+p.h+' '+PROF.pct+'% '+p.c+'</h2><button class="btn sm ghost" onclick="alert(\''+(LANG==='ES'?'Completar perfil (demo)':'Complete profile (demo)')+'\')">'+p.cta+'</button></div>'+
- '<div style="height:9px;background:#241B38;border-radius:6px;overflow:hidden;margin:12px 0"><i style="display:block;height:100%;width:'+PROF.pct+'%;background:linear-gradient(90deg,var(--purple),var(--purple2))"></i></div>'+
+ '<div style="height:9px;background:#E2E8F0;border-radius:6px;overflow:hidden;margin:12px 0"><i style="display:block;height:100%;width:'+PROF.pct+'%;background:var(--brand)"></i></div>'+
  '<div class="note" style="margin-bottom:8px">'+p.missLbl+'</div>'+
- '<div style="display:flex;flex-wrap:wrap;gap:7px">'+p.miss.map(function(m){return '<span style="font:600 12px/1 Inter;padding:5px 11px;border-radius:100px;background:rgba(251,191,36,.12);color:var(--amber);border:1px solid rgba(251,191,36,.35)">+ '+m+'</span>';}).join('')+'</div>';}
+ '<div style="display:flex;flex-wrap:wrap;gap:7px">'+p.miss.map(function(m){return '<span style="font:600 12px/1 Inter;padding:5px 11px;border-radius:100px;background:var(--amber-soft);color:var(--amber);border:1px solid #FCD34D">+ '+m+'</span>';}).join('')+'</div>';}
 renderProfile();
 function num(id){var v=val(id);var m=(v.match(/[0-9][0-9,.]*/g)||[]).map(function(x){return parseFloat(x.replace(/,/g,''));}).filter(function(n){return !isNaN(n)&&n>0;});return m.length?Math.max.apply(null,m):0;}
 function renderCostBreak(){var el=document.getElementById('costBreak');if(!el)return;var es=LANG==='ES';
  var list=es?[['Mano de obra','labor'],['Cargo de servicio','service_fee'],['Cargo de viaje','travel'],['Partes/materiales','parts']]:[['Labor','labor'],['Service fee','service_fee'],['Travel fee','travel'],['Parts/materials','parts']];
- var total=0;var rows=list.map(function(it){var n=num(it[1]);total+=n;return n?'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px"><span style="color:var(--gray)">'+it[0]+'</span><b>$'+n.toLocaleString()+'</b></div>':'';}).join('');
+ var total=0;var rows=list.map(function(it){var n=num(it[1]);total+=n;return n?'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px"><span style="color:var(--ink-2)">'+it[0]+'</span><b>$'+n.toLocaleString()+'</b></div>':'';}).join('');
  if(total<=0){el.innerHTML='<div class="note">'+(es?'Agrega costos (mano de obra, servicio, viaje, partes) para ver el desglose.':'Add costs (labor, service, travel, parts) to see a breakdown.')+'</div>';return;}
- el.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><span style="font:600 14px Inter">'+(es?'Desglose de costos':'Cost breakdown')+'</span><span class="gk" style="color:var(--violet)">$'+total.toLocaleString()+'</span></div>'+rows+'<div style="display:flex;justify-content:space-between;padding:8px 0 0;font-weight:700"><span>'+(es?'Total estimado':'Estimated total')+'</span><span style="color:var(--violet)">$'+total.toLocaleString()+'</span></div>';}
+ el.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><span style="font:600 14px Inter">'+(es?'Desglose de costos':'Cost breakdown')+'</span><span class="gk" style="color:var(--brand-2)">$'+total.toLocaleString()+'</span></div>'+rows+'<div style="display:flex;justify-content:space-between;padding:8px 0 0;font-weight:700"><span>'+(es?'Total estimado':'Estimated total')+'</span><span style="color:var(--brand-2)">$'+total.toLocaleString()+'</span></div>';}
 function updateSubmitLabel(){var sb=document.getElementById('b-submit');if(!sb)return;var rd=val('readiness');var canNow=(LANG==='ES'?'Puedo cotizar ahora':'Can quote now');if(rd&&rd!==canNow){sb.textContent=(LANG==='ES'?'Enviar — ':'Submit — ')+rd;}else{sb.textContent=tr('submit');}}
 </script>
 </body>
