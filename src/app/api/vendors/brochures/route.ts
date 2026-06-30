@@ -46,8 +46,7 @@ export async function POST(req: Request) {
       .upload(path, bytes, { contentType: file.type || 'application/octet-stream', upsert: false });
     if (upErr) throw upErr;
 
-    const { data: pub } = db.storage.from(BUCKET).getPublicUrl(path);
-
+    // Bucket is private — store the path; we mint short-lived signed URLs on read.
     const { data, error } = await db
       .from('vendor_brochures')
       .insert({
@@ -56,14 +55,14 @@ export async function POST(req: Request) {
         file_type: file.type,
         size_bytes: file.size,
         storage_path: path,
-        public_url: pub?.publicUrl || null,
         title: title || file.name,
       })
-      .select('id, file_name, public_url, storage_path')
+      .select('id, file_name, storage_path')
       .single();
     if (error) throw error;
 
-    return NextResponse.json({ ok: true, stored: true, brochure: data });
+    const { data: signed } = await db.storage.from(BUCKET).createSignedUrl(path, 3600);
+    return NextResponse.json({ ok: true, stored: true, brochure: { ...data, public_url: signed?.signedUrl || null } });
   } catch (e) {
     return NextResponse.json({
       ok: true, stored: false, degraded: true,
@@ -81,11 +80,18 @@ export async function GET(req: Request) {
     const db = getSupabaseClient({ admin: true });
     const { data, error } = await db
       .from('vendor_brochures')
-      .select('id, file_name, file_type, size_bytes, public_url, storage_path, title, uploaded_at')
+      .select('id, file_name, file_type, size_bytes, storage_path, title, uploaded_at')
       .eq('vendor_id', vendorId)
       .order('uploaded_at', { ascending: false });
     if (error) throw error;
-    return NextResponse.json({ ok: true, stored: true, brochures: data || [] });
+    // Mint a fresh signed URL for each file (private bucket).
+    const brochures = await Promise.all(
+      (data || []).map(async (b) => {
+        const { data: signed } = await db.storage.from(BUCKET).createSignedUrl(b.storage_path, 3600);
+        return { ...b, public_url: signed?.signedUrl || null };
+      }),
+    );
+    return NextResponse.json({ ok: true, stored: true, brochures });
   } catch (e) {
     return NextResponse.json({ ok: true, stored: false, degraded: true, brochures: [],
       message: e instanceof Error ? e.message : 'Could not load brochures' });
