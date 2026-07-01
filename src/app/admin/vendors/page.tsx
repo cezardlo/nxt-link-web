@@ -68,6 +68,7 @@ export default function AdminVendorsPage() {
       <header className="av-nav">
         <div className="av-brand"><span className="av-mk sm"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h12" /><path d="m13 8 4 4-4 4" /></svg></span><b>NXT<i>//</i>LINK</b> <span className="av-tag">Vendor directory</span></div>
         <div className="av-zoho">
+          <a href="/admin/directory" className="av-link" style={{ marginRight: 16 }}>Browse →</a>
           <a href="/admin/match" className="av-link" style={{ marginRight: 16 }}>Match vendors →</a>
           <span className={'av-dot' + (zoho?.mail_ready ? ' on' : '')} /> Zoho Mail {zoho?.mail_ready ? 'connected' : 'not connected'}
         </div>
