@@ -10,8 +10,25 @@ import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getApplicantSession, getOwnApplication } from '@/lib/apply/auth';
 
 const CATEGORIES = ['TMS', 'WMS', 'Telematics/ELD', 'Forklifts', 'Customs/Cross-Border', 'Cold Chain', 'Robotics', 'Other'];
+const OFFERING_TYPES = ['Product', 'Software / platform', 'Service', 'Innovation / frontier tool'];
 const LOGO_BUCKET = 'vendor-logos';
 const IMG_BUCKET = 'vendor-product-images';
+const MAX_STAGES = 12;
+
+function cleanStringArray(values: unknown, max: number, maxLen: number): string[] | undefined {
+  if (!Array.isArray(values)) return undefined;
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of values) {
+    if (typeof raw !== 'string') continue;
+    const v = raw.trim().slice(0, maxLen);
+    if (!v || seen.has(v)) continue;
+    seen.add(v);
+    out.push(v);
+    if (out.length >= max) break;
+  }
+  return out;
+}
 
 export async function GET() {
   const session = await getApplicantSession();
@@ -53,11 +70,16 @@ export async function PATCH(req: Request) {
   str('problem_solved', 2000);
   if (typeof body.category === 'string' && CATEGORIES.includes(body.category)) patch.category = body.category;
 
+  const offeringTypes = cleanStringArray(body.offering_types, OFFERING_TYPES.length, 60)?.filter((v) => OFFERING_TYPES.includes(v));
+  if (offeringTypes) patch.offering_types = offeringTypes;
+  const stages = cleanStringArray(body.supply_chain_stages, MAX_STAGES, 80);
+  if (stages) patch.supply_chain_stages = stages;
+
   if (!Object.keys(patch).length) return NextResponse.json({ ok: false, message: 'Nothing to update' }, { status: 400 });
 
   const db = getSupabaseClient({ admin: true });
   const { data, error } = await db.from('vendor_applications').update(patch).eq('id', app.id).eq('auth_id', session.authId)
-    .select('id, public_ref, company_name, contact_name, email, phone, category, problem_solved, target_customer, price_range, status')
+    .select('id, public_ref, company_name, contact_name, email, phone, category, offering_types, supply_chain_stages, problem_solved, target_customer, price_range, status')
     .single();
   if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
   return NextResponse.json({ ok: true, stored: true, application: data });

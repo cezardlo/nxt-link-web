@@ -21,6 +21,23 @@ const CATEGORIES = [
 
 const PRICE_OPTIONS = ['under $5k', '$5-25k', '$25k+', 'Other'];
 
+const OFFERING_TYPES = ['Product', 'Software / platform', 'Service', 'Innovation / frontier tool'];
+
+const SUPPLY_CHAIN_STAGES = [
+  'Sourcing / Procurement',
+  'Inbound / Receiving',
+  'Warehousing / Storage',
+  'Inventory Management',
+  'Order Fulfillment / Picking',
+  'Yard / Dock',
+  'Transportation / Fleet',
+  'Last-Mile Delivery',
+  'Customs / Cross-Border',
+  'Cold Chain',
+  'Reverse Logistics / Returns',
+  'Supply Chain Planning / Visibility',
+];
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const MAX_PRODUCT_IMAGES = 3;
@@ -44,6 +61,9 @@ export default function ApplyPage() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [category, setCategory] = useState('');
+  const [offeringTypes, setOfferingTypes] = useState<string[]>([]);
+  const [stages, setStages] = useState<string[]>([]);
+  const [customStage, setCustomStage] = useState('');
   const [problemSolved, setProblemSolved] = useState('');
   const [targetCustomer, setTargetCustomer] = useState('');
   const [priceRange, setPriceRange] = useState('');
@@ -101,6 +121,21 @@ export default function ApplyPage() {
     return priceRange;
   }
 
+  function toggle(list: string[], value: string, setter: (next: string[]) => void) {
+    setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
+  }
+
+  function addCustomStage() {
+    const v = customStage.trim();
+    if (!v || stages.includes(v)) { setCustomStage(''); return; }
+    setStages((prev) => [...prev, v]);
+    setCustomStage('');
+  }
+
+  function removeStage(value: string) {
+    setStages((prev) => prev.filter((v) => v !== value));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setEmailTouched(true);
@@ -119,6 +154,8 @@ export default function ApplyPage() {
       fd.append('email', email.trim());
       fd.append('phone', phone.trim());
       fd.append('category', category);
+      for (const t of offeringTypes) fd.append('offering_types', t);
+      for (const s of stages) fd.append('supply_chain_stages', s);
       fd.append('problem_solved', problemSolved.trim());
       fd.append('target_customer', targetCustomer.trim());
       fd.append('price_range', resolvedPriceRange());
@@ -239,6 +276,60 @@ export default function ApplyPage() {
                   )}
                 </Field>
               </div>
+
+              <Field label="What kind of offering is this?" hint="Select all that apply" full>
+                <div className="ap-chips">
+                  {OFFERING_TYPES.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      className={`ap-chip ${offeringTypes.includes(t) ? 'ap-chip-on' : ''}`}
+                      onClick={() => toggle(offeringTypes, t, setOfferingTypes)}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+
+              <Field label="Where in the supply chain does this apply?" hint="Select all that apply" full>
+                <div className="ap-chips">
+                  {SUPPLY_CHAIN_STAGES.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      className={`ap-chip ${stages.includes(s) ? 'ap-chip-on' : ''}`}
+                      onClick={() => toggle(stages, s, setStages)}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                  {stages.filter((s) => !SUPPLY_CHAIN_STAGES.includes(s)).map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      className="ap-chip ap-chip-on ap-chip-custom"
+                      onClick={() => removeStage(s)}
+                    >
+                      {s} ×
+                    </button>
+                  ))}
+                </div>
+                <div className="ap-addstage">
+                  <input
+                    type="text"
+                    value={customStage}
+                    onChange={(e) => setCustomStage(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); addCustomStage(); }
+                    }}
+                    placeholder="Other — add your own stage"
+                  />
+                  <button type="button" className="ap-addbtn" onClick={addCustomStage}>
+                    Add
+                  </button>
+                </div>
+              </Field>
 
               <Field label="What problem do you solve?" required full>
                 <textarea
@@ -435,6 +526,16 @@ const CSS = `
 .ap-field input:focus,.ap-field select:focus,.ap-field textarea:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
 .ap-field input.ap-invalid{border-color:var(--red);}
 .ap-mt{margin-top:8px;}
+.ap-chips{display:flex;flex-wrap:wrap;gap:8px;}
+.ap-chip{font-family:var(--sans);background:var(--surf2);border:1px solid var(--line);color:var(--ink2);border-radius:99px;padding:8px 15px;font-size:13px;font-weight:500;cursor:pointer;transition:border-color .15s,background .15s,color .15s;}
+.ap-chip:hover{border-color:var(--p);color:var(--ink);}
+.ap-chip-on{background:var(--pbg);border-color:var(--p);color:var(--p3);}
+.ap-chip-custom:hover{border-color:var(--red);color:var(--red);}
+.ap-addstage{display:flex;gap:8px;margin-top:10px;}
+.ap-addstage input{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 13px;color:var(--ink);font-size:13.5px;font-family:var(--sans);outline:none;}
+.ap-addstage input:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
+.ap-addbtn{background:var(--surf2);border:1px solid var(--line);color:var(--ink2);border-radius:10px;padding:0 18px;font-size:13.5px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:border-color .15s;}
+.ap-addbtn:hover{border-color:var(--p);color:var(--ink);}
 .ap-fielderror{color:var(--red);font-size:12.5px;margin:0;}
 .ap-error{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--red);border-radius:11px;padding:12px 14px;font-size:14px;margin:4px 0 18px;}
 .ap-filebtn{display:inline-flex;align-items:center;gap:8px;background:var(--surf2);border:1px solid var(--line);border-radius:10px;padding:10px 16px;font-size:13.5px;font-weight:600;color:var(--ink2);cursor:pointer;width:fit-content;transition:border-color .15s;}

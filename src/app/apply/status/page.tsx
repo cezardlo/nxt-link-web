@@ -20,6 +20,23 @@ const CATEGORIES = [
   'Other',
 ];
 
+const OFFERING_TYPES = ['Product', 'Software / platform', 'Service', 'Innovation / frontier tool'];
+
+const SUPPLY_CHAIN_STAGES = [
+  'Sourcing / Procurement',
+  'Inbound / Receiving',
+  'Warehousing / Storage',
+  'Inventory Management',
+  'Order Fulfillment / Picking',
+  'Yard / Dock',
+  'Transportation / Fleet',
+  'Last-Mile Delivery',
+  'Customs / Cross-Border',
+  'Cold Chain',
+  'Reverse Logistics / Returns',
+  'Supply Chain Planning / Visibility',
+];
+
 const MAX_PRODUCT_IMAGES = 3;
 
 type Status = 'pending' | 'approved' | 'rejected';
@@ -32,6 +49,8 @@ interface Application {
   email: string;
   phone: string;
   category: string;
+  offering_types: string[];
+  supply_chain_stages: string[];
   problem_solved: string;
   target_customer: string;
   price_range: string;
@@ -187,6 +206,8 @@ interface EditableFields {
   contact_name: string;
   phone: string;
   category: string;
+  offering_types: string[];
+  supply_chain_stages: string[];
   problem_solved: string;
   target_customer: string;
   price_range: string;
@@ -204,11 +225,14 @@ function ApplicationPanel({
     contact_name: application.contact_name || '',
     phone: application.phone || '',
     category: application.category || '',
+    offering_types: application.offering_types || [],
+    supply_chain_stages: application.supply_chain_stages || [],
     problem_solved: application.problem_solved || '',
     target_customer: application.target_customer || '',
     price_range: application.price_range || '',
   });
 
+  const [customStage, setCustomStage] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [saveNotice, setSaveNotice] = useState('');
@@ -227,6 +251,31 @@ function ApplicationPanel({
 
   function setField<K extends keyof EditableFields>(key: K, value: EditableFields[K]) {
     setFields((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function toggleOffering(value: string) {
+    setFields((prev) => ({
+      ...prev,
+      offering_types: prev.offering_types.includes(value)
+        ? prev.offering_types.filter((v) => v !== value)
+        : [...prev.offering_types, value],
+    }));
+  }
+
+  function toggleStage(value: string) {
+    setFields((prev) => ({
+      ...prev,
+      supply_chain_stages: prev.supply_chain_stages.includes(value)
+        ? prev.supply_chain_stages.filter((v) => v !== value)
+        : [...prev.supply_chain_stages, value],
+    }));
+  }
+
+  function addCustomStage() {
+    const v = customStage.trim();
+    if (!v || fields.supply_chain_stages.includes(v)) { setCustomStage(''); return; }
+    setFields((prev) => ({ ...prev, supply_chain_stages: [...prev.supply_chain_stages, v] }));
+    setCustomStage('');
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -386,6 +435,60 @@ function ApplicationPanel({
             </Field>
           </div>
 
+          <Field label="What kind of offering is this?" full>
+            <div className="ays-chips">
+              {OFFERING_TYPES.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  className={`ays-chip ${fields.offering_types.includes(t) ? 'ays-chip-on' : ''}`}
+                  onClick={() => toggleOffering(t)}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </Field>
+
+          <Field label="Where in the supply chain does this apply?" full>
+            <div className="ays-chips">
+              {SUPPLY_CHAIN_STAGES.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  className={`ays-chip ${fields.supply_chain_stages.includes(s) ? 'ays-chip-on' : ''}`}
+                  onClick={() => toggleStage(s)}
+                >
+                  {s}
+                </button>
+              ))}
+              {fields.supply_chain_stages.filter((s) => !SUPPLY_CHAIN_STAGES.includes(s)).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  className="ays-chip ays-chip-on ays-chip-custom"
+                  onClick={() => toggleStage(s)}
+                >
+                  {s} ×
+                </button>
+              ))}
+            </div>
+            <div className="ays-addstage">
+              <input
+                type="text"
+                value={customStage}
+                onChange={(e) => setCustomStage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { e.preventDefault(); addCustomStage(); }
+                }}
+                placeholder="Other — add your own stage"
+              />
+              <button type="button" className="ays-addbtn" onClick={addCustomStage}>
+                Add
+              </button>
+            </div>
+          </Field>
+
           <Field label="What problem do you solve?" full>
             <textarea
               value={fields.problem_solved}
@@ -523,6 +626,16 @@ const CSS = `
 .ays-field input:disabled{opacity:.55;cursor:not-allowed;}
 .ays-field textarea{resize:vertical;line-height:1.5;}
 .ays-field input:focus,.ays-field select:focus,.ays-field textarea:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
+.ays-chips{display:flex;flex-wrap:wrap;gap:8px;}
+.ays-chip{font-family:var(--sans);background:var(--surf2);border:1px solid var(--line);color:var(--ink2);border-radius:99px;padding:8px 15px;font-size:13px;font-weight:500;cursor:pointer;transition:border-color .15s,background .15s,color .15s;}
+.ays-chip:hover{border-color:var(--p);color:var(--ink);}
+.ays-chip-on{background:var(--pbg);border-color:var(--p);color:var(--p3);}
+.ays-chip-custom:hover{border-color:var(--red);color:var(--red);}
+.ays-addstage{display:flex;gap:8px;margin-top:10px;}
+.ays-addstage input{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 13px;color:var(--ink);font-size:13.5px;font-family:var(--sans);outline:none;}
+.ays-addstage input:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
+.ays-addbtn{background:var(--surf2);border:1px solid var(--line);color:var(--ink2);border-radius:10px;padding:0 18px;font-size:13.5px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:border-color .15s;}
+.ays-addbtn:hover{border-color:var(--p);color:var(--ink);}
 .ays-error{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--red);border-radius:11px;padding:12px 14px;font-size:14px;margin:4px 0 18px;}
 .ays-notice{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:var(--green);border-radius:11px;padding:12px 14px;font-size:14px;margin:4px 0 18px;}
 .ays-btn{display:inline-flex;align-items:center;justify-content:center;background:var(--p);color:#fff;border:none;border-radius:12px;padding:13px 22px;font:600 15px 'Outfit';cursor:pointer;text-decoration:none;box-shadow:0 8px 24px rgba(124,92,252,.35);transition:background .15s;}

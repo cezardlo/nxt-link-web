@@ -12,10 +12,26 @@ import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getApplicantSession } from '@/lib/apply/auth';
 
 const CATEGORIES = ['TMS', 'WMS', 'Telematics/ELD', 'Forklifts', 'Customs/Cross-Border', 'Cold Chain', 'Robotics', 'Other'];
+const OFFERING_TYPES = ['Product', 'Software / platform', 'Service', 'Innovation / frontier tool'];
 const LOGO_BUCKET = 'vendor-logos';
 const IMG_BUCKET = 'vendor-product-images';
 const MAX_BYTES = 8 * 1024 * 1024;
 const ALLOWED_IMG = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+const MAX_STAGES = 12;
+
+/** Free values allowed (the "Other" escape hatch) — just capped in length/count. */
+function cleanStringArray(values: string[], max: number, maxLen: number): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of values) {
+    const v = raw.trim().slice(0, maxLen);
+    if (!v || seen.has(v)) continue;
+    seen.add(v);
+    out.push(v);
+    if (out.length >= max) break;
+  }
+  return out;
+}
 
 export async function POST(req: Request) {
   let form: FormData;
@@ -36,12 +52,19 @@ export async function POST(req: Request) {
 
   const session = await getApplicantSession();
 
+  const offeringTypesRaw = form.getAll('offering_types').map((v) => String(v));
+  const stagesRaw = form.getAll('supply_chain_stages').map((v) => String(v));
+  const offering_types = cleanStringArray(offeringTypesRaw, OFFERING_TYPES.length, 60).filter((v) => OFFERING_TYPES.includes(v));
+  const supply_chain_stages = cleanStringArray(stagesRaw, MAX_STAGES, 80);
+
   const row = {
     company_name,
     contact_name: get('contact_name'),
     email,
     phone: get('phone'),
     category,
+    offering_types,
+    supply_chain_stages,
     problem_solved: get('problem_solved').slice(0, 2000),
     target_customer: get('target_customer').slice(0, 500),
     price_range: get('price_range').slice(0, 100),
