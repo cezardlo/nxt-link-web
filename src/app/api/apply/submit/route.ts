@@ -65,6 +65,8 @@ export async function POST(req: Request) {
     category,
     offering_types,
     supply_chain_stages,
+    company_size: get('company_size').slice(0, 100),
+    region: get('region').slice(0, 100),
     problem_solved: get('problem_solved').slice(0, 2000),
     target_customer: get('target_customer').slice(0, 500),
     price_range: get('price_range').slice(0, 100),

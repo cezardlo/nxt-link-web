@@ -67,6 +67,7 @@ export async function PATCH(req: Request) {
   const patch: Record<string, unknown> = {};
   const str = (k: string, max = 300) => { if (typeof body[k] === 'string') patch[k] = (body[k] as string).slice(0, max); };
   str('company_name'); str('contact_name'); str('phone'); str('target_customer'); str('price_range', 100);
+  str('company_size', 100); str('region', 100);
   str('problem_solved', 2000);
   if (typeof body.category === 'string' && CATEGORIES.includes(body.category)) patch.category = body.category;
 
@@ -79,7 +80,7 @@ export async function PATCH(req: Request) {
 
   const db = getSupabaseClient({ admin: true });
   const { data, error } = await db.from('vendor_applications').update(patch).eq('id', app.id).eq('auth_id', session.authId)
-    .select('id, public_ref, company_name, contact_name, email, phone, category, offering_types, supply_chain_stages, problem_solved, target_customer, price_range, status')
+    .select('id, public_ref, company_name, contact_name, email, phone, category, offering_types, supply_chain_stages, company_size, region, problem_solved, target_customer, price_range, status')
     .single();
   if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
   return NextResponse.json({ ok: true, stored: true, application: data });

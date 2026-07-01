@@ -38,6 +38,23 @@ const SUPPLY_CHAIN_STAGES = [
   'Supply Chain Planning / Visibility',
 ];
 
+const COMPANY_SIZES = ['1-10 employees', '11-50 employees', '51-200 employees', '201-500 employees', '500+ employees', 'Other'];
+
+const REGIONS = ['El Paso', 'Juárez', 'New Mexico', 'West Texas', 'Cross-border', 'National', 'Other'];
+
+const TARGET_CUSTOMER_TYPES = [
+  'Small warehouses (<50k sqft)',
+  'Mid-size warehouses',
+  'Large distribution centers',
+  'Manufacturers',
+  '3PL providers',
+  'Retailers',
+  'Cross-border operations',
+  'Startups',
+  'Enterprise',
+  'Other',
+];
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const MAX_PRODUCT_IMAGES = 3;
@@ -64,8 +81,13 @@ export default function ApplyPage() {
   const [offeringTypes, setOfferingTypes] = useState<string[]>([]);
   const [stages, setStages] = useState<string[]>([]);
   const [customStage, setCustomStage] = useState('');
+  const [companySize, setCompanySize] = useState('');
+  const [companySizeOther, setCompanySizeOther] = useState('');
+  const [region, setRegion] = useState('');
+  const [regionOther, setRegionOther] = useState('');
   const [problemSolved, setProblemSolved] = useState('');
   const [targetCustomer, setTargetCustomer] = useState('');
+  const [targetCustomerOther, setTargetCustomerOther] = useState('');
   const [priceRange, setPriceRange] = useState('');
   const [priceOther, setPriceOther] = useState('');
 
@@ -120,6 +142,18 @@ export default function ApplyPage() {
     if (priceRange === 'Other') return priceOther.trim();
     return priceRange;
   }
+  function resolvedCompanySize(): string {
+    if (companySize === 'Other') return companySizeOther.trim();
+    return companySize;
+  }
+  function resolvedRegion(): string {
+    if (region === 'Other') return regionOther.trim();
+    return region;
+  }
+  function resolvedTargetCustomer(): string {
+    if (targetCustomer === 'Other') return targetCustomerOther.trim();
+    return targetCustomer;
+  }
 
   function toggle(list: string[], value: string, setter: (next: string[]) => void) {
     setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
@@ -156,8 +190,10 @@ export default function ApplyPage() {
       fd.append('category', category);
       for (const t of offeringTypes) fd.append('offering_types', t);
       for (const s of stages) fd.append('supply_chain_stages', s);
+      fd.append('company_size', resolvedCompanySize());
+      fd.append('region', resolvedRegion());
       fd.append('problem_solved', problemSolved.trim());
-      fd.append('target_customer', targetCustomer.trim());
+      fd.append('target_customer', resolvedTargetCustomer());
       fd.append('price_range', resolvedPriceRange());
       if (logo) fd.append('logo', logo.file);
       for (const img of images) fd.append('images', img.file);
@@ -275,6 +311,46 @@ export default function ApplyPage() {
                     />
                   )}
                 </Field>
+
+                <Field label="Company size">
+                  <select value={companySize} onChange={(e) => setCompanySize(e.target.value)}>
+                    <option value="">Select a size</option>
+                    {COMPANY_SIZES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                  {companySize === 'Other' && (
+                    <input
+                      type="text"
+                      className="ap-mt"
+                      value={companySizeOther}
+                      onChange={(e) => setCompanySizeOther(e.target.value)}
+                      placeholder="Describe your company size"
+                    />
+                  )}
+                </Field>
+
+                <Field label="Region">
+                  <select value={region} onChange={(e) => setRegion(e.target.value)}>
+                    <option value="">Select a region</option>
+                    {REGIONS.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                  {region === 'Other' && (
+                    <input
+                      type="text"
+                      className="ap-mt"
+                      value={regionOther}
+                      onChange={(e) => setRegionOther(e.target.value)}
+                      placeholder="Describe your region"
+                    />
+                  )}
+                </Field>
               </div>
 
               <Field label="What kind of offering is this?" hint="Select all that apply" full>
@@ -342,12 +418,23 @@ export default function ApplyPage() {
               </Field>
 
               <Field label="Who do you serve best?" full>
-                <textarea
-                  value={targetCustomer}
-                  onChange={(e) => setTargetCustomer(e.target.value)}
-                  placeholder="Your ideal customer — industry, company size, region, etc."
-                  rows={2}
-                />
+                <select value={targetCustomer} onChange={(e) => setTargetCustomer(e.target.value)}>
+                  <option value="">Select a customer type</option>
+                  {TARGET_CUSTOMER_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+                {targetCustomer === 'Other' && (
+                  <input
+                    type="text"
+                    className="ap-mt"
+                    value={targetCustomerOther}
+                    onChange={(e) => setTargetCustomerOther(e.target.value)}
+                    placeholder="Describe your ideal customer"
+                  />
+                )}
               </Field>
 
               <div className="ap-grid">

@@ -32,6 +32,8 @@ export interface ApplicationRow {
   category: string;
   offering_types: string[];
   supply_chain_stages: string[];
+  company_size: string | null;
+  region: string | null;
   problem_solved: string | null;
   target_customer: string | null;
   price_range: string | null;
@@ -43,7 +45,7 @@ export interface ApplicationRow {
 }
 
 const COLS =
-  'id, public_ref, company_name, contact_name, email, phone, category, offering_types, supply_chain_stages, problem_solved, target_customer, price_range, logo_path, product_image_paths, status, auth_id, created_at';
+  'id, public_ref, company_name, contact_name, email, phone, category, offering_types, supply_chain_stages, company_size, region, problem_solved, target_customer, price_range, logo_path, product_image_paths, status, auth_id, created_at';
 
 /**
  * Find the caller's own application: by auth_id, or by linking a prior

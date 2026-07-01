@@ -37,6 +37,23 @@ const SUPPLY_CHAIN_STAGES = [
   'Supply Chain Planning / Visibility',
 ];
 
+const COMPANY_SIZES = ['1-10 employees', '11-50 employees', '51-200 employees', '201-500 employees', '500+ employees', 'Other'];
+
+const REGIONS = ['El Paso', 'Juárez', 'New Mexico', 'West Texas', 'Cross-border', 'National', 'Other'];
+
+const TARGET_CUSTOMER_TYPES = [
+  'Small warehouses (<50k sqft)',
+  'Mid-size warehouses',
+  'Large distribution centers',
+  'Manufacturers',
+  '3PL providers',
+  'Retailers',
+  'Cross-border operations',
+  'Startups',
+  'Enterprise',
+  'Other',
+];
+
 const MAX_PRODUCT_IMAGES = 3;
 
 type Status = 'pending' | 'approved' | 'rejected';
@@ -51,6 +68,8 @@ interface Application {
   category: string;
   offering_types: string[];
   supply_chain_stages: string[];
+  company_size: string;
+  region: string;
   problem_solved: string;
   target_customer: string;
   price_range: string;
@@ -58,6 +77,15 @@ interface Application {
   logo_url: string | null;
   image_urls: string[];
   product_image_paths: string[];
+}
+
+/** Resolve a stored free-text value against a fixed option list: returns the
+ * select's value (the exact match, or "Other" if it's a non-empty custom
+ * value) and the text to prefill the "Other" input with. */
+function resolveOptionValue(stored: string, options: string[]): { select: string; other: string } {
+  if (!stored) return { select: '', other: '' };
+  if (options.includes(stored)) return { select: stored, other: '' };
+  return { select: 'Other', other: stored };
 }
 
 interface MyResponse {
@@ -209,7 +237,6 @@ interface EditableFields {
   offering_types: string[];
   supply_chain_stages: string[];
   problem_solved: string;
-  target_customer: string;
   price_range: string;
 }
 
@@ -228,9 +255,18 @@ function ApplicationPanel({
     offering_types: application.offering_types || [],
     supply_chain_stages: application.supply_chain_stages || [],
     problem_solved: application.problem_solved || '',
-    target_customer: application.target_customer || '',
     price_range: application.price_range || '',
   });
+
+  const initSize = resolveOptionValue(application.company_size || '', COMPANY_SIZES);
+  const initRegion = resolveOptionValue(application.region || '', REGIONS);
+  const initCustomer = resolveOptionValue(application.target_customer || '', TARGET_CUSTOMER_TYPES);
+  const [companySize, setCompanySize] = useState(initSize.select);
+  const [companySizeOther, setCompanySizeOther] = useState(initSize.other);
+  const [region, setRegion] = useState(initRegion.select);
+  const [regionOther, setRegionOther] = useState(initRegion.other);
+  const [targetCustomer, setTargetCustomer] = useState(initCustomer.select);
+  const [targetCustomerOther, setTargetCustomerOther] = useState(initCustomer.other);
 
   const [customStage, setCustomStage] = useState('');
   const [saving, setSaving] = useState(false);
@@ -283,11 +319,17 @@ function ApplicationPanel({
     setSaving(true);
     setSaveError('');
     setSaveNotice('');
+    const resolved = {
+      ...fields,
+      company_size: companySize === 'Other' ? companySizeOther.trim() : companySize,
+      region: region === 'Other' ? regionOther.trim() : region,
+      target_customer: targetCustomer === 'Other' ? targetCustomerOther.trim() : targetCustomer,
+    };
     try {
       const res = await fetch('/api/apply/my', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(fields),
+        body: JSON.stringify(resolved),
       });
       const json = await res.json();
       if (!json.ok) {
@@ -295,7 +337,7 @@ function ApplicationPanel({
         return;
       }
       setSaveNotice('Changes saved.');
-      onApplicationChange({ ...application, ...fields });
+      onApplicationChange({ ...application, ...resolved });
     } catch {
       setSaveError('Could not save your changes.');
     } finally {
@@ -433,6 +475,46 @@ function ApplicationPanel({
                 placeholder="e.g. $5-25k"
               />
             </Field>
+
+            <Field label="Company size">
+              <select value={companySize} onChange={(e) => setCompanySize(e.target.value)}>
+                <option value="">Select a size</option>
+                {COMPANY_SIZES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+              {companySize === 'Other' && (
+                <input
+                  type="text"
+                  className="ays-mt"
+                  value={companySizeOther}
+                  onChange={(e) => setCompanySizeOther(e.target.value)}
+                  placeholder="Describe your company size"
+                />
+              )}
+            </Field>
+
+            <Field label="Region">
+              <select value={region} onChange={(e) => setRegion(e.target.value)}>
+                <option value="">Select a region</option>
+                {REGIONS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+              {region === 'Other' && (
+                <input
+                  type="text"
+                  className="ays-mt"
+                  value={regionOther}
+                  onChange={(e) => setRegionOther(e.target.value)}
+                  placeholder="Describe your region"
+                />
+              )}
+            </Field>
           </div>
 
           <Field label="What kind of offering is this?" full>
@@ -498,11 +580,23 @@ function ApplicationPanel({
           </Field>
 
           <Field label="Who do you serve best?" full>
-            <textarea
-              value={fields.target_customer}
-              onChange={(e) => setField('target_customer', e.target.value)}
-              rows={2}
-            />
+            <select value={targetCustomer} onChange={(e) => setTargetCustomer(e.target.value)}>
+              <option value="">Select a customer type</option>
+              {TARGET_CUSTOMER_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+            {targetCustomer === 'Other' && (
+              <input
+                type="text"
+                className="ays-mt"
+                value={targetCustomerOther}
+                onChange={(e) => setTargetCustomerOther(e.target.value)}
+                placeholder="Describe your ideal customer"
+              />
+            )}
           </Field>
 
           {saveError && <p className="ays-error">{saveError}</p>}
@@ -624,6 +718,7 @@ const CSS = `
   width:100%;background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:12px 14px;color:var(--ink);font-size:14.5px;font-family:var(--sans);outline:none;transition:border-color .15s,box-shadow .15s;
 }
 .ays-field input:disabled{opacity:.55;cursor:not-allowed;}
+.ays-mt{margin-top:8px;}
 .ays-field textarea{resize:vertical;line-height:1.5;}
 .ays-field input:focus,.ays-field select:focus,.ays-field textarea:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
 .ays-chips{display:flex;flex-wrap:wrap;gap:8px;}
