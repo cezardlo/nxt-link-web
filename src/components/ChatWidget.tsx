@@ -4,21 +4,31 @@ import { useState, useRef, useEffect } from 'react';
 
 interface Msg { role: 'user' | 'assistant'; content: string }
 
+const SCOUT_ICON = (
+  <svg viewBox="0 0 24 24" fill="none"><circle cx="8" cy="14" r="4" stroke="currentColor" strokeWidth="1.8" /><circle cx="16" cy="14" r="4" stroke="currentColor" strokeWidth="1.8" /><path d="M12 14V10M8 10h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+);
+
+// NXT//LINK Scout — premium brand chat (Outfit + purple), wired to /api/chat.
 export default function ChatWidget({ mode = 'public', locale = 'en' }: { mode?: 'public' | 'vendor'; locale?: 'en' | 'es' }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [input, setInput] = useState('');
   const greeting = mode === 'vendor'
-    ? (locale === 'es' ? 'Hola, soy el asistente de NXT//LINK. Te ayudo a registrar tu empresa y a describir lo que ofreces. ¿En qué trabajas?' : "Hi, I'm the NXT//LINK assistant. I can help you register your company and describe what you provide. What does your company do?")
-    : (locale === 'es' ? 'Hola, soy el asistente de NXT//LINK. ¿Qué necesita tu almacén?' : "Hi, I'm the NXT//LINK assistant. What does your warehouse need?");
+    ? (locale === 'es' ? 'Hola, soy Scout de NXT//LINK. Te ayudo a registrar tu empresa y a describir lo que ofreces. ¿En qué trabaja tu empresa?' : "Hi, I'm Scout from NXT//LINK. I can help you register your company and describe what you provide. What does your company do?")
+    : (locale === 'es' ? 'Hola, soy Scout de NXT//LINK. ¿Qué necesita tu almacén?' : "Hi, I'm Scout from NXT//LINK. What does your warehouse need?");
+  const starters = mode === 'vendor'
+    ? (locale === 'es' ? ['¿Cómo registro mi empresa?', 'Sube un folleto', '¿Qué zonas cubren?'] : ['How do I register my company?', 'Upload a brochure', 'Which areas do you cover?'])
+    : (locale === 'es' ? ['Necesito montacargas', 'Busco personal', 'No estoy seguro'] : ['I need forklift service', 'I need staffing', "I'm not sure yet"]);
   const [messages, setMessages] = useState<Msg[]>([{ role: 'assistant', content: greeting }]);
+  const [showStarters, setShowStarters] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }); }, [messages, open]);
 
-  async function send() {
-    const text = input.trim();
+  async function send(preset?: string) {
+    const text = (preset ?? input).trim();
     if (!text || busy) return;
+    setShowStarters(false);
     const next = [...messages, { role: 'user' as const, content: text }];
     setMessages(next); setInput(''); setBusy(true);
     try {
@@ -34,59 +44,74 @@ export default function ChatWidget({ mode = 'public', locale = 'en' }: { mode?: 
   }
 
   return (
-    <div className="cw">
+    <div className="scout">
       <style>{CSS}</style>
-      {open && (
-        <div className="cw-panel">
-          <div className="cw-head">
-            <span className="cw-mk"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h12" /><path d="m13 8 4 4-4 4" /></svg></span>
-            <div><b>NXT//LINK Assistant</b><small>{locale === 'es' ? 'AI · un humano da seguimiento' : 'AI · a human follows up'}</small></div>
-            <button className="cw-x" onClick={() => setOpen(false)}>✕</button>
-          </div>
-          <div className="cw-body" ref={scrollRef}>
-            {messages.map((m, i) => <div key={i} className={'cw-msg ' + m.role}>{m.content}</div>)}
-            {busy && <div className="cw-msg assistant cw-typing"><span /><span /><span /></div>}
-          </div>
-          <div className="cw-input">
-            <input value={input} placeholder={locale === 'es' ? 'Escribe un mensaje…' : 'Type a message…'} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && send()} />
-            <button onClick={send} disabled={busy}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></svg>
-            </button>
-          </div>
+      <div className={'sc-box' + (open ? ' open' : '')}>
+        <div className="sc-head">
+          <div className="sc-av-wrap"><span className="sc-av">{SCOUT_ICON}</span><span className="sc-dot" /></div>
+          <div className="sc-titles"><div className="sc-title">NXT//LINK Scout</div><div className="sc-sub">{locale === 'es' ? 'AI · un humano da seguimiento' : 'AI · a human follows up'}</div></div>
+          <button className="sc-x" onClick={() => setOpen(false)} aria-label="Close">✕</button>
         </div>
-      )}
-      <button className="cw-fab" onClick={() => setOpen(!open)} aria-label="Open assistant">
-        {open ? (
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-        ) : (
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-        )}
+        <div className="sc-msgs" ref={scrollRef}>
+          {messages.map((m, i) => m.role === 'user'
+            ? <div key={i} className="sc-user">{m.content}</div>
+            : <div key={i} className="sc-bot-wrap"><span className="sc-av sm">{SCOUT_ICON}</span><div className="sc-bot">{m.content}</div></div>)}
+          {busy && <div className="sc-bot-wrap"><span className="sc-av sm">{SCOUT_ICON}</span><div className="sc-typing"><span /><span /><span /></div></div>}
+          {showStarters && !busy && (
+            <div className="sc-starters">{starters.map((s) => <button key={s} onClick={() => send(s)}>{s}</button>)}</div>
+          )}
+        </div>
+        <div className="sc-input">
+          <input value={input} placeholder={locale === 'es' ? 'Pregúntame lo que sea…' : 'Ask me anything…'} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && send()} />
+          <button onClick={() => send()} disabled={busy} aria-label="Send"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z" /></svg></button>
+        </div>
+      </div>
+      <button className={'sc-fab' + (open ? ' open' : '')} onClick={() => setOpen(!open)} aria-label="Open Scout chat">
+        {open
+          ? <svg viewBox="0 0 24 24" fill="#fff"><path d="M18 6 6 18M6 6l12 12" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" /></svg>
+          : <svg viewBox="0 0 24 24" fill="none"><circle cx="8" cy="14" r="4" stroke="#fff" strokeWidth="1.9" /><circle cx="16" cy="14" r="4" stroke="#fff" strokeWidth="1.9" /><path d="M12 14V10M8 10h8" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" /></svg>}
       </button>
     </div>
   );
 }
 
 const CSS = `
-.cw{--brand:#2563EB;--brand-2:#1D4ED8;--ink:#0F172A;--ink-2:#475569;--line:#E2E8F0;position:fixed;right:22px;bottom:22px;z-index:60;font-family:Inter,system-ui,sans-serif;}
-.cw-fab{width:56px;height:56px;border-radius:50%;border:none;background:var(--brand);color:#fff;cursor:pointer;box-shadow:0 12px 28px -8px rgba(37,99,235,.6);display:grid;place-items:center;margin-left:auto;}
-.cw-fab:hover{background:var(--brand-2);}
-.cw-panel{width:min(380px,calc(100vw - 32px));height:min(560px,70vh);background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 30px 60px -20px rgba(15,23,42,.35);display:flex;flex-direction:column;overflow:hidden;margin-bottom:14px;}
-.cw-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);}
-.cw-mk{width:30px;height:30px;border-radius:8px;background:var(--brand);display:grid;place-items:center;flex:none;}
-.cw-head b{display:block;font:700 14px/1.2 Inter;color:var(--ink);}
-.cw-head small{color:var(--ink-2);font-size:11px;}
-.cw-x{margin-left:auto;border:none;background:none;color:var(--ink-2);cursor:pointer;font-size:14px;}
-.cw-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:#F8FAFC;}
-.cw-msg{max-width:84%;padding:10px 13px;border-radius:14px;font:400 14px/1.5 Inter;white-space:pre-wrap;}
-.cw-msg.assistant{background:#fff;border:1px solid var(--line);color:var(--ink);align-self:flex-start;border-bottom-left-radius:4px;}
-.cw-msg.user{background:var(--brand);color:#fff;align-self:flex-end;border-bottom-right-radius:4px;}
-.cw-typing{display:flex;gap:4px;align-items:center;}
-.cw-typing span{width:6px;height:6px;border-radius:50%;background:var(--ink-2);opacity:.4;animation:cwb 1s infinite;}
-.cw-typing span:nth-child(2){animation-delay:.15s;}.cw-typing span:nth-child(3){animation-delay:.3s;}
-@keyframes cwb{0%,60%,100%{opacity:.25;}30%{opacity:.9;}}
-.cw-input{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line);background:#fff;}
-.cw-input input{flex:1;padding:10px 13px;border:1px solid #CBD5E1;border-radius:10px;font:400 14px Inter;outline:none;}
-.cw-input input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(37,99,235,.15);}
-.cw-input button{border:none;background:var(--brand);color:#fff;width:40px;border-radius:10px;cursor:pointer;display:grid;place-items:center;}
-.cw-input button:hover{background:var(--brand-2);}.cw-input button:disabled{opacity:.5;}
+.scout{--bg:#0A0A0F;--bg2:#111118;--surf2:rgba(255,255,255,.07);--ink:#F0F0F5;--ink2:#C0C0D0;--muted:#8080A0;--muted2:#505068;--line:rgba(255,255,255,.08);--p:#7C5CFC;--p2:#A78BFA;--pd:#6344DF;--pbg:rgba(124,92,252,.12);--green:#34D399;
+  font-family:'Outfit',system-ui,sans-serif;}
+.sc-fab{position:fixed;bottom:28px;right:28px;z-index:150;width:60px;height:60px;border-radius:50%;background:var(--p);border:none;cursor:pointer;box-shadow:0 4px 24px rgba(124,92,252,.45);display:flex;align-items:center;justify-content:center;transition:.3s;}
+.sc-fab:hover{transform:scale(1.08);box-shadow:0 6px 32px rgba(124,92,252,.55);}
+.sc-fab svg{width:26px;height:26px;}
+.sc-box{position:fixed;bottom:100px;right:28px;z-index:150;width:370px;max-width:calc(100vw - 56px);height:480px;max-height:calc(100vh - 140px);background:var(--bg2);border:1px solid var(--line);border-radius:18px;display:flex;flex-direction:column;overflow:hidden;opacity:0;transform:translateY(12px) scale(.97);pointer-events:none;transition:opacity .2s,transform .2s;box-shadow:0 12px 48px rgba(0,0,0,.5);}
+.sc-box.open{opacity:1;transform:none;pointer-events:auto;}
+.sc-head{padding:15px 18px;background:linear-gradient(135deg,var(--p),var(--pd));display:flex;align-items:center;gap:12px;}
+.sc-av-wrap{position:relative;}
+.sc-av{width:30px;height:30px;background:rgba(255,255,255,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;}
+.sc-av svg{width:16px;height:16px;}
+.sc-av.sm{width:28px;height:28px;background:var(--pbg);color:var(--p2);}
+.sc-av.sm svg{width:14px;height:14px;}
+.sc-dot{width:8px;height:8px;background:var(--green);border-radius:50%;position:absolute;bottom:0;right:0;border:2px solid var(--pd);}
+.sc-titles{flex:1;min-width:0;}
+.sc-title{font-size:15px;font-weight:600;color:#fff;}
+.sc-sub{font-size:11px;color:rgba(255,255,255,.75);margin-top:1px;}
+.sc-x{border:none;background:none;color:rgba(255,255,255,.85);cursor:pointer;font-size:14px;}
+.sc-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--bg);}
+.sc-msgs::-webkit-scrollbar{width:4px;}.sc-msgs::-webkit-scrollbar-thumb{background:var(--muted2);border-radius:2px;}
+.sc-bot-wrap{display:flex;gap:8px;align-items:flex-start;align-self:flex-start;max-width:90%;}
+.sc-bot,.sc-user{padding:11px 15px;border-radius:14px;font-size:14px;line-height:1.5;white-space:pre-wrap;}
+.sc-bot{background:var(--surf2);color:var(--ink);border-bottom-left-radius:4px;}
+.sc-user{background:var(--p);color:#fff;align-self:flex-end;border-bottom-right-radius:4px;max-width:85%;}
+.sc-typing{padding:12px 16px;background:var(--surf2);border-radius:14px;border-bottom-left-radius:4px;display:flex;gap:4px;}
+.sc-typing span{width:6px;height:6px;background:var(--muted);border-radius:50%;animation:scTyp 1.2s infinite;}
+.sc-typing span:nth-child(2){animation-delay:.2s;}.sc-typing span:nth-child(3){animation-delay:.4s;}
+@keyframes scTyp{0%,100%{opacity:.3;transform:translateY(0);}50%{opacity:1;transform:translateY(-4px);}}
+.sc-starters{display:flex;flex-direction:column;gap:7px;margin-top:4px;align-items:flex-start;}
+.sc-starters button{background:var(--pbg);border:1px solid rgba(124,92,252,.25);color:var(--p3,#C4B5FD);font-family:'Outfit';font-size:13px;padding:8px 13px;border-radius:99px;cursor:pointer;transition:.15s;}
+.sc-starters button:hover{background:rgba(124,92,252,.2);}
+.sc-input{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:10px;background:var(--bg2);}
+.sc-input input{flex:1;font-family:'Outfit';font-size:14px;padding:10px 14px;background:var(--bg);border:1px solid var(--line);border-radius:99px;color:var(--ink);outline:none;}
+.sc-input input:focus{border-color:var(--p);}
+.sc-input button{width:38px;height:38px;border-radius:50%;background:var(--p);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s;flex-shrink:0;}
+.sc-input button:hover{background:var(--pd);}.sc-input button:disabled{opacity:.5;}
+.sc-input button svg{width:18px;height:18px;}
+@media(max-width:768px){.sc-box{bottom:88px;right:12px;width:320px;max-width:calc(100vw - 24px);height:440px;}.sc-fab{bottom:20px;right:20px;width:52px;height:52px;}}
 `;
