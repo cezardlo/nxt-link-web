@@ -22,7 +22,7 @@ export async function GET(req: Request) {
     const db = getSupabaseClient({ admin: true });
     let query = db
       .from('vendor_profiles')
-      .select('id, public_ref, company_name, contact_name, email, phone, website, city, categories, service_areas, description, status, zoho_contact_id, created_at')
+      .select('id, public_ref, company_name, contact_name, email, phone, website, city, categories, service_areas, industries, client_types, description, status, zoho_contact_id, created_at')
       .order('created_at', { ascending: false })
       .limit(500);
     if (status && status !== 'all') query = query.eq('status', status);

@@ -92,7 +92,7 @@ export default function VendorSignupPage() {
 
   return (
     <div className="vs">
-      <style>{CSS}</style>
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div className="vs-mesh"><span className="o1" /><span className="o2" /></div>
 
       <nav className="vs-nav">

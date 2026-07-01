@@ -51,7 +51,7 @@ export default function AdminVendorsPage() {
 
   if (!authed) {
     return (
-      <div className="av-root"><style>{CSS}</style>
+      <div className="av-root"><style dangerouslySetInnerHTML={{ __html: CSS }} />
         <div className="av-gate">
           <div className="av-mk"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h12" /><path d="m13 8 4 4-4 4" /></svg></div>
           <h1>Admin · Vendor directory</h1>
@@ -64,7 +64,7 @@ export default function AdminVendorsPage() {
   }
 
   return (
-    <div className="av-root"><style>{CSS}</style>
+    <div className="av-root"><style dangerouslySetInnerHTML={{ __html: CSS }} />
       <header className="av-nav">
         <div className="av-brand"><span className="av-mk sm"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h12" /><path d="m13 8 4 4-4 4" /></svg></span><b>NXT<i>//</i>LINK</b> <span className="av-tag">Vendor directory</span></div>
         <div className="av-zoho">

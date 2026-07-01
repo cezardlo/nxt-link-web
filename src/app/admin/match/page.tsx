@@ -57,7 +57,7 @@ export default function AdminMatchPage() {
 
   if (!authed) {
     return (
-      <div className="m-root"><style>{CSS}</style>
+      <div className="m-root"><style dangerouslySetInnerHTML={{ __html: CSS }} />
         <div className="m-gate">
           <div className="m-mk"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h12" /><path d="m13 8 4 4-4 4" /></svg></div>
           <h1>Admin · Vendor matching</h1>
@@ -70,7 +70,7 @@ export default function AdminMatchPage() {
   }
 
   return (
-    <div className="m-root"><style>{CSS}</style>
+    <div className="m-root"><style dangerouslySetInnerHTML={{ __html: CSS }} />
       <header className="m-nav">
         <div className="m-brand"><span className="m-mk sm"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h12" /><path d="m13 8 4 4-4 4" /></svg></span><b>NXT<i>//</i>LINK</b> <span className="m-tag">Vendor matching</span></div>
         <a className="m-link" href="/admin/directory" style={{ marginRight: 16 }}>Browse →</a>

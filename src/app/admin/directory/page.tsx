@@ -9,10 +9,11 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 interface Vendor {
   id: string; public_ref: string; company_name: string; contact_name: string;
   email: string; phone: string; website: string; city: string;
-  categories: string[]; service_areas: string[]; description: string;
+  categories: string[]; service_areas: string[]; industries: string[]; client_types: string[]; description: string;
   status: string; brochure_count: number; created_at: string;
 }
 interface Brochure { id: string; file_name: string; public_url: string | null; title: string; size_bytes: number }
+interface Video { id: string; title: string | null; embed_url: string; url: string; provider: string }
 
 const ALPHABET = ['#', ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))];
 
@@ -34,6 +35,8 @@ export default function AdminDirectoryPage() {
   const [q, setQ] = useState('');
   const [cats, setCats] = useState<Set<string>>(new Set());
   const [areas, setAreas] = useState<Set<string>>(new Set());
+  const [industries, setIndustries] = useState<Set<string>>(new Set());
+  const [clientTypes, setClientTypes] = useState<Set<string>>(new Set());
   const [letter, setLetter] = useState('');
   const [includePending, setIncludePending] = useState(false);
   const [open, setOpen] = useState<Vendor | null>(null);
@@ -65,15 +68,29 @@ export default function AdminDirectoryPage() {
     return [...m.entries()].sort((a, b) => b[1] - a[1]);
   }, [vendors]);
 
+  const industryCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    vendors.forEach((v) => (v.industries || []).forEach((c) => m.set(c, (m.get(c) || 0) + 1)));
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  }, [vendors]);
+
+  const clientTypeCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    vendors.forEach((v) => (v.client_types || []).forEach((c) => m.set(c, (m.get(c) || 0) + 1)));
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  }, [vendors]);
+
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
     return vendors
       .filter((v) => !query || v.company_name.toLowerCase().includes(query) || v.description?.toLowerCase().includes(query) || (v.categories || []).some((c) => c.toLowerCase().includes(query)))
       .filter((v) => cats.size === 0 || (v.categories || []).some((c) => cats.has(c)))
       .filter((v) => areas.size === 0 || (v.service_areas || []).some((a) => areas.has(a)))
+      .filter((v) => industries.size === 0 || (v.industries || []).some((a) => industries.has(a)))
+      .filter((v) => clientTypes.size === 0 || (v.client_types || []).some((a) => clientTypes.has(a)))
       .filter((v) => !letter || letterOf(v.company_name) === letter)
       .sort((a, b) => a.company_name.localeCompare(b.company_name));
-  }, [vendors, q, cats, areas, letter]);
+  }, [vendors, q, cats, areas, industries, clientTypes, letter]);
 
   const availableLetters = useMemo(() => new Set(vendors.map((v) => letterOf(v.company_name))), [vendors]);
 
@@ -82,7 +99,7 @@ export default function AdminDirectoryPage() {
     next.has(v) ? next.delete(v) : next.add(v);
     setter(next);
   }
-  function clearAll() { setQ(''); setCats(new Set()); setAreas(new Set()); setLetter(''); }
+  function clearAll() { setQ(''); setCats(new Set()); setAreas(new Set()); setIndustries(new Set()); setClientTypes(new Set()); setLetter(''); }
 
   async function setVendorStatus(id: string, st: string) {
     await fetch('/api/vendors/manage', { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-access-code': code }, body: JSON.stringify({ id, status: st }) });
@@ -92,7 +109,7 @@ export default function AdminDirectoryPage() {
 
   if (!authed) {
     return (
-      <div className="dir-root"><style>{CSS}</style>
+      <div className="dir-root"><style dangerouslySetInnerHTML={{ __html: CSS }} />
         <div className="dir-gate">
           <div className="dir-mk">N</div>
           <h1>Vendor directory</h1>
@@ -105,7 +122,7 @@ export default function AdminDirectoryPage() {
   }
 
   return (
-    <div className="dir-root"><style>{CSS}</style>
+    <div className="dir-root"><style dangerouslySetInnerHTML={{ __html: CSS }} />
       <header className="dir-nav">
         <div className="dir-brand"><span className="dir-mk sm">N</span><b>NXT<i>//</i>LINK</b> <span className="dir-tag">Directory</span></div>
         <div className="dir-navr">
@@ -131,10 +148,24 @@ export default function AdminDirectoryPage() {
 
       <div className="dir-body">
         <aside className="dir-side">
-          <div className="dir-side-head"><span>Filters</span>{(cats.size || areas.size || q || letter) ? <button onClick={clearAll}>Clear all</button> : null}</div>
+          <div className="dir-side-head"><span>Filters</span>{(cats.size || areas.size || industries.size || clientTypes.size || q || letter) ? <button onClick={clearAll}>Clear all</button> : null}</div>
 
           <div className="dir-facet">
-            <div className="dir-facet-h">Category</div>
+            <div className="dir-facet-h">Industry</div>
+            {industryCounts.length === 0 ? <p className="dir-empty-mini">No industries yet.</p> : industryCounts.map(([c, n]) => (
+              <label key={c} className="dir-cb"><input type="checkbox" checked={industries.has(c)} onChange={() => toggle(industries, c, setIndustries)} /><span>{c}</span><em>{n}</em></label>
+            ))}
+          </div>
+
+          <div className="dir-facet">
+            <div className="dir-facet-h">Client type</div>
+            {clientTypeCounts.length === 0 ? <p className="dir-empty-mini">No client types yet.</p> : clientTypeCounts.map(([c, n]) => (
+              <label key={c} className="dir-cb"><input type="checkbox" checked={clientTypes.has(c)} onChange={() => toggle(clientTypes, c, setClientTypes)} /><span>{c}</span><em>{n}</em></label>
+            ))}
+          </div>
+
+          <div className="dir-facet">
+            <div className="dir-facet-h">Products / services</div>
             {categoryCounts.length === 0 ? <p className="dir-empty-mini">No categories yet.</p> : categoryCounts.map(([c, n]) => (
               <label key={c} className="dir-cb"><input type="checkbox" checked={cats.has(c)} onChange={() => toggle(cats, c, setCats)} /><span>{c}</span><em>{n}</em></label>
             ))}
@@ -158,6 +189,7 @@ export default function AdminDirectoryPage() {
                   <div className="dir-avatar">{initials(v.company_name)}</div>
                   <div className="dir-card-body">
                     <div className="dir-card-head"><b>{v.company_name}</b><em className={'dir-badge ' + v.status}>{v.status}</em></div>
+                    {v.industries?.length > 0 && <div className="dir-card-industry">{v.industries.slice(0, 2).join(' · ')}</div>}
                     <div className="dir-card-tags">
                       {(v.categories || []).slice(0, 3).map((c) => <span key={c}>{c}</span>)}
                       {(v.categories || []).length > 3 && <span className="dir-more">+{v.categories.length - 3}</span>}
@@ -185,12 +217,14 @@ function DirectoryDrawer({ vendor, code, zoho, onClose, onStatus }: {
   onClose: () => void; onStatus: (id: string, st: string) => void;
 }) {
   const [brochures, setBrochures] = useState<Brochure[]>([]);
+  const [videos, setVideos] = useState<Video[]>([]);
   const [msg, setMsg] = useState('');
   const [emailBody, setEmailBody] = useState(`Hi ${vendor.contact_name || vendor.company_name},\n\nWe have a protected opportunity that may fit your service area. Are you available to quote?\n\n— NXT//LINK`);
 
   useEffect(() => {
     fetch(`/api/vendors/brochures?vendor_id=${vendor.id}`).then((r) => r.json()).then((d) => setBrochures(d.brochures || [])).catch(() => {});
-  }, [vendor.id]);
+    fetch(`/api/vendors/videos?vendor_id=${vendor.id}`, { headers: { 'x-access-code': code } }).then((r) => r.json()).then((d) => setVideos(d.videos || [])).catch(() => {});
+  }, [vendor.id, code]);
 
   async function sendEmail() {
     setMsg('Sending…');
@@ -227,9 +261,25 @@ function DirectoryDrawer({ vendor, code, zoho, onClose, onStatus }: {
           <div><label>City</label><span>{vendor.city || '—'}</span></div>
         </div>
 
-        {vendor.categories?.length > 0 && <><div className="dir-lbl">Provides</div><div className="dir-chips">{vendor.categories.map((c) => <span key={c} className="dir-chip">{c}</span>)}</div></>}
+        {vendor.industries?.length > 0 && <><div className="dir-lbl">Industry</div><div className="dir-chips">{vendor.industries.map((c) => <span key={c} className="dir-chip">{c}</span>)}</div></>}
+        {vendor.client_types?.length > 0 && <><div className="dir-lbl">Looking for clients like</div><div className="dir-chips">{vendor.client_types.map((c) => <span key={c} className="dir-chip">{c}</span>)}</div></>}
+        {vendor.categories?.length > 0 && <><div className="dir-lbl">Products / services</div><div className="dir-chips">{vendor.categories.map((c) => <span key={c} className="dir-chip">{c}</span>)}</div></>}
         {vendor.service_areas?.length > 0 && <><div className="dir-lbl">Service areas</div><div className="dir-chips">{vendor.service_areas.map((c) => <span key={c} className="dir-chip">{c}</span>)}</div></>}
         {vendor.description && <><div className="dir-lbl">About</div><p className="dir-desc">{vendor.description}</p></>}
+
+        {videos.length > 0 && (
+          <>
+            <div className="dir-lbl">Showcase videos</div>
+            <div className="dir-vgrid">
+              {videos.map((v) => (
+                <div className="dir-vcard" key={v.id}>
+                  {v.provider === 'other' ? <a className="dir-vlink" href={v.url} target="_blank" rel="noreferrer">{v.title || v.url}</a>
+                    : <div className="dir-viframe"><iframe src={v.embed_url} title={v.title || 'video'} allow="encrypted-media; picture-in-picture" allowFullScreen /></div>}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
 
         <div className="dir-lbl">Brochures</div>
         {brochures.length === 0 ? <p className="dir-desc">No files uploaded.</p> : (
@@ -313,6 +363,7 @@ const CSS = `
 .dir-badge.approved{background:var(--green-soft);color:var(--green);}
 .dir-badge.pending{background:var(--amber-soft);color:var(--amber);}
 .dir-badge.paused,.dir-badge.rejected{background:var(--surf2);color:var(--ink-3);}
+.dir-card-industry{font:500 11.5px/1 'Outfit';color:var(--ink-3);margin-bottom:8px;}
 .dir-card-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
 .dir-card-tags span{font:500 11.5px/1 'Outfit';padding:5px 9px;border-radius:100px;background:var(--brand-soft);color:var(--p3);}
 .dir-card-tags .dir-more{background:var(--surf2);color:var(--ink-3);}
@@ -336,6 +387,11 @@ const CSS = `
 .dir-broch li{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:13px;background:var(--surf);}
 .dir-broch a{color:var(--p2);}
 .dir-broch small{color:var(--ink-3);}
+.dir-vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:6px;}
+.dir-vcard{background:var(--surf);border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+.dir-viframe{position:relative;padding-top:56.25%;background:#000;}
+.dir-viframe iframe{position:absolute;inset:0;width:100%;height:100%;border:none;}
+.dir-vlink{display:block;padding:14px;color:var(--p2);font-size:12.5px;word-break:break-all;}
 .dir-row{display:flex;gap:8px;flex-wrap:wrap;}
 .dir-btn{font-family:'Outfit';border:none;cursor:pointer;font:600 13px/1 'Outfit';border-radius:9px;padding:10px 15px;background:var(--brand);color:#fff;box-shadow:0 4px 16px rgba(124,92,252,.3);}
 .dir-btn:hover{background:var(--brand-2);}.dir-btn:disabled{opacity:.5;cursor:default;}

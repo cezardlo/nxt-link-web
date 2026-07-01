@@ -45,7 +45,7 @@ export default function ChatWidget({ mode = 'public', locale = 'en' }: { mode?: 
 
   return (
     <div className="scout">
-      <style>{CSS}</style>
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div className={'sc-box' + (open ? ' open' : '')}>
         <div className="sc-head">
           <div className="sc-av-wrap"><span className="sc-av">{SCOUT_ICON}</span><span className="sc-dot" /></div>
