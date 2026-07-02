@@ -5,6 +5,10 @@ picking up work on the nxtlink web repo. Read this before doing anything.
 Keep it up to date as you ship changes — append to the **Recent changes**
 section, prune what's stale.
 
+**Canonical operating guide:** Read [docs/AGENT_INSTRUCTIONS.md](docs/AGENT_INSTRUCTIONS.md)
+before making changes. It defines the WAT architecture, human approval gates,
+confidentiality boundaries, and deterministic-tool requirements for NXT Link.
+
 ---
 
 ## What this project is
@@ -22,7 +26,7 @@ present but not the active surface unless Cesar explicitly asks.
 
 - **Production site:** https://nxt-link-web.vercel.app
 - **Catalog page:** https://nxt-link-web.vercel.app/vendors
-- **Admin panel** (gated by AccessGate, password `4444`): https://nxt-link-web.vercel.app/admin
+- **Admin panel:** https://nxt-link-web.vercel.app/admin — the current shared-code AccessGate is a known legacy security blocker; do not treat it as real authentication
 - **GitHub repo:** https://github.com/cezardlo/nxt-link-web (default branch `master`, not `main`)
 - **Supabase dashboard:** https://supabase.com/dashboard/project/yvykselwehxjwsqercjg
 - **GitHub Actions:** https://github.com/cezardlo/nxt-link-web/actions
@@ -66,11 +70,12 @@ through that.
 
 ## Admin endpoints (all under `/api/admin/`)
 
-All accept `POST` (cron + curl) or `GET` (browser). Auth: either the
-`x-cron-secret` header matching `CRON_SECRET` env, OR an `x-access-code`
-header matching `PRIVATE_ACCESS_CODE` (currently `'4444'` in
-`src/lib/privateAccess.ts`). The `/admin` browser page sends the access
-code automatically.
+These endpoints currently contain a legacy authorization pattern. Scheduled jobs
+may use the `x-cron-secret` header matching the environment-managed `CRON_SECRET`.
+The browser-facing `x-access-code` / `PRIVATE_ACCESS_CODE` fallback is insecure,
+client-visible, and must not be extended. Replace it with authenticated, server-side
+organization and role authorization before production admin use. Never document or
+commit a real access secret.
 
 | Endpoint | What it does | Cron |
 |---|---|---|
@@ -141,7 +146,7 @@ trigger a redeploy.
 
 ## How to resume work in a fresh session
 
-1. Read this file. Read the latest 5–10 commits: `git log --oneline -10`.
+1. Read `docs/AGENT_INSTRUCTIONS.md`, then this file. Read the latest 5–10 commits: `git log --oneline -10`.
 2. Hit `https://nxt-link-web.vercel.app/api/health` to confirm env vars set.
 3. If picking up a specific change: check the **Recent changes** section
    below for the most recent task; the conversation context is gone but
@@ -196,6 +201,7 @@ than ~30 entries old to keep the file scannable.)
 
 ## Open TODO
 
+- **HIGH PRIORITY: replace the shared client-side administrator code** with real server-side authentication, organization membership, role authorization, rate limiting, and audit logging. Do not extend the `4444` / `x-access-code` fallback.
 - **`CRON_SECRET` env var** — not yet added to Vercel. Without it, the
   Vercel cron jobs can't authenticate. Manual `/admin` button clicks work
   regardless. Cesar can add any random string.
@@ -219,11 +225,9 @@ than ~30 entries old to keep the file scannable.)
   + the page button that triggers it).
 - Push to `master` only after live verification via PowerShell. Vercel
   auto-deploys. Don't force-push.
-- Add new endpoints under `/api/admin/*` if they need write access. Use
-  `requireCronSecret` + access-code fallback (see `dedup-vendors/route.ts`
-  for the pattern).
+- Add new write endpoints under `/api/admin/*` only with server-side authentication and authorization. Scheduled internal jobs may use a rotated environment-managed `CRON_SECRET`; never add or extend a browser-supplied shared access-code fallback.
 - Add new buttons to `/admin/page.tsx` `JOBS` array — auto-renders.
 
 ---
 
-Last touched: 2026-05-05.
+Last touched: 2026-07-02.
