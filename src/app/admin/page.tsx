@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Loader2, Play, RefreshCcw, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import { PRIVATE_ACCESS_CODE } from '@/lib/privateAccess';
+import { AccessGate } from '@/components/AccessGate';
 
 type JobStatus = 'idle' | 'running' | 'ok' | 'error';
 
@@ -62,7 +62,7 @@ function JsonBlock({ value }: { value: unknown }) {
   );
 }
 
-export default function AdminPage() {
+function AdminJobsPage() {
   const [results, setResults] = useState<Record<string, JobResult>>({
     junk: { status: 'idle' },
     dedup: { status: 'idle' },
@@ -75,9 +75,10 @@ export default function AdminPage() {
       [job.id]: { status: 'running', startedAt: Date.now() },
     }));
     try {
+      // The httpOnly admin session cookie (set by the access gate) authenticates this call.
       const res = await fetch(job.endpoint, {
         method: 'POST',
-        headers: { 'x-access-code': PRIVATE_ACCESS_CODE, 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json' },
       });
       const text = await res.text();
       let payload: unknown = text;
@@ -206,5 +207,13 @@ export default function AdminPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function AdminPage() {
+  return (
+    <AccessGate title="Admin tools">
+      <AdminJobsPage />
+    </AccessGate>
   );
 }

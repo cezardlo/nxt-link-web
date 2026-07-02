@@ -1,9 +1,9 @@
 // Server-side auth guard for NXT//LINK platform routes.
 // Real auth via Supabase session + platform_users.role, with a transitional
-// fallback to the shared admin access code so existing tooling keeps working.
+// fallback to the env-managed admin access code / signed admin session cookie.
 
 import { createServerSupabaseClient } from '@/lib/supabase/server-auth';
-import { PRIVATE_ACCESS_CODE } from '@/lib/privateAccess';
+import { accessCodeHeaderOk, adminCookieOk } from '@/lib/server/admin-session';
 
 export type PlatformRole = 'public' | 'client' | 'vendor' | 'admin' | 'super_admin';
 
@@ -38,11 +38,13 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
 /**
  * True when the caller is allowed to act as admin.
- * Accepts a signed-in admin/super_admin, OR the shared access code header
- * (transitional — remove once every admin has a real account).
+ * Accepts a signed-in admin/super_admin, a valid admin session cookie minted
+ * by POST /api/auth/access-code, OR (transitional, for scripts/tooling) an
+ * x-access-code header matching the env-managed ADMIN_ACCESS_CODE.
  */
 export async function isAdminRequest(req: Request): Promise<boolean> {
   const user = await getCurrentUser();
   if (user && (user.role === 'admin' || user.role === 'super_admin')) return true;
-  return req.headers.get('x-access-code') === PRIVATE_ACCESS_CODE;
+  if (adminCookieOk(req.headers)) return true;
+  return accessCodeHeaderOk(req.headers);
 }

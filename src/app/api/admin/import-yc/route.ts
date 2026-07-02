@@ -22,10 +22,10 @@ import { requireCronSecret } from '@/lib/http/cron-auth';
 import { normalizeVendorUrl } from '@/lib/vendors/normalize-url';
 import { mapToCanonicalIndustry } from '@/lib/data/sector-mapping';
 import { INDUSTRIES, type IndustrySlug } from '@/lib/data/technology-catalog';
-import { PRIVATE_ACCESS_CODE } from '@/lib/privateAccess';
+import { accessCodeHeaderOk, adminCookieOk } from '@/lib/server/admin-session';
 
 function authorize(headers: Headers): { ok: true } | { ok: false; status: number; message: string } {
-  if (headers.get('x-access-code') === PRIVATE_ACCESS_CODE) return { ok: true };
+  if (accessCodeHeaderOk(headers) || adminCookieOk(headers)) return { ok: true };
   return requireCronSecret(headers);
 }
 

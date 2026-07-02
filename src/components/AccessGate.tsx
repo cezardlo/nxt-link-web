@@ -2,7 +2,7 @@
 
 import { FormEvent, ReactNode, useEffect, useState } from 'react';
 import { LockKeyhole, ShieldCheck } from 'lucide-react';
-import { PRIVATE_ACCESS_CODE, grantPrivateAccess, hasPrivateAccess } from '@/lib/privateAccess';
+import { hasPrivateAccess, requestPrivateAccess } from '@/lib/privateAccess';
 
 type AccessGateProps = {
   children: ReactNode;
@@ -14,21 +14,25 @@ export function AccessGate({ children, title = 'Private NXT Link workspace' }: A
   const [unlocked, setUnlocked] = useState(false);
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     setUnlocked(hasPrivateAccess());
     setReady(true);
   }, []);
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (code.trim() === PRIVATE_ACCESS_CODE) {
-      grantPrivateAccess();
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    const result = await requestPrivateAccess(code.trim());
+    setBusy(false);
+    if (result.ok) {
       setUnlocked(true);
-      setError('');
       return;
     }
-    setError('Wrong code. Try again.');
+    setError(result.message || 'Wrong code. Try again.');
   }
 
   if (!ready) return null;
@@ -63,14 +67,15 @@ export function AccessGate({ children, title = 'Private NXT Link workspace' }: A
             {error && <p className="text-sm font-medium text-[#b4235f]">{error}</p>}
             <button
               type="submit"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#11155f] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1d2382]"
+              disabled={busy}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#11155f] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1d2382] disabled:opacity-60"
             >
-              Unlock workspace
+              {busy ? 'Checking…' : 'Unlock workspace'}
               <ShieldCheck className="h-4 w-4" />
             </button>
           </form>
           <p className="mt-5 text-xs leading-6 text-[#7f86a8]">
-            This is a lightweight website gate for private viewing, not bank-level security.
+            The code is verified server-side and never ships with the page.
           </p>
         </div>
       </div>

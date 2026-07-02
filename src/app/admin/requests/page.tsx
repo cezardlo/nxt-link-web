@@ -9,9 +9,7 @@ import {
   FileText,
   Sparkles,
 } from 'lucide-react';
-import { PRIVATE_ACCESS_CODE } from '@/lib/privateAccess';
-
-const STORAGE_KEY = 'nxt-link-private-access';
+import { hasPrivateAccess, requestPrivateAccess } from '@/lib/privateAccess';
 
 // ---------- Types ----------
 
@@ -294,7 +292,7 @@ export default function AdminRequestsPage() {
   // Gate check on mount.
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (window.localStorage.getItem(STORAGE_KEY) === PRIVATE_ACCESS_CODE) {
+    if (hasPrivateAccess()) {
       setUnlocked(true);
     }
   }, []);
@@ -311,12 +309,10 @@ export default function AdminRequestsPage() {
     [requests, selectedRef],
   );
 
-  function submitCode(e: React.FormEvent) {
+  async function submitCode(e: React.FormEvent) {
     e.preventDefault();
-    if (codeInput.trim() === PRIVATE_ACCESS_CODE) {
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(STORAGE_KEY, PRIVATE_ACCESS_CODE);
-      }
+    const result = await requestPrivateAccess(codeInput.trim());
+    if (result.ok) {
       setCodeError(false);
       setUnlocked(true);
     } else {
@@ -328,9 +324,8 @@ export default function AdminRequestsPage() {
     setListLoading(true);
     setListError(null);
     try {
-      const res = await fetch('/api/platform/requests', {
-        headers: { 'x-access-code': PRIVATE_ACCESS_CODE },
-      });
+      // The httpOnly admin session cookie (set by the gate) authenticates this call.
+      const res = await fetch('/api/platform/requests');
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
       }
@@ -371,7 +366,6 @@ export default function AdminRequestsPage() {
       const res = await fetch('/api/assistant/admin', {
         method: 'POST',
         headers: {
-          'x-access-code': PRIVATE_ACCESS_CODE,
           'content-type': 'application/json',
         },
         body: JSON.stringify({

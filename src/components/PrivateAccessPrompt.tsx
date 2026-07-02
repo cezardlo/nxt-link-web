@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { LockKeyhole, ShieldCheck, X } from 'lucide-react';
-import { PRIVATE_ACCESS_CODE, grantPrivateAccess } from '@/lib/privateAccess';
+import { requestPrivateAccess } from '@/lib/privateAccess';
 
 type PrivateAccessPromptProps = {
   open: boolean;
@@ -19,27 +19,32 @@ export function PrivateAccessPrompt({
 }: PrivateAccessPromptProps) {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!open) {
       setCode('');
       setError('');
+      setBusy(false);
     }
   }, [open]);
 
   if (!open) return null;
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (code.trim() === PRIVATE_ACCESS_CODE) {
-      grantPrivateAccess();
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    const result = await requestPrivateAccess(code.trim());
+    setBusy(false);
+    if (result.ok) {
       setCode('');
-      setError('');
       onUnlock();
       return;
     }
 
-    setError('Wrong password. Try again.');
+    setError(result.message || 'Wrong password. Try again.');
   }
 
   return (
@@ -80,9 +85,10 @@ export function PrivateAccessPrompt({
           {error && <p className="text-sm font-medium text-[#b4235f]">{error}</p>}
           <button
             type="submit"
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#11155f] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1d2382]"
+            disabled={busy}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#11155f] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1d2382] disabled:opacity-60"
           >
-            Unlock
+            {busy ? 'Checking…' : 'Unlock'}
             <ShieldCheck className="h-4 w-4" />
           </button>
         </form>

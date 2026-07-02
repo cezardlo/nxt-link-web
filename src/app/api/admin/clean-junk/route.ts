@@ -5,8 +5,9 @@
 // 'discovered' or null status; never overwrites 'active', 'approved',
 // 'duplicate', or 'junk'. Idempotent.
 //
-// Protected by CRON_SECRET (header: x-cron-secret OR Authorization: Bearer ...)
-// or by x-access-code header matching PRIVATE_ACCESS_CODE.
+// Protected by CRON_SECRET (header: x-cron-secret OR Authorization: Bearer ...),
+// an admin session cookie, or an x-access-code header matching the
+// env-managed ADMIN_ACCESS_CODE.
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -14,11 +15,11 @@ export const maxDuration = 60;
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient, hasSupabaseAdmin, isSupabaseConfigured } from '@/lib/supabase/client';
 import { requireCronSecret } from '@/lib/http/cron-auth';
-import { PRIVATE_ACCESS_CODE } from '@/lib/privateAccess';
+import { accessCodeHeaderOk, adminCookieOk } from '@/lib/server/admin-session';
 import { isJunkVendorName, isJunkDescription, decodeHtmlEntities } from '@/lib/vendors/junk-detector';
 
 function authorize(headers: Headers): { ok: true } | { ok: false; status: number; message: string } {
-  if (headers.get('x-access-code') === PRIVATE_ACCESS_CODE) return { ok: true };
+  if (accessCodeHeaderOk(headers) || adminCookieOk(headers)) return { ok: true };
   return requireCronSecret(headers);
 }
 
