@@ -6,6 +6,8 @@ This file provides guidance to Claude Code and terminal Claude when working in t
 - Active repo organization plan: `claude/repo-organization.md`
 - Current repo state summary: `claude/current-state.md`
 - Current active architecture: `docs/architecture/current-system.md`
+- Agent operating framework (WAT: workflows/agents/tools, approval gates): `docs/AGENT_INSTRUCTIONS.md`
+- Consolidated product architecture & phased plan (gating doc): `docs/product/master-plan.md`
 
 Claude should treat archived systems as reference-only unless the user explicitly asks to reactivate them.
 
