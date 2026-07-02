@@ -67,10 +67,12 @@ through that.
 ## Admin endpoints (all under `/api/admin/`)
 
 All accept `POST` (cron + curl) or `GET` (browser). Auth: either the
-`x-cron-secret` header matching `CRON_SECRET` env, OR an `x-access-code`
-header matching `PRIVATE_ACCESS_CODE` (currently `'4444'` in
-`src/lib/privateAccess.ts`). The `/admin` browser page sends the access
-code automatically.
+`x-cron-secret` header matching `CRON_SECRET` env, an admin session cookie
+minted by `POST /api/auth/access-code`, OR an `x-access-code` header matching
+the env-managed `ADMIN_ACCESS_CODE`. The old hardcoded `'4444'` constant was
+removed on branch `claude/event-strategy-platform` (still live on `master`
+until that branch merges — set `ADMIN_ACCESS_CODE` in Vercel before/with the
+merge or admin sign-in will return 501). See `src/lib/server/admin-session.ts`.
 
 | Endpoint | What it does | Cron |
 |---|---|---|
@@ -120,6 +122,8 @@ import-yc and clean-junk to scope which rows to touch.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Vercel | Anon read fallback |
 | `SUPABASE_SERVICE_ROLE_KEY` | Vercel + GH | Admin endpoint writes |
 | `CRON_SECRET` | Vercel | Optional — needed only for scheduled cron auth |
+| `ADMIN_ACCESS_CODE` | Vercel | Admin gate code (replaces hardcoded '4444' once `claude/event-strategy-platform` merges) |
+| `ADMIN_SESSION_SECRET` | Vercel | Optional — separate signing secret for the admin session cookie |
 | `YC_ALGOLIA_*` | Optional | Override defaults if YC keys rotate |
 
 `SUPABASE_SERVICE_ROLE_KEY` was added on 2026-05-04 — don't repaste it. If
@@ -155,6 +159,20 @@ trigger a redeploy.
 
 (Newest first. Append a one-liner per significant push. Prune anything more
 than ~30 entries old to keep the file scannable.)
+
+- 2026-07-02 (branch `claude/event-strategy-platform`, unpushed — push blocked
+  from build env; backup ZIP delivered to Cesar) — Replaced hardcoded '4444'
+  with env-managed server-side auth (`ADMIN_ACCESS_CODE` + signed httpOnly
+  cookie); reconciled the 20260625→20260706 migration chain against the LIVE
+  database (legacy `vendor_applications` renamed aside; new account table is
+  `vendor_accounts`, never touching the 14k-row `vendors` catalog; `leads`
+  extended additively); added consent ledger + NDA/MNDA/NCA agreements +
+  versioned immutable fee policies migration (20260707); deterministic
+  success-fee engine (`src/lib/fees/engine.ts`) + `/api/fees/calculate`;
+  deal stage-gate evaluation (`src/lib/deals/gates.ts`); events intelligence
+  schema + 6 admin-guarded `/api/events/*` routes; consolidated product docs
+  (`docs/product/master-plan.md`, `docs/product/plan/*`,
+  `docs/AGENT_INSTRUCTIONS.md`). Test suite 86/86; typecheck + build green.
 
 - 2026-05-05 `eda528b` — Added Fintech, Consumer, Real Estate, Education,
   Media tiles (8 → 13 industries). Reclassified 1,060 YC rows out of "Other"
