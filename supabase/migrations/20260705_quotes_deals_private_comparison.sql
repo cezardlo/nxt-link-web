@@ -9,28 +9,31 @@
 -- ============================================================================
 
 -- ---------------------------------------------------------------------------
--- vendors — the ACTIVE account created when an application is approved.
--- Deliberately a thin link table, not a duplicate profile: the vendor's
--- profile (company info, category, offering type, supply-chain stage, size,
--- region, images, etc.) already lives in vendor_applications and is already
--- editable via /api/apply/my. `vendors` just marks "this application is a
--- live account that can receive deal invites and submit quotes."
+-- vendor_accounts — the ACTIVE account created when an application is
+-- approved. Deliberately a thin link table, not a duplicate profile: the
+-- vendor's profile (company info, category, offering type, supply-chain
+-- stage, size, region, images, etc.) already lives in vendor_applications and
+-- is already editable via /api/apply/my. `vendor_accounts` just marks "this
+-- application is a live account that can receive deal invites and submit
+-- quotes." Named vendor_accounts (NOT vendors) because the live database's
+-- `vendors` table is the 14k-row scraped public catalog behind /vendors —
+-- a completely different concept that must not be touched.
 -- ---------------------------------------------------------------------------
-create table if not exists public.vendors (
+create table if not exists public.vendor_accounts (
   id             uuid primary key default gen_random_uuid(),
   application_id uuid not null unique references public.vendor_applications(id) on delete restrict,
   auth_id        uuid not null unique,   -- denormalized from the application, for simple RLS joins
   status         text not null default 'active' check (status in ('active', 'paused')),
   created_at     timestamptz not null default now()
 );
-create index if not exists vendors_auth_id_idx on public.vendors (auth_id);
+create index if not exists vendor_accounts_auth_id_idx on public.vendor_accounts (auth_id);
 
--- Auto-create the vendors row the moment an application is approved.
+-- Auto-create the vendor_accounts row the moment an application is approved.
 create or replace function public.promote_approved_vendor_application() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
   if new.status = 'approved' and (old.status is distinct from 'approved') and new.auth_id is not null then
-    insert into public.vendors (application_id, auth_id, status)
+    insert into public.vendor_accounts (application_id, auth_id, status)
     values (new.id, new.auth_id, 'active')
     on conflict (application_id) do update set status = 'active';
   end if;
@@ -44,12 +47,12 @@ create trigger trg_promote_approved_vendor_application
 
 create or replace function public.is_active_vendor() returns boolean
 language sql stable security definer set search_path = public as $$
-  select exists(select 1 from public.vendors where auth_id = auth.uid() and status = 'active');
+  select exists(select 1 from public.vendor_accounts where auth_id = auth.uid() and status = 'active');
 $$;
 
 create or replace function public.current_vendor_id() returns uuid
 language sql stable security definer set search_path = public as $$
-  select id from public.vendors where auth_id = auth.uid() and status = 'active' limit 1;
+  select id from public.vendor_accounts where auth_id = auth.uid() and status = 'active' limit 1;
 $$;
 
 -- ---------------------------------------------------------------------------
@@ -89,7 +92,7 @@ create trigger trg_touch_deal before update on public.deals
 create table if not exists public.deal_invites (
   id          uuid primary key default gen_random_uuid(),
   deal_id     uuid not null references public.deals(id) on delete cascade,
-  vendor_id   uuid not null references public.vendors(id) on delete cascade,
+  vendor_id   uuid not null references public.vendor_accounts(id) on delete cascade,
   invited_at  timestamptz not null default now(),
   unique (deal_id, vendor_id)
 );
@@ -104,7 +107,7 @@ create index if not exists deal_invites_deal_idx on public.deal_invites (deal_id
 create table if not exists public.quotes (
   id                  uuid primary key default gen_random_uuid(),
   deal_id             uuid not null references public.deals(id) on delete cascade,
-  vendor_id           uuid not null references public.vendors(id) on delete cascade,
+  vendor_id           uuid not null references public.vendor_accounts(id) on delete cascade,
   status              text not null default 'draft' check (status in ('draft', 'submitted')),
   line_items          jsonb default '[]'::jsonb,  -- [{description, quantity, unit_price, subtotal}]
   total_price         numeric,
@@ -185,6 +188,17 @@ create table if not exists public.leads (
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now()
 );
+-- Reconcile with the live chatbot-era leads table (name/email/company/phone/
+-- source/status/category_interest/transcript/notes/assigned_to, live rows):
+-- the create above no-ops there. Add the two link columns this flow needs and
+-- widen the source check to include quote_preference. Existing rows untouched.
+alter table public.leads
+  add column if not exists deal_share_id uuid references public.deal_shares(id) on delete set null,
+  add column if not exists quote_id      uuid references public.quotes(id) on delete set null;
+alter table public.leads drop constraint if exists leads_source_check;
+alter table public.leads add constraint leads_source_check
+  check (source in ('quote_preference', 'chatbot', 'contact_form', 'manual', 'vendor_signup'));
+
 create index if not exists leads_status_idx on public.leads (status);
 create index if not exists leads_deal_share_idx on public.leads (deal_share_id);
 
@@ -198,7 +212,7 @@ create trigger trg_touch_lead before update on public.leads
 -- ============================================================================
 -- Row Level Security
 -- ============================================================================
-alter table public.vendors enable row level security;
+alter table public.vendor_accounts enable row level security;
 alter table public.deals enable row level security;
 alter table public.deal_invites enable row level security;
 alter table public.quotes enable row level security;
@@ -210,16 +224,16 @@ begin
   -- vendors: a vendor reads/updates ONLY their own row; admin reads/updates all.
   -- No public policy at all (matches "no public SELECT on vendors ... anywhere").
   begin
-    create policy vendors_owner_select on public.vendors
+    create policy vendor_accounts_owner_select on public.vendor_accounts
       for select to authenticated using (auth_id = auth.uid() or public.is_admin());
   exception when duplicate_object then null; end;
   begin
-    create policy vendors_owner_update on public.vendors
+    create policy vendor_accounts_owner_update on public.vendor_accounts
       for update to authenticated using (auth_id = auth.uid() or public.is_admin())
       with check (auth_id = auth.uid() or public.is_admin());
   exception when duplicate_object then null; end;
   begin
-    create policy vendors_service_all on public.vendors
+    create policy vendor_accounts_service_all on public.vendor_accounts
       for all to service_role using (true) with check (true);
   exception when duplicate_object then null; end;
 
