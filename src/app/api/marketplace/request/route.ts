@@ -1,0 +1,50 @@
+// POST /api/marketplace/request — public quote/service request for a listing.
+// Server-only insert; the vendor sees it in /vendor/leads. Honeypot + min-fill
+// time keep bots out. Buyer contact info is never exposed publicly.
+
+export const dynamic = 'force-dynamic';
+import { NextResponse } from 'next/server';
+import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { tableFor } from '@/lib/marketplace/types';
+
+export async function POST(req: Request) {
+  let body: Record<string, unknown>;
+  try { body = await req.json(); } catch { return NextResponse.json({ ok: false, message: 'Invalid JSON' }, { status: 400 }); }
+
+  // Anti-bot: hidden honeypot must stay empty (fake success), min 1.5s fill time.
+  if (String(body.website_url || '')) return NextResponse.json({ ok: true, public_ref: 'REQ-RECEIVED' });
+  const startedAt = Number(body.started_at || 0);
+  if (startedAt && Date.now() - startedAt < 1500) {
+    return NextResponse.json({ ok: false, message: 'Form submitted too quickly — please try again' }, { status: 400 });
+  }
+
+  const kind = body.kind === 'service' ? 'service' : 'product';
+  const listingId = String(body.listing_id || '');
+  const company = String(body.company || '').trim().slice(0, 200);
+  const contact = String(body.contact_name || '').trim().slice(0, 200);
+  const email = String(body.email || '').trim().slice(0, 200);
+  const phone = String(body.phone || '').trim().slice(0, 60);
+  const message = String(body.message || '').trim().slice(0, 3000);
+
+  if (!listingId) return NextResponse.json({ ok: false, message: 'listing_id is required' }, { status: 400 });
+  if (!company) return NextResponse.json({ ok: false, message: 'Company is required' }, { status: 400 });
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return NextResponse.json({ ok: false, message: 'A valid email is required' }, { status: 400 });
+  if (!isSupabaseConfigured()) return NextResponse.json({ ok: true, stored: false, degraded: true });
+
+  const db = getSupabaseClient({ admin: true });
+  // The listing must actually be published; vendor_id comes from the row, never the client.
+  const { data: listing } = await db.from(tableFor(kind)).select('id, vendor_id').eq('id', listingId).eq('status', 'published').maybeSingle();
+  if (!listing) return NextResponse.json({ ok: false, message: 'Listing not found' }, { status: 404 });
+
+  const { data, error } = await db.from('quote_requests').insert({
+    kind,
+    product_id: kind === 'product' ? listingId : null,
+    service_id: kind === 'service' ? listingId : null,
+    vendor_id: listing.vendor_id,
+    company, contact_name: contact, email, phone, message,
+    status: 'new',
+  }).select('public_ref').single();
+  if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+
+  return NextResponse.json({ ok: true, public_ref: data.public_ref });
+}

@@ -166,6 +166,8 @@ export default function VendorPortalPage() {
       <nav className="vp-nav">
         <a className="vp-brand" href="/"><span className="vp-mk">N</span><b>NXT<i>//</i>LINK</b></a>
         <div className="vp-navr">
+          <a className="vp-navlink" href="/vendor/listings">Listings</a>
+          <a className="vp-navlink" href="/vendor/leads">Leads</a>
           <span className={'vp-badge ' + vendor.status}>{vendor.status}</span>
           <button className="vp-signout" onClick={signOut}>Sign out</button>
         </div>
@@ -292,6 +294,8 @@ const CSS = `
 .vp-mk{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--p),var(--pd));display:grid;place-items:center;font-family:var(--serif);font-size:17px;color:#fff;}
 .vp-brand b{font-size:18px;font-weight:700;letter-spacing:-.02em;}.vp-brand i{color:var(--p2);font-style:normal;}
 .vp-navr{display:flex;align-items:center;gap:14px;}
+.vp-navlink{color:var(--p2);font-size:13.5px;font-weight:600;text-decoration:none;}
+.vp-navlink:hover{color:var(--p3);}
 .vp-badge{font:600 11px/1 var(--sans);padding:5px 11px;border-radius:99px;text-transform:capitalize;}
 .vp-badge.pending{background:rgba(251,191,36,.12);color:#FBBF24;}
 .vp-badge.approved{background:rgba(52,211,153,.12);color:var(--green);}

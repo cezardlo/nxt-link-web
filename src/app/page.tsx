@@ -22,19 +22,19 @@ const CSS = `
 
 const ROLES = [
   {
-    href: '/intake',
-    role: 'Customer',
-    roleEs: 'Cliente',
-    title: 'I need a solution',
-    desc: 'Describe your problem in English or Spanish. We find verified vendors, protect your identity, and manage the process.',
-    cta: 'Start my search',
+    href: '/marketplace',
+    role: 'Buyer',
+    roleEs: 'Comprador',
+    title: 'Browse the marketplace',
+    desc: 'Search industrial products and services with standardized listings — pilots, implementation, warranties, and pricing up front. No login needed.',
+    cta: 'Browse listings',
   },
   {
     href: '/vendor-login',
     role: 'Vendor',
     roleEs: 'Proveedor',
     title: 'I provide solutions',
-    desc: 'Get matched to real, qualified opportunities. Your pricing and quotes stay private — competitors never see them.',
+    desc: 'Build your storefront, publish product and service listings (AI drafts them from your brochures), and receive qualified leads.',
     cta: 'Vendor sign in',
   },
   {
@@ -68,7 +68,8 @@ export default function Home() {
         ))}
       </div>
       <div className="wl-foot">
-        New vendor? <a href="/apply">Apply to join the network</a>
+        New vendor? <a href="/apply">Apply to join the network</a> · Prefer we find it for you?{' '}
+        <a href="/intake">Describe your need</a>
       </div>
     </div>
   );
