@@ -1,10 +1,10 @@
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from '@/lib/supabase/client';
 
+// Server-only cache (all importers are API routes). Uses the service-role
+// client because cache_store / api_quota_log are locked down with
+// service_role-only RLS — the public anon key can no longer touch them.
 function getDb() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  return getSupabaseClient({ admin: true });
 }
 
 export async function getCache<T>(key: string): Promise<T | null> {
