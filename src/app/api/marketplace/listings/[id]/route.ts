@@ -31,6 +31,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   ]);
 
   const images = await Promise.all((row.image_paths || []).map(async (p) => {
+    if (/^https?:\/\//.test(p)) return { path: p, url: p }; // direct external image URL
     const { data: signed } = await db.storage.from('listing-media').createSignedUrl(p, 3600);
     return { path: p, url: signed?.signedUrl || null };
   }));

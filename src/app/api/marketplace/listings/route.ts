@@ -59,7 +59,9 @@ export async function GET(req: Request) {
   const listings = await Promise.all(rows.map(async (r) => {
     const first = Array.isArray(r.image_paths) && r.image_paths.length ? r.image_paths[0] : null;
     let image_url: string | null = null;
-    if (first) {
+    if (first && /^https?:\/\//.test(first)) {
+      image_url = first; // direct external image URL
+    } else if (first) {
       const { data: signed } = await db.storage.from('listing-media').createSignedUrl(first, 3600);
       image_url = signed?.signedUrl || null;
     }
