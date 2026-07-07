@@ -24,6 +24,7 @@
     "@deck.gl/react": "^9.2.9",
     "@deck.gl/widgets": "^9.2.11",
     "@excalidraw/excalidraw": "^0.18.0",
+    "@google/genai": "^1.48.0",
     "@google/generative-ai": "^0.24.1",
     "@radix-ui/react-slot": "^1.2.4",
     "@supabase/ssr": "^0.9.0",
@@ -54,8 +55,8 @@
     "side-channel": "1.0.6",
     "swr": "^2.4.1",
     "tailwind-merge": "^3.5.0",
-    "zod": "^4.3.6",
-    "@google/genai": "^1.48.0"
+    "unpdf": "^1.6.2",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

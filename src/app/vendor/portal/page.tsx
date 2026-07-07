@@ -29,6 +29,11 @@ interface Vendor {
 }
 interface Brochure { id: string; file_name: string; title: string; size_bytes: number; public_url: string | null }
 interface Video { id: string; title: string | null; url: string; embed_url: string; provider: string }
+interface Draft {
+  company_name: string | null; description: string | null; categories: string[];
+  service_areas: string[]; industries: string[]; client_types: string[];
+  website: string | null; phone: string | null; city: string | null; summary: string;
+}
 
 export default function VendorPortalPage() {
   const [checking, setChecking] = useState(true);
@@ -40,6 +45,9 @@ export default function VendorPortalPage() {
   const [msg, setMsg] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [videoTitle, setVideoTitle] = useState('');
+  const [extractingId, setExtractingId] = useState('');
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [draftSource, setDraftSource] = useState('');
 
   const load = useCallback(async () => {
     const res = await fetch('/api/vendor/profile');
@@ -100,6 +108,35 @@ export default function VendorPortalPage() {
   async function removeBrochure(id: string) {
     await fetch(`/api/vendor/brochures?id=${id}`, { method: 'DELETE' });
     setBrochures((b) => b.filter((x) => x.id !== id));
+  }
+  async function extractFromBrochure(id: string) {
+    setExtractingId(id); setMsg('');
+    try {
+      const res = await fetch('/api/vendor/profile/extract', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ brochure_id: id }) });
+      const data = await res.json();
+      if (data.ok) { setDraft(data.draft); setDraftSource(data.source_file || ''); }
+      else setMsg(data.message || 'Could not read that file');
+    } catch { setMsg('Could not read that file'); }
+    setExtractingId('');
+  }
+  function applyDraft() {
+    if (!vendor || !draft) return;
+    const merge = (a: string[], b: string[]) => Array.from(new Set([...(a || []), ...b]));
+    setVendor({
+      ...vendor,
+      company_name: draft.company_name || vendor.company_name,
+      description: draft.description || vendor.description,
+      website: draft.website || vendor.website,
+      phone: draft.phone || vendor.phone,
+      city: draft.city || vendor.city,
+      categories: merge(vendor.categories, draft.categories),
+      service_areas: merge(vendor.service_areas, draft.service_areas),
+      industries: merge(vendor.industries, draft.industries),
+      client_types: merge(vendor.client_types, draft.client_types),
+    });
+    setDraft(null);
+    setMsg('Draft applied — review the fields above, then press "Save profile" to confirm.');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   async function signOut() {
     const sb = createBrowserSupabaseClient();
@@ -189,6 +226,7 @@ export default function VendorPortalPage() {
 
         <section className="vp-card">
           <div className="vp-lbl">Brochures &amp; documents</div>
+          <p className="vp-hint">Upload a brochure, then press &ldquo;AI fill&rdquo; and we&apos;ll draft your profile from it — you review and approve before anything is saved.</p>
           <label className="vp-drop">
             <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.ppt,.pptx,.doc,.docx" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile(f); e.target.value = ''; }} />
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 16V4" /><path d="m7 9 5-5 5 5" /><path d="M5 20h14" /></svg>
@@ -200,10 +238,31 @@ export default function VendorPortalPage() {
                 <li key={b.id}>
                   {b.public_url ? <a href={b.public_url} target="_blank" rel="noreferrer">{b.title || b.file_name}</a> : <span>{b.title || b.file_name}</span>}
                   <span className="vp-fmeta">{(b.size_bytes / 1024 / 1024).toFixed(1)} MB</span>
+                  <button className="vp-ai" disabled={!!extractingId} onClick={() => extractFromBrochure(b.id)}>{extractingId === b.id ? 'Reading…' : 'AI fill'}</button>
                   <button onClick={() => removeBrochure(b.id)}>Remove</button>
                 </li>
               ))}
             </ul>
+          )}
+          {draft && (
+            <div className="vp-draft">
+              <div className="vp-lbl">AI draft from {draftSource}</div>
+              <p className="vp-hint">{draft.summary}</p>
+              <ul className="vp-draft-list">
+                {draft.company_name && <li><b>Company:</b> {draft.company_name}</li>}
+                {draft.description && <li><b>About:</b> {draft.description}</li>}
+                {draft.categories.length > 0 && <li><b>Products / services:</b> {draft.categories.join(', ')}</li>}
+                {draft.industries.length > 0 && <li><b>Industries:</b> {draft.industries.join(', ')}</li>}
+                {draft.service_areas.length > 0 && <li><b>Service areas:</b> {draft.service_areas.join(', ')}</li>}
+                {draft.client_types.length > 0 && <li><b>Client types:</b> {draft.client_types.join(', ')}</li>}
+                {draft.website && <li><b>Website:</b> {draft.website}</li>}
+                {draft.city && <li><b>City:</b> {draft.city}</li>}
+              </ul>
+              <div className="vp-draft-actions">
+                <button className="vp-btn sm" onClick={applyDraft}>Use this draft</button>
+                <button className="vp-signout" onClick={() => setDraft(null)}>Dismiss</button>
+              </div>
+            </div>
           )}
         </section>
       </main>
@@ -280,4 +339,11 @@ const CSS = `
 .vp-fmeta{color:var(--muted);font-size:12px;}
 .vp-files button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12.5px;}
 .vp-files button:hover{color:#FCA5A5;}
+.vp-files button.vp-ai{color:var(--p2);font-weight:600;}
+.vp-files button.vp-ai:hover{color:var(--p3);}
+.vp-files button.vp-ai:disabled{opacity:.5;cursor:default;}
+.vp-draft{margin-top:18px;border:1px solid rgba(124,92,252,.35);background:var(--pbg);border-radius:14px;padding:20px;}
+.vp-draft-list{list-style:none;margin:0 0 16px;padding:0;display:flex;flex-direction:column;gap:8px;font-size:13.5px;color:var(--ink2);line-height:1.5;}
+.vp-draft-list b{color:var(--ink);}
+.vp-draft-actions{display:flex;gap:10px;}
 `;

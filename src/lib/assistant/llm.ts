@@ -5,7 +5,7 @@
 import { runParallelJsonEnsemble } from '@/lib/llm/parallel-router';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 
-export type AiMode = 'intake' | 'admin' | 'vendor_quote' | 'chatbot';
+export type AiMode = 'intake' | 'admin' | 'vendor_quote' | 'chatbot' | 'brochure_extract';
 
 interface DraftArgs<T> {
   systemPrompt: string;
