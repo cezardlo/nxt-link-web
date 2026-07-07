@@ -101,12 +101,22 @@ export default function VendorListingsPage() {
   const [pasteText, setPasteText] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Review-before-publish
+  const [reviewFor, setReviewFor] = useState<{ kind: Kind; listing: Listing } | null>(null);
+  const [accOk, setAccOk] = useState(false);
+  const [pubBusy, setPubBusy] = useState(false);
+  const [pubErr, setPubErr] = useState('');
+  const [emailVerified, setEmailVerified] = useState(true);
+
   const load = useCallback(async () => {
     const res = await fetch('/api/vendor/listings');
     if (res.status === 401) { setSignedIn(false); setChecking(false); return; }
     const data = await res.json();
     setProducts(data.products || []); setServices(data.services || []);
     setSignedIn(true); setChecking(false);
+    fetch('/api/auth/me').then((r) => r.json()).then((me) => {
+      if (me?.signed_in) setEmailVerified(Boolean(me.email_verified));
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -149,28 +159,47 @@ export default function VendorListingsPage() {
     setAiBusy(false);
   }
 
-  async function save(publish?: boolean) {
-    if (!editing) return;
-    if (!f.name.trim()) { setMsg('Give the listing a name first.'); return; }
+  async function save(): Promise<Listing | null> {
+    if (!editing) return null;
+    if (!f.name.trim()) { setMsg('Give the listing a name first.'); return null; }
     setSaving(true); setMsg('');
     const body: Record<string, unknown> = { ...toBody(editing.kind, f), kind: editing.kind };
     if (editing.id) body.id = editing.id;
     else { body.ai_extracted = Boolean(docId); if (docId) body.attach_document_id = docId; }
-    if (publish) body.status = 'published';
     const res = await fetch('/api/vendor/listings', {
       method: editing.id ? 'PATCH' : 'POST',
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
     });
     const data = await res.json();
     setSaving(false);
-    if (!data.ok) { setMsg(data.message || 'Could not save'); return; }
-    if (!editing.id && !publish) setEditing({ kind: editing.kind, id: data.listing.id });
-    else if (publish) setEditing(null);
-    setMsg(publish ? 'Published — it is now live in the marketplace.' : 'Saved as draft.');
+    if (!data.ok) { setMsg(data.message || 'Could not save'); return null; }
+    if (!editing.id) setEditing({ kind: editing.kind, id: data.listing.id });
+    setMsg('Saved. Nothing is public until you review and publish.');
+    load();
+    return data.listing as Listing;
+  }
+
+  async function reviewAndPublish() {
+    const saved = await save();
+    if (saved && editing) { setReviewFor({ kind: editing.kind, listing: saved }); setAccOk(false); setPubErr(''); }
+  }
+
+  async function publishNow() {
+    if (!reviewFor || !accOk) return;
+    setPubBusy(true); setPubErr('');
+    const res = await fetch('/api/vendor/listings', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: reviewFor.kind, id: reviewFor.listing.id, status: 'published', accuracy_confirmed: true }),
+    });
+    const data = await res.json();
+    setPubBusy(false);
+    if (!data.ok) { setPubErr(data.message || 'Could not publish'); return; }
+    setReviewFor(null); setAccOk(false); setEditing(null);
+    setMsg('Published — it is now live in the marketplace.');
     load();
   }
 
-  async function setStatus(kind: Kind, id: string, status: 'published' | 'draft') {
+  async function setStatus(kind: Kind, id: string, status: 'unpublished' | 'draft' | 'ready') {
     await fetch('/api/vendor/listings', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, id, status }) });
     load();
   }
@@ -215,6 +244,12 @@ export default function VendorListingsPage() {
           <a className="sc-link" href="/vendor/portal">Company profile</a>
         </div>
       </div>
+      {!emailVerified && (
+        <div className="sc-warn">
+          Your email is not verified yet — you can build and save listings, but publishing is
+          locked until you click the confirmation link we emailed you.
+        </div>
+      )}
       {msg && <div className="sc-msg">{msg}</div>}
 
       {!editing && (
@@ -236,8 +271,8 @@ export default function VendorListingsPage() {
                       {l.status === 'published' && <a href={`/marketplace/${kind}/${l.id}`} target="_blank" rel="noreferrer">View live</a>}
                       <button onClick={() => openEdit(kind, l)}>Edit</button>
                       {l.status === 'published'
-                        ? <button onClick={() => setStatus(kind, l.id, 'draft')}>Unpublish</button>
-                        : <button className="sc-pub" onClick={() => setStatus(kind, l.id, 'published')}>Publish</button>}
+                        ? <button onClick={() => setStatus(kind, l.id, 'unpublished')}>Unpublish</button>
+                        : <button className="sc-pub" onClick={() => { setReviewFor({ kind, listing: l }); setAccOk(false); setPubErr(''); }}>Review &amp; publish</button>}
                       <button className="sc-del" onClick={() => archive(kind, l.id)}>Archive</button>
                     </li>
                   ))}
@@ -327,13 +362,76 @@ export default function VendorListingsPage() {
           )}
 
           <div className="sc-actions">
-            <button className="sc-btn ghost" disabled={saving} onClick={() => save(false)}>{saving ? 'Saving…' : 'Save draft'}</button>
-            <button className="sc-btn" disabled={saving} onClick={() => save(true)}>{saving ? 'Saving…' : 'Save & publish'}</button>
+            <button className="sc-btn ghost" disabled={saving} onClick={() => save()}>{saving ? 'Saving…' : 'Save draft'}</button>
+            <button className="sc-btn" disabled={saving} onClick={reviewAndPublish}>{saving ? 'Saving…' : 'Review & publish'}</button>
           </div>
         </section>
       )}
+
+      {reviewFor && (
+        <div className="sc-modal" onClick={() => setReviewFor(null)}>
+          <div className="sc-modal-in" onClick={(e) => e.stopPropagation()}>
+            <div className="sc-lbl">Review before publishing</div>
+            <p className="sc-hint">This is exactly what buyers will see. Check every line — you are responsible for its accuracy.</p>
+
+            <div className="sc-prev-card">
+              {(() => {
+                const l = reviewFor.listing;
+                const img = (l.image_paths || [])[0];
+                return (
+                  <>
+                    <div className="sc-prev-img">{img && /^https?:/.test(img) ? <img src={img} alt="" /> : <span>{img ? 'Photo attached' : 'No photo'}</span>}</div>
+                    <div className="sc-prev-body">
+                      <b>{l.name}</b>
+                      <small>{l.category || 'No category'} · {reviewFor.kind}</small>
+                      {(l.best_for || []).length > 0 && <em>Best for: {(l.best_for || []).join(', ')}</em>}
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+
+            <ul className="sc-prev-list">
+              <Prev label="Description" v={reviewFor.listing.overview || ''} />
+              <Prev label="Industries" v={(reviewFor.listing.industries || []).join(', ')} />
+              {reviewFor.kind === 'product' ? (
+                <>
+                  <Prev label="Specs" v={reviewFor.listing.specs ? `${Object.keys(reviewFor.listing.specs).length} listed` : ''} />
+                  <Prev label="Availability" v={(reviewFor.listing.availability || []).join(', ')} />
+                  <Prev label="Lead time" v={reviewFor.listing.lead_time || ''} />
+                </>
+              ) : (
+                <>
+                  <Prev label="Service areas" v={(reviewFor.listing.service_areas || []).join(', ')} />
+                  <Prev label="Response time" v={reviewFor.listing.response_time || ''} />
+                  <Prev label="Certifications" v={(reviewFor.listing.certifications || []).join(', ')} />
+                </>
+              )}
+              <Prev label="Pilot / demo" v={reviewFor.listing.pilot?.available ? 'Available' : ''} />
+              <Prev label="Warranty" v={String(reviewFor.listing.warranty_support?.warranty || '')} />
+              <Prev label="Pricing" v={String(reviewFor.listing.pricing?.range || reviewFor.listing.pricing?.model || reviewFor.listing.pricing_model || 'Request quote')} />
+              <Prev label="Photos" v={`${(reviewFor.listing.image_paths || []).length}`} />
+            </ul>
+            <p className="sc-hint">Empty fields simply will not show. AI-drafted content only used what was in your document — anything missing was left blank on purpose.</p>
+
+            <label className="sc-cb sc-acc">
+              <input type="checkbox" checked={accOk} onChange={(e) => setAccOk(e.target.checked)} />
+              I confirm this information is accurate, current, and approved to be displayed on NXT LINK.
+            </label>
+            {pubErr && <div className="sc-warn">{pubErr}</div>}
+            <div className="sc-actions">
+              <button className="sc-btn ghost" onClick={() => setReviewFor(null)}>Keep editing</button>
+              <button className="sc-btn" disabled={!accOk || pubBusy} onClick={publishNow}>{pubBusy ? 'Publishing…' : 'Publish to marketplace'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </Shell>
   );
+}
+
+function Prev({ label, v }: { label: string; v: string }) {
+  return <li><span>{label}</span><div>{v || <i>empty — will not display</i>}</div></li>;
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -386,6 +484,9 @@ const CSS = `
 .sc-status{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:99px;}
 .sc-status.published{background:rgba(52,211,153,.12);color:#34D399;}
 .sc-status.draft{background:rgba(251,191,36,.1);color:#FBBF24;}
+.sc-status.needs_review{background:rgba(251,146,60,.12);color:#FB923C;}
+.sc-status.ready{background:rgba(96,165,250,.12);color:#60A5FA;}
+.sc-status.unpublished{background:rgba(255,255,255,.07);color:#8080A0;}
 .sc-btn{font-family:inherit;font-size:14px;font-weight:700;padding:12px 20px;border-radius:11px;border:none;background:#7C5CFC;color:#fff;cursor:pointer;}
 .sc-btn:hover{background:#6344DF;}.sc-btn:disabled{opacity:.55;}
 .sc-btn.sm{padding:9px 14px;font-size:13px;}
@@ -407,4 +508,20 @@ const CSS = `
 .sc-block summary{cursor:pointer;font-size:13.5px;font-weight:600;color:#C0C0D0;}
 .sc-photos{display:flex;align-items:center;gap:12px;margin:16px 0;}
 .sc-actions{display:flex;gap:12px;margin-top:20px;}
+.sc-warn{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);color:#FCD34D;padding:11px 15px;border-radius:12px;font-size:13.5px;margin-bottom:16px;line-height:1.5;}
+.sc-modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:grid;place-items:center;z-index:40;padding:20px;}
+.sc-modal-in{background:#14141F;border:1px solid rgba(124,92,252,.35);border-radius:18px;max-width:560px;width:100%;max-height:85vh;overflow:auto;padding:24px;}
+.sc-prev-card{display:flex;gap:14px;background:#0E0E16;border:1px solid rgba(255,255,255,.08);border-radius:13px;padding:12px;margin:14px 0;}
+.sc-prev-img{width:110px;height:74px;border-radius:9px;overflow:hidden;background:#1A1A28;display:grid;place-items:center;color:#505068;font-size:11px;flex-shrink:0;}
+.sc-prev-img img{width:100%;height:100%;object-fit:cover;}
+.sc-prev-body{display:flex;flex-direction:column;gap:4px;}
+.sc-prev-body b{font-size:15px;}
+.sc-prev-body small{color:#8080A0;font-size:12.5px;}
+.sc-prev-body em{font-style:normal;font-size:12px;color:#A78BFA;}
+.sc-prev-list{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;}
+.sc-prev-list li{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13.5px;}
+.sc-prev-list li span{color:#8080A0;min-width:120px;flex-shrink:0;}
+.sc-prev-list li i{color:#505068;font-style:italic;}
+.sc-acc{margin:14px 0 4px;font-size:13.5px;line-height:1.5;align-items:flex-start;}
+.sc-acc input{margin-top:3px;}
 `;

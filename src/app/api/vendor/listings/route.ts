@@ -9,10 +9,14 @@ import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getVendorSession, getOrCreateVendorProfile } from '@/lib/vendor/auth';
 import { ListingKind, tableFor, colsFor, normalizeListingInput } from '@/lib/marketplace/types';
+import { sendZohoMail } from '@/lib/zoho/mail';
 
 function kindOf(v: unknown): ListingKind | null {
   return v === 'product' || v === 'service' ? v : null;
 }
+
+// Statuses a vendor may set directly; 'published' has extra requirements below.
+const VENDOR_STATUSES = ['draft', 'needs_review', 'ready', 'published', 'unpublished', 'archived'];
 
 async function requireVendor() {
   const session = await getVendorSession();
@@ -20,7 +24,7 @@ async function requireVendor() {
   if (!isSupabaseConfigured()) return { err: NextResponse.json({ ok: false, message: 'Not configured' }, { status: 503 }) };
   const vendor = await getOrCreateVendorProfile(session);
   if (!vendor) return { err: NextResponse.json({ ok: false, message: 'Profile not found' }, { status: 404 }) };
-  return { vendor };
+  return { vendor, session };
 }
 
 export async function GET() {
@@ -46,8 +50,10 @@ export async function POST(req: Request) {
   if (!fields.name) return NextResponse.json({ ok: false, message: 'name is required' }, { status: 400 });
 
   const db = getSupabaseClient({ admin: true });
+  // AI-drafted listings start in needs_review — a human must look before publish.
+  const aiExtracted = Boolean(body.ai_extracted);
   const { data, error } = await db.from(tableFor(kind))
-    .insert({ ...fields, vendor_id: vendor.id, status: 'draft', ai_extracted: Boolean(body.ai_extracted) })
+    .insert({ ...fields, vendor_id: vendor.id, status: aiExtracted ? 'needs_review' : 'draft', ai_extracted: aiExtracted })
     .select(colsFor(kind)).single();
   if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
 
@@ -63,7 +69,7 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const { vendor, err } = await requireVendor();
+  const { vendor, session, err } = await requireVendor();
   if (err) return err;
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return NextResponse.json({ ok: false, message: 'Invalid JSON' }, { status: 400 }); }
@@ -72,9 +78,20 @@ export async function PATCH(req: Request) {
   if (!kind || !id) return NextResponse.json({ ok: false, message: 'kind and id are required' }, { status: 400 });
 
   const patch = normalizeListingInput(kind, body);
-  if (body.status === 'published' || body.status === 'draft' || body.status === 'archived') {
+  const wantsPublish = body.status === 'published';
+  if (typeof body.status === 'string' && VENDOR_STATUSES.includes(body.status)) {
+    if (wantsPublish) {
+      // Publishing gate: verified email + explicit accuracy confirmation.
+      if (!session.emailConfirmed) {
+        return NextResponse.json({ ok: false, code: 'email_unverified', message: 'Verify your email before publishing — check your inbox for the confirmation link.' }, { status: 403 });
+      }
+      if (body.accuracy_confirmed !== true) {
+        return NextResponse.json({ ok: false, code: 'accuracy_required', message: 'Please confirm the information is accurate before publishing.' }, { status: 400 });
+      }
+      patch.published_at = new Date().toISOString();
+      patch.accuracy_confirmed_at = new Date().toISOString();
+    }
     patch.status = body.status;
-    if (body.status === 'published') patch.published_at = new Date().toISOString();
   }
   if (!Object.keys(patch).length) return NextResponse.json({ ok: false, message: 'Nothing to update' }, { status: 400 });
   patch.updated_at = new Date().toISOString();
@@ -84,6 +101,15 @@ export async function PATCH(req: Request) {
     .eq('id', id).eq('vendor_id', vendor.id)
     .select(colsFor(kind)).single();
   if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+
+  if (wantsPublish && vendor.email) {
+    const name = (data as unknown as { name?: string })?.name || 'Your listing';
+    sendZohoMail({
+      to: vendor.email,
+      subject: `NXT//LINK: "${name}" is now live in the marketplace`,
+      body: `${name} is published and visible to buyers in the NXT//LINK marketplace. You confirmed its accuracy on ${new Date().toLocaleDateString()}. You can unpublish it anytime from your listings dashboard.`,
+    }).catch(() => {});
+  }
   return NextResponse.json({ ok: true, listing: data, kind });
 }
 

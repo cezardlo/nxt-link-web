@@ -10,6 +10,7 @@ import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 export interface VendorSession {
   authId: string;
   email: string | null;
+  emailConfirmed: boolean;
 }
 
 /** Resolve the signed-in vendor's auth session, or null if not signed in. */
@@ -18,7 +19,11 @@ export async function getVendorSession(): Promise<VendorSession | null> {
     const sb = await createServerSupabaseClient();
     const { data } = await sb.auth.getUser();
     if (!data?.user) return null;
-    return { authId: data.user.id, email: data.user.email ?? null };
+    return {
+      authId: data.user.id,
+      email: data.user.email ?? null,
+      emailConfirmed: Boolean(data.user.email_confirmed_at),
+    };
   } catch {
     return null;
   }

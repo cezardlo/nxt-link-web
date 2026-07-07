@@ -17,6 +17,7 @@ interface Card {
   availability?: string[]; lead_time?: string | null;
   service_areas?: string[]; response_time?: string | null; emergency_available?: boolean;
   pricing_model?: string | null;
+  vendor_verified?: boolean; has_documents?: boolean; has_case_studies?: boolean;
 }
 
 const CATEGORIES = ['', 'Forklifts', 'Warehouse technology', 'Robotics', 'WMS', 'TMS', 'Telematics/ELD', 'Cold Chain', 'Labels / Zebra', 'Electrical service', 'General maintenance', 'IT support', 'Pest control', 'Staffing agency', 'Transportation / FTL / LTL', 'Customs/Cross-Border'];
@@ -120,8 +121,11 @@ export default function MarketplacePage() {
                   <div className="mk-card-body">
                     <div className="mk-kindrow">
                       <span className={'mk-kind ' + c.kind}>{c.kind}</span>
+                      {c.vendor_verified && <span className="mk-badge trust">Verified vendor</span>}
                       {c.pilot?.available && <span className="mk-badge">Pilot available</span>}
                       {c.warranty_support?.warranty && <span className="mk-badge">Warranty</span>}
+                      {c.has_documents && <span className="mk-badge">Docs</span>}
+                      {c.has_case_studies && <span className="mk-badge">Case studies</span>}
                       {c.emergency_available && <span className="mk-badge urgent">24/7</span>}
                     </div>
                     <Link href={`/marketplace/${c.kind}/${c.id}`} className="mk-name">{c.name}</Link>
@@ -217,6 +221,7 @@ const CSS = `
 .mk-kind.service{background:rgba(52,211,153,.12);color:#34D399;}
 .mk-badge{font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:99px;background:rgba(255,255,255,.06);color:#C0C0D0;}
 .mk-badge.urgent{background:rgba(251,191,36,.12);color:#FBBF24;}
+.mk-badge.trust{background:rgba(52,211,153,.12);color:#34D399;}
 .mk-name{font-size:16px;font-weight:700;color:#F0F0F5;text-decoration:none;line-height:1.3;}
 .mk-name:hover{color:#C4B5FD;}
 .mk-vendor{font-size:12.5px;color:#8080A0;}

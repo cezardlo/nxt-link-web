@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { tableFor } from '@/lib/marketplace/types';
+import { sendZohoMail } from '@/lib/zoho/mail';
 
 export async function POST(req: Request) {
   let body: Record<string, unknown>;
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
 
   const db = getSupabaseClient({ admin: true });
   // The listing must actually be published; vendor_id comes from the row, never the client.
-  const { data: listing } = await db.from(tableFor(kind)).select('id, vendor_id').eq('id', listingId).eq('status', 'published').maybeSingle();
+  const { data: listing } = await db.from(tableFor(kind)).select('id, name, vendor_id').eq('id', listingId).eq('status', 'published').maybeSingle();
   if (!listing) return NextResponse.json({ ok: false, message: 'Listing not found' }, { status: 404 });
 
   const { data, error } = await db.from('quote_requests').insert({
@@ -45,6 +46,16 @@ export async function POST(req: Request) {
     status: 'new',
   }).select('public_ref').single();
   if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+
+  // Best-effort: tell the vendor a lead arrived (never blocks the response).
+  const { data: v } = await db.from('vendor_profiles').select('email, company_name').eq('id', listing.vendor_id).maybeSingle();
+  if (v?.email) {
+    sendZohoMail({
+      to: v.email as string,
+      subject: `NXT//LINK: new ${kind === 'product' ? 'quote' : 'service'} request for "${listing.name}"`,
+      body: `You have a new lead (${data.public_ref}) from ${company} for "${listing.name}". Open your leads inbox to respond: /vendor/leads`,
+    }).catch(() => {});
+  }
 
   return NextResponse.json({ ok: true, public_ref: data.public_ref });
 }

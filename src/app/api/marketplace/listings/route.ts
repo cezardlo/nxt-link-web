@@ -51,10 +51,27 @@ export async function GET(req: Request) {
   // Vendor names (bulk) + signed first image per card.
   const vendorIds = Array.from(new Set(rows.map((r) => r.vendor_id)));
   const { data: vendors } = vendorIds.length
-    ? await db.from('vendor_profiles').select('id, company_name, city').in('id', vendorIds)
+    ? await db.from('vendor_profiles').select('id, company_name, city, status').in('id', vendorIds)
     : { data: [] };
-  const vmap = new Map<string, { company_name: string; city: string | null }>();
-  for (const v of vendors || []) vmap.set(v.id as string, { company_name: v.company_name as string, city: (v.city as string) || null });
+  const vmap = new Map<string, { company_name: string; city: string | null; verified: boolean }>();
+  for (const v of vendors || []) vmap.set(v.id as string, { company_name: v.company_name as string, city: (v.city as string) || null, verified: v.status === 'approved' });
+
+  // Trust badges only when the underlying data really exists: bulk-count
+  // documents and case studies for the listed ids.
+  const pIds = rows.filter((r) => (r as { kind?: string }).kind !== 'service').map((r) => r.id);
+  const sIds = rows.filter((r) => (r as { kind?: string }).kind === 'service').map((r) => r.id);
+  const hasDocs = new Set<string>();
+  const hasCases = new Set<string>();
+  const [dp, ds, cp, cs2] = await Promise.all([
+    pIds.length ? db.from('listing_documents').select('product_id').in('product_id', pIds) : Promise.resolve({ data: [] }),
+    sIds.length ? db.from('listing_documents').select('service_id').in('service_id', sIds) : Promise.resolve({ data: [] }),
+    pIds.length ? db.from('case_studies').select('product_id').in('product_id', pIds).eq('status', 'published') : Promise.resolve({ data: [] }),
+    sIds.length ? db.from('case_studies').select('service_id').in('service_id', sIds).eq('status', 'published') : Promise.resolve({ data: [] }),
+  ]);
+  for (const r of dp.data || []) if (r.product_id) hasDocs.add(r.product_id as string);
+  for (const r of ds.data || []) if (r.service_id) hasDocs.add(r.service_id as string);
+  for (const r of cp.data || []) if (r.product_id) hasCases.add(r.product_id as string);
+  for (const r of cs2.data || []) if (r.service_id) hasCases.add(r.service_id as string);
 
   const listings = await Promise.all(rows.map(async (r) => {
     const first = Array.isArray(r.image_paths) && r.image_paths.length ? r.image_paths[0] : null;
@@ -66,7 +83,13 @@ export async function GET(req: Request) {
       image_url = signed?.signedUrl || null;
     }
     const v = vmap.get(r.vendor_id);
-    return { ...r, image_paths: undefined, image_url, vendor_name: v?.company_name || 'Verified vendor', vendor_city: v?.city || null };
+    return {
+      ...r, image_paths: undefined, image_url,
+      vendor_name: v?.company_name || 'Vendor', vendor_city: v?.city || null,
+      vendor_verified: Boolean(v?.verified),
+      has_documents: hasDocs.has(r.id),
+      has_case_studies: hasCases.has(r.id),
+    };
   }));
 
   return NextResponse.json({ ok: true, listings });

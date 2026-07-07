@@ -30,7 +30,7 @@ const ROLES = [
     cta: 'Browse listings',
   },
   {
-    href: '/vendor-login',
+    href: '/login',
     role: 'Vendor',
     roleEs: 'Proveedor',
     title: 'I provide solutions',
@@ -38,11 +38,11 @@ const ROLES = [
     cta: 'Vendor sign in',
   },
   {
-    href: '/sign-in',
+    href: '/login',
     role: 'Operator',
     roleEs: 'Operador',
     title: 'NXT Link team',
-    desc: 'Review intakes, build anonymized RFQ packets, select vendors, compare quotes, and advance deals.',
+    desc: 'Oversee vendors and listings, review what is published, and manage leads and deals.',
     cta: 'Operator sign in',
   },
 ];
@@ -68,8 +68,8 @@ export default function Home() {
         ))}
       </div>
       <div className="wl-foot">
-        New vendor? <a href="/apply">Apply to join the network</a> · Prefer we find it for you?{' '}
-        <a href="/intake">Describe your need</a>
+        <a href="/signup">Create an account</a> · New vendor? <a href="/apply">Apply to join the network</a> ·
+        Prefer we find it for you? <a href="/intake">Describe your need</a>
       </div>
     </div>
   );
