@@ -12,7 +12,8 @@ import { getApplicantSession, getOwnApplication } from '@/lib/apply/auth';
 const LOGO_BUCKET = 'vendor-logos';
 const IMG_BUCKET = 'vendor-product-images';
 const MAX_BYTES = 8 * 1024 * 1024;
-const ALLOWED_IMG = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+// No SVG: it can carry scripts and these files are re-served to admins/buyers.
+const ALLOWED_IMG = ['image/png', 'image/jpeg', 'image/webp'];
 const MAX_IMAGES = 3;
 
 function safeName(name: string): string {

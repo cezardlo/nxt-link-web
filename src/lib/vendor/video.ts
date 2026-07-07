@@ -11,6 +11,7 @@ export function parseVideoUrl(raw: string): ParsedVideo | null {
 
   try {
     const u = new URL(url);
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
     const host = u.hostname.replace(/^www\./, '');
 
     if (host === 'youtube.com' || host === 'm.youtube.com') {

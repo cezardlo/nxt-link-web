@@ -59,7 +59,7 @@ export async function getOrCreateVendorProfile(session: VendorSession): Promise<
     const { data: byEmail } = await db
       .from('vendor_profiles')
       .select(cols)
-      .ilike('email', session.email)
+      .ilike('email', session.email.replace(/[\\%_]/g, (c) => `\\${c}`))
       .is('auth_id', null)
       .order('created_at', { ascending: false })
       .maybeSingle();

@@ -103,6 +103,10 @@ export default function ApplyPage() {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const imagesInputRef = useRef<HTMLInputElement>(null);
 
+  // Anti-bot: honeypot field (humans never see/fill it) + time the form was opened.
+  const [websiteUrl, setWebsiteUrl] = useState('');
+  const startedAtRef = useRef(Date.now());
+
   const emailValid = email.trim().length === 0 || EMAIL_RE.test(email.trim());
 
   function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -195,6 +199,8 @@ export default function ApplyPage() {
       fd.append('problem_solved', problemSolved.trim());
       fd.append('target_customer', resolvedTargetCustomer());
       fd.append('price_range', resolvedPriceRange());
+      fd.append('website_url', websiteUrl);
+      fd.append('started_at', String(startedAtRef.current));
       if (logo) fd.append('logo', logo.file);
       for (const img of images) fd.append('images', img.file);
 
@@ -238,6 +244,16 @@ export default function ApplyPage() {
             </header>
 
             <form className="ap-card" onSubmit={handleSubmit} noValidate>
+              <input
+                type="text"
+                name="website_url"
+                value={websiteUrl}
+                onChange={(e) => setWebsiteUrl(e.target.value)}
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }}
+              />
               <div className="ap-grid">
                 <Field label="Company name" required>
                   <input
@@ -443,7 +459,7 @@ export default function ApplyPage() {
                     <input
                       ref={logoInputRef}
                       type="file"
-                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                      accept="image/png,image/jpeg,image/webp"
                       onChange={handleLogoChange}
                     />
                     Choose logo
@@ -465,7 +481,7 @@ export default function ApplyPage() {
                     <input
                       ref={imagesInputRef}
                       type="file"
-                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                      accept="image/png,image/jpeg,image/webp"
                       multiple
                       disabled={images.length >= MAX_PRODUCT_IMAGES}
                       onChange={handleImagesChange}

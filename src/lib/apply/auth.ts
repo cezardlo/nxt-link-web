@@ -64,7 +64,7 @@ export async function getOwnApplication(session: ApplicantSession): Promise<Appl
     const { data: byEmail } = await db
       .from('vendor_applications')
       .select(COLS)
-      .ilike('email', session.email)
+      .ilike('email', session.email.replace(/[\\%_]/g, (c) => `\\${c}`))
       .is('auth_id', null)
       .order('created_at', { ascending: false })
       .maybeSingle();

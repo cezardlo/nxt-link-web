@@ -16,7 +16,8 @@ const OFFERING_TYPES = ['Product', 'Software / platform', 'Service', 'Innovation
 const LOGO_BUCKET = 'vendor-logos';
 const IMG_BUCKET = 'vendor-product-images';
 const MAX_BYTES = 8 * 1024 * 1024;
-const ALLOWED_IMG = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+// No SVG: it can carry scripts and these files are re-served to admins/buyers.
+const ALLOWED_IMG = ['image/png', 'image/jpeg', 'image/webp'];
 const MAX_STAGES = 12;
 
 /** Free values allowed (the "Other" escape hatch) — just capped in length/count. */
@@ -42,6 +43,15 @@ export async function POST(req: Request) {
   }
 
   const get = (k: string) => String(form.get(k) || '').trim();
+
+  // Anti-bot: hidden honeypot field must stay empty (fake success so bots
+  // don't learn), and the form must have been open at least 1.5s.
+  if (get('website_url')) return NextResponse.json({ ok: true, stored: false, public_ref: 'APP-RECEIVED' });
+  const startedAt = Number(get('started_at') || 0);
+  if (startedAt && Date.now() - startedAt < 1500) {
+    return NextResponse.json({ ok: false, message: 'Form submitted too quickly — please try again' }, { status: 400 });
+  }
+
   const company_name = get('company_name');
   const email = get('email');
   const category = get('category');

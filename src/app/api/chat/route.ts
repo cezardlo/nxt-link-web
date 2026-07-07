@@ -26,7 +26,10 @@ export async function POST(req: Request) {
   let body: { messages?: ChatMsg[]; mode?: string; locale?: string };
   try { body = await req.json(); } catch { return NextResponse.json({ ok: false, message: 'Invalid JSON' }, { status: 400 }); }
 
-  const messages = Array.isArray(body.messages) ? body.messages.slice(-12) : [];
+  const MAX_MSG_LEN = 4000;
+  const messages = Array.isArray(body.messages)
+    ? body.messages.slice(-12).map((m) => ({ ...m, content: String(m.content ?? '').slice(0, MAX_MSG_LEN) }))
+    : [];
   const mode = body.mode === 'vendor' ? 'vendor' : 'public';
   const locale = body.locale === 'es' ? 'es' : 'en';
   const lastUser = [...messages].reverse().find((m) => m.role === 'user')?.content || '';
