@@ -3,6 +3,10 @@
 This file provides guidance to Claude Code and terminal Claude when working in this repository.
 
 ## Source Of Truth
+- Product truth + priorities + sprint plan: `docs/project/ROADMAP_2026-07-08.md`
+- Current technical state (environments, migration truth, known issues): `docs/project/TECH_HANDOFF_CURRENT.md`
+- Core-transaction acceptance script (MVP definition of done): `docs/project/CORE_TRANSACTION_TEST.md`
+- Historical context only: `docs/project/CLAUDE_APP_HANDOFF_2026-07-06.md`
 - Active repo organization plan: `claude/repo-organization.md`
 - Current repo state summary: `claude/current-state.md`
 - Current active architecture: `docs/architecture/current-system.md`
@@ -13,8 +17,8 @@ Claude should treat archived systems as reference-only unless the user explicitl
 
 ## Active Product Path
 - Active application: `src/`
-- Active brain: `src/lib/intelligence` and `src/app/api/brain`
-- Core surfaces: `/briefing`, `/intel`, `/map`, `/command`
+- Core surfaces (MVP): `/marketplace`, `/vendor/listings`, `/vendor/leads`, `/intake`, `/admin/requests`, `/admin/marketplace`, `/signup`, `/login`
+- Paused (do not extend until the core transaction works): intelligence surfaces (`/briefing`, `/intel`, `/map`, `/command`), feeds, agents, conference tools
 
 Do not assume `archive/` folders are active runtime dependencies.
 
@@ -27,6 +31,8 @@ Do not assume `archive/` folders are active runtime dependencies.
 - `archive` = inactive or superseded systems
 
 ## Working Rules
+- Read `docs/project/ROADMAP_2026-07-08.md` before proposing the next product change; fix the core transaction where `docs/project/CORE_TRANSACTION_TEST.md` first fails.
+- The live Supabase project is the ONLY database (no staging) — never apply migrations or touch data without explicit user approval.
 - Read existing code before editing.
 - Prefer small targeted edits.
 - Validate changes before declaring done.
