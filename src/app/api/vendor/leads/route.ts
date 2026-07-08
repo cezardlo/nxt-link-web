@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getVendorSession, getOrCreateVendorProfile } from '@/lib/vendor/auth';
+import { sendZohoMail } from '@/lib/zoho/mail';
 
 const STATUSES = ['new', 'viewed', 'responded', 'won', 'lost', 'spam'];
 
@@ -52,9 +53,20 @@ export async function PATCH(req: Request) {
   }
 
   const db = getSupabaseClient({ admin: true });
-  const { error } = await db.from('quote_requests')
+  const { data: updated, error } = await db.from('quote_requests')
     .update({ status: body.status, updated_at: new Date().toISOString() })
-    .eq('id', body.id).eq('vendor_id', vendor.id);
+    .eq('id', body.id).eq('vendor_id', vendor.id)
+    .select('public_ref, email, company').maybeSingle();
   if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+
+  // Tell the buyer when the vendor starts working their request (only
+  // 'responded' — internal states like viewed/won/lost stay internal).
+  if (body.status === 'responded' && updated?.email) {
+    sendZohoMail({
+      to: updated.email as string,
+      subject: `NXT//LINK: the vendor is responding to your request ${updated.public_ref}`,
+      body: `Good news — ${vendor.company_name} marked your request (${updated.public_ref}) as being responded to. Expect to hear from them at this email address.`,
+    }).catch(() => {});
+  }
   return NextResponse.json({ ok: true });
 }

@@ -9,9 +9,10 @@ import { useCallback, useEffect, useState } from 'react';
 interface AdminVendor { id: string; company_name: string; email: string | null; city: string | null; status: string; has_account: boolean; email_verified: boolean | null; created_at: string }
 interface AdminListing { id: string; public_ref: string; vendor_id: string; name: string; category: string; status: string; ai_extracted: boolean; accuracy_confirmed_at: string | null; published_at: string | null }
 interface AdminLead { id: string; public_ref: string; kind: string; vendor_id: string; company: string; status: string; created_at: string }
+interface AdminReport { id: string; kind: 'product' | 'service'; product_id: string | null; service_id: string | null; vendor_id: string; reason: string; details: string | null; reporter_email: string | null; status: string; created_at: string }
 
 export default function AdminMarketplacePage() {
-  const [data, setData] = useState<{ vendors: AdminVendor[]; products: AdminListing[]; services: AdminListing[]; leads: AdminLead[] } | null>(null);
+  const [data, setData] = useState<{ vendors: AdminVendor[]; products: AdminListing[]; services: AdminListing[]; leads: AdminLead[]; reports: AdminReport[] } | null>(null);
   const [denied, setDenied] = useState(false);
   const [msg, setMsg] = useState('');
 
@@ -29,8 +30,13 @@ export default function AdminMarketplacePage() {
     setMsg(d.ok ? 'Updated.' : (d.message || 'Failed'));
     load();
   }
+  async function setReportStatus(report_id: string, report_status: string) {
+    await fetch('/api/admin/marketplace', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ report_id, report_status }) });
+    load();
+  }
 
   const vmap = new Map((data?.vendors || []).map((v) => [v.id, v.company_name]));
+  const lmap = new Map([...(data?.products || []), ...(data?.services || [])].map((l) => [l.id, l.name]));
 
   return (
     <div className="am">
@@ -91,6 +97,36 @@ export default function AdminMarketplacePage() {
             ))}
 
             <section className="am-card">
+              <div className="am-lbl">Reported issues ({data.reports.length})</div>
+              {data.reports.length === 0 ? <p className="am-none">No reports.</p> : (
+                <div className="am-scroll"><table>
+                  <thead><tr><th>Listing</th><th>Vendor</th><th>Reason</th><th>Details</th><th>Reporter</th><th>Status</th><th></th></tr></thead>
+                  <tbody>
+                    {data.reports.map((r) => (
+                      <tr key={r.id}>
+                        <td><a href={`/marketplace/${r.kind}/${r.product_id || r.service_id}`} target="_blank" rel="noreferrer">{lmap.get((r.product_id || r.service_id) as string) || r.kind}</a></td>
+                        <td>{vmap.get(r.vendor_id) || '—'}</td>
+                        <td>{r.reason.replace('_', ' ')}</td>
+                        <td className="am-details">{r.details || '—'}</td>
+                        <td>{r.reporter_email || '—'}</td>
+                        <td><span className={'am-pill ' + r.status}>{r.status}</span></td>
+                        <td>
+                          {r.status === 'new' && (
+                            <>
+                              <button onClick={() => setStatus(r.kind, (r.product_id || r.service_id) as string, 'unpublished')}>Unpublish listing</button>{' '}
+                              <button onClick={() => setReportStatus(r.id, 'reviewed')}>Mark reviewed</button>{' '}
+                              <button onClick={() => setReportStatus(r.id, 'dismissed')}>Dismiss</button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table></div>
+              )}
+            </section>
+
+            <section className="am-card">
               <div className="am-lbl">Recent leads ({data.leads.length})</div>
               <div className="am-scroll"><table>
                 <thead><tr><th>Ref</th><th>Buyer</th><th>Vendor</th><th>Type</th><th>Status</th><th>Date</th></tr></thead>
@@ -139,4 +175,8 @@ const CSS = `
 .am-pill.unpublished,.am-pill.archived,.am-pill.rejected{background:rgba(255,255,255,.06);color:#8080A0;}
 .am-card button{font-family:inherit;background:none;border:1px solid rgba(255,255,255,.12);color:#C0C0D0;font-size:12px;border-radius:8px;padding:5px 10px;cursor:pointer;}
 .am-card button:hover{border-color:#FCA5A5;color:#FCA5A5;}
+.am-none{color:#8080A0;font-size:13px;margin:0;}
+.am-details{max-width:260px;white-space:normal;color:#C0C0D0;}
+.am-pill.reviewed{background:rgba(96,165,250,.12);color:#60A5FA;}
+.am-pill.dismissed{background:rgba(255,255,255,.06);color:#8080A0;}
 `;

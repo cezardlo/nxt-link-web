@@ -65,6 +65,15 @@ export async function POST(req: Request) {
       .update(kind === 'product' ? { product_id: newId } : { service_id: newId })
       .eq('id', docId).eq('vendor_id', vendor.id);
   }
+
+  if (vendor.email) {
+    const name = (data as unknown as { name?: string })?.name || 'Your listing';
+    sendZohoMail({
+      to: vendor.email,
+      subject: `NXT//LINK: "${name}" was saved as a ${aiExtracted ? 'draft that needs your review' : 'draft'}`,
+      body: `${name} was created in your NXT//LINK listings dashboard. It is NOT public — nothing appears in the marketplace until you review it and confirm its accuracy on the publish screen.`,
+    }).catch(() => {});
+  }
   return NextResponse.json({ ok: true, listing: data, kind });
 }
 

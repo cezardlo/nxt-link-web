@@ -17,11 +17,12 @@ export async function GET(req: Request) {
   if (!isSupabaseConfigured()) return NextResponse.json({ ok: false, message: 'Not configured' }, { status: 503 });
 
   const db = getSupabaseClient({ admin: true });
-  const [{ data: vendors }, { data: products }, { data: services }, { data: leads }] = await Promise.all([
+  const [{ data: vendors }, { data: products }, { data: services }, { data: leads }, { data: reports }] = await Promise.all([
     db.from('vendor_profiles').select('id, public_ref, company_name, email, city, status, auth_id, created_at').order('created_at', { ascending: false }).limit(200),
     db.from('marketplace_products').select(LISTING_COLS).order('updated_at', { ascending: false }).limit(200),
     db.from('marketplace_services').select(LISTING_COLS).order('updated_at', { ascending: false }).limit(200),
     db.from('quote_requests').select('id, public_ref, kind, vendor_id, company, status, created_at').order('created_at', { ascending: false }).limit(100),
+    db.from('listing_reports').select('id, kind, product_id, service_id, vendor_id, reason, details, reporter_email, status, created_at').order('created_at', { ascending: false }).limit(100),
   ]);
 
   // Email-verified flag per vendor account (capped to keep this fast).
@@ -44,6 +45,7 @@ export async function GET(req: Request) {
     products: products || [],
     services: services || [],
     leads: leads || [],
+    reports: reports || [],
   });
 }
 
@@ -51,8 +53,20 @@ export async function PATCH(req: Request) {
   if (!(await isAdminRequest(req))) return NextResponse.json({ ok: false, message: 'Admin only' }, { status: 401 });
   if (!isSupabaseConfigured()) return NextResponse.json({ ok: false, message: 'Not configured' }, { status: 503 });
 
-  let body: { kind?: string; id?: string; status?: string };
+  let body: { kind?: string; id?: string; status?: string; report_id?: string; report_status?: string };
   try { body = await req.json(); } catch { return NextResponse.json({ ok: false, message: 'Invalid JSON' }, { status: 400 }); }
+
+  // Report triage: { report_id, report_status }
+  if (body.report_id) {
+    if (!['reviewed', 'dismissed', 'new'].includes(body.report_status || '')) {
+      return NextResponse.json({ ok: false, message: 'valid report_status required' }, { status: 400 });
+    }
+    const db = getSupabaseClient({ admin: true });
+    const { error } = await db.from('listing_reports').update({ status: body.report_status }).eq('id', body.report_id);
+    if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  }
+
   const kind = body.kind === 'product' || body.kind === 'service' ? body.kind : null;
   const allowed = ['draft', 'needs_review', 'ready', 'published', 'unpublished', 'archived'];
   if (!kind || !body.id || !allowed.includes(body.status || '')) {

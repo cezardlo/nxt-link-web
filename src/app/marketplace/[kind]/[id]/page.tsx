@@ -42,6 +42,13 @@ export default function ListingDetailPage() {
   const [sentRef, setSentRef] = useState('');
   const [formMsg, setFormMsg] = useState('');
 
+  // Report a problem
+  const [repOpen, setRepOpen] = useState(false);
+  const [repReason, setRepReason] = useState('wrong_info');
+  const [repDetails, setRepDetails] = useState('');
+  const [repEmail, setRepEmail] = useState('');
+  const [repDone, setRepDone] = useState(false);
+
   useEffect(() => {
     fetch(`/api/marketplace/listings/${params.id}?kind=${kind}`)
       .then((r) => r.json())
@@ -62,6 +69,16 @@ export default function ListingDetailPage() {
       else setFormMsg(data.message || 'Could not send');
     } catch { setFormMsg('Could not send'); }
     setSending(false);
+  }
+
+  async function submitReport() {
+    try {
+      await fetch('/api/marketplace/report', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind, listing_id: params.id, reason: repReason, details: repDetails, email: repEmail }),
+      });
+    } catch { /* best effort */ }
+    setRepDone(true);
   }
 
   if (missing) return <div className="dt"><style dangerouslySetInnerHTML={{ __html: CSS }} /><div className="dt-empty">Listing not found. <Link href="/marketplace">Back to marketplace</Link></div></div>;
@@ -244,6 +261,31 @@ export default function ListingDetailPage() {
               <p>{d.vendor.description.slice(0, 300)}</p>
             </div>
           )}
+
+          <div className="dt-report">
+            {repDone ? (
+              <p>Thanks — our team will review this listing.</p>
+            ) : !repOpen ? (
+              <button className="dt-replink" onClick={() => setRepOpen(true)}>Something wrong with this listing? Report it</button>
+            ) : (
+              <div className="dt-repform">
+                <b>Report this listing</b>
+                <select value={repReason} onChange={(e) => setRepReason(e.target.value)}>
+                  <option value="wrong_info">Information is wrong</option>
+                  <option value="misleading">Misleading claims</option>
+                  <option value="spam">Spam or fake</option>
+                  <option value="not_available">No longer available</option>
+                  <option value="other">Other</option>
+                </select>
+                <textarea rows={3} placeholder="What is wrong? (optional)" value={repDetails} onChange={(e) => setRepDetails(e.target.value)} />
+                <input type="email" placeholder="Your email (optional)" value={repEmail} onChange={(e) => setRepEmail(e.target.value)} />
+                <div className="dt-repactions">
+                  <button className="dt-repsend" onClick={submitReport}>Send report</button>
+                  <button className="dt-replink" onClick={() => setRepOpen(false)}>Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
         </aside>
       </div>
     </div>
@@ -329,4 +371,13 @@ const CSS = `
 .dt-vendorcard{background:#14141F;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:18px;}
 .dt-vendorcard h4{font-size:15px;margin-bottom:8px;}
 .dt-vendorcard p{font-size:13px;color:#8080A0;line-height:1.6;}
+.dt-report{text-align:center;}
+.dt-report p{color:#8080A0;font-size:13px;}
+.dt-replink{background:none;border:none;color:#63607A;font:inherit;font-size:12.5px;cursor:pointer;text-decoration:underline;}
+.dt-replink:hover{color:#9A97AF;}
+.dt-repform{background:#14141F;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:9px;text-align:left;}
+.dt-repform b{font-size:14px;}
+.dt-repform select,.dt-repform textarea,.dt-repform input{font-family:inherit;font-size:13.5px;padding:10px 12px;border-radius:9px;border:1px solid rgba(255,255,255,.1);background:#0A0A0F;color:#F0F0F5;outline:none;resize:vertical;}
+.dt-repactions{display:flex;gap:10px;align-items:center;}
+.dt-repsend{font-family:inherit;font-size:13px;font-weight:700;padding:9px 14px;border-radius:9px;border:none;background:rgba(252,165,165,.15);color:#FCA5A5;cursor:pointer;}
 `;

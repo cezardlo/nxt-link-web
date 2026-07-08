@@ -107,6 +107,14 @@ export default function VendorListingsPage() {
   const [pubBusy, setPubBusy] = useState(false);
   const [pubErr, setPubErr] = useState('');
   const [emailVerified, setEmailVerified] = useState(true);
+  const [extras, setExtras] = useState<{ documents: Array<{ id: string; title: string | null; file_name: string }>; case_studies: Array<{ id: string; title: string }> } | null>(null);
+
+  function openReview(kind: Kind, listing: Listing) {
+    setReviewFor({ kind, listing }); setAccOk(false); setPubErr(''); setExtras(null);
+    fetch(`/api/vendor/listings/extras?kind=${kind}&id=${listing.id}`)
+      .then((r) => r.json()).then((d) => { if (d.ok) setExtras({ documents: d.documents, case_studies: d.case_studies }); })
+      .catch(() => {});
+  }
 
   const load = useCallback(async () => {
     const res = await fetch('/api/vendor/listings');
@@ -181,7 +189,7 @@ export default function VendorListingsPage() {
 
   async function reviewAndPublish() {
     const saved = await save();
-    if (saved && editing) { setReviewFor({ kind: editing.kind, listing: saved }); setAccOk(false); setPubErr(''); }
+    if (saved && editing) openReview(editing.kind, saved);
   }
 
   async function publishNow() {
@@ -272,7 +280,7 @@ export default function VendorListingsPage() {
                       <button onClick={() => openEdit(kind, l)}>Edit</button>
                       {l.status === 'published'
                         ? <button onClick={() => setStatus(kind, l.id, 'unpublished')}>Unpublish</button>
-                        : <button className="sc-pub" onClick={() => { setReviewFor({ kind, listing: l }); setAccOk(false); setPubErr(''); }}>Review &amp; publish</button>}
+                        : <button className="sc-pub" onClick={() => openReview(kind, l)}>Review &amp; publish</button>}
                       <button className="sc-del" onClick={() => archive(kind, l.id)}>Archive</button>
                     </li>
                   ))}
@@ -411,6 +419,8 @@ export default function VendorListingsPage() {
               <Prev label="Warranty" v={String(reviewFor.listing.warranty_support?.warranty || '')} />
               <Prev label="Pricing" v={String(reviewFor.listing.pricing?.range || reviewFor.listing.pricing?.model || reviewFor.listing.pricing_model || 'Request quote')} />
               <Prev label="Photos" v={`${(reviewFor.listing.image_paths || []).length}`} />
+              <Prev label="Documents" v={extras ? (extras.documents.length ? extras.documents.map((doc) => doc.title || doc.file_name).join(' · ') : '') : 'checking…'} />
+              <Prev label="Case studies" v={extras ? (extras.case_studies.length ? extras.case_studies.map((c) => c.title).join(' · ') : '') : 'checking…'} />
             </ul>
             <p className="sc-hint">Empty fields simply will not show. AI-drafted content only used what was in your document — anything missing was left blank on purpose.</p>
 
