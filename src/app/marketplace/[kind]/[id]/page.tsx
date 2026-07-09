@@ -14,13 +14,26 @@ interface Detail {
   images: Array<{ path: string; url: string | null }>;
   documents: Array<{ id: string; file_name: string; title: string | null; ai_summary: string | null; url: string | null }>;
   case_studies: Array<{ id: string; title: string; challenge: string | null; solution: string | null; results: string[] | null }>;
-  vendor: { company_name: string; city: string | null; website: string | null; description: string | null } | null;
+  vendor: { company_name: string; city: string | null; website: string | null; description: string | null; rating?: number | null; review_count?: number } | null;
+  reviews?: Array<{ rating: number; title: string | null; body: string | null; created_at: string }>;
   related: { same_vendor: Array<{ id: string; kind: string; name: string; category: string }>; same_category: Array<{ id: string; kind: string; name: string; category: string }> };
 }
+const stars = (n: number) => '★★★★★'.slice(0, Math.round(n)) + '☆☆☆☆☆'.slice(0, 5 - Math.round(n));
 
 const s = (v: unknown): string => (typeof v === 'string' ? v : '');
 const arr = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : []);
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' ? (v as Record<string, unknown>) : {});
+
+// Every deal-starting action runs THROUGH NXT//LINK (never "email the vendor"
+// or "visit their site"). One tracked request record per action.
+const REQUEST_ACTIONS = [
+  { key: 'quote', label: 'Request Quote', heading: 'Request a quote', cta: 'Send request', placeholder: 'What do you need? Quantity, timeline, site details…' },
+  { key: 'contact_sales', label: 'Contact Sales', heading: 'Contact sales', cta: 'Send message', placeholder: 'What would you like to discuss with the sales team?' },
+  { key: 'demo', label: 'Request Demo', heading: 'Request a demo', cta: 'Request demo', placeholder: 'What would you like the demo to show? Any preferred dates?' },
+  { key: 'pilot', label: 'Request Pilot', heading: 'Request a pilot', cta: 'Request pilot', placeholder: 'What outcome should a pilot prove? Site, timeline, success measure?' },
+  { key: 'question', label: 'Ask a Question', heading: 'Ask a question', cta: 'Send question', placeholder: 'What would you like to ask about this listing?' },
+] as const;
+type RequestKey = (typeof REQUEST_ACTIONS)[number]['key'];
 
 export default function ListingDetailPage() {
   const params = useParams<{ kind: string; id: string }>();
@@ -36,6 +49,7 @@ export default function ListingDetailPage() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
+  const [requestType, setRequestType] = useState<RequestKey>('quote');
   const [websiteUrl, setWebsiteUrl] = useState('');
   const startedAtRef = useRef(Date.now());
   const [sending, setSending] = useState(false);
@@ -62,7 +76,7 @@ export default function ListingDetailPage() {
     try {
       const res = await fetch('/api/marketplace/request', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind, listing_id: params.id, company, contact_name: contact, email, phone, message, website_url: websiteUrl, started_at: startedAtRef.current }),
+        body: JSON.stringify({ kind, request_type: requestType, listing_id: params.id, company, contact_name: contact, email, phone, message, website_url: websiteUrl, started_at: startedAtRef.current }),
       });
       const data = await res.json();
       if (data.ok) setSentRef(data.public_ref || 'received');
@@ -98,6 +112,7 @@ export default function ListingDetailPage() {
     ['warranty', 'Warranty & Support', Object.keys(ws).length > 0],
     ['documents', 'Documents', d.documents.length > 0],
     ['cases', 'Case Studies', d.case_studies.length > 0],
+    ['reviews', 'Reviews', (d.reviews?.length || 0) > 0],
   ];
 
   const related = [...d.related.same_vendor, ...d.related.same_category];
@@ -131,6 +146,7 @@ export default function ListingDetailPage() {
             <h1>{s(L.name)}</h1>
             <div className="dt-sub">{s(L.category)}{d.vendor ? ` · ${d.vendor.company_name}` : ''}{d.vendor?.city ? ` · ${d.vendor.city}` : ''}</div>
             <div className="dt-badges">
+              {typeof d.vendor?.rating === 'number' && (d.vendor.review_count || 0) > 0 && <span className="rating">★ {d.vendor.rating.toFixed(1)} ({d.vendor.review_count} review{d.vendor.review_count === 1 ? '' : 's'})</span>}
               {Boolean(pilot.available) && <span>Pilot available</span>}
               {s(ws.warranty) && <span>Warranty</span>}
               {s(L.lead_time) && <span>Lead time: {s(L.lead_time)}</span>}
@@ -218,6 +234,17 @@ export default function ListingDetailPage() {
                 ))}
               </div>
             )}
+            {tab === 'reviews' && (
+              <div className="dt-reviews">
+                <p className="dt-hint">Reviews come only from buyers who accepted a quote through NXT//LINK — verified engagements.</p>
+                {(d.reviews || []).map((rv, i) => (
+                  <div className="dt-review" key={i}>
+                    <div className="dt-rvhead"><span className="dt-rvstars">{stars(rv.rating)}</span>{rv.title && <b>{rv.title}</b>}</div>
+                    {rv.body && <p>{rv.body}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {related.length > 0 && (
@@ -238,10 +265,26 @@ export default function ListingDetailPage() {
 
         <aside className="dt-side" id="quote">
           <div className="dt-quote">
-            <h3>{kind === 'product' ? 'Request a quote' : 'Request this service'}</h3>
-            {d.vendor && <p className="dt-hint">Goes directly to {d.vendor.company_name}. Your info is never shown publicly.</p>}
+            <div className="dt-thru">Through NXT<span>{'//'}</span>LINK</div>
+            {(() => { const a = REQUEST_ACTIONS.find((x) => x.key === requestType)!; return (
+            <>
+            <h3>{a.heading}</h3>
+            <div className="dt-actions" role="tablist" aria-label="Request type">
+              {REQUEST_ACTIONS.map((act) => (
+                <button
+                  key={act.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={requestType === act.key}
+                  className={requestType === act.key ? 'on' : ''}
+                  onClick={() => { setRequestType(act.key); setSentRef(''); setFormMsg(''); }}
+                >
+                  {act.label}
+                </button>
+              ))}
+            </div>
             {sentRef ? (
-              <div className="dt-sent">Request sent. Reference: <b>{sentRef}</b>. The vendor will contact you at the email you provided.</div>
+              <div className="dt-sent">Request sent through NXT//LINK. Reference: <b>{sentRef}</b>. {d.vendor ? d.vendor.company_name : 'The vendor'} responds inside NXT//LINK — track it in <Link href="/buyer">your dashboard</Link>.</div>
             ) : (
               <form onSubmit={submitQuote}>
                 <input type="text" name="website_url" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }} />
@@ -249,16 +292,20 @@ export default function ListingDetailPage() {
                 <input placeholder="Your name" value={contact} onChange={(e) => setContact(e.target.value)} />
                 <input placeholder="Work email *" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 <input placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
-                <textarea placeholder={kind === 'product' ? 'What do you need? Quantity, timeline, site details…' : 'What do you need done? Location, urgency, equipment…'} rows={4} value={message} onChange={(e) => setMessage(e.target.value)} />
+                <textarea placeholder={a.placeholder} rows={4} value={message} onChange={(e) => setMessage(e.target.value)} />
                 {formMsg && <div className="dt-err">{formMsg}</div>}
-                <button type="submit" disabled={sending}>{sending ? 'Sending…' : kind === 'product' ? 'Request quote' : 'Request service'}</button>
+                <button type="submit" disabled={sending}>{sending ? 'Sending…' : a.cta}</button>
+                <p className="dt-disclosure">Managed through NXT//LINK. NXT//LINK may receive a commission from the vendor. You compare offers and communicate through the platform; your contact info is never shown publicly.</p>
               </form>
             )}
+            </>
+            ); })()}
           </div>
-          {d.vendor?.description && (
+          {d.vendor && (
             <div className="dt-vendorcard">
               <h4>{d.vendor.company_name}</h4>
-              <p>{d.vendor.description.slice(0, 300)}</p>
+              {d.vendor.description && <p>{d.vendor.description.slice(0, 300)}</p>}
+              <Link className="dt-storelink" href={`/marketplace/vendor/${s(L.vendor_id)}`}>View storefront →</Link>
             </div>
           )}
 
@@ -325,6 +372,13 @@ const CSS = `
 .dt-badges{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px;}
 .dt-badges span{font-size:11.5px;font-weight:600;padding:5px 10px;border-radius:99px;background:rgba(255,255,255,.06);color:#C0C0D0;}
 .dt-badges span.urgent{background:rgba(251,191,36,.12);color:#FBBF24;}
+.dt-badges span.rating{background:rgba(251,191,36,.14);color:#FBBF24;font-weight:700;}
+.dt-reviews{display:flex;flex-direction:column;gap:14px;}
+.dt-review{background:#14141F;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:15px 17px;}
+.dt-rvhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.dt-rvstars{color:#FBBF24;font-size:15px;letter-spacing:2px;}
+.dt-review b{font-size:14.5px;}
+.dt-review p{font-size:13.5px;color:#C0C0D0;margin:8px 0 0;line-height:1.55;white-space:pre-wrap;}
 .dt-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-top:22px;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:10px;}
 .dt-tabs button{font-family:inherit;font-size:13px;font-weight:600;padding:8px 13px;border-radius:9px;border:none;background:none;color:#8080A0;cursor:pointer;}
 .dt-tabs button.on{background:rgba(124,92,252,.15);color:#C4B5FD;}
@@ -359,7 +413,14 @@ const CSS = `
 .dt-relcard .dt-kind{align-self:flex-start;}
 .dt-side{display:flex;flex-direction:column;gap:16px;}
 .dt-quote{background:#14141F;border:1px solid rgba(124,92,252,.3);border-radius:16px;padding:20px;position:sticky;top:74px;}
+.dt-thru{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#C4B5FD;background:rgba(124,92,252,.14);border:1px solid rgba(124,92,252,.3);padding:4px 10px;border-radius:99px;margin-bottom:12px;}
+.dt-thru span{color:#7C5CFC;}
 .dt-quote h3{font-size:17px;margin-bottom:6px;}
+.dt-actions{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 4px;}
+.dt-actions button{font-family:inherit;font-size:12.5px;font-weight:600;padding:7px 11px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background:none;color:#C0C0D0;cursor:pointer;transition:all .12s;}
+.dt-actions button:hover{border-color:rgba(124,92,252,.5);color:#C4B5FD;}
+.dt-actions button.on{background:rgba(124,92,252,.15);border-color:#7C5CFC;color:#C4B5FD;}
+.dt-disclosure{margin:12px 0 0;font-size:11.5px;line-height:1.5;color:#7A7A92;}
 .dt-quote form{display:flex;flex-direction:column;gap:10px;margin-top:14px;}
 .dt-quote input,.dt-quote textarea{font-family:inherit;font-size:14px;padding:11px 13px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:#0A0A0F;color:#F0F0F5;outline:none;resize:vertical;}
 .dt-quote input:focus,.dt-quote textarea:focus{border-color:#7C5CFC;}
@@ -371,6 +432,8 @@ const CSS = `
 .dt-vendorcard{background:#14141F;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:18px;}
 .dt-vendorcard h4{font-size:15px;margin-bottom:8px;}
 .dt-vendorcard p{font-size:13px;color:#8080A0;line-height:1.6;}
+.dt-storelink{display:inline-block;margin-top:10px;color:#C4B5FD;font-size:13px;font-weight:700;text-decoration:none;}
+.dt-storelink:hover{color:#A78BFA;}
 .dt-report{text-align:center;}
 .dt-report p{color:#8080A0;font-size:13px;}
 .dt-replink{background:none;border:none;color:#63607A;font:inherit;font-size:12.5px;cursor:pointer;text-decoration:underline;}

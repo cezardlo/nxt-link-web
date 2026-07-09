@@ -9,6 +9,7 @@ import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getVendorSession, getOrCreateVendorProfile } from '@/lib/vendor/auth';
 import { ListingKind, tableFor, colsFor, normalizeListingInput } from '@/lib/marketplace/types';
+import { VENDOR_TERMS_VERSION } from '@/lib/vendor/terms';
 import { sendZohoMail } from '@/lib/zoho/mail';
 
 function kindOf(v: unknown): ListingKind | null {
@@ -90,7 +91,12 @@ export async function PATCH(req: Request) {
   const wantsPublish = body.status === 'published';
   if (typeof body.status === 'string' && VENDOR_STATUSES.includes(body.status)) {
     if (wantsPublish) {
-      // Publishing gate: verified email + explicit accuracy confirmation.
+      // Publishing gate: accepted NXT//LINK terms + verified email + accuracy.
+      const dbGate = getSupabaseClient({ admin: true });
+      const { data: termsRow } = await dbGate.from('vendor_profiles').select('terms_accepted_version').eq('id', vendor.id).maybeSingle();
+      if (termsRow?.terms_accepted_version !== VENDOR_TERMS_VERSION) {
+        return NextResponse.json({ ok: false, code: 'terms_required', message: 'Accept the NXT//LINK vendor terms before publishing — open your profile to review and accept them.' }, { status: 403 });
+      }
       if (!session.emailConfirmed) {
         return NextResponse.json({ ok: false, code: 'email_unverified', message: 'Verify your email before publishing — check your inbox for the confirmation link.' }, { status: 403 });
       }

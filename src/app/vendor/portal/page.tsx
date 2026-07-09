@@ -25,10 +25,12 @@ interface Vendor {
   id: string; public_ref: string; company_name: string; contact_name: string | null;
   email: string | null; phone: string | null; website: string | null; city: string | null;
   categories: string[]; service_areas: string[]; industries: string[]; client_types: string[];
+  achievements?: string[];
   description: string | null; status: string;
 }
 interface Brochure { id: string; file_name: string; title: string; size_bytes: number; public_url: string | null }
 interface Video { id: string; title: string | null; url: string; embed_url: string; provider: string }
+interface CaseStudy { id: string; title: string; challenge: string | null; solution: string | null; result: string | null; sort_order: number }
 interface Draft {
   company_name: string | null; description: string | null; categories: string[];
   service_areas: string[]; industries: string[]; client_types: string[];
@@ -48,12 +50,22 @@ export default function VendorPortalPage() {
   const [extractingId, setExtractingId] = useState('');
   const [draft, setDraft] = useState<Draft | null>(null);
   const [draftSource, setDraftSource] = useState('');
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoBusy, setLogoBusy] = useState(false);
+  const [caseStudies, setCaseStudies] = useState<CaseStudy[]>([]);
+  const [cs, setCs] = useState({ title: '', challenge: '', solution: '', result: '' });
+  const [csBusy, setCsBusy] = useState(false);
+  const [agreement, setAgreement] = useState<{ accepted: boolean; summary: string; terms: { title: string; body: string }[]; accepted_at: string | null } | null>(null);
+  const [agBusy, setAgBusy] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch('/api/vendor/profile');
     if (res.status === 401) { setSignedIn(false); setChecking(false); return; }
     const data = await res.json();
     setVendor(data.vendor); setBrochures(data.brochures || []); setVideos(data.videos || []);
+    setCaseStudies(data.case_studies || []); setLogoUrl(data.logo_url || null);
+    const ag = await fetch('/api/vendor/agreement').then((r) => r.json()).catch(() => null);
+    if (ag?.ok) setAgreement(ag);
     setSignedIn(true); setChecking(false);
   }, []);
 
@@ -79,6 +91,7 @@ export default function VendorPortalPage() {
         website: vendor.website, city: vendor.city, description: vendor.description,
         categories: vendor.categories, service_areas: vendor.service_areas,
         industries: vendor.industries, client_types: vendor.client_types,
+        achievements: vendor.achievements || [],
       }),
     });
     const data = await res.json();
@@ -96,6 +109,40 @@ export default function VendorPortalPage() {
   async function removeVideo(id: string) {
     await fetch(`/api/vendor/videos?id=${id}`, { method: 'DELETE' });
     setVideos((v) => v.filter((x) => x.id !== id));
+  }
+
+  async function uploadLogo(file: File) {
+    setLogoBusy(true); setMsg('');
+    const fd = new FormData(); fd.append('file', file);
+    const res = await fetch('/api/vendor/logo', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.ok) setLogoUrl(data.logo_url || null); else setMsg(data.message || 'Logo upload failed');
+    setLogoBusy(false);
+  }
+  async function removeLogo() {
+    setLogoUrl(null);
+    await fetch('/api/vendor/logo', { method: 'DELETE' });
+  }
+  async function addCaseStudy() {
+    if (!cs.title.trim()) { setMsg('Give the case study a title first.'); return; }
+    setCsBusy(true); setMsg('');
+    const res = await fetch('/api/vendor/case-studies', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cs) });
+    const data = await res.json();
+    if (data.ok) { setCaseStudies((c) => [...c, data.case_study]); setCs({ title: '', challenge: '', solution: '', result: '' }); }
+    else setMsg(data.message || 'Could not add case study');
+    setCsBusy(false);
+  }
+  async function removeCaseStudy(id: string) {
+    setCaseStudies((c) => c.filter((x) => x.id !== id));
+    await fetch(`/api/vendor/case-studies?id=${id}`, { method: 'DELETE' });
+  }
+  async function acceptTerms() {
+    setAgBusy(true); setMsg('');
+    const res = await fetch('/api/vendor/agreement', { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) setAgreement((a) => (a ? { ...a, accepted: true, accepted_at: new Date().toISOString() } : a));
+    else setMsg(data.message || 'Could not record acceptance');
+    setAgBusy(false);
   }
 
   async function uploadFile(file: File) {
@@ -164,7 +211,7 @@ export default function VendorPortalPage() {
     <div className="vp">
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <nav className="vp-nav">
-        <a className="vp-brand" href="/"><span className="vp-mk">N</span><b>NXT<i>//</i>LINK</b></a>
+        <a className="vp-brand" href="/"><span className="vp-mk">N</span><b>NXT<i>{'//'}</i>LINK</b></a>
         <div className="vp-navr">
           <a className="vp-navlink" href="/vendor/listings">Listings</a>
           <a className="vp-navlink" href="/vendor/leads">Leads</a>
@@ -178,14 +225,44 @@ export default function VendorPortalPage() {
         <p className="vp-sub">This is what NXT//LINK — and once approved, the opportunities you receive — will be based on. Keep it current.</p>
         {msg && <div className="vp-msg">{msg}</div>}
 
+        {agreement && !agreement.accepted && (
+          <section className="vp-card vp-agreement">
+            <div className="vp-lbl">Vendor agreement — required before you can publish</div>
+            <p className="vp-hint">To publish listings and receive buyer leads, accept the NXT//LINK vendor terms. In short: {agreement.summary}</p>
+            <ul className="vp-terms">
+              {agreement.terms.map((t) => <li key={t.title}><b>{t.title}.</b> {t.body}</li>)}
+            </ul>
+            <p className="vp-hint" style={{ fontSize: 12 }}>Plain-language business terms, not final legal wording — a lawyer reviews the full agreement before real commerce.</p>
+            <button className="vp-btn" disabled={agBusy} onClick={acceptTerms}>{agBusy ? 'Saving…' : 'I accept the NXT//LINK vendor terms'}</button>
+          </section>
+        )}
+        {agreement && agreement.accepted && (
+          <div className="vp-accepted">✓ NXT//LINK vendor terms accepted{agreement.accepted_at ? ` on ${new Date(agreement.accepted_at).toLocaleDateString()}` : ''}. You can publish listings and receive leads.</div>
+        )}
+
         <section className="vp-card">
           <div className="vp-lbl">Company</div>
+          <div className="vp-logo">
+            <div className="vp-logobox">
+              {logoUrl ? <img src={logoUrl} alt="Company logo" /> : <span>Logo</span>}
+            </div>
+            <div className="vp-logoactions">
+              <label className="vp-btn sm vp-logobtn">
+                {logoBusy ? 'Uploading…' : logoUrl ? 'Replace logo' : 'Upload logo'}
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" disabled={logoBusy} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadLogo(f); e.target.value = ''; }} />
+              </label>
+              {logoUrl && <button className="vp-signout" type="button" onClick={removeLogo}>Remove</button>}
+              <p className="vp-hint" style={{ margin: 0 }}>PNG, JPG, WEBP, or SVG · up to 5&nbsp;MB</p>
+            </div>
+          </div>
           <div className="vp-fgrid">
             <Field label="Company name" value={vendor.company_name} onChange={(v) => set('company_name', v)} />
             <Field label="Contact name" value={vendor.contact_name || ''} onChange={(v) => set('contact_name', v)} />
-            <Field label="Phone" value={vendor.phone || ''} onChange={(v) => set('phone', v)} />
             <Field label="Website" value={vendor.website || ''} onChange={(v) => set('website', v)} />
             <Field label="City" value={vendor.city || ''} onChange={(v) => set('city', v)} />
+          </div>
+          <div style={{ marginTop: 16 }}>
+            <PhoneField value={vendor.phone || ''} onChange={(v) => set('phone', v)} />
           </div>
           <label className="vp-field" style={{ marginTop: 18 }}>
             <span>About your company</span>
@@ -195,14 +272,51 @@ export default function VendorPortalPage() {
 
         <section className="vp-card">
           <div className="vp-lbl">Industry you work in</div>
-          <ChipGroup options={INDUSTRIES} selected={vendor.industries || []} onToggle={(v) => toggle(vendor.industries || [], v, 'industries')} />
-          <div className="vp-lbl" style={{ marginTop: 22 }}>Clients you're looking for</div>
+          <ChipGroup options={Array.from(new Set([...INDUSTRIES, ...(vendor.industries || [])]))} selected={vendor.industries || []} onToggle={(v) => toggle(vendor.industries || [], v, 'industries')} />
+          <AddYourOwn placeholder="Add another industry (e.g. Mining, Textiles)…" existing={vendor.industries || []} onAdd={(v) => set('industries', [...(vendor.industries || []), v])} />
+          <div className="vp-lbl" style={{ marginTop: 22 }}>Clients you&apos;re looking for</div>
           <ChipGroup options={CLIENT_TYPES} selected={vendor.client_types || []} onToggle={(v) => toggle(vendor.client_types || [], v, 'client_types')} />
           <div className="vp-lbl" style={{ marginTop: 22 }}>Products / services you sell</div>
           <ChipGroup options={CATEGORIES} selected={vendor.categories || []} onToggle={(v) => toggle(vendor.categories || [], v, 'categories')} />
           <div className="vp-lbl" style={{ marginTop: 22 }}>Service areas</div>
           <ChipGroup options={AREAS} selected={vendor.service_areas || []} onToggle={(v) => toggle(vendor.service_areas || [], v, 'service_areas')} />
+          <div className="vp-lbl" style={{ marginTop: 22 }}>Awards &amp; recognitions</div>
+          <p className="vp-hint">Industry analyst mentions, awards, and honors — e.g. Gartner Cool Vendor, Inc. 5000, ISO 9001. Shown on your public storefront.</p>
+          {(vendor.achievements || []).length > 0 && (
+            <div className="vp-chips">
+              {(vendor.achievements || []).map((a) => (
+                <button key={a} type="button" className="vp-chip on" title="Remove" onClick={() => set('achievements', (vendor.achievements || []).filter((x) => x !== a))}>{a} ✕</button>
+              ))}
+            </div>
+          )}
+          <AddYourOwn placeholder="Add an award or recognition (e.g. Gartner Cool Vendor 2025)…" existing={vendor.achievements || []} onAdd={(v) => set('achievements', [...(vendor.achievements || []), v])} />
           <button className="vp-btn" style={{ marginTop: 24 }} disabled={saving} onClick={save}>{saving ? 'Saving…' : 'Save profile'}</button>
+        </section>
+
+        <section className="vp-card">
+          <div className="vp-lbl">Case studies <span className="vp-cnt">{caseStudies.length}/3</span></div>
+          <p className="vp-hint">Show up to 3 real results. Buyers trust proof — the challenge, what you did, and the measurable outcome.</p>
+          {caseStudies.length > 0 && (
+            <div className="vp-cslist">
+              {caseStudies.map((c) => (
+                <div className="vp-cscard" key={c.id}>
+                  <div className="vp-cshead"><b>{c.title}</b><button type="button" onClick={() => removeCaseStudy(c.id)}>Remove</button></div>
+                  {c.challenge && <p><span>Challenge:</span> {c.challenge}</p>}
+                  {c.solution && <p><span>Solution:</span> {c.solution}</p>}
+                  {c.result && <p><span>Result:</span> {c.result}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+          {caseStudies.length < 3 ? (
+            <div className="vp-csform">
+              <input placeholder="Title — e.g. “Cut picking time 40% for a 3PL”" value={cs.title} onChange={(e) => setCs({ ...cs, title: e.target.value })} />
+              <textarea rows={2} placeholder="Challenge — what problem did the customer have?" value={cs.challenge} onChange={(e) => setCs({ ...cs, challenge: e.target.value })} />
+              <textarea rows={2} placeholder="Solution — what you delivered" value={cs.solution} onChange={(e) => setCs({ ...cs, solution: e.target.value })} />
+              <textarea rows={2} placeholder="Result — the measurable outcome" value={cs.result} onChange={(e) => setCs({ ...cs, result: e.target.value })} />
+              <button className="vp-btn sm" type="button" disabled={csBusy} onClick={addCaseStudy}>{csBusy ? 'Adding…' : 'Add case study'}</button>
+            </div>
+          ) : <p className="vp-hint">You&apos;ve added the maximum of 3. Remove one to add another.</p>}
         </section>
 
         <section className="vp-card">
@@ -280,6 +394,67 @@ function ChipGroup({ options, selected, onToggle }: { options: string[]; selecte
   return (<div className="vp-chips">{options.map((o) => (<button key={o} type="button" className={'vp-chip' + (selected.includes(o) ? ' on' : '')} onClick={() => onToggle(o)}>{o}</button>))}</div>);
 }
 
+// "Add your own" free-text entry that appends to a chip list (industries, etc.).
+function AddYourOwn({ placeholder, existing, onAdd }: { placeholder: string; existing: string[]; onAdd: (v: string) => void }) {
+  const [v, setV] = useState('');
+  const add = () => {
+    const t = v.trim();
+    if (!t) return;
+    if (!existing.some((x) => x.toLowerCase() === t.toLowerCase())) onAdd(t);
+    setV('');
+  };
+  return (
+    <div className="vp-addown">
+      <input value={v} placeholder={placeholder} onChange={(e) => setV(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }} />
+      <button type="button" className="vp-btn sm" onClick={add}>Add</button>
+    </div>
+  );
+}
+
+// International phone: country code + number + optional extension, combined
+// into one stored string like "+52 656 123 4567 x201". Borderplex-first list.
+const COUNTRY_CODES: Array<{ c: string; n: string }> = [
+  { c: '+1', n: 'US / Canada (+1)' },
+  { c: '+52', n: 'Mexico (+52)' },
+  { c: '+44', n: 'UK (+44)' },
+  { c: '+34', n: 'Spain (+34)' },
+  { c: '+49', n: 'Germany (+49)' },
+  { c: '+86', n: 'China (+86)' },
+  { c: '+91', n: 'India (+91)' },
+  { c: '+81', n: 'Japan (+81)' },
+];
+function parsePhone(raw: string): { code: string; number: string; ext: string } {
+  let v = (raw || '').trim();
+  let ext = '';
+  const em = v.match(/(?:x|ext\.?)\s*(\d+)\s*$/i);
+  if (em) { ext = em[1]; v = v.slice(0, em.index).trim(); }
+  let code = '+1';
+  const cm = v.match(/^(\+\d{1,3})\s*(.*)$/);
+  let number = v;
+  if (cm) { code = cm[1]; number = cm[2].trim(); }
+  return { code, number, ext };
+}
+function PhoneField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { code, number, ext } = parsePhone(value);
+  const emit = (c: string, num: string, x: string) => {
+    const base = num.trim() ? `${c} ${num.trim()}` : '';
+    onChange(x.trim() ? `${base || c} x${x.trim()}` : base);
+  };
+  return (
+    <div className="vp-field">
+      <span>Phone</span>
+      <div className="vp-phone">
+        <select value={code} onChange={(e) => emit(e.target.value, number, ext)}>
+          {COUNTRY_CODES.some((o) => o.c === code) ? null : <option value={code}>{code}</option>}
+          {COUNTRY_CODES.map((o) => <option key={o.n} value={o.c}>{o.n}</option>)}
+        </select>
+        <input className="vp-phonenum" inputMode="tel" placeholder="Phone number" value={number} onChange={(e) => emit(code, e.target.value, ext)} />
+        <input className="vp-phoneext" inputMode="numeric" placeholder="Ext." value={ext} onChange={(e) => emit(code, number, e.target.value.replace(/\D/g, ''))} />
+      </div>
+    </div>
+  );
+}
+
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap');
 .vp{--bg:#0A0A0F;--bg2:#111118;--surf:rgba(255,255,255,.04);--surf2:rgba(255,255,255,.07);--ink:#F0F0F5;--ink2:#C0C0D0;--muted:#8080A0;--muted2:#505068;--line:rgba(255,255,255,.08);--p:#7C5CFC;--p2:#A78BFA;--p3:#C4B5FD;--pbg:rgba(124,92,252,.12);--pd:#6344DF;--green:#34D399;--sans:'Outfit',system-ui,sans-serif;--serif:'Instrument Serif',Georgia,serif;
@@ -318,6 +493,37 @@ const CSS = `
 .vp-chip{font-family:var(--sans);padding:9px 15px;border-radius:99px;border:1px solid var(--line);background:var(--bg);color:var(--ink2);font-size:13px;font-weight:500;cursor:pointer;}
 .vp-chip:hover{border-color:var(--p2);}
 .vp-chip.on{background:var(--pbg);border-color:var(--p);color:var(--p3);}
+.vp-addown{display:flex;gap:9px;margin-top:12px;}
+.vp-addown input{flex:1;font-family:var(--sans);padding:10px 13px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:14px;outline:none;}
+.vp-addown input:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
+.vp-phone{display:flex;gap:9px;}
+.vp-phone select{font-family:var(--sans);padding:12px 12px;border-radius:11px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:14px;outline:none;max-width:170px;}
+.vp-phone select:focus{border-color:var(--p);}
+.vp-phonenum{flex:1;}
+.vp-phoneext{max-width:90px;}
+.vp-logo{display:flex;align-items:center;gap:18px;margin-bottom:20px;}
+.vp-logobox{width:84px;height:84px;flex-shrink:0;border-radius:14px;border:1px solid var(--line);background:var(--bg);display:grid;place-items:center;overflow:hidden;color:var(--muted2);font-size:12px;letter-spacing:.12em;text-transform:uppercase;}
+.vp-logobox img{width:100%;height:100%;object-fit:contain;}
+.vp-logoactions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;}
+.vp-logobtn{position:relative;overflow:hidden;box-shadow:none;}
+.vp-logobtn input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0;}
+.vp-cnt{font-weight:600;color:var(--muted);letter-spacing:0;text-transform:none;font-size:12px;margin-left:6px;}
+.vp-cslist{display:flex;flex-direction:column;gap:12px;margin-bottom:18px;}
+.vp-cscard{background:var(--bg2);border:1px solid var(--line);border-radius:13px;padding:15px 17px;}
+.vp-cshead{display:flex;justify-content:space-between;align-items:center;gap:12px;}
+.vp-cshead b{font-size:14.5px;}
+.vp-cshead button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12.5px;}
+.vp-cshead button:hover{color:#FCA5A5;}
+.vp-cscard p{font-size:13px;color:var(--ink2);margin:8px 0 0;line-height:1.55;}
+.vp-cscard p span{color:var(--muted);}
+.vp-csform{display:flex;flex-direction:column;gap:10px;background:var(--bg2);border:1px solid var(--line);border-radius:13px;padding:16px;}
+.vp-csform input,.vp-csform textarea{font-family:var(--sans);padding:11px 13px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:14px;outline:none;resize:vertical;}
+.vp-csform input:focus,.vp-csform textarea:focus{border-color:var(--p);}
+.vp-csform .vp-btn{align-self:flex-start;}
+.vp-agreement{border-color:rgba(124,92,252,.45);background:rgba(124,92,252,.06);}
+.vp-terms{margin:4px 0 12px;padding-left:18px;display:flex;flex-direction:column;gap:9px;font-size:13.5px;color:var(--ink2);line-height:1.55;}
+.vp-terms b{color:var(--ink);}
+.vp-accepted{background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);color:var(--green);border-radius:12px;padding:11px 15px;font-size:13.5px;margin-bottom:20px;}
 .vp-btn{font-family:var(--sans);border:none;cursor:pointer;font-size:14.5px;font-weight:600;border-radius:11px;padding:13px 22px;background:var(--p);color:#fff;box-shadow:0 4px 18px rgba(124,92,252,.35);}
 .vp-btn:hover{background:var(--pd);}.vp-btn:disabled{opacity:.6;}
 .vp-btn.sm{padding:11px 16px;font-size:13.5px;}

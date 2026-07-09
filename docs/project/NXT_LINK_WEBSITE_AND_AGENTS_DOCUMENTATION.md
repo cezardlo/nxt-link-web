@@ -1,5 +1,9 @@
 ﻿# NXT//LINK Website + Agent System Documentation
 
+> **Historical March 2026 snapshot.** The active product is now the industrial
+> marketplace in `../product/MARKETPLACE_BLUEPRINT.md`. Start with
+> `START_HERE.md`.
+
 Snapshot date: March 6, 2026
 Codebase path: `nxt-link-web`
 

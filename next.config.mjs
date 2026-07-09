@@ -22,9 +22,25 @@ const nextConfig = {
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
   async redirects() {
+    // Hide the paused intel-era surfaces: send them to the marketplace before
+    // their (now-unwired) pages can render and error. Files are kept in the
+    // repo — this is a routing-layer redirect only, fully reversible. See
+    // docs/project/START_HERE.md for the active-vs-paused surface list.
+    const INTEL_ROUTES = [
+      'signals', 'markets', 'intel', 'briefing', 'map', 'command', 'iker',
+      'conferences', 'observe', 'discover', 'discoveries', 'explore', 'sector',
+      'trajectory', 'industry', 'solve', 'crm', 'dashboard', 'leads',
+      'products', 'vendors', 'test-api',
+    ];
+    const intelRedirects = INTEL_ROUTES.flatMap((r) => [
+      { source: `/${r}`, destination: '/marketplace', permanent: false },
+      { source: `/${r}/:path*`, destination: '/marketplace', permanent: false },
+    ]);
     return [
-      // Legacy route alias — /command was the original command monitor URL
-      { source: '/command', destination: '/map', permanent: false },
+      ...intelRedirects,
+      // Legacy sign-in alias -> the active login page.
+      { source: '/sign-in', destination: '/login', permanent: false },
+      { source: '/sign-in/:path*', destination: '/login', permanent: false },
     ];
   },
   experimental: {

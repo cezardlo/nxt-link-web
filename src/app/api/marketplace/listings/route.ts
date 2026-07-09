@@ -56,6 +56,15 @@ export async function GET(req: Request) {
   const vmap = new Map<string, { company_name: string; city: string | null; verified: boolean }>();
   for (const v of vendors || []) vmap.set(v.id as string, { company_name: v.company_name as string, city: (v.city as string) || null, verified: v.status === 'approved' });
 
+  // Verified-review ratings per vendor (degrades to none if reviews absent).
+  const ratings = new Map<string, { avg: number; count: number }>();
+  if (vendorIds.length) {
+    const { data: revs } = await db.from('reviews').select('vendor_id, rating').in('vendor_id', vendorIds).eq('status', 'published');
+    const acc = new Map<string, { sum: number; n: number }>();
+    for (const r of revs || []) { const a = acc.get(r.vendor_id as string) || { sum: 0, n: 0 }; a.sum += Number(r.rating); a.n++; acc.set(r.vendor_id as string, a); }
+    for (const [vid, a] of acc) ratings.set(vid, { avg: Math.round((a.sum / a.n) * 10) / 10, count: a.n });
+  }
+
   // Trust badges only when the underlying data really exists: bulk-count
   // documents and case studies for the listed ids.
   const pIds = rows.filter((r) => (r as { kind?: string }).kind !== 'service').map((r) => r.id);
@@ -83,10 +92,13 @@ export async function GET(req: Request) {
       image_url = signed?.signedUrl || null;
     }
     const v = vmap.get(r.vendor_id);
+    const rt = ratings.get(r.vendor_id);
     return {
       ...r, image_paths: undefined, image_url,
       vendor_name: v?.company_name || 'Vendor', vendor_city: v?.city || null,
       vendor_verified: Boolean(v?.verified),
+      vendor_rating: rt?.avg ?? null,
+      vendor_review_count: rt?.count ?? 0,
       has_documents: hasDocs.has(r.id),
       has_case_studies: hasCases.has(r.id),
     };

@@ -1,49 +1,81 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code and terminal Claude when working in this repository.
+This file provides mandatory guidance to Claude Code and terminal Claude when
+working in this repository.
 
-## Source Of Truth
-- Product truth + priorities + sprint plan: `docs/project/ROADMAP_2026-07-08.md`
-- Current technical state (environments, migration truth, known issues): `docs/project/TECH_HANDOFF_CURRENT.md`
-- Core-transaction acceptance script (MVP definition of done): `docs/project/CORE_TRANSACTION_TEST.md`
-- Historical context only: `docs/project/CLAUDE_APP_HANDOFF_2026-07-06.md`
-- Active repo organization plan: `claude/repo-organization.md`
-- Current repo state summary: `claude/current-state.md`
-- Current active architecture: `docs/architecture/current-system.md`
-- Agent operating framework (WAT: workflows/agents/tools, approval gates): `docs/AGENT_INSTRUCTIONS.md`
-- Consolidated product architecture & phased plan (gating doc): `docs/product/master-plan.md`
+## Mandatory start
 
-Claude should treat archived systems as reference-only unless the user explicitly asks to reactivate them.
+1. Read `docs/project/START_HERE.md` first.
+2. Follow its reading order and instruction precedence.
+3. The user's latest explicit instruction overrides repository documents.
+4. Do not use older status, handoff, decision, or product-plan files to
+   override the active marketplace blueprint.
 
-## Active Product Path
+## Active sources of truth
+
+- Entry point and instruction order: `docs/project/START_HERE.md`
+- Product definition: `docs/product/MARKETPLACE_BLUEPRINT.md`
+- Current gaps and exact build order: `docs/project/MARKETPLACE_GAP_ANALYSIS_2026-07-08.md`
+- Active priorities and MVP boundary: `docs/project/ROADMAP_2026-07-08.md`
+- Environments, migrations, and technical truth: `docs/project/TECH_HANDOFF_CURRENT.md`
+- Managed-flow acceptance script: `docs/project/CORE_TRANSACTION_TEST.md`
+- Agent operating framework: `docs/AGENT_INSTRUCTIONS.md`
+
+Historical context only:
+
+- `docs/project/STATUS.md`
+- `docs/project/DECISIONS.md`
+- `docs/project/NXT_LINK_WEBSITE_AND_AGENTS_DOCUMENTATION.md`
+- `docs/project/CLAUDE_HANDOFF.md`
+- `docs/project/CLAUDE_APP_HANDOFF_2026-07-06.md`
+- `docs/product/master-plan.md`
+- `docs/product/plan/*`
+
+## Active product path
+
 - Active application: `src/`
-- Core surfaces (MVP): `/marketplace`, `/vendor/listings`, `/vendor/leads`, `/intake`, `/admin/requests`, `/admin/marketplace`, `/signup`, `/login`
-- Paused (do not extend until the core transaction works): intelligence surfaces (`/briefing`, `/intel`, `/map`, `/command`), feeds, agents, conference tools
+- Core marketplace surfaces: `/marketplace`, `/vendor/portal`,
+  `/vendor/listings`, `/vendor/leads`, `/vendor/quotes`, `/intake`,
+  `/admin/requests`, `/admin/marketplace`, `/signup`, `/login`
+- Paused: intelligence surfaces (`/briefing`, `/intel`, `/map`, `/command`),
+  feeds, conference tools, unrelated agents, and visual redesigns that do not
+  improve the marketplace flow.
 
 Do not assume `archive/` folders are active runtime dependencies.
 
-## Ownership Rules
+## Ownership rules
+
 - `src/app` = routes and UI
-- `src/lib` = app logic and brain logic
+- `src/lib` = application and domain logic
 - `src/db` = persistence and queries
-- `scripts` = operational scripts and maintenance utilities
-- `docs` = human documentation
+- `scripts` = operational and maintenance utilities
+- `docs` = current human documentation
 - `archive` = inactive or superseded systems
 
-## Working Rules
-- Read `docs/project/ROADMAP_2026-07-08.md` before proposing the next product change; fix the core transaction where `docs/project/CORE_TRANSACTION_TEST.md` first fails.
-- The live Supabase project is the ONLY database (no staging) — never apply migrations or touch data without explicit user approval.
-- Read existing code before editing.
-- Prefer small targeted edits.
-- Validate changes before declaring done.
-- Use the active TypeScript brain path before looking at archived Python systems.
-- User instructions override this file.
+## Working rules
+
+- Follow the active build order in
+  `docs/project/MARKETPLACE_GAP_ANALYSIS_2026-07-08.md`.
+- Use `CORE_TRANSACTION_TEST.md` as acceptance for the managed path; do not use
+  it to skip newer vendor-trust and marketplace priorities.
+- The current Supabase project is live and shared. Never apply migrations,
+  seed or delete data, or change database configuration without explicit user
+  approval.
+- Never deploy production, merge to `master`, send external messages, collect
+  payments, or change external accounts without explicit user approval.
+- Run `git status --short` before and after work; preserve unrelated changes.
+- Read existing code before editing and prefer small targeted changes.
+- Validate changes in proportion to risk before declaring them done.
+- Verify visible outcomes with the correct buyer, vendor, or operator persona.
+- Update source-of-truth documents when product or technical truth changes.
 
 ## Commands
+
 ```bash
 npm run dev
 npm run build
 npm run typecheck
 npm run lint
+npm run test
 npm run verify
 ```

@@ -1,6 +1,7 @@
 # Claude Handoff
 
-Historical note: this file reflects an older workspace snapshot before the repo was reorganized around one active Next.js app. Use `CLAUDE.md`, `claude/repo-organization.md`, and `docs/architecture/current-system.md` as the current source of truth.
+Historical note: this file reflects an older workspace snapshot. Do not use it
+to direct current work. Start with `docs/project/START_HERE.md`.
 
 ## Project
 - Repo: `nxt-link-web`

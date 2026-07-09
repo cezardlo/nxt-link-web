@@ -1,5 +1,8 @@
 # Claude App to Claude Code Handoff — NXT Link
 
+> **Historical handoff.** It is retained for user context but no longer directs
+> product work. Start with `START_HERE.md` and the marketplace blueprint.
+
 Date: 2026-07-06
 
 This document transfers the important product and project context from the

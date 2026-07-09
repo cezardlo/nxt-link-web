@@ -26,17 +26,31 @@ Applied and live (platform era): `nxtlink_platform_core`,
 `listing_reports` (plus the long intel-era history under dashboard-generated
 version numbers).
 
-**Local migration files NOT applied to the live DB:**
+**CORRECTION 2026-07-08 (verified against the live DB migration ledger):**
+The quote/deal and agreement/fee migrations described below as "not applied"
+were in fact APPLIED to the live DB earlier the same day (ledger versions
+`20260708063904 quotes_deals_private_comparison` and
+`20260708063933 agreements_consent_fees`). The collision fear was already
+resolved in the SQL: the migration creates `public.vendor_accounts`, NOT
+`public.vendors`, so the 14,615-row intel `vendors` table is untouched.
 
-| File | Why it matters | Blocker |
-|---|---|---|
-| `20260705_quotes_deals_private_comparison.sql` | Quotes, deals, private comparison — the backbone of the core transaction | Creates `public.vendors`, which collides with the existing 14,597-row intel `vendors` table. Needs a rename (e.g. `deal_vendors` or reuse `vendor_profiles`) before it can ever be applied. |
-| `20260706_event_strategy_platform.sql` | Event/conference strategy tables | Not required for the MVP transaction; apply later. |
-| `20260707_agreements_consent_fees.sql` | NDA/consent gates, fee engine persistence — required for reveal + fee steps | Likely depends on 20260705's tables; audit together. |
+Live tables now present (all 0 rows unless noted): `vendor_accounts`, `deals`,
+`deal_invites`, `quotes`, `deal_shares`, `consent_log`, `agreements`,
+`fee_policies` (1 row), `fee_acknowledgments`, `fee_calculations`.
 
-Consequence: the vendor quote workspace (`/vendor/quotes`), agreement gates,
-and fee engine have UI/logic in the repo but **no tables under them in the
-live DB**. This is the deepest gap in the core transaction.
+| File | Status |
+|---|---|
+| `20260705_quotes_deals_private_comparison.sql` | **APPLIED** (ledger `20260708063904`). Uses `vendor_accounts`; no `vendors` collision. |
+| `20260706_event_strategy_platform.sql` | Still NOT applied. Not required for the MVP transaction; apply later. |
+| `20260707_agreements_consent_fees.sql` | **APPLIED** (ledger `20260708063933`). |
+
+Revised consequence: the deal/quote/agreement/fee tables EXIST. The remaining
+gap is no longer "missing tables" — it is UI/API wiring, and choosing ONE
+canonical flow among the overlapping systems already in the DB (the newest
+admin-curated `deals`/`quotes`/`deal_shares` set vs. the older, empty
+`quote_packets`/`vendor_opportunities`/`vendor_responses` set vs. the live
+self-service `quote_requests`). No new migration is needed to run the core
+transaction.
 
 ## Known code issues (from the 2026-07-08 audit)
 - Lint fails repo-wide; includes a React Hooks violation in

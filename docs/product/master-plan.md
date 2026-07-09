@@ -1,6 +1,10 @@
 # NXT Link — Consolidated Platform Architecture & Implementation Plan
 
-**Status: gating document.** All requirements gathered to date are treated as
+> **Historical plan:** This document predates the clarified two-sided
+> marketplace model. Do not use it to direct new work. Start with
+> `../project/START_HERE.md` and use `MARKETPLACE_BLUEPRINT.md` as product truth.
+
+**Former status: gating document.** All requirements gathered to that date were treated as
 ONE product. No further implementation scope is added until this plan and the
 current change set are reviewed. Detailed section documents live in
 [`docs/product/plan/`](./plan/) (01–10 + codebase inventories); the agent

@@ -1,5 +1,8 @@
 # NXT//LINK Status — Last updated 2026-03-22
 
+> **Historical snapshot only.** Routes, architecture, and priorities here are
+> obsolete. Start with `START_HERE.md` and `TECH_HANDOFF_CURRENT.md`.
+
 ## What's Live
 - **Production**: https://www.nxtlinktech.com (Vercel)
 - **Backend**: nxt-brain on Railway (Python/FastAPI, port 8000)

@@ -3,8 +3,11 @@ import { IBM_Plex_Mono, Space_Grotesk } from 'next/font/google';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './globals.css';
 import { Analytics } from '@vercel/analytics/react';
-import { DockNav } from '@/components/DockNav';
-import { MobileNav } from '@/components/MobileBottomNav';
+// NOTE: The old intel-era global nav (DockNav / MobileNav — Home/Briefing/
+// Markets/Signals/Vendors) is intentionally NOT rendered. This is a
+// marketplace app; each marketplace surface ships its own nav. The components
+// remain in the repo (src/components/DockNav.tsx, MobileBottomNav.tsx) in case
+// the intel surfaces are ever revived.
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -59,11 +62,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           Skip to content
         </a>
-        <DockNav />
-        <main id="main-content" className="pt-24 lg:pt-14 pb-16 lg:pb-0">
+        <main id="main-content">
           {children}
         </main>
-        <MobileNav />
         <Analytics />
       </body>
     </html>

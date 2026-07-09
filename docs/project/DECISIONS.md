@@ -1,5 +1,9 @@
 # NXT//LINK Architecture Decisions
 
+> **Historical decision log.** Some routes described as deleted here now exist
+> in the active marketplace. Do not treat this file as current direction. Start
+> with `START_HERE.md`.
+
 ## 2026-03-22 — Route pruning
 
 **Decision**: Deleted 14 orphaned routes that had no navigation links.

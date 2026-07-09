@@ -18,24 +18,34 @@ export async function GET() {
 
   const db = getSupabaseClient({ admin: true });
   const { data: leads } = await db.from('quote_requests')
-    .select('id, public_ref, kind, product_id, service_id, company, contact_name, email, phone, message, answers, status, created_at')
+    .select('id, public_ref, kind, product_id, service_id, company, contact_name, email, phone, message, answers, status, created_at, quote_amount, quote_currency, quote_message, quote_timeline, quote_valid_until, quoted_at, buyer_decision')
     .eq('vendor_id', vendor.id).order('created_at', { ascending: false }).limit(200);
 
-  // Resolve listing names in two bulk queries.
+  // Resolve listing names + commission amounts in bulk.
   const rows = leads || [];
   const pIds = Array.from(new Set(rows.map((l) => l.product_id).filter(Boolean)));
   const sIds = Array.from(new Set(rows.map((l) => l.service_id).filter(Boolean)));
-  const [pRes, sRes] = await Promise.all([
+  const ids = rows.map((l) => l.id);
+  const [pRes, sRes, cRes, piRes] = await Promise.all([
     pIds.length ? db.from('marketplace_products').select('id, name').in('id', pIds) : Promise.resolve({ data: [] }),
     sIds.length ? db.from('marketplace_services').select('id, name').in('id', sIds) : Promise.resolve({ data: [] }),
+    ids.length ? db.from('commissions').select('quote_request_id, commission_amount, effective_rate, status, protected_until').in('quote_request_id', ids) : Promise.resolve({ data: [] }),
+    ids.length ? db.from('pilots').select('id, quote_request_id, kind, status, scheduled_for, location, scope, success_criteria, results, outcome').in('quote_request_id', ids).order('created_at') : Promise.resolve({ data: [] }),
   ]);
   const names = new Map<string, string>();
   for (const r of pRes.data || []) names.set(r.id as string, r.name as string);
   for (const r of sRes.data || []) names.set(r.id as string, r.name as string);
+  const commissions = new Map<string, unknown>();
+  for (const c of cRes.data || []) commissions.set(c.quote_request_id as string, c);
+  const pilotsByQr = new Map<string, unknown[]>();
+  for (const p of piRes.data || []) {
+    const arr = pilotsByQr.get(p.quote_request_id as string) || [];
+    arr.push(p); pilotsByQr.set(p.quote_request_id as string, arr);
+  }
 
   return NextResponse.json({
     ok: true,
-    leads: rows.map((l) => ({ ...l, listing_name: names.get((l.product_id || l.service_id) as string) || null })),
+    leads: rows.map((l) => ({ ...l, listing_name: names.get((l.product_id || l.service_id) as string) || null, commission: commissions.get(l.id) || null, pilots: pilotsByQr.get(l.id) || [] })),
   });
 }
 

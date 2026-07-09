@@ -16,9 +16,11 @@ export async function GET() {
   if (!vendor) return NextResponse.json({ ok: false, message: 'Could not load profile' }, { status: 500 });
 
   const db = getSupabaseClient({ admin: true });
-  const [{ data: brochureRows }, { data: videoRows }] = await Promise.all([
+  const [{ data: brochureRows }, { data: videoRows }, { data: caseRows }, { data: logoRow }] = await Promise.all([
     db.from('vendor_brochures').select('id, file_name, storage_path, title, size_bytes, uploaded_at').eq('vendor_id', vendor.id).order('uploaded_at', { ascending: false }),
     db.from('vendor_videos').select('id, title, url, embed_url, provider, created_at').eq('vendor_id', vendor.id).order('created_at', { ascending: false }),
+    db.from('vendor_case_studies').select('id, title, challenge, solution, result, sort_order, created_at').eq('vendor_id', vendor.id).order('sort_order').order('created_at'),
+    db.from('vendor_profiles').select('logo_path, achievements').eq('id', vendor.id).maybeSingle(),
   ]);
 
   const BUCKET = 'vendor-brochures';
@@ -27,7 +29,17 @@ export async function GET() {
     return { ...b, public_url: signed?.signedUrl || null };
   }));
 
-  return NextResponse.json({ ok: true, stored: true, vendor, brochures, videos: videoRows || [] });
+  let logo_url: string | null = null;
+  if (logoRow?.logo_path) {
+    const { data: signed } = await db.storage.from('vendor-logos').createSignedUrl(logoRow.logo_path as string, 3600);
+    logo_url = signed?.signedUrl || null;
+  }
+
+  return NextResponse.json({
+    ok: true, stored: true,
+    vendor: { ...vendor, achievements: (logoRow?.achievements as string[]) || [] },
+    brochures, videos: videoRows || [], case_studies: caseRows || [], logo_url,
+  });
 }
 
 export async function PATCH(req: Request) {
@@ -49,6 +61,7 @@ export async function PATCH(req: Request) {
   if (Array.isArray(body.service_areas)) patch.service_areas = (body.service_areas as string[]).slice(0, 20);
   if (Array.isArray(body.industries)) patch.industries = (body.industries as string[]).slice(0, 20);
   if (Array.isArray(body.client_types)) patch.client_types = (body.client_types as string[]).slice(0, 20);
+  if (Array.isArray(body.achievements)) patch.achievements = (body.achievements as string[]).map((a) => String(a).slice(0, 160)).slice(0, 12);
 
   if (!Object.keys(patch).length) return NextResponse.json({ ok: false, message: 'Nothing to update' }, { status: 400 });
 

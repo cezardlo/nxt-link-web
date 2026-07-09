@@ -239,7 +239,7 @@ export default function VendorQuotesPage() {
     flash(T('Template deleted.', 'Plantilla eliminada.'));
   };
 
-  const useTemplateInQuote = (t: Template) => {
+  const applyTemplateInQuote = (t: Template) => {
     applyTemplateToResponse(t);
     setSelectedTplId(t.id);
     setTab(2);
@@ -527,7 +527,7 @@ export default function VendorQuotesPage() {
       {/* Nav */}
       <div style={{ padding: '16px 24px', borderBottom: '1px solid #1A1A24', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <a href="/" style={{ fontSize: 18, fontWeight: 800, letterSpacing: -1, textDecoration: 'none', color: C.text }}>
-          NXT<span style={{ color: C.accent }}>//</span>LINK
+          NXT<span style={{ color: C.accent }}>{'//'}</span>LINK
         </a>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ textAlign: 'right' }}>
@@ -681,7 +681,7 @@ export default function VendorQuotesPage() {
                     <button onClick={() => editTemplate(t)} style={ghostBtn}>{T('Edit', 'Editar')}</button>
                     <button onClick={() => duplicateTemplate(t)} style={ghostBtn}>{T('Duplicate', 'Duplicar')}</button>
                     <button onClick={() => deleteTemplate(t.id)} style={{ ...ghostBtn, color: C.red, borderColor: `${C.red}55` }}>{T('Delete', 'Eliminar')}</button>
-                    <button onClick={() => useTemplateInQuote(t)} style={btn(C.accent)}>{T('Use in quote', 'Usar en cotización')}</button>
+                    <button onClick={() => applyTemplateInQuote(t)} style={btn(C.accent)}>{T('Use in quote', 'Usar en cotización')}</button>
                   </div>
                 </div>
               ))}
@@ -807,7 +807,7 @@ export default function VendorQuotesPage() {
                     <div style={{ fontWeight: 700 }}>{t.name || '(untitled)'}</div>
                     <div style={{ color: C.sec, fontSize: 13 }}>{t.category || '—'}</div>
                     <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                      <button onClick={() => useTemplateInQuote(t)} style={btn(C.accent)}>{T('Use in quote', 'Usar en cotización')}</button>
+                      <button onClick={() => applyTemplateInQuote(t)} style={btn(C.accent)}>{T('Use in quote', 'Usar en cotización')}</button>
                       <button onClick={() => deleteTemplate(t.id)} style={{ ...ghostBtn, color: C.red, borderColor: `${C.red}55` }}>{T('Delete', 'Eliminar')}</button>
                     </div>
                   </div>

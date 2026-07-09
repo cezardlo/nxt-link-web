@@ -2,7 +2,7 @@
 
 // Sign in for every role (replaces the old intel command-center login).
 // After login, routes by platform role: admin/operator -> /admin,
-// vendor -> /vendor/listings, buyer -> /marketplace.
+// vendor -> /vendor/listings, buyer -> /buyer.
 
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -17,6 +17,26 @@ function LoginInner() {
   const [err, setErr] = useState('');
   const [resent, setResent] = useState(false);
   const [needsVerify, setNeedsVerify] = useState(false);
+  const [demoBusy, setDemoBusy] = useState<'vendor' | 'buyer' | null>(null);
+
+  async function demoLogin(role: 'vendor' | 'buyer') {
+    if (demoBusy) return;
+    setDemoBusy(role); setErr('');
+    try {
+      // Ensures the pre-confirmed demo account exists, then signs straight in.
+      const res = await fetch('/api/demo/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role }) });
+      const demo = await res.json();
+      if (!demo.ok) { setErr(demo.message || 'Demo unavailable'); setDemoBusy(null); return; }
+      const sb = createBrowserSupabaseClient();
+      const { error } = await sb.auth.signInWithPassword({ email: demo.email, password: demo.password });
+      if (error) { setErr(error.message); setDemoBusy(null); return; }
+      await fetch('/api/auth/me');
+      window.location.href = role === 'vendor' ? '/vendor/listings' : '/buyer';
+    } catch {
+      setErr('Demo sign-in failed. Try again.');
+      setDemoBusy(null);
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,7 +53,7 @@ function LoginInner() {
       const role = me?.role || 'client';
       window.location.href = role === 'admin' || role === 'super_admin' ? '/admin'
         : role === 'vendor' ? '/vendor/listings'
-        : '/marketplace';
+        : '/buyer';
     } catch {
       setErr('Could not sign in. Try again.');
       setBusy(false);
@@ -51,7 +71,7 @@ function LoginInner() {
   return (
     <div className="li">
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
-      <a className="li-brand" href="/"><b>NXT<i>//</i>LINK</b></a>
+      <a className="li-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b></a>
       <div className="li-card">
         <h1>Sign in</h1>
         {confirmed && <div className="li-ok">Email confirmed — sign in below.</div>}
@@ -67,6 +87,13 @@ function LoginInner() {
           )}
           <button className="li-btn" type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
         </form>
+        <div className="li-demo">
+          <div className="li-demolabel">Just exploring? Try the demo — no account needed</div>
+          <div className="li-demorow">
+            <button type="button" className="li-demobtn" disabled={!!demoBusy} onClick={() => demoLogin('buyer')}>{demoBusy === 'buyer' ? 'Entering…' : 'Demo as Buyer'}</button>
+            <button type="button" className="li-demobtn" disabled={!!demoBusy} onClick={() => demoLogin('vendor')}>{demoBusy === 'vendor' ? 'Entering…' : 'Demo as Vendor'}</button>
+          </div>
+        </div>
         <a className="li-link" href="/signup">New here? Create an account</a>
       </div>
     </div>
@@ -94,5 +121,11 @@ const CSS = `
 .li-ok{background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);color:#6EE7B7;border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:12px;}
 .li-warn{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);color:#FCD34D;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.5;}
 .li-warn button{background:none;border:none;color:#FBBF24;text-decoration:underline;cursor:pointer;font:inherit;padding:0;}
+.li-demo{margin-top:16px;border-top:1px solid rgba(255,255,255,.08);padding-top:14px;}
+.li-demolabel{color:#8080A0;font-size:12.5px;margin-bottom:10px;text-align:center;}
+.li-demorow{display:flex;gap:9px;}
+.li-demobtn{flex:1;font-family:inherit;font-size:13.5px;font-weight:600;padding:11px;border-radius:10px;border:1px solid rgba(52,211,153,.35);background:rgba(52,211,153,.08);color:#34D399;cursor:pointer;}
+.li-demobtn:hover{background:rgba(52,211,153,.15);}
+.li-demobtn:disabled{opacity:.6;cursor:wait;}
 .li-link{display:block;margin-top:14px;color:#A78BFA;font-size:13.5px;text-decoration:none;}
 `;

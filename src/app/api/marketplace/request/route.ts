@@ -20,6 +20,14 @@ export async function POST(req: Request) {
   }
 
   const kind = body.kind === 'service' ? 'service' : 'product';
+  // Which NXT//LINK deal action started this request. Stored in answers (jsonb)
+  // so no schema change is needed yet; formalized into a column in Phase 3.
+  const REQUEST_TYPES = ['quote', 'contact_sales', 'demo', 'pilot', 'question'];
+  const requestType = REQUEST_TYPES.includes(String(body.request_type)) ? String(body.request_type) : 'quote';
+  const REQUEST_LABEL: Record<string, string> = {
+    quote: 'quote request', contact_sales: 'sales inquiry', demo: 'demo request',
+    pilot: 'pilot request', question: 'question',
+  };
   const listingId = String(body.listing_id || '');
   const company = String(body.company || '').trim().slice(0, 200);
   const contact = String(body.contact_name || '').trim().slice(0, 200);
@@ -43,6 +51,7 @@ export async function POST(req: Request) {
     service_id: kind === 'service' ? listingId : null,
     vendor_id: listing.vendor_id,
     company, contact_name: contact, email, phone, message,
+    answers: { request_type: requestType },
     status: 'new',
   }).select('public_ref').single();
   if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
@@ -52,8 +61,8 @@ export async function POST(req: Request) {
   if (v?.email) {
     sendZohoMail({
       to: v.email as string,
-      subject: `NXT//LINK: new ${kind === 'product' ? 'quote' : 'service'} request for "${listing.name}"`,
-      body: `You have a new lead (${data.public_ref}) from ${company} for "${listing.name}". Open your leads inbox to respond: /vendor/leads`,
+      subject: `NXT//LINK: new ${REQUEST_LABEL[requestType]} for "${listing.name}"`,
+      body: `You have a new ${REQUEST_LABEL[requestType]} (${data.public_ref}) from ${company} for "${listing.name}". Respond inside NXT//LINK — do not contact the buyer off-platform. Open your leads inbox: /vendor/leads`,
     }).catch(() => {});
   }
 

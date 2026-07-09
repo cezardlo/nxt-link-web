@@ -21,14 +21,19 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const row = listing as unknown as { id: string; vendor_id: string; category: string; image_paths?: string[] };
   const fk = kind === 'product' ? 'product_id' : 'service_id';
 
-  const [{ data: vendor }, { data: docs }, { data: cases }, { data: sameVendorP }, { data: sameVendorS }, { data: sameCat }] = await Promise.all([
+  const [{ data: vendor }, { data: docs }, { data: cases }, { data: sameVendorP }, { data: sameVendorS }, { data: sameCat }, { data: reviewRows }] = await Promise.all([
     db.from('vendor_profiles').select('id, company_name, city, website, description').eq('id', row.vendor_id).maybeSingle(),
     db.from('listing_documents').select('id, file_name, title, doc_type, ai_summary, size_bytes, storage_path').eq(fk, id).order('uploaded_at', { ascending: false }).limit(12),
     db.from('case_studies').select('id, title, challenge, solution, results').eq(fk, id).eq('status', 'published').limit(6),
     db.from('marketplace_products').select('id, name, category, overview').eq('vendor_id', row.vendor_id).eq('status', 'published').neq('id', id).limit(4),
     db.from('marketplace_services').select('id, name, category, overview').eq('vendor_id', row.vendor_id).eq('status', 'published').neq('id', id).limit(4),
     db.from(tableFor(kind)).select('id, name, category, overview, vendor_id').eq('status', 'published').ilike('category', row.category || '').neq('id', id).limit(4),
+    db.from('reviews').select('rating, title, body, created_at').eq('vendor_id', row.vendor_id).eq('status', 'published').order('created_at', { ascending: false }).limit(100),
   ]);
+
+  const revs = reviewRows || [];
+  const reviewCount = revs.length;
+  const rating = reviewCount ? Math.round((revs.reduce((s, r) => s + Number(r.rating), 0) / reviewCount) * 10) / 10 : null;
 
   const images = await Promise.all((row.image_paths || []).map(async (p) => {
     if (/^https?:\/\//.test(p)) return { path: p, url: p }; // direct external image URL
@@ -46,7 +51,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     images: images.filter((i) => i.url),
     documents,
     case_studies: cases || [],
-    vendor: vendor ? { company_name: vendor.company_name, city: vendor.city, website: vendor.website, description: vendor.description } : null,
+    vendor: vendor ? { company_name: vendor.company_name, city: vendor.city, website: vendor.website, description: vendor.description, rating, review_count: reviewCount } : null,
+    reviews: revs.slice(0, 8),
     related: {
       same_vendor: [
         ...(sameVendorP || []).map((r) => ({ ...r, kind: 'product' })),

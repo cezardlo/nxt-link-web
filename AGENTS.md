@@ -1,5 +1,11 @@
 # AGENTS.md — nxtlink shared playbook
 
+> **Current-work warning (2026-07-08):** Read `docs/project/START_HERE.md`
+> before using this playbook. The current product is the two-sided industrial
+> marketplace defined in `docs/product/MARKETPLACE_BLUEPRINT.md`. If this file
+> conflicts with the start-here file, `CLAUDE.md`, marketplace blueprint, gap
+> analysis, roadmap, or technical handoff, those newer sources win.
+
 This file is the handoff document for any AI agent (Claude Code, Codex, etc.)
 picking up work on the nxtlink web repo. Read this before doing anything.
 Keep it up to date as you ship changes — append to the **Recent changes**
@@ -9,20 +15,21 @@ section, prune what's stale.
 
 ## What this project is
 
-**nxtlink** — a global tech-vendor catalog. Cesar (the owner) is non-technical;
-build for that. The headline page is `/vendors`, a directory of ~7,300+
-classified tech companies organised into 13 industry tiles.
+**NXT Link** is the two-sided industrial marketplace defined in
+`docs/product/MARKETPLACE_BLUEPRINT.md`. Vendors and service providers create
+standardized, credential-backed profiles and offerings. Buyers browse, filter,
+compare, contact vendors or NXT Link advisors, run pilots, and progress toward
+purchase and implementation. Build for a non-technical product owner.
 
-The repo also contains an "El Paso industrial intelligence" layer
-(`src/lib/intelligence/*`, `src/app/api/brain/*`, the agents under
-`src/lib/agents/`) — that work pre-dates the catalog focus. Treat it as
-present but not the active surface unless Cesar explicitly asks.
+The large global catalog and El Paso industrial-intelligence systems remain in
+the repository as supporting or historical surfaces. Do not extend them unless
+the user explicitly changes the active marketplace priority.
 
-## Live URLs (bookmark these)
+## Historical URL snapshot (verify against TECH_HANDOFF_CURRENT before use)
 
 - **Production site:** https://nxt-link-web.vercel.app
 - **Catalog page:** https://nxt-link-web.vercel.app/vendors
-- **Admin panel** (gated by AccessGate, password `4444`): https://nxt-link-web.vercel.app/admin
+- **Historical admin URL:** https://nxt-link-web.vercel.app/admin
 - **GitHub repo:** https://github.com/cezardlo/nxt-link-web (default branch `master`, not `main`)
 - **Supabase dashboard:** https://supabase.com/dashboard/project/yvykselwehxjwsqercjg
 - **GitHub Actions:** https://github.com/cezardlo/nxt-link-web/actions
@@ -194,8 +201,8 @@ than ~30 entries old to keep the file scannable.)
 - 2026-05-05 `057535a` — YC import gained an UPDATE pass that re-classifies
   existing `source='yc'` rows when sector or country drift. Country now
   pulled from `regions[0]`, not `country` (which YC leaves empty).
-- 2026-05-05 `97b8dc2` — `/admin` browser page with three Run-Now buttons
-  for the admin endpoints. Gated by AccessGate password `4444`.
+- 2026-05-05 `97b8dc2` — historical `/admin` browser page with three Run-Now
+  buttons. Its old shared access-code approach is retired and must not be reused.
 - 2026-05-05 `3beac82` — First admin endpoints (`dedup-vendors`,
   `import-yc`) + Vercel cron config for nightly automation.
 - 2026-05-04 `01ea789` — Sector translation layer in
