@@ -464,7 +464,12 @@ function Shell({ children }: { children: React.ReactNode }) {
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <nav className="sc-nav">
         <a className="sc-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>Seller Central</span></a>
-        <a className="sc-link" href="/marketplace">View marketplace</a>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+          <a className="sc-link" href="/vendor/portal">Profile</a>
+          <a className="sc-link" href="/vendor/leads">Leads</a>
+          <a className="sc-link" href="/marketplace">View marketplace</a>
+          <a className="sc-link" href="/account">Account</a>
+        </div>
       </nav>
       <main className="sc-wrap">{children}</main>
     </div>

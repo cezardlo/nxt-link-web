@@ -130,6 +130,7 @@ export default function BuyerDashboardPage() {
           <button className="by-bell" onClick={toggleNotifs} aria-label="Notifications">
             Alerts{notifUnread > 0 && <span className="by-belldot">{notifUnread}</span>}
           </button>
+          <button className="by-link by-refresh" onClick={() => { setChecking(true); load(); }} aria-label="Refresh">Refresh</button>
           <a className="by-link" href="/marketplace">Browse marketplace</a>
           <a className="by-link" href="/intake">Describe a need</a>
           <a className="by-link" href="/buyer/profile">My profile</a>
@@ -349,6 +350,7 @@ const CSS = `
 .by-sechead h2{font-size:16px;font-weight:700;letter-spacing:-.01em;}
 .by-cnt{font-size:11.5px;font-weight:700;color:#C4B5FD;background:rgba(124,92,252,.14);border-radius:99px;padding:2px 9px;margin-left:7px;vertical-align:2px;}
 .by-bell{position:relative;font-family:inherit;font-size:13.5px;font-weight:600;color:#C4B5FD;background:rgba(124,92,252,.1);border:1px solid rgba(124,92,252,.35);border-radius:99px;padding:7px 14px;cursor:pointer;}
+.by-refresh{background:none;border:none;cursor:pointer;font-family:inherit;}
 .by-belldot{margin-left:7px;background:#EF4444;color:#fff;font-size:11px;font-weight:800;border-radius:99px;padding:1px 7px;}
 .by-notifs{background:#12121B;border:1px solid rgba(124,92,252,.3);border-radius:14px;padding:16px 18px;margin:14px 0 6px;}
 .by-notifhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}

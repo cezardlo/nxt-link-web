@@ -211,7 +211,7 @@ export default function VendorLeadsPage() {
                 <div className="ld-card" key={l.id}>
                   <div className="ld-top">
                     <span className={'ld-status ' + l.status}>{l.status}</span>
-                    {l.answers?.request_type && <span className="ld-reqtype">{REQ_LABEL[l.answers.request_type] || l.answers.request_type}</span>}
+                    <span className="ld-reqtype">{REQ_LABEL[l.answers?.request_type || 'quote'] || l.answers?.request_type}</span>
                     <b>{l.company}</b>
                     <small>{l.listing_name ? `→ ${l.listing_name}` : ''} · {new Date(l.created_at).toLocaleDateString()}</small>
                     <span className="ld-ref">{l.public_ref}</span>

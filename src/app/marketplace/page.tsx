@@ -442,14 +442,14 @@ function ListingCard({ c, saved, inCompare, onSave, onCompare }: { c: Card; save
       <div className="mk-card-body">
         <div className="mk-kindrow">
           <span className={'mk-kind ' + c.kind}>{c.kind}</span>
-          {c.vendor_verified && <span className="mk-badge trust">Verified</span>}
-          {c.pilot?.available && <span className="mk-badge">Pilot</span>}
-          {c.warranty_support?.warranty && <span className="mk-badge">Warranty</span>}
-          {c.has_case_studies && <span className="mk-badge">Case study</span>}
-          {c.has_documents && <span className="mk-badge">Docs</span>}
-          {isLocal(c) && <span className="mk-badge">Local support</span>}
-          {isFast(c) && <span className="mk-badge">Fast {c.kind === 'service' ? 'response' : 'lead time'}</span>}
-          {c.emergency_available && <span className="mk-badge urgent">24/7</span>}
+          {c.vendor_verified && <span className="mk-badge trust" title="This vendor's business was reviewed and approved by NXT//LINK">Verified</span>}
+          {c.pilot?.available && <span className="mk-badge" title="You can test this before buying (pilot/demo available)">Pilot</span>}
+          {c.warranty_support?.warranty && <span className="mk-badge" title="Warranty details provided by the vendor">Warranty</span>}
+          {c.has_case_studies && <span className="mk-badge" title="Real customer results documented">Case study</span>}
+          {c.has_documents && <span className="mk-badge" title="Spec sheets / brochures attached">Docs</span>}
+          {isLocal(c) && <span className="mk-badge" title="Serves El Paso / Juárez locally">Local support</span>}
+          {isFast(c) && <span className="mk-badge" title="Fast turnaround stated by the vendor">Fast {c.kind === 'service' ? 'response' : 'lead time'}</span>}
+          {c.emergency_available && <span className="mk-badge urgent" title="24/7 emergency service available">24/7</span>}
         </div>
         <Link href={`/marketplace/${c.kind}/${c.id}`} className="mk-name">{c.name}</Link>
         <div className="mk-vendor">

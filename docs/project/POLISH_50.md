@@ -14,6 +14,13 @@ auto-scroll, #28 quote card links to listing, #29 section counts, #33 portal
 #41 show/hide password (login+signup), #42 autofocus email, #46 expired certs
 in red, #50 storefront trust footer. (26 of 50; rest queued.)
 
+**Pass 2 (2026-07-09):** DONE — #30 buyer dashboard Refresh, #36 leads type
+chip always shown (Quote fallback), #39 Seller Central nav (Profile/Leads/
+Marketplace/Account), #44 friendly wrong-password copy, #47 review dates,
+#48 badge tooltips, plus verified already-done #10/#15/#17/#18/#19/#31/#40/
+#43/#45. (~41 of 50 complete; remaining are larger: #16-analytics-ish items,
+#25 related-vendor names, #37 unsaved hint, #38 anchors, #49 terms page.)
+
 ## Global
 1. [ ] Custom 404 page (branded, helpful links)
 2. [ ] Global error page (friendly crash screen)

@@ -263,7 +263,7 @@ export default function ListingDetailPage() {
                 <p className="dt-hint">Reviews come only from buyers who accepted a quote through NXT//LINK — verified engagements.</p>
                 {(d.reviews || []).map((rv, i) => (
                   <div className="dt-review" key={i}>
-                    <div className="dt-rvhead"><span className="dt-rvstars">{stars(rv.rating)}</span>{rv.title && <b>{rv.title}</b>}</div>
+                    <div className="dt-rvhead"><span className="dt-rvstars">{stars(rv.rating)}</span>{rv.title && <b>{rv.title}</b>}<small className="dt-rvdate">{new Date(rv.created_at).toLocaleDateString()}</small></div>
                     {rv.body && <p>{rv.body}</p>}
                   </div>
                 ))}
@@ -419,6 +419,7 @@ const CSS = `
 .dt-review{background:#14141F;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:15px 17px;}
 .dt-rvhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .dt-rvstars{color:#FBBF24;font-size:15px;letter-spacing:2px;}
+.dt-rvdate{margin-left:auto;color:#63607A;font-size:11.5px;}
 .dt-review b{font-size:14.5px;}
 .dt-review p{font-size:13.5px;color:#C0C0D0;margin:8px 0 0;line-height:1.55;white-space:pre-wrap;}
 .dt-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-top:22px;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:10px;}

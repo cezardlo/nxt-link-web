@@ -47,6 +47,7 @@ function LoginInner() {
       const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password });
       if (error) {
         if (/confirm/i.test(error.message)) setNeedsVerify(true);
+        else if (/invalid login credentials/i.test(error.message)) setErr('Wrong email or password. Check your password — or use "Forgot password?" below.');
         else setErr(error.message);
         setBusy(false); return;
       }
