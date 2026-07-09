@@ -45,7 +45,20 @@ export async function GET() {
 
   return NextResponse.json({
     ok: true,
-    leads: rows.map((l) => ({ ...l, listing_name: names.get((l.product_id || l.service_id) as string) || null, commission: commissions.get(l.id) || null, pilots: pilotsByQr.get(l.id) || [] })),
+    leads: rows.map((l) => {
+      // Anti-circumvention: buyer contact details are revealed only after the
+      // buyer accepts the quote. Until then, the conversation stays in-app.
+      const revealed = l.buyer_decision === 'accepted';
+      return {
+        ...l,
+        email: revealed ? l.email : null,
+        phone: revealed ? l.phone : null,
+        contact_hidden: !revealed,
+        listing_name: names.get((l.product_id || l.service_id) as string) || null,
+        commission: commissions.get(l.id) || null,
+        pilots: pilotsByQr.get(l.id) || [],
+      };
+    }),
   });
 }
 
@@ -75,7 +88,7 @@ export async function PATCH(req: Request) {
     sendZohoMail({
       to: updated.email as string,
       subject: `NXT//LINK: the vendor is responding to your request ${updated.public_ref}`,
-      body: `Good news — ${vendor.company_name} marked your request (${updated.public_ref}) as being responded to. Expect to hear from them at this email address.`,
+      body: `Good news — ${vendor.company_name} is responding to your request (${updated.public_ref}) inside NXT//LINK. See their quote and messages in your dashboard: /buyer`,
     }).catch(() => {});
   }
   return NextResponse.json({ ok: true });

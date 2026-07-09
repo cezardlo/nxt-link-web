@@ -240,6 +240,7 @@ export default function BuyerDashboardPage() {
                               <button className="by-accept" disabled={chatBusy || !chatInput.trim()} onClick={() => sendChat(q.id)}>Send</button>
                               <button className="by-decline" onClick={() => setChatFor(null)}>Close</button>
                             </div>
+                            {q.buyer_decision !== 'accepted' && <p className="by-guardnote">For your protection, contact details are hidden in chat until you accept a quote — keep the conversation on NXT{'//'}LINK.</p>}
                           </div>
                         ) : (
                           <button className="by-chatopen" onClick={() => openChat(q.id)}>Message vendor</button>
@@ -384,6 +385,7 @@ const CSS = `
 .by-chatrow{display:flex;gap:8px;}
 .by-chatrow input{flex:1;font-family:inherit;font-size:14px;padding:10px 12px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background:#0A0A0F;color:#F0F0F5;outline:none;}
 .by-chatrow input:focus{border-color:#7C5CFC;}
+.by-guardnote{margin:9px 0 0;font-size:11.5px;color:#8080A0;line-height:1.5;}
 .by-pilots{margin-top:10px;display:flex;flex-direction:column;gap:7px;}
 .by-pilot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#111118;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:9px 12px;}
 .by-pilot small{color:#8080A0;font-size:12px;}

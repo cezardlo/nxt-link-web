@@ -9,6 +9,7 @@ import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getVendorSession, getOrCreateVendorProfile } from '@/lib/vendor/auth';
 import { calculateFee, DEFAULT_FEE_POLICY } from '@/lib/fees/engine';
 import { notifyBuyer } from '@/lib/notify';
+import { maskContacts } from '@/lib/guard';
 import { sendZohoMail } from '@/lib/zoho/mail';
 
 const PROTECTED_PERIOD_DAYS = 90;
@@ -50,7 +51,7 @@ export async function POST(req: Request) {
   const { error: upErr } = await db.from('quote_requests').update({
     quote_amount: amount,
     quote_currency: currency,
-    quote_message: String(body.message || '').slice(0, 4000) || null,
+    quote_message: maskContacts(String(body.message || '').slice(0, 4000)).masked || null,
     quote_timeline: String(body.timeline || '').slice(0, 300) || null,
     quote_valid_until: body.valid_until ? String(body.valid_until).slice(0, 40) : null,
     quoted_at: now.toISOString(),

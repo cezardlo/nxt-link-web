@@ -17,7 +17,8 @@ interface Pilot {
 }
 interface Lead {
   id: string; public_ref: string; kind: string; listing_name: string | null;
-  company: string; contact_name: string | null; email: string; phone: string | null;
+  company: string; contact_name: string | null; email: string | null; phone: string | null;
+  contact_hidden?: boolean;
   message: string | null; status: string; created_at: string;
   answers?: { request_type?: string } | null;
   quote_amount?: number | null; quote_currency?: string | null; quote_message?: string | null;
@@ -216,8 +217,14 @@ export default function VendorLeadsPage() {
                   </div>
                   <div className="ld-contact">
                     {l.contact_name && <span>{l.contact_name}</span>}
-                    <a href={`mailto:${l.email}`}>{l.email}</a>
-                    {l.phone && <span>{l.phone}</span>}
+                    {l.email ? (
+                      <>
+                        <a href={`mailto:${l.email}`}>{l.email}</a>
+                        {l.phone && <span>{l.phone}</span>}
+                      </>
+                    ) : (
+                      <span className="ld-hiddenc">Contact details unlock when the buyer accepts your quote — use Messages below</span>
+                    )}
                   </div>
                   {l.message && <p className="ld-msg">{l.message}</p>}
 
@@ -363,6 +370,7 @@ export default function VendorLeadsPage() {
                           <button className="ld-qsend" disabled={chatBusy || !chatInput.trim()} onClick={() => sendChat(l.id)}>Send</button>
                           <button className="ld-qcancel" onClick={() => setChatFor(null)}>Close</button>
                         </div>
+                        {l.buyer_decision !== 'accepted' && <p className="ld-guardnote">Emails, phone numbers, and links are hidden automatically until the buyer accepts — deals stay on NXT{'//'}LINK (your terms: commission owed during the protected period either way).</p>}
                       </div>
                     ) : (
                       <button className="ld-chatopen" onClick={() => openChat(l.id)}>Messages</button>
@@ -423,6 +431,8 @@ const CSS = `
 .ld-status.lost{background:rgba(252,165,165,.1);color:#FCA5A5;}
 .ld-contact{display:flex;gap:14px;flex-wrap:wrap;font-size:13.5px;color:#C0C0D0;margin-top:10px;}
 .ld-contact a{color:#A78BFA;}
+.ld-hiddenc{color:#FBBF24;font-size:12.5px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:5px 10px;}
+.ld-guardnote{margin:9px 0 0;font-size:11.5px;color:#8080A0;line-height:1.5;}
 .ld-msg{margin:12px 0 0;font-size:14px;color:#D5D4E0;line-height:1.6;background:#111118;border-radius:10px;padding:12px 14px;white-space:pre-wrap;}
 .ld-quote{margin-top:14px;border-top:1px solid rgba(255,255,255,.07);padding-top:14px;}
 .ld-decision{display:inline-block;font-size:12px;font-weight:700;padding:5px 11px;border-radius:99px;margin-bottom:10px;text-transform:capitalize;}
