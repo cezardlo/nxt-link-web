@@ -26,7 +26,7 @@ export async function GET(req: Request) {
         }
         dest = next || (role === 'admin' || role === 'super_admin' ? '/admin'
           : role === 'vendor' ? '/vendor/listings?verified=1'
-          : '/marketplace');
+          : '/buyer');
       }
     }
   } catch { /* fall through to login */ }

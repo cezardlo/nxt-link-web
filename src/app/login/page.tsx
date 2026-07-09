@@ -86,6 +86,7 @@ function LoginInner() {
             </div>
           )}
           <button className="li-btn" type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
+          <a className="li-forgot" href="/forgot-password">Forgot password?</a>
         </form>
         <div className="li-demo">
           <div className="li-demolabel">Just exploring? Try the demo — no account needed</div>
@@ -121,6 +122,8 @@ const CSS = `
 .li-ok{background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);color:#6EE7B7;border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:12px;}
 .li-warn{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);color:#FCD34D;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.5;}
 .li-warn button{background:none;border:none;color:#FBBF24;text-decoration:underline;cursor:pointer;font:inherit;padding:0;}
+.li-forgot{color:#8080A0;font-size:12.5px;text-decoration:none;text-align:right;margin-top:-3px;}
+.li-forgot:hover{color:#A78BFA;}
 .li-demo{margin-top:16px;border-top:1px solid rgba(255,255,255,.08);padding-top:14px;}
 .li-demolabel{color:#8080A0;font-size:12.5px;margin-bottom:10px;text-align:center;}
 .li-demorow{display:flex;gap:9px;}

@@ -215,6 +215,7 @@ export default function VendorPortalPage() {
         <div className="vp-navr">
           <a className="vp-navlink" href="/vendor/listings">Listings</a>
           <a className="vp-navlink" href="/vendor/leads">Leads</a>
+          <a className="vp-navlink" href="/account">Account</a>
           <span className={'vp-badge ' + vendor.status}>{vendor.status}</span>
           <button className="vp-signout" onClick={signOut}>Sign out</button>
         </div>

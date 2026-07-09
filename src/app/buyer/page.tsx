@@ -109,6 +109,7 @@ export default function BuyerDashboardPage() {
         <div className="by-navlinks">
           <a className="by-link" href="/marketplace">Browse marketplace</a>
           <a className="by-link" href="/intake">Describe a need</a>
+          <a className="by-link" href="/account">Account</a>
         </div>
       </nav>
 
