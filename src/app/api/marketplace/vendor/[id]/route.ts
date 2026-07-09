@@ -18,13 +18,28 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     .eq('id', id).maybeSingle();
   if (!vendor) return NextResponse.json({ ok: false, message: 'Vendor not found' }, { status: 404 });
 
-  const [{ data: products }, { data: services }, { data: cases }, { data: videos }, { data: reviews }] = await Promise.all([
+  const [{ data: products }, { data: services }, { data: cases }, { data: videos }, { data: reviews }, { data: certRows }, { data: galleryRows }] = await Promise.all([
     db.from('marketplace_products').select(CARD).eq('vendor_id', id).eq('status', 'published').order('published_at', { ascending: false }).limit(24),
     db.from('marketplace_services').select(`${CARD}, service_areas, response_time, emergency_available, pricing_model`).eq('vendor_id', id).eq('status', 'published').order('published_at', { ascending: false }).limit(24),
     db.from('vendor_case_studies').select('id, title, challenge, solution, result').eq('vendor_id', id).order('sort_order').limit(3),
     db.from('vendor_videos').select('id, title, embed_url, provider').eq('vendor_id', id).order('created_at', { ascending: false }).limit(4),
     db.from('reviews').select('rating, title, body, created_at').eq('vendor_id', id).eq('status', 'published').order('created_at', { ascending: false }).limit(50),
+    db.from('vendor_certifications').select('id, name, issuer, credential, issued_on, expires_on, image_path').eq('vendor_id', id).order('sort_order').limit(12),
+    db.from('vendor_gallery').select('id, image_path, caption').eq('vendor_id', id).order('sort_order').limit(12),
   ]);
+
+  const certifications = await Promise.all((certRows || []).map(async (c) => {
+    let image_url: string | null = null;
+    if (c.image_path) {
+      const { data: s } = await db.storage.from('vendor-logos').createSignedUrl(c.image_path as string, 3600);
+      image_url = s?.signedUrl || null;
+    }
+    return { id: c.id, name: c.name, issuer: c.issuer, credential: c.credential, issued_on: c.issued_on, expires_on: c.expires_on, image_url };
+  }));
+  const gallery = (await Promise.all((galleryRows || []).map(async (g) => {
+    const { data: s } = await db.storage.from('vendor-logos').createSignedUrl(g.image_path as string, 3600);
+    return { id: g.id, caption: g.caption, image_url: s?.signedUrl || null };
+  }))).filter((g) => g.image_url);
 
   let logo_url: string | null = null;
   if (vendor.logo_path) {
@@ -81,5 +96,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     case_studies: cases || [],
     videos: videos || [],
     reviews: revs.slice(0, 6),
+    certifications,
+    gallery,
   });
 }

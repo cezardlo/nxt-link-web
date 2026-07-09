@@ -31,6 +31,8 @@ interface Vendor {
 interface Brochure { id: string; file_name: string; title: string; size_bytes: number; public_url: string | null }
 interface Video { id: string; title: string | null; url: string; embed_url: string; provider: string }
 interface CaseStudy { id: string; title: string; challenge: string | null; solution: string | null; result: string | null; sort_order: number }
+interface Cert { id: string; name: string; issuer: string | null; credential: string | null; issued_on: string | null; expires_on: string | null; image_url?: string | null }
+interface Photo { id: string; caption: string | null; image_url: string | null }
 interface Draft {
   company_name: string | null; description: string | null; categories: string[];
   service_areas: string[]; industries: string[]; client_types: string[];
@@ -59,6 +61,13 @@ export default function VendorPortalPage() {
   const [csBusy, setCsBusy] = useState(false);
   const [agreement, setAgreement] = useState<{ accepted: boolean; summary: string; terms: { title: string; body: string }[]; accepted_at: string | null } | null>(null);
   const [agBusy, setAgBusy] = useState(false);
+  const [certs, setCerts] = useState<Cert[]>([]);
+  const [certForm, setCertForm] = useState({ name: '', issuer: '', credential: '', issued_on: '', expires_on: '' });
+  const [certFile, setCertFile] = useState<File | null>(null);
+  const [certBusy, setCertBusy] = useState(false);
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [photoCaption, setPhotoCaption] = useState('');
+  const [photoBusy, setPhotoBusy] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch('/api/vendor/profile');
@@ -69,6 +78,12 @@ export default function VendorPortalPage() {
     setBannerUrl(data.banner_url || null);
     const ag = await fetch('/api/vendor/agreement').then((r) => r.json()).catch(() => null);
     if (ag?.ok) setAgreement(ag);
+    const [ce, ga] = await Promise.all([
+      fetch('/api/vendor/certifications').then((r) => r.json()).catch(() => null),
+      fetch('/api/vendor/gallery').then((r) => r.json()).catch(() => null),
+    ]);
+    if (ce?.ok) setCerts(ce.certifications || []);
+    if (ga?.ok) setPhotos(ga.photos || []);
     setSignedIn(true); setChecking(false);
   }, []);
 
@@ -152,6 +167,39 @@ export default function VendorPortalPage() {
     setCaseStudies((c) => c.filter((x) => x.id !== id));
     await fetch(`/api/vendor/case-studies?id=${id}`, { method: 'DELETE' });
   }
+  async function addCert() {
+    if (!certForm.name.trim()) { setMsg('Give the certification a name first.'); return; }
+    setCertBusy(true); setMsg('');
+    const fd = new FormData();
+    Object.entries(certForm).forEach(([k, v]) => fd.append(k, v));
+    if (certFile) fd.append('file', certFile);
+    const res = await fetch('/api/vendor/certifications', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.ok) {
+      setCerts((c) => [...c, data.certification]);
+      setCertForm({ name: '', issuer: '', credential: '', issued_on: '', expires_on: '' });
+      setCertFile(null);
+    } else setMsg(data.message || 'Could not add certification');
+    setCertBusy(false);
+  }
+  async function removeCert(id: string) {
+    setCerts((c) => c.filter((x) => x.id !== id));
+    await fetch(`/api/vendor/certifications?id=${id}`, { method: 'DELETE' });
+  }
+  async function addPhoto(file: File) {
+    setPhotoBusy(true); setMsg('');
+    const fd = new FormData(); fd.append('file', file); fd.append('caption', photoCaption);
+    const res = await fetch('/api/vendor/gallery', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.ok) { setPhotos((p) => [...p, data.photo]); setPhotoCaption(''); }
+    else setMsg(data.message || 'Could not add photo');
+    setPhotoBusy(false);
+  }
+  async function removePhoto(id: string) {
+    setPhotos((p) => p.filter((x) => x.id !== id));
+    await fetch(`/api/vendor/gallery?id=${id}`, { method: 'DELETE' });
+  }
+
   async function acceptTerms() {
     setAgBusy(true); setMsg('');
     const res = await fetch('/api/vendor/agreement', { method: 'POST' });
@@ -351,6 +399,64 @@ export default function VendorPortalPage() {
               <button className="vp-btn sm" type="button" disabled={csBusy} onClick={addCaseStudy}>{csBusy ? 'Adding…' : 'Add case study'}</button>
             </div>
           ) : <p className="vp-hint">You&apos;ve added the maximum of 3. Remove one to add another.</p>}
+        </section>
+
+        <section className="vp-card">
+          <div className="vp-lbl">Certifications <span className="vp-cnt">{certs.length}/12</span></div>
+          <p className="vp-hint">ISO, OSHA, licenses, insurance — with issuer, dates, and an optional photo/PDF of the certificate. Shown on your storefront; buyers filter by these.</p>
+          {certs.length > 0 && (
+            <div className="vp-certlist">
+              {certs.map((c) => (
+                <div className="vp-cert" key={c.id}>
+                  <div className="vp-certmain">
+                    <b>{c.name}</b>
+                    <small>{[c.issuer, c.credential && `#${c.credential}`, c.expires_on && `expires ${c.expires_on}`].filter(Boolean).join(' · ')}</small>
+                  </div>
+                  {c.image_url && <a href={c.image_url} target="_blank" rel="noreferrer">Proof</a>}
+                  <button type="button" onClick={() => removeCert(c.id)}>Remove</button>
+                </div>
+              ))}
+            </div>
+          )}
+          {certs.length < 12 && (
+            <div className="vp-csform">
+              <div className="vp-fgrid">
+                <input placeholder="Certification name * — e.g. ISO 9001:2015" value={certForm.name} onChange={(e) => setCertForm({ ...certForm, name: e.target.value })} />
+                <input placeholder="Issuer — e.g. SGS" value={certForm.issuer} onChange={(e) => setCertForm({ ...certForm, issuer: e.target.value })} />
+                <input placeholder="Certificate #" value={certForm.credential} onChange={(e) => setCertForm({ ...certForm, credential: e.target.value })} />
+                <label className="vp-datef">Expires<input type="date" value={certForm.expires_on} onChange={(e) => setCertForm({ ...certForm, expires_on: e.target.value })} /></label>
+              </div>
+              <label className="vp-fileline">
+                {certFile ? certFile.name : 'Attach certificate photo/PDF (optional)'}
+                <input type="file" accept="image/png,image/jpeg,image/webp,application/pdf" onChange={(e) => setCertFile(e.target.files?.[0] || null)} />
+              </label>
+              <button className="vp-btn sm" type="button" disabled={certBusy} onClick={addCert}>{certBusy ? 'Adding…' : 'Add certification'}</button>
+            </div>
+          )}
+        </section>
+
+        <section className="vp-card">
+          <div className="vp-lbl">Photo gallery <span className="vp-cnt">{photos.length}/12</span></div>
+          <p className="vp-hint">Facility, equipment, and completed-work photos. High-quality images make buyers trust you faster.</p>
+          {photos.length > 0 && (
+            <div className="vp-gallery">
+              {photos.map((p) => (
+                <div className="vp-photo" key={p.id}>
+                  {p.image_url && <img src={p.image_url} alt={p.caption || 'Gallery photo'} />}
+                  <div className="vp-photofoot"><span>{p.caption || ''}</span><button type="button" onClick={() => removePhoto(p.id)}>Remove</button></div>
+                </div>
+              ))}
+            </div>
+          )}
+          {photos.length < 12 && (
+            <div className="vp-vform" style={{ gridTemplateColumns: '1.6fr auto' }}>
+              <input placeholder="Caption (optional)" value={photoCaption} onChange={(e) => setPhotoCaption(e.target.value)} />
+              <label className="vp-btn sm vp-logobtn">
+                {photoBusy ? 'Uploading…' : 'Add photo'}
+                <input type="file" accept="image/png,image/jpeg,image/webp" disabled={photoBusy} onChange={(e) => { const f = e.target.files?.[0]; if (f) addPhoto(f); e.target.value = ''; }} />
+              </label>
+            </div>
+          )}
         </section>
 
         <section className="vp-card">
@@ -558,6 +664,25 @@ const CSS = `
 .vp-csform input,.vp-csform textarea{font-family:var(--sans);padding:11px 13px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:14px;outline:none;resize:vertical;}
 .vp-csform input:focus,.vp-csform textarea:focus{border-color:var(--p);}
 .vp-csform .vp-btn{align-self:flex-start;}
+.vp-certlist{display:flex;flex-direction:column;gap:9px;margin-bottom:16px;}
+.vp-cert{display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:11px 14px;}
+.vp-certmain{flex:1;display:flex;flex-direction:column;gap:3px;}
+.vp-cert b{font-size:14px;}
+.vp-cert small{color:var(--muted);font-size:12px;}
+.vp-cert a{color:var(--p2);font-size:12.5px;font-weight:600;}
+.vp-cert button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12.5px;}
+.vp-cert button:hover{color:#FCA5A5;}
+.vp-csform .vp-fgrid input{font-family:var(--sans);padding:11px 13px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:14px;outline:none;width:100%;}
+.vp-datef{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--muted);}
+.vp-datef input{flex:1;}
+.vp-fileline{display:block;padding:11px 13px;border:1.5px dashed rgba(124,92,252,.35);border-radius:10px;color:var(--p2);font-size:13px;cursor:pointer;position:relative;overflow:hidden;}
+.vp-fileline input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0;}
+.vp-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:16px;}
+.vp-photo{background:var(--bg2);border:1px solid var(--line);border-radius:11px;overflow:hidden;}
+.vp-photo img{width:100%;height:110px;object-fit:cover;display:block;}
+.vp-photofoot{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 10px;font-size:11.5px;color:var(--ink2);}
+.vp-photofoot button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11.5px;}
+.vp-photofoot button:hover{color:#FCA5A5;}
 .vp-agreement{border-color:rgba(124,92,252,.45);background:rgba(124,92,252,.06);}
 .vp-terms{margin:4px 0 12px;padding-left:18px;display:flex;flex-direction:column;gap:9px;font-size:13.5px;color:var(--ink2);line-height:1.55;}
 .vp-terms b{color:var(--ink);}

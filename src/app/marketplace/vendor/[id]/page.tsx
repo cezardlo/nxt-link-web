@@ -28,6 +28,8 @@ interface Storefront {
   case_studies: Array<{ id: string; title: string; challenge: string | null; solution: string | null; result: string | null }>;
   videos: Array<{ id: string; title: string | null; embed_url: string; provider: string }>;
   reviews: Array<{ rating: number; title: string | null; body: string | null }>;
+  certifications: Array<{ id: string; name: string; issuer: string | null; credential: string | null; expires_on: string | null; image_url: string | null }>;
+  gallery: Array<{ id: string; caption: string | null; image_url: string | null }>;
 }
 
 const stars = (n: number) => '★★★★★'.slice(0, Math.round(n)) + '☆☆☆☆☆'.slice(0, 5 - Math.round(n));
@@ -147,6 +149,35 @@ export default function VendorStorefrontPage() {
           )}
         </section>
 
+        {(d.certifications || []).length > 0 && (
+          <section className="vs-sec">
+            <h2>Certifications</h2>
+            <div className="vs-certs">
+              {d.certifications.map((c) => (
+                <div className="vs-cert" key={c.id}>
+                  <b>{c.name}</b>
+                  <small>{[c.issuer, c.credential && `#${c.credential}`, c.expires_on && `valid through ${c.expires_on}`].filter(Boolean).join(' · ')}</small>
+                  {c.image_url && <a href={c.image_url} target="_blank" rel="noreferrer">View certificate ↗</a>}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {(d.gallery || []).length > 0 && (
+          <section className="vs-sec">
+            <h2>Photos</h2>
+            <div className="vs-photos">
+              {d.gallery.map((g) => (
+                <figure key={g.id} className="vs-photo">
+                  {g.image_url && <img src={g.image_url} alt={g.caption || 'Vendor photo'} />}
+                  {g.caption && <figcaption>{g.caption}</figcaption>}
+                </figure>
+              ))}
+            </div>
+          </section>
+        )}
+
         {d.case_studies.length > 0 && (
           <section className="vs-sec">
             <h2>Case studies</h2>
@@ -248,6 +279,15 @@ const CSS = `
 .vs-cbody strong{font-size:15px;font-weight:700;line-height:1.3;}
 .vs-cbody small{color:#8080A0;font-size:12px;}
 .vs-quotecta{margin-top:auto;padding-top:8px;color:#C4B5FD;font-size:12.5px;font-weight:700;}
+.vs-certs{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
+.vs-cert{display:flex;flex-direction:column;gap:5px;background:#14141F;border:1px solid rgba(251,191,36,.25);border-radius:13px;padding:14px 16px;}
+.vs-cert b{font-size:14px;}
+.vs-cert small{color:#8080A0;font-size:12px;line-height:1.45;}
+.vs-cert a{color:#FBBF24;font-size:12.5px;font-weight:600;text-decoration:none;margin-top:3px;}
+.vs-photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
+.vs-photo{margin:0;background:#14141F;border:1px solid rgba(255,255,255,.08);border-radius:13px;overflow:hidden;}
+.vs-photo img{width:100%;height:150px;object-fit:cover;display:block;}
+.vs-photo figcaption{padding:8px 12px;font-size:12px;color:#8080A0;}
 .vs-cases{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;}
 .vs-case{background:#14141F;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px 18px;}
 .vs-case b{font-size:14.5px;}
