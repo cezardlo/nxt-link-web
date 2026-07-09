@@ -53,7 +53,9 @@ function LoginInner() {
       }
       const me = await fetch('/api/auth/me').then((r) => r.json()).catch(() => null);
       const role = me?.role || 'client';
-      window.location.href = role === 'admin' || role === 'super_admin' ? '/admin'
+      const next = sp.get('next');
+      window.location.href = (next && next.startsWith('/') && !next.startsWith('//')) ? next
+        : role === 'admin' || role === 'super_admin' ? '/admin'
         : role === 'vendor' ? '/vendor/listings'
         : '/buyer';
     } catch {

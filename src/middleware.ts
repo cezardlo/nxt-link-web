@@ -111,6 +111,19 @@ export function middleware(req: NextRequest) {
     });
   }
 
+  // Server-side auth gate: signed-in-only pages redirect to /login when no
+  // Supabase session cookie is present. (APIs enforce ownership themselves;
+  // this stops logged-out access to private surfaces at the edge.)
+  const AUTH_PAGES = ['/buyer', '/account', '/admin', '/vendor/leads', '/vendor/listings', '/vendor/portal', '/vendor/start', '/vendor/quotes'];
+  if (AUTH_PAGES.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
+    const hasSession = req.cookies.getAll().some((c) => c.name.startsWith('sb-') && c.name.includes('-auth-token'));
+    if (!hasSession) {
+      const login = new URL('/login', req.url);
+      login.searchParams.set('next', pathname);
+      return NextResponse.redirect(login);
+    }
+  }
+
   // Rate limit API routes
   if (pathname.startsWith('/api/')) {
     if (isRateLimited(ip)) {
