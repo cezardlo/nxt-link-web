@@ -465,6 +465,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       <nav className="sc-nav">
         <a className="sc-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>Seller Central</span></a>
         <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+          <a className="sc-link" href="/vendor/start">Get set up</a>
           <a className="sc-link" href="/vendor/portal">Profile</a>
           <a className="sc-link" href="/vendor/leads">Leads</a>
           <a className="sc-link" href="/marketplace">View marketplace</a>

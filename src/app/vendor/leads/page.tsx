@@ -80,6 +80,18 @@ export default function VendorLeadsPage() {
   const [notifs, setNotifs] = useState<Array<{ id: string; title: string; read_at: string | null; created_at: string }>>([]);
   const [notifUnread, setNotifUnread] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [openReqs, setOpenReqs] = useState<Array<{ id: string; public_ref: string; category: string | null; problem: string | null; location: string | null; urgency: string | null; budget_range: string | null; relevant: boolean; responded: boolean }>>([]);
+  const [orBusy, setOrBusy] = useState<string | null>(null);
+  async function respondToRequest(id: string) {
+    setOrBusy(id);
+    const res = await fetch('/api/vendor/open-requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    const data = await res.json();
+    if (data.ok) {
+      setOpenReqs((rs) => rs.map((r) => (r.id === id ? { ...r, responded: true } : r)));
+      load(); // the new lead appears in the inbox below
+    }
+    setOrBusy(null);
+  }
   async function toggleNotifs() {
     const next = !notifOpen;
     setNotifOpen(next);
@@ -96,6 +108,8 @@ export default function VendorLeadsPage() {
     setLeads(data.leads || []); setSignedIn(true); setChecking(false);
     const n = await fetch('/api/vendor/notifications').then((r) => r.json()).catch(() => null);
     if (n?.ok) { setNotifs(n.notifications || []); setNotifUnread(n.unread || 0); }
+    const o = await fetch('/api/vendor/open-requests').then((r) => r.json()).catch(() => null);
+    if (o?.ok) setOpenReqs(o.requests || []);
   }, []);
 
   useEffect(() => {
@@ -200,6 +214,32 @@ export default function VendorLeadsPage() {
             )}
           </div>
         )}
+        {openReqs.length > 0 && (
+          <section className="ld-open">
+            <h2>Open buyer requests <small>respond and it becomes a lead — buyer contact stays hidden until they accept your quote</small></h2>
+            <div className="ld-openlist">
+              {openReqs.map((r) => (
+                <div className={'ld-opencard' + (r.relevant ? ' rel' : '')} key={r.id}>
+                  <div className="ld-opentop">
+                    {r.relevant && <span className="ld-relbadge">Matches your profile</span>}
+                    <b>{r.category || 'Buyer need'}</b>
+                    <small>{r.public_ref}</small>
+                  </div>
+                  {r.problem && <p>{r.problem}</p>}
+                  <div className="ld-openmeta">
+                    {r.location && <span>{r.location}</span>}
+                    {r.urgency && <span>Urgency: {r.urgency}</span>}
+                    {r.budget_range && <span>Budget: {r.budget_range}</span>}
+                  </div>
+                  {r.responded
+                    ? <span className="ld-openok">✓ Responded — see your leads below</span>
+                    : <button className="ld-qsend" disabled={orBusy === r.id} onClick={() => respondToRequest(r.id)}>{orBusy === r.id ? 'Creating lead…' : 'Respond with a quote'}</button>}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         <h1>Leads inbox {leads.filter((l) => l.status === 'new').length > 0 && <span className="ld-newcnt">{leads.filter((l) => l.status === 'new').length} new</span>}</h1>
         <p className="ld-sub">Buyers who requested a quote or service from your listings. Respond inside NXT{'//'}LINK.</p>
         {checking ? <div className="ld-empty">Loading…</div>
@@ -432,6 +472,19 @@ const CSS = `
 .ld-wrap{max-width:760px;margin:0 auto;padding:36px 20px 100px;}
 .ld-wrap h1{font-size:28px;font-weight:800;letter-spacing:-.02em;}
 .ld-newcnt{font-size:12px;font-weight:700;color:#C4B5FD;background:rgba(124,92,252,.15);border-radius:99px;padding:4px 12px;vertical-align:6px;margin-left:8px;}
+.ld-open{margin-bottom:28px;}
+.ld-open h2{font-size:17px;font-weight:800;letter-spacing:-.01em;}
+.ld-open h2 small{display:block;color:#8080A0;font-size:12.5px;font-weight:400;margin-top:5px;line-height:1.5;}
+.ld-openlist{display:flex;flex-direction:column;gap:12px;margin-top:14px;}
+.ld-opencard{background:rgba(255,255,255,.04);border:1px dashed rgba(124,92,252,.4);border-radius:14px;padding:15px 17px;}
+.ld-opencard.rel{border-style:solid;border-color:rgba(52,211,153,.45);}
+.ld-opentop{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.ld-opentop b{font-size:15px;}
+.ld-opentop small{margin-left:auto;color:#505068;font-size:12px;}
+.ld-relbadge{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:99px;background:rgba(52,211,153,.14);color:#34D399;}
+.ld-opencard p{margin:9px 0 0;font-size:13.5px;color:#D5D4E0;line-height:1.55;}
+.ld-openmeta{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:#8080A0;margin:9px 0 12px;}
+.ld-openok{color:#34D399;font-size:13px;font-weight:600;}
 .ld-sub{color:#8080A0;font-size:14px;margin:6px 0 24px;}
 .ld-empty{text-align:center;color:#8080A0;padding:70px 0;}
 .ld-empty a{color:#A78BFA;}
