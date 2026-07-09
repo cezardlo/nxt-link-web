@@ -20,7 +20,7 @@ export async function GET() {
     db.from('vendor_brochures').select('id, file_name, storage_path, title, size_bytes, uploaded_at').eq('vendor_id', vendor.id).order('uploaded_at', { ascending: false }),
     db.from('vendor_videos').select('id, title, url, embed_url, provider, created_at').eq('vendor_id', vendor.id).order('created_at', { ascending: false }),
     db.from('vendor_case_studies').select('id, title, challenge, solution, result, sort_order, created_at').eq('vendor_id', vendor.id).order('sort_order').order('created_at'),
-    db.from('vendor_profiles').select('logo_path, achievements').eq('id', vendor.id).maybeSingle(),
+    db.from('vendor_profiles').select('logo_path, achievements, banner_path, tagline').eq('id', vendor.id).maybeSingle(),
   ]);
 
   const BUCKET = 'vendor-brochures';
@@ -34,11 +34,16 @@ export async function GET() {
     const { data: signed } = await db.storage.from('vendor-logos').createSignedUrl(logoRow.logo_path as string, 3600);
     logo_url = signed?.signedUrl || null;
   }
+  let banner_url: string | null = null;
+  if (logoRow?.banner_path) {
+    const { data: signed } = await db.storage.from('vendor-logos').createSignedUrl(logoRow.banner_path as string, 3600);
+    banner_url = signed?.signedUrl || null;
+  }
 
   return NextResponse.json({
     ok: true, stored: true,
-    vendor: { ...vendor, achievements: (logoRow?.achievements as string[]) || [] },
-    brochures, videos: videoRows || [], case_studies: caseRows || [], logo_url,
+    vendor: { ...vendor, achievements: (logoRow?.achievements as string[]) || [], tagline: (logoRow?.tagline as string) || null },
+    brochures, videos: videoRows || [], case_studies: caseRows || [], logo_url, banner_url,
   });
 }
 
@@ -56,7 +61,7 @@ export async function PATCH(req: Request) {
   const patch: Record<string, unknown> = {};
   const str = (k: string, max = 300) => { if (typeof body[k] === 'string') patch[k] = (body[k] as string).slice(0, max); };
   str('company_name'); str('contact_name'); str('phone'); str('website'); str('city');
-  str('description', 4000);
+  str('description', 4000); str('tagline', 160);
   if (Array.isArray(body.categories)) patch.categories = (body.categories as string[]).slice(0, 30);
   if (Array.isArray(body.service_areas)) patch.service_areas = (body.service_areas as string[]).slice(0, 20);
   if (Array.isArray(body.industries)) patch.industries = (body.industries as string[]).slice(0, 20);

@@ -25,7 +25,7 @@ interface Vendor {
   id: string; public_ref: string; company_name: string; contact_name: string | null;
   email: string | null; phone: string | null; website: string | null; city: string | null;
   categories: string[]; service_areas: string[]; industries: string[]; client_types: string[];
-  achievements?: string[];
+  achievements?: string[]; tagline?: string | null;
   description: string | null; status: string;
 }
 interface Brochure { id: string; file_name: string; title: string; size_bytes: number; public_url: string | null }
@@ -52,6 +52,8 @@ export default function VendorPortalPage() {
   const [draftSource, setDraftSource] = useState('');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoBusy, setLogoBusy] = useState(false);
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null);
+  const [bannerBusy, setBannerBusy] = useState(false);
   const [caseStudies, setCaseStudies] = useState<CaseStudy[]>([]);
   const [cs, setCs] = useState({ title: '', challenge: '', solution: '', result: '' });
   const [csBusy, setCsBusy] = useState(false);
@@ -64,6 +66,7 @@ export default function VendorPortalPage() {
     const data = await res.json();
     setVendor(data.vendor); setBrochures(data.brochures || []); setVideos(data.videos || []);
     setCaseStudies(data.case_studies || []); setLogoUrl(data.logo_url || null);
+    setBannerUrl(data.banner_url || null);
     const ag = await fetch('/api/vendor/agreement').then((r) => r.json()).catch(() => null);
     if (ag?.ok) setAgreement(ag);
     setSignedIn(true); setChecking(false);
@@ -89,6 +92,7 @@ export default function VendorPortalPage() {
       body: JSON.stringify({
         company_name: vendor.company_name, contact_name: vendor.contact_name, phone: vendor.phone,
         website: vendor.website, city: vendor.city, description: vendor.description,
+        tagline: vendor.tagline || '',
         categories: vendor.categories, service_areas: vendor.service_areas,
         industries: vendor.industries, client_types: vendor.client_types,
         achievements: vendor.achievements || [],
@@ -122,6 +126,18 @@ export default function VendorPortalPage() {
   async function removeLogo() {
     setLogoUrl(null);
     await fetch('/api/vendor/logo', { method: 'DELETE' });
+  }
+  async function uploadBanner(file: File) {
+    setBannerBusy(true); setMsg('');
+    const fd = new FormData(); fd.append('file', file);
+    const res = await fetch('/api/vendor/banner', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.ok) setBannerUrl(data.banner_url || null); else setMsg(data.message || 'Banner upload failed');
+    setBannerBusy(false);
+  }
+  async function removeBanner() {
+    setBannerUrl(null);
+    await fetch('/api/vendor/banner', { method: 'DELETE' });
   }
   async function addCaseStudy() {
     if (!cs.title.trim()) { setMsg('Give the case study a title first.'); return; }
@@ -243,6 +259,19 @@ export default function VendorPortalPage() {
 
         <section className="vp-card">
           <div className="vp-lbl">Company</div>
+          <div className="vp-banner">
+            <div className="vp-bannerimg">
+              {bannerUrl ? <img src={bannerUrl} alt="Storefront banner" /> : <div className="vp-bannerph">Cover banner — shown across the top of your storefront</div>}
+            </div>
+            <div className="vp-logoactions" style={{ marginTop: 10 }}>
+              <label className="vp-btn sm vp-logobtn">
+                {bannerBusy ? 'Uploading…' : bannerUrl ? 'Replace banner' : 'Upload banner'}
+                <input type="file" accept="image/png,image/jpeg,image/webp" disabled={bannerBusy} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadBanner(f); e.target.value = ''; }} />
+              </label>
+              {bannerUrl && <button className="vp-signout" type="button" onClick={removeBanner}>Remove</button>}
+              <p className="vp-hint" style={{ margin: 0 }}>Wide image works best (about 1200×300) · up to 8&nbsp;MB</p>
+            </div>
+          </div>
           <div className="vp-logo">
             <div className="vp-logobox">
               {logoUrl ? <img src={logoUrl} alt="Company logo" /> : <span>Logo</span>}
@@ -265,6 +294,10 @@ export default function VendorPortalPage() {
           <div style={{ marginTop: 16 }}>
             <PhoneField value={vendor.phone || ''} onChange={(v) => set('phone', v)} />
           </div>
+          <label className="vp-field" style={{ marginTop: 18 }}>
+            <span>Tagline — one line under your name (e.g. &ldquo;Forklift service across the Borderplex since 2009&rdquo;)</span>
+            <input value={vendor.tagline || ''} maxLength={160} onChange={(e) => set('tagline', e.target.value)} />
+          </label>
           <label className="vp-field" style={{ marginTop: 18 }}>
             <span>About your company</span>
             <textarea rows={4} value={vendor.description || ''} onChange={(e) => set('description', e.target.value)} />
@@ -502,6 +535,10 @@ const CSS = `
 .vp-phone select:focus{border-color:var(--p);}
 .vp-phonenum{flex:1;}
 .vp-phoneext{max-width:90px;}
+.vp-banner{margin-bottom:20px;}
+.vp-bannerimg{height:130px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:linear-gradient(120deg,#1b1533 0%,#241a4d 40%,#12244a 100%);}
+.vp-bannerimg img{width:100%;height:100%;object-fit:cover;}
+.vp-bannerph{height:100%;display:grid;place-items:center;color:var(--muted);font-size:13px;padding:0 20px;text-align:center;}
 .vp-logo{display:flex;align-items:center;gap:18px;margin-bottom:20px;}
 .vp-logobox{width:84px;height:84px;flex-shrink:0;border-radius:14px;border:1px solid var(--line);background:var(--bg);display:grid;place-items:center;overflow:hidden;color:var(--muted2);font-size:12px;letter-spacing:.12em;text-transform:uppercase;}
 .vp-logobox img{width:100%;height:100%;object-fit:contain;}

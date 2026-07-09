@@ -19,6 +19,7 @@ interface Storefront {
   vendor: {
     id: string; company_name: string; city: string | null; website: string | null;
     description: string | null; verified: boolean; logo_url: string | null;
+    banner_url: string | null; tagline: string | null;
     categories: string[]; industries: string[]; service_areas: string[]; client_types: string[];
     achievements: string[];
     rating: number | null; review_count: number;
@@ -35,12 +36,19 @@ export default function VendorStorefrontPage() {
   const params = useParams<{ id: string }>();
   const [d, setD] = useState<Storefront | null>(null);
   const [missing, setMissing] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
     fetch(`/api/marketplace/vendor/${params.id}`)
       .then((r) => r.json())
       .then((data) => { if (data.ok) setD(data); else setMissing(true); })
       .catch(() => setMissing(true));
+    // Facebook-style: if the signed-in vendor is viewing their OWN page,
+    // show the Edit profile button.
+    fetch('/api/vendor/profile')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((me) => { if (me?.ok && me.vendor?.id === params.id) setIsOwner(true); })
+      .catch(() => {});
   }, [params.id]);
 
   if (missing) return <div className="vs"><style dangerouslySetInnerHTML={{ __html: CSS }} /><div className="vs-empty">Vendor not found. <Link href="/marketplace">Back to marketplace</Link></div></div>;
@@ -62,11 +70,18 @@ export default function VendorStorefrontPage() {
         <span className="vs-thru">Deals run through NXT{'//'}LINK</span>
       </nav>
 
-      {/* Hero — identical structure for every vendor */}
+      {/* Facebook-style profile header — identical structure for every vendor */}
+      <div className="vs-cover">
+        {v.banner_url ? <img src={v.banner_url} alt="" /> : <div className="vs-coverph" />}
+      </div>
       <header className="vs-hero">
         <div className="vs-logo">{v.logo_url ? <img src={v.logo_url} alt={`${v.company_name} logo`} /> : <span>{v.company_name.slice(0, 2).toUpperCase()}</span>}</div>
         <div className="vs-id">
-          <h1>{v.company_name}</h1>
+          <div className="vs-namerow">
+            <h1>{v.company_name}</h1>
+            {isOwner && <Link className="vs-edit" href="/vendor/portal">Edit profile</Link>}
+          </div>
+          {v.tagline && <p className="vs-tagline">{v.tagline}</p>}
           <div className="vs-sub">{v.city && <span>{v.city}</span>}{v.website && <a href={v.website.startsWith('http') ? v.website : `https://${v.website}`} target="_blank" rel="noreferrer">Company website ↗</a>}</div>
           <div className="vs-badges">
             {v.verified && <span className="trust">Verified vendor</span>}
@@ -190,10 +205,18 @@ const CSS = `
 .vs-nav{display:flex;justify-content:space-between;align-items:center;padding:14px 26px;border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);z-index:20;}
 .vs-back{color:#C0C0D0;text-decoration:none;font-size:14px;font-weight:600;}
 .vs-thru{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#C4B5FD;background:rgba(124,92,252,.14);border:1px solid rgba(124,92,252,.3);padding:4px 10px;border-radius:99px;}
-.vs-hero{display:flex;gap:22px;align-items:center;max-width:960px;margin:0 auto;padding:36px 20px 8px;}
-.vs-logo{width:96px;height:96px;flex-shrink:0;border-radius:18px;border:1px solid rgba(255,255,255,.1);background:#14141F;display:grid;place-items:center;overflow:hidden;font-size:26px;font-weight:800;color:#7C5CFC;}
+.vs-cover{height:220px;overflow:hidden;position:relative;background:#0E0E16;}
+.vs-cover img{width:100%;height:100%;object-fit:cover;}
+.vs-coverph{width:100%;height:100%;background:linear-gradient(120deg,#1b1533 0%,#241a4d 40%,#12244a 100%);}
+.vs-hero{display:flex;gap:22px;align-items:flex-end;max-width:960px;margin:-52px auto 0;padding:0 20px 8px;position:relative;z-index:2;}
+.vs-logo{width:112px;height:112px;flex-shrink:0;border-radius:20px;border:4px solid #0A0A0F;background:#14141F;display:grid;place-items:center;overflow:hidden;font-size:30px;font-weight:800;color:#7C5CFC;box-shadow:0 8px 30px rgba(0,0,0,.45);}
 .vs-logo img{width:100%;height:100%;object-fit:contain;}
+.vs-id{padding-bottom:2px;}
+.vs-namerow{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
 .vs-id h1{font-size:clamp(22px,3.6vw,32px);font-weight:800;letter-spacing:-.02em;}
+.vs-edit{font-size:12.5px;font-weight:700;color:#C4B5FD;background:rgba(124,92,252,.14);border:1px solid rgba(124,92,252,.4);border-radius:9px;padding:7px 14px;text-decoration:none;}
+.vs-edit:hover{background:rgba(124,92,252,.24);}
+.vs-tagline{color:#B8B6CC;font-size:14.5px;margin:6px 0 0;font-weight:300;}
 .vs-sub{display:flex;gap:14px;color:#8080A0;font-size:14px;margin-top:6px;flex-wrap:wrap;}
 .vs-sub a{color:#A78BFA;text-decoration:none;}
 .vs-badges{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px;}

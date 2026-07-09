@@ -14,7 +14,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const db = getSupabaseClient({ admin: true });
 
   const { data: vendor } = await db.from('vendor_profiles')
-    .select('id, company_name, city, website, description, status, categories, industries, service_areas, client_types, achievements, logo_path')
+    .select('id, company_name, city, website, description, status, categories, industries, service_areas, client_types, achievements, logo_path, banner_path, tagline')
     .eq('id', id).maybeSingle();
   if (!vendor) return NextResponse.json({ ok: false, message: 'Vendor not found' }, { status: 404 });
 
@@ -30,6 +30,11 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   if (vendor.logo_path) {
     const { data: signed } = await db.storage.from('vendor-logos').createSignedUrl(vendor.logo_path as string, 3600);
     logo_url = signed?.signedUrl || null;
+  }
+  let banner_url: string | null = null;
+  if (vendor.banner_path) {
+    const { data: signed } = await db.storage.from('vendor-logos').createSignedUrl(vendor.banner_path as string, 3600);
+    banner_url = signed?.signedUrl || null;
   }
 
   async function withImage(rows: Array<Record<string, unknown>>, kind: 'product' | 'service') {
@@ -63,7 +68,9 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       service_areas: vendor.service_areas || [],
       client_types: vendor.client_types || [],
       achievements: vendor.achievements || [],
+      tagline: (vendor.tagline as string) || null,
       logo_url,
+      banner_url,
       rating,
       review_count: revs.length,
     },
