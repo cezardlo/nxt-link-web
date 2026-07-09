@@ -50,6 +50,7 @@ export default function BuyerDashboardPage() {
   const [chatBusy, setChatBusy] = useState(false);
   const chatListRef = useRef<HTMLDivElement>(null);
   useEffect(() => { chatListRef.current?.scrollTo({ top: chatListRef.current.scrollHeight }); }, [chatMsgs, chatFor]);
+  const [savedItems, setSavedItems] = useState<Array<{ listing_id: string; kind: string; name: string | null }>>([]);
   const [notifs, setNotifs] = useState<Array<{ id: string; title: string; read_at: string | null; created_at: string }>>([]);
   const [notifUnread, setNotifUnread] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -69,6 +70,8 @@ export default function BuyerDashboardPage() {
       setData(json);
       const n = await fetch('/api/buyer/notifications').then((r) => r.json()).catch(() => null);
       if (n?.ok) { setNotifs(n.notifications || []); setNotifUnread(n.unread || 0); }
+      const sv = await fetch('/api/buyer/saved').then((r) => r.json()).catch(() => null);
+      if (sv?.ok && sv.signed_in) setSavedItems(sv.items || []);
     } catch {
       setData({ signed_in: false });
     } finally {
@@ -164,15 +167,24 @@ export default function BuyerDashboardPage() {
           </div>
         ) : (
           <>
-            {/* Saved listings */}
+            {/* Saved listings — account-level, follow the buyer across devices */}
             <section className="by-sec">
-              <div className="by-sechead"><h2>Saved listings</h2></div>
-              {savedCount === 0 ? (
-                <div className="by-empty sm">Nothing saved yet. <a href="/marketplace">Browse the marketplace</a> and tap Save on listings you like.</div>
-              ) : (
+              <div className="by-sechead"><h2>Saved listings {savedItems.length > 0 && <small className="by-cnt">{savedItems.length}</small>}</h2><a className="by-link" href="/marketplace">Browse more</a></div>
+              {savedItems.length > 0 ? (
+                <div className="by-savedgrid">
+                  {savedItems.filter((s) => s.name).map((s) => (
+                    <a key={s.listing_id} className="by-saveditem" href={`/marketplace/${s.kind}/${s.listing_id}`}>
+                      <i className={s.kind}>{s.kind}</i>
+                      <span>{s.name}</span>
+                    </a>
+                  ))}
+                </div>
+              ) : savedCount > 0 ? (
                 <a className="by-saved" href="/marketplace">
-                  <b>{savedCount}</b> saved listing{savedCount === 1 ? '' : 's'} <span>→ view in marketplace</span>
+                  <b>{savedCount}</b> saved on this device <span>→ view in marketplace (sign-in saves them to your account)</span>
                 </a>
+              ) : (
+                <div className="by-empty sm">Nothing saved yet. <a href="/marketplace">Browse the marketplace</a> and tap Save on listings you like.</div>
               )}
             </section>
 
@@ -358,6 +370,11 @@ const CSS = `
 .by-status.resp{background:rgba(52,211,153,.12);color:#34D399;}
 .by-msg{margin:12px 0 0;font-size:14px;color:#D5D4E0;line-height:1.6;background:#111118;border-radius:10px;padding:11px 13px;white-space:pre-wrap;}
 .by-meta{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:#9090A8;margin-top:10px;}
+.by-savedgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;}
+.by-saveditem{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:11px 14px;color:#D5D4E0;text-decoration:none;font-size:13.5px;}
+.by-saveditem:hover{border-color:rgba(124,92,252,.5);color:#F0F0F5;}
+.by-saveditem i{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 7px;border-radius:99px;background:rgba(124,92,252,.15);color:#C4B5FD;flex-shrink:0;}
+.by-saveditem i.service{background:rgba(52,211,153,.12);color:#34D399;}
 .by-saved{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:12px 16px;color:#D5D4E0;text-decoration:none;font-size:14px;}
 .by-saved b{font-size:18px;color:#C4B5FD;}
 .by-saved span{color:#8080A0;font-size:13px;}

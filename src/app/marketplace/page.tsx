@@ -39,7 +39,7 @@ const SORTS: Array<[Sort, string]> = [
 // set the search box; results still come only from real vendor data.
 const PROBLEM_STARTERS = ['reduce labor', 'prevent cargo theft', 'improve safety', 'speed up picking', 'reduce downtime', 'warehouse automation'];
 
-function useLocalSet(key: string): [Set<string>, (id: string) => void] {
+function useLocalSet(key: string): [Set<string>, (id: string) => void, (ids: string[]) => void] {
   const [set, setSet] = useState<Set<string>>(new Set());
   useEffect(() => {
     try { setSet(new Set(JSON.parse(localStorage.getItem(key) || '[]'))); } catch { /* ignore */ }
@@ -52,7 +52,16 @@ function useLocalSet(key: string): [Set<string>, (id: string) => void] {
       return next;
     });
   };
-  return [set, toggle];
+  const addAll = (ids: string[]) => {
+    if (!ids.length) return;
+    setSet((prev) => {
+      const next = new Set(prev);
+      ids.forEach((i) => next.add(i));
+      try { localStorage.setItem(key, JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+  };
+  return [set, toggle, addAll];
 }
 
 // ---- trust badge helpers (data-driven, no invented values) ----
@@ -131,8 +140,31 @@ export default function MarketplacePage() {
   const [fLocal, setFLocal] = useState(false);
   const [fFast, setFFast] = useState(false);
 
-  const [saved, toggleSaved] = useLocalSet('nxt_saved');
+  const [saved, toggleSaved, addAllSaved] = useLocalSet('nxt_saved');
   const [compare, toggleCompare] = useLocalSet('nxt_compare');
+  const [savedSynced, setSavedSynced] = useState(false);
+
+  // Signed-in buyers: saves follow the account across devices. Merge server
+  // saves in on load; sync every save/unsave back to the account.
+  useEffect(() => {
+    (async () => {
+      try {
+        const d = await fetch('/api/buyer/saved').then((r) => r.json());
+        if (d?.signed_in) {
+          setSavedSynced(true);
+          addAllSaved((d.items || []).map((i: { listing_id: string }) => i.listing_id));
+        }
+      } catch { /* anonymous — localStorage only */ }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  function handleSaveToggle(c: Card) {
+    const nowSaved = !saved.has(c.id);
+    toggleSaved(c.id);
+    if (savedSynced) {
+      fetch('/api/buyer/saved', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ listing_id: c.id, kind: c.kind, saved: nowSaved }) }).catch(() => {});
+    }
+  }
   const [showCompare, setShowCompare] = useState(false);
   const [savedOnly, setSavedOnly] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -372,7 +404,7 @@ export default function MarketplacePage() {
                     c={c}
                     saved={saved.has(c.id)}
                     inCompare={compare.has(c.id)}
-                    onSave={() => toggleSaved(c.id)}
+                    onSave={() => handleSaveToggle(c)}
                     onCompare={() => toggleCompare(c.id)}
                   />
                 ))}
