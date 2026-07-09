@@ -29,7 +29,7 @@ export async function GET() {
   const [pRes, sRes, cRes, piRes] = await Promise.all([
     pIds.length ? db.from('marketplace_products').select('id, name').in('id', pIds) : Promise.resolve({ data: [] }),
     sIds.length ? db.from('marketplace_services').select('id, name').in('id', sIds) : Promise.resolve({ data: [] }),
-    ids.length ? db.from('commissions').select('quote_request_id, commission_amount, effective_rate, status, protected_until').in('quote_request_id', ids) : Promise.resolve({ data: [] }),
+    ids.length ? db.from('commissions').select('quote_request_id, commission_amount, effective_rate, status, protected_until, final_amount, invoice_number, due_date, paid_at').in('quote_request_id', ids) : Promise.resolve({ data: [] }),
     ids.length ? db.from('pilots').select('id, quote_request_id, kind, status, scheduled_for, location, scope, success_criteria, results, outcome').in('quote_request_id', ids).order('created_at') : Promise.resolve({ data: [] }),
   ]);
   const names = new Map<string, string>();

@@ -6,7 +6,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 
-interface Commission { commission_amount: number; effective_rate: number; status: string; protected_until: string | null }
+interface Commission {
+  commission_amount: number; effective_rate: number; status: string; protected_until: string | null;
+  final_amount?: number | null; invoice_number?: string | null; due_date?: string | null; paid_at?: string | null;
+}
 interface Pilot {
   id: string; kind: string; status: string; scheduled_for: string | null;
   location: string | null; scope: string | null; success_criteria: string | null;
@@ -51,6 +54,21 @@ export default function VendorLeadsPage() {
   const [pBusy, setPBusy] = useState(false);
   const [resultsFor, setResultsFor] = useState<string | null>(null);
   const [rform, setRform] = useState({ results: '', outcome: 'passed' });
+  const [purFor, setPurFor] = useState<string | null>(null);
+  const [purForm, setPurForm] = useState({ amount: '', po_number: '', invoice_ref: '', purchased_at: '' });
+  const [purBusy, setPurBusy] = useState(false);
+  async function recordPurchase(leadId: string) {
+    const amount = Number(purForm.amount);
+    if (!(amount > 0)) return;
+    setPurBusy(true);
+    const res = await fetch('/api/vendor/purchase', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quote_request_id: leadId, ...purForm, amount }) });
+    const data = await res.json();
+    if (data.ok) {
+      setLeads((ls) => ls.map((l) => (l.id === leadId ? { ...l, commission: { ...(l.commission as Commission), ...data.commission, final_amount: amount } } : l)));
+      setPurFor(null); setPurForm({ amount: '', po_number: '', invoice_ref: '', purchased_at: '' });
+    }
+    setPurBusy(false);
+  }
   const [chatFor, setChatFor] = useState<string | null>(null);
   const [chatMsgs, setChatMsgs] = useState<Array<{ id: string; sender: string; body: string; created_at: string }>>([]);
   const [chatInput, setChatInput] = useState('');
@@ -233,6 +251,42 @@ export default function VendorLeadsPage() {
                     )}
                   </div>
 
+                  {/* Purchase record + commission bill (after buyer accepts) */}
+                  {l.buyer_decision === 'accepted' && (
+                    <div className="ld-purchase">
+                      {l.commission?.invoice_number ? (
+                        <div className="ld-bill">
+                          <div className="ld-billtop">
+                            <b>Deal closed: {money(l.commission.final_amount || l.quote_amount || 0)}</b>
+                            <span className={'ld-billstatus ' + (l.commission.paid_at ? 'paid' : 'due')}>{l.commission.paid_at ? 'Commission paid' : 'Commission due'}</span>
+                          </div>
+                          <div className="ld-billrow">
+                            <span>NXT{'//'}LINK commission: <b>{money(l.commission.commission_amount)}</b></span>
+                            <span>Invoice {l.commission.invoice_number}</span>
+                            {l.commission.due_date && !l.commission.paid_at && <span>due {new Date(l.commission.due_date).toLocaleDateString()}</span>}
+                          </div>
+                        </div>
+                      ) : purFor === l.id ? (
+                        <div className="ld-qform">
+                          <div className="ld-qrow">
+                            <label>Final purchase amount (USD)<input type="number" min="0" value={purForm.amount} onChange={(e) => setPurForm({ ...purForm, amount: e.target.value })} placeholder={l.quote_amount != null ? String(l.quote_amount) : 'e.g. 25000'} /></label>
+                            <label>PO number<input value={purForm.po_number} onChange={(e) => setPurForm({ ...purForm, po_number: e.target.value })} placeholder="Buyer's PO #" /></label>
+                            <label>Your invoice #<input value={purForm.invoice_ref} onChange={(e) => setPurForm({ ...purForm, invoice_ref: e.target.value })} placeholder="Your invoice to the buyer" /></label>
+                          </div>
+                          <div className="ld-qcom">NXT{'//'}LINK commission on this amount: <b>{money(estimateCommission(Number(purForm.amount)))}</b> <small>— billed to you with 30-day terms.</small></div>
+                          <div className="ld-qactions">
+                            <button className="ld-qsend" disabled={purBusy || !(Number(purForm.amount) > 0)} onClick={() => recordPurchase(l.id)}>{purBusy ? 'Recording…' : 'Record purchase'}</button>
+                            <button className="ld-qcancel" onClick={() => setPurFor(null)}>Cancel</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button className="ld-purbtn" onClick={() => { setPurForm({ amount: l.quote_amount != null ? String(l.quote_amount) : '', po_number: '', invoice_ref: '', purchased_at: '' }); setPurFor(l.id); }}>
+                          Record the purchase (required — closes the deal)
+                        </button>
+                      )}
+                    </div>
+                  )}
+
                   {/* Demo / pilot tracking — stays inside NXT//LINK */}
                   <div className="ld-pilots">
                     {(l.pilots || []).map((p) => (
@@ -391,6 +445,17 @@ const CSS = `
 .ld-qsend{font-family:inherit;font-size:13.5px;font-weight:700;background:#7C5CFC;border:none;color:#fff;border-radius:9px;padding:10px 16px;cursor:pointer;}
 .ld-qsend:disabled{opacity:.5;cursor:not-allowed;}
 .ld-qcancel{font-family:inherit;font-size:13px;background:none;border:1px solid rgba(255,255,255,.14);color:#C0C0D0;border-radius:9px;padding:10px 14px;cursor:pointer;}
+.ld-purchase{margin-top:14px;border-top:1px solid rgba(255,255,255,.07);padding-top:14px;}
+.ld-purbtn{font-family:inherit;font-size:13px;font-weight:700;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.45);color:#34D399;border-radius:10px;padding:10px 16px;cursor:pointer;}
+.ld-purbtn:hover{background:rgba(52,211,153,.2);}
+.ld-bill{background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.3);border-radius:12px;padding:13px 15px;}
+.ld-billtop{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+.ld-billtop b{font-size:15px;color:#F0F0F5;}
+.ld-billstatus{font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;text-transform:uppercase;letter-spacing:.05em;}
+.ld-billstatus.due{background:rgba(251,191,36,.14);color:#FBBF24;}
+.ld-billstatus.paid{background:rgba(52,211,153,.15);color:#34D399;}
+.ld-billrow{display:flex;gap:16px;flex-wrap:wrap;margin-top:9px;font-size:13px;color:#C0C0D0;}
+.ld-billrow b{color:#34D399;}
 .ld-pilots{margin-top:14px;border-top:1px solid rgba(255,255,255,.07);padding-top:14px;display:flex;flex-direction:column;gap:10px;}
 .ld-pcard{background:#111118;border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:12px 14px;}
 .ld-ptop{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
