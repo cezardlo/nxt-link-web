@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
+import { scoreListing } from '@/lib/marketplace/completeness';
 
 type Kind = 'product' | 'service';
 interface Listing {
@@ -270,20 +271,33 @@ export default function VendorListingsPage() {
               </div>
               {rows.length === 0 ? <p className="sc-hint">No {label.toLowerCase()} yet. Create one — AI can draft it from a spec sheet.</p> : (
                 <ul className="sc-list">
-                  {rows.map((l) => (
+                  {rows.map((l) => {
+                    const score = scoreListing(kind, l as unknown as Record<string, unknown>);
+                    return (
                     <li key={l.id}>
-                      <span className={'sc-status ' + l.status}>{l.status}</span>
-                      <b>{l.name}</b>
-                      <small>{l.category || 'No category'}</small>
-                      <span className="sc-spacer" />
-                      {l.status === 'published' && <a href={`/marketplace/${kind}/${l.id}`} target="_blank" rel="noreferrer">View live</a>}
-                      <button onClick={() => openEdit(kind, l)}>Edit</button>
-                      {l.status === 'published'
-                        ? <button onClick={() => setStatus(kind, l.id, 'unpublished')}>Unpublish</button>
-                        : <button className="sc-pub" onClick={() => openReview(kind, l)}>Review &amp; publish</button>}
-                      <button className="sc-del" onClick={() => archive(kind, l.id)}>Archive</button>
+                      <div className="sc-rowtop">
+                        <span className={'sc-status ' + l.status}>{l.status}</span>
+                        <b>{l.name}</b>
+                        <small>{l.category || 'No category'}</small>
+                        <span className="sc-spacer" />
+                        {l.status === 'published' && <a href={`/marketplace/${kind}/${l.id}`} target="_blank" rel="noreferrer">View live</a>}
+                        <button onClick={() => openEdit(kind, l)}>Edit</button>
+                        {l.status === 'published'
+                          ? <button onClick={() => setStatus(kind, l.id, 'unpublished')}>Unpublish</button>
+                          : <button className="sc-pub" onClick={() => openReview(kind, l)}>Review &amp; publish</button>}
+                        <button className="sc-del" onClick={() => archive(kind, l.id)}>Archive</button>
+                      </div>
+                      {/* Completeness meter — complete listings rank higher & win more quotes */}
+                      <div className="sc-meter" title={score.missing.join(' · ')}>
+                        <div className="sc-meterbar"><div className={'sc-meterfill' + (score.percent >= 80 ? ' good' : score.percent >= 50 ? ' mid' : ' low')} style={{ width: `${score.percent}%` }} /></div>
+                        <span className="sc-meterpct">{score.percent}% complete</span>
+                        {score.missing.length > 0 && score.percent < 100 && (
+                          <span className="sc-meterhint">Next: {score.missing.slice(0, 2).join(' · ')}</span>
+                        )}
+                      </div>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               )}
             </section>
@@ -449,7 +463,7 @@ function Shell({ children }: { children: React.ReactNode }) {
     <div className="sc">
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <nav className="sc-nav">
-        <a className="sc-brand" href="/"><b>NXT<i>//</i>LINK</b><span>Seller Central</span></a>
+        <a className="sc-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>Seller Central</span></a>
         <a className="sc-link" href="/marketplace">View marketplace</a>
       </nav>
       <main className="sc-wrap">{children}</main>
@@ -481,7 +495,16 @@ const CSS = `
 .sc-lblsm{font-size:12.5px;color:#8080A0;}
 .sc-hint{color:#8080A0;font-size:13.5px;line-height:1.5;margin:0 0 10px;}
 .sc-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
-.sc-list li{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid rgba(255,255,255,.07);border-radius:11px;background:#111118;font-size:14px;flex-wrap:wrap;}
+.sc-list li{display:flex;flex-direction:column;gap:9px;padding:12px 14px;border:1px solid rgba(255,255,255,.07);border-radius:11px;background:#111118;font-size:14px;}
+.sc-rowtop{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.sc-meter{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.sc-meterbar{width:130px;height:7px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;flex-shrink:0;}
+.sc-meterfill{height:100%;border-radius:99px;transition:width .3s;}
+.sc-meterfill.good{background:#34D399;}
+.sc-meterfill.mid{background:#FBBF24;}
+.sc-meterfill.low{background:#F87171;}
+.sc-meterpct{font-size:11.5px;font-weight:700;color:#C0C0D0;}
+.sc-meterhint{font-size:11.5px;color:#8080A0;}
 .sc-list b{font-size:14.5px;}
 .sc-list small{color:#8080A0;}
 .sc-spacer{flex:1;}
