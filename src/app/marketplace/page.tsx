@@ -282,6 +282,25 @@ export default function MarketplacePage() {
     [fPilot, fWarranty, fEmergency, fVerified, fCases, fLocal, fFast].filter(Boolean).length;
   const marketplaceEmpty = !loading && cards.length === 0;
 
+  // "Storefront" home state: nothing searched or filtered yet → show discovery
+  // sections (category tiles, vendors, post-a-need banner) above the listings.
+  const pristine = !q.trim() && tab === 'all' && activeFilterCount === 0 && !savedOnly;
+  const homeCategories = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const c of cards) if (c.category) counts.set(c.category, (counts.get(c.category) || 0) + 1);
+    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  }, [cards]);
+  const homeVendors = useMemo(() => {
+    const seen = new Map<string, { id: string; name: string; rating: number | null; count: number }>();
+    for (const c of cards) {
+      if (!c.vendor_id) continue;
+      const v = seen.get(c.vendor_id) || { id: c.vendor_id, name: c.vendor_name, rating: c.vendor_rating ?? null, count: 0 };
+      v.count++;
+      seen.set(c.vendor_id, v);
+    }
+    return Array.from(seen.values()).slice(0, 6);
+  }, [cards]);
+
   // Suggested related searches for empty states (from real category data).
   const suggestions = facets.categories.slice(0, 6);
 
@@ -297,6 +316,14 @@ export default function MarketplacePage() {
         </div>
       </nav>
 
+      {/* Storefront hero (home state only) */}
+      {pristine && !loading && (
+        <div className="mk-hero">
+          <h1>Find industrial products &amp; services</h1>
+          <p>Standardized listings from verified Borderplex vendors — compare, request quotes, and run the whole deal through NXT{'//'}LINK.</p>
+        </div>
+      )}
+
       {/* Search bar */}
       <div className="mk-searchbar">
         <div className="mk-searchwrap">
@@ -311,6 +338,55 @@ export default function MarketplacePage() {
           {q && <button className="mk-clearq" onClick={() => setQ('')} aria-label="Clear search">×</button>}
         </div>
       </div>
+
+      {/* Storefront discovery sections (home state only) */}
+      {pristine && !loading && cards.length > 0 && (
+        <div className="mk-home">
+          {homeCategories.length > 0 && (
+            <section className="mk-homesec">
+              <h2>Browse by category</h2>
+              <div className="mk-cattiles">
+                {homeCategories.map(([cat, n]) => (
+                  <button key={cat} className="mk-cattile" onClick={() => setFCategory(cat)}>
+                    <span className="mk-catinit">{cat.slice(0, 1).toUpperCase()}</span>
+                    <b>{cat}</b>
+                    <small>{n} listing{n === 1 ? '' : 's'}</small>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="mk-rfq">
+            <div>
+              <b>Can&apos;t find what you need?</b>
+              <p>Describe your problem once — NXT{'//'}LINK matches vendors and they quote you through the platform.</p>
+            </div>
+            <Link href="/intake" className="mk-rfqbtn">Post a request</Link>
+          </section>
+
+          {homeVendors.length > 0 && (
+            <section className="mk-homesec">
+              <h2>Featured vendors</h2>
+              <div className="mk-vstrip">
+                {homeVendors.map((v) => (
+                  <Link key={v.id} href={`/marketplace/vendor/${v.id}`} className="mk-vtile">
+                    <span className="mk-catinit">{v.name.slice(0, 1).toUpperCase()}</span>
+                    <div>
+                      <b>{v.name}</b>
+                      <small>
+                        {typeof v.rating === 'number' ? `★ ${v.rating.toFixed(1)} · ` : ''}{v.count} listing{v.count === 1 ? '' : 's'}
+                      </small>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <h2 className="mk-allhead">All listings</h2>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="mk-tabsrow">
@@ -594,6 +670,27 @@ const CSS = `
 .mk-navr{display:flex;gap:8px;flex-wrap:wrap;}
 .mk-pill{font-family:inherit;font-size:13px;font-weight:500;color:#C0C0D0;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:99px;padding:8px 14px;cursor:pointer;text-decoration:none;white-space:nowrap;}
 .mk-pill.on{background:rgba(124,92,252,.15);border-color:#7C5CFC;color:#C4B5FD;}
+.mk-hero{max-width:1200px;margin:0 auto;padding:36px 20px 0;text-align:center;}
+.mk-hero h1{font-size:clamp(24px,4vw,38px);font-weight:800;letter-spacing:-.02em;}
+.mk-hero p{color:#8080A0;font-size:15px;margin:10px auto 0;max-width:560px;line-height:1.6;}
+.mk-home{max-width:1200px;margin:0 auto;padding:8px 20px 0;}
+.mk-homesec h2,.mk-allhead{font-size:17px;font-weight:800;letter-spacing:-.01em;margin:26px 0 14px;}
+.mk-cattiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;}
+.mk-cattile{font-family:inherit;text-align:left;display:flex;flex-direction:column;gap:6px;background:#14141F;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px;cursor:pointer;color:#F0F0F5;transition:border-color .15s,transform .15s;}
+.mk-cattile:hover{border-color:rgba(124,92,252,.5);transform:translateY(-2px);}
+.mk-cattile b{font-size:14px;line-height:1.3;}
+.mk-cattile small{color:#8080A0;font-size:12px;}
+.mk-catinit{width:34px;height:34px;border-radius:10px;background:rgba(124,92,252,.14);color:#C4B5FD;display:grid;place-items:center;font-weight:800;font-size:15px;}
+.mk-rfq{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;background:linear-gradient(120deg,rgba(124,92,252,.14),rgba(52,211,153,.08));border:1px solid rgba(124,92,252,.35);border-radius:16px;padding:20px 22px;margin-top:26px;}
+.mk-rfq b{font-size:16.5px;}
+.mk-rfq p{color:#B8B6CC;font-size:13.5px;margin:5px 0 0;line-height:1.5;max-width:520px;}
+.mk-rfqbtn{background:#7C5CFC;color:#fff;font-weight:700;font-size:14px;padding:12px 22px;border-radius:11px;text-decoration:none;white-space:nowrap;}
+.mk-rfqbtn:hover{background:#6344DF;}
+.mk-vstrip{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
+.mk-vtile{display:flex;align-items:center;gap:12px;background:#14141F;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px 16px;text-decoration:none;color:#F0F0F5;transition:border-color .15s;}
+.mk-vtile:hover{border-color:rgba(124,92,252,.5);}
+.mk-vtile b{font-size:14px;display:block;line-height:1.3;}
+.mk-vtile small{color:#8080A0;font-size:12px;}
 .mk-searchbar{padding:22px 20px 6px;max-width:1200px;margin:0 auto;}
 .mk-searchwrap{display:flex;align-items:center;gap:10px;background:#14141F;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:0 16px;color:#8080A0;transition:border-color .15s;}
 .mk-searchwrap:focus-within{border-color:#7C5CFC;box-shadow:0 0 0 3px rgba(124,92,252,.15);}
