@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getBuyerSession } from '@/lib/buyer/auth';
+import { notifyVendor } from '@/lib/notify';
 import { sendZohoMail } from '@/lib/zoho/mail';
 
 function likeLiteral(v: string): string { return v.replace(/[\\%_]/g, (c) => `\\${c}`); }
@@ -42,6 +43,7 @@ export async function POST(req: Request) {
   }).eq('quote_request_id', id);
 
   // Tell the vendor the buyer's decision.
+  await notifyVendor(db, opp.vendor_id as string, id, 'decision', `Buyer ${decision} your quote (${opp.public_ref})`);
   const { data: v } = await db.from('vendor_profiles').select('email, company_name').eq('id', opp.vendor_id).maybeSingle();
   if (v?.email) {
     sendZohoMail({

@@ -1,0 +1,33 @@
+// GET  /api/buyer/notifications — my latest notifications + unread count
+// POST /api/buyer/notifications — mark all mine as read
+// Scoped to the buyer's own verified email.
+
+export const dynamic = 'force-dynamic';
+import { NextResponse } from 'next/server';
+import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { getBuyerSession } from '@/lib/buyer/auth';
+
+function likeLiteral(v: string): string { return v.replace(/[\\%_]/g, (c) => `\\${c}`); }
+
+export async function GET() {
+  const session = await getBuyerSession();
+  if (!session || !session.email || !session.emailConfirmed) return NextResponse.json({ ok: true, notifications: [], unread: 0 });
+  if (!isSupabaseConfigured()) return NextResponse.json({ ok: true, notifications: [], unread: 0 });
+  const db = getSupabaseClient({ admin: true });
+  const { data } = await db.from('notifications')
+    .select('id, type, title, read_at, created_at')
+    .eq('recipient', 'buyer').ilike('buyer_email', likeLiteral(session.email))
+    .order('created_at', { ascending: false }).limit(30);
+  const rows = data || [];
+  return NextResponse.json({ ok: true, notifications: rows, unread: rows.filter((n) => !n.read_at).length });
+}
+
+export async function POST() {
+  const session = await getBuyerSession();
+  if (!session || !session.email || !session.emailConfirmed) return NextResponse.json({ ok: false, message: 'Sign in required' }, { status: 401 });
+  if (!isSupabaseConfigured()) return NextResponse.json({ ok: true });
+  const db = getSupabaseClient({ admin: true });
+  await db.from('notifications').update({ read_at: new Date().toISOString() })
+    .eq('recipient', 'buyer').ilike('buyer_email', likeLiteral(session.email)).is('read_at', null);
+  return NextResponse.json({ ok: true });
+}

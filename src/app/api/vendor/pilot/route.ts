@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getVendorSession, getOrCreateVendorProfile } from '@/lib/vendor/auth';
+import { notifyBuyer } from '@/lib/notify';
 import { sendZohoMail } from '@/lib/zoho/mail';
 
 const KINDS = ['demo', 'pilot', 'site_visit'];
@@ -41,6 +42,7 @@ export async function POST(req: Request) {
   }).select(COLS).single();
   if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
 
+  await notifyBuyer(db, (opp.email as string) || '', qrId, 'pilot', `A ${kind.replace('_', ' ')} was proposed for ${opp.public_ref}`);
   if (opp.email) {
     sendZohoMail({
       to: opp.email as string,

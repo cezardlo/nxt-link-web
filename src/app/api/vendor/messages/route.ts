@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getVendorSession, getOrCreateVendorProfile } from '@/lib/vendor/auth';
+import { notifyBuyer } from '@/lib/notify';
 
 async function ownedThread(qrId: string) {
   const session = await getVendorSession();
@@ -38,5 +39,7 @@ export async function POST(req: Request) {
   if (err) return err;
   const { data, error } = await db.from('messages').insert({ quote_request_id: qrId, sender: 'vendor', body: text }).select('id, sender, body, created_at').single();
   if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+  const { data: opp } = await db.from('quote_requests').select('email, public_ref').eq('id', qrId).maybeSingle();
+  await notifyBuyer(db, (opp?.email as string) || '', qrId, 'message', `New message from the vendor on ${opp?.public_ref || 'your request'}`);
   return NextResponse.json({ ok: true, message: data });
 }

@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getBuyerSession } from '@/lib/buyer/auth';
+import { notifyVendor } from '@/lib/notify';
 
 function likeLiteral(v: string): string { return v.replace(/[\\%_]/g, (c) => `\\${c}`); }
 
@@ -39,5 +40,7 @@ export async function POST(req: Request) {
   if (err) return err;
   const { data, error } = await db.from('messages').insert({ quote_request_id: qrId, sender: 'buyer', body: text }).select('id, sender, body, created_at').single();
   if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+  const { data: opp } = await db.from('quote_requests').select('vendor_id, public_ref').eq('id', qrId).maybeSingle();
+  if (opp?.vendor_id) await notifyVendor(db, opp.vendor_id as string, qrId, 'message', `New message from the buyer on ${opp.public_ref}`);
   return NextResponse.json({ ok: true, message: data });
 }

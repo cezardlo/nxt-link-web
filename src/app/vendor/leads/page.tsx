@@ -57,12 +57,25 @@ export default function VendorLeadsPage() {
   const [chatBusy, setChatBusy] = useState(false);
   const chatListRef = useRef<HTMLDivElement>(null);
   useEffect(() => { chatListRef.current?.scrollTo({ top: chatListRef.current.scrollHeight }); }, [chatMsgs, chatFor]);
+  const [notifs, setNotifs] = useState<Array<{ id: string; title: string; read_at: string | null; created_at: string }>>([]);
+  const [notifUnread, setNotifUnread] = useState(0);
+  const [notifOpen, setNotifOpen] = useState(false);
+  async function toggleNotifs() {
+    const next = !notifOpen;
+    setNotifOpen(next);
+    if (next && notifUnread > 0) {
+      await fetch('/api/vendor/notifications', { method: 'POST' });
+      setNotifUnread(0);
+    }
+  }
 
   const load = useCallback(async () => {
     const res = await fetch('/api/vendor/leads');
     if (res.status === 401) { setSignedIn(false); setChecking(false); return; }
     const data = await res.json();
     setLeads(data.leads || []); setSignedIn(true); setChecking(false);
+    const n = await fetch('/api/vendor/notifications').then((r) => r.json()).catch(() => null);
+    if (n?.ok) { setNotifs(n.notifications || []); setNotifUnread(n.unread || 0); }
   }, []);
 
   useEffect(() => {
@@ -145,9 +158,28 @@ export default function VendorLeadsPage() {
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <nav className="ld-nav">
         <a className="ld-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>Leads</span></a>
-        <a className="ld-link" href="/vendor/listings">Your listings</a>
+        <div className="ld-navr">
+          <button className="ld-bell" onClick={toggleNotifs} aria-label="Notifications">Alerts{notifUnread > 0 && <span className="ld-belldot">{notifUnread}</span>}</button>
+          <a className="ld-link" href="/vendor/portal">Profile</a>
+          <a className="ld-link" href="/vendor/listings">Your listings</a>
+        </div>
       </nav>
       <main className="ld-wrap">
+        {notifOpen && (
+          <div className="ld-notifs">
+            <div className="ld-notifhead"><b>Notifications</b><button onClick={() => setNotifOpen(false)}>Close</button></div>
+            {notifs.length === 0 ? <p className="ld-notifempty">Nothing yet — new leads, messages, and buyer decisions show here.</p> : (
+              <ul>
+                {notifs.map((n) => (
+                  <li key={n.id} className={n.read_at ? '' : 'unread'}>
+                    <span>{n.title}</span>
+                    <small>{new Date(n.created_at).toLocaleDateString()}</small>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
         <h1>Leads inbox {leads.filter((l) => l.status === 'new').length > 0 && <span className="ld-newcnt">{leads.filter((l) => l.status === 'new').length} new</span>}</h1>
         <p className="ld-sub">Buyers who requested a quote or service from your listings. Respond inside NXT{'//'}LINK.</p>
         {checking ? <div className="ld-empty">Loading…</div>
@@ -306,6 +338,18 @@ const CSS = `
 .ld-brand b{font-size:17px;}.ld-brand i{color:#A78BFA;font-style:normal;}
 .ld-brand span{color:#8080A0;font-size:13px;}
 .ld-link{color:#A78BFA;font-size:13.5px;font-weight:600;text-decoration:none;}
+.ld-navr{display:flex;align-items:center;gap:14px;}
+.ld-bell{position:relative;font-family:inherit;font-size:13px;font-weight:600;color:#C4B5FD;background:rgba(124,92,252,.1);border:1px solid rgba(124,92,252,.35);border-radius:99px;padding:7px 14px;cursor:pointer;}
+.ld-belldot{margin-left:7px;background:#EF4444;color:#fff;font-size:11px;font-weight:800;border-radius:99px;padding:1px 7px;}
+.ld-notifs{background:#12121B;border:1px solid rgba(124,92,252,.3);border-radius:14px;padding:16px 18px;margin:0 0 18px;}
+.ld-notifhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.ld-notifhead b{font-size:14.5px;}
+.ld-notifhead button{background:none;border:none;color:#8080A0;font:inherit;font-size:12.5px;cursor:pointer;}
+.ld-notifempty{color:#8080A0;font-size:13.5px;margin:4px 0;}
+.ld-notifs ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;max-height:280px;overflow-y:auto;}
+.ld-notifs li{display:flex;justify-content:space-between;gap:12px;padding:9px 10px;border-radius:9px;font-size:13.5px;color:#C0C0D0;}
+.ld-notifs li.unread{background:rgba(124,92,252,.08);color:#F0F0F5;font-weight:500;}
+.ld-notifs li small{color:#8080A0;white-space:nowrap;}
 .ld-wrap{max-width:760px;margin:0 auto;padding:36px 20px 100px;}
 .ld-wrap h1{font-size:28px;font-weight:800;letter-spacing:-.02em;}
 .ld-newcnt{font-size:12px;font-weight:700;color:#C4B5FD;background:rgba(124,92,252,.15);border-radius:99px;padding:4px 12px;vertical-align:6px;margin-left:8px;}

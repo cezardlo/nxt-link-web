@@ -50,12 +50,25 @@ export default function BuyerDashboardPage() {
   const [chatBusy, setChatBusy] = useState(false);
   const chatListRef = useRef<HTMLDivElement>(null);
   useEffect(() => { chatListRef.current?.scrollTo({ top: chatListRef.current.scrollHeight }); }, [chatMsgs, chatFor]);
+  const [notifs, setNotifs] = useState<Array<{ id: string; title: string; read_at: string | null; created_at: string }>>([]);
+  const [notifUnread, setNotifUnread] = useState(0);
+  const [notifOpen, setNotifOpen] = useState(false);
+  async function toggleNotifs() {
+    const next = !notifOpen;
+    setNotifOpen(next);
+    if (next && notifUnread > 0) {
+      await fetch('/api/buyer/notifications', { method: 'POST' });
+      setNotifUnread(0);
+    }
+  }
 
   const load = useCallback(async () => {
     try {
       const res = await fetch('/api/buyer/dashboard');
       const json = (await res.json()) as DashboardData;
       setData(json);
+      const n = await fetch('/api/buyer/notifications').then((r) => r.json()).catch(() => null);
+      if (n?.ok) { setNotifs(n.notifications || []); setNotifUnread(n.unread || 0); }
     } catch {
       setData({ signed_in: false });
     } finally {
@@ -111,6 +124,9 @@ export default function BuyerDashboardPage() {
       <nav className="by-nav">
         <a className="by-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>Dashboard</span></a>
         <div className="by-navlinks">
+          <button className="by-bell" onClick={toggleNotifs} aria-label="Notifications">
+            Alerts{notifUnread > 0 && <span className="by-belldot">{notifUnread}</span>}
+          </button>
           <a className="by-link" href="/marketplace">Browse marketplace</a>
           <a className="by-link" href="/intake">Describe a need</a>
           <a className="by-link" href="/account">Account</a>
@@ -120,6 +136,22 @@ export default function BuyerDashboardPage() {
       <main className="by-wrap">
         <h1>Your dashboard</h1>
         {data.email && <p className="by-sub">Signed in as {data.email}</p>}
+
+        {notifOpen && (
+          <div className="by-notifs">
+            <div className="by-notifhead"><b>Notifications</b><button onClick={() => setNotifOpen(false)}>Close</button></div>
+            {notifs.length === 0 ? <p className="by-notifempty">Nothing yet — you&apos;ll see quotes, messages, and pilot updates here.</p> : (
+              <ul>
+                {notifs.map((n) => (
+                  <li key={n.id} className={n.read_at ? '' : 'unread'}>
+                    <span>{n.title}</span>
+                    <small>{fmtDate(n.created_at)}</small>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         {checking ? (
           <div className="by-empty">Loading…</div>
@@ -302,6 +334,17 @@ const CSS = `
 .by-sechead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,.06);padding-bottom:8px;}
 .by-sechead h2{font-size:16px;font-weight:700;letter-spacing:-.01em;}
 .by-cnt{font-size:11.5px;font-weight:700;color:#C4B5FD;background:rgba(124,92,252,.14);border-radius:99px;padding:2px 9px;margin-left:7px;vertical-align:2px;}
+.by-bell{position:relative;font-family:inherit;font-size:13.5px;font-weight:600;color:#C4B5FD;background:rgba(124,92,252,.1);border:1px solid rgba(124,92,252,.35);border-radius:99px;padding:7px 14px;cursor:pointer;}
+.by-belldot{margin-left:7px;background:#EF4444;color:#fff;font-size:11px;font-weight:800;border-radius:99px;padding:1px 7px;}
+.by-notifs{background:#12121B;border:1px solid rgba(124,92,252,.3);border-radius:14px;padding:16px 18px;margin:14px 0 6px;}
+.by-notifhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.by-notifhead b{font-size:14.5px;}
+.by-notifhead button{background:none;border:none;color:#8080A0;font:inherit;font-size:12.5px;cursor:pointer;}
+.by-notifempty{color:#8080A0;font-size:13.5px;margin:4px 0;}
+.by-notifs ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;max-height:280px;overflow-y:auto;}
+.by-notifs li{display:flex;justify-content:space-between;gap:12px;padding:9px 10px;border-radius:9px;font-size:13.5px;color:#C0C0D0;}
+.by-notifs li.unread{background:rgba(124,92,252,.08);color:#F0F0F5;font-weight:500;}
+.by-notifs li small{color:#8080A0;white-space:nowrap;}
 .by-listinglink{text-decoration:none;color:inherit;}
 .by-listinglink:hover b{color:#C4B5FD;}
 .by-list{display:flex;flex-direction:column;gap:14px;}

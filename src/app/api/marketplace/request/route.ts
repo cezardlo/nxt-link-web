@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { tableFor } from '@/lib/marketplace/types';
+import { notifyVendor } from '@/lib/notify';
 import { sendZohoMail } from '@/lib/zoho/mail';
 
 export async function POST(req: Request) {
@@ -57,6 +58,8 @@ export async function POST(req: Request) {
   if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
 
   // Best-effort: tell the vendor a lead arrived (never blocks the response).
+  const { data: qrRow } = await db.from('quote_requests').select('id').eq('public_ref', data.public_ref).maybeSingle();
+  await notifyVendor(db, listing.vendor_id as string, (qrRow?.id as string) || null, 'new_lead', `New ${REQUEST_LABEL[requestType]} from ${company} for "${listing.name}"`);
   const { data: v } = await db.from('vendor_profiles').select('email, company_name').eq('id', listing.vendor_id).maybeSingle();
   if (v?.email) {
     sendZohoMail({

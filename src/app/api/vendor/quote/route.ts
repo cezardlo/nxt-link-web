@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getVendorSession, getOrCreateVendorProfile } from '@/lib/vendor/auth';
 import { calculateFee, DEFAULT_FEE_POLICY } from '@/lib/fees/engine';
+import { notifyBuyer } from '@/lib/notify';
 import { sendZohoMail } from '@/lib/zoho/mail';
 
 const PROTECTED_PERIOD_DAYS = 90;
@@ -75,6 +76,7 @@ export async function POST(req: Request) {
   if (comErr) return NextResponse.json({ ok: false, message: comErr.message }, { status: 500 });
 
   // Tell the buyer a quote is waiting for them inside NXT//LINK.
+  await notifyBuyer(db, (opp.email as string) || '', id, 'quote', `${vendor.company_name} sent you a quote (${opp.public_ref})`);
   if (opp.email) {
     sendZohoMail({
       to: opp.email as string,
