@@ -19,6 +19,7 @@ interface Lead {
   id: string; public_ref: string; kind: string; listing_name: string | null;
   company: string; contact_name: string | null; email: string | null; phone: string | null;
   contact_hidden?: boolean;
+  buyer_profile?: { company_name: string | null; contact_name: string | null; position: string | null; industry: string | null; city: string | null; phone: string | null; logo_url: string | null } | null;
   message: string | null; status: string; created_at: string;
   answers?: { request_type?: string } | null;
   quote_amount?: number | null; quote_currency?: string | null; quote_message?: string | null;
@@ -228,6 +229,22 @@ export default function VendorLeadsPage() {
                   </div>
                   {l.message && <p className="ld-msg">{l.message}</p>}
 
+                  {/* Buyer profile card — revealed after acceptance */}
+                  {l.buyer_profile && (
+                    <div className="ld-buyercard">
+                      <div className="ld-buyerlogo">{l.buyer_profile.logo_url ? <img src={l.buyer_profile.logo_url} alt="" /> : <span>{(l.buyer_profile.company_name || l.company || '?').slice(0, 2).toUpperCase()}</span>}</div>
+                      <div className="ld-buyerinfo">
+                        <b>{l.buyer_profile.company_name || l.company}</b>
+                        <small>
+                          {[l.buyer_profile.contact_name, l.buyer_profile.position].filter(Boolean).join(' · ')}
+                          {l.buyer_profile.industry ? ` · ${l.buyer_profile.industry}` : ''}
+                          {l.buyer_profile.city ? ` · ${l.buyer_profile.city}` : ''}
+                        </small>
+                        {l.buyer_profile.phone && <small>{l.buyer_profile.phone}</small>}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Quote answer + commission — the deal stays inside NXT//LINK */}
                   <div className="ld-quote">
                     {l.buyer_decision && <div className={'ld-decision ' + l.buyer_decision}>Buyer {l.buyer_decision} your quote</div>}
@@ -432,6 +449,12 @@ const CSS = `
 .ld-contact{display:flex;gap:14px;flex-wrap:wrap;font-size:13.5px;color:#C0C0D0;margin-top:10px;}
 .ld-contact a{color:#A78BFA;}
 .ld-hiddenc{color:#FBBF24;font-size:12.5px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:5px 10px;}
+.ld-buyercard{display:flex;align-items:center;gap:13px;margin-top:12px;background:rgba(52,211,153,.05);border:1px solid rgba(52,211,153,.25);border-radius:12px;padding:12px 14px;}
+.ld-buyerlogo{width:46px;height:46px;flex-shrink:0;border-radius:11px;border:1px solid rgba(255,255,255,.1);background:#0A0A0F;display:grid;place-items:center;overflow:hidden;font-size:14px;font-weight:800;color:#34D399;}
+.ld-buyerlogo img{width:100%;height:100%;object-fit:contain;}
+.ld-buyerinfo{display:flex;flex-direction:column;gap:3px;}
+.ld-buyerinfo b{font-size:14.5px;}
+.ld-buyerinfo small{color:#8080A0;font-size:12.5px;line-height:1.45;}
 .ld-guardnote{margin:9px 0 0;font-size:11.5px;color:#8080A0;line-height:1.5;}
 .ld-msg{margin:12px 0 0;font-size:14px;color:#D5D4E0;line-height:1.6;background:#111118;border-radius:10px;padding:12px 14px;white-space:pre-wrap;}
 .ld-quote{margin-top:14px;border-top:1px solid rgba(255,255,255,.07);padding-top:14px;}

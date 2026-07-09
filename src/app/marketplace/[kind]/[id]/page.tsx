@@ -74,6 +74,17 @@ export default function ListingDetailPage() {
       .then((r) => r.json())
       .then((data) => { if (data.ok) setD(data); else setMissing(true); })
       .catch(() => setMissing(true));
+    // Signed-in buyers: prefill the request form from their profile.
+    fetch('/api/buyer/profile')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((me) => {
+        if (!me?.ok || !me.profile) return;
+        setCompany((v) => v || me.profile.company_name || '');
+        setContact((v) => v || me.profile.contact_name || '');
+        setEmail((v) => v || me.profile.buyer_email || '');
+        setPhone((v) => v || me.profile.phone || '');
+      })
+      .catch(() => {});
   }, [params.id, kind]);
 
   async function submitQuote(e: React.FormEvent) {

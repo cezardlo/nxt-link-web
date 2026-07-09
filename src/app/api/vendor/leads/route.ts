@@ -37,6 +37,23 @@ export async function GET() {
   for (const r of sRes.data || []) names.set(r.id as string, r.name as string);
   const commissions = new Map<string, unknown>();
   for (const c of cRes.data || []) commissions.set(c.quote_request_id as string, c);
+
+  // Buyer profile cards — shared ONLY for accepted deals (anti-circumvention).
+  const acceptedEmails = Array.from(new Set(rows.filter((l) => l.buyer_decision === 'accepted' && l.email).map((l) => (l.email as string).toLowerCase())));
+  const profiles = new Map<string, Record<string, unknown>>();
+  if (acceptedEmails.length) {
+    const { data: profRows } = await db.from('buyer_profiles')
+      .select('buyer_email, company_name, contact_name, position, industry, city, phone, logo_path')
+      .in('buyer_email', acceptedEmails);
+    for (const p of profRows || []) {
+      let logo_url: string | null = null;
+      if (p.logo_path) {
+        const { data: signed } = await db.storage.from('vendor-logos').createSignedUrl(p.logo_path as string, 3600);
+        logo_url = signed?.signedUrl || null;
+      }
+      profiles.set((p.buyer_email as string).toLowerCase(), { company_name: p.company_name, contact_name: p.contact_name, position: p.position, industry: p.industry, city: p.city, phone: p.phone, logo_url });
+    }
+  }
   const pilotsByQr = new Map<string, unknown[]>();
   for (const p of piRes.data || []) {
     const arr = pilotsByQr.get(p.quote_request_id as string) || [];
@@ -54,6 +71,7 @@ export async function GET() {
         email: revealed ? l.email : null,
         phone: revealed ? l.phone : null,
         contact_hidden: !revealed,
+        buyer_profile: revealed && l.email ? profiles.get((l.email as string).toLowerCase()) || null : null,
         listing_name: names.get((l.product_id || l.service_id) as string) || null,
         commission: commissions.get(l.id) || null,
         pilots: pilotsByQr.get(l.id) || [],
