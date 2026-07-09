@@ -5,7 +5,15 @@
 import Link from 'next/link';
 
 const CSS = `
-.wl-root{min-height:100vh;background:#0B0B12;color:#EDECF5;font-family:'Outfit',system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 20px}
+.wl-root{min-height:100vh;background:#0B0B12;color:#EDECF5;font-family:'Outfit',system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:88px 20px 48px;position:relative}
+.wl-nav{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:16px 26px}
+.wl-navbrand{font-size:16px;font-weight:800;letter-spacing:-.02em}
+.wl-navbrand span{color:#7C5CFC}
+.wl-navr{display:flex;gap:16px;align-items:center}
+.wl-navr a{color:#9A97AF;font-size:13.5px;font-weight:600;text-decoration:none}
+.wl-navr a:hover{color:#EDECF5}
+.wl-navcta{background:#7C5CFC;color:#fff !important;padding:9px 16px;border-radius:10px}
+.wl-navcta:hover{background:#6344DF}
 .wl-brand{font-size:15px;letter-spacing:.35em;color:#7C5CFC;font-weight:700;margin-bottom:14px}
 .wl-h1{font-size:clamp(26px,4.5vw,40px);font-weight:700;text-align:center;line-height:1.15;max-width:680px}
 .wl-sub{margin-top:12px;color:#9A97AF;font-size:16px;text-align:center;max-width:560px;line-height:1.5}
@@ -51,6 +59,14 @@ export default function Home() {
   return (
     <div className="wl-root">
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
+      <nav className="wl-nav">
+        <span className="wl-navbrand">NXT<span>{'//'}</span>LINK</span>
+        <div className="wl-navr">
+          <Link href="/marketplace">Marketplace</Link>
+          <Link href="/login">Sign in</Link>
+          <Link className="wl-navcta" href="/signup">Create account</Link>
+        </div>
+      </nav>
       <div className="wl-brand">NXT//LINK</div>
       <h1 className="wl-h1">We connect industrial problems with the right problem-solvers.</h1>
       <p className="wl-sub">

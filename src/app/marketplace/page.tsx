@@ -7,7 +7,7 @@
 // derived from real vendor-entered listing data — nothing is invented. If a
 // field is empty, its badge/filter option does not appear.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 
 interface Card {
@@ -135,6 +135,32 @@ export default function MarketplacePage() {
   const [compare, toggleCompare] = useLocalSet('nxt_compare');
   const [showCompare, setShowCompare] = useState(false);
   const [savedOnly, setSavedOnly] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  // Shareable URLs: read ?q= and ?tab= on load, keep them in sync after.
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const q0 = sp.get('q'); const t0 = sp.get('tab');
+    if (q0) setQ(q0);
+    if (t0 === 'product' || t0 === 'service' || t0 === 'solution') setTab(t0);
+    // Autofocus search on desktop only (avoid popping the mobile keyboard).
+    if (window.innerWidth > 860) searchRef.current?.focus();
+  }, []);
+  useEffect(() => {
+    const sp = new URLSearchParams();
+    if (q.trim()) sp.set('q', q.trim());
+    if (tab !== 'all') sp.set('tab', tab);
+    const qs = sp.toString();
+    window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
+    document.title = q.trim() ? `${q.trim()} — NXT//LINK Marketplace` : 'Marketplace — NXT//LINK';
+  }, [q, tab]);
+  // Escape closes the mobile filter drawer.
+  useEffect(() => {
+    if (!drawer) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setDrawer(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [drawer]);
 
   // Fetch the full published set once; all search/filter/sort is client-side so
   // facets always reflect real, available data.
@@ -244,6 +270,7 @@ export default function MarketplacePage() {
         <div className="mk-searchwrap">
           <SearchIcon />
           <input
+            ref={searchRef}
             className="mk-search"
             placeholder="Search products, services, or a problem — e.g. “forklift maintenance El Paso”, “reduce downtime”"
             value={q}
@@ -311,9 +338,25 @@ export default function MarketplacePage() {
           {/* Results */}
           <main className="mk-results">
             <div className="mk-count">
-              {loading ? 'Loading…' : `${results.length} ${results.length === 1 ? 'result' : 'results'}`}
+              {loading ? 'Loading…' : `${results.length} ${tab === 'product' ? (results.length === 1 ? 'product' : 'products') : tab === 'service' ? (results.length === 1 ? 'service' : 'services') : (results.length === 1 ? 'result' : 'results')}`}
               {q && !loading ? <> for <b>“{q}”</b></> : null}
             </div>
+            {activeFilterCount > 0 && (
+              <div className="mk-activechips">
+                {fCategory && <button onClick={() => setFCategory('')}>{fCategory} ✕</button>}
+                {fIndustry && <button onClick={() => setFIndustry('')}>{fIndustry} ✕</button>}
+                {fArea && <button onClick={() => setFArea('')}>{fArea} ✕</button>}
+                {fPricing && <button onClick={() => setFPricing('')}>{fPricing} ✕</button>}
+                {fPilot && <button onClick={() => setFPilot(false)}>Pilot ✕</button>}
+                {fWarranty && <button onClick={() => setFWarranty(false)}>Warranty ✕</button>}
+                {fLocal && <button onClick={() => setFLocal(false)}>Local support ✕</button>}
+                {fFast && <button onClick={() => setFFast(false)}>Fast ✕</button>}
+                {fEmergency && <button onClick={() => setFEmergency(false)}>24/7 ✕</button>}
+                {fVerified && <button onClick={() => setFVerified(false)}>Verified ✕</button>}
+                {fCases && <button onClick={() => setFCases(false)}>Case studies ✕</button>}
+                <button className="all" onClick={resetFilters}>Clear all</button>
+              </div>
+            )}
 
             {loading ? (
               <div className="mk-skeletons">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="mk-skel" />)}</div>
@@ -342,7 +385,9 @@ export default function MarketplacePage() {
       {/* Compare bar */}
       {compareCards.length > 0 && (
         <div className="mk-cbar">
-          <span>{compareCards.length} to compare</span>
+          <span className="mk-cnames" title={compareCards.map((c) => c.name).join(' · ')}>
+            <b>{compareCards.length}</b> to compare: {compareCards.map((c) => c.name).join(' · ').slice(0, 70)}{compareCards.map((c) => c.name).join(' · ').length > 70 ? '…' : ''}
+          </span>
           <button className="mk-mini on" onClick={() => setShowCompare(true)} disabled={compareCards.length < 2}>Compare now</button>
           <button className="mk-mini" onClick={() => compareCards.forEach((c) => toggleCompare(c.id))}>Clear</button>
         </div>
@@ -360,7 +405,7 @@ function ListingCard({ c, saved, inCompare, onSave, onCompare }: { c: Card; save
   return (
     <div className="mk-card">
       <Link href={`/marketplace/${c.kind}/${c.id}`} className="mk-card-img">
-        {c.image_url ? <img src={c.image_url} alt={c.name} /> : <div className="mk-noimg">{c.kind === 'product' ? 'Product' : 'Service'}</div>}
+        {c.image_url ? <img src={c.image_url} alt={c.name} loading="lazy" /> : <div className="mk-noimg">{c.kind === 'product' ? 'Product' : 'Service'}</div>}
       </Link>
       <div className="mk-card-body">
         <div className="mk-kindrow">
@@ -545,8 +590,14 @@ const CSS = `
 .mk-facetcheck input{accent-color:#7C5CFC;width:15px;height:15px;}
 .mk-railnote{font-size:11.5px;color:#5A5A70;line-height:1.5;margin:2px 0 0;}
 .mk-results{min-width:0;}
-.mk-count{font-size:13.5px;color:#8080A0;margin:4px 2px 16px;}
+.mk-count{font-size:13.5px;color:#8080A0;margin:4px 2px 12px;}
 .mk-count b{color:#C4B5FD;}
+.mk-activechips{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 16px;}
+.mk-activechips button{font-family:inherit;font-size:12px;font-weight:600;padding:6px 11px;border-radius:99px;border:1px solid rgba(124,92,252,.4);background:rgba(124,92,252,.12);color:#C4B5FD;cursor:pointer;}
+.mk-activechips button:hover{background:rgba(124,92,252,.22);}
+.mk-activechips button.all{border-color:rgba(255,255,255,.14);background:none;color:#8080A0;}
+.mk-cnames{max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.mk-cnames b{color:#C4B5FD;}
 .mk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px;}
 .mk-card{background:#14141F;border:1px solid rgba(255,255,255,.08);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .15s,transform .15s;}
 .mk-card:hover{border-color:rgba(124,92,252,.5);transform:translateY(-2px);}

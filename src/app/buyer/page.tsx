@@ -4,7 +4,7 @@
 // requests (NXT-assisted) and marketplace quote/service requests (self-service),
 // matched server-side to their verified email, plus saved listings (localStorage).
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 
 interface IntakeRequest {
@@ -14,6 +14,7 @@ interface IntakeRequest {
 }
 interface QuoteRequest {
   id: string; public_ref: string; kind: string; listing_name: string | null;
+  product_id?: string | null; service_id?: string | null;
   company: string | null; message: string | null; status: string; created_at: string;
   quote_amount?: number | null; quote_currency?: string | null; quote_message?: string | null;
   quote_timeline?: string | null; quote_valid_until?: string | null; quoted_at?: string | null;
@@ -47,6 +48,8 @@ export default function BuyerDashboardPage() {
   const [chatMsgs, setChatMsgs] = useState<Array<{ id: string; sender: string; body: string; created_at: string }>>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatBusy, setChatBusy] = useState(false);
+  const chatListRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { chatListRef.current?.scrollTo({ top: chatListRef.current.scrollHeight }); }, [chatMsgs, chatFor]);
 
   const load = useCallback(async () => {
     try {
@@ -61,6 +64,7 @@ export default function BuyerDashboardPage() {
   }, []);
 
   useEffect(() => {
+    document.title = 'My dashboard — NXT//LINK';
     try { setSavedCount(new Set(JSON.parse(localStorage.getItem('nxt_saved') || '[]')).size); } catch { /* ignore */ }
     const sb = createBrowserSupabaseClient();
     sb.auth.getSession().then(({ data: s }) => { if (s.session) load(); else setChecking(false); });
@@ -142,7 +146,7 @@ export default function BuyerDashboardPage() {
 
             {/* NXT-assisted intake requests */}
             <section className="by-sec">
-              <div className="by-sechead"><h2>Your requests</h2><a className="by-link" href="/intake">+ New request</a></div>
+              <div className="by-sechead"><h2>Your requests {requests.length > 0 && <small className="by-cnt">{requests.length}</small>}</h2><a className="by-link" href="/intake">+ New request</a></div>
               {requests.length === 0 ? (
                 <div className="by-empty sm">No requests yet. <a href="/intake">Describe what you need</a> and NXT//LINK will help.</div>
               ) : (
@@ -168,7 +172,7 @@ export default function BuyerDashboardPage() {
 
             {/* Self-service marketplace quote requests */}
             <section className="by-sec">
-              <div className="by-sechead"><h2>Quote requests</h2><a className="by-link" href="/marketplace">Browse listings</a></div>
+              <div className="by-sechead"><h2>Quote requests {quotes.length > 0 && <small className="by-cnt">{quotes.length}</small>}</h2><a className="by-link" href="/marketplace">Browse listings</a></div>
               {quotes.length === 0 ? (
                 <div className="by-empty sm">No quote requests yet. <a href="/marketplace">Find a product or service</a> and request a quote.</div>
               ) : (
@@ -177,7 +181,11 @@ export default function BuyerDashboardPage() {
                     <div className="by-card" key={q.id}>
                       <div className="by-top">
                         <span className={'by-status ' + (q.status === 'responded' ? 'resp' : '')}>{QUOTE_LABEL[q.status] || q.status}</span>
-                        <b>{q.listing_name || (q.kind === 'service' ? 'Service request' : 'Product request')}</b>
+                        {(q.product_id || q.service_id) ? (
+                          <a className="by-listinglink" href={`/marketplace/${q.kind}/${q.product_id || q.service_id}`}><b>{q.listing_name || (q.kind === 'service' ? 'Service request' : 'Product request')}</b></a>
+                        ) : (
+                          <b>{q.listing_name || (q.kind === 'service' ? 'Service request' : 'Product request')}</b>
+                        )}
                         <small>{fmtDate(q.created_at)}</small>
                         <span className="by-ref">{q.public_ref}</span>
                       </div>
@@ -186,7 +194,7 @@ export default function BuyerDashboardPage() {
                       <div className="by-chat">
                         {chatFor === q.id ? (
                           <div className="by-chatbox">
-                            <div className="by-chatlist">
+                            <div className="by-chatlist" ref={chatListRef}>
                               {chatMsgs.length === 0 && <div className="by-chatempty">No messages yet — ask the vendor anything.</div>}
                               {chatMsgs.map((m) => (
                                 <div key={m.id} className={'by-bubble ' + (m.sender === 'buyer' ? 'me' : 'them')}>
@@ -293,6 +301,9 @@ const CSS = `
 .by-sec{margin-top:34px;}
 .by-sechead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,.06);padding-bottom:8px;}
 .by-sechead h2{font-size:16px;font-weight:700;letter-spacing:-.01em;}
+.by-cnt{font-size:11.5px;font-weight:700;color:#C4B5FD;background:rgba(124,92,252,.14);border-radius:99px;padding:2px 9px;margin-left:7px;vertical-align:2px;}
+.by-listinglink{text-decoration:none;color:inherit;}
+.by-listinglink:hover b{color:#C4B5FD;}
 .by-list{display:flex;flex-direction:column;gap:14px;}
 .by-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px 18px;}
 .by-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}

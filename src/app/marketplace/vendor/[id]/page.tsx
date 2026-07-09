@@ -43,7 +43,10 @@ export default function VendorStorefrontPage() {
   useEffect(() => {
     fetch(`/api/marketplace/vendor/${params.id}`)
       .then((r) => r.json())
-      .then((data) => { if (data.ok) setD(data); else setMissing(true); })
+      .then((data) => {
+        if (data.ok) { setD(data); document.title = `${data.vendor.company_name} — NXT//LINK`; }
+        else setMissing(true);
+      })
       .catch(() => setMissing(true));
     // Facebook-style: if the signed-in vendor is viewing their OWN page,
     // show the Edit profile button.
@@ -153,13 +156,16 @@ export default function VendorStorefrontPage() {
           <section className="vs-sec">
             <h2>Certifications</h2>
             <div className="vs-certs">
-              {d.certifications.map((c) => (
-                <div className="vs-cert" key={c.id}>
-                  <b>{c.name}</b>
-                  <small>{[c.issuer, c.credential && `#${c.credential}`, c.expires_on && `valid through ${c.expires_on}`].filter(Boolean).join(' · ')}</small>
-                  {c.image_url && <a href={c.image_url} target="_blank" rel="noreferrer">View certificate ↗</a>}
-                </div>
-              ))}
+              {d.certifications.map((c) => {
+                const expired = c.expires_on ? new Date(c.expires_on) < new Date() : false;
+                return (
+                  <div className={'vs-cert' + (expired ? ' expired' : '')} key={c.id}>
+                    <b>{c.name}</b>
+                    <small>{[c.issuer, c.credential && `#${c.credential}`, c.expires_on && (expired ? `EXPIRED ${c.expires_on}` : `valid through ${c.expires_on}`)].filter(Boolean).join(' · ')}</small>
+                    {c.image_url && <a href={c.image_url} target="_blank" rel="noreferrer">View certificate ↗</a>}
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}
@@ -222,6 +228,10 @@ export default function VendorStorefrontPage() {
             </div>
           </section>
         )}
+
+        <footer className="vs-foot">
+          Quotes, demos, pilots, and purchases with {v.company_name} run through NXT{'//'}LINK — tracked, protected, and reviewed.
+        </footer>
       </main>
     </div>
   );
@@ -281,6 +291,9 @@ const CSS = `
 .vs-quotecta{margin-top:auto;padding-top:8px;color:#C4B5FD;font-size:12.5px;font-weight:700;}
 .vs-certs{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
 .vs-cert{display:flex;flex-direction:column;gap:5px;background:#14141F;border:1px solid rgba(251,191,36,.25);border-radius:13px;padding:14px 16px;}
+.vs-cert.expired{border-color:rgba(252,165,165,.4);}
+.vs-cert.expired small{color:#FCA5A5;font-weight:600;}
+.vs-foot{margin-top:44px;padding-top:18px;border-top:1px solid rgba(255,255,255,.07);color:#63607A;font-size:12.5px;text-align:center;line-height:1.6;}
 .vs-cert b{font-size:14px;}
 .vs-cert small{color:#8080A0;font-size:12px;line-height:1.45;}
 .vs-cert a{color:#FBBF24;font-size:12.5px;font-weight:600;text-decoration:none;margin-top:3px;}

@@ -3,7 +3,7 @@
 // Vendor leads inbox: quote/service requests from marketplace buyers,
 // scoped to the signed-in vendor's own listings.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 
 interface Commission { commission_amount: number; effective_rate: number; status: string; protected_until: string | null }
@@ -55,6 +55,8 @@ export default function VendorLeadsPage() {
   const [chatMsgs, setChatMsgs] = useState<Array<{ id: string; sender: string; body: string; created_at: string }>>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatBusy, setChatBusy] = useState(false);
+  const chatListRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { chatListRef.current?.scrollTo({ top: chatListRef.current.scrollHeight }); }, [chatMsgs, chatFor]);
 
   const load = useCallback(async () => {
     const res = await fetch('/api/vendor/leads');
@@ -146,8 +148,8 @@ export default function VendorLeadsPage() {
         <a className="ld-link" href="/vendor/listings">Your listings</a>
       </nav>
       <main className="ld-wrap">
-        <h1>Leads inbox</h1>
-        <p className="ld-sub">Buyers who requested a quote or service from your listings.</p>
+        <h1>Leads inbox {leads.filter((l) => l.status === 'new').length > 0 && <span className="ld-newcnt">{leads.filter((l) => l.status === 'new').length} new</span>}</h1>
+        <p className="ld-sub">Buyers who requested a quote or service from your listings. Respond inside NXT{'//'}LINK.</p>
         {checking ? <div className="ld-empty">Loading…</div>
           : !signedIn ? <div className="ld-empty">Sign in first — <a href="/vendor-login">go to sign in</a></div>
           : leads.length === 0 ? <div className="ld-empty">No leads yet. Publish listings so buyers can find you.</div>
@@ -261,7 +263,7 @@ export default function VendorLeadsPage() {
                   <div className="ld-chat">
                     {chatFor === l.id ? (
                       <div className="ld-chatbox">
-                        <div className="ld-chatlist">
+                        <div className="ld-chatlist" ref={chatListRef}>
                           {chatMsgs.length === 0 && <div className="ld-chatempty">No messages yet — say hello.</div>}
                           {chatMsgs.map((m) => (
                             <div key={m.id} className={'ld-bubble ' + (m.sender === 'vendor' ? 'me' : 'them')}>
@@ -306,6 +308,7 @@ const CSS = `
 .ld-link{color:#A78BFA;font-size:13.5px;font-weight:600;text-decoration:none;}
 .ld-wrap{max-width:760px;margin:0 auto;padding:36px 20px 100px;}
 .ld-wrap h1{font-size:28px;font-weight:800;letter-spacing:-.02em;}
+.ld-newcnt{font-size:12px;font-weight:700;color:#C4B5FD;background:rgba(124,92,252,.15);border-radius:99px;padding:4px 12px;vertical-align:6px;margin-left:8px;}
 .ld-sub{color:#8080A0;font-size:14px;margin:6px 0 24px;}
 .ld-empty{text-align:center;color:#8080A0;padding:70px 0;}
 .ld-empty a{color:#A78BFA;}

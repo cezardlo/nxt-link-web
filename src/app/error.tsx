@@ -47,10 +47,10 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
             TRY AGAIN
           </button>
           <Link
-            href="/map"
+            href="/marketplace"
             className="px-4 py-2 border border-white/10 text-white/50 text-[10px] tracking-[0.2em] uppercase hover:bg-white/5 hover:text-white/70 transition-colors"
           >
-            ← BACK TO MAP
+            ← BACK TO MARKETPLACE
           </Link>
         </div>
 

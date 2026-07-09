@@ -34,6 +34,7 @@ export default function SignupPage() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [sent, setSent] = useState(false);
+  const [showPw, setShowPw] = useState(false);
 
   const canContinue = role === 'client' || (role === 'vendor' && !!vendorType);
 
@@ -127,8 +128,11 @@ export default function SignupPage() {
           <p className="su-sub">Account type: <b>{roleLabel}</b></p>
 
           <form onSubmit={submit}>
-            <input type="email" placeholder="Work email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
-            <input type="password" placeholder="Password (8+ characters)" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" />
+            <input type="email" placeholder="Work email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" autoFocus />
+            <div className="su-pwrow">
+              <input type={showPw ? 'text' : 'password'} placeholder="Password (8+ characters)" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" />
+              <button type="button" className="su-pwtoggle" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? 'Hide password' : 'Show password'}>{showPw ? 'Hide' : 'Show'}</button>
+            </div>
             {err && <div className="su-err">{err}</div>}
             <button className="su-btn" type="submit" disabled={busy}>{busy ? 'Creating…' : 'Create account'}</button>
           </form>
@@ -163,6 +167,10 @@ const CSS = `
 .su-chip:hover{border-color:rgba(124,92,252,.5);color:#C4B5FD;}
 .su-chip.on{background:rgba(124,92,252,.15);border-color:#7C5CFC;color:#C4B5FD;}
 .su-back{background:none;border:none;color:#A78BFA;font:inherit;font-size:13px;cursor:pointer;padding:0;margin-bottom:14px;}
+.su-pwrow{position:relative;display:flex;}
+.su-pwrow input{flex:1;padding-right:62px !important;width:100%;}
+.su-pwtoggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:#8080A0;font:600 12px 'Outfit',sans-serif;cursor:pointer;padding:6px;}
+.su-pwtoggle:hover{color:#C4B5FD;}
 .su-card form{display:flex;flex-direction:column;gap:11px;}
 .su-card input{font-family:inherit;font-size:14.5px;padding:12px 14px;border-radius:11px;border:1px solid rgba(255,255,255,.1);background:#0A0A0F;color:#F0F0F5;outline:none;}
 .su-card input:focus{border-color:#7C5CFC;}

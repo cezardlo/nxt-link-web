@@ -56,6 +56,12 @@ export default function ListingDetailPage() {
   const [sentRef, setSentRef] = useState('');
   const [formMsg, setFormMsg] = useState('');
 
+  // Copy-link share
+  const [copied, setCopied] = useState(false);
+  async function copyLink() {
+    try { await navigator.clipboard.writeText(window.location.href); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { /* ignore */ }
+  }
+
   // Report a problem
   const [repOpen, setRepOpen] = useState(false);
   const [repReason, setRepReason] = useState('wrong_info');
@@ -121,8 +127,15 @@ export default function ListingDetailPage() {
     <div className="dt">
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <nav className="dt-nav">
-        <Link className="dt-brand" href="/marketplace">← Marketplace</Link>
-        <span className={'dt-kind ' + kind}>{kind}</span>
+        <div className="dt-crumbs">
+          <Link href="/marketplace">Marketplace</Link>
+          {s(L.category) && <><span>›</span><Link href={`/marketplace?tab=${kind}`}>{s(L.category)}</Link></>}
+          <span>›</span><em>{s(L.name).slice(0, 40)}{s(L.name).length > 40 ? '…' : ''}</em>
+        </div>
+        <div className="dt-navr">
+          <button className="dt-share" onClick={copyLink}>{copied ? 'Link copied ✓' : 'Share'}</button>
+          <span className={'dt-kind ' + kind}>{kind}</span>
+        </div>
       </nav>
 
       <div className="dt-wrap">
@@ -134,7 +147,7 @@ export default function ListingDetailPage() {
                 {d.images.length > 1 && (
                   <div className="dt-thumbs">
                     {d.images.map((im, i) => (
-                      <button key={im.path} className={i === imgIdx ? 'on' : ''} onClick={() => setImgIdx(i)}>{im.url && <img src={im.url} alt="" />}</button>
+                      <button key={im.path} className={i === imgIdx ? 'on' : ''} onClick={() => setImgIdx(i)} aria-label={`Photo ${i + 1}`}>{im.url && <img src={im.url} alt="" loading="lazy" />}</button>
                     ))}
                   </div>
                 )}
@@ -335,6 +348,13 @@ export default function ListingDetailPage() {
           </div>
         </aside>
       </div>
+
+      {/* Mobile: sticky request bar so the action is always reachable */}
+      {!sentRef && (
+        <div className="dt-mobilecta">
+          <a href="#quote">{REQUEST_ACTIONS.find((x) => x.key === requestType)?.label || 'Request Quote'} — through NXT{'//'}LINK</a>
+        </div>
+      )}
     </div>
   );
 }
@@ -355,6 +375,17 @@ const CSS = `
 .dt-empty a{color:#A78BFA;}
 .dt-nav{display:flex;justify-content:space-between;align-items:center;padding:14px 26px;border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);z-index:20;}
 .dt-brand{color:#C0C0D0;text-decoration:none;font-size:14px;font-weight:600;}
+.dt-crumbs{display:flex;align-items:center;gap:8px;font-size:13px;min-width:0;flex-wrap:wrap;}
+.dt-crumbs a{color:#A78BFA;text-decoration:none;font-weight:600;}
+.dt-crumbs a:hover{color:#C4B5FD;}
+.dt-crumbs span{color:#505068;}
+.dt-crumbs em{font-style:normal;color:#C0C0D0;}
+.dt-navr{display:flex;align-items:center;gap:10px;}
+.dt-share{font-family:inherit;font-size:12.5px;font-weight:600;background:none;border:1px solid rgba(255,255,255,.14);color:#C0C0D0;border-radius:9px;padding:7px 13px;cursor:pointer;}
+.dt-share:hover{border-color:#A78BFA;color:#C4B5FD;}
+.dt-mobilecta{display:none;position:fixed;bottom:0;left:0;right:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:rgba(10,10,15,.92);backdrop-filter:blur(16px);border-top:1px solid rgba(124,92,252,.35);z-index:30;}
+.dt-mobilecta a{display:block;text-align:center;background:#7C5CFC;color:#fff;font-weight:700;font-size:14.5px;padding:13px;border-radius:12px;text-decoration:none;}
+@media(max-width:900px){.dt-mobilecta{display:block;}.dt-wrap{padding-bottom:150px;}}
 .dt-kind{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:99px;}
 .dt-kind.product{background:rgba(124,92,252,.15);color:#C4B5FD;}
 .dt-kind.service{background:rgba(52,211,153,.12);color:#34D399;}

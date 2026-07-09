@@ -18,6 +18,7 @@ function LoginInner() {
   const [resent, setResent] = useState(false);
   const [needsVerify, setNeedsVerify] = useState(false);
   const [demoBusy, setDemoBusy] = useState<'vendor' | 'buyer' | null>(null);
+  const [showPw, setShowPw] = useState(false);
 
   async function demoLogin(role: 'vendor' | 'buyer') {
     if (demoBusy) return;
@@ -76,8 +77,11 @@ function LoginInner() {
         <h1>Sign in</h1>
         {confirmed && <div className="li-ok">Email confirmed — sign in below.</div>}
         <form onSubmit={submit}>
-          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
-          <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" autoFocus />
+          <div className="li-pwrow">
+            <input type={showPw ? 'text' : 'password'} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+            <button type="button" className="li-pwtoggle" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? 'Hide password' : 'Show password'}>{showPw ? 'Hide' : 'Show'}</button>
+          </div>
           {err && <div className="li-err">{err}</div>}
           {needsVerify && (
             <div className="li-warn">
@@ -122,6 +126,10 @@ const CSS = `
 .li-ok{background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);color:#6EE7B7;border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:12px;}
 .li-warn{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);color:#FCD34D;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.5;}
 .li-warn button{background:none;border:none;color:#FBBF24;text-decoration:underline;cursor:pointer;font:inherit;padding:0;}
+.li-pwrow{position:relative;display:flex;}
+.li-pwrow input{flex:1;padding-right:62px !important;}
+.li-pwtoggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:#8080A0;font:600 12px 'Outfit',sans-serif;cursor:pointer;padding:6px;}
+.li-pwtoggle:hover{color:#C4B5FD;}
 .li-forgot{color:#8080A0;font-size:12.5px;text-decoration:none;text-align:right;margin-top:-3px;}
 .li-forgot:hover{color:#A78BFA;}
 .li-demo{margin-top:16px;border-top:1px solid rgba(255,255,255,.08);padding-top:14px;}
