@@ -26,21 +26,21 @@ export const viewport = {
   maximumScale: 1,
 };
 
-const siteDescription = 'NXT Link helps industrial and logistics teams hunt down the right technology, narrow the market to 5 vendors, and test before buying.';
+const siteDescription = 'NXT Link is the industrial supply chain marketplace: technology, hardware, equipment, and services for warehouses, manufacturers, and logistics. Discover, compare, request quotes, pilot before buying — deals run through NXT Link.';
 
 export const metadata: Metadata = {
-  title: 'NXT Link - We Hunt. You Test. You Buy Smarter.',
+  title: 'NXT Link — The Industrial Supply Chain Marketplace',
   description: siteDescription,
   robots: { index: true, follow: true },
   openGraph: {
-    title: 'NXT Link - We Hunt. You Test. You Buy Smarter.',
+    title: 'NXT Link — The Industrial Supply Chain Marketplace',
     description: siteDescription,
     siteName: 'NXT Link',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'NXT Link - We Hunt. You Test. You Buy Smarter.',
+    title: 'NXT Link — The Industrial Supply Chain Marketplace',
     description: siteDescription,
   },
   appleWebApp: {

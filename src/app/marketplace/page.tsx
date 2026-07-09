@@ -319,8 +319,8 @@ export default function MarketplacePage() {
       {/* Storefront hero (home state only) */}
       {pristine && !loading && (
         <div className="mk-hero">
-          <h1>Find industrial products &amp; services</h1>
-          <p>Standardized listings from verified Borderplex vendors — compare, request quotes, and run the whole deal through NXT{'//'}LINK.</p>
+          <h1>The industrial supply chain marketplace</h1>
+          <p>Technology, hardware, equipment, and services for warehouses, manufacturers, and logistics — discover, compare, request quotes, pilot, and close the deal through NXT{'//'}LINK.</p>
         </div>
       )}
 

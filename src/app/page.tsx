@@ -68,10 +68,11 @@ export default function Home() {
         </div>
       </nav>
       <div className="wl-brand">NXT//LINK</div>
-      <h1 className="wl-h1">We connect industrial problems with the right problem-solvers.</h1>
+      <h1 className="wl-h1">The industrial supply chain marketplace.</h1>
       <p className="wl-sub">
-        Private, bilingual B2B sourcing for the El Paso–Juárez Borderplex. Confidential by default —
-        identities are revealed only when you approve.
+        Technology, hardware, equipment, and services for warehouses, manufacturers, and logistics —
+        bilingual, built for the El Paso–Juárez Borderplex. Discover openly; quotes, pilots, and deals
+        run through NXT//LINK.
       </p>
       <div className="wl-grid">
         {ROLES.map((r) => (
