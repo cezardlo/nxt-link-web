@@ -87,6 +87,8 @@ export default function Home() {
       <div className="wl-foot">
         <a href="/signup">Create an account</a> · New vendor? <a href="/apply">Apply to join the network</a> ·
         Prefer we find it for you? <a href="/intake">Describe your need</a>
+        <br />
+        <a href="/terms">Terms of Service</a> · <a href="/privacy">Privacy Policy</a>
       </div>
     </div>
   );

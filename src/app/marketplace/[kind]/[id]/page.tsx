@@ -319,7 +319,7 @@ export default function ListingDetailPage() {
                 <textarea placeholder={a.placeholder} rows={4} value={message} onChange={(e) => setMessage(e.target.value)} />
                 {formMsg && <div className="dt-err">{formMsg}</div>}
                 <button type="submit" disabled={sending}>{sending ? 'Sending…' : a.cta}</button>
-                <p className="dt-disclosure">Managed through NXT//LINK. NXT//LINK may receive a commission from the vendor. You compare offers and communicate through the platform; your contact info is never shown publicly.</p>
+                <p className="dt-disclosure">Managed through NXT//LINK. NXT//LINK may receive a commission from the vendor. You compare offers and communicate through the platform; your contact info is never shown publicly. <Link href="/terms">Terms</Link> · <Link href="/privacy">Privacy</Link></p>
               </form>
             )}
             </>
@@ -464,6 +464,7 @@ const CSS = `
 .dt-actions button:hover{border-color:rgba(124,92,252,.5);color:#C4B5FD;}
 .dt-actions button.on{background:rgba(124,92,252,.15);border-color:#7C5CFC;color:#C4B5FD;}
 .dt-disclosure{margin:12px 0 0;font-size:11.5px;line-height:1.5;color:#7A7A92;}
+.dt-disclosure a{color:#9A97AF;}
 .dt-quote form{display:flex;flex-direction:column;gap:10px;margin-top:14px;}
 .dt-quote input,.dt-quote textarea{font-family:inherit;font-size:14px;padding:11px 13px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:#0A0A0F;color:#F0F0F5;outline:none;resize:vertical;}
 .dt-quote input:focus,.dt-quote textarea:focus{border-color:#7C5CFC;}

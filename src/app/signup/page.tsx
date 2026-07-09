@@ -135,6 +135,7 @@ export default function SignupPage() {
             </div>
             {err && <div className="su-err">{err}</div>}
             <button className="su-btn" type="submit" disabled={busy}>{busy ? 'Creating…' : 'Create account'}</button>
+            <p className="su-legal">By creating an account you agree to the <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>.</p>
           </form>
 
           <a className="su-link" href="/login">Already have an account? Sign in</a>
@@ -177,6 +178,8 @@ const CSS = `
 .su-btn{font-family:inherit;font-size:15px;font-weight:700;padding:13px;border-radius:11px;border:none;background:#7C5CFC;color:#fff;cursor:pointer;width:100%;margin-top:4px;}
 .su-btn:hover{background:#6344DF;}.su-btn:disabled{opacity:.45;cursor:not-allowed;}
 .su-err{color:#FCA5A5;font-size:13px;}
+.su-legal{color:#63607A;font-size:11.5px;line-height:1.5;margin:2px 0 0;}
+.su-legal a{color:#9A97AF;}
 .su-hint{color:#63607A;font-size:12.5px;line-height:1.6;margin:16px 0 0;}
 .su-hint a{color:#9A97AF;}
 .su-link{display:block;margin-top:12px;color:#A78BFA;font-size:13.5px;text-decoration:none;}
