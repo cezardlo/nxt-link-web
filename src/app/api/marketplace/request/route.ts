@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { tableFor } from '@/lib/marketplace/types';
 import { notifyVendor } from '@/lib/notify';
-import { sendZohoMail } from '@/lib/zoho/mail';
+import { sendMail } from '@/lib/mail';
 
 export async function POST(req: Request) {
   let body: Record<string, unknown>;
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
   await notifyVendor(db, listing.vendor_id as string, (qrRow?.id as string) || null, 'new_lead', `New ${REQUEST_LABEL[requestType]} from ${company} for "${listing.name}"`);
   const { data: v } = await db.from('vendor_profiles').select('email, company_name').eq('id', listing.vendor_id).maybeSingle();
   if (v?.email) {
-    sendZohoMail({
+    sendMail({
       to: v.email as string,
       subject: `NXT//LINK: new ${REQUEST_LABEL[requestType]} for "${listing.name}"`,
       body: `You have a new ${REQUEST_LABEL[requestType]} (${data.public_ref}) from ${company} for "${listing.name}". Respond inside NXT//LINK — do not contact the buyer off-platform. Open your leads inbox: /vendor/leads`,

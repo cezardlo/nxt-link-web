@@ -10,7 +10,7 @@ import { getVendorSession, getOrCreateVendorProfile } from '@/lib/vendor/auth';
 import { calculateFee, DEFAULT_FEE_POLICY } from '@/lib/fees/engine';
 import { notifyBuyer } from '@/lib/notify';
 import { maskContacts } from '@/lib/guard';
-import { sendZohoMail } from '@/lib/zoho/mail';
+import { sendMail } from '@/lib/mail';
 
 const PROTECTED_PERIOD_DAYS = 90;
 
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
   // Tell the buyer a quote is waiting for them inside NXT//LINK.
   await notifyBuyer(db, (opp.email as string) || '', id, 'quote', `${vendor.company_name} sent you a quote (${opp.public_ref})`);
   if (opp.email) {
-    sendZohoMail({
+    sendMail({
       to: opp.email as string,
       subject: `NXT//LINK: you received a quote (${opp.public_ref})`,
       body: `${vendor.company_name} sent you a quote through NXT//LINK for request ${opp.public_ref}. Review it and accept or decline in your dashboard: /buyer`,

@@ -10,7 +10,7 @@ import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getVendorSession, getOrCreateVendorProfile } from '@/lib/vendor/auth';
 import { ListingKind, tableFor, colsFor, normalizeListingInput } from '@/lib/marketplace/types';
 import { VENDOR_TERMS_VERSION } from '@/lib/vendor/terms';
-import { sendZohoMail } from '@/lib/zoho/mail';
+import { sendMail } from '@/lib/mail';
 
 function kindOf(v: unknown): ListingKind | null {
   return v === 'product' || v === 'service' ? v : null;
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
 
   if (vendor.email) {
     const name = (data as unknown as { name?: string })?.name || 'Your listing';
-    sendZohoMail({
+    sendMail({
       to: vendor.email,
       subject: `NXT//LINK: "${name}" was saved as a ${aiExtracted ? 'draft that needs your review' : 'draft'}`,
       body: `${name} was created in your NXT//LINK listings dashboard. It is NOT public — nothing appears in the marketplace until you review it and confirm its accuracy on the publish screen.`,
@@ -119,7 +119,7 @@ export async function PATCH(req: Request) {
 
   if (wantsPublish && vendor.email) {
     const name = (data as unknown as { name?: string })?.name || 'Your listing';
-    sendZohoMail({
+    sendMail({
       to: vendor.email,
       subject: `NXT//LINK: "${name}" is now live in the marketplace`,
       body: `${name} is published and visible to buyers in the NXT//LINK marketplace. You confirmed its accuracy on ${new Date().toLocaleDateString()}. You can unpublish it anytime from your listings dashboard.`,

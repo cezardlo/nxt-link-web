@@ -8,7 +8,7 @@ import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getVendorSession, getOrCreateVendorProfile } from '@/lib/vendor/auth';
 import { notifyBuyer } from '@/lib/notify';
 import { maskContacts } from '@/lib/guard';
-import { sendZohoMail } from '@/lib/zoho/mail';
+import { sendMail } from '@/lib/mail';
 
 const KINDS = ['demo', 'pilot', 'site_visit'];
 const STATUSES = ['proposed', 'scheduled', 'in_progress', 'completed', 'cancelled'];
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
 
   await notifyBuyer(db, (opp.email as string) || '', qrId, 'pilot', `A ${kind.replace('_', ' ')} was proposed for ${opp.public_ref}`);
   if (opp.email) {
-    sendZohoMail({
+    sendMail({
       to: opp.email as string,
       subject: `NXT//LINK: a ${kind.replace('_', ' ')} was proposed for your request ${opp.public_ref}`,
       body: `${vendor.company_name} proposed a ${kind.replace('_', ' ')} for your request (${opp.public_ref}) through NXT//LINK. Track it in your dashboard: /buyer`,

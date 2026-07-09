@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getVendorSession, getOrCreateVendorProfile } from '@/lib/vendor/auth';
-import { sendZohoMail } from '@/lib/zoho/mail';
+import { sendMail } from '@/lib/mail';
 
 const STATUSES = ['new', 'viewed', 'responded', 'won', 'lost', 'spam'];
 
@@ -85,7 +85,7 @@ export async function PATCH(req: Request) {
   // Tell the buyer when the vendor starts working their request (only
   // 'responded' — internal states like viewed/won/lost stay internal).
   if (body.status === 'responded' && updated?.email) {
-    sendZohoMail({
+    sendMail({
       to: updated.email as string,
       subject: `NXT//LINK: the vendor is responding to your request ${updated.public_ref}`,
       body: `Good news — ${vendor.company_name} is responding to your request (${updated.public_ref}) inside NXT//LINK. See their quote and messages in your dashboard: /buyer`,
