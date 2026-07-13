@@ -10,14 +10,14 @@ export type NavItem = {
 
 export const NAV_ITEMS: NavItem[] = [
   { href: '/briefing', label: 'BRIEFING', icon: '◎', color: '#00d4ff', description: 'Top 3 intelligence today' },
-  { href: '/markets',  label: 'MARKETS',  icon: '◫', color: '#10b981', description: 'Where markets are heading' },
-  { href: '/intel',    label: 'SIGNALS',  icon: '◇', color: '#ffd700', description: 'Browse all signals' },
-  { href: '/vendors',  label: 'VENDORS',  icon: '▦', color: '#3b82f6', description: 'Vendor directory' },
+  { href: '/markets', label: 'MARKETS', icon: '◫', color: '#10b981', description: 'Where markets are heading' },
+  { href: '/intel', label: 'SIGNALS', icon: '◇', color: '#ffd700', description: 'Browse all signals' },
+  { href: '/marketplace', label: 'MARKETPLACE', icon: '▦', color: '#3b82f6', description: 'Companies, products, proof, and matching' },
 ];
 
 export const INDUSTRIES = [
   { id: 'manufacturing', label: 'Manufacturing', icon: '▣', color: '#00ff88', desc: 'Production, robotics, automation' },
-  { id: 'logistics',     label: 'Logistics',     icon: '⬡', color: '#ffd700', desc: 'Supply chain, freight, warehousing' },
+  { id: 'logistics', label: 'Logistics', icon: '⬡', color: '#ffd700', desc: 'Supply chain, freight, warehousing' },
 ] as const;
 
 export type IndustryId = (typeof INDUSTRIES)[number]['id'];
