@@ -2,26 +2,8 @@
 
 import { useState } from 'react';
 import ChatWidget from '@/components/ChatWidget';
+import CategoryPicker from '@/components/CategoryPicker';
 
-// 16 warehouse categories — aligned with the client intake flow.
-const CATEGORIES: { id: string; en: string; es: string }[] = [
-  { id: 'forklift', en: 'Forklift maintenance', es: 'Mantenimiento de montacargas' },
-  { id: 'copier', en: 'Copy machine service', es: 'Servicio de copiadoras' },
-  { id: 'waste', en: 'Waste collection', es: 'Recolección de basura' },
-  { id: 'transport', en: 'Transportation / FTL / LTL', es: 'Transporte / FTL / LTL' },
-  { id: 'labels', en: 'Labels / Zebra', es: 'Etiquetas / Zebra' },
-  { id: 'extinguisher', en: 'Fire extinguisher inspection', es: 'Inspección de extintores' },
-  { id: 'electrical', en: 'Electrical service', es: 'Servicio eléctrico' },
-  { id: 'pallets', en: 'Wooden pallets', es: 'Tarimas de madera' },
-  { id: 'firedoor', en: 'Fire door maintenance', es: 'Puertas contra incendio' },
-  { id: 'it', en: 'IT support', es: 'Soporte IT' },
-  { id: 'maintenance', en: 'General maintenance', es: 'Mantenimiento general' },
-  { id: 'propane', en: 'Propane gas', es: 'Gas propano' },
-  { id: 'pest', en: 'Pest control', es: 'Control de plagas' },
-  { id: 'staffing', en: 'Staffing agency', es: 'Agencia de personal' },
-  { id: 'whtech', en: 'Warehouse technology', es: 'Tecnología para almacén' },
-  { id: 'whparts', en: 'Warehouse products / parts', es: 'Productos / partes' },
-];
 const AREAS = ['El Paso', 'Juárez', 'New Mexico', 'West Texas', 'Cross-border', 'National'];
 
 const T = {
@@ -79,7 +61,7 @@ export default function VendorSignupPage() {
     try {
       const res = await fetch('/api/vendors/signup', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, categories: cats.map((id) => CATEGORIES.find((c) => c.id === id)?.en || id), service_areas: areas, locale: lang }),
+        body: JSON.stringify({ ...form, categories: cats, service_areas: areas, locale: lang }),
       });
       const data = await res.json();
       const vendorId = data.id as string | undefined;
@@ -145,7 +127,7 @@ export default function VendorSignupPage() {
               {step === 1 && (
                 <>
                   <div className="vs-lbl">{t.cats}</div>
-                  <div className="vs-chips">{CATEGORIES.map((c) => (<button key={c.id} type="button" className={'vs-chip' + (cats.includes(c.id) ? ' on' : '')} onClick={() => toggle(cats, c.id, setCats)}>{c[lang]}</button>))}</div>
+                  <CategoryPicker selected={cats} onToggle={(v) => toggle(cats, v, setCats)} lang={lang} />
                   <div className="vs-lbl" style={{ marginTop: 22 }}>{t.areas}</div>
                   <div className="vs-chips">{AREAS.map((a) => (<button key={a} type="button" className={'vs-chip' + (areas.includes(a) ? ' on' : '')} onClick={() => toggle(areas, a, setAreas)}>{a}</button>))}</div>
                   <label className="vs-field" style={{ marginTop: 22 }}><span>{t.desc}</span><textarea rows={4} placeholder={t.descPh} value={form.description} onChange={(e) => set('description', e.target.value)} /></label>

@@ -8,13 +8,8 @@ import {
   EXPERTISE_OPTIONS, PROBLEM_OPTIONS, CAPABILITY_OPTIONS, MAX_EXPERTISE,
   profileCompletion,
 } from '@/lib/vendor/profile-template';
+import CategoryPicker from '@/components/CategoryPicker';
 
-const CATEGORIES = [
-  'Forklift maintenance', 'Copy machine service', 'Waste collection', 'Transportation / FTL / LTL',
-  'Labels / Zebra', 'Fire extinguisher inspection', 'Electrical service', 'Wooden pallets',
-  'Fire door maintenance', 'IT support', 'General maintenance', 'Propane gas', 'Pest control',
-  'Staffing agency', 'Warehouse technology', 'Warehouse products / parts',
-];
 const AREAS = ['El Paso', 'Juárez', 'New Mexico', 'West Texas', 'Cross-border', 'National'];
 const INDUSTRIES = [
   'Warehousing & 3PL', 'Manufacturing', 'Retail & E-commerce', 'Food & Beverage', 'Automotive',
@@ -540,7 +535,7 @@ export default function VendorPortalPage() {
           <div className="vp-lbl" style={{ marginTop: 22 }}>Clients you&apos;re looking for</div>
           <ChipGroup options={CLIENT_TYPES} selected={vendor.client_types || []} onToggle={(v) => toggle(vendor.client_types || [], v, 'client_types')} />
           <div className="vp-lbl" style={{ marginTop: 22 }}>Products / services you sell</div>
-          <ChipGroup options={CATEGORIES} selected={vendor.categories || []} onToggle={(v) => toggle(vendor.categories || [], v, 'categories')} />
+          <CategoryPicker selected={vendor.categories || []} onToggle={(v) => toggle(vendor.categories || [], v, 'categories')} />
           <div className="vp-lbl" style={{ marginTop: 22 }}>Service areas</div>
           <ChipGroup options={AREAS} selected={vendor.service_areas || []} onToggle={(v) => toggle(vendor.service_areas || [], v, 'service_areas')} />
           <div className="vp-lbl" style={{ marginTop: 22 }}>Awards &amp; recognitions</div>
