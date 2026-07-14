@@ -7,7 +7,7 @@
 // derived from real vendor-entered listing data — nothing is invented. If a
 // field is empty, its badge/filter option does not appear.
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   OPERATIONS, areasFor, SOLUTION_TYPES, LOCATION_OPTIONS, SITE_NEEDS, GOALS,
@@ -15,6 +15,16 @@ import {
   EMPTY_GUIDED, guidedIsEmpty, guidedCount, listingMatchesGuided,
   solutionTypeOf, companyMatch, explainMatch,
 } from '@/lib/marketplace/guided-search';
+import { cardPriceText, publicMinPrice } from '@/lib/marketplace/types';
+
+// Budget bands for the price facet — matched against the lowest PUBLIC price
+// on each listing (structured models first, legacy range parsing as fallback).
+const PRICE_BANDS: Array<{ key: string; test: (n: number) => boolean }> = [
+  { key: 'Under $1,000', test: (n) => n < 1000 },
+  { key: '$1,000 – $5,000', test: (n) => n >= 1000 && n < 5000 },
+  { key: '$5,000 – $25,000', test: (n) => n >= 5000 && n < 25000 },
+  { key: '$25,000+', test: (n) => n >= 25000 },
+];
 import {
   type CompanySnapshot, SAVED_COMPANIES_KEY, COMPARE_COMPANIES_KEY,
   readCompanyList, writeCompanyList, CompareDrawer,
@@ -25,7 +35,7 @@ interface Card {
   overview: string | null; best_for: string[]; industries: string[];
   image_url: string | null; vendor_name: string; vendor_city: string | null;
   pilot: { available?: boolean } | null;
-  pricing: { model?: string; range?: string } | null;
+  pricing: { model?: string; range?: string; models?: unknown[]; has_gated_pricing?: boolean } | null;
   warranty_support: { warranty?: string } | null;
   availability?: string[]; lead_time?: string | null; published_at?: string | null;
   service_areas?: string[]; response_time?: string | null; emergency_available?: boolean;
@@ -171,6 +181,7 @@ export default function MarketplacePage() {
   const [fIndustry, setFIndustry] = useState('');
   const [fArea, setFArea] = useState('');
   const [fPricing, setFPricing] = useState('');
+  const [fBand, setFBand] = useState('');
   const [fPilot, setFPilot] = useState(false);
   const [fWarranty, setFWarranty] = useState(false);
   const [fEmergency, setFEmergency] = useState(false);
@@ -211,9 +222,10 @@ export default function MarketplacePage() {
   // Shareable URLs: read ?q= and ?tab= on load, keep them in sync after.
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
-    const q0 = sp.get('q'); const t0 = sp.get('tab');
+    const q0 = sp.get('q'); const t0 = sp.get('tab'); const d0 = sp.get('department');
     if (q0) setQ(q0);
     if (t0 === 'equipment' || t0 === 'product' || t0 === 'technology' || t0 === 'service' || t0 === 'company') setTab(t0);
+    if (d0) setFDept(d0); // homepage "Browse by department" deep links
     // Autofocus search on desktop only (avoid popping the mobile keyboard).
     if (window.innerWidth > 860) searchRef.current?.focus();
   }, []);
@@ -255,7 +267,7 @@ export default function MarketplacePage() {
   }, []);
 
   const resetFilters = () => {
-    setFDept(''); setFCategory(''); setFIndustry(''); setFArea(''); setFPricing('');
+    setFDept(''); setFCategory(''); setFIndustry(''); setFArea(''); setFPricing(''); setFBand('');
     setFPilot(false); setFWarranty(false); setFEmergency(false); setFVerified(false); setFCases(false);
     setFLocal(false); setFFast(false);
     setGuided(EMPTY_GUIDED);
@@ -295,9 +307,16 @@ export default function MarketplacePage() {
       if (isLocal(c)) anyLocal = true;
       if (isFast(c)) anyFast = true;
     }
+    // Price bands offered only when real public prices exist in that band.
+    const bandsPresent = new Set<string>();
+    for (const c of tabCards) {
+      const min = publicMinPrice(c.pricing);
+      if (min !== null) { const b = PRICE_BANDS.find((x) => x.test(min)); if (b) bandsPresent.add(b.key); }
+    }
     const sortArr = (s: Set<string>) => Array.from(s).sort((a, b) => a.localeCompare(b));
     return {
       categories: sortArr(cat), industries: sortArr(ind), areas: sortArr(area), pricing: sortArr(price),
+      bands: PRICE_BANDS.map((b) => b.key).filter((k) => bandsPresent.has(k)),
       anyPilot, anyWarranty, anyEmergency, anyVerified, anyCases, anyLocal, anyFast,
     };
   }, [tabCards]);
@@ -312,6 +331,11 @@ export default function MarketplacePage() {
       if (fIndustry && !(c.industries || []).includes(fIndustry)) return false;
       if (fArea && !(c.service_areas || []).includes(fArea)) return false;
       if (fPricing && (c.pricing?.model || c.pricing_model) !== fPricing) return false;
+      if (fBand) {
+        const min = publicMinPrice(c.pricing);
+        const band = PRICE_BANDS.find((x) => x.key === fBand);
+        if (min === null || !band || !band.test(min)) return false;
+      }
       if (fPilot && !c.pilot?.available) return false;
       if (fWarranty && !c.warranty_support?.warranty) return false;
       if (fEmergency && !c.emergency_available) return false;
@@ -539,6 +563,7 @@ export default function MarketplacePage() {
             <FacetSelect label="Industry" value={fIndustry} onChange={setFIndustry} options={facets.industries} />
             {(tab !== 'product') && facets.areas.length > 0 && <FacetSelect label="Service area" value={fArea} onChange={setFArea} options={facets.areas} />}
             {facets.pricing.length > 0 && <FacetSelect label="Pricing model" value={fPricing} onChange={setFPricing} options={facets.pricing} />}
+            {facets.bands.length > 0 && <FacetSelect label="Price" value={fBand} onChange={setFBand} options={facets.bands} />}
 
             {(facets.anyPilot || facets.anyWarranty || facets.anyEmergency || facets.anyVerified || facets.anyCases || facets.anyLocal || facets.anyFast) && (
               <div className="mk-facet">
@@ -672,7 +697,7 @@ function ListingCard({ c, saved, inCompare, onSave, onCompare }: { c: Card; save
         <div className="mk-meta">
           {c.kind === 'product' && c.lead_time && <span>Lead time: {c.lead_time}</span>}
           {c.kind === 'service' && c.response_time && <span>Response: {c.response_time}</span>}
-          {(c.pricing?.range || c.pricing?.model || c.pricing_model) && <span>{c.pricing?.range || c.pricing?.model || c.pricing_model}</span>}
+          {cardPriceText(c.pricing, c.pricing_model) && <span className="mk-price">{cardPriceText(c.pricing, c.pricing_model)}</span>}
         </div>
         <div className="mk-actions">
           <button className={'mk-mini' + (saved ? ' on' : '')} onClick={onSave}>{saved ? 'Saved' : 'Save'}</button>
@@ -685,11 +710,12 @@ function ListingCard({ c, saved, inCompare, onSave, onCompare }: { c: Card; save
 }
 
 function FacetSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: string[] }) {
+  const id = useId();
   if (options.length === 0) return null;
   return (
     <div className="mk-facet">
-      <label className="mk-facetlabel">{label}</label>
-      <select value={value} onChange={(e) => onChange(e.target.value)}>
+      <label className="mk-facetlabel" htmlFor={id}>{label}</label>
+      <select id={id} value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">All</option>
         {options.map((o) => <option key={o} value={o}>{o}</option>)}
       </select>
@@ -1037,7 +1063,7 @@ function CompareModal({ cards, onClose }: { cards: Card[]; onClose: () => void }
     ['Industries', (c) => c.industries.join(', ') || '—'],
     ['Pilot / demo', (c) => (c.pilot?.available ? 'Available' : '—')],
     ['Lead / response', (c) => c.lead_time || c.response_time || '—'],
-    ['Pricing', (c) => c.pricing?.range || c.pricing?.model || c.pricing_model || 'Request quote'],
+    ['Pricing', (c) => cardPriceText(c.pricing, c.pricing_model) || 'Request quote'],
     ['Warranty', (c) => c.warranty_support?.warranty || '—'],
     ['Service area', (c) => (c.service_areas || []).join(', ') || '—'],
     ['Case studies', (c) => (c.has_case_studies ? 'Yes' : '—')],
@@ -1173,6 +1199,7 @@ const CSS = `
 .mk-tags{display:flex;flex-wrap:wrap;gap:5px;}
 .mk-tags span{font-size:11px;color:#A78BFA;background:rgba(124,92,252,.08);padding:3px 8px;border-radius:6px;}
 .mk-meta{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:#8080A0;margin-top:auto;padding-top:4px;}
+.mk-price{color:#34D399;font-weight:700;}
 .mk-actions{display:flex;gap:8px;margin-top:10px;align-items:center;}
 .mk-mini{font-family:inherit;font-size:12px;font-weight:600;padding:8px 10px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background:none;color:#C0C0D0;cursor:pointer;text-decoration:none;}
 .mk-mini.on{border-color:#7C5CFC;color:#C4B5FD;background:rgba(124,92,252,.1);}

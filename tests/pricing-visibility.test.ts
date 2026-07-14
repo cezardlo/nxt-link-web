@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import {
   cleanPriceModels, cleanPriceComponents, priceLine, componentLine,
-  publicPricing, normalizeListingInput,
+  tierLine, publicMinPrice, publicPricing, normalizeListingInput,
 } from '@/lib/marketplace/types';
 
 function model(overrides: Record<string, unknown> = {}) {
@@ -122,6 +122,40 @@ test('normalizeListingInput preserves structured pricing alongside legacy keys',
   assert.equal(p.visibility, 'signed_in');
   assert.equal((p.models as unknown[]).length, 1);
   assert.equal((p.components as unknown[]).length, 1);
+});
+
+test('quantity tiers normalize, format, and drop incomplete rows', () => {
+  const [m] = cleanPriceModels([model({
+    tiers: [
+      { min_qty: '1', max_qty: '9', unit_amount: '100' },
+      { min_qty: '10', max_qty: '49', unit_amount: '$90' },
+      { min_qty: '50', max_qty: '', unit_amount: '75' },
+      { min_qty: '', max_qty: '99', unit_amount: '60' },   // no min → dropped
+      { min_qty: '100', max_qty: '', unit_amount: '' },    // no price → dropped
+    ],
+  })]);
+  assert.equal(m.tiers.length, 3);
+  assert.equal(tierLine(m.tiers[0]), '1–9 units: $100 each');
+  assert.equal(tierLine(m.tiers[1]), '10–49 units: $90 each');
+  assert.equal(tierLine(m.tiers[2]), '50+ units: $75 each');
+});
+
+test('publicMinPrice picks the lowest public number, ignoring gated and quote-only', () => {
+  assert.equal(publicMinPrice({
+    visibility: 'public',
+    models: [
+      model({ amount: '450', visibility: 'public', tiers: [{ min_qty: '50', max_qty: '', unit_amount: '75' }] }),
+      model({ id: 'b', amount: '5', visibility: 'private' }),          // gated → ignored
+      model({ id: 'c', method: 'quote', amount: '', visibility: 'public' }), // quote-only → ignored
+    ],
+    components: [],
+  }), 75);
+  // Legacy range fallback with k-suffix.
+  assert.equal(publicMinPrice({ range: '$15k-$40k', visibility: 'public', models: [], components: [] }), 15000);
+  // Quote-only listing → null.
+  assert.equal(publicMinPrice({ visibility: 'public', models: [], components: [] }), null);
+  // Gated legacy range → null, not a leak.
+  assert.equal(publicMinPrice({ range: '$5,000', visibility: 'private', models: [], components: [] }), null);
 });
 
 test('normalizeListingInput rejects unknown visibility on the block', () => {

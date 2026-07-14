@@ -15,6 +15,7 @@ import {
   PROFILE_TABS, TAB_LABELS, type ProfileTab,
   isTechnologyCategory, yearsInBusiness,
 } from '@/lib/vendor/profile-template';
+import { cardPriceText } from '@/lib/marketplace/types';
 import {
   type CompanySnapshot, SAVED_COMPANIES_KEY, COMPARE_COMPANIES_KEY,
   readCompanyList, writeCompanyList, CompareDrawer,
@@ -24,7 +25,7 @@ interface ListingCard {
   id: string; kind: 'product' | 'service'; name: string; category: string;
   overview: string | null; best_for?: string[]; image_url: string | null;
   pilot?: { available?: boolean } | null;
-  pricing?: { model?: string; range?: string; buy?: boolean; rent?: boolean; lease?: boolean } | null;
+  pricing?: { model?: string; range?: string; buy?: boolean; rent?: boolean; lease?: boolean; models?: unknown[]; has_gated_pricing?: boolean } | null;
   warranty_support?: { warranty?: string } | null;
   lead_time?: string | null; availability?: string[];
   service_areas?: string[]; response_time?: string | null; emergency_available?: boolean;
@@ -465,7 +466,7 @@ function ListingGrid({ title, items, cta }: { title: string; items: ListingCard[
                 <strong>{l.name}</strong>
                 <small>{l.category}</small>
                 <div className="vs-cmeta">
-                  {(l.pricing?.range || l.pricing_model) && <span>{l.pricing?.range || l.pricing_model}</span>}
+                  {cardPriceText(l.pricing, l.pricing_model) && <span className="vs-price">{cardPriceText(l.pricing, l.pricing_model)}</span>}
                   {buyOpts.length > 0 && <span>{buyOpts.join(' / ')}</span>}
                   {l.lead_time && <span>Lead time: {l.lead_time}</span>}
                   {l.response_time && <span>Response: {l.response_time}</span>}
@@ -639,6 +640,7 @@ const CSS = `
 .vs-cbody strong{font-size:15px;font-weight:700;line-height:1.3;}
 .vs-cbody small{color:#8080A0;font-size:12px;}
 .vs-cmeta{display:flex;flex-direction:column;gap:2px;}
+.vs-price{color:#34D399;font-weight:700;}
 .vs-cmeta span{font-size:11.5px;color:#A0A0B5;}
 .vs-quotecta{margin-top:auto;padding-top:8px;color:#C4B5FD;font-size:12.5px;font-weight:700;}
 .vs-certs{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}

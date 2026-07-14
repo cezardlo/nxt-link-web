@@ -7,6 +7,9 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import {
+  PriceModelEntry, PriceComponentEntry, priceLine, componentLine, tierLine, pricingHasContent,
+} from '@/lib/marketplace/types';
 
 interface Detail {
   kind: 'product' | 'service';
@@ -19,6 +22,48 @@ interface Detail {
   related: { same_vendor: Array<{ id: string; kind: string; name: string; category: string }>; same_category: Array<{ id: string; kind: string; name: string; category: string }> };
 }
 const stars = (n: number) => '★★★★★'.slice(0, Math.round(n)) + '☆☆☆☆☆'.slice(0, 5 - Math.round(n));
+
+/** "Save to project" — adds this listing to the buyer's project shortlist
+ *  (the Deal Room's Vendors tab). Signed-out buyers are pointed to /projects. */
+function SaveToProject({ kind, listingId, vendorId }: { kind: string; listingId: string; vendorId: string }) {
+  const [open, setOpen] = useState(false);
+  const [projects, setProjects] = useState<Array<{ id: string; name: string }> | null>(null);
+  const [signedIn, setSignedIn] = useState(true);
+  const [note, setNote] = useState('');
+  async function toggle() {
+    const next = !open;
+    setOpen(next);
+    if (next && projects === null) {
+      const d = await fetch('/api/projects').then((r) => r.json()).catch(() => null);
+      setSignedIn(Boolean(d?.signed_in));
+      setProjects((d?.projects || []).map((p: { id: string; name: string }) => ({ id: p.id, name: p.name })));
+    }
+  }
+  async function add(pid: string) {
+    const res = await fetch(`/api/projects/${pid}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: 'vendor', vendor_id: vendorId, listing_kind: kind, listing_id: listingId, source: 'saved' }),
+    }).catch(() => null);
+    const d = await res?.json().catch(() => null);
+    setNote(d?.ok ? 'Saved ✓' : (d?.message || 'Could not save'));
+    setOpen(false);
+  }
+  return (
+    <span className="dt-proj">
+      <button className="dt-share" onClick={toggle} aria-expanded={open} aria-haspopup="menu">{note || 'Save to project'}</button>
+      {open && (
+        <div className="dt-projmenu" role="menu">
+          {!signedIn && <Link href="/login">Sign in to use projects →</Link>}
+          {signedIn && (projects || []).length === 0 && <Link href="/projects">Start your first project →</Link>}
+          {signedIn && (projects || []).map((p) => (
+            <button key={p.id} role="menuitem" onClick={() => add(p.id)}>{p.name}</button>
+          ))}
+          {signedIn && (projects || []).length > 0 && <Link href="/projects">+ New project</Link>}
+        </div>
+      )}
+    </span>
+  );
+}
 
 const s = (v: unknown): string => (typeof v === 'string' ? v : '');
 const arr = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : []);
@@ -125,7 +170,7 @@ export default function ListingDetailPage() {
     [kind === 'product' ? 'specs' : 'process', kind === 'product' ? 'Specs' : 'Process', kind === 'product' ? Object.keys(specs).length > 0 : arr(L.process).length > 0],
     ['pilot', 'Pilot / Demo', Object.keys(pilot).length > 0],
     ['implementation', 'Implementation', Object.keys(impl).length > 0],
-    ['pricing', 'Pricing', Object.keys(pricing).length > 0 || Boolean(s(L.pricing_model))],
+    ['pricing', 'Pricing', pricingHasContent(pricing, s(L.pricing_model))],
     ['warranty', 'Warranty & Support', Object.keys(ws).length > 0],
     ['documents', 'Documents', d.documents.length > 0],
     ['cases', 'Case Studies', d.case_studies.length > 0],
@@ -144,6 +189,7 @@ export default function ListingDetailPage() {
           <span>›</span><em>{s(L.name).slice(0, 40)}{s(L.name).length > 40 ? '…' : ''}</em>
         </div>
         <div className="dt-navr">
+          <SaveToProject kind={kind} listingId={params.id} vendorId={s(L.vendor_id)} />
           <button className="dt-share" onClick={copyLink}>{copied ? 'Link copied ✓' : 'Share'}</button>
           <span className={'dt-kind ' + kind}>{kind}</span>
         </div>
@@ -221,14 +267,54 @@ export default function ListingDetailPage() {
                 {arr(impl.integrations).length > 0 && <Item k="Integrations" v={arr(impl.integrations).join(' · ')} />}
               </dl>
             )}
-            {tab === 'pricing' && (
-              <dl className="dt-kv">
-                <Item k="Model" v={s(pricing.model) || s(L.pricing_model)} /><Item k="Range" v={s(pricing.range)} />
-                {(pricing.buy || pricing.rent || pricing.lease) ? <Item k="Options" v={['buy', 'rent', 'lease'].filter((o) => pricing[o]).join(' · ')} /> : null}
-                <Item k="Notes" v={s(pricing.notes)} />
-                {!s(pricing.range) && <p className="dt-hint">Exact pricing depends on your situation — request a quote below.</p>}
-              </dl>
-            )}
+            {tab === 'pricing' && (() => {
+              // Structured pricing (already visibility-gated by the API).
+              const pModels = (Array.isArray(pricing.models) ? pricing.models : []) as PriceModelEntry[];
+              const pComponents = (Array.isArray(pricing.components) ? pricing.components : []) as PriceComponentEntry[];
+              const gated = Boolean(pricing.has_gated_pricing);
+              return (
+                <>
+                  {pModels.length > 0 && (
+                    <ul className="dt-prices">
+                      {pModels.map((m) => (
+                        <li key={m.id}>
+                          <div className="dt-priceline">{m.name && <span>{m.name}</span>}<b>{priceLine(m)}</b></div>
+                          {(m.tiers || []).length > 0 && (
+                            <table className="dt-specs dt-tiertable"><tbody>
+                              {m.tiers.map((t, i) => {
+                                const [range, each] = tierLine(t, m.currency).split(': ');
+                                return <tr key={i}><td>{range}</td><td>{each}</td></tr>;
+                              })}
+                            </tbody></table>
+                          )}
+                          {(m.conditions || m.included || m.excluded) && (
+                            <p className="dt-priceconditions">
+                              {[m.conditions, m.included && `Includes: ${m.included}`, m.excluded && `Excludes: ${m.excluded}`].filter(Boolean).join(' · ')}
+                            </p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {pComponents.length > 0 && (
+                    <>
+                      <div className="dt-pricelabel">Additional costs</div>
+                      <ul className="dt-pricecomponents">
+                        {pComponents.map((c) => <li key={c.id}>{componentLine(c)}{c.conditions ? ` — ${c.conditions}` : ''}</li>)}
+                      </ul>
+                    </>
+                  )}
+                  <dl className="dt-kv">
+                    {pModels.length === 0 && <><Item k="Model" v={s(pricing.model) || s(L.pricing_model)} /><Item k="Range" v={s(pricing.range)} /></>}
+                    {(pricing.buy || pricing.rent || pricing.lease) ? <Item k="Options" v={['buy', 'rent', 'lease'].filter((o) => pricing[o]).join(' · ')} /> : null}
+                    <Item k="Notes" v={s(pricing.notes)} />
+                  </dl>
+                  {gated && <p className="dt-hint">This vendor shares more pricing after you request a quote through NXT//LINK.</p>}
+                  {pModels.length > 0 && <p className="dt-hint">Prices shown are vendor-listed estimates — the vendor confirms the official price in your quote.</p>}
+                  {pModels.length === 0 && !s(pricing.range) && <p className="dt-hint">Exact pricing depends on your situation — request a quote below.</p>}
+                </>
+              );
+            })()}
             {tab === 'warranty' && (
               <dl className="dt-kv">
                 <Item k="Warranty" v={s(ws.warranty)} />
@@ -439,6 +525,20 @@ const CSS = `
 .dt-item dt{color:#8080A0;font-size:13px;min-width:130px;}
 .dt-item dd{margin:0;font-size:14px;color:#D5D4E0;line-height:1.5;}
 .dt-hint{color:#8080A0;font-size:13px;line-height:1.5;margin-top:12px;}
+.dt-proj{position:relative;display:inline-block;}
+.dt-projmenu{position:absolute;right:0;top:calc(100% + 6px);min-width:220px;background:#14141F;border:1px solid rgba(124,92,252,.35);border-radius:12px;padding:8px;z-index:50;display:flex;flex-direction:column;gap:2px;}
+.dt-projmenu button,.dt-projmenu a{font-family:inherit;text-align:left;background:none;border:none;color:#F0F0F5;font-size:13px;padding:9px 11px;border-radius:8px;cursor:pointer;text-decoration:none;display:block;}
+.dt-projmenu button:hover,.dt-projmenu a:hover{background:rgba(124,92,252,.15);}
+.dt-projmenu a{color:#A78BFA;font-weight:600;}
+.dt-prices{list-style:none;margin:0 0 8px;padding:0;display:flex;flex-direction:column;gap:12px;}
+.dt-prices li{border:1px solid rgba(255,255,255,.08);border-radius:12px;background:#111118;padding:13px 15px;}
+.dt-priceline{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;}
+.dt-priceline span{color:#8080A0;font-size:13px;}
+.dt-priceline b{font-size:16px;color:#34D399;}
+.dt-tiertable{margin-top:8px;}
+.dt-priceconditions{margin:8px 0 0;color:#8080A0;font-size:12.5px;line-height:1.5;}
+.dt-pricelabel{font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#A78BFA;margin:14px 0 6px;}
+.dt-pricecomponents{margin:0;padding-left:18px;color:#C0C0D0;font-size:13.5px;line-height:1.7;}
 .dt-docs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;}
 .dt-docs a{color:#A78BFA;font-size:14.5px;}
 .dt-docs p{color:#8080A0;font-size:13px;margin:5px 0 0;line-height:1.5;}

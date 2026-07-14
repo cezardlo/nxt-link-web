@@ -23,8 +23,9 @@ import {
 } from '@/lib/vendor/profile-template';
 import {
   PriceModelEntry, PriceComponentEntry, PriceVisibility,
-  priceLine, componentLine, publicPricing, cleanPriceModels, cleanPriceComponents,
+  priceLine, componentLine, tierLine, publicPricing, cleanPriceModels, cleanPriceComponents,
 } from '@/lib/marketplace/types';
+import { templateFor } from '@/lib/marketplace/spec-templates';
 
 type Kind = 'product' | 'service';
 
@@ -43,6 +44,7 @@ interface Listing {
   id: string; name: string; category: string; overview: string | null; status: string;
   best_for: string[]; industries: string[]; image_paths: string[];
   lead_time?: string | null; service_areas?: string[]; response_time?: string | null;
+  specs?: Record<string, string> | null;
   pricing?: Record<string, unknown> | null; pricing_model?: string | null;
   kind: Kind;
 }
@@ -92,6 +94,18 @@ export default function VendorOnboardingPage() {
   const [creating, setCreating] = useState(false);
   const [aiText, setAiText] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
+  // Specs as ordered rows so template fields and custom fields coexist.
+  const [specRows, setSpecRows] = useState<Array<{ k: string; v: string }>>([]);
+  const specTemplate = offering.kind === 'product' ? templateFor(offering.category, offering.name) : null;
+  const specValue = (label: string) => specRows.find((r) => r.k === label)?.v || '';
+  function setSpec(label: string, v: string) {
+    setSpecRows((rows) => {
+      const i = rows.findIndex((r) => r.k === label);
+      if (i === -1) return v ? [...rows, { k: label, v }] : rows;
+      const next = rows.slice(); next[i] = { k: label, v };
+      return next;
+    });
+  }
 
   // ---- Pricing editor state (per selected listing) ----
   const [priceListingId, setPriceListingId] = useState<string>('');
@@ -237,7 +251,7 @@ export default function VendorOnboardingPage() {
       amount: '', min_amount: '', max_amount: '', currency: 'USD',
       unit: card.unit, recurring: card.recurring,
       billing_frequency: card.recurring ? 'monthly' : '',
-      conditions: '', included: '', excluded: '',
+      conditions: '', included: '', excluded: '', tiers: [],
       visibility, confirmed_at: '',
     }]);
     setPriceApproved(false);
@@ -288,7 +302,7 @@ export default function VendorOnboardingPage() {
   function startCreate(family: string) {
     const card = OFFERING_FAMILY_CARDS.find((c) => c.key === family);
     setOffering({ ...EMPTY_OFFERING, family, kind: card?.kind || 'product' });
-    setEditingId(null); setCreating(true); setAiText('');
+    setEditingId(null); setCreating(true); setAiText(''); setSpecRows([]);
   }
   function startEdit(l: Listing) {
     setOffering({
@@ -299,6 +313,7 @@ export default function VendorOnboardingPage() {
       response_time: l.response_time || '',
     });
     setEditingId(l.id); setCreating(true); setAiText('');
+    setSpecRows(Object.entries(l.specs || {}).map(([k, v]) => ({ k, v: String(v) })));
   }
   function duplicateListing(l: Listing) {
     startEdit(l);
@@ -335,8 +350,10 @@ export default function VendorOnboardingPage() {
       kind: offering.kind, name: offering.name, category: offering.category,
       overview: offering.overview, best_for: csv(offering.best_for), industries: csv(offering.industries),
     };
-    if (offering.kind === 'product') body.lead_time = offering.lead_time;
-    else { body.service_areas = csv(offering.service_areas); body.response_time = offering.response_time; }
+    if (offering.kind === 'product') {
+      body.lead_time = offering.lead_time;
+      body.specs = Object.fromEntries(specRows.filter((r) => r.k.trim() && r.v.trim()).map((r) => [r.k.trim(), r.v.trim()]));
+    } else { body.service_areas = csv(offering.service_areas); body.response_time = offering.response_time; }
     if (editingId) body.id = editingId;
     const res = await fetch('/api/vendor/listings', {
       method: editingId ? 'PATCH' : 'POST',
@@ -628,9 +645,41 @@ export default function VendorOnboardingPage() {
             <Field label="Industries served (comma-separated)"><input placeholder="e.g. Warehousing & 3PL, Manufacturing" value={offering.industries} onChange={(e) => setOffering({ ...offering, industries: e.target.value })} /></Field>
           </div>
           {offering.kind === 'product' ? (
-            <div className="ob-grid">
-              <Field label="Typical lead time"><input placeholder="e.g. 2–4 weeks" value={offering.lead_time} onChange={(e) => setOffering({ ...offering, lead_time: e.target.value })} /></Field>
-            </div>
+            <>
+              <div className="ob-grid">
+                <Field label="Typical lead time"><input placeholder="e.g. 2–4 weeks" value={offering.lead_time} onChange={(e) => setOffering({ ...offering, lead_time: e.target.value })} /></Field>
+              </div>
+              <div className="ob-specs">
+                <span className="ob-lblsm">{specTemplate ? `${specTemplate.name} specifications` : 'Specifications'}</span>
+                {specTemplate && (
+                  <div className="ob-grid">
+                    {specTemplate.fields.map((f) => (
+                      <Field key={f.label} label={f.label}>
+                        {f.options ? (
+                          <select value={specValue(f.label)} onChange={(e) => setSpec(f.label, e.target.value)}>
+                            <option value="">Select…</option>
+                            {f.options.map((o) => <option key={o} value={o}>{o}</option>)}
+                          </select>
+                        ) : (
+                          <input placeholder={f.hint || ''} value={specValue(f.label)} onChange={(e) => setSpec(f.label, e.target.value)} />
+                        )}
+                      </Field>
+                    ))}
+                  </div>
+                )}
+                {!specTemplate && <p className="ob-hint">Pick a category above and matching spec fields appear (forklifts, software, racking, robotics…). You can always add your own below.</p>}
+                {specRows.filter((r) => !specTemplate || !specTemplate.fields.some((f) => f.label === r.k)).map((r, i) => (
+                  <div className="ob-customspec" key={`c${i}`}>
+                    <input placeholder="Field name" aria-label="Custom specification name" value={r.k}
+                      onChange={(e) => setSpecRows((rows) => rows.map((x) => (x === r ? { ...x, k: e.target.value } : x)))} />
+                    <input placeholder="Value" aria-label="Custom specification value" value={r.v}
+                      onChange={(e) => setSpecRows((rows) => rows.map((x) => (x === r ? { ...x, v: e.target.value } : x)))} />
+                    <button className="ob-mini" onClick={() => setSpecRows((rows) => rows.filter((x) => x !== r))} aria-label={`Remove ${r.k || 'custom field'}`}>✕</button>
+                  </div>
+                ))}
+                <button className="ob-mini" onClick={() => setSpecRows((rows) => [...rows, { k: '', v: '' }])}>+ Add custom specification</button>
+              </div>
+            </>
           ) : (
             <div className="ob-grid">
               <Field label="Service areas (comma-separated)"><input placeholder="El Paso, Juárez, Cross-border" value={offering.service_areas} onChange={(e) => setOffering({ ...offering, service_areas: e.target.value })} /></Field>
@@ -729,6 +778,26 @@ export default function VendorOnboardingPage() {
                     <div className="ob-grid">
                       <Field label="What's included"><input value={m.included} onChange={(e) => setModel(m.id, { included: e.target.value })} /></Field>
                       <Field label="What's excluded"><input placeholder="e.g. Parts quoted separately" value={m.excluded} onChange={(e) => setModel(m.id, { excluded: e.target.value })} /></Field>
+                    </div>
+                    <div className="ob-tiers">
+                      <span className="ob-lblsm">Quantity discounts (optional)</span>
+                      {(m.tiers || []).map((t, ti) => (
+                        <div className="ob-tierrow" key={ti}>
+                          <input inputMode="numeric" placeholder="From qty" aria-label="From quantity" value={t.min_qty}
+                            onChange={(e) => setModel(m.id, { tiers: m.tiers.map((x, i) => (i === ti ? { ...x, min_qty: e.target.value } : x)) })} />
+                          <input inputMode="numeric" placeholder="To qty (empty = no limit)" aria-label="To quantity" value={t.max_qty}
+                            onChange={(e) => setModel(m.id, { tiers: m.tiers.map((x, i) => (i === ti ? { ...x, max_qty: e.target.value } : x)) })} />
+                          <input inputMode="decimal" placeholder="$ each" aria-label="Price each" value={t.unit_amount}
+                            onChange={(e) => setModel(m.id, { tiers: m.tiers.map((x, i) => (i === ti ? { ...x, unit_amount: e.target.value } : x)) })} />
+                          <button className="ob-mini" onClick={() => setModel(m.id, { tiers: m.tiers.filter((_, i) => i !== ti) })} aria-label="Remove tier">✕</button>
+                        </div>
+                      ))}
+                      <button className="ob-mini" onClick={() => setModel(m.id, { tiers: [...(m.tiers || []), { min_qty: m.tiers?.length ? '' : '1', max_qty: '', unit_amount: '' }] })}>+ Add quantity tier</button>
+                      {(m.tiers || []).filter((t) => t.min_qty && t.unit_amount).length > 0 && (
+                        <p className="ob-hint" style={{ margin: '8px 0 0' }}>
+                          Buyers see: {(m.tiers || []).filter((t) => t.min_qty && t.unit_amount).map((t) => tierLine(t, m.currency)).join(' · ')}
+                        </p>
+                      )}
                     </div>
                   </details>
                   <div className="ob-linepreview">Buyers see: <b>{priceLine(m)}</b></div>
@@ -945,7 +1014,14 @@ function PricePreview({ pricing, listingName }: { pricing: Record<string, unknow
     <div className="ob-buyerprev">
       <b>{listingName || 'Your offering'}</b>
       {pubModels.length === 0 && <p className="ob-quoteonly">Request Quote{gated ? ' — pricing shared after you request a quote' : ''}</p>}
-      {pubModels.map((m) => <p key={m.id} className="ob-priceline">{m.name ? `${m.name}: ` : ''}<b>{priceLine(m)}</b></p>)}
+      {pubModels.map((m) => (
+        <div key={m.id}>
+          <p className="ob-priceline">{m.name ? `${m.name}: ` : ''}<b>{priceLine(m)}</b></p>
+          {(m.tiers || []).length > 0 && (
+            <ul className="ob-tierlist">{m.tiers.map((t, i) => <li key={i}>{tierLine(t, m.currency)}</li>)}</ul>
+          )}
+        </div>
+      ))}
       {pubComponents.length > 0 && (
         <>
           <span className="ob-lblsm">Additional costs</span>
@@ -1065,6 +1141,16 @@ const CSS = `
 .ob-more summary{cursor:pointer;font-size:13px;font-weight:600;color:#A78BFA;margin-bottom:10px;}
 .ob-linepreview{margin-top:10px;font-size:13px;color:#8080A0;}
 .ob-linepreview b{color:#34D399;}
+.ob-tiers{margin-top:12px;border-top:1px dashed rgba(255,255,255,.08);padding-top:10px;}
+.ob-tierrow{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;margin-bottom:8px;}
+.ob-tierrow input{font-family:inherit;font-size:13px;padding:9px 11px;border-radius:9px;border:1px solid rgba(255,255,255,.1);background:#0A0A0F;color:#F0F0F5;outline:none;width:100%;}
+.ob-tierrow input:focus{border-color:#7C5CFC;}
+@media(max-width:600px){.ob-tierrow{grid-template-columns:1fr 1fr;}}
+.ob-tierlist{margin:2px 0 0;padding-left:18px;color:#8080A0;font-size:12.5px;line-height:1.6;}
+.ob-specs{margin-top:14px;border-top:1px dashed rgba(255,255,255,.08);padding-top:12px;}
+.ob-customspec{display:grid;grid-template-columns:1fr 1.4fr auto;gap:8px;margin-bottom:8px;}
+.ob-customspec input{font-family:inherit;font-size:13px;padding:9px 11px;border-radius:9px;border:1px solid rgba(255,255,255,.1);background:#0A0A0F;color:#F0F0F5;outline:none;width:100%;}
+.ob-customspec input:focus{border-color:#7C5CFC;}
 .ob-listingpick{display:flex;gap:12px;align-items:center;margin-bottom:14px;}
 .ob-listingpick .ob-lblsm{margin:0;white-space:nowrap;}
 .ob-listingpick select{max-width:340px;}

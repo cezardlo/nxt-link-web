@@ -21,6 +21,12 @@ export const PRICE_METHODS = [
 ] as const;
 export type PriceMethod = (typeof PRICE_METHODS)[number];
 
+export interface PriceTierEntry {
+  min_qty: string;           // "1"
+  max_qty: string;           // "9" or '' for open-ended (e.g. "50+")
+  unit_amount: string;       // "100"
+}
+
 export interface PriceModelEntry {
   id: string;
   name: string;              // e.g. "Purchase price", "Monthly rental"
@@ -35,6 +41,7 @@ export interface PriceModelEntry {
   conditions: string;
   included: string;
   excluded: string;
+  tiers: PriceTierEntry[];   // optional quantity tiers: 1–9 $100 · 10–49 $90 · 50+ $75
   visibility: PriceVisibility;
   confirmed_at: string;      // ISO date the vendor last confirmed accuracy ('' = never)
 }
@@ -173,6 +180,21 @@ function methodOf(v: unknown): PriceMethod {
 }
 const money = (v: unknown): string => cleanStr(v, 40).replace(/[^0-9.,]/g, '').slice(0, 20);
 
+function cleanTiers(v: unknown): PriceTierEntry[] {
+  if (!Array.isArray(v)) return [];
+  return v.slice(0, 8).map((raw): PriceTierEntry | null => {
+    if (!raw || typeof raw !== 'object') return null;
+    const src = raw as Record<string, unknown>;
+    const tier: PriceTierEntry = {
+      min_qty: cleanStr(src.min_qty, 10).replace(/\D/g, ''),
+      max_qty: cleanStr(src.max_qty, 10).replace(/\D/g, ''),
+      unit_amount: money(src.unit_amount),
+    };
+    if (!tier.min_qty || !tier.unit_amount) return null;
+    return tier;
+  }).filter((t): t is PriceTierEntry => t !== null);
+}
+
 export function cleanPriceModels(v: unknown): PriceModelEntry[] {
   if (!Array.isArray(v)) return [];
   return v.slice(0, 12).map((raw, i): PriceModelEntry | null => {
@@ -192,6 +214,7 @@ export function cleanPriceModels(v: unknown): PriceModelEntry[] {
       conditions: cleanStr(src.conditions, 400),
       included: cleanStr(src.included, 400),
       excluded: cleanStr(src.excluded, 400),
+      tiers: cleanTiers(src.tiers),
       visibility: visOf(src.visibility),
       confirmed_at: cleanStr(src.confirmed_at, 40),
     };
@@ -246,6 +269,66 @@ export function priceLine(m: PriceModelEntry): string {
   if (min && max) return `${min}–${max}${unit}${freq}`;
   if (min) return `From ${min}${unit}${freq}`;
   return 'Request quote';
+}
+
+/** One buyer-facing tier line, e.g. "10–49 units: $90 each" / "50+ units: $75 each". */
+export function tierLine(t: PriceTierEntry, currency = 'USD'): string {
+  const amt = fmtAmount(t.unit_amount, currency);
+  const range = t.max_qty ? `${t.min_qty}–${t.max_qty}` : `${t.min_qty}+`;
+  return `${range} units: ${amt} each`;
+}
+
+/** Lowest PUBLIC numeric price (USD-ish) for facets and sorting. Falls back to
+ *  parsing the legacy range string ("$15k-$40k" → 15000). null = quote-only. */
+export function publicMinPrice(pricing: unknown): number | null {
+  const pub = publicPricing(pricing, 'public');
+  if (!pub) return null;
+  const nums: number[] = [];
+  const push = (raw: string) => {
+    const n = Number(String(raw).replace(/,/g, ''));
+    if (Number.isFinite(n) && n > 0) nums.push(n);
+  };
+  for (const m of (pub.models as PriceModelEntry[]) || []) {
+    if (m.method === 'quote') continue;
+    if (m.amount) push(m.amount);
+    if (m.min_amount) push(m.min_amount);
+    for (const t of m.tiers || []) push(t.unit_amount);
+  }
+  if (!nums.length && typeof pub.range === 'string' && pub.range) {
+    const match = (pub.range as string).match(/\$?\s*([\d][\d,.]*)\s*(k)?/i);
+    if (match) {
+      const n = Number(match[1].replace(/,/g, '')) * (match[2] ? 1000 : 1);
+      if (Number.isFinite(n) && n > 0) nums.push(n);
+    }
+  }
+  return nums.length ? Math.min(...nums) : null;
+}
+
+/** Card price text from an API-sanitized pricing block: first public priced
+ *  model wins, then the legacy range/model strings, then the fallback. */
+export function cardPriceText(pricing: unknown, fallback?: string | null): string {
+  if (pricing && typeof pricing === 'object') {
+    const p = pricing as Record<string, unknown>;
+    const models = Array.isArray(p.models) ? (p.models as PriceModelEntry[]) : [];
+    const first = models.find((m) => m && m.method !== 'quote');
+    if (first) return priceLine(first);
+    if (typeof p.range === 'string' && p.range) return p.range;
+    if (typeof p.model === 'string' && p.model) return p.model;
+  }
+  return fallback || '';
+}
+
+/** Whether a sanitized pricing block has anything buyer-visible to show.
+ *  (publicPricing always returns every key, so key-count checks no longer work.) */
+export function pricingHasContent(pricing: unknown, pricingModel?: string | null): boolean {
+  if (pricingModel) return true;
+  if (!pricing || typeof pricing !== 'object') return false;
+  const p = pricing as Record<string, unknown>;
+  return Boolean(
+    (Array.isArray(p.models) && p.models.length) ||
+    (Array.isArray(p.components) && p.components.length) ||
+    p.range || p.model || p.notes || p.buy || p.rent || p.lease || p.has_gated_pricing,
+  );
 }
 
 /** One buyer-facing line for an additional cost, e.g. "Mobile-service fee: $110 per visit". */
