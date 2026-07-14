@@ -56,7 +56,10 @@ export default function VendorStartPage() {
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <nav className="vw-nav">
         <a className="vw-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>Get set up</span></a>
-        <a className="vw-link" href="/vendor/listings">Skip to listings</a>
+        <div style={{ display: 'flex', gap: 16 }}>
+          <a className="vw-link" href="/vendor/onboarding">Guided setup →</a>
+          <a className="vw-link" href="/vendor/listings">Skip to listings</a>
+        </div>
       </nav>
       <main className="vw-wrap">
         {checking ? <div className="vw-empty">Loading…</div>

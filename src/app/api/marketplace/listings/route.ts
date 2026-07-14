@@ -6,6 +6,7 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { publicPricing } from '@/lib/marketplace/types';
 
 const CARD_BASE = 'id, public_ref, vendor_id, name, category, functional_group, overview, best_for, industries, image_paths, pilot, pricing, warranty_support, status, published_at';
 const CARD_PRODUCT = `${CARD_BASE}, availability, lead_time`;
@@ -102,6 +103,8 @@ export async function GET(req: Request) {
     const rt = ratings.get(r.vendor_id);
     return {
       ...r, image_paths: undefined, image_url,
+      // Anonymous browse: gated price entries must never leave the server.
+      pricing: publicPricing(r.pricing, 'public'),
       vendor_name: v?.company_name || 'Vendor', vendor_city: v?.city || null,
       vendor_verified: Boolean(v?.verified),
       vendor_rating: rt?.avg ?? null,

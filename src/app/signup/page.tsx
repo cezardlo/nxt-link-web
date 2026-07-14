@@ -56,7 +56,7 @@ export default function SignupPage() {
       if (data.session) {
         // Email confirmation disabled in project settings — go straight in.
         await fetch('/api/auth/me');
-        window.location.href = role === 'vendor' ? '/vendor/start' : '/buyer';
+        window.location.href = role === 'vendor' ? '/vendor/onboarding' : '/buyer';
         return;
       }
       setSent(true);

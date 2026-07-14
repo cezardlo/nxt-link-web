@@ -5,7 +5,7 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
-import { colsFor, tableFor } from '@/lib/marketplace/types';
+import { colsFor, tableFor, publicPricing } from '@/lib/marketplace/types';
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   if (!isSupabaseConfigured()) return NextResponse.json({ ok: false, message: 'Not configured' }, { status: 503 });
@@ -47,7 +47,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
   return NextResponse.json({
     ok: true, kind,
-    listing: { ...row, image_paths: undefined },
+    // Anonymous detail: strip price entries gated behind sign-in/quote flows.
+    listing: { ...row, image_paths: undefined, pricing: publicPricing((row as Record<string, unknown>).pricing, 'public') },
     images: images.filter((i) => i.url),
     documents,
     case_studies: cases || [],

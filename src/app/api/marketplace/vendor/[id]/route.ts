@@ -6,6 +6,7 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { publicPricing } from '@/lib/marketplace/types';
 
 const PRODUCT_CARD = 'id, name, category, overview, best_for, image_paths, pilot, pricing, warranty_support, lead_time, availability';
 const SERVICE_CARD = 'id, name, category, overview, best_for, image_paths, pilot, pricing, warranty_support, service_areas, response_time, emergency_available, pricing_model';
@@ -73,7 +74,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
         const { data: signed } = await db.storage.from('listing-media').createSignedUrl(first, 3600);
         image_url = signed?.signedUrl || null;
       }
-      return { ...r, image_paths: undefined, image_url, kind };
+      // Anonymous storefront: gated price entries must never leave the server.
+      return { ...r, image_paths: undefined, image_url, kind, pricing: publicPricing(r.pricing, 'public') };
     }));
   }
 

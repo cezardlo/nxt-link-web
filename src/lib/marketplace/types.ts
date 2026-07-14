@@ -6,7 +6,59 @@ export type ListingKind = 'product' | 'service';
 export interface PilotBlock { available: boolean; duration: string; cost: string; scope: string; success_criteria: string[] }
 export interface ImplementationBlock { requirements: string[]; typical_timeline: string; training: string; integrations: string[] }
 export interface WarrantySupportBlock { warranty: string; support_channels: string[]; sla: string; maintenance: string }
-export interface PricingBlock { model: string; range: string; buy: boolean; rent: boolean; lease: boolean; notes: string }
+
+// Structured pricing lives INSIDE the existing `pricing` jsonb column so no
+// migration is needed: legacy keys (model/range/buy/rent/lease/notes) stay,
+// and `models` / `components` / `visibility` are added alongside them.
+// Gated entries must never reach anonymous responses — see publicPricing().
+export const PRICE_VISIBILITY = ['public', 'signed_in', 'after_details', 'after_request', 'private'] as const;
+export type PriceVisibility = (typeof PRICE_VISIBILITY)[number];
+
+export const PRICE_METHODS = [
+  'exact', 'starting', 'range', 'per_unit', 'per_hour', 'per_day', 'per_week',
+  'per_month', 'per_year', 'per_visit', 'per_project', 'per_user', 'per_facility',
+  'rental', 'lease', 'subscription', 'quote', 'custom',
+] as const;
+export type PriceMethod = (typeof PRICE_METHODS)[number];
+
+export interface PriceModelEntry {
+  id: string;
+  name: string;              // e.g. "Purchase price", "Monthly rental"
+  method: PriceMethod;
+  amount: string;            // stored as strings — form-friendly, formatted on display
+  min_amount: string;
+  max_amount: string;
+  currency: string;          // 'USD' | 'MXN'
+  unit: string;              // e.g. "per unit", "per dock door" (custom units allowed)
+  recurring: boolean;
+  billing_frequency: string; // e.g. "monthly" — only when recurring
+  conditions: string;
+  included: string;
+  excluded: string;
+  visibility: PriceVisibility;
+  confirmed_at: string;      // ISO date the vendor last confirmed accuracy ('' = never)
+}
+
+export interface PriceComponentEntry {
+  id: string;
+  name: string;              // e.g. "Mobile-service fee", "Installation"
+  description: string;
+  amount: string;
+  min_amount: string;
+  max_amount: string;
+  unit: string;              // e.g. "per visit", "% of labor"
+  required: boolean;
+  recurring: boolean;
+  conditions: string;
+  visibility: PriceVisibility;
+}
+
+export interface PricingBlock {
+  model: string; range: string; buy: boolean; rent: boolean; lease: boolean; notes: string;
+  models: PriceModelEntry[];
+  components: PriceComponentEntry[];
+  visibility: PriceVisibility; // default for the legacy range/model line
+}
 export interface FitBlock { company_sizes: string[]; prerequisites: string[]; not_a_fit_for: string[] }
 export interface RiskBlock { common_risks: string[]; mitigations: string[] }
 export interface RoiBlock { drivers: string[]; typical_payback: string; example: string }
@@ -111,6 +163,133 @@ export const BLOCK_SHAPES = {
   roi: { drivers: 'arr', typical_payback: 'str', example: 'str' },
 } as const satisfies Record<string, Record<string, 'str' | 'bool' | 'arr' | 'obj'>>;
 
+// ---------- Structured pricing: normalize, format, and gate ----------
+
+function visOf(v: unknown): PriceVisibility {
+  return PRICE_VISIBILITY.includes(v as PriceVisibility) ? (v as PriceVisibility) : 'public';
+}
+function methodOf(v: unknown): PriceMethod {
+  return PRICE_METHODS.includes(v as PriceMethod) ? (v as PriceMethod) : 'custom';
+}
+const money = (v: unknown): string => cleanStr(v, 40).replace(/[^0-9.,]/g, '').slice(0, 20);
+
+export function cleanPriceModels(v: unknown): PriceModelEntry[] {
+  if (!Array.isArray(v)) return [];
+  return v.slice(0, 12).map((raw, i): PriceModelEntry | null => {
+    if (!raw || typeof raw !== 'object') return null;
+    const src = raw as Record<string, unknown>;
+    const entry: PriceModelEntry = {
+      id: cleanStr(src.id, 40) || `pm_${i + 1}`,
+      name: cleanStr(src.name, 120),
+      method: methodOf(src.method),
+      amount: money(src.amount),
+      min_amount: money(src.min_amount),
+      max_amount: money(src.max_amount),
+      currency: src.currency === 'MXN' ? 'MXN' : 'USD',
+      unit: cleanStr(src.unit, 60),
+      recurring: Boolean(src.recurring),
+      billing_frequency: cleanStr(src.billing_frequency, 40),
+      conditions: cleanStr(src.conditions, 400),
+      included: cleanStr(src.included, 400),
+      excluded: cleanStr(src.excluded, 400),
+      visibility: visOf(src.visibility),
+      confirmed_at: cleanStr(src.confirmed_at, 40),
+    };
+    // Keep only entries that say something: a name, an amount, or quote-only.
+    if (!entry.name && !entry.amount && !entry.min_amount && entry.method !== 'quote') return null;
+    return entry;
+  }).filter((e): e is PriceModelEntry => e !== null);
+}
+
+export function cleanPriceComponents(v: unknown): PriceComponentEntry[] {
+  if (!Array.isArray(v)) return [];
+  return v.slice(0, 20).map((raw, i): PriceComponentEntry | null => {
+    if (!raw || typeof raw !== 'object') return null;
+    const src = raw as Record<string, unknown>;
+    const entry: PriceComponentEntry = {
+      id: cleanStr(src.id, 40) || `pc_${i + 1}`,
+      name: cleanStr(src.name, 120),
+      description: cleanStr(src.description, 300),
+      amount: money(src.amount),
+      min_amount: money(src.min_amount),
+      max_amount: money(src.max_amount),
+      unit: cleanStr(src.unit, 60),
+      required: Boolean(src.required),
+      recurring: Boolean(src.recurring),
+      conditions: cleanStr(src.conditions, 400),
+      visibility: visOf(src.visibility),
+    };
+    if (!entry.name) return null;
+    return entry;
+  }).filter((e): e is PriceComponentEntry => e !== null);
+}
+
+const CURRENCY_SIGN: Record<string, string> = { USD: '$', MXN: 'MX$' };
+function fmtAmount(raw: string, currency: string): string {
+  const n = Number(raw.replace(/,/g, ''));
+  const sign = CURRENCY_SIGN[currency] || '$';
+  if (!raw || !Number.isFinite(n)) return '';
+  return sign + n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+
+/** One buyer-facing line for a price model, e.g. "Starting at $195 per unit". */
+export function priceLine(m: PriceModelEntry): string {
+  if (m.method === 'quote') return 'Custom quote';
+  const unit = m.unit ? ` ${m.unit}` : '';
+  const freq = m.recurring && m.billing_frequency ? ` (${m.billing_frequency})` : '';
+  const amount = fmtAmount(m.amount, m.currency);
+  const min = fmtAmount(m.min_amount, m.currency);
+  const max = fmtAmount(m.max_amount, m.currency);
+  if (m.method === 'starting' && (amount || min)) return `Starting at ${amount || min}${unit}${freq}`;
+  if (m.method === 'range' && min && max) return `${min}–${max}${unit}${freq}`;
+  if (amount) return `${amount}${unit}${freq}`;
+  if (min && max) return `${min}–${max}${unit}${freq}`;
+  if (min) return `From ${min}${unit}${freq}`;
+  return 'Request quote';
+}
+
+/** One buyer-facing line for an additional cost, e.g. "Mobile-service fee: $110 per visit". */
+export function componentLine(c: PriceComponentEntry): string {
+  const amount = fmtAmount(c.amount, 'USD');
+  const min = fmtAmount(c.min_amount, 'USD');
+  const max = fmtAmount(c.max_amount, 'USD');
+  const val = amount || (min && max ? `${min}–${max}` : min) || 'Quoted separately';
+  const unit = c.unit ? ` ${c.unit}` : '';
+  return `${c.name}: ${val}${unit}${c.required ? '' : ' (optional)'}`;
+}
+
+/**
+ * Strip pricing entries the audience may not see. MUST be applied by every
+ * route that serializes listings to buyers. 'public' = anonymous visitor;
+ * 'signed_in' = authenticated buyer. after_details / after_request / private
+ * entries never leave the server here — those surfaces get their own flows.
+ */
+export function publicPricing(
+  pricing: unknown,
+  audience: 'public' | 'signed_in' = 'public',
+): Record<string, unknown> | null {
+  if (!pricing || typeof pricing !== 'object') return (pricing as null) ?? null;
+  const src = pricing as Record<string, unknown>;
+  const allowed: PriceVisibility[] = audience === 'signed_in' ? ['public', 'signed_in'] : ['public'];
+  const models = cleanPriceModels(src.models).filter((m) => allowed.includes(m.visibility));
+  const components = cleanPriceComponents(src.components).filter((c) => allowed.includes(c.visibility));
+  const overall = visOf(src.visibility);
+  const legacyVisible = allowed.includes(overall);
+  const gatedCount =
+    cleanPriceModels(src.models).length - models.length +
+    cleanPriceComponents(src.components).length - components.length +
+    (legacyVisible ? 0 : 1);
+  return {
+    model: legacyVisible ? (src.model ?? '') : '',
+    range: legacyVisible ? (src.range ?? '') : '',
+    buy: Boolean(src.buy), rent: Boolean(src.rent), lease: Boolean(src.lease),
+    notes: legacyVisible ? (src.notes ?? '') : '',
+    models, components,
+    visibility: overall,
+    has_gated_pricing: gatedCount > 0, // buyer UI can say "more pricing after you request a quote"
+  };
+}
+
 /** Normalize client-supplied listing fields into a safe row patch. */
 export function normalizeListingInput(kind: ListingKind, body: Record<string, unknown>): Record<string, unknown> {
   const patch: Record<string, unknown> = {};
@@ -122,6 +301,19 @@ export function normalizeListingInput(kind: ListingKind, body: Record<string, un
   if ('video_urls' in body) patch.video_urls = cleanArray(body.video_urls, 6, 300);
   for (const k of Object.keys(BLOCK_SHAPES) as Array<keyof typeof BLOCK_SHAPES>) {
     if (k in body) patch[k] = cleanBlock(body[k], BLOCK_SHAPES[k]);
+  }
+  // Structured pricing rides inside the same jsonb: re-attach the typed arrays
+  // that cleanBlock (legacy keys only) drops.
+  if ('pricing' in body && body.pricing && typeof body.pricing === 'object') {
+    const rawPricing = body.pricing as Record<string, unknown>;
+    const legacy = (patch.pricing as Record<string, unknown> | null) || {};
+    patch.pricing = {
+      ...legacy,
+      models: cleanPriceModels(rawPricing.models),
+      components: cleanPriceComponents(rawPricing.components),
+      visibility: PRICE_VISIBILITY.includes(rawPricing.visibility as PriceVisibility)
+        ? rawPricing.visibility : 'public',
+    };
   }
   if (kind === 'product') {
     if ('use_cases' in body) patch.use_cases = cleanArray(body.use_cases, 12, 200);
