@@ -1,972 +1,327 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ASSISTANT, type Locale } from '@/lib/assistant/branding';
+// /vendor/quotes — the vendor proposal builder, DB-backed.
+// North star: a vendor answers a lead in ~2 minutes, never a blank 20-field
+// form. Pick a lead → line items with live totals (prefilled starter row) →
+// terms → live commission preview → Save draft or Send. Submitted revisions
+// are immutable; "Revise" starts revision+1. Replaces the old localStorage-only
+// builder — proposals now persist and survive logout.
 
-// ---------- Tokens ----------
-const C = {
-  bg: '#0A0A0F',
-  text: '#F3F4F6',
-  sec: '#9CA3AF',
-  sec2: '#D1D5DB',
-  muted: '#6B7280',
-  card: '#111118',
-  border: '#2A2A35',
-  input: '#0A0A0F',
-  accent: '#7C5CFC',
-  green: '#10B981',
-  amber: '#F59E0B',
-  red: '#EF4444',
-};
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-const FONT = 'system-ui, sans-serif';
+interface Lead {
+  id: string; public_ref: string; kind: string; listing_name: string | null;
+  company: string | null; contact_name: string | null; message: string | null;
+  status: string; created_at: string; quote_amount: number | null; buyer_decision: string | null;
+}
+interface Item { description: string; qty: number; unit_price: number; kind: string }
+interface Proposal {
+  id: string; quote_request_id: string; revision: number; status: string;
+  line_items: Item[]; subtotal: number | null; tax: number | null; discount: number | null;
+  total: number; currency: string; lead_time: string | null; warranty: string | null;
+  payment_terms: string | null; valid_until: string | null; assumptions: string | null;
+  exclusions: string | null; notes: string | null; submitted_at: string | null;
+}
 
-const CATEGORIES = [
-  'Forklift maintenance', 'Staffing', 'Transportation', 'Facility maintenance',
-  'IT/security', 'Warehouse technology', 'Packaging/labels', 'Pallets/materials', 'Custom',
+const ITEM_KINDS = [
+  { v: 'product', en: 'Product / equipment' }, { v: 'labor', en: 'Labor' },
+  { v: 'install', en: 'Installation' }, { v: 'shipping', en: 'Shipping' },
+  { v: 'travel', en: 'Travel / mobile fee' }, { v: 'other', en: 'Other' },
 ];
+const money = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+const fmtDate = (s: string) => { try { return new Date(s).toLocaleDateString(); } catch { return ''; } };
+const EMPTY_ITEM: Item = { description: '', qty: 1, unit_price: 0, kind: 'product' };
 
-const STATUS_FILTERS = ['Draft', 'Submitted', 'Accepted', 'Declined', 'Expired', 'Templates'];
+export default function VendorProposalsPage() {
+  const [loading, setLoading] = useState(true);
+  const [signedIn, setSignedIn] = useState(true);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [sel, setSel] = useState<Lead | null>(null);
+  const [history, setHistory] = useState<Proposal[]>([]);
 
-const STORE = {
-  templates: 'nxtlink_vendor_templates',
-  quotes: 'nxtlink_vendor_quotes',
-};
+  const [items, setItems] = useState<Item[]>([{ ...EMPTY_ITEM }]);
+  const [tax, setTax] = useState(0);
+  const [discount, setDiscount] = useState(0);
+  const [terms, setTerms] = useState({ lead_time: '', warranty: '', payment_terms: '50% deposit, 50% on completion', valid_until: '', assumptions: '', exclusions: '', notes: '' });
+  const [commission, setCommission] = useState<{ amount: number; rate: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
 
-// ---------- Types ----------
-interface Template {
-  id: string;
-  created_at: string;
-  name: string;
-  category: string;
-  description: string;
-  pricing_model: string;
-  labor_rate: string;
-  service_fee: string;
-  parts_note: string;
-  included: string;
-  excluded: string;
-  lead_time: string;
-  warranty: string;
-  payment_terms: string;
-  required_info: string;
-  terms: string;
-  expiration_period: string;
-}
+  const subtotal = useMemo(() => items.reduce((s, i) => s + (i.qty || 0) * (i.unit_price || 0), 0), [items]);
+  const total = Math.max(0, subtotal + (tax || 0) - (discount || 0));
 
-interface ResponseFields {
-  can_serve_location: string;
-  available_by_deadline: string;
-  quote_type: string;
-  price_text: string;
-  labor_rate: string;
-  service_fee: string;
-  travel_fee: string;
-  parts_cost: string;
-  included: string;
-  excluded: string;
-  lead_time: string;
-  warranty: string;
-  payment_terms: string;
-  expiration_date: string;
-  required_next_info: string;
-  questions_for_client: string;
-}
-
-interface Quote {
-  id: string;
-  created_at: string;
-  submitted_at: string;
-  status: string; // draft | submitted | accepted | declined | expired
-  opportunity_ref: string;
-  client_desc: string;
-  category: string;
-  notes: string;
-  response: ResponseFields;
-}
-
-interface AiDraft {
-  short_response: string;
-  price_range: string;
-  included: string;
-  excluded: string;
-  timeline: string;
-  required_next_info: string;
-  terms: string;
-  attachments_needed: string;
-}
-
-interface TermsDraft {
-  quote_validity: string;
-  payment_terms: string;
-  warranty: string;
-  exclusions: string;
-  lead_time: string;
-  emergency_service: string;
-  liability_insurance: string;
-  confidentiality: string;
-  introduction_agreement: string;
-  terms_and_conditions: string;
-  disclaimer: string;
-}
-
-// ---------- Defaults ----------
-const emptyTemplate = (): Template => ({
-  id: '', created_at: '', name: '', category: '', description: '', pricing_model: '',
-  labor_rate: '', service_fee: '', parts_note: '', included: '', excluded: '',
-  lead_time: '', warranty: '', payment_terms: '', required_info: '', terms: '',
-  expiration_period: '',
-});
-
-const emptyResponse = (): ResponseFields => ({
-  can_serve_location: 'yes', available_by_deadline: 'yes', quote_type: 'estimate',
-  price_text: '', labor_rate: '', service_fee: '', travel_fee: '', parts_cost: '',
-  included: '', excluded: '', lead_time: '', warranty: '', payment_terms: '',
-  expiration_date: '', required_next_info: '', questions_for_client: '',
-});
-
-const SAMPLE_PACKET = {
-  scope: 'Warehouse forklift preventive maintenance',
-  general_location: 'El Paso',
-  timeline: 'next week',
-  quantity: '6 units',
-  notes: 'Routine PM service for 6 warehouse forklifts. Client identity withheld.',
-};
-
-const genId = () => Date.now().toString() + Math.random().toString(36).slice(2, 8);
-
-// ---------- Component ----------
-export default function VendorQuotesPage() {
-  const [locale, setLocale] = useState<Locale>('en');
-  const [tab, setTab] = useState<1 | 2 | 3 | 4>(1);
-  const [toast, setToast] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
-
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [quotes, setQuotes] = useState<Quote[]>([]);
-
-  const [tplForm, setTplForm] = useState<Template>(emptyTemplate());
-  const [editingTplId, setEditingTplId] = useState<string>('');
-
-  const [packetText, setPacketText] = useState<string>(JSON.stringify(SAMPLE_PACKET, null, 2));
-  const [response, setResponse] = useState<ResponseFields>(emptyResponse());
-  const [selectedTplId, setSelectedTplId] = useState<string>('');
-  const [aiDraft, setAiDraft] = useState<AiDraft | null>(null);
-  const [aiProvider, setAiProvider] = useState<string>('');
-  const [aiLoading, setAiLoading] = useState(false);
-  const [editingQuoteId, setEditingQuoteId] = useState<string>('');
-
-  const [filter, setFilter] = useState<string>('Draft');
-  const [expandedId, setExpandedId] = useState<string>('');
-
-  // ---------- Terms & Agreement tab state ----------
-  const [termsVendorName, setTermsVendorName] = useState<string>('Your Company');
-  const [termsWarrantyMonths, setTermsWarrantyMonths] = useState<number>(12);
-  const [termsEmergency, setTermsEmergency] = useState<boolean>(false);
-  const [termsNda, setTermsNda] = useState<boolean>(false);
-  const [termsDraft, setTermsDraft] = useState<TermsDraft | null>(null);
-  const [termsProvider, setTermsProvider] = useState<string>('');
-  const [termsLoading, setTermsLoading] = useState(false);
-
-  const T = (en: string, es: string) => (locale === 'es' ? es : en);
-
-  // ---------- Load ----------
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const rawT = window.localStorage.getItem(STORE.templates);
-      if (rawT) setTemplates(JSON.parse(rawT) as Template[]);
-      const rawQ = window.localStorage.getItem(STORE.quotes);
-      if (rawQ) setQuotes(JSON.parse(rawQ) as Quote[]);
-    } catch {
-      // ignore corrupt storage
-    }
+    (async () => {
+      try {
+        const r = await fetch('/api/vendor/leads');
+        if (r.status === 401) { setSignedIn(false); setLoading(false); return; }
+        const j = await r.json();
+        setLeads((j.leads || []).filter((l: Lead) => !['won', 'lost', 'spam'].includes(l.status)));
+      } catch { /* ignore */ }
+      setLoading(false);
+    })();
   }, []);
 
-  const persistTemplates = (next: Template[]) => {
-    setTemplates(next);
-    if (typeof window !== 'undefined') {
-      try { window.localStorage.setItem(STORE.templates, JSON.stringify(next)); } catch { /* ignore */ }
-    }
-  };
+  // Live commission preview (debounced) so the fee is never a surprise.
+  useEffect(() => {
+    if (total <= 0) { setCommission(null); return; }
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/vendor/quote?amount=${total}`);
+        const j = await r.json();
+        if (j.ok) setCommission({ amount: j.commission_amount, rate: j.effective_rate });
+      } catch { /* ignore */ }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [total]);
 
-  const persistQuotes = (next: Quote[]) => {
-    setQuotes(next);
-    if (typeof window !== 'undefined') {
-      try { window.localStorage.setItem(STORE.quotes, JSON.stringify(next)); } catch { /* ignore */ }
-    }
-  };
-
-  const flash = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(''), 3500);
-  };
-
-  // ---------- Template actions ----------
-  const setTpl = (k: keyof Template, v: string) => setTplForm({ ...tplForm, [k]: v });
-
-  const saveTemplate = () => {
-    if (!tplForm.name.trim()) { setErrorMsg(T('Template name is required.', 'El nombre de la plantilla es obligatorio.')); return; }
-    setErrorMsg('');
-    if (editingTplId) {
-      const next = templates.map((t) => (t.id === editingTplId ? { ...tplForm, id: editingTplId } : t));
-      persistTemplates(next);
-      flash(T('Template updated.', 'Plantilla actualizada.'));
-    } else {
-      const nt: Template = { ...tplForm, id: genId(), created_at: new Date().toISOString() };
-      persistTemplates([nt, ...templates]);
-      flash(T('Template saved.', 'Plantilla guardada.'));
-    }
-    setTplForm(emptyTemplate());
-    setEditingTplId('');
-  };
-
-  const editTemplate = (t: Template) => {
-    setTplForm(t);
-    setEditingTplId(t.id);
-    setTab(1);
-  };
-
-  const duplicateTemplate = (t: Template) => {
-    const copy: Template = { ...t, id: genId(), created_at: new Date().toISOString(), name: `${t.name} (copy)` };
-    persistTemplates([copy, ...templates]);
-    flash(T('Template duplicated.', 'Plantilla duplicada.'));
-  };
-
-  const deleteTemplate = (id: string) => {
-    persistTemplates(templates.filter((t) => t.id !== id));
-    if (editingTplId === id) { setTplForm(emptyTemplate()); setEditingTplId(''); }
-    flash(T('Template deleted.', 'Plantilla eliminada.'));
-  };
-
-  const applyTemplateInQuote = (t: Template) => {
-    applyTemplateToResponse(t);
-    setSelectedTplId(t.id);
-    setTab(2);
-    flash(T('Template loaded into quote.', 'Plantilla cargada en la cotización.'));
-  };
-
-  const applyTemplateToResponse = (t: Template) => {
-    setResponse((prev) => ({
-      ...prev,
-      price_text: t.pricing_model || prev.price_text,
-      labor_rate: t.labor_rate || prev.labor_rate,
-      service_fee: t.service_fee || prev.service_fee,
-      parts_cost: t.parts_note || prev.parts_cost,
-      included: t.included || prev.included,
-      excluded: t.excluded || prev.excluded,
-      lead_time: t.lead_time || prev.lead_time,
-      warranty: t.warranty || prev.warranty,
-      payment_terms: t.payment_terms || prev.payment_terms,
-      required_next_info: t.required_info || prev.required_next_info,
-      expiration_date: t.expiration_period || prev.expiration_date,
-    }));
-  };
-
-  // ---------- Response actions ----------
-  const setResp = (k: keyof ResponseFields, v: string) => setResponse({ ...response, [k]: v });
-
-  const insertFromTemplate = (id: string) => {
-    const t = templates.find((x) => x.id === id);
-    if (!t) return;
-    applyTemplateToResponse(t);
-    setSelectedTplId(id);
-    flash(T('Inserted from template.', 'Insertado desde la plantilla.'));
-  };
-
-  const parsePacket = (): Record<string, unknown> => {
+  const pickLead = useCallback(async (lead: Lead) => {
+    setSel(lead); setMsg('');
+    // Smart default: start the first line from what they asked about.
+    setItems([{ ...EMPTY_ITEM, description: lead.listing_name || '' }]);
+    setTax(0); setDiscount(0);
+    setTerms({ lead_time: '', warranty: '', payment_terms: '50% deposit, 50% on completion', valid_until: '', assumptions: '', exclusions: '', notes: '' });
     try {
-      const parsed = JSON.parse(packetText) as Record<string, unknown>;
-      if (parsed && typeof parsed === 'object') return parsed;
-    } catch {
-      // fall through
-    }
-    return { scope: 'forklift preventive maintenance', general_location: 'El Paso', timeline: 'next week', quantity: '6 units' };
-  };
-
-  const aiDraftWithAssistant = async () => {
-    setErrorMsg('');
-    setAiLoading(true);
-    const packet = parsePacket();
-    const template = templates.find((t) => t.id === selectedTplId) || {};
-    try {
-      const res = await fetch('/api/assistant/vendor-quote', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          packet,
-          vendorProfile: { name: 'Your Company', service_areas: ['El Paso', 'Juárez'] },
-          template,
-          locale,
-        }),
-      });
-      const data = (await res.json()) as { ok?: boolean; provider?: string; draft?: AiDraft };
-      if (!res.ok || !data || !data.draft) {
-        throw new Error('No draft returned');
+      const r = await fetch(`/api/vendor/proposals?quote_request_id=${lead.id}`);
+      const j = await r.json();
+      const props: Proposal[] = j.proposals || [];
+      setHistory(props);
+      const editable = props.find((p) => p.status === 'draft') || props[0];
+      if (editable) {
+        setItems(editable.line_items?.length ? editable.line_items : [{ ...EMPTY_ITEM }]);
+        setTax(editable.tax || 0); setDiscount(editable.discount || 0);
+        setTerms({
+          lead_time: editable.lead_time || '', warranty: editable.warranty || '',
+          payment_terms: editable.payment_terms || '50% deposit, 50% on completion',
+          valid_until: editable.valid_until || '', assumptions: editable.assumptions || '',
+          exclusions: editable.exclusions || '', notes: editable.notes || '',
+        });
       }
-      const d = data.draft;
-      setAiDraft(d);
-      setAiProvider(data.provider || 'unknown');
-      setResponse((prev) => ({
-        ...prev,
-        price_text: d.price_range || prev.price_text,
-        included: d.included || prev.included,
-        excluded: d.excluded || prev.excluded,
-        lead_time: d.timeline || prev.lead_time,
-        required_next_info: d.required_next_info || prev.required_next_info,
-        payment_terms: d.terms || prev.payment_terms,
-      }));
-      flash(T('AI draft created — review before sending.', 'Borrador de AI creado — revise antes de enviar.'));
-    } catch {
-      setErrorMsg(T(
-        'Could not reach the assistant. Please try again or fill the quote manually.',
-        'No se pudo contactar al asistente. Intente de nuevo o complete la cotización manualmente.',
-      ));
-    }
-    setAiLoading(false);
-  };
+    } catch { setHistory([]); }
+  }, []);
 
-  const aiDraftTerms = async () => {
-    setErrorMsg('');
-    setTermsLoading(true);
+  async function send(action: 'save' | 'submit') {
+    if (!sel) return;
+    setBusy(true); setMsg('');
     try {
-      const res = await fetch('/api/assistant/terms', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          vendorName: termsVendorName,
-          category: 'Forklift maintenance',
-          warrantyMonths: termsWarrantyMonths,
-          emergency: termsEmergency,
-          nda: termsNda,
-          locale,
-        }),
+      const r = await fetch('/api/vendor/proposals', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quote_request_id: sel.id, action, line_items: items, tax, discount, ...terms }),
       });
-      const data = (await res.json()) as { ok?: boolean; is_draft?: boolean; provider?: string; terms?: TermsDraft };
-      if (!res.ok || !data || !data.terms) {
-        throw new Error('No terms returned');
-      }
-      setTermsDraft(data.terms);
-      setTermsProvider(data.provider || 'unknown');
-      flash(T('Terms drafted — review before sending.', 'Términos redactados — revise antes de enviar.'));
-    } catch {
-      setErrorMsg(T(
-        'Could not reach the assistant. Please try again or fill the terms manually.',
-        'No se pudo contactar al asistente. Intente de nuevo o complete los términos manualmente.',
-      ));
-    }
-    setTermsLoading(false);
-  };
+      const j = await r.json();
+      if (j.ok) {
+        setMsg(action === 'submit'
+          ? `✓ Proposal sent to the buyer (revision ${j.revision}). NXT//LINK fee if won: ${money(j.commission.amount)}.`
+          : '✓ Draft saved — finish it anytime.');
+        pickLead(sel);
+      } else setMsg(j.message || 'Something went wrong.');
+    } catch { setMsg('Something went wrong. Please try again.'); }
+    setBusy(false);
+  }
 
-  const setTermsField = (k: keyof TermsDraft, v: string) =>
-    setTermsDraft((prev) => (prev ? { ...prev, [k]: v } : prev));
+  const latestSubmitted = history.find((p) => ['submitted', 'final'].includes(p.status));
 
-  const saveResponseAsTemplate = () => {
-    const nt: Template = {
-      id: genId(),
-      created_at: new Date().toISOString(),
-      name: T('Quote response template', 'Plantilla de respuesta') + ' ' + new Date().toLocaleDateString(),
-      category: 'Custom',
-      description: '',
-      pricing_model: response.price_text,
-      labor_rate: response.labor_rate,
-      service_fee: response.service_fee,
-      parts_note: response.parts_cost,
-      included: response.included,
-      excluded: response.excluded,
-      lead_time: response.lead_time,
-      warranty: response.warranty,
-      payment_terms: response.payment_terms,
-      required_info: response.required_next_info,
-      terms: response.questions_for_client,
-      expiration_period: response.expiration_date,
-    };
-    persistTemplates([nt, ...templates]);
-    flash(T('Saved current response as template.', 'Respuesta guardada como plantilla.'));
-  };
-
-  const deriveClientDesc = (): string => {
-    const p = parsePacket();
-    const scope = (p.scope as string) || 'Warehouse forklift PM';
-    const loc = (p.general_location as string) || 'El Paso';
-    return `${scope} — ${loc}`;
-  };
-
-  const saveQuote = (status: 'draft' | 'submitted') => {
-    const now = new Date().toISOString();
-    if (editingQuoteId) {
-      const next = quotes.map((q) =>
-        q.id === editingQuoteId
-          ? {
-              ...q,
-              status,
-              submitted_at: status === 'submitted' ? now : q.submitted_at,
-              response: { ...response },
-              price_text: response.price_text,
-            }
-          : q,
-      );
-      persistQuotes(next);
-    } else {
-      const nq: Quote = {
-        id: genId(),
-        created_at: now,
-        submitted_at: status === 'submitted' ? now : '',
-        status,
-        opportunity_ref: 'OPP-' + genId().slice(-6).toUpperCase(),
-        client_desc: deriveClientDesc(),
-        category: templates.find((t) => t.id === selectedTplId)?.category || 'Custom',
-        notes: aiDraft ? aiDraft.short_response : '',
-        response: { ...response },
-      };
-      persistQuotes([nq, ...quotes]);
-    }
-    setEditingQuoteId('');
-    flash(status === 'submitted'
-      ? T('Response submitted.', 'Respuesta enviada.')
-      : T('Draft saved.', 'Borrador guardado.'));
-    setTab(3);
-    setFilter(status === 'submitted' ? 'Submitted' : 'Draft');
-  };
-
-  // ---------- Saved quotes actions ----------
-  const editQuoteDraft = (q: Quote) => {
-    setResponse(q.response);
-    setEditingQuoteId(q.id);
-    setAiDraft(null);
-    setTab(2);
-    flash(T('Loaded draft for editing.', 'Borrador cargado para editar.'));
-  };
-
-  const duplicateQuote = (q: Quote) => {
-    const copy: Quote = {
-      ...q,
-      id: genId(),
-      created_at: new Date().toISOString(),
-      submitted_at: '',
-      status: 'draft',
-      opportunity_ref: 'OPP-' + genId().slice(-6).toUpperCase(),
-    };
-    persistQuotes([copy, ...quotes]);
-    flash(T('Quote duplicated.', 'Cotización duplicada.'));
-  };
-
-  const quoteAsTemplate = (q: Quote) => {
-    const r = q.response;
-    const nt: Template = {
-      id: genId(),
-      created_at: new Date().toISOString(),
-      name: `${q.client_desc} ${T('template', 'plantilla')}`,
-      category: q.category || 'Custom',
-      description: '',
-      pricing_model: r.price_text,
-      labor_rate: r.labor_rate,
-      service_fee: r.service_fee,
-      parts_note: r.parts_cost,
-      included: r.included,
-      excluded: r.excluded,
-      lead_time: r.lead_time,
-      warranty: r.warranty,
-      payment_terms: r.payment_terms,
-      required_info: r.required_next_info,
-      terms: r.questions_for_client,
-      expiration_period: r.expiration_date,
-    };
-    persistTemplates([nt, ...templates]);
-    flash(T('Saved quote as template.', 'Cotización guardada como plantilla.'));
-  };
-
-  const deleteQuote = (id: string) => {
-    persistQuotes(quotes.filter((q) => q.id !== id));
-    flash(T('Quote deleted.', 'Cotización eliminada.'));
-  };
-
-  const stub = () => { if (typeof window !== 'undefined') window.alert(T('Coming soon', 'Próximamente')); };
-
-  // ---------- Style helpers ----------
-  const labelStyle: React.CSSProperties = { display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: C.sec2 };
-  const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 14px', background: C.input, border: `1px solid ${C.border}`, borderRadius: 10, color: C.text, fontSize: 14, outline: 'none', boxSizing: 'border-box' };
-  const taStyle: React.CSSProperties = { ...inputStyle, resize: 'vertical' };
-  const cardStyle: React.CSSProperties = { background: C.card, border: `1px solid ${C.border}`, borderRadius: 18, padding: 28 };
-  const btn = (bg: string, fg = '#fff'): React.CSSProperties => ({ padding: '10px 16px', background: bg, color: fg, border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' });
-  const ghostBtn: React.CSSProperties = { padding: '8px 12px', background: 'transparent', color: C.sec2, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' };
-
-  const statusColor = (s: string): string => {
-    switch (s) {
-      case 'submitted': return C.accent;
-      case 'accepted': return C.green;
-      case 'declined': return C.red;
-      case 'expired': return C.muted;
-      default: return C.amber; // draft
-    }
-  };
-
-  const Field = ({ label, k, area = false, placeholder = '' }: { label: string; k: keyof ResponseFields; area?: boolean; placeholder?: string }) => (
-    <div>
-      <label style={labelStyle}>{label}</label>
-      {area ? (
-        <textarea value={response[k]} onChange={(e) => setResp(k, e.target.value)} rows={2} placeholder={placeholder} style={taStyle} />
-      ) : (
-        <input value={response[k]} onChange={(e) => setResp(k, e.target.value)} placeholder={placeholder} style={inputStyle} />
-      )}
-    </div>
-  );
-
-  const footerNote = (
-    <p style={{ color: C.muted, fontSize: 12, lineHeight: 1.6, marginTop: 32, textAlign: 'center' }}>
-      {T(
-        'AI drafts are suggestions. You review and approve before anything is submitted. Client identity stays hidden.',
-        'Los borradores de AI son sugerencias. Usted revisa y aprueba antes de enviar. La identidad del cliente permanece oculta.',
-      )}
-    </p>
-  );
-
-  // ---------- Render ----------
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, color: C.text, fontFamily: FONT }}>
-      {/* Nav */}
-      <div style={{ padding: '16px 24px', borderBottom: '1px solid #1A1A24', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <a href="/" style={{ fontSize: 18, fontWeight: 800, letterSpacing: -1, textDecoration: 'none', color: C.text }}>
-          NXT<span style={{ color: C.accent }}>{'//'}</span>LINK
-        </a>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 13, fontWeight: 700 }}>{locale === 'es' ? ASSISTANT.name_es : ASSISTANT.name}</div>
-            <div style={{ fontSize: 11, color: C.muted }}>{locale === 'es' ? ASSISTANT.subtitle_es : ASSISTANT.subtitle}</div>
-          </div>
-          <div style={{ display: 'flex', border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden' }}>
-            {(['en', 'es'] as Locale[]).map((l) => (
-              <button key={l} onClick={() => setLocale(l)} style={{ padding: '6px 12px', background: locale === l ? C.accent : 'transparent', color: locale === l ? '#fff' : C.sec, border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                {l.toUpperCase()}
-              </button>
-            ))}
-          </div>
+    <div className="vp">
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
+      <nav className="vp-nav">
+        <a className="vp-brand" href="/vendor/portal"><b>NXT<i>//</i>LINK</b><span>Seller Central</span></a>
+        <div className="vp-navr">
+          <a className="vp-pill" href="/vendor/leads">Leads</a>
+          <a className="vp-pill" href="/vendor/listings">Listings</a>
         </div>
-      </div>
+      </nav>
 
-      <div style={{ maxWidth: 880, margin: '0 auto', padding: '40px 20px 60px' }}>
-        <div style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: 3, marginBottom: 8 }}>
-            {T('FOR VENDORS', 'PARA PROVEEDORES')}
-          </div>
-          <h1 style={{ fontSize: 30, fontWeight: 800, margin: 0 }}>
-            {T('Vendor AI Quote Builder', 'Generador de Cotizaciones con AI')}
-          </h1>
-        </div>
+      <div className="vp-wrap">
+        <h1>Quotes &amp; proposals</h1>
+        <p className="vp-sub">Answer a lead in about two minutes. Your proposal is saved, versioned, and delivered inside NXT//LINK.</p>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: 8, margin: '24px 0', flexWrap: 'wrap' }}>
-          {([
-            [1, T('Quote Template Library', 'Biblioteca de Plantillas de Cotización')],
-            [2, T('Quote Response', 'Respuesta de Cotización')],
-            [3, T('Saved Quotes', 'Cotizaciones Guardadas')],
-            [4, T('Terms & Agreement', 'Términos y Acuerdo')],
-          ] as [number, string][]).map(([n, label]) => (
-            <button key={n} onClick={() => setTab(n as 1 | 2 | 3 | 4)} style={{ padding: '10px 16px', background: tab === n ? C.accent : C.card, color: tab === n ? '#fff' : C.sec2, border: `1px solid ${tab === n ? C.accent : C.border}`, borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Toast / errors */}
-        {toast && <div style={{ background: '#10B98118', border: `1px solid ${C.green}55`, color: C.green, padding: '10px 14px', borderRadius: 10, fontSize: 13, marginBottom: 16 }}>{toast}</div>}
-        {errorMsg && <div style={{ background: '#EF444418', border: `1px solid ${C.red}55`, color: C.red, padding: '10px 14px', borderRadius: 10, fontSize: 13, marginBottom: 16 }}>{errorMsg}</div>}
-
-        {/* ---------------- TAB 1 ---------------- */}
-        {tab === 1 && (
-          <>
-            <div style={cardStyle}>
-              <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 0 }}>
-                {editingTplId ? T('Edit template', 'Editar plantilla') : T('Create a template', 'Crear una plantilla')}
-              </h2>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div>
-                  <label style={labelStyle}>{T('Name', 'Nombre')} <span style={{ color: C.accent }}>*</span></label>
-                  <input value={tplForm.name} onChange={(e) => setTpl('name', e.target.value)} style={inputStyle} />
-                </div>
-                <div>
-                  <label style={labelStyle}>{T('Category', 'Categoría')}</label>
-                  <select value={tplForm.category} onChange={(e) => setTpl('category', e.target.value)} style={inputStyle}>
-                    <option value="">{T('Select...', 'Seleccione...')}</option>
-                    {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ marginTop: 16 }}>
-                <label style={labelStyle}>{T('Description', 'Descripción')}</label>
-                <textarea value={tplForm.description} onChange={(e) => setTpl('description', e.target.value)} rows={2} style={taStyle} />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
-                <div>
-                  <label style={labelStyle}>{T('Pricing model', 'Modelo de precios')}</label>
-                  <input value={tplForm.pricing_model} onChange={(e) => setTpl('pricing_model', e.target.value)} style={inputStyle} />
-                </div>
-                <div>
-                  <label style={labelStyle}>{T('Labor rate', 'Tarifa de mano de obra')}</label>
-                  <input value={tplForm.labor_rate} onChange={(e) => setTpl('labor_rate', e.target.value)} style={inputStyle} />
-                </div>
-                <div>
-                  <label style={labelStyle}>{T('Service fee', 'Cargo por servicio')}</label>
-                  <input value={tplForm.service_fee} onChange={(e) => setTpl('service_fee', e.target.value)} style={inputStyle} />
-                </div>
-                <div>
-                  <label style={labelStyle}>{T('Lead time', 'Tiempo de entrega')}</label>
-                  <input value={tplForm.lead_time} onChange={(e) => setTpl('lead_time', e.target.value)} style={inputStyle} />
-                </div>
-                <div>
-                  <label style={labelStyle}>{T('Warranty', 'Garantía')}</label>
-                  <input value={tplForm.warranty} onChange={(e) => setTpl('warranty', e.target.value)} style={inputStyle} />
-                </div>
-                <div>
-                  <label style={labelStyle}>{T('Payment terms', 'Términos de pago')}</label>
-                  <input value={tplForm.payment_terms} onChange={(e) => setTpl('payment_terms', e.target.value)} style={inputStyle} />
-                </div>
-                <div>
-                  <label style={labelStyle}>{T('Expiration period', 'Período de expiración')}</label>
-                  <input value={tplForm.expiration_period} onChange={(e) => setTpl('expiration_period', e.target.value)} style={inputStyle} />
-                </div>
-                <div>
-                  <label style={labelStyle}>{T('Parts note', 'Nota de partes')}</label>
-                  <input value={tplForm.parts_note} onChange={(e) => setTpl('parts_note', e.target.value)} style={inputStyle} />
-                </div>
-              </div>
-
-              <div style={{ marginTop: 16 }}>
-                <label style={labelStyle}>{T('Included', 'Incluido')}</label>
-                <textarea value={tplForm.included} onChange={(e) => setTpl('included', e.target.value)} rows={2} style={taStyle} />
-              </div>
-              <div style={{ marginTop: 16 }}>
-                <label style={labelStyle}>{T('Excluded', 'Excluido')}</label>
-                <textarea value={tplForm.excluded} onChange={(e) => setTpl('excluded', e.target.value)} rows={2} style={taStyle} />
-              </div>
-              <div style={{ marginTop: 16 }}>
-                <label style={labelStyle}>{T('Required info', 'Información requerida')}</label>
-                <textarea value={tplForm.required_info} onChange={(e) => setTpl('required_info', e.target.value)} rows={2} style={taStyle} />
-              </div>
-              <div style={{ marginTop: 16 }}>
-                <label style={labelStyle}>{T('Terms', 'Términos')}</label>
-                <textarea value={tplForm.terms} onChange={(e) => setTpl('terms', e.target.value)} rows={2} style={taStyle} />
-              </div>
-
-              <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
-                <button onClick={saveTemplate} style={btn(C.accent)}>
-                  {editingTplId ? T('Update template', 'Actualizar plantilla') : T('Save template', 'Guardar plantilla')}
+        {!signedIn ? (
+          <div className="vp-empty">Sign in to see your leads — <a href="/vendor-login">vendor sign in</a></div>
+        ) : loading ? (
+          <div className="vp-empty">Loading your leads…</div>
+        ) : leads.length === 0 ? (
+          <div className="vp-empty">No open leads yet. When a buyer requests a quote on one of your listings, it appears here.</div>
+        ) : (
+          <div className="vp-layout">
+            {/* Lead picker */}
+            <aside className="vp-leads">
+              <div className="vp-leadhead">Open leads ({leads.length})</div>
+              {leads.map((l) => (
+                <button key={l.id} className={`vp-lead ${sel?.id === l.id ? 'on' : ''}`} onClick={() => pickLead(l)}>
+                  <div className="vp-leadname">{l.listing_name || (l.kind === 'service' ? 'Service request' : 'Product request')}</div>
+                  <div className="vp-leadmeta">{l.company || l.contact_name || 'Buyer'} · {fmtDate(l.created_at)}</div>
+                  <div className="vp-leadrow">
+                    <span className="vp-ref">{l.public_ref}</span>
+                    {l.quote_amount ? <span className="vp-quoted">quoted {money(l.quote_amount)}</span> : <span className="vp-await">awaiting quote</span>}
+                  </div>
                 </button>
-                {editingTplId && (
-                  <button onClick={() => { setTplForm(emptyTemplate()); setEditingTplId(''); }} style={ghostBtn}>
-                    {T('Cancel edit', 'Cancelar edición')}
-                  </button>
-                )}
-              </div>
-            </div>
+              ))}
+            </aside>
 
-            {/* Template list */}
-            <h3 style={{ fontSize: 16, fontWeight: 800, marginTop: 32 }}>
-              {T('Saved templates', 'Plantillas guardadas')} ({templates.length})
-            </h3>
-            {templates.length === 0 && <p style={{ color: C.sec, fontSize: 14 }}>{T('No templates yet.', 'Aún no hay plantillas.')}</p>}
-            <div style={{ display: 'grid', gap: 12 }}>
-              {templates.map((t) => (
-                <div key={t.id} style={{ ...cardStyle, padding: 18 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+            {/* Builder */}
+            <main className="vp-main">
+              {!sel ? (
+                <div className="vp-empty">← Pick a lead to build its proposal.</div>
+              ) : (
+                <>
+                  <div className="vp-selhead">
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: 15 }}>{t.name || T('(untitled)', '(sin título)')}</div>
-                      <div style={{ color: C.sec, fontSize: 13, marginTop: 2 }}>{t.category || '—'} · {t.pricing_model || '—'}</div>
+                      <div className="vp-selname">{sel.listing_name || 'Request'} <span className="vp-ref">{sel.public_ref}</span></div>
+                      {sel.message && <div className="vp-buyermsg">“{sel.message.slice(0, 240)}”</div>}
                     </div>
+                    {latestSubmitted && <span className="vp-rev">Rev {latestSubmitted.revision} sent {latestSubmitted.submitted_at ? fmtDate(latestSubmitted.submitted_at) : ''}</span>}
                   </div>
-                  {t.description && <p style={{ color: C.sec2, fontSize: 13, marginTop: 8, marginBottom: 0 }}>{t.description}</p>}
-                  <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
-                    <button onClick={() => editTemplate(t)} style={ghostBtn}>{T('Edit', 'Editar')}</button>
-                    <button onClick={() => duplicateTemplate(t)} style={ghostBtn}>{T('Duplicate', 'Duplicar')}</button>
-                    <button onClick={() => deleteTemplate(t.id)} style={{ ...ghostBtn, color: C.red, borderColor: `${C.red}55` }}>{T('Delete', 'Eliminar')}</button>
-                    <button onClick={() => applyTemplateInQuote(t)} style={btn(C.accent)}>{T('Use in quote', 'Usar en cotización')}</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            {footerNote}
-          </>
-        )}
 
-        {/* ---------------- TAB 2 ---------------- */}
-        {tab === 2 && (
-          <>
-            <div style={cardStyle}>
-              <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 0 }}>{T('Opportunity packet', 'Paquete de oportunidad')}</h2>
-              <p style={{ color: C.sec, fontSize: 13, marginTop: 0 }}>
-                {T('Edit the packet below (JSON). Client identity stays hidden.', 'Edite el paquete (JSON). La identidad del cliente permanece oculta.')}
-              </p>
-              <textarea value={packetText} onChange={(e) => setPacketText(e.target.value)} rows={7} style={{ ...taStyle, fontFamily: 'monospace', fontSize: 13 }} />
-
-              <div style={{ display: 'flex', gap: 12, marginTop: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-                <select value={selectedTplId} onChange={(e) => { setSelectedTplId(e.target.value); }} style={{ ...inputStyle, width: 'auto', minWidth: 180 }}>
-                  <option value="">{T('Insert from template…', 'Insertar desde plantilla…')}</option>
-                  {templates.map((t) => <option key={t.id} value={t.id}>{t.name || '(untitled)'}</option>)}
-                </select>
-                <button onClick={() => insertFromTemplate(selectedTplId)} disabled={!selectedTplId} style={{ ...ghostBtn, opacity: selectedTplId ? 1 : 0.5 }}>
-                  {T('Insert from template', 'Insertar desde plantilla')}
-                </button>
-                <button onClick={aiDraftWithAssistant} disabled={aiLoading} style={btn(aiLoading ? '#4A3D8F' : C.accent)}>
-                  {aiLoading ? T('Drafting…', 'Redactando…') : T('AI Draft with NXT//LINK Assistant', 'Borrador AI con Asistente NXT//LINK')}
-                </button>
-                <button onClick={saveResponseAsTemplate} style={ghostBtn}>{T('Save as template', 'Guardar como plantilla')}</button>
-              </div>
-            </div>
-
-            {/* AI draft banner + box */}
-            {aiDraft && (
-              <div style={{ marginTop: 16 }}>
-                <div style={{ background: '#F59E0B18', border: `1px solid ${C.amber}`, color: C.amber, padding: '12px 16px', borderRadius: 12, fontSize: 13, fontWeight: 700 }}>
-                  {T('DRAFT — review and approve before sending', 'BORRADOR — revise y apruebe antes de enviar')}
-                </div>
-                <div style={{ ...cardStyle, marginTop: 12, borderColor: `${C.amber}55` }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: C.amber, marginBottom: 8 }}>
-                    {T('AI draft (review before sending)', 'Borrador AI (revise antes de enviar)')}
-                  </div>
-                  <p style={{ color: C.sec2, fontSize: 14, lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' }}>{aiDraft.short_response}</p>
-                  {aiDraft.attachments_needed && (
-                    <p style={{ color: C.sec, fontSize: 12, marginTop: 10, marginBottom: 0 }}>
-                      {T('Attachments needed:', 'Adjuntos necesarios:')} {aiDraft.attachments_needed}
-                    </p>
-                  )}
-                  {aiProvider && <p style={{ color: C.muted, fontSize: 11, marginTop: 8, marginBottom: 0 }}>{T('Provider', 'Proveedor')}: {aiProvider}</p>}
-                </div>
-              </div>
-            )}
-
-            {/* Response fields */}
-            <div style={{ ...cardStyle, marginTop: 16 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 0 }}>{T('Your response', 'Su respuesta')}</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div>
-                  <label style={labelStyle}>{T('Can serve location?', '¿Puede atender la ubicación?')}</label>
-                  <select value={response.can_serve_location} onChange={(e) => setResp('can_serve_location', e.target.value)} style={inputStyle}>
-                    <option value="yes">{T('Yes', 'Sí')}</option>
-                    <option value="no">{T('No', 'No')}</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={labelStyle}>{T('Available by deadline?', '¿Disponible para la fecha límite?')}</label>
-                  <select value={response.available_by_deadline} onChange={(e) => setResp('available_by_deadline', e.target.value)} style={inputStyle}>
-                    <option value="yes">{T('Yes', 'Sí')}</option>
-                    <option value="no">{T('No', 'No')}</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={labelStyle}>{T('Quote type', 'Tipo de cotización')}</label>
-                  <select value={response.quote_type} onChange={(e) => setResp('quote_type', e.target.value)} style={inputStyle}>
-                    <option value="estimate">{T('Estimate', 'Estimado')}</option>
-                    <option value="range">{T('Range', 'Rango')}</option>
-                    <option value="formal">{T('Formal', 'Formal')}</option>
-                    <option value="site visit">{T('Site visit', 'Visita al sitio')}</option>
-                  </select>
-                </div>
-                <Field label={T('Price', 'Precio')} k="price_text" />
-                <Field label={T('Labor rate', 'Tarifa de mano de obra')} k="labor_rate" />
-                <Field label={T('Service fee', 'Cargo por servicio')} k="service_fee" />
-                <Field label={T('Travel fee', 'Cargo por viaje')} k="travel_fee" />
-                <Field label={T('Parts cost', 'Costo de partes')} k="parts_cost" />
-                <Field label={T('Lead time', 'Tiempo de entrega')} k="lead_time" />
-                <Field label={T('Warranty', 'Garantía')} k="warranty" />
-                <Field label={T('Payment terms', 'Términos de pago')} k="payment_terms" />
-                <Field label={T('Expiration date', 'Fecha de expiración')} k="expiration_date" />
-              </div>
-              <div style={{ marginTop: 16 }}><Field label={T('Included', 'Incluido')} k="included" area /></div>
-              <div style={{ marginTop: 16 }}><Field label={T('Excluded', 'Excluido')} k="excluded" area /></div>
-              <div style={{ marginTop: 16 }}><Field label={T('Required next info', 'Información requerida')} k="required_next_info" area /></div>
-              <div style={{ marginTop: 16 }}><Field label={T('Questions for client', 'Preguntas para el cliente')} k="questions_for_client" area /></div>
-
-              <div style={{ display: 'flex', gap: 12, marginTop: 24, flexWrap: 'wrap' }}>
-                <button onClick={() => saveQuote('submitted')} style={btn(C.green)}>{T('Submit response', 'Enviar respuesta')}</button>
-                <button onClick={() => saveQuote('draft')} style={ghostBtn}>{T('Save draft', 'Guardar borrador')}</button>
-                {editingQuoteId && <span style={{ color: C.amber, fontSize: 12, alignSelf: 'center' }}>{T('Editing existing quote', 'Editando cotización existente')}</span>}
-              </div>
-            </div>
-            {footerNote}
-          </>
-        )}
-
-        {/* ---------------- TAB 3 ---------------- */}
-        {tab === 3 && (
-          <>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-              {STATUS_FILTERS.map((f) => (
-                <button key={f} onClick={() => setFilter(f)} style={{ padding: '7px 14px', background: filter === f ? C.accent : C.card, color: filter === f ? '#fff' : C.sec2, border: `1px solid ${filter === f ? C.accent : C.border}`, borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                  {T(f, { Draft: 'Borrador', Submitted: 'Enviadas', Accepted: 'Aceptadas', Declined: 'Rechazadas', Expired: 'Expiradas', Templates: 'Plantillas' }[f] || f)}
-                </button>
-              ))}
-            </div>
-
-            {filter === 'Templates' ? (
-              <div style={{ display: 'grid', gap: 12 }}>
-                {templates.length === 0 && <p style={{ color: C.sec, fontSize: 14 }}>{T('No templates yet.', 'Aún no hay plantillas.')}</p>}
-                {templates.map((t) => (
-                  <div key={t.id} style={{ ...cardStyle, padding: 18 }}>
-                    <div style={{ fontWeight: 700 }}>{t.name || '(untitled)'}</div>
-                    <div style={{ color: C.sec, fontSize: 13 }}>{t.category || '—'}</div>
-                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                      <button onClick={() => applyTemplateInQuote(t)} style={btn(C.accent)}>{T('Use in quote', 'Usar en cotización')}</button>
-                      <button onClick={() => deleteTemplate(t.id)} style={{ ...ghostBtn, color: C.red, borderColor: `${C.red}55` }}>{T('Delete', 'Eliminar')}</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gap: 12 }}>
-                {quotes.filter((q) => q.status === filter.toLowerCase()).length === 0 && (
-                  <p style={{ color: C.sec, fontSize: 14 }}>{T('No quotes in this status.', 'No hay cotizaciones en este estado.')}</p>
-                )}
-                {quotes.filter((q) => q.status === filter.toLowerCase()).map((q) => (
-                  <div key={q.id} style={{ ...cardStyle, padding: 18 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 15 }}>{q.client_desc}</div>
-                        <div style={{ color: C.sec, fontSize: 12, marginTop: 2 }}>
-                          {q.opportunity_ref} · {q.category || '—'}
-                        </div>
+                  {/* Line items */}
+                  <div className="vp-sec">Line items</div>
+                  <div className="vp-items">
+                    {items.map((it, i) => (
+                      <div key={i} className="vp-item">
+                        <input className="vp-desc" placeholder="Description (e.g. 5,000 lb electric forklift)" value={it.description}
+                          onChange={(e) => setItems(items.map((x, j) => j === i ? { ...x, description: e.target.value } : x))} />
+                        <select value={it.kind} onChange={(e) => setItems(items.map((x, j) => j === i ? { ...x, kind: e.target.value } : x))}>
+                          {ITEM_KINDS.map((k) => <option key={k.v} value={k.v}>{k.en}</option>)}
+                        </select>
+                        <input className="vp-num" type="number" min={1} value={it.qty || ''}
+                          onChange={(e) => setItems(items.map((x, j) => j === i ? { ...x, qty: Number(e.target.value) } : x))} placeholder="Qty" />
+                        <input className="vp-num wide" type="number" min={0} value={it.unit_price || ''}
+                          onChange={(e) => setItems(items.map((x, j) => j === i ? { ...x, unit_price: Number(e.target.value) } : x))} placeholder="Unit $" />
+                        <span className="vp-line">{money((it.qty || 0) * (it.unit_price || 0))}</span>
+                        {items.length > 1 && <button className="vp-x" onClick={() => setItems(items.filter((_, j) => j !== i))}>×</button>}
                       </div>
-                      <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, color: statusColor(q.status), background: `${statusColor(q.status)}1A`, border: `1px solid ${statusColor(q.status)}55`, padding: '4px 10px', borderRadius: 999 }}>
-                        {q.status}
-                      </span>
-                    </div>
-                    <div style={{ color: C.sec2, fontSize: 13, marginTop: 10 }}>
-                      <div>{T('Amount', 'Monto')}: {q.response.price_text || '—'}</div>
-                      <div>{T('Created', 'Creada')}: {new Date(q.created_at).toLocaleString()}</div>
-                      <div>{T('Submitted', 'Enviada')}: {q.submitted_at ? new Date(q.submitted_at).toLocaleString() : '—'}</div>
-                      <div>{T('Expiration', 'Expiración')}: {q.response.expiration_date || '—'}</div>
-                    </div>
+                    ))}
+                  </div>
+                  <button className="vp-add" onClick={() => setItems([...items, { ...EMPTY_ITEM, kind: 'labor' }])}>+ Add line</button>
 
-                    {expandedId === q.id && (
-                      <div style={{ marginTop: 12, padding: 14, background: C.input, border: `1px solid ${C.border}`, borderRadius: 10, fontSize: 13, color: C.sec2 }}>
-                        <div>{T('Quote type', 'Tipo')}: {q.response.quote_type}</div>
-                        <div>{T('Included', 'Incluido')}: {q.response.included || '—'}</div>
-                        <div>{T('Excluded', 'Excluido')}: {q.response.excluded || '—'}</div>
-                        <div>{T('Lead time', 'Tiempo de entrega')}: {q.response.lead_time || '—'}</div>
-                        <div>{T('Payment terms', 'Términos de pago')}: {q.response.payment_terms || '—'}</div>
-                        <div>{T('Required next info', 'Información requerida')}: {q.response.required_next_info || '—'}</div>
-                        {q.notes && <div style={{ marginTop: 8 }}>{T('Notes', 'Notas')}: {q.notes}</div>}
-                      </div>
+                  {/* Totals */}
+                  <div className="vp-totals">
+                    <div><span>Subtotal</span><b>{money(subtotal)}</b></div>
+                    <div><span>Tax</span><input type="number" min={0} value={tax || ''} onChange={(e) => setTax(Number(e.target.value))} placeholder="0" /></div>
+                    <div><span>Discount</span><input type="number" min={0} value={discount || ''} onChange={(e) => setDiscount(Number(e.target.value))} placeholder="0" /></div>
+                    <div className="vp-total"><span>Total</span><b>{money(total)}</b></div>
+                    {commission && (
+                      <div className="vp-fee">NXT//LINK success fee if won: <b>{money(commission.amount)}</b> ({(commission.rate * 100).toFixed(1)}%) — only due when you get paid.</div>
                     )}
-
-                    <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
-                      <button onClick={() => setExpandedId(expandedId === q.id ? '' : q.id)} style={ghostBtn}>
-                        {expandedId === q.id ? T('Hide', 'Ocultar') : T('View', 'Ver')}
-                      </button>
-                      <button onClick={() => editQuoteDraft(q)} style={ghostBtn}>{T('Edit draft', 'Editar borrador')}</button>
-                      <button onClick={() => duplicateQuote(q)} style={ghostBtn}>{T('Duplicate', 'Duplicar')}</button>
-                      <button onClick={() => quoteAsTemplate(q)} style={ghostBtn}>{T('Use as template', 'Usar como plantilla')}</button>
-                      <button onClick={stub} style={ghostBtn}>{T('Download PDF', 'Descargar PDF')}</button>
-                      <button onClick={stub} style={ghostBtn}>{T('Submit revised', 'Enviar revisada')}</button>
-                      <button onClick={() => deleteQuote(q.id)} style={{ ...ghostBtn, color: C.red, borderColor: `${C.red}55` }}>{T('Delete', 'Eliminar')}</button>
-                    </div>
                   </div>
-                ))}
-              </div>
-            )}
-            {footerNote}
-          </>
-        )}
 
-        {/* ---------------- TAB 4 ---------------- */}
-        {tab === 4 && (
-          <>
-            <div style={cardStyle}>
-              <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 0 }}>
-                {T('Terms & Agreement', 'Términos y Acuerdo')}
-              </h2>
-              <p style={{ color: C.sec, fontSize: 13, marginTop: 0 }}>
-                {T(
-                  'Draft quote terms and the NXT//LINK introduction / commission agreement with AI. Review before sending.',
-                  'Redacte los términos de la cotización y el acuerdo de introducción / comisión de NXT//LINK con AI. Revise antes de enviar.',
-                )}
-              </p>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div>
-                  <label style={labelStyle}>{T('Your company name', 'Nombre de su empresa')}</label>
-                  <input value={termsVendorName} onChange={(e) => setTermsVendorName(e.target.value)} style={inputStyle} />
-                </div>
-                <div>
-                  <label style={labelStyle}>{T('Warranty (months)', 'Garantía (meses)')}</label>
-                  <input
-                    type="number"
-                    value={termsWarrantyMonths}
-                    onChange={(e) => setTermsWarrantyMonths(Number(e.target.value))}
-                    style={inputStyle}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: C.sec2, cursor: 'pointer' }}>
-                  <input type="checkbox" checked={termsEmergency} onChange={(e) => setTermsEmergency(e.target.checked)} style={{ accentColor: C.accent }} />
-                  {T('Offer 24/7 emergency service', 'Ofrecer servicio de emergencia 24/7')}
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: C.sec2, cursor: 'pointer' }}>
-                  <input type="checkbox" checked={termsNda} onChange={(e) => setTermsNda(e.target.checked)} style={{ accentColor: C.accent }} />
-                  {T('NDA / MNDA in place', 'NDA / MNDA establecido')}
-                </label>
-              </div>
-
-              <div style={{ marginTop: 20 }}>
-                <button onClick={aiDraftTerms} disabled={termsLoading} style={btn(termsLoading ? '#4A3D8F' : C.accent)}>
-                  {termsLoading
-                    ? T('✦ Drafting…', '✦ Redactando…')
-                    : T('✦ AI: Draft Terms & Agreement', '✦ AI: Redactar Términos y Acuerdo')}
-                </button>
-              </div>
-            </div>
-
-            {/* Terms draft output */}
-            {termsDraft && (
-              <div style={{ marginTop: 16 }}>
-                <div style={{ background: '#F59E0B18', border: `1px solid ${C.amber}`, color: C.amber, padding: '12px 16px', borderRadius: 12, fontSize: 13, fontWeight: 700 }}>
-                  {T('DRAFT — review before sending', 'BORRADOR — revise antes de enviar')}
-                </div>
-                {termsProvider && (
-                  <p style={{ color: C.muted, fontSize: 11, margin: '8px 0 0' }}>
-                    {T('Provider', 'Proveedor')}: {termsProvider}
-                  </p>
-                )}
-
-                <div style={{ ...cardStyle, marginTop: 12, borderColor: `${C.amber}55` }}>
-                  {([
-                    ['quote_validity', T('Quote validity', 'Validez de la cotización')],
-                    ['payment_terms', T('Payment terms', 'Términos de pago')],
-                    ['warranty', T('Warranty', 'Garantía')],
-                    ['exclusions', T('Exclusions', 'Exclusiones')],
-                    ['lead_time', T('Lead time', 'Tiempo de entrega')],
-                    ['emergency_service', T('Emergency service', 'Servicio de emergencia')],
-                    ['liability_insurance', T('Insurance & liability', 'Seguro y responsabilidad')],
-                    ['confidentiality', T('Confidentiality', 'Confidencialidad')],
-                    ['introduction_agreement', T('NXT//LINK introduction agreement', 'Acuerdo de introducción NXT//LINK')],
-                    ['terms_and_conditions', T('Terms & conditions', 'Términos y condiciones')],
-                  ] as [keyof TermsDraft, string][]).map(([k, label]) => (
-                    <div key={k} style={{ marginBottom: 16 }}>
-                      <label style={labelStyle}>{label}</label>
-                      <textarea
-                        value={termsDraft[k]}
-                        onChange={(e) => setTermsField(k, e.target.value)}
-                        rows={3}
-                        style={taStyle}
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                {termsDraft.disclaimer && (
-                  <div style={{ background: '#F59E0B18', border: `1px solid ${C.amber}`, color: C.amber, padding: '14px 18px', borderRadius: 12, fontSize: 13, lineHeight: 1.6, marginTop: 16, whiteSpace: 'pre-wrap' }}>
-                    {termsDraft.disclaimer}
+                  {/* Terms — smart defaults, all editable */}
+                  <div className="vp-sec">Terms</div>
+                  <div className="vp-grid">
+                    <label>Lead time<input value={terms.lead_time} onChange={(e) => setTerms({ ...terms, lead_time: e.target.value })} placeholder="e.g. 2–3 weeks" /></label>
+                    <label>Warranty<input value={terms.warranty} onChange={(e) => setTerms({ ...terms, warranty: e.target.value })} placeholder="e.g. 2-year parts &amp; labor" /></label>
+                    <label>Payment terms<input value={terms.payment_terms} onChange={(e) => setTerms({ ...terms, payment_terms: e.target.value })} /></label>
+                    <label>Quote valid until<input type="date" value={terms.valid_until} onChange={(e) => setTerms({ ...terms, valid_until: e.target.value })} /></label>
                   </div>
-                )}
-              </div>
-            )}
-            {footerNote}
-          </>
+                  <div className="vp-grid">
+                    <label>Assumptions<textarea rows={2} value={terms.assumptions} onChange={(e) => setTerms({ ...terms, assumptions: e.target.value })} placeholder="What this quote assumes (site access, power, etc.)" /></label>
+                    <label>Exclusions<textarea rows={2} value={terms.exclusions} onChange={(e) => setTerms({ ...terms, exclusions: e.target.value })} placeholder="What is NOT included" /></label>
+                  </div>
+                  <label className="vp-noteslab">Message to the buyer<textarea rows={2} value={terms.notes} onChange={(e) => setTerms({ ...terms, notes: e.target.value })} placeholder="Short note — contact details are shared automatically after acceptance." /></label>
+
+                  <div className="vp-actions">
+                    <button className="vp-save" disabled={busy} onClick={() => send('save')}>Save draft</button>
+                    <button className="vp-send" disabled={busy || total <= 0} onClick={() => send('submit')}>
+                      {latestSubmitted ? 'Send revised proposal →' : 'Send proposal →'}
+                    </button>
+                  </div>
+                  {msg && <div className={`vp-msg ${msg.startsWith('✓') ? 'ok' : 'err'}`}>{msg}</div>}
+
+                  {/* Revision history */}
+                  {history.length > 0 && (
+                    <>
+                      <div className="vp-sec">History</div>
+                      <div className="vp-hist">
+                        {history.map((p) => (
+                          <div key={p.id} className="vp-histrow">
+                            <span className={`vp-hstat ${p.status}`}>{p.status}</span>
+                            <span>Rev {p.revision}</span>
+                            <span>{money(p.total || 0)}</span>
+                            <span className="vp-hdate">{p.submitted_at ? fmtDate(p.submitted_at) : 'draft'}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </main>
+          </div>
         )}
       </div>
     </div>
   );
 }
+
+const CSS = `
+.vp{min-height:100vh;background:#0A0A0F;color:#F0F0F5;font-family:'Outfit',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;}
+.vp *{box-sizing:border-box;}
+.vp-nav{display:flex;justify-content:space-between;align-items:center;padding:14px 26px;border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;background:rgba(10,10,15,.9);backdrop-filter:blur(20px);z-index:30;}
+.vp-brand{display:flex;align-items:baseline;gap:10px;color:#F0F0F5;text-decoration:none;}
+.vp-brand b{font-size:17px;}.vp-brand i{color:#A78BFA;font-style:normal;}.vp-brand span{color:#8080A0;font-size:13px;}
+.vp-navr{display:flex;gap:8px;}
+.vp-pill{font-size:13px;font-weight:500;color:#C0C0D0;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:99px;padding:8px 14px;text-decoration:none;}
+.vp-wrap{max-width:1120px;margin:0 auto;padding:30px 20px 100px;}
+.vp-wrap h1{font-size:clamp(22px,3.5vw,30px);font-weight:800;letter-spacing:-.02em;margin:0;}
+.vp-sub{color:#8080A0;font-size:14px;margin:8px 0 0;max-width:560px;line-height:1.6;}
+.vp-empty{color:#8080A0;font-size:14px;padding:44px 0;text-align:center;}
+.vp-empty a{color:#A78BFA;}
+.vp-layout{display:grid;grid-template-columns:300px 1fr;gap:20px;margin-top:24px;align-items:start;}
+@media(max-width:860px){.vp-layout{grid-template-columns:1fr;}}
+.vp-leads{background:#12121B;border:1px solid rgba(255,255,255,.08);border-radius:15px;padding:12px;display:flex;flex-direction:column;gap:8px;position:sticky;top:76px;max-height:80vh;overflow-y:auto;}
+.vp-leadhead{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#8080A0;padding:4px 6px 6px;}
+.vp-lead{font-family:inherit;text-align:left;background:#14141F;border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:11px 12px;cursor:pointer;color:#F0F0F5;}
+.vp-lead:hover{border-color:rgba(124,92,252,.4);}
+.vp-lead.on{border-color:#7C5CFC;background:rgba(124,92,252,.08);}
+.vp-leadname{font-size:13px;font-weight:700;line-height:1.3;}
+.vp-leadmeta{font-size:11px;color:#8080A0;margin-top:3px;}
+.vp-leadrow{display:flex;justify-content:space-between;align-items:center;margin-top:7px;gap:6px;}
+.vp-ref{font-size:10.5px;color:#5A5A70;font-variant-numeric:tabular-nums;}
+.vp-quoted{font-size:10.5px;font-weight:700;color:#34D399;}
+.vp-await{font-size:10.5px;font-weight:700;color:#FBBF24;}
+.vp-main{background:#12121B;border:1px solid rgba(255,255,255,.08);border-radius:15px;padding:20px;}
+.vp-selhead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;border-bottom:1px solid rgba(255,255,255,.07);padding-bottom:14px;}
+.vp-selname{font-size:16px;font-weight:800;}
+.vp-selname .vp-ref{margin-left:8px;font-size:11.5px;}
+.vp-buyermsg{font-size:12.5px;color:#B8B6CC;margin-top:6px;line-height:1.5;font-style:italic;}
+.vp-rev{font-size:11px;font-weight:700;color:#C4B5FD;background:rgba(124,92,252,.12);padding:5px 10px;border-radius:99px;white-space:nowrap;}
+.vp-sec{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#8080A0;margin:20px 0 10px;}
+.vp-items{display:flex;flex-direction:column;gap:8px;}
+.vp-item{display:grid;grid-template-columns:1fr 130px 60px 90px 80px 24px;gap:7px;align-items:center;}
+@media(max-width:720px){.vp-item{grid-template-columns:1fr 1fr;}.vp-item .vp-desc{grid-column:1/-1;}}
+.vp-item input,.vp-item select,.vp-totals input,.vp-grid input,.vp-grid textarea,.vp-noteslab textarea{font-family:inherit;font-size:13px;padding:9px 10px;border-radius:9px;border:1px solid rgba(255,255,255,.1);background:#0A0A0F;color:#F0F0F5;outline:none;width:100%;}
+.vp-item input:focus,.vp-grid input:focus,.vp-grid textarea:focus,.vp-noteslab textarea:focus{border-color:#7C5CFC;}
+.vp-item select{cursor:pointer;}
+.vp-line{font-size:12.5px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums;}
+.vp-x{background:none;border:none;color:#5A5A70;font-size:18px;cursor:pointer;padding:0;}
+.vp-x:hover{color:#F87171;}
+.vp-add{font-family:inherit;font-size:12.5px;font-weight:700;color:#A78BFA;background:none;border:1px dashed rgba(124,92,252,.4);border-radius:9px;padding:9px;margin-top:9px;cursor:pointer;width:100%;}
+.vp-add:hover{background:rgba(124,92,252,.06);}
+.vp-totals{margin-top:16px;background:#0E0E16;border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:13px 15px;display:flex;flex-direction:column;gap:9px;}
+.vp-totals>div{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#B8B6CC;gap:12px;}
+.vp-totals input{max-width:110px;text-align:right;}
+.vp-totals b{font-variant-numeric:tabular-nums;}
+.vp-total{border-top:1px solid rgba(255,255,255,.08);padding-top:10px;font-size:15px !important;}
+.vp-total b{font-size:18px;color:#F0F0F5;}
+.vp-fee{font-size:12px;color:#C4B5FD;background:rgba(124,92,252,.08);border-radius:8px;padding:9px 11px;line-height:1.5;}
+.vp-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:11px;}
+@media(max-width:640px){.vp-grid{grid-template-columns:1fr;}}
+.vp-grid label,.vp-noteslab{display:flex;flex-direction:column;gap:5px;font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:#8080A0;}
+.vp-noteslab{margin-top:2px;}
+.vp-actions{display:flex;gap:10px;margin-top:18px;}
+.vp-save{font-family:inherit;font-size:13.5px;font-weight:700;padding:12px 18px;border-radius:11px;border:1px solid rgba(255,255,255,.14);background:none;color:#C0C0D0;cursor:pointer;}
+.vp-save:hover{border-color:rgba(124,92,252,.5);}
+.vp-send{flex:1;font-family:inherit;font-size:14px;font-weight:700;padding:12px 18px;border-radius:11px;border:none;background:#7C5CFC;color:#fff;cursor:pointer;box-shadow:0 10px 26px -12px rgba(124,92,252,.6);}
+.vp-send:hover{background:#6344DF;}
+.vp-save:disabled,.vp-send:disabled{opacity:.45;cursor:default;}
+.vp-msg{margin-top:12px;font-size:13px;padding:10px 13px;border-radius:10px;line-height:1.5;}
+.vp-msg.ok{background:rgba(52,211,153,.1);color:#34D399;}
+.vp-msg.err{background:rgba(248,113,113,.1);color:#FCA5A5;}
+.vp-hist{display:flex;flex-direction:column;gap:6px;}
+.vp-histrow{display:flex;align-items:center;gap:14px;font-size:12.5px;color:#B8B6CC;background:#0E0E16;border-radius:9px;padding:9px 12px;font-variant-numeric:tabular-nums;}
+.vp-hstat{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:3px 8px;border-radius:99px;background:rgba(255,255,255,.06);color:#8080A0;}
+.vp-hstat.submitted{background:rgba(52,211,153,.12);color:#34D399;}
+.vp-hstat.draft{background:rgba(251,191,36,.12);color:#FBBF24;}
+.vp-hstat.revised{background:rgba(124,92,252,.12);color:#C4B5FD;}
+.vp-hdate{margin-left:auto;color:#5A5A70;}
+`;
