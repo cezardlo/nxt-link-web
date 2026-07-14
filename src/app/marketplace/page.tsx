@@ -9,6 +9,16 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import {
+  OPERATIONS, areasFor, SOLUTION_TYPES, LOCATION_OPTIONS, SITE_NEEDS, GOALS,
+  type GuidedSelection, type SolutionType,
+  EMPTY_GUIDED, guidedIsEmpty, guidedCount, listingMatchesGuided,
+  solutionTypeOf, companyMatch, explainMatch,
+} from '@/lib/marketplace/guided-search';
+import {
+  type CompanySnapshot, SAVED_COMPANIES_KEY, COMPARE_COMPANIES_KEY,
+  readCompanyList, writeCompanyList, CompareDrawer,
+} from '@/components/marketplace/CompanyCompare';
 
 interface Card {
   id: string; vendor_id?: string; kind: 'product' | 'service'; name: string; category: string;
@@ -27,7 +37,25 @@ interface Card {
 
 interface Department { fg: string; label_en: string; is_service: boolean }
 
-type Tab = 'all' | 'product' | 'service' | 'solution';
+// Company directory record from /api/marketplace/companies.
+interface CompanyRecord {
+  id: string; company_name: string; tagline: string | null; city: string | null;
+  logo_url: string | null; verified: boolean; insured: boolean;
+  company_type: string | null; year_founded: number | null;
+  industries: string[]; service_areas: string[]; categories: string[];
+  main_expertise: string[]; problems_solved: string[]; capabilities: string[];
+  languages: string[]; response_time: string | null;
+  cross_border: boolean; installation_available: boolean; pilot_available: boolean;
+  emergency_available: boolean;
+  solution_types: SolutionType[]; product_count: number; service_count: number;
+  rating: number | null; review_count: number;
+  case_study_count: number; certification_count: number;
+}
+
+// Buyer-facing solution-type tabs (Equipment | Products | Technology |
+// Services | Companies) — the visible journey is operation → area → solution
+// type → location → goal, never “50 filters, figure it out.”
+type Tab = 'all' | 'equipment' | 'product' | 'technology' | 'service' | 'company';
 type Sort = 'best' | 'recent' | 'lead' | 'pilot' | 'verified';
 
 const SORTS: Array<[Sort, string]> = [
@@ -37,10 +65,6 @@ const SORTS: Array<[Sort, string]> = [
   ['pilot', 'Pilot available first'],
   ['verified', 'Verified vendors first'],
 ];
-
-// A few starting points for the Solutions tab (problem-first discovery). These
-// set the search box; results still come only from real vendor data.
-const PROBLEM_STARTERS = ['reduce labor', 'prevent cargo theft', 'improve safety', 'speed up picking', 'reduce downtime', 'warehouse automation'];
 
 function useLocalSet(key: string): [Set<string>, (id: string) => void, (ids: string[]) => void] {
   const [set, setSet] = useState<Set<string>>(new Set());
@@ -134,6 +158,14 @@ export default function MarketplacePage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [fDept, setFDept] = useState('');
 
+  // Guided journey: Operation → Area → Solution type → Location → Goal.
+  const [guided, setGuided] = useState<GuidedSelection>(EMPTY_GUIDED);
+  const [wizardOpen, setWizardOpen] = useState(false);
+
+  // Companies tab data (lazy-loaded the first time the tab opens).
+  const [companies, setCompanies] = useState<CompanyRecord[] | null>(null);
+  const [companiesLoading, setCompaniesLoading] = useState(false);
+
   // selected facet filters (data-driven)
   const [fCategory, setFCategory] = useState('');
   const [fIndustry, setFIndustry] = useState('');
@@ -181,7 +213,7 @@ export default function MarketplacePage() {
     const sp = new URLSearchParams(window.location.search);
     const q0 = sp.get('q'); const t0 = sp.get('tab');
     if (q0) setQ(q0);
-    if (t0 === 'product' || t0 === 'service' || t0 === 'solution') setTab(t0);
+    if (t0 === 'equipment' || t0 === 'product' || t0 === 'technology' || t0 === 'service' || t0 === 'company') setTab(t0);
     // Autofocus search on desktop only (avoid popping the mobile keyboard).
     if (window.innerWidth > 860) searchRef.current?.focus();
   }, []);
@@ -226,12 +258,24 @@ export default function MarketplacePage() {
     setFDept(''); setFCategory(''); setFIndustry(''); setFArea(''); setFPricing('');
     setFPilot(false); setFWarranty(false); setFEmergency(false); setFVerified(false); setFCases(false);
     setFLocal(false); setFFast(false);
+    setGuided(EMPTY_GUIDED);
   };
+
+  // Lazy-load the company directory the first time the Companies tab opens.
+  useEffect(() => {
+    if (tab !== 'company' || companies !== null || companiesLoading) return;
+    setCompaniesLoading(true);
+    fetch('/api/marketplace/companies')
+      .then((r) => r.json())
+      .then((d) => setCompanies(d.ok ? d.companies || [] : []))
+      .catch(() => setCompanies([]))
+      .finally(() => setCompaniesLoading(false));
+  }, [tab, companies, companiesLoading]);
 
   // listings for the active tab (before facet/search filtering) — drives facets
   const tabCards = useMemo(() => {
-    if (tab === 'product' || tab === 'service') return cards.filter((c) => c.kind === tab);
-    return cards; // 'all' and 'solution' consider everything
+    if (tab === 'all' || tab === 'company') return cards;
+    return cards.filter((c) => solutionTypeOf(c) === tab);
   }, [cards, tab]);
 
   // Build facet option lists from REAL data only.
@@ -262,6 +306,7 @@ export default function MarketplacePage() {
 
   const results = useMemo(() => {
     let list = tabCards.filter((c) => {
+      if (!guidedIsEmpty(guided) && !listingMatchesGuided(c, guided)) return false;
       if (fDept && c.functional_group !== fDept) return false;
       if (fCategory && c.category !== fCategory) return false;
       if (fIndustry && !(c.industries || []).includes(fIndustry)) return false;
@@ -290,7 +335,7 @@ export default function MarketplacePage() {
       return sb - sa;
     });
     return list;
-  }, [tabCards, fDept, fCategory, fIndustry, fArea, fPricing, fPilot, fWarranty, fEmergency, fVerified, fCases, fLocal, fFast, savedOnly, saved, tokens, sort]);
+  }, [tabCards, guided, fDept, fCategory, fIndustry, fArea, fPricing, fPilot, fWarranty, fEmergency, fVerified, fCases, fLocal, fFast, savedOnly, saved, tokens, sort]);
 
   // Which departments actually have listings (so we never show an empty aisle).
   const deptCounts = useMemo(() => {
@@ -302,7 +347,8 @@ export default function MarketplacePage() {
 
   const compareCards = useMemo(() => cards.filter((c) => compare.has(c.id)).slice(0, 5), [cards, compare]);
   const activeFilterCount = [fDept, fCategory, fIndustry, fArea, fPricing].filter(Boolean).length +
-    [fPilot, fWarranty, fEmergency, fVerified, fCases, fLocal, fFast].filter(Boolean).length;
+    [fPilot, fWarranty, fEmergency, fVerified, fCases, fLocal, fFast].filter(Boolean).length +
+    guidedCount(guided);
   const marketplaceEmpty = !loading && cards.length === 0;
 
   // "Storefront" home state: nothing searched or filtered yet → show discovery
@@ -342,7 +388,7 @@ export default function MarketplacePage() {
       {/* Storefront hero (home state only) */}
       {pristine && !loading && (
         <div className="mk-hero">
-          <h1>The industrial supply chain marketplace</h1>
+          <h1>What does your operation need?</h1>
           <p>Technology, hardware, equipment, and services for warehouses, manufacturers, and logistics — discover, compare, request quotes, pilot, and close the deal through NXT{'//'}LINK.</p>
         </div>
       )}
@@ -354,11 +400,35 @@ export default function MarketplacePage() {
           <input
             ref={searchRef}
             className="mk-search"
-            placeholder="Search products, services, or a problem — e.g. “forklift maintenance El Paso”, “reduce downtime”"
+            placeholder="Search equipment, technology, services, companies, or describe a problem"
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
           {q && <button className="mk-clearq" onClick={() => setQ('')} aria-label="Clear search">×</button>}
+        </div>
+
+        {/* Operation toggle + guided entry + suggested quick filters */}
+        <div className="mk-oprow">
+          <div className="mk-opseg">
+            {OPERATIONS.map((o) => (
+              <button
+                key={o.key}
+                className={'mk-op' + (guided.operation === o.key ? ' on' : '')}
+                onClick={() => setGuided({ ...guided, operation: guided.operation === o.key ? null : o.key })}
+                title={o.forWho.join(', ')}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <button className="mk-guidedbtn" onClick={() => setWizardOpen(true)}>Help me choose →</button>
+        </div>
+        <div className="mk-sugchips">
+          <button className={guided.location === 'El Paso' ? 'on' : ''} onClick={() => setGuided({ ...guided, location: guided.location === 'El Paso' ? null : 'El Paso' })}>El Paso</button>
+          <button className={fLocal ? 'on' : ''} onClick={() => setFLocal(!fLocal)}>On-site service</button>
+          <button className={fFast ? 'on' : ''} onClick={() => setFFast(!fFast)}>Fast lead time</button>
+          <button className={fVerified ? 'on' : ''} onClick={() => setFVerified(!fVerified)}>Verified companies</button>
+          <button className={fPilot ? 'on' : ''} onClick={() => setFPilot(!fPilot)}>Pilot available</button>
         </div>
       </div>
 
@@ -427,8 +497,8 @@ export default function MarketplacePage() {
       {/* Tabs */}
       <div className="mk-tabsrow">
         <div className="mk-tabs">
-          {([['all', 'Everything'], ['product', 'Products'], ['service', 'Services'], ['solution', 'Solutions']] as Array<[Tab, string]>).map(([k, label]) => (
-            <button key={k} className={'mk-tab' + (tab === k ? ' on' : '')} onClick={() => { setTab(k); resetFilters(); }}>{label}</button>
+          {([['all', 'Everything'], ['equipment', 'Equipment'], ['product', 'Products'], ['technology', 'Technology'], ['service', 'Services'], ['company', 'Companies']] as Array<[Tab, string]>).map(([k, label]) => (
+            <button key={k} className={'mk-tab' + (tab === k ? ' on' : '')} onClick={() => setTab(k)}>{label}</button>
           ))}
         </div>
         <div className="mk-tabsr">
@@ -444,8 +514,15 @@ export default function MarketplacePage() {
         </div>
       </div>
 
-      {tab === 'solution' ? (
-        <SolutionsPanel onPick={(p) => { setQ(p); setTab('all'); }} starters={PROBLEM_STARTERS} />
+      {tab === 'company' ? (
+        <CompaniesPanel
+          companies={companies}
+          loading={companiesLoading}
+          guided={guided}
+          tokens={tokens}
+          onlyVerified={fVerified}
+          onlyPilot={fPilot}
+        />
       ) : (
         <div className="mk-layout">
           {/* Left filter rail (desktop) + drawer (mobile) */}
@@ -487,6 +564,12 @@ export default function MarketplacePage() {
             </div>
             {activeFilterCount > 0 && (
               <div className="mk-activechips">
+                {guided.operation && <button onClick={() => setGuided({ ...guided, operation: null })}>{OPERATIONS.find((o) => o.key === guided.operation)?.label} ✕</button>}
+                {guided.area && <button onClick={() => setGuided({ ...guided, area: null })}>{areasFor(guided.operation).find((a) => a.key === guided.area)?.label} ✕</button>}
+                {guided.solutionTypes.length > 0 && <button onClick={() => setGuided({ ...guided, solutionTypes: [] })}>{guided.solutionTypes.map((t) => SOLUTION_TYPES.find((s) => s.key === t)?.label).join(' + ')} ✕</button>}
+                {guided.location && <button onClick={() => setGuided({ ...guided, location: null })}>{guided.location} ✕</button>}
+                {guided.siteNeeds.length > 0 && <button onClick={() => setGuided({ ...guided, siteNeeds: [] })}>{guided.siteNeeds.map((n) => SITE_NEEDS.find((s) => s.key === n)?.label).join(', ')} ✕</button>}
+                {guided.goal && <button onClick={() => setGuided({ ...guided, goal: null })}>{GOALS.find((g) => g.key === guided.goal)?.label} ✕</button>}
                 {fCategory && <button onClick={() => setFCategory('')}>{fCategory} ✕</button>}
                 {fIndustry && <button onClick={() => setFIndustry('')}>{fIndustry} ✕</button>}
                 {fArea && <button onClick={() => setFArea('')}>{fArea} ✕</button>}
@@ -539,6 +622,20 @@ export default function MarketplacePage() {
 
       {showCompare && compareCards.length >= 2 && (
         <CompareModal cards={compareCards} onClose={() => setShowCompare(false)} />
+      )}
+
+      {wizardOpen && (
+        <GuidedWizard
+          initial={guided}
+          onApply={(sel) => {
+            setGuided(sel);
+            setWizardOpen(false);
+            // One solution type picked → land on that tab; several → Everything.
+            if (sel.solutionTypes.length === 1) setTab(sel.solutionTypes[0]);
+            else if (sel.solutionTypes.length > 1 && tab !== 'company') setTab('all');
+          }}
+          onClose={() => setWizardOpen(false)}
+        />
       )}
     </div>
   );
@@ -607,15 +704,295 @@ function FacetCheck({ label, checked, onChange }: { label: string; checked: bool
   );
 }
 
-function SolutionsPanel({ onPick, starters }: { onPick: (p: string) => void; starters: string[] }) {
+// ---- Companies tab: directory with plain-language "why they match" ----
+function companySearchText(c: CompanyRecord): string {
+  return [
+    c.company_name, c.tagline || '', c.city || '', c.company_type || '',
+    c.categories.join(' '), c.industries.join(' '), c.main_expertise.join(' '),
+    c.problems_solved.join(' '), c.capabilities.join(' '), c.service_areas.join(' '),
+  ].join(' ').toLowerCase();
+}
+function toSnapshot(c: CompanyRecord): CompanySnapshot {
+  return {
+    id: c.id, name: c.company_name, city: c.city, verified: c.verified, insured: c.insured,
+    rating: c.rating, review_count: c.review_count, response_time: c.response_time,
+    year_founded: c.year_founded, listings: c.product_count + c.service_count,
+    pilot_available: c.pilot_available, installation_available: c.installation_available,
+    cross_border: c.cross_border, emergency_available: c.emergency_available,
+    industries: c.industries.slice(0, 4), main_expertise: c.main_expertise.slice(0, 5),
+  };
+}
+
+function CompaniesPanel({ companies, loading, guided, tokens, onlyVerified, onlyPilot }: {
+  companies: CompanyRecord[] | null; loading: boolean; guided: GuidedSelection;
+  tokens: string[]; onlyVerified: boolean; onlyPilot: boolean;
+}) {
+  const [fType, setFType] = useState('');
+  const [fIndustry, setFIndustry] = useState('');
+  const [fCoverage, setFCoverage] = useState('');
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [compareList, setCompareList] = useState<CompanySnapshot[]>([]);
+  const [compareOpen, setCompareOpen] = useState(false);
+
+  useEffect(() => {
+    setSavedIds(new Set(readCompanyList(SAVED_COMPANIES_KEY).map((c) => c.id)));
+    setCompareList(readCompanyList(COMPARE_COMPANIES_KEY));
+  }, []);
+
+  const facets = useMemo(() => {
+    const types = new Set<string>(); const inds = new Set<string>(); const cov = new Set<string>();
+    for (const c of companies || []) {
+      if (c.company_type) types.add(c.company_type);
+      c.industries.forEach((i) => inds.add(i));
+      c.service_areas.forEach((a) => cov.add(a));
+    }
+    const sortArr = (s: Set<string>) => Array.from(s).sort((a, b) => a.localeCompare(b));
+    return { types: sortArr(types), industries: sortArr(inds), coverage: sortArr(cov) };
+  }, [companies]);
+
+  const matched = useMemo(() => {
+    return (companies || [])
+      .map((c) => ({ c, m: companyMatch(c, guided) }))
+      .filter(({ c, m }) => {
+        if (!m.ok) return false;
+        if (fType && c.company_type !== fType) return false;
+        if (fIndustry && !c.industries.includes(fIndustry)) return false;
+        if (fCoverage && !c.service_areas.includes(fCoverage)) return false;
+        if (onlyVerified && !c.verified) return false;
+        if (onlyPilot && !c.pilot_available) return false;
+        if (tokens.length) {
+          const text = companySearchText(c);
+          if (!tokens.every((t) => text.includes(t))) return false;
+        }
+        return true;
+      });
+  }, [companies, guided, fType, fIndustry, fCoverage, onlyVerified, onlyPilot, tokens]);
+
+  function toggleSave(c: CompanyRecord) {
+    const list = readCompanyList(SAVED_COMPANIES_KEY).filter((x) => x.id !== c.id);
+    const isSaved = savedIds.has(c.id);
+    if (!isSaved) list.push(toSnapshot(c));
+    writeCompanyList(SAVED_COMPANIES_KEY, list);
+    setSavedIds((prev) => {
+      const next = new Set(prev);
+      if (isSaved) next.delete(c.id); else next.add(c.id);
+      return next;
+    });
+  }
+  function toggleCompare(c: CompanyRecord) {
+    let list = readCompanyList(COMPARE_COMPANIES_KEY);
+    if (list.some((x) => x.id === c.id)) list = list.filter((x) => x.id !== c.id);
+    else list = [...list, toSnapshot(c)].slice(-4);
+    writeCompanyList(COMPARE_COMPANIES_KEY, list);
+    setCompareList(list);
+  }
+  function removeCompare(id: string) {
+    const list = readCompanyList(COMPARE_COMPANIES_KEY).filter((x) => x.id !== id);
+    writeCompanyList(COMPARE_COMPANIES_KEY, list);
+    setCompareList(list);
+    if (!list.length) setCompareOpen(false);
+  }
+
   return (
-    <div className="mk-solutions">
-      <h2>Describe the outcome you need</h2>
-      <p>Solutions bundle the right products and services for a goal. Tell NXT//LINK the problem and we build a comparable shortlist — or start from a common goal below.</p>
-      <div className="mk-starters">
-        {starters.map((s) => <button key={s} onClick={() => onPick(s)}>{s}</button>)}
+    <div className="mk-companies">
+      <div className="mk-cofilters">
+        <FacetSelect label="Company type" value={fType} onChange={setFType} options={facets.types} />
+        <FacetSelect label="Industries served" value={fIndustry} onChange={setFIndustry} options={facets.industries} />
+        <FacetSelect label="Coverage" value={fCoverage} onChange={setFCoverage} options={facets.coverage} />
       </div>
-      <Link className="mk-asknxt" href="/intake">Describe your project → get an NXT//LINK shortlist</Link>
+      <div className="mk-count">
+        {loading || companies === null ? 'Loading companies…' : `${matched.length} ${matched.length === 1 ? 'company' : 'companies'}`}
+      </div>
+      {loading || companies === null ? (
+        <div className="mk-skeletons">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="mk-skel" />)}</div>
+      ) : matched.length === 0 ? (
+        <div className="mk-empty big">
+          <b>No companies match</b>
+          <p>Try fewer filters, or describe your need and NXT{'//'}LINK will source it.</p>
+          <div className="mk-emptyactions"><Link className="mk-quote" href="/intake">Ask NXT{'//'}LINK to find it</Link></div>
+        </div>
+      ) : (
+        <div className="mk-cogrid">
+          {matched.map(({ c, m }) => (
+            <CompanyCard
+              key={c.id}
+              c={c}
+              why={explainMatch(m.reasons)}
+              saved={savedIds.has(c.id)}
+              inCompare={compareList.some((x) => x.id === c.id)}
+              onSave={() => toggleSave(c)}
+              onCompare={() => toggleCompare(c)}
+            />
+          ))}
+        </div>
+      )}
+      {compareList.length > 1 && (
+        <div className="mk-cbar">
+          <span className="mk-cnames"><b>{compareList.length}</b> companies to compare</span>
+          <button className="mk-mini on" onClick={() => setCompareOpen(true)}>Compare now</button>
+          <button className="mk-mini" onClick={() => { writeCompanyList(COMPARE_COMPANIES_KEY, []); setCompareList([]); }}>Clear</button>
+        </div>
+      )}
+      {compareOpen && compareList.length > 0 && (
+        <CompareDrawer companies={compareList} onRemove={removeCompare} onClose={() => setCompareOpen(false)} />
+      )}
+    </div>
+  );
+}
+
+function CompanyCard({ c, why, saved, inCompare, onSave, onCompare }: {
+  c: CompanyRecord; why: string; saved: boolean; inCompare: boolean;
+  onSave: () => void; onCompare: () => void;
+}) {
+  // "What they provide" — from structured tags, never the marketing blurb.
+  const provides = [...c.categories.slice(0, 4), ...c.main_expertise.slice(0, 2)]
+    .filter((v, i, a) => a.indexOf(v) === i).slice(0, 5).join(', ');
+  return (
+    <div className="mk-cocard">
+      <div className="mk-cohead">
+        <div className="mk-cologo">{c.logo_url ? <img src={c.logo_url} alt={`${c.company_name} logo`} /> : <span>{c.company_name.slice(0, 2).toUpperCase()}</span>}</div>
+        <div className="mk-coid">
+          <Link href={`/marketplace/vendor/${c.id}`} className="mk-coname">{c.company_name}</Link>
+          <div className="mk-cosub">
+            {c.city && <span>{c.city}</span>}
+            {c.company_type && <span>{c.company_type}</span>}
+            {typeof c.rating === 'number' && c.review_count > 0 && <span className="mk-rating">★ {c.rating.toFixed(1)} ({c.review_count})</span>}
+          </div>
+        </div>
+      </div>
+      <div className="mk-kindrow">
+        {c.verified && <span className="mk-badge trust">Verified</span>}
+        {c.insured && <span className="mk-badge trust">Insured</span>}
+        {c.pilot_available && <span className="mk-badge">Pilot</span>}
+        {c.installation_available && <span className="mk-badge">Installation</span>}
+        {c.cross_border && <span className="mk-badge">Cross-border</span>}
+        {c.emergency_available && <span className="mk-badge urgent">24/7</span>}
+        {c.case_study_count > 0 && <span className="mk-badge">Case studies</span>}
+      </div>
+      {provides && <p className="mk-coprov">{provides}</p>}
+      {why ? <p className="mk-cowhy">{why}</p> : (c.tagline && <p className="mk-cowhy plain">{c.tagline}</p>)}
+      <div className="mk-cometa">
+        {c.industries.length > 0 && <span>{c.industries.slice(0, 3).join(' · ')}</span>}
+        {c.service_areas.length > 0 && <span>Serves {c.service_areas.slice(0, 3).join(', ')}</span>}
+        {c.response_time && <span>Responds {c.response_time.toLowerCase()}</span>}
+        <span>{c.product_count + c.service_count} listing{c.product_count + c.service_count === 1 ? '' : 's'}</span>
+      </div>
+      <div className="mk-actions">
+        <Link className="mk-mini" href={`/marketplace/vendor/${c.id}`}>View company</Link>
+        <button className={'mk-mini' + (saved ? ' on' : '')} onClick={onSave}>{saved ? 'Saved' : 'Save'}</button>
+        <button className={'mk-mini' + (inCompare ? ' on' : '')} onClick={onCompare}>{inCompare ? 'In compare' : 'Compare'}</button>
+        <Link className="mk-quote" href={`/marketplace/vendor/${c.id}?request=quote`}>Request quote</Link>
+      </div>
+    </div>
+  );
+}
+
+// ---- Guided wizard: Operation → Area → Solution type → Location → Goal ----
+function GuidedWizard({ initial, onApply, onClose }: {
+  initial: GuidedSelection; onApply: (sel: GuidedSelection) => void; onClose: () => void;
+}) {
+  const [sel, setSel] = useState<GuidedSelection>(initial);
+  const [step, setStep] = useState(0);
+  const steps = ['Your operation', 'What needs help', 'Solution type', 'Location', 'Your goal'];
+  const last = step === steps.length - 1;
+
+  function toggleType(t: SolutionType) {
+    setSel((s) => ({
+      ...s,
+      solutionTypes: s.solutionTypes.includes(t) ? s.solutionTypes.filter((x) => x !== t) : [...s.solutionTypes, t],
+    }));
+  }
+  function toggleNeed(n: GuidedSelection['siteNeeds'][number]) {
+    setSel((s) => ({
+      ...s,
+      siteNeeds: s.siteNeeds.includes(n) ? s.siteNeeds.filter((x) => x !== n) : [...s.siteNeeds, n],
+    }));
+  }
+
+  return (
+    <div className="mk-modal" onClick={onClose}>
+      <div className="mk-modal-in mk-wiz" onClick={(e) => e.stopPropagation()}>
+        <div className="mk-modal-head">
+          <b>{steps[step]} <small>step {step + 1} of {steps.length}</small></b>
+          <button onClick={onClose}>Close</button>
+        </div>
+
+        {step === 0 && (
+          <div className="mk-wizcards">
+            {OPERATIONS.map((o) => (
+              <button key={o.key} className={'mk-wizcard' + (sel.operation === o.key ? ' on' : '')} onClick={() => setSel({ ...sel, operation: sel.operation === o.key ? null : o.key, area: null })}>
+                <b>{o.label}</b>
+                {o.forWho.length > 0 && <small>{o.forWho.join(' · ')}</small>}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {step === 1 && (
+          <div className="mk-wizgrid">
+            {areasFor(sel.operation).map((a) => (
+              <button key={a.key} className={'mk-wizcard sm' + (sel.area === a.key ? ' on' : '')} onClick={() => setSel({ ...sel, area: sel.area === a.key ? null : a.key })}>
+                <b>{a.label}</b>
+                <small>{a.hint}</small>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {step === 2 && (
+          <>
+            <p className="mk-wizhint">Pick more than one if the project needs it — a forklift project may need equipment, maintenance, and training.</p>
+            <div className="mk-wizcards">
+              {SOLUTION_TYPES.map((t) => (
+                <button key={t.key} className={'mk-wizcard' + (sel.solutionTypes.includes(t.key) ? ' on' : '')} onClick={() => toggleType(t.key)}>
+                  <b>{t.label}</b>
+                  <small>{t.hint}</small>
+                  <small className="mk-wizex">{t.examples}</small>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {step === 3 && (
+          <>
+            <div className="mk-starters">
+              {LOCATION_OPTIONS.map((l) => (
+                <button key={l} className={sel.location === l ? 'on' : ''} onClick={() => setSel({ ...sel, location: sel.location === l ? null : l })}>{l}</button>
+              ))}
+            </div>
+            <p className="mk-wizhint">Does the company need to work at your location?</p>
+            <div className="mk-starters">
+              {SITE_NEEDS.map((n) => (
+                <button key={n.key} className={sel.siteNeeds.includes(n.key) ? 'on' : ''} onClick={() => toggleNeed(n.key)}>{n.label}</button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {step === 4 && (
+          <>
+            <p className="mk-wizhint">Search by the result you want — you don&apos;t need to know the product name.</p>
+            <div className="mk-wizgrid">
+              {GOALS.map((g) => (
+                <button key={g.key} className={'mk-wizcard sm' + (sel.goal === g.key ? ' on' : '')} onClick={() => setSel({ ...sel, goal: sel.goal === g.key ? null : g.key })}>
+                  <b>{g.label}</b>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        <div className="mk-wizfoot">
+          {step > 0 ? <button className="mk-mini" onClick={() => setStep(step - 1)}>← Back</button> : <span />}
+          <div className="mk-wizfootr">
+            <button className="mk-mini" onClick={() => onApply(sel)}>Apply now</button>
+            {!last
+              ? <button className="mk-quote" onClick={() => setStep(step + 1)}>Next →</button>
+              : <button className="mk-quote" onClick={() => onApply(sel)}>Show results</button>}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -813,6 +1190,46 @@ const CSS = `
 .mk-starters{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:18px;}
 .mk-starters button{font-family:inherit;font-size:13px;color:#C4B5FD;background:rgba(124,92,252,.1);border:1px solid rgba(124,92,252,.3);border-radius:99px;padding:8px 14px;cursor:pointer;}
 .mk-starters button:hover{background:rgba(124,92,252,.2);}
+.mk-starters button.on{background:#7C5CFC;color:#fff;border-color:#7C5CFC;}
+.mk-oprow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px;}
+.mk-opseg{display:flex;background:#14141F;border:1px solid rgba(255,255,255,.1);border-radius:11px;overflow:hidden;}
+.mk-op{font-family:inherit;font-size:13px;font-weight:600;padding:9px 16px;background:none;border:none;color:#8080A0;cursor:pointer;white-space:nowrap;}
+.mk-op.on{background:rgba(124,92,252,.18);color:#C4B5FD;}
+.mk-guidedbtn{font-family:inherit;font-size:13px;font-weight:700;color:#C4B5FD;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.4);border-radius:11px;padding:10px 16px;cursor:pointer;}
+.mk-guidedbtn:hover{background:rgba(124,92,252,.22);}
+.mk-sugchips{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;}
+.mk-sugchips button{font-family:inherit;font-size:12px;font-weight:600;padding:6px 12px;border-radius:99px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#C0C0D0;cursor:pointer;}
+.mk-sugchips button.on{border-color:#7C5CFC;background:rgba(124,92,252,.14);color:#C4B5FD;}
+.mk-companies{max-width:1200px;margin:0 auto;padding:8px 20px 120px;}
+.mk-cofilters{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px;background:#12121B;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px;}
+.mk-cogrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px;}
+.mk-cocard{background:#14141F;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:9px;transition:border-color .15s;}
+.mk-cocard:hover{border-color:rgba(124,92,252,.5);}
+.mk-cohead{display:flex;gap:12px;align-items:center;}
+.mk-cologo{width:52px;height:52px;flex-shrink:0;border-radius:12px;background:#0E0E16;display:grid;place-items:center;overflow:hidden;color:#7C5CFC;font-weight:800;font-size:16px;}
+.mk-cologo img{width:100%;height:100%;object-fit:contain;}
+.mk-coname{font-size:16px;font-weight:800;color:#F0F0F5;text-decoration:none;line-height:1.25;}
+.mk-coname:hover{color:#C4B5FD;}
+.mk-cosub{display:flex;flex-wrap:wrap;gap:9px;font-size:12px;color:#8080A0;margin-top:3px;}
+.mk-coprov{font-size:13px;color:#D5D4E0;margin:0;line-height:1.5;}
+.mk-cowhy{font-size:12.5px;color:#34D399;margin:0;line-height:1.5;background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2);border-radius:9px;padding:8px 11px;}
+.mk-cowhy.plain{color:#8080A0;background:none;border:none;padding:0;}
+.mk-cometa{display:flex;flex-wrap:wrap;gap:9px;font-size:11.5px;color:#8080A0;}
+.mk-wiz{max-width:680px;}
+.mk-modal-head b small{color:#8080A0;font-weight:600;font-size:12px;margin-left:8px;}
+.mk-wizhint{color:#8080A0;font-size:13px;line-height:1.5;margin:0 0 14px;}
+.mk-wizcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;}
+.mk-wizgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;}
+.mk-wizcard{font-family:inherit;text-align:left;display:flex;flex-direction:column;gap:6px;background:#0E0E16;border:1px solid rgba(255,255,255,.1);border-radius:13px;padding:15px 16px;cursor:pointer;color:#F0F0F5;}
+.mk-wizcard.sm{padding:12px 14px;gap:4px;}
+.mk-wizcard:hover{border-color:rgba(124,92,252,.5);}
+.mk-wizcard.on{border-color:#7C5CFC;background:rgba(124,92,252,.1);}
+.mk-wizcard b{font-size:14px;line-height:1.3;}
+.mk-wizcard small{font-size:11.5px;color:#8080A0;line-height:1.45;}
+.mk-wizcard .mk-wizex{color:#63607A;}
+.mk-wizfoot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:20px;}
+.mk-wizfootr{display:flex;gap:10px;align-items:center;}
+.mk-wizfoot .mk-quote{border:none;cursor:pointer;font-family:inherit;font-size:13px;}
 .mk-solutions{max-width:720px;margin:10px auto;padding:44px 24px 120px;text-align:center;}
 .mk-solutions h2{font-size:24px;font-weight:800;letter-spacing:-.02em;}
 .mk-solutions p{color:#8080A0;font-size:15px;line-height:1.6;margin:12px auto 24px;max-width:560px;}
