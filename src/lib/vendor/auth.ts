@@ -45,6 +45,24 @@ export interface VendorRow {
   description: string | null;
   status: string;
   auth_id: string | null;
+  // Company profile template (vendor_profiles template columns).
+  year_founded?: number | null;
+  employee_count?: string | null;
+  company_type?: string | null;
+  languages?: string[] | null;
+  response_time?: string | null;
+  projects_completed?: number | null;
+  emergency_available?: boolean | null;
+  cross_border?: boolean | null;
+  installation_available?: boolean | null;
+  pilot_available?: boolean | null;
+  main_expertise?: string[] | null;
+  problems_solved?: string[] | null;
+  capabilities?: string[] | null;
+  offering_families?: string[] | null;
+  cta_label?: string | null;
+  visible_tabs?: string[] | null;
+  brand_color?: string | null;
 }
 
 /**
@@ -55,7 +73,9 @@ export async function getOrCreateVendorProfile(session: VendorSession): Promise<
   if (!isSupabaseConfigured()) return null;
   const db = getSupabaseClient({ admin: true });
 
-  const cols = 'id, public_ref, company_name, contact_name, email, phone, website, city, categories, service_areas, industries, client_types, description, status, auth_id';
+  // '*' so the row carries the company-profile-template columns too; the
+  // VendorRow interface types the fields routes actually rely on.
+  const cols = '*';
 
   const { data: byAuth } = await db.from('vendor_profiles').select(cols).eq('auth_id', session.authId).maybeSingle();
   if (byAuth) return byAuth as VendorRow;

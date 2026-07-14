@@ -60,19 +60,38 @@ export async function PATCH(req: Request) {
 
   const patch: Record<string, unknown> = {};
   const str = (k: string, max = 300) => { if (typeof body[k] === 'string') patch[k] = (body[k] as string).slice(0, max); };
+  const arr = (k: string, max = 20, maxLen = 160) => {
+    if (Array.isArray(body[k])) patch[k] = (body[k] as unknown[]).map((v) => String(v).trim().slice(0, maxLen)).filter(Boolean).slice(0, max);
+  };
+  const bool = (k: string) => { if (typeof body[k] === 'boolean') patch[k] = body[k]; };
+  const int = (k: string, min: number, max: number) => {
+    if (body[k] === null) { patch[k] = null; return; }
+    const n = Number(body[k]);
+    if (Number.isInteger(n) && n >= min && n <= max) patch[k] = n;
+  };
   str('company_name'); str('contact_name'); str('phone'); str('website'); str('city');
   str('description', 4000); str('tagline', 160);
-  if (Array.isArray(body.categories)) patch.categories = (body.categories as string[]).slice(0, 30);
-  if (Array.isArray(body.service_areas)) patch.service_areas = (body.service_areas as string[]).slice(0, 20);
-  if (Array.isArray(body.industries)) patch.industries = (body.industries as string[]).slice(0, 20);
-  if (Array.isArray(body.client_types)) patch.client_types = (body.client_types as string[]).slice(0, 20);
+  arr('categories', 30); arr('service_areas'); arr('industries'); arr('client_types');
   if (Array.isArray(body.achievements)) patch.achievements = (body.achievements as string[]).map((a) => String(a).slice(0, 160)).slice(0, 12);
+
+  // Company profile template fields (Overview + Expertise + quick facts).
+  int('year_founded', 1800, new Date().getFullYear());
+  int('projects_completed', 0, 1000000);
+  str('employee_count', 40); str('company_type', 60); str('response_time', 60);
+  str('cta_label', 40); str('brand_color', 20);
+  arr('languages', 10, 40);
+  arr('main_expertise', 5, 80); // spec: at most five primary areas
+  arr('problems_solved', 20, 120);
+  arr('capabilities', 20, 120);
+  arr('offering_families', 4, 20);
+  arr('visible_tabs', 12, 20);
+  bool('emergency_available'); bool('cross_border'); bool('installation_available'); bool('pilot_available');
 
   if (!Object.keys(patch).length) return NextResponse.json({ ok: false, message: 'Nothing to update' }, { status: 400 });
 
   const db = getSupabaseClient({ admin: true });
   const { data, error } = await db.from('vendor_profiles').update(patch).eq('id', vendor.id).eq('auth_id', session.authId)
-    .select('id, public_ref, company_name, contact_name, email, phone, website, city, categories, service_areas, industries, client_types, description, status')
+    .select('*')
     .single();
   if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
   return NextResponse.json({ ok: true, stored: true, vendor: data });
