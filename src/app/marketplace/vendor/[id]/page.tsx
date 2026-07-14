@@ -15,6 +15,10 @@ import {
   PROFILE_TABS, TAB_LABELS, type ProfileTab,
   isTechnologyCategory, yearsInBusiness,
 } from '@/lib/vendor/profile-template';
+import {
+  type CompanySnapshot, SAVED_COMPANIES_KEY, COMPARE_COMPANIES_KEY,
+  readCompanyList, writeCompanyList, CompareDrawer,
+} from '@/components/marketplace/CompanyCompare';
 
 interface ListingCard {
   id: string; kind: 'product' | 'service'; name: string; category: string;
@@ -53,24 +57,7 @@ interface Storefront {
   documents: Array<{ id: string; name: string; size_bytes: number; url: string | null }>;
 }
 
-interface CompanySnapshot {
-  id: string; name: string; city: string | null; verified: boolean; insured: boolean;
-  rating: number | null; review_count: number; response_time: string | null;
-  year_founded: number | null; listings: number;
-  pilot_available: boolean; installation_available: boolean; cross_border: boolean; emergency_available: boolean;
-  industries: string[]; main_expertise: string[];
-}
-
-const SAVED_KEY = 'nxt_saved_companies';
-const COMPARE_KEY = 'nxt_company_compare';
 const stars = (n: number) => '★★★★★'.slice(0, Math.round(n)) + '☆☆☆☆☆'.slice(0, 5 - Math.round(n));
-
-function readList(key: string): CompanySnapshot[] {
-  try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
-}
-function writeList(key: string, list: CompanySnapshot[]) {
-  try { localStorage.setItem(key, JSON.stringify(list)); } catch { /* storage full/blocked */ }
-}
 
 export default function VendorStorefrontPage() {
   const params = useParams<{ id: string }>();
@@ -96,10 +83,13 @@ export default function VendorStorefrontPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then((me) => { if (me?.ok && me.vendor?.id === params.id) setIsOwner(true); })
       .catch(() => {});
-    setSaved(readList(SAVED_KEY).some((c) => c.id === params.id));
-    setCompare(readList(COMPARE_KEY));
+    setSaved(readCompanyList(SAVED_COMPANIES_KEY).some((c) => c.id === params.id));
+    setCompare(readCompanyList(COMPARE_COMPANIES_KEY));
     const hash = window.location.hash.replace('#', '');
     if ((PROFILE_TABS as readonly string[]).includes(hash)) setTab(hash as ProfileTab);
+    // Deep link from marketplace company cards: ?request=quote|question.
+    const req = new URLSearchParams(window.location.search).get('request');
+    if (req === 'quote' || req === 'question') setReqOpen(req);
   }, [params.id]);
 
   const v = d?.vendor;
@@ -142,22 +132,22 @@ export default function VendorStorefrontPage() {
   }
   function toggleSave() {
     if (!snapshot) return;
-    const list = readList(SAVED_KEY).filter((c) => c.id !== snapshot.id);
+    const list = readCompanyList(SAVED_COMPANIES_KEY).filter((c) => c.id !== snapshot.id);
     if (!saved) list.push(snapshot);
-    writeList(SAVED_KEY, list);
+    writeCompanyList(SAVED_COMPANIES_KEY, list);
     setSaved(!saved);
   }
   function toggleCompare() {
     if (!snapshot) return;
-    let list = readList(COMPARE_KEY);
+    let list = readCompanyList(COMPARE_COMPANIES_KEY);
     if (list.some((c) => c.id === snapshot.id)) list = list.filter((c) => c.id !== snapshot.id);
     else { list = [...list, snapshot].slice(-4); setCompareOpen(true); }
-    writeList(COMPARE_KEY, list);
+    writeCompanyList(COMPARE_COMPANIES_KEY, list);
     setCompare(list);
   }
   function removeCompare(id: string) {
-    const list = readList(COMPARE_KEY).filter((c) => c.id !== id);
-    writeList(COMPARE_KEY, list);
+    const list = readCompanyList(COMPARE_COMPANIES_KEY).filter((c) => c.id !== id);
+    writeCompanyList(COMPARE_COMPANIES_KEY, list);
     setCompare(list);
     if (!list.length) setCompareOpen(false);
   }
@@ -571,58 +561,6 @@ function RequestModal({ vendor, listings, type, onClose }: {
   );
 }
 
-// Side-by-side company comparison from locally saved snapshots (up to 4).
-function CompareDrawer({ companies, onRemove, onClose }: {
-  companies: CompanySnapshot[]; onRemove: (id: string) => void; onClose: () => void;
-}) {
-  const rows: Array<[string, (c: CompanySnapshot) => string]> = [
-    ['City', (c) => c.city || '—'],
-    ['Verified', (c) => (c.verified ? '✓' : '—')],
-    ['Insured', (c) => (c.insured ? '✓' : '—')],
-    ['Rating', (c) => (c.rating != null ? `★ ${c.rating.toFixed(1)} (${c.review_count})` : '—')],
-    ['Response time', (c) => c.response_time || '—'],
-    ['Founded', (c) => (c.year_founded ? String(c.year_founded) : '—')],
-    ['Listings', (c) => String(c.listings)],
-    ['Pilot available', (c) => (c.pilot_available ? '✓' : '—')],
-    ['Installation', (c) => (c.installation_available ? '✓' : '—')],
-    ['Cross-border', (c) => (c.cross_border ? '✓' : '—')],
-    ['24/7 emergency', (c) => (c.emergency_available ? '✓' : '—')],
-    ['Industries', (c) => c.industries.join(', ') || '—'],
-    ['Expertise', (c) => c.main_expertise.join(', ') || '—'],
-  ];
-  return (
-    <div className="vs-modal" role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="vs-mbox wide">
-        <button className="vs-mclose" onClick={onClose} aria-label="Close">✕</button>
-        <h3>Compare companies</h3>
-        <div className="vs-cmpscroll">
-          <table className="vs-cmp">
-            <thead>
-              <tr>
-                <th />
-                {companies.map((c) => (
-                  <th key={c.id}>
-                    <Link href={`/marketplace/vendor/${c.id}`}>{c.name}</Link>
-                    <button onClick={() => onRemove(c.id)}>remove</button>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(([label, get]) => (
-                <tr key={label}>
-                  <td>{label}</td>
-                  {companies.map((c) => <td key={c.id}>{get(c)}</td>)}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 .vs{--vsa:#7C5CFC;min-height:100vh;background:#0A0A0F;color:#F0F0F5;font-family:'Outfit',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
@@ -757,13 +695,5 @@ const CSS = `
 .vs-mfield{display:flex;flex-direction:column;gap:6px;font-size:12.5px;font-weight:600;color:#C0C0D0;margin-bottom:12px;}
 .vs-mfield input,.vs-mfield textarea,.vs-mfield select{font-family:inherit;padding:11px 13px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:#0A0A0F;color:#F0F0F5;font-size:14px;outline:none;resize:vertical;}
 .vs-mfield input:focus,.vs-mfield textarea:focus,.vs-mfield select:focus{border-color:var(--vsa);}
-.vs-cmpscroll{overflow-x:auto;}
-.vs-cmp{width:100%;border-collapse:collapse;font-size:13px;}
-.vs-cmp th,.vs-cmp td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left;vertical-align:top;}
-.vs-cmp th{min-width:150px;}
-.vs-cmp th a{color:#C4B5FD;font-size:13.5px;font-weight:700;text-decoration:none;display:block;}
-.vs-cmp th button{background:none;border:none;color:#63607A;font-size:11px;cursor:pointer;padding:2px 0;}
-.vs-cmp th button:hover{color:#FCA5A5;}
-.vs-cmp td:first-child{color:#8080A0;white-space:nowrap;}
 @media(max-width:560px){.vs-hero{flex-direction:column;align-items:flex-start;}.vs-tabs{top:52px;}}
 `;
