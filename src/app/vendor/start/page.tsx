@@ -30,6 +30,7 @@ export default function VendorStartPage() {
         { key: 'company', title: 'Name your company', desc: 'Company name, city, and a one-line tagline buyers see first.', href: '/vendor/portal', cta: 'Edit profile', done: Boolean(v.company_name && v.company_name !== 'New company' && v.tagline) },
         { key: 'logo', title: 'Add your logo', desc: 'Your logo appears on your storefront and every listing.', href: '/vendor/portal', cta: 'Upload logo', done: Boolean(prof.logo_url) },
         { key: 'fit', title: 'Say what you do', desc: 'Pick your industries, service areas, and what you sell — this powers search.', href: '/vendor/portal', cta: 'Set industries', done: (v.industries || []).length > 0 && (v.categories || []).length > 0 },
+        { key: 'expertise', title: 'Show your expertise', desc: 'Your top 5 expertise areas and the problems you solve — buyers compare on this.', href: '/vendor/portal', cta: 'Add expertise', done: (v.main_expertise || []).length > 0 },
         { key: 'proof', title: 'Add proof', desc: 'Certifications, case studies, or photos — proof wins quotes.', href: '/vendor/portal', cta: 'Add proof', done: false },
         { key: 'terms', title: 'Accept the NXT//LINK terms', desc: 'Commission, protected period, no going around the platform. Required to publish.', href: '/vendor/portal', cta: 'Review terms', done: Boolean(ag?.accepted) },
         { key: 'listing', title: 'Create your first listing', desc: 'A product or a service — AI can draft it from your brochure.', href: '/vendor/listings', cta: 'New listing', done: all.length > 0 },
@@ -63,7 +64,7 @@ export default function VendorStartPage() {
           : (
             <>
               <h1>Set up your storefront</h1>
-              <p className="vw-sub">Seven steps from empty account to your first buyers. {next ? <>Next up: <b>{next.title}</b>.</> : 'All done — you are live!'}</p>
+              <p className="vw-sub">Eight steps from empty account to your first buyers. {next ? <>Next up: <b>{next.title}</b>.</> : 'All done — you are live!'}</p>
 
               <div className="vw-meter">
                 <div className="vw-meterbar"><div style={{ width: `${pct}%` }} /></div>

@@ -3,6 +3,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import ChatWidget from '@/components/ChatWidget';
+import {
+  COMPANY_TYPES, EMPLOYEE_RANGES, RESPONSE_TIMES, LANGUAGE_OPTIONS,
+  EXPERTISE_OPTIONS, PROBLEM_OPTIONS, CAPABILITY_OPTIONS, MAX_EXPERTISE,
+  profileCompletion,
+} from '@/lib/vendor/profile-template';
 
 const CATEGORIES = [
   'Forklift maintenance', 'Copy machine service', 'Waste collection', 'Transportation / FTL / LTL',
@@ -27,6 +32,17 @@ interface Vendor {
   categories: string[]; service_areas: string[]; industries: string[]; client_types: string[];
   achievements?: string[]; tagline?: string | null;
   description: string | null; status: string;
+  // Company profile template fields.
+  year_founded?: number | null; employee_count?: string | null; company_type?: string | null;
+  languages?: string[] | null; response_time?: string | null; projects_completed?: number | null;
+  emergency_available?: boolean | null; cross_border?: boolean | null;
+  installation_available?: boolean | null; pilot_available?: boolean | null;
+  main_expertise?: string[] | null; problems_solved?: string[] | null; capabilities?: string[] | null;
+  cta_label?: string | null; brand_color?: string | null;
+}
+interface TeamMember {
+  id: string; name: string; position: string | null; expertise: string | null;
+  languages: string[]; service_region: string | null; photo_url?: string | null;
 }
 interface Brochure { id: string; file_name: string; title: string; size_bytes: number; public_url: string | null }
 interface Video { id: string; title: string | null; url: string; embed_url: string; provider: string }
@@ -68,6 +84,11 @@ export default function VendorPortalPage() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [photoCaption, setPhotoCaption] = useState('');
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [team, setTeam] = useState<TeamMember[]>([]);
+  const [teamForm, setTeamForm] = useState({ name: '', position: '', expertise: '', languages: '', service_region: '' });
+  const [teamFile, setTeamFile] = useState<File | null>(null);
+  const [teamBusy, setTeamBusy] = useState(false);
+  const [listingCount, setListingCount] = useState(0);
 
   const load = useCallback(async () => {
     const res = await fetch('/api/vendor/profile');
@@ -78,12 +99,16 @@ export default function VendorPortalPage() {
     setBannerUrl(data.banner_url || null);
     const ag = await fetch('/api/vendor/agreement').then((r) => r.json()).catch(() => null);
     if (ag?.ok) setAgreement(ag);
-    const [ce, ga] = await Promise.all([
+    const [ce, ga, tm, li] = await Promise.all([
       fetch('/api/vendor/certifications').then((r) => r.json()).catch(() => null),
       fetch('/api/vendor/gallery').then((r) => r.json()).catch(() => null),
+      fetch('/api/vendor/team').then((r) => r.json()).catch(() => null),
+      fetch('/api/vendor/listings').then((r) => r.json()).catch(() => null),
     ]);
     if (ce?.ok) setCerts(ce.certifications || []);
     if (ga?.ok) setPhotos(ga.photos || []);
+    if (tm?.ok) setTeam(tm.team || []);
+    if (li?.ok) setListingCount((li.products?.length || 0) + (li.services?.length || 0));
     setSignedIn(true); setChecking(false);
   }, []);
 
@@ -111,6 +136,21 @@ export default function VendorPortalPage() {
         categories: vendor.categories, service_areas: vendor.service_areas,
         industries: vendor.industries, client_types: vendor.client_types,
         achievements: vendor.achievements || [],
+        year_founded: vendor.year_founded ?? null,
+        employee_count: vendor.employee_count || '',
+        company_type: vendor.company_type || '',
+        languages: vendor.languages || [],
+        response_time: vendor.response_time || '',
+        projects_completed: vendor.projects_completed ?? null,
+        emergency_available: Boolean(vendor.emergency_available),
+        cross_border: Boolean(vendor.cross_border),
+        installation_available: Boolean(vendor.installation_available),
+        pilot_available: Boolean(vendor.pilot_available),
+        main_expertise: vendor.main_expertise || [],
+        problems_solved: vendor.problems_solved || [],
+        capabilities: vendor.capabilities || [],
+        cta_label: vendor.cta_label || '',
+        brand_color: vendor.brand_color || '',
       }),
     });
     const data = await res.json();
@@ -198,6 +238,38 @@ export default function VendorPortalPage() {
   async function removePhoto(id: string) {
     setPhotos((p) => p.filter((x) => x.id !== id));
     await fetch(`/api/vendor/gallery?id=${id}`, { method: 'DELETE' });
+  }
+  async function addTeamMember() {
+    if (!teamForm.name.trim()) { setMsg('Give the team member a name first.'); return; }
+    setTeamBusy(true); setMsg('');
+    const fd = new FormData();
+    Object.entries(teamForm).forEach(([k, v]) => fd.append(k, v));
+    if (teamFile) fd.append('file', teamFile);
+    const res = await fetch('/api/vendor/team', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.ok) {
+      setTeam((t) => [...t, data.member]);
+      setTeamForm({ name: '', position: '', expertise: '', languages: '', service_region: '' });
+      setTeamFile(null);
+    } else setMsg(data.message || 'Could not add team member');
+    setTeamBusy(false);
+  }
+  async function removeTeamMember(id: string) {
+    setTeam((t) => t.filter((x) => x.id !== id));
+    await fetch(`/api/vendor/team?id=${id}`, { method: 'DELETE' });
+  }
+  // Expertise is capped at MAX_EXPERTISE so profiles stay honest and scannable.
+  function toggleExpertise(v: string) {
+    if (!vendor) return;
+    const cur = vendor.main_expertise || [];
+    if (cur.includes(v)) set('main_expertise', cur.filter((x) => x !== v));
+    else if (cur.length < MAX_EXPERTISE) set('main_expertise', [...cur, v]);
+    else setMsg(`Pick your top ${MAX_EXPERTISE} — remove one to add another.`);
+  }
+  function toggleIn(key: 'problems_solved' | 'capabilities' | 'languages', v: string) {
+    if (!vendor) return;
+    const cur = vendor[key] || [];
+    set(key, cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]);
   }
 
   async function acceptTerms() {
@@ -291,6 +363,31 @@ export default function VendorPortalPage() {
         <p className="vp-sub">This is what NXT//LINK — and once approved, the opportunities you receive — will be based on. Keep it current.</p>
         {msg && <div className="vp-msg">{msg}</div>}
 
+        {(() => {
+          const { score, steps } = profileCompletion({
+            companyName: vendor.company_name, tagline: vendor.tagline, description: vendor.description,
+            city: vendor.city, hasLogo: Boolean(logoUrl),
+            industries: vendor.industries, serviceAreas: vendor.service_areas,
+            mainExpertise: vendor.main_expertise || [], problemsSolved: vendor.problems_solved || [],
+            hasCompanyDetails: Boolean(vendor.year_founded || vendor.employee_count || vendor.company_type),
+            listingCount, caseStudyCount: caseStudies.length,
+            certificationCount: certs.length, photoCount: photos.length,
+          });
+          const next = steps.find((s) => !s.done);
+          return (
+            <section className="vp-card">
+              <div className="vp-lbl">Your company profile is {score}% complete</div>
+              <div className="vp-meterbar"><div style={{ width: `${score}%` }} /></div>
+              <div className="vp-scorelist">
+                {steps.map((s) => (
+                  <span key={s.key} className={'vp-scorestep' + (s.done ? ' done' : '')}>{s.done ? '✓' : '○'} {s.label}</span>
+                ))}
+              </div>
+              {next && <p className="vp-hint" style={{ margin: '12px 0 0' }}>Suggested next step: <b>{next.label}</b></p>}
+            </section>
+          );
+        })()}
+
         {agreement && !agreement.accepted && (
           <section className="vp-card vp-agreement">
             <div className="vp-lbl">Vendor agreement — required before you can publish</div>
@@ -351,6 +448,89 @@ export default function VendorPortalPage() {
             <span>About your company</span>
             <textarea rows={4} value={vendor.description || ''} onChange={(e) => set('description', e.target.value)} />
           </label>
+        </section>
+
+        <section className="vp-card">
+          <div className="vp-lbl">Company details</div>
+          <p className="vp-hint">Shown as &ldquo;quick facts&rdquo; on your public profile. Only confirmed facts are displayed — leave anything blank to hide it.</p>
+          <div className="vp-fgrid">
+            <label className="vp-field">
+              <span>Year founded</span>
+              <input inputMode="numeric" placeholder="e.g. 2009" value={vendor.year_founded ?? ''} onChange={(e) => { const n = parseInt(e.target.value, 10); set('year_founded', Number.isNaN(n) ? null : n); }} />
+            </label>
+            <label className="vp-field">
+              <span>Employees</span>
+              <select value={vendor.employee_count || ''} onChange={(e) => set('employee_count', e.target.value || null)}>
+                <option value="">Select…</option>
+                {EMPLOYEE_RANGES.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </label>
+            <label className="vp-field">
+              <span>Company type</span>
+              <select value={vendor.company_type || ''} onChange={(e) => set('company_type', e.target.value || null)}>
+                <option value="">Select…</option>
+                {COMPANY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </label>
+            <label className="vp-field">
+              <span>Typical response time</span>
+              <select value={vendor.response_time || ''} onChange={(e) => set('response_time', e.target.value || null)}>
+                <option value="">Select…</option>
+                {RESPONSE_TIMES.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </label>
+            <label className="vp-field">
+              <span>Projects completed (approx.)</span>
+              <input inputMode="numeric" placeholder="e.g. 120" value={vendor.projects_completed ?? ''} onChange={(e) => { const n = parseInt(e.target.value, 10); set('projects_completed', Number.isNaN(n) ? null : n); }} />
+            </label>
+          </div>
+          <div className="vp-lbl" style={{ marginTop: 22 }}>Languages supported</div>
+          <ChipGroup options={Array.from(new Set([...LANGUAGE_OPTIONS, ...(vendor.languages || [])]))} selected={vendor.languages || []} onToggle={(v) => toggleIn('languages', v)} />
+          <div className="vp-lbl" style={{ marginTop: 22 }}>Capabilities you can confirm</div>
+          <div className="vp-chips">
+            {([
+              ['installation_available', 'Installation available'],
+              ['emergency_available', '24/7 emergency service'],
+              ['cross_border', 'Cross-border capability'],
+              ['pilot_available', 'Pilot projects available'],
+            ] as const).map(([key, label]) => (
+              <button key={key} type="button" className={'vp-chip' + (vendor[key] ? ' on' : '')} onClick={() => set(key, !vendor[key])}>{label}</button>
+            ))}
+          </div>
+          <button className="vp-btn" style={{ marginTop: 24 }} disabled={saving} onClick={save}>{saving ? 'Saving…' : 'Save profile'}</button>
+        </section>
+
+        <section className="vp-card">
+          <div className="vp-lbl">Your expertise <span className="vp-cnt">{(vendor.main_expertise || []).length}/{MAX_EXPERTISE} main areas</span></div>
+          <p className="vp-hint">Pick up to {MAX_EXPERTISE} primary areas — this is the first thing buyers read on your Expertise tab.</p>
+          <ChipGroup options={Array.from(new Set([...EXPERTISE_OPTIONS, ...(vendor.main_expertise || [])]))} selected={vendor.main_expertise || []} onToggle={toggleExpertise} />
+          <AddYourOwn placeholder="Add your own expertise area…" existing={vendor.main_expertise || []} onAdd={(v) => { if ((vendor.main_expertise || []).length < MAX_EXPERTISE) set('main_expertise', [...(vendor.main_expertise || []), v]); }} />
+          <div className="vp-lbl" style={{ marginTop: 22 }}>Problems you solve</div>
+          <ChipGroup options={Array.from(new Set([...PROBLEM_OPTIONS, ...(vendor.problems_solved || [])]))} selected={vendor.problems_solved || []} onToggle={(v) => toggleIn('problems_solved', v)} />
+          <AddYourOwn placeholder="Add a specific problem you solve…" existing={vendor.problems_solved || []} onAdd={(v) => set('problems_solved', [...(vendor.problems_solved || []), v])} />
+          <div className="vp-lbl" style={{ marginTop: 22 }}>Capabilities</div>
+          <ChipGroup options={Array.from(new Set([...CAPABILITY_OPTIONS, ...(vendor.capabilities || [])]))} selected={vendor.capabilities || []} onToggle={(v) => toggleIn('capabilities', v)} />
+          <AddYourOwn placeholder="Add a capability…" existing={vendor.capabilities || []} onAdd={(v) => set('capabilities', [...(vendor.capabilities || []), v])} />
+          <button className="vp-btn" style={{ marginTop: 24 }} disabled={saving} onClick={save}>{saving ? 'Saving…' : 'Save profile'}</button>
+        </section>
+
+        <section className="vp-card">
+          <div className="vp-lbl">Storefront options</div>
+          <p className="vp-hint">Light customization — the profile structure stays standard so buyers can compare companies easily.</p>
+          <div className="vp-fgrid">
+            <label className="vp-field">
+              <span>Main button label (default &ldquo;Request Quote&rdquo;)</span>
+              <input maxLength={40} placeholder="Request Quote" value={vendor.cta_label || ''} onChange={(e) => set('cta_label', e.target.value || null)} />
+            </label>
+            <label className="vp-field">
+              <span>Accent color</span>
+              <div className="vp-colorrow">
+                <input type="color" value={/^#[0-9a-fA-F]{6}$/.test(vendor.brand_color || '') ? (vendor.brand_color as string) : '#7C5CFC'} onChange={(e) => set('brand_color', e.target.value)} />
+                <button type="button" className="vp-signout" onClick={() => set('brand_color', null)}>Reset</button>
+              </div>
+            </label>
+          </div>
+          <button className="vp-btn" style={{ marginTop: 24 }} disabled={saving} onClick={save}>{saving ? 'Saving…' : 'Save profile'}</button>
         </section>
 
         <section className="vp-card">
@@ -456,6 +636,41 @@ export default function VendorPortalPage() {
                 {photoBusy ? 'Uploading…' : 'Add photo'}
                 <input type="file" accept="image/png,image/jpeg,image/webp" disabled={photoBusy} onChange={(e) => { const f = e.target.files?.[0]; if (f) addPhoto(f); e.target.value = ''; }} />
               </label>
+            </div>
+          )}
+        </section>
+
+        <section className="vp-card">
+          <div className="vp-lbl">Team <span className="vp-cnt">{team.length}/8</span></div>
+          <p className="vp-hint">Key people buyers may work with — sales, project managers, engineers. No direct contact details are shown; introductions run through NXT//LINK.</p>
+          {team.length > 0 && (
+            <div className="vp-certlist">
+              {team.map((m) => (
+                <div className="vp-cert" key={m.id}>
+                  <div className="vp-teamphoto">{m.photo_url ? <img src={m.photo_url} alt={m.name} /> : <span>{m.name.slice(0, 2).toUpperCase()}</span>}</div>
+                  <div className="vp-certmain">
+                    <b>{m.name}</b>
+                    <small>{[m.position, m.expertise, (m.languages || []).join(', '), m.service_region].filter(Boolean).join(' · ')}</small>
+                  </div>
+                  <button type="button" onClick={() => removeTeamMember(m.id)}>Remove</button>
+                </div>
+              ))}
+            </div>
+          )}
+          {team.length < 8 && (
+            <div className="vp-csform">
+              <div className="vp-fgrid">
+                <input placeholder="Name *" value={teamForm.name} onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })} />
+                <input placeholder="Position — e.g. Project manager" value={teamForm.position} onChange={(e) => setTeamForm({ ...teamForm, position: e.target.value })} />
+                <input placeholder="Expertise — e.g. WMS integrations" value={teamForm.expertise} onChange={(e) => setTeamForm({ ...teamForm, expertise: e.target.value })} />
+                <input placeholder="Languages — e.g. English, Spanish" value={teamForm.languages} onChange={(e) => setTeamForm({ ...teamForm, languages: e.target.value })} />
+                <input placeholder="Service region — e.g. El Paso / Juárez" value={teamForm.service_region} onChange={(e) => setTeamForm({ ...teamForm, service_region: e.target.value })} />
+              </div>
+              <label className="vp-fileline">
+                {teamFile ? teamFile.name : 'Attach photo (optional)'}
+                <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => setTeamFile(e.target.files?.[0] || null)} />
+              </label>
+              <button className="vp-btn sm" type="button" disabled={teamBusy} onClick={addTeamMember}>{teamBusy ? 'Adding…' : 'Add team member'}</button>
             </div>
           )}
         </section>
@@ -628,8 +843,17 @@ const CSS = `
 .vp-fgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 @media(max-width:520px){.vp-fgrid{grid-template-columns:1fr;}}
 .vp-field{display:flex;flex-direction:column;gap:7px;font-size:13px;font-weight:500;color:var(--ink2);}
-.vp-field input,.vp-field textarea{font-family:var(--sans);padding:12px 14px;border-radius:11px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:14.5px;outline:none;width:100%;resize:vertical;}
-.vp-field input:focus,.vp-field textarea:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
+.vp-field input,.vp-field textarea,.vp-field select{font-family:var(--sans);padding:12px 14px;border-radius:11px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:14.5px;outline:none;width:100%;resize:vertical;}
+.vp-field input:focus,.vp-field textarea:focus,.vp-field select:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
+.vp-meterbar{height:9px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin-bottom:14px;}
+.vp-meterbar div{height:100%;background:linear-gradient(90deg,var(--p),var(--green));border-radius:99px;transition:width .4s;}
+.vp-scorelist{display:flex;flex-wrap:wrap;gap:8px;}
+.vp-scorestep{font-size:12px;color:var(--muted);background:var(--bg2);border:1px solid var(--line);border-radius:99px;padding:5px 11px;}
+.vp-scorestep.done{color:var(--green);border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.07);}
+.vp-colorrow{display:flex;align-items:center;gap:10px;}
+.vp-colorrow input[type=color]{width:52px;height:40px;padding:3px;border-radius:9px;border:1px solid var(--line);background:var(--bg);cursor:pointer;}
+.vp-teamphoto{width:44px;height:44px;flex-shrink:0;border-radius:99px;background:var(--bg);display:grid;place-items:center;overflow:hidden;color:var(--p2);font-weight:800;font-size:14px;}
+.vp-teamphoto img{width:100%;height:100%;object-fit:cover;}
 .vp-chips{display:flex;flex-wrap:wrap;gap:9px;}
 .vp-chip{font-family:var(--sans);padding:9px 15px;border-radius:99px;border:1px solid var(--line);background:var(--bg);color:var(--ink2);font-size:13px;font-weight:500;cursor:pointer;}
 .vp-chip:hover{border-color:var(--p2);}
