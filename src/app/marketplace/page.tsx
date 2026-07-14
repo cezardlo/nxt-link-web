@@ -22,7 +22,10 @@ interface Card {
   pricing_model?: string | null;
   vendor_verified?: boolean; has_documents?: boolean; has_case_studies?: boolean;
   vendor_rating?: number | null; vendor_review_count?: number;
+  functional_group?: string | null;
 }
+
+interface Department { fg: string; label_en: string; is_service: boolean }
 
 type Tab = 'all' | 'product' | 'service' | 'solution';
 type Sort = 'best' | 'recent' | 'lead' | 'pilot' | 'verified';
@@ -127,6 +130,10 @@ export default function MarketplacePage() {
   const [loading, setLoading] = useState(true);
   const [drawer, setDrawer] = useState(false); // mobile filter drawer
 
+  // Departments (functional groups) for the "Browse by department" row.
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [fDept, setFDept] = useState('');
+
   // selected facet filters (data-driven)
   const [fCategory, setFCategory] = useState('');
   const [fIndustry, setFIndustry] = useState('');
@@ -200,16 +207,23 @@ export default function MarketplacePage() {
     (async () => {
       setLoading(true);
       try {
-        const res = await fetch('/api/marketplace/listings');
-        const data = await res.json();
+        const [lRes, cRes] = await Promise.all([
+          fetch('/api/marketplace/listings'),
+          fetch('/api/marketplace/categories'),
+        ]);
+        const data = await lRes.json();
         setCards(data.listings || []);
+        try {
+          const cat = await cRes.json();
+          setDepartments((cat.departments || []).map((d: { fg: string; label_en: string; is_service: boolean }) => ({ fg: d.fg, label_en: d.label_en, is_service: d.is_service })));
+        } catch { /* departments optional */ }
       } catch { setCards([]); }
       setLoading(false);
     })();
   }, []);
 
   const resetFilters = () => {
-    setFCategory(''); setFIndustry(''); setFArea(''); setFPricing('');
+    setFDept(''); setFCategory(''); setFIndustry(''); setFArea(''); setFPricing('');
     setFPilot(false); setFWarranty(false); setFEmergency(false); setFVerified(false); setFCases(false);
     setFLocal(false); setFFast(false);
   };
@@ -248,6 +262,7 @@ export default function MarketplacePage() {
 
   const results = useMemo(() => {
     let list = tabCards.filter((c) => {
+      if (fDept && c.functional_group !== fDept) return false;
       if (fCategory && c.category !== fCategory) return false;
       if (fIndustry && !(c.industries || []).includes(fIndustry)) return false;
       if (fArea && !(c.service_areas || []).includes(fArea)) return false;
@@ -275,10 +290,18 @@ export default function MarketplacePage() {
       return sb - sa;
     });
     return list;
-  }, [tabCards, fCategory, fIndustry, fArea, fPricing, fPilot, fWarranty, fEmergency, fVerified, fCases, fLocal, fFast, savedOnly, saved, tokens, sort]);
+  }, [tabCards, fDept, fCategory, fIndustry, fArea, fPricing, fPilot, fWarranty, fEmergency, fVerified, fCases, fLocal, fFast, savedOnly, saved, tokens, sort]);
+
+  // Which departments actually have listings (so we never show an empty aisle).
+  const deptCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const c of cards) if (c.functional_group) m.set(c.functional_group, (m.get(c.functional_group) || 0) + 1);
+    return m;
+  }, [cards]);
+  const liveDepartments = useMemo(() => departments.filter((d) => deptCounts.has(d.fg)), [departments, deptCounts]);
 
   const compareCards = useMemo(() => cards.filter((c) => compare.has(c.id)).slice(0, 5), [cards, compare]);
-  const activeFilterCount = [fCategory, fIndustry, fArea, fPricing].filter(Boolean).length +
+  const activeFilterCount = [fDept, fCategory, fIndustry, fArea, fPricing].filter(Boolean).length +
     [fPilot, fWarranty, fEmergency, fVerified, fCases, fLocal, fFast].filter(Boolean).length;
   const marketplaceEmpty = !loading && cards.length === 0;
 
@@ -338,6 +361,19 @@ export default function MarketplacePage() {
           {q && <button className="mk-clearq" onClick={() => setQ('')} aria-label="Clear search">×</button>}
         </div>
       </div>
+
+      {/* Browse by department — the primary functional aisles (Grainger/Amazon style) */}
+      {liveDepartments.length > 0 && (
+        <div className="mk-deptbar">
+          <button className={`mk-dept ${!fDept ? 'on' : ''}`} onClick={() => setFDept('')}>All departments</button>
+          {liveDepartments.map((d) => (
+            <button key={d.fg} className={`mk-dept ${fDept === d.fg ? 'on' : ''} ${d.is_service ? 'svc' : ''}`}
+              onClick={() => setFDept(fDept === d.fg ? '' : d.fg)}>
+              {d.label_en}<span className="mk-deptn">{deptCounts.get(d.fg)}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Storefront discovery sections (home state only) */}
       {pristine && !loading && cards.length > 0 && (
@@ -691,6 +727,15 @@ const CSS = `
 .mk-vtile:hover{border-color:rgba(124,92,252,.5);}
 .mk-vtile b{font-size:14px;display:block;line-height:1.3;}
 .mk-vtile small{color:#8080A0;font-size:12px;}
+.mk-deptbar{display:flex;gap:8px;overflow-x:auto;max-width:1200px;margin:0 auto;padding:14px 20px 4px;scrollbar-width:none;}
+.mk-deptbar::-webkit-scrollbar{display:none;}
+.mk-dept{flex-shrink:0;display:inline-flex;align-items:center;gap:7px;font-family:inherit;font-size:13px;font-weight:600;color:#C0C0D0;background:#14141F;border:1px solid rgba(255,255,255,.1);border-radius:99px;padding:9px 15px;cursor:pointer;white-space:nowrap;transition:border-color .15s,background .15s;}
+.mk-dept:hover{border-color:rgba(124,92,252,.5);}
+.mk-dept.on{background:rgba(124,92,252,.16);border-color:#7C5CFC;color:#C4B5FD;}
+.mk-dept.svc{color:#9FE8C8;}
+.mk-dept.svc.on{background:rgba(52,211,153,.14);border-color:#34D399;color:#34D399;}
+.mk-deptn{font-size:11px;font-weight:700;color:#8080A0;background:rgba(255,255,255,.06);border-radius:99px;padding:1px 7px;}
+.mk-dept.on .mk-deptn{color:inherit;background:rgba(255,255,255,.12);}
 .mk-searchbar{padding:22px 20px 6px;max-width:1200px;margin:0 auto;}
 .mk-searchwrap{display:flex;align-items:center;gap:10px;background:#14141F;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:0 16px;color:#8080A0;transition:border-color .15s;}
 .mk-searchwrap:focus-within{border-color:#7C5CFC;box-shadow:0 0 0 3px rgba(124,92,252,.15);}

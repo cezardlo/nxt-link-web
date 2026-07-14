@@ -1,12 +1,13 @@
 // GET /api/marketplace/listings — public browse (published listings only).
-// Query: kind=product|service|all, q, category, industry, pilot=1, area
+// Query: kind=product|service|all, q, department (functional_group), category,
+//        industry, area, pilot=1, verified=1
 // Returns standardized cards with vendor name + signed first image.
 
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 
-const CARD_BASE = 'id, public_ref, vendor_id, name, category, overview, best_for, industries, image_paths, pilot, pricing, warranty_support, status, published_at';
+const CARD_BASE = 'id, public_ref, vendor_id, name, category, functional_group, overview, best_for, industries, image_paths, pilot, pricing, warranty_support, status, published_at';
 const CARD_PRODUCT = `${CARD_BASE}, availability, lead_time`;
 const CARD_SERVICE = `${CARD_BASE}, service_areas, response_time, emergency_available, pricing_model`;
 
@@ -22,9 +23,11 @@ export async function GET(req: Request) {
   const kind = sp.get('kind') === 'product' ? 'product' : sp.get('kind') === 'service' ? 'service' : 'all';
   const q = (sp.get('q') || '').trim().slice(0, 120);
   const category = (sp.get('category') || '').trim().slice(0, 120);
+  const department = (sp.get('department') || '').trim().slice(0, 60);
   const industry = (sp.get('industry') || '').trim().slice(0, 120);
   const area = (sp.get('area') || '').trim().slice(0, 120);
   const pilotOnly = sp.get('pilot') === '1';
+  const verifiedOnly = sp.get('verified') === '1';
 
   const db = getSupabaseClient({ admin: true });
 
@@ -35,6 +38,7 @@ export async function GET(req: Request) {
       .order('published_at', { ascending: false })
       .limit(60);
     if (q) query = query.or(`name.ilike.%${escLike(q)}%,overview.ilike.%${escLike(q)}%,category.ilike.%${escLike(q)}%`);
+    if (department) query = query.eq('functional_group', department);
     if (category) query = query.ilike('category', escLike(category));
     if (industry) query = query.contains('industries', JSON.stringify([industry]));
     if (area && k === 'service') query = query.contains('service_areas', JSON.stringify([area]));
@@ -55,6 +59,9 @@ export async function GET(req: Request) {
     : { data: [] };
   const vmap = new Map<string, { company_name: string; city: string | null; verified: boolean }>();
   for (const v of vendors || []) vmap.set(v.id as string, { company_name: v.company_name as string, city: (v.city as string) || null, verified: v.status === 'approved' });
+
+  // "Verified vendors only" facet — drop listings whose vendor isn't verified.
+  if (verifiedOnly) rows = rows.filter((r) => vmap.get(r.vendor_id)?.verified);
 
   // Verified-review ratings per vendor (degrades to none if reviews absent).
   const ratings = new Map<string, { avg: number; count: number }>();

@@ -32,7 +32,7 @@ function LoginInner() {
       const { error } = await sb.auth.signInWithPassword({ email: demo.email, password: demo.password });
       if (error) { setErr(error.message); setDemoBusy(null); return; }
       await fetch('/api/auth/me');
-      window.location.href = role === 'vendor' ? '/vendor/listings' : '/buyer';
+      window.location.href = role === 'vendor' ? '/vendor/leads' : '/buyer';
     } catch {
       setErr('Demo sign-in failed. Try again.');
       setDemoBusy(null);
@@ -56,7 +56,7 @@ function LoginInner() {
       const next = sp.get('next');
       window.location.href = (next && next.startsWith('/') && !next.startsWith('//')) ? next
         : role === 'admin' || role === 'super_admin' ? '/admin'
-        : role === 'vendor' ? '/vendor/listings'
+        : role === 'vendor' ? '/vendor/leads'
         : '/buyer';
     } catch {
       setErr('Could not sign in. Try again.');
