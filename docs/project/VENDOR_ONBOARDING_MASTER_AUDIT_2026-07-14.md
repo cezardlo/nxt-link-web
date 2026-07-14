@@ -4,6 +4,20 @@ Date: 2026-07-14
 Branch audited: `claude/event-strategy-platform` (commit `e0c9021`, in sync with GitHub)
 Companion doc: `docs/product/MARKETPLACE_BENCHMARKS_2026-07-14.md`
 
+> **STATUS UPDATE (2026-07-14, branch `feat/vendor-onboarding-wizard`):**
+> Phase 1 is BUILT: `/vendor/onboarding` 6-stage wizard (quick/complete paths,
+> autosave, accuracy + terms + email publish gates), structured pricing inside
+> the `pricing` jsonb (models, components, 5-level visibility), server-side
+> `publicPricing()` gating on all three public APIs, migrations filed
+> UNAPPLIED. Phase 2 is PARTIALLY BUILT: buyer-facing structured-pricing
+> rendering, quantity tiers, category spec templates (products, in-code),
+> "Save to project" wiring, price-band facet, `?department=` deep links,
+> facet-label a11y fix. Still open from Phase 2: brands-supported (needs the
+> filed `vendor_brands` migration APPLIED), storefront extras (featured pins,
+> why-choose-us, marketplace stats), listing-card match explanations,
+> guided-search budget/timeline step, visibility enforcement for the
+> signed-in-buyer audience tier, legacy `/products` + `/vendors` retirement.
+
 This is the "required first output" for the vendor onboarding / pricing /
 matching / marketplace master plan. It synthesizes three deep code audits
 (vendor onboarding surfaces, database & pricing model, client marketplace UX)
