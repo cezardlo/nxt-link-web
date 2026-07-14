@@ -45,14 +45,29 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   if (!allowed) return NextResponse.json({ ok: false, message: 'You do not have access to this project' }, { status: 403 });
 
   const id = params.id;
-  const [members, vendors, documents, tasks, decisions, events] = await Promise.all([
+  const [members, vendors, documents, tasks, decisions, events, approvals, milestones, quoteReqs] = await Promise.all([
     db.from('project_members').select('id, auth_id, invited_email, display_name, role, status').eq('project_id', id),
     db.from('project_vendors').select('*').eq('project_id', id).order('created_at', { ascending: false }),
     db.from('project_documents').select('id, kind, title, storage_path, external_url, vendor_id, note, created_at').eq('project_id', id).order('created_at', { ascending: false }),
     db.from('project_tasks').select('*').eq('project_id', id).order('sort_order', { ascending: true }),
     db.from('project_decisions').select('*').eq('project_id', id).order('decided_at', { ascending: false }),
     db.from('project_events').select('id, actor_name, event, detail, created_at').eq('project_id', id).order('created_at', { ascending: false }).limit(100),
+    db.from('project_approvals').select('*').eq('project_id', id).order('requested_at', { ascending: true }),
+    db.from('project_milestones').select('*').eq('project_id', id).order('sort_order', { ascending: true }),
+    // Quotes for THIS project + their commission status (the Deal Room ties
+    // the marketplace opportunity into the workspace).
+    db.from('quote_requests').select('id, public_ref, opportunity_ref, kind, company, quote_amount, quote_currency, quote_timeline, quote_valid_until, quoted_at, status, buyer_decision, created_at').eq('project_id', id).order('created_at', { ascending: false }),
   ]);
+
+  // Attach commission status to each quote (buyer sees where NXT Link stands too).
+  const qrIds = (quoteReqs.data || []).map((q) => (q as { id: string }).id);
+  let commissions: Record<string, unknown>[] = [];
+  if (qrIds.length) {
+    const { data: com } = await db.from('commissions').select('quote_request_id, commission_amount, effective_rate, status, protected_until').in('quote_request_id', qrIds);
+    commissions = (com as Record<string, unknown>[]) || [];
+  }
+  const comByQr = new Map(commissions.map((c) => [c.quote_request_id as string, c]));
+  const quotes = (quoteReqs.data || []).map((q) => ({ ...(q as Record<string, unknown>), commission: comByQr.get((q as { id: string }).id) || null }));
 
   return NextResponse.json({
     ok: true,
@@ -64,6 +79,9 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     tasks: tasks.data || [],
     decisions: decisions.data || [],
     events: events.data || [],
+    approvals: approvals.data || [],
+    milestones: milestones.data || [],
+    quotes,
   });
 }
 
@@ -184,6 +202,50 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
     await logEvent(db, id, session, 'document_added', { title, kind: row.kind });
     return NextResponse.json({ ok: true, document: data });
+  }
+
+  if (kind === 'approval') {
+    const APPROVAL_KINDS = ['budget', 'safety', 'engineering', 'operations', 'final_decision', 'purchase_order', 'contract'];
+    const akind = APPROVAL_KINDS.includes(String(body.approval_kind)) ? String(body.approval_kind) : null;
+    if (!akind) return NextResponse.json({ ok: false, message: 'Invalid approval type' }, { status: 400 });
+    const row = { project_id: id, kind: akind, requested_by: session.authId, approver_name: s('approver_name', 160), note: s('note', 1000), due_date: s('due_date', 10) };
+    const { data, error } = await db.from('project_approvals').insert(row).select('*').single();
+    if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+    await logEvent(db, id, session, 'approval_requested', { kind: akind });
+    return NextResponse.json({ ok: true, approval: data });
+  }
+
+  if (kind === 'approval_decision') {
+    const approvalId = s('approval_id', 60);
+    const status = ['approved', 'rejected', 'skipped', 'pending'].includes(String(body.status)) ? String(body.status) : null;
+    if (!approvalId || !status) return NextResponse.json({ ok: false, message: 'approval_id and status required' }, { status: 400 });
+    const patch = { status, approver_auth_id: session.authId, approver_name: session.email, note: s('note', 1000), decided_at: status === 'pending' ? null : new Date().toISOString() };
+    const { data, error } = await db.from('project_approvals').update(patch).eq('id', approvalId).eq('project_id', id).select('*').single();
+    if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+    await logEvent(db, id, session, 'approval_' + status, { approval_id: approvalId });
+    return NextResponse.json({ ok: true, approval: data });
+  }
+
+  if (kind === 'milestone') {
+    const MILESTONE_KINDS = ['purchase_order', 'production', 'shipping', 'delivery', 'installation', 'integration', 'training', 'testing', 'acceptance', 'warranty_start', 'maintenance', 'issue'];
+    const mkind = MILESTONE_KINDS.includes(String(body.milestone_kind)) ? String(body.milestone_kind) : null;
+    if (!mkind) return NextResponse.json({ ok: false, message: 'Invalid milestone type' }, { status: 400 });
+    const row = { project_id: id, kind: mkind, title: s('title', 200), due_date: s('due_date', 10), vendor_id: s('vendor_id', 60), note: s('note', 1000) };
+    const { data, error } = await db.from('project_milestones').insert(row).select('*').single();
+    if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+    await logEvent(db, id, session, 'milestone_added', { kind: mkind });
+    return NextResponse.json({ ok: true, milestone: data });
+  }
+
+  if (kind === 'milestone_status') {
+    const mId = s('milestone_id', 60);
+    const status = ['pending', 'scheduled', 'in_progress', 'done', 'blocked', 'skipped'].includes(String(body.status)) ? String(body.status) : null;
+    if (!mId || !status) return NextResponse.json({ ok: false, message: 'milestone_id and status required' }, { status: 400 });
+    const patch: Record<string, unknown> = { status, completed_at: status === 'done' ? new Date().toISOString() : null };
+    const { data, error } = await db.from('project_milestones').update(patch).eq('id', mId).eq('project_id', id).select('*').single();
+    if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+    await logEvent(db, id, session, 'milestone_' + status, { milestone_id: mId });
+    return NextResponse.json({ ok: true, milestone: data });
   }
 
   if (kind === 'task_status') {

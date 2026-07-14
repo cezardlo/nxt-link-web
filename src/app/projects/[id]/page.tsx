@@ -19,6 +19,10 @@ interface Doc { id: string; kind: string; title: string; external_url: string | 
 interface Task { id: string; title: string; detail: string | null; due_date: string | null; status: string }
 interface Decision { id: string; decision: string; reason: string | null; decided_at: string }
 interface Ev { id: string; actor_name: string | null; event: string; detail: Record<string, unknown>; created_at: string }
+interface Commission { commission_amount: number | null; effective_rate: number | null; status: string | null }
+interface Quote { id: string; public_ref: string; opportunity_ref: string | null; kind: string; company: string | null; quote_amount: number | null; quote_currency: string | null; quote_timeline: string | null; quote_valid_until: string | null; quoted_at: string | null; status: string; buyer_decision: string | null; commission: Commission | null }
+interface Approval { id: string; kind: string; status: string; approver_name: string | null; note: string | null; due_date: string | null; decided_at: string | null }
+interface Milestone { id: string; kind: string; title: string | null; status: string; due_date: string | null; note: string | null }
 
 const STAGES = ['organizing', 'requirements_ready', 'matching', 'vendors_invited', 'collecting_quotes', 'comparing', 'decision', 'vendor_selected', 'implementation', 'completed'];
 const STAGE_LABEL: Record<string, string> = {
@@ -33,15 +37,18 @@ const EVENT_LABEL: Record<string, string> = {
   task_skipped: 'Task skipped', task_open: 'Task reopened', note_added: 'Note added',
   decision_recorded: 'Decision recorded', document_added: 'Document added',
 };
+const APPROVAL_LABEL: Record<string, string> = { budget: 'Budget approval', safety: 'Safety review', engineering: 'Engineering review', operations: 'Operations review', final_decision: 'Final decision', purchase_order: 'Purchase order', contract: 'Contract' };
+const MILESTONE_LABEL: Record<string, string> = { purchase_order: 'Purchase order', production: 'Production', shipping: 'Shipping', delivery: 'Delivery', installation: 'Installation', integration: 'Integration', training: 'Training', testing: 'Testing', acceptance: 'Customer acceptance', warranty_start: 'Warranty start', maintenance: 'Maintenance', issue: 'Issue' };
 const fmtDate = (s: string) => { try { return new Date(s).toLocaleDateString(); } catch { return ''; } };
 const fmtDT = (s: string) => { try { return new Date(s).toLocaleString(); } catch { return ''; } };
+const money = (n: number, c = 'USD') => n.toLocaleString('en-US', { style: 'currency', currency: c || 'USD', maximumFractionDigits: 0 });
 
 export default function ProjectWorkspacePage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
-  const [tab, setTab] = useState<'overview' | 'vendors' | 'documents' | 'history'>('overview');
+  const [tab, setTab] = useState<'overview' | 'quotes' | 'vendors' | 'approvals' | 'delivery' | 'documents' | 'history'>('overview');
 
   const [project, setProject] = useState<Project | null>(null);
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -49,6 +56,11 @@ export default function ProjectWorkspacePage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [events, setEvents] = useState<Ev[]>([]);
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [approvals, setApprovals] = useState<Approval[]>([]);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [newApproval, setNewApproval] = useState('budget');
+  const [newMilestone, setNewMilestone] = useState('delivery');
 
   const [newTask, setNewTask] = useState('');
   const [docTitle, setDocTitle] = useState('');
@@ -64,6 +76,7 @@ export default function ProjectWorkspacePage() {
       if (j.ok) {
         setProject(j.project); setVendors(j.vendors); setDocs(j.documents);
         setTasks(j.tasks); setDecisions(j.decisions); setEvents(j.events);
+        setQuotes(j.quotes || []); setApprovals(j.approvals || []); setMilestones(j.milestones || []);
       }
     } catch { /* ignore */ }
     setLoading(false);
@@ -145,11 +158,16 @@ export default function ProjectWorkspacePage() {
           </div>
         </header>
 
-        {/* Tabs */}
+        {/* Tabs — the unified Deal Room */}
         <div className="pd-tabs">
-          {(['overview', 'vendors', 'documents', 'history'] as const).map((t) => (
+          {(['overview', 'quotes', 'vendors', 'approvals', 'delivery', 'documents', 'history'] as const).map((t) => (
             <button key={t} className={`pd-tab ${tab === t ? 'on' : ''}`} onClick={() => setTab(t)}>
-              {t === 'overview' ? 'Overview' : t === 'vendors' ? `Vendors (${vendors.length})` : t === 'documents' ? `Documents (${docs.length})` : 'History'}
+              {t === 'overview' ? 'Overview'
+                : t === 'quotes' ? `Quotes (${quotes.length})`
+                : t === 'vendors' ? `Vendors (${vendors.length})`
+                : t === 'approvals' ? `Approvals (${approvals.length})`
+                : t === 'delivery' ? 'Delivery'
+                : t === 'documents' ? `Documents (${docs.length})` : 'History'}
             </button>
           ))}
         </div>
@@ -232,6 +250,94 @@ export default function ProjectWorkspacePage() {
               </div>
             )}
             <p className="pd-hint">Add vendors from the <a href="/marketplace">Marketplace</a> — open a listing and “Save to project”. Inviting a vendor creates a quote request linked to this project.</p>
+          </div>
+        )}
+
+        {/* QUOTES — the received proposals + NXT Link commission status */}
+        {tab === 'quotes' && (
+          <div className="pd-panel">
+            {quotes.length === 0 ? (
+              <div className="pd-empty">No quotes yet. Invite vendors from your shortlist and their proposals land here — with versions and expiry.</div>
+            ) : (
+              <div className="pd-quotes">
+                {quotes.map((q) => (
+                  <div key={q.id} className="pd-quote">
+                    <div className="pd-qtop">
+                      <div><b>{q.company || 'Vendor'}</b><span className="pd-ref">{q.opportunity_ref || q.public_ref}</span></div>
+                      <span className={`pd-qstat ${q.buyer_decision === 'accepted' ? 'accepted' : q.quote_amount ? 'quoted' : 'await'}`}>
+                        {q.buyer_decision === 'accepted' ? 'Accepted' : q.quote_amount ? 'Quote received' : 'Awaiting quote'}
+                      </span>
+                    </div>
+                    {q.quote_amount != null && (
+                      <div className="pd-qamt">{money(q.quote_amount, q.quote_currency || 'USD')}
+                        {q.quote_timeline && <small> · {q.quote_timeline}</small>}
+                        {q.quote_valid_until && <small> · valid to {fmtDate(q.quote_valid_until)}</small>}
+                      </div>
+                    )}
+                    {q.commission && q.commission.commission_amount != null && (
+                      <div className="pd-comm">NXT//LINK fee if won: {money(q.commission.commission_amount)} ({((q.commission.effective_rate || 0) * 100).toFixed(1)}%) · {q.commission.status}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* APPROVALS — team sign-offs */}
+        {tab === 'approvals' && (
+          <div className="pd-panel">
+            {approvals.length === 0 ? (
+              <div className="pd-empty">No approvals requested yet. Add the sign-offs your purchase needs — budget, safety, engineering, final decision.</div>
+            ) : (
+              <div className="pd-apps">
+                {approvals.map((a) => (
+                  <div key={a.id} className={`pd-app ${a.status}`}>
+                    <div className="pd-appmain">
+                      <div className="pd-appname">{APPROVAL_LABEL[a.kind] || a.kind}</div>
+                      <div className="pd-appmeta">{a.approver_name ? `${a.approver_name} · ` : ''}{a.status}{a.due_date ? ` · due ${fmtDate(a.due_date)}` : ''}{a.decided_at ? ` · ${fmtDate(a.decided_at)}` : ''}</div>
+                    </div>
+                    {a.status === 'pending' ? (
+                      <div className="pd-appacts">
+                        <button className="pd-ok" onClick={() => addItem({ kind: 'approval_decision', approval_id: a.id, status: 'approved' })}>Approve</button>
+                        <button className="pd-no" onClick={() => addItem({ kind: 'approval_decision', approval_id: a.id, status: 'rejected' })}>Reject</button>
+                      </div>
+                    ) : <span className={`pd-appbadge ${a.status}`}>{a.status}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="pd-addrow">
+              <select value={newApproval} onChange={(e) => setNewApproval(e.target.value)} className="pd-selectfull">
+                {Object.entries(APPROVAL_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+              <button className="pd-mini" disabled={busy} onClick={() => addItem({ kind: 'approval', approval_kind: newApproval })}>Request approval</button>
+            </div>
+          </div>
+        )}
+
+        {/* DELIVERY — after-sale execution milestones */}
+        {tab === 'delivery' && (
+          <div className="pd-panel">
+            {milestones.length === 0 ? (
+              <div className="pd-empty">Track the after-sale steps here once a vendor is selected: PO, delivery, installation, training, testing, acceptance, warranty.</div>
+            ) : (
+              <div className="pd-tasks">
+                {milestones.map((m) => (
+                  <div key={m.id} className={`pd-task ${m.status === 'done' ? 'done' : ''}`}>
+                    <button className="pd-check" onClick={() => addItem({ kind: 'milestone_status', milestone_id: m.id, status: m.status === 'done' ? 'pending' : 'done' })}>{m.status === 'done' ? '✓' : ''}</button>
+                    <div className="pd-tasktext"><span>{MILESTONE_LABEL[m.kind] || m.kind}{m.title ? ` — ${m.title}` : ''}</span>
+                      <small>{m.status}{m.due_date ? ` · due ${fmtDate(m.due_date)}` : ''}</small></div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="pd-addrow">
+              <select value={newMilestone} onChange={(e) => setNewMilestone(e.target.value)} className="pd-selectfull">
+                {Object.entries(MILESTONE_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+              <button className="pd-mini" disabled={busy} onClick={() => addItem({ kind: 'milestone', milestone_kind: newMilestone })}>Add step</button>
+            </div>
           </div>
         )}
 
@@ -373,4 +479,31 @@ const CSS = `
 .pd-evtitle{font-size:13.5px;font-weight:700;}
 .pd-evdetail{font-size:12px;color:#B8B6CC;margin-top:2px;}
 .pd-evmeta{font-size:11px;color:#5A5A70;margin-top:3px;}
+.pd-quotes{display:flex;flex-direction:column;gap:11px;}
+.pd-quote{background:#14141F;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px;}
+.pd-qtop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+.pd-qtop b{font-size:14px;}
+.pd-qtop .pd-ref{margin-left:8px;font-size:11px;color:#8080A0;}
+.pd-qstat{font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;white-space:nowrap;}
+.pd-qstat.accepted{background:rgba(52,211,153,.14);color:#34D399;}
+.pd-qstat.quoted{background:rgba(124,92,252,.14);color:#C4B5FD;}
+.pd-qstat.await{background:rgba(251,191,36,.12);color:#FBBF24;}
+.pd-qamt{font-size:17px;font-weight:800;margin-top:9px;font-variant-numeric:tabular-nums;}
+.pd-qamt small{font-size:12px;font-weight:500;color:#8080A0;}
+.pd-comm{font-size:12px;color:#C4B5FD;background:rgba(124,92,252,.08);border-radius:8px;padding:8px 10px;margin-top:9px;}
+.pd-apps{display:flex;flex-direction:column;gap:8px;}
+.pd-app{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#12121B;border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:12px 14px;}
+.pd-app.approved{border-color:rgba(52,211,153,.3);}
+.pd-app.rejected{border-color:rgba(248,113,113,.3);}
+.pd-appname{font-size:13.5px;font-weight:700;}
+.pd-appmeta{font-size:11.5px;color:#8080A0;margin-top:3px;text-transform:capitalize;}
+.pd-appacts{display:flex;gap:7px;}
+.pd-ok,.pd-no{font-family:inherit;font-size:12px;font-weight:700;padding:7px 13px;border-radius:8px;border:none;cursor:pointer;}
+.pd-ok{background:rgba(52,211,153,.15);color:#34D399;}
+.pd-no{background:rgba(248,113,113,.12);color:#FCA5A5;}
+.pd-appbadge{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:4px 10px;border-radius:99px;}
+.pd-appbadge.approved{background:rgba(52,211,153,.14);color:#34D399;}
+.pd-appbadge.rejected{background:rgba(248,113,113,.14);color:#FCA5A5;}
+.pd-appbadge.skipped{background:rgba(255,255,255,.06);color:#8080A0;}
+.pd-selectfull{flex:1;font-family:inherit;font-size:13px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:#14141F;color:#C0C0D0;cursor:pointer;outline:none;}
 `;
