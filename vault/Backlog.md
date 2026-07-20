@@ -20,10 +20,13 @@ these three are under-planned — scope them after Wave 2:
   needs; the seed of the future CRM-lite tier (see finance plan §4).
 
 ## Ready when user says go
-- **Easy vendor onboarding (invite funnel)** — 3-field invite (name + company +
-  email/phone) → magic-link `/join/<token>` → pre-approved profile → existing
-  portal/nudges. Full plan: `workplace/plans/vendor-onboarding.md` (2026-07-20).
-  Blocked on Cesar: confirm invited-skip-review, Supabase SMTP/Site URL, SMS y/n.
+- ~~**Easy vendor onboarding (invite funnel)**~~ — **SHIPPED 2026-07-20**
+  (slices 1–4): `/admin/invites` 3-field capture → bilingual invite email →
+  `/join/<token>` magic-link quick account → pre-approved profile at
+  `/auth/callback` → day 2/5/9 reminder cron + unsubscribe. Migration
+  `supabase/migrations/20260720_vendor_invites.sql` must be applied to the
+  live DB before use. Still on Cesar: Supabase Auth Site URL + custom SMTP
+  (DEPLOY.md §B) or magic links rate-limit. SMS = Phase 2 (not built).
 - **Payments P1 — Stripe Connect escrow** (see [[Payments]]): vendor payout
   onboarding (Connect Express) + fixed-price flow: pay-into-escrow on quote
   accept, manual capture, ship → 5-day inspection → auto-release day 6,

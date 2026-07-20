@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import {
   Building2, ClipboardCheck, Inbox, Wand2, Store, Receipt,
-  Coins, Users, ArrowRight,
+  Coins, Users, ArrowRight, Send,
 } from 'lucide-react';
 import { AccessGate } from '@/components/AccessGate';
 
@@ -20,6 +20,7 @@ const GROUPS: AdminGroup[] = [
   {
     heading: 'Vendors',
     links: [
+      { href: '/admin/invites', title: 'Vendor invites', description: 'Invite a vendor you met: three fields, they get a personal link, reminders run automatically.', icon: Send },
       { href: '/admin/vendor-applications', title: 'Vendor applications', description: 'Review, approve, or reject companies that applied. Approving creates their live vendor profile.', icon: ClipboardCheck },
       { href: '/admin/vendors', title: 'Vendor moderation', description: 'Suspend, ban, or reactivate vendors, with a full audit trail.', icon: Building2 },
       { href: '/admin/directory', title: 'Vendor directory', description: 'Browse and manage the full vendor catalog.', icon: Users },
