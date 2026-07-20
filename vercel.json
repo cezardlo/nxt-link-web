@@ -1,0 +1,32 @@
+{
+  "headers": [
+    {
+      "source": "/landing.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, s-maxage=3600, stale-while-revalidate=86400" },
+        { "key": "CDN-Cache-Control", "value": "max-age=3600" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" }
+      ]
+    },
+    {
+      "source": "/admin.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, s-maxage=3600, stale-while-revalidate=86400" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, s-maxage=60, stale-while-revalidate=300" }
+      ]
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/profile-nudges",
+      "schedule": "0 16 * * *"
+    }
+  ],
+  "$schema": "https://openapi.vercel.sh/vercel.json"
+}

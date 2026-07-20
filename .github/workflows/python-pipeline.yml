@@ -1,0 +1,47 @@
+name: Python Vendor Pipeline
+
+on:
+  schedule:
+    # Run daily at 5 AM UTC (11 PM El Paso time)
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+    inputs:
+      command:
+        description: 'Command to run (test, scrape, enrich, full)'
+        required: false
+        default: 'full'
+      max_conferences:
+        description: 'Max conferences to scrape'
+        required: false
+        default: '16'
+
+env:
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+jobs:
+  scrape-and-enrich:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r pipeline/requirements.txt
+
+      - name: Install Playwright browsers
+        run: python -m playwright install chromium --with-deps
+
+      - name: Run pipeline
+        run: |
+          CMD="${{ github.event.inputs.command || 'full' }}"
+          MAX="${{ github.event.inputs.max_conferences || '16' }}"
+          echo "Running: python -m pipeline.run $CMD --max $MAX --persist"
+          python -m pipeline.run $CMD --max $MAX --persist --verbose

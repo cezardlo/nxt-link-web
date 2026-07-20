@@ -1,0 +1,108 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: nxtlink-postgres
+    environment:
+      POSTGRES_DB: nxtlink_intel
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./intelligence/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./intelligence/db/migrations/20260226_command_monitor.sql:/docker-entrypoint-initdb.d/02-command-monitor.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d nxtlink_intel"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  minio:
+    image: minio/minio:latest
+    container_name: nxtlink-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin minioadmin &&
+      mc mb -p local/nxtlink-intel-snapshots || true &&
+      mc anonymous set private local/nxtlink-intel-snapshots || true
+      "
+
+  intel-backend:
+    image: python:3.11-slim
+    container_name: nxtlink-intel-backend
+    working_dir: /app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./intelligence/intel_backend:/app
+    environment:
+      POSTGRES_DSN: postgresql+psycopg://postgres:postgres@postgres:5432/nxtlink_intel
+      OBJECT_STORE_BUCKET: nxtlink-intel-snapshots
+      OBJECT_STORE_ENDPOINT: http://minio:9000
+      OBJECT_STORE_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      EMBEDDING_MODEL_NAME: sentence-transformers/all-MiniLM-L6-v2
+    ports:
+      - "8100:8100"
+    command: >
+      bash -lc "pip install --no-cache-dir --upgrade pip &&
+      pip install --no-cache-dir . &&
+      uvicorn app.api:app --host 0.0.0.0 --port 8100"
+
+  intel-seed:
+    image: python:3.11-slim
+    container_name: nxtlink-intel-seed
+    working_dir: /app
+    depends_on:
+      intel-backend:
+        condition: service_started
+    volumes:
+      - ./intelligence/intel_backend:/app
+    environment:
+      POSTGRES_DSN: postgresql+psycopg://postgres:postgres@postgres:5432/nxtlink_intel
+    command: >
+      bash -lc "pip install --no-cache-dir --upgrade pip &&
+      pip install --no-cache-dir . &&
+      python scripts/seed_demo.py"
+    restart: "no"
+
+  web:
+    image: node:20-alpine
+    container_name: nxtlink-web
+    working_dir: /workspace
+    depends_on:
+      - intel-backend
+    volumes:
+      - ./:/workspace
+      - /workspace/node_modules
+    environment:
+      NEXT_PUBLIC_INTEL_API_URL: http://localhost:8100
+    ports:
+      - "3000:3000"
+    command: sh -lc "npm install && npm run dev -- --hostname 0.0.0.0 --port 3000"
+
+volumes:
+  postgres_data:
+  minio_data:
+

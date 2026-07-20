@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style data-omelette-injected>html,body{background:transparent}</style><script data-omelette-injected>(()=>{{const W=new URLSearchParams(location.search).get("theme");if(W==="light"||W==="dark"){document.documentElement.dataset.theme=W}}{if(new URLSearchParams(location.search).get("_omthumb")==="1"){const W=(q)=>{const X=q.focus;if(!X)return;q.focus=function(H){X.call(this,{...H,preventScroll:true})}};W(HTMLElement.prototype);W(SVGElement.prototype);if(typeof MathMLElement!=="undefined"){W(MathMLElement.prototype)}const $=(q)=>{q.removeAttribute("autofocus");q.inert=true;if(!(q instanceof HTMLElement))q.removeAttribute("tabindex")};const z=(q)=>{if(q.hasAttribute("autofocus"))$(q);for(const X of q.querySelectorAll("[autofocus]")){$(X)}};z(document.documentElement);new MutationObserver((q)=>{for(const X of q){for(const H of X.addedNodes){if(H.nodeType===1)z(H)}}}).observe(document,{childList:true,subtree:true})}}{const W=()=>{try{if(document.querySelector('meta[name="color-scheme"]'))return;const $=getComputedStyle(document.documentElement).getPropertyValue("color-scheme").trim();if($&&$!=="normal")return;const z=(j)=>{if(!j)return null;const F=getComputedStyle(j).backgroundColor.match(/^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)(?:[,\s/]+([\d.]+%?))?\s*\)$/);if(!F)return null;const G=F[4]==null?1:parseFloat(F[4])/(F[4].endsWith("%")?100:1);if(G<0.99)return null;return[+F[1],+F[2],+F[3]]};const q=z(document.body)||z(document.documentElement);if(!q)return;const X=(j)=>{const F=j/255;return F<=0.04045?F/12.92:((F+0.055)/1.055)**2.4};const H=0.2126*X(q[0])+0.7152*X(q[1])+0.0722*X(q[2]);document.documentElement.style.setProperty("color-scheme",H<0.4?"dark":"light")}catch{}};if(document.readyState==="complete")W();else window.addEventListener("load",W)}var b=[];var p=false;var u=30000;var d=3000;document.addEventListener("DOMContentLoaded",()=>{const W=window.Babel;const $="om-src-id";if(W&&W.registerPlugin&&!(W.availablePlugins&&W.availablePlugins[$])){W.registerPlugin($,({types:H})=>({visitor:{JSXOpeningElement(j,F){const G=j.node;if(G.name&&G.name.type==="JSXMemberExpression")return;for(let Q=0;Q<G.attributes.length;Q++){const V=G.attributes[Q];if(V.type==="JSXAttribute"&&V.name&&V.name.name==="data-om-id")return}const P=F.file&&F.file.opts&&F.file.opts.filename||"?";const R=G.loc&&G.loc.start;const J=`jsx:${P}:${G.start??0}:${R?R.line:0}:${R?R.column+1:0}`;G.attributes.push(H.jsxAttribute(H.jsxIdentifier("data-om-id"),H.stringLiteral(J)))}}}))}const z="om-text-extract";let q=false;if(p&&W&&W.registerPlugin&&!(W.availablePlugins&&W.availablePlugins[z])){const H=window.React;if(H&&H.useSyncExternalStore&&H.createElement){q=true;const j={};const F=new Set;let G=0;window.__omTextO=j;window.__omTextSet=(J)=>{for(const Q in J){const V=J[Q];if(V==null)delete j[Q];else j[Q]=V}G++;F.forEach((Q)=>Q())};const P=(J)=>{F.add(J);return()=>F.delete(J)};const R=()=>G;window.__OmT=function J(Q){H.useSyncExternalStore(P,R,R);return H.createElement("span",{"data-om-text":Q.i,className:"__om-t"},Q.i in j?j[Q.i]:Q.children)};W.registerPlugin(z,({types:J})=>{const Q={style:1,script:1,noscript:1,textarea:1,title:1,option:1,text:1,tspan:1,textPath:1};const V={placeholder:1,alt:1,title:1,label:1,"aria-label":1,"aria-description":1,"aria-placeholder":1};const Y=(K,M)=>J.logicalExpression("??",J.memberExpression(J.logicalExpression("||",J.memberExpression(J.identifier("window"),J.identifier("__omTextO")),J.objectExpression([])),J.stringLiteral(K),true),M);const Z=(K)=>K.file&&K.file.opts&&K.file.opts.filename||"?";const B=(K)=>K.file&&K.file.code||"";const U=(K,M)=>{const L=(D)=>D&&D.start!=null&&D.end!=null&&(D.type==="StringLiteral"||D.type==="TemplateLiteral"&&D.expressions.length===0)?[D.start,D.end]:null;const N=L(M);if(N)return N;if(M&&M.type==="Identifier"){const D=K.scope.getBinding(M.name);if(D&&D.constant&&D.path.node.type==="VariableDeclarator"){return L(D.path.node.init)}}return null};const x=(K,M,L)=>{const N=K.node;let D=false;const f=(w,A)=>{D=true;return J.jsxElement(J.jsxOpeningElement(J.jsxIdentifier("__OmT"),[J.jsxAttribute(J.jsxIdentifier("i"),J.stringLiteral(w))],false),J.jsxClosingElement(J.jsxIdentifier("__OmT")),[A],false)};const C=N.children.map((w)=>{if(w.type==="JSXText"){if(w.start==null||w.end==null)return w;const A=L.slice(w.start,w.end);const S=A.length-A.trimStart().length;const O=A.length-A.trimEnd().length;if(S+O>=A.length)return w;return f(`txt:${M}:${w.start+S}:${w.end-O}`,w)}if(w.type==="JSXExpressionContainer"){const A=U(K,w.expression);if(A)return f(`str:${M}:${A[0]}:${A[1]}`,w)}return w});if(D)N.children=C};return{visitor:{JSXOpeningElement(K,M){const L=K.node;const N=Z(M);const D={};for(let f=0;f<L.attributes.length;f++){const C=L.attributes[f];if(C.type!=="JSXAttribute"||!C.name)continue;const w=C.name.name;if(!V[w])continue;if(!C.value||C.value.type!=="StringLiteral")continue;if(C.value.start==null||C.value.end==null)continue;const A=`txt:${N}:${C.value.start}:${C.value.end}`;D[w]=A;C.value=J.jsxExpressionContainer(Y(A,J.stringLiteral(C.value.value)))}if(Object.keys(D).length){L.attributes.push(J.jsxAttribute(J.jsxIdentifier("data-om-text-attrs"),J.stringLiteral(JSON.stringify(D))))}},JSXElement(K,M){const L=K.node.openingElement;const N=L&&L.name&&L.name.name;if(N==="__OmT")return;if(typeof N==="string"&&Q[N])return;x(K,Z(M),B(M))},JSXFragment(K,M){x(K,Z(M),B(M))}}}})}}const X=q?["transform-react-jsx-source",$,z]:["transform-react-jsx-source",$];document.querySelectorAll('script[type="text/babel"],script[type="text/jsx"]').forEach((H,j)=>{const F=H.getAttribute("data-plugins")||"";const G=X.filter((P)=>F.indexOf(P)<0);if(G.length){H.setAttribute("data-plugins",F?`${F},${G.join(",")}`:G.join(","))}if(!H.hasAttribute("data-filename")){H.setAttribute("data-filename",H.getAttribute("src")||`inline-${j}`)}})});var I=window.parent;var g="not editable here — open the project in the Claude Design editor to save";var n=()=>Promise.resolve({persisted:false,noHost:true,reason:g});var k=n;var v="data/storage.json";var l=()=>{try{const W=new URL(document.baseURI);const $=W.pathname.match(/\/projects\/([^/]+)\/serve\//);if($)return $[1];return W.hostname.split(".")[0]||""}catch{return location.hostname.split(".")[0]||""}};var o=()=>{try{const W=new URL(document.baseURI);const $=W.pathname.indexOf("/serve/");if($>=0)return W.origin+W.pathname.slice(0,$+"/serve/".length)+v}catch{}return"./"+v};var E=null;var _=()=>{if(!E){E=fetch(o(),{cache:"no-store"}).then((W)=>{if(W.ok)return W.text();return W.status===404?"":null}).catch(()=>null).then((W)=>{if(W===null){E=null;return null}const $=new Map;if(!W)return $;let z;try{z=JSON.parse(W)}catch{console.warn("[omelette.storage] "+v+" is not valid JSON; treating the store as unreadable so a save cannot overwrite the "+"hand-edited bytes. Fix the JSON (or delete the file) to re-enable persistence.");E=null;return null}if(z===null||typeof z!=="object"||Array.isArray(z)){console.warn("[omelette.storage] "+v+" doesn't hold a JSON object; treating the store as unreadable so a save cannot "+"overwrite the hand-edited bytes. Make the top level a JSON object to re-enable persistence.");E=null;return null}const q=z;if("data"in q){const X=q.data;if(X===null||typeof X!=="object"||Array.isArray(X)){console.warn("[omelette.storage] "+v+' has a "data" field that is not a JSON object; treating the store as unreadable so a '+'save cannot overwrite the hand-edited bytes. Make "data" a JSON object to re-enable persistence.');E=null;return null}const H=q._meta;const j=H!==null&&typeof H==="object"?H.project:undefined;if(typeof j==="string"&&j!==""&&j!==l())return $;for(const F of Object.keys(X))$.set(F,X[F]);return $}for(const X of Object.keys(q)){if(X!=="_meta")$.set(X,q[X])}return $})}return E};var y=(W)=>k(v,JSON.stringify({_meta:{project:l(),version:1},data:Object.fromEntries(W)},null,2));var m=Promise.resolve();var T=(W)=>{const $=m.then(W);m=$.then(()=>{return},()=>{return});return $};var s=/sk-(?:ant-)?[A-Za-z0-9_-]{16,}|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{20,}|xox[a-z]-[A-Za-z0-9][A-Za-z0-9-]{9,}|AIza[0-9A-Za-z_-]{30,}|-----BEGIN [A-Z ]*PRIVATE KEY-----/;var a=/password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token|credential/i;var r=(W,$,z)=>{if(s.test($)||a.test(W)&&typeof z==="string"&&z.length>=8){console.warn('[omelette.storage] the value for "'+W+'" looks like a credential. The storage file is a plaintext project file — visible to '+"everyone with project access and copied when the project is duplicated. Do not store secrets here.")}};var c={persisted:false,reason:"could not load the existing store — not overwriting it"};var i={persisted:false,reason:"stored value changed since a failed read — re-read this key before saving"};var h=new Set;var t={get:(W)=>{if(typeof W!=="string"){return Promise.reject(new TypeError("storage.get: key must be a string"))}return T(_).then(($)=>{if($===null){h.add(W);return null}h.delete(W);if(!$.has(W))return null;const z=$.get(W);return z==null?null:JSON.parse(JSON.stringify(z))})},set:(W,$)=>{if(typeof W!=="string"){return Promise.reject(new TypeError("storage.set: key must be a string"))}let z;try{z=JSON.stringify($)}catch(X){return Promise.reject(new TypeError("storage.set: value must be JSON-serializable ("+String(X)+")"))}if(z===undefined){return Promise.reject(new TypeError("storage.set: value must be JSON-serializable"))}r(W,z,$);const q=JSON.parse(z);return T(()=>_().then((X)=>{if(X===null)return c;if(h.has(W)){if(X.has(W))return i;h.delete(W)}X.set(W,q);return y(X)}))},delete:(W)=>{if(typeof W!=="string"){return Promise.reject(new TypeError("storage.delete: key must be a string"))}return T(()=>_().then(($)=>{if($===null)return c;if(h.has(W)){if($.has(W))return i;h.delete(W)}$.delete(W);return y($)}))},keys:()=>T(_).then((W)=>W===null?[]:Array.from(W.keys()))};window.omelette={writeFile:(W,$)=>k(W,$).then((z)=>{if(!z.persisted&&!z.noHost){throw new Error(z.reason||"write failed")}}),storage:t};if(I&&I!==window){const W=(J,Q)=>{try{I.postMessage({__omelette_log:true,type:J,data:Q},"*")}catch{}};["log","warn","error"].forEach((J)=>{const Q=console[J];console[J]=(...V)=>{const Y=V.map((Z)=>{try{return typeof Z==="object"?JSON.stringify(Z):String(Z)}catch{try{return String(Z)}catch{return"[unstringifiable]"}}}).join(" ");W(J,Y);Q.apply(console,V)}});window.addEventListener("error",(J)=>{const Q=J.target;if(Q&&Q!==window&&Q.tagName){const V=Q.src||Q.href||"";W("resource_error",`${Q.tagName} failed to load: ${V}`)}else{W("error",`${J.message||"Unknown error"} at ${J.filename||"?"}:${J.lineno||0}:${J.colno||0}`)}},true);window.addEventListener("unhandledrejection",(J)=>{const Q=J.reason;const V=Q instanceof Error?`${Q.message} ${Q.stack}`:String(Q);W("error",`Unhandled rejection: ${V}`)});window.addEventListener("click",(J)=>{if(J.defaultPrevented||J.button!==0)return;if(J.metaKey||J.ctrlKey||J.shiftKey||J.altKey)return;const Q=J.composedPath?J.composedPath():[];const V=["button","input","select","textarea","summary","label"];let Y=null;for(const x of Q){if(!(x instanceof Element))continue;if(x.localName==="a"){if(!(x instanceof HTMLAnchorElement))return;Y=x;break}if(V.indexOf(x.localName)!==-1)return}if(!Y)return;if(Y.isContentEditable)return;const Z=Y.closest("[contenteditable]");if(Z&&Z.getAttribute("contenteditable")!=="false")return;const B=(Y.getAttribute("target")||"_self").toLowerCase();if(B!=="_self"&&B!=="_top"&&B!=="_parent")return;let U;try{U=new URL(Y.href)}catch{return}if(U.protocol!=="http:"&&U.protocol!=="https:")return;if(location.origin==="null")return;if(U.origin===location.origin)return;J.preventDefault();window.open(U.href,"_blank","noopener,noreferrer")});const $=()=>{try{I.postMessage({type:"omelette:height",height:document.documentElement.scrollHeight},"*")}catch{}};if(window.ResizeObserver)new ResizeObserver($).observe(document.documentElement);const z=()=>{$();if(!document.querySelector('script[type="text/babel"],script[type="text/jsx"]'))return;const J=()=>document.getElementById("root")||document.querySelector("body > div[id]");const Q=J()?.firstElementChild??null;let V=0;const Y=()=>{const Z=J();if(Z&&Z.firstElementChild!==Q||++V>30){$();return}setTimeout(Y,100)};setTimeout(Y,100)};if(document.readyState==="complete")z();else window.addEventListener("load",z);const q={};let X=0;const H=(J)=>new Promise((Q,V)=>{if(!b.length){V(new Error("claude.complete: no parent origin"));return}const Y=`c${++X}`;const Z=()=>setTimeout(()=>{delete q[Y];V(new Error(`claude.complete: no data for ${u/1000}s`))},u);const B=Z();q[Y]={resolve:Q,reject:V,text:"",t:B,arm:Z};try{for(const U of b){I.postMessage({__om_api:true,id:Y,body:J},U)}}catch(U){clearTimeout(B);delete q[Y];V(U)}});const j=8;const F=async(J,Q)=>{if(!Array.isArray(J.messages)){throw new Error("claude.complete: tools require a messages array")}const V=J.messages.slice();const Y={...J,tools:J.tools.map((U)=>{if(U===null||typeof U!=="object")return U;const x={};for(const K of Object.keys(U)){if(typeof U[K]!=="function")x[K]=U[K]}return x})};const Z=Y.tool_choice;const B=Z!=null&&(Z.type==="any"||Z.type==="tool")?{...Y,tool_choice:Z.disable_parallel_tool_use!==undefined?{type:"auto",disable_parallel_tool_use:Z.disable_parallel_tool_use}:{type:"auto"}}:Y;for(let U=0;U<j;U++){const x=await H({...U===0?Y:B,messages:V});const K=x.message;const M=K&&Array.isArray(K.content)?K.content:null;const L=M?M.filter((D)=>D?.type==="tool_use"):[];if(K?.stop_reason!=="tool_use"||L.length===0){return x.text}const N=[];for(const D of L){const f=Q.get(D.name);if(!f){N.push({type:"tool_result",tool_use_id:D.id,content:`no handler for tool "${D.name}"`,is_error:true});continue}try{const C=await f(D.input);const w=typeof C==="string"?C:R(C)??"";N.push({type:"tool_result",tool_use_id:D.id,content:w})}catch(C){N.push({type:"tool_result",tool_use_id:D.id,content:String(C?.message??C??"tool handler failed"),is_error:true})}}V.push({role:"assistant",content:M},{role:"user",content:N})}throw new Error(`claude.complete: exceeded ${j} tool turns`)};window.claude={complete(J){const Q=J;if(Q!==null&&typeof Q==="object"&&Array.isArray(Q.tools)&&Q.tools.some((V)=>V!==null&&typeof V==="object"&&typeof V.run==="function")){const V=new Map;for(const Y of Q.tools){if(Y!==null&&typeof Y==="object"&&typeof Y.run==="function"){V.set(String(Y.name),Y.run)}}return F(Q,V)}return H(J).then((V)=>V.text)}};const G={};let P=0;k=(J,Q)=>new Promise((V)=>{if(!b.length){V({persisted:false,noHost:true,reason:g});return}const Y=`f${++P}`;const Z=setTimeout(()=>{delete G[Y];V({persisted:false,noHost:true,reason:g})},d);G[Y]={settle:V,t:Z};try{for(const B of b){I.postMessage({__om_file:true,id:Y,op:"write",path:J,content:Q},B)}}catch{clearTimeout(Z);delete G[Y];V({persisted:false,noHost:true,reason:g})}});const R=(J)=>{try{return JSON.stringify(J)}catch{return JSON.stringify(String(J))}};window.addEventListener("message",(J)=>{if(b.indexOf(J.origin)<0)return;if(J.source!==I)return;const Q=J.data;if(!Q)return;if(Q.type==="omelette-preview-refresh"){if(typeof Q.token!=="string"||!/^[0-9a-f.-]+(\.(rc|pr-[0-9]+))?(\.[0-9]+\.[0-9a-f]{16})?$/.test(Q.token))return;const Z=Math.max(1,Math.floor((Q.expiresAt||0)-Date.now()/1000));document.cookie="__Host-omelette-preview="+Q.token+"; Path=/; Secure; SameSite=None; Partitioned; Max-Age="+Z;return}if(Q.__om_file_r){const Z=G[Q.id];if(!Z)return;clearTimeout(Z.t);delete G[Q.id];Z.settle(Q.ok?{persisted:true}:{persisted:false,reason:Q.error||"write failed"});return}if(Q.__om_api_r){const Z=q[Q.id];if(!Z)return;if(Q.error!=null){clearTimeout(Z.t);delete q[Q.id];Z.reject(new Error(Q.error));return}if(Q.chunk!=null){clearTimeout(Z.t);Z.t=Z.arm();Z.text+=Q.chunk;return}if(Q.done){clearTimeout(Z.t);delete q[Q.id];Z.resolve({text:Q.text!=null?Q.text:Z.text,message:Q.message});return}return}if(!Q.__om_eval)return;const V=Q;const Y=(Z)=>{J.source.postMessage({...Z,__om_eval_r:1,id:V.id},J.origin)};try{const Z=(0,eval)(V.code);if(Z&&typeof Z.then==="function"){Z.then((B)=>Y({ok:1,v:R(B)}),(B)=>Y({ok:0,e:String(B)}))}else{Y({ok:1,v:R(Z)})}}catch(Z){Y({ok:0,e:String(Z)})}})}})();
+</script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0}
+  ::selection{background:#6C5CE0;color:#fff}
+  a{color:#6C5CE0;text-decoration:none}
+  a:hover{color:#4A3DB0}
+  .lucide{display:block}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:#D8D5E4;border-radius:8px;border:2px solid #F8F7FB}
+</style>
+</helmet>
+<div style="display:flex;min-height:900px;font-family:'IBM Plex Sans',sans-serif;color:#141320;background:#F8F7FB;-webkit-font-smoothing:antialiased">
+
+  <!-- ========= SIDEBAR ========= -->
+  <aside style="width:248px;flex-shrink:0;background:#141320;color:#C9C6D6;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;min-height:900px">
+    <div style="padding:22px 22px 18px;font-family:'Space Grotesk';font-weight:700;font-size:24px;letter-spacing:-.03em;color:#F8F7FB">NXT<span style="color:#8B7FEC">//</span>LINK</div>
+
+    <div style="padding:0 14px 8px">
+      <div style="font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#615F72;padding:14px 10px 8px">Marketplace</div>
+      <button onClick="{{ goHome }}" style="{{ navHome }}"><i data-lucide="store"></i><span>Home</span></button>
+      <button onClick="{{ goSearch }}" style="{{ navSearch }}"><i data-lucide="search"></i><span>Search results</span></button>
+      <button onClick="{{ goVendor }}" style="{{ navVendor }}"><i data-lucide="building-2"></i><span>Vendor profile</span></button>
+
+      <div style="font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#615F72;padding:16px 10px 8px">Dashboards</div>
+      <button onClick="{{ goBuyer }}" style="{{ navBuyer }}"><i data-lucide="layout-dashboard"></i><span>Buyer</span></button>
+      <button onClick="{{ goCompare }}" style="{{ navCompare }}"><i data-lucide="git-compare-arrows"></i><span>Quote comparison</span></button>
+      <button onClick="{{ goVendorDash }}" style="{{ navVendorDash }}"><i data-lucide="briefcase"></i><span>Vendor</span></button>
+      <button onClick="{{ goOperator }}" style="{{ navOperator }}"><i data-lucide="shield-check"></i><span>Operator</span></button>
+    </div>
+
+    <div style="margin-top:auto;padding:18px 20px;border-top:1px solid #26243480;display:flex;align-items:center;gap:12px">
+      <div style="width:36px;height:36px;border-radius:10px;background:#6C5CE0;display:grid;place-items:center;font-family:'Space Grotesk';font-weight:700;font-size:15px;color:#fff">YN</div>
+      <div style="line-height:1.2"><div style="font-size:13px;font-weight:600;color:#F8F7FB">Your Name</div><div style="font-size:11px;color:#8B889C">Founder</div></div>
+    </div>
+  </aside>
+
+  <!-- ========= MAIN ========= -->
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+
+    <!-- top bar -->
+    <header style="height:66px;flex-shrink:0;background:#fff;border-bottom:1px solid #E2DFEC;display:flex;align-items:center;gap:18px;padding:0 28px;position:sticky;top:0;z-index:20">
+      <div style="flex:1;max-width:560px;display:flex;align-items:center;gap:10px;height:42px;background:#F8F7FB;border:1px solid #E2DFEC;border-radius:12px;padding:0 14px;color:#615F72">
+        <i data-lucide="search" style="width:18px"></i>
+        <span style="font-size:14px">Search solutions, vendors, equipment, services—or describe a problem</span>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:14px;color:#3B3A4A">
+        <div style="position:relative;width:40px;height:40px;border-radius:10px;border:1px solid #E2DFEC;display:grid;place-items:center"><i data-lucide="bell" style="width:19px"></i><span style="position:absolute;top:8px;right:9px;width:7px;height:7px;background:#CE4B43;border-radius:50%"></span></div>
+        <div style="width:40px;height:40px;border-radius:10px;border:1px solid #E2DFEC;display:grid;place-items:center"><i data-lucide="messages-square" style="width:19px"></i></div>
+        <button style="height:40px;padding:0 18px;background:#6C5CE0;color:#fff;border:none;border-radius:10px;font-family:'IBM Plex Sans';font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px;cursor:pointer"><i data-lucide="plus" style="width:17px"></i>Create a Project</button>
+      </div>
+    </header>
+
+    <main style="flex:1;overflow:auto;padding:32px">
+
+    <!-- ============================================================= HOME -->
+    <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+      <div style="max-width:1120px;margin:0 auto">
+        <!-- hero -->
+        <section style="border-radius:22px;background:#141320;color:#F8F7FB;padding:56px 56px 52px;position:relative;overflow:hidden">
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(118deg,transparent 0 28px,rgba(108,92,224,.08) 28px 31px)"></div>
+          <div style="position:relative;max-width:720px">
+            <div style="font-family:'IBM Plex Mono';font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#A99DF2;margin-bottom:18px">Global industrial marketplace</div>
+            <h1 style="font-family:'Space Grotesk';font-weight:700;font-size:46px;line-height:1.05;letter-spacing:-.03em;margin:0 0 28px">Find the technology, equipment, products, and services your operation needs.</h1>
+            <div style="display:flex;gap:10px;background:#fff;border-radius:14px;padding:8px;max-width:640px">
+              <div style="flex:1;display:flex;align-items:center;gap:10px;padding:0 14px;color:#615F72"><i data-lucide="search" style="width:20px;color:#6C5CE0"></i><span style="font-size:15px">Describe a problem, or search a solution…</span></div>
+              <button style="height:48px;padding:0 26px;background:#6C5CE0;color:#fff;border:none;border-radius:10px;font-family:'IBM Plex Sans';font-weight:600;font-size:15px;cursor:pointer">Search Solutions</button>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
+              <span style="padding:7px 14px;background:#ffffff14;border:1px solid #ffffff22;border-radius:999px;font-size:13px;color:#C9C6D6">Forklift maintenance</span>
+              <span style="padding:7px 14px;background:#ffffff14;border:1px solid #ffffff22;border-radius:999px;font-size:13px;color:#C9C6D6">Barcode systems</span>
+              <span style="padding:7px 14px;background:#ffffff14;border:1px solid #ffffff22;border-radius:999px;font-size:13px;color:#C9C6D6">Warehouse software</span>
+              <span style="padding:7px 14px;background:#ffffff14;border:1px solid #ffffff22;border-radius:999px;font-size:13px;color:#C9C6D6">Conveyor installation</span>
+              <span style="padding:7px 14px;background:#ffffff14;border:1px solid #ffffff22;border-radius:999px;font-size:13px;color:#C9C6D6">Machine vision</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- categories -->
+        <section style="margin-top:36px">
+          <h2 style="font-family:'Space Grotesk';font-weight:600;font-size:22px;margin:0 0 18px;letter-spacing:-.01em">Browse by category</h2>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px">
+            <div style="border:1px solid #E2DFEC;border-radius:14px;background:#fff;padding:20px 16px;display:flex;flex-direction:column;gap:12px"><div style="width:40px;height:40px;border-radius:10px;background:#EFEDF5;display:grid;place-items:center;color:#6C5CE0"><i data-lucide="package" style="width:20px"></i></div><span style="font-weight:600;font-size:14px">Equipment</span></div>
+            <div style="border:1px solid #E2DFEC;border-radius:14px;background:#fff;padding:20px 16px;display:flex;flex-direction:column;gap:12px"><div style="width:40px;height:40px;border-radius:10px;background:#EFEDF5;display:grid;place-items:center;color:#6C5CE0"><i data-lucide="boxes" style="width:20px"></i></div><span style="font-weight:600;font-size:14px">Products</span></div>
+            <div style="border:1px solid #E2DFEC;border-radius:14px;background:#fff;padding:20px 16px;display:flex;flex-direction:column;gap:12px"><div style="width:40px;height:40px;border-radius:10px;background:#EFEDF5;display:grid;place-items:center;color:#6C5CE0"><i data-lucide="cpu" style="width:20px"></i></div><span style="font-weight:600;font-size:14px">Technology</span></div>
+            <div style="border:1px solid #E2DFEC;border-radius:14px;background:#fff;padding:20px 16px;display:flex;flex-direction:column;gap:12px"><div style="width:40px;height:40px;border-radius:10px;background:#EFEDF5;display:grid;place-items:center;color:#6C5CE0"><i data-lucide="wrench" style="width:20px"></i></div><span style="font-weight:600;font-size:14px">Services</span></div>
+            <div style="border:1px solid #E2DFEC;border-radius:14px;background:#fff;padding:20px 16px;display:flex;flex-direction:column;gap:12px"><div style="width:40px;height:40px;border-radius:10px;background:#EFEDF5;display:grid;place-items:center;color:#6C5CE0"><i data-lucide="bot" style="width:20px"></i></div><span style="font-weight:600;font-size:14px">Automation</span></div>
+            <div style="border:1px solid #E2DFEC;border-radius:14px;background:#fff;padding:20px 16px;display:flex;flex-direction:column;gap:12px"><div style="width:40px;height:40px;border-radius:10px;background:#EFEDF5;display:grid;place-items:center;color:#6C5CE0"><i data-lucide="hard-hat" style="width:20px"></i></div><span style="font-weight:600;font-size:14px">Maintenance</span></div>
+            <div style="border:1px solid #E2DFEC;border-radius:14px;background:#fff;padding:20px 16px;display:flex;flex-direction:column;gap:12px"><div style="width:40px;height:40px;border-radius:10px;background:#EFEDF5;display:grid;place-items:center;color:#6C5CE0"><i data-lucide="truck" style="width:20px"></i></div><span style="font-weight:600;font-size:14px">Logistics</span></div>
+            <div style="border:1px solid #E2DFEC;border-radius:14px;background:#fff;padding:20px 16px;display:flex;flex-direction:column;gap:12px"><div style="width:40px;height:40px;border-radius:10px;background:#EFEDF5;display:grid;place-items:center;color:#6C5CE0"><i data-lucide="shield-check" style="width:20px"></i></div><span style="font-weight:600;font-size:14px">Safety</span></div>
+            <div style="border:1px solid #E2DFEC;border-radius:14px;background:#fff;padding:20px 16px;display:flex;flex-direction:column;gap:12px"><div style="width:40px;height:40px;border-radius:10px;background:#EFEDF5;display:grid;place-items:center;color:#6C5CE0"><i data-lucide="users" style="width:20px"></i></div><span style="font-weight:600;font-size:14px">Staffing</span></div>
+            <div style="border:1px solid #E2DFEC;border-radius:14px;background:#fff;padding:20px 16px;display:flex;flex-direction:column;gap:12px"><div style="width:40px;height:40px;border-radius:10px;background:#EFEDF5;display:grid;place-items:center;color:#6C5CE0"><i data-lucide="building" style="width:20px"></i></div><span style="font-weight:600;font-size:14px">Facility Ops</span></div>
+          </div>
+        </section>
+
+        <!-- how it works -->
+        <section style="margin-top:40px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+          <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;padding:26px"><div style="font-family:'IBM Plex Mono';font-size:13px;color:#6C5CE0;font-weight:600">01</div><div style="font-family:'Space Grotesk';font-weight:600;font-size:18px;margin:10px 0 6px">Tell us what you need</div><p style="font-size:14px;color:#615F72;margin:0">Describe the problem in plain language — no technical part numbers required.</p></div>
+          <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;padding:26px"><div style="font-family:'IBM Plex Mono';font-size:13px;color:#6C5CE0;font-weight:600">02</div><div style="font-family:'Space Grotesk';font-weight:600;font-size:18px;margin:10px 0 6px">Discover matched vendors</div><p style="font-size:14px;color:#615F72;margin:0">We surface verified vendors that fit your category, location, and timeline.</p></div>
+          <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;padding:26px"><div style="font-family:'IBM Plex Mono';font-size:13px;color:#6C5CE0;font-weight:600">03</div><div style="font-family:'Space Grotesk';font-weight:600;font-size:18px;margin:10px 0 6px">Compare &amp; move forward</div><p style="font-size:14px;color:#615F72;margin:0">Request quotes, compare side by side, and manage the project in one place.</p></div>
+        </section>
+
+        <!-- featured vendors -->
+        <section style="margin-top:40px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px"><h2 style="font-family:'Space Grotesk';font-weight:600;font-size:22px;margin:0;letter-spacing:-.01em">Featured vendors</h2><a href="#" style="font-size:14px;font-weight:500">View all →</a></div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+            <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;overflow:hidden">
+              <div style="height:96px;background:repeating-linear-gradient(120deg,#EFEDF5 0 12px,#E7E4F0 12px 24px)"></div>
+              <div style="padding:18px;position:relative">
+                <div style="width:48px;height:48px;border-radius:12px;background:#141320;display:grid;place-items:center;color:#8B7FEC;font-family:'Space Grotesk';font-weight:700;position:absolute;top:-24px;border:3px solid #fff">MW</div>
+                <div style="margin-top:6px;display:flex;align-items:center;gap:8px"><span style="font-family:'Space Grotesk';font-weight:600;font-size:16px">MidWest Handling</span><i data-lucide="badge-check" style="width:16px;color:#6C5CE0"></i></div>
+                <div style="font-size:13px;color:#615F72;margin:4px 0 12px">Forklift service &amp; parts · El Paso, TX</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap"><span style="font-family:'IBM Plex Mono';font-size:11px;padding:4px 8px;background:#EFEDF5;border-radius:6px;color:#3B3A4A">4.9 ★</span><span style="font-family:'IBM Plex Mono';font-size:11px;padding:4px 8px;background:#EFEDF5;border-radius:6px;color:#3B3A4A">4h response</span></div>
+              </div>
+            </div>
+            <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;overflow:hidden">
+              <div style="height:96px;background:repeating-linear-gradient(120deg,#EFEDF5 0 12px,#E7E4F0 12px 24px)"></div>
+              <div style="padding:18px;position:relative">
+                <div style="width:48px;height:48px;border-radius:12px;background:#141320;display:grid;place-items:center;color:#8B7FEC;font-family:'Space Grotesk';font-weight:700;position:absolute;top:-24px;border:3px solid #fff">AX</div>
+                <div style="margin-top:6px;display:flex;align-items:center;gap:8px"><span style="font-family:'Space Grotesk';font-weight:600;font-size:16px">Axiom Automation</span><i data-lucide="badge-check" style="width:16px;color:#6C5CE0"></i></div>
+                <div style="font-size:13px;color:#615F72;margin:4px 0 12px">Conveyor &amp; robotics integrator · Nationwide</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap"><span style="font-family:'IBM Plex Mono';font-size:11px;padding:4px 8px;background:#EFEDF5;border-radius:6px;color:#3B3A4A">4.8 ★</span><span style="font-family:'IBM Plex Mono';font-size:11px;padding:4px 8px;background:#EFEDF5;border-radius:6px;color:#3B3A4A">Installs</span></div>
+              </div>
+            </div>
+            <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;overflow:hidden">
+              <div style="height:96px;background:repeating-linear-gradient(120deg,#EFEDF5 0 12px,#E7E4F0 12px 24px)"></div>
+              <div style="padding:18px;position:relative">
+                <div style="width:48px;height:48px;border-radius:12px;background:#141320;display:grid;place-items:center;color:#8B7FEC;font-family:'Space Grotesk';font-weight:700;position:absolute;top:-24px;border:3px solid #fff">CV</div>
+                <div style="margin-top:6px;display:flex;align-items:center;gap:8px"><span style="font-family:'Space Grotesk';font-weight:600;font-size:16px">ClearView WMS</span><i data-lucide="badge-check" style="width:16px;color:#6C5CE0"></i></div>
+                <div style="font-size:13px;color:#615F72;margin:4px 0 12px">Warehouse software · Cloud · EN/ES</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap"><span style="font-family:'IBM Plex Mono';font-size:11px;padding:4px 8px;background:#EFEDF5;border-radius:6px;color:#3B3A4A">4.7 ★</span><span style="font-family:'IBM Plex Mono';font-size:11px;padding:4px 8px;background:#EFEDF5;border-radius:6px;color:#3B3A4A">Demo</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </sc-if>
+
+    <!-- ============================================================= SEARCH -->
+    <sc-if value="{{ isSearch }}" hint-placeholder-val="{{ true }}">
+      <div style="max-width:1200px;margin:0 auto">
+        <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:6px"><h1 style="font-family:'Space Grotesk';font-weight:600;font-size:26px;margin:0;letter-spacing:-.02em">“forklift maintenance”</h1><span style="font-size:14px;color:#615F72">142 results · El Paso, TX</span></div>
+        <div style="display:flex;gap:8px;margin:14px 0 22px;flex-wrap:wrap">
+          <span style="padding:8px 14px;background:#141320;color:#fff;border-radius:999px;font-size:13px;font-weight:500">All</span>
+          <span style="padding:8px 14px;background:#fff;border:1px solid #E2DFEC;border-radius:999px;font-size:13px">Equipment</span>
+          <span style="padding:8px 14px;background:#fff;border:1px solid #E2DFEC;border-radius:999px;font-size:13px">Products</span>
+          <span style="padding:8px 14px;background:#fff;border:1px solid #E2DFEC;border-radius:999px;font-size:13px">Technology</span>
+          <span style="padding:8px 14px;background:#fff;border:1px solid #E2DFEC;border-radius:999px;font-size:13px">Services</span>
+          <span style="padding:8px 14px;background:#fff;border:1px solid #E2DFEC;border-radius:999px;font-size:13px">Companies</span>
+        </div>
+        <div style="display:grid;grid-template-columns:248px 1fr;gap:24px">
+          <!-- filters -->
+          <aside style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;padding:20px;height:fit-content">
+            <div style="font-family:'Space Grotesk';font-weight:600;font-size:15px;margin-bottom:14px">Filters</div>
+            <div style="font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#615F72;margin:14px 0 8px">Purchase type</div>
+            <label style="display:flex;align-items:center;gap:9px;font-size:14px;padding:5px 0;color:#3B3A4A"><span style="width:16px;height:16px;border:1.5px solid #6C5CE0;border-radius:5px;background:#6C5CE0;display:grid;place-items:center"><i data-lucide="check" style="width:12px;color:#fff"></i></span>Service</label>
+            <label style="display:flex;align-items:center;gap:9px;font-size:14px;padding:5px 0;color:#3B3A4A"><span style="width:16px;height:16px;border:1.5px solid #C9C6D6;border-radius:5px"></span>Buy</label>
+            <label style="display:flex;align-items:center;gap:9px;font-size:14px;padding:5px 0;color:#3B3A4A"><span style="width:16px;height:16px;border:1.5px solid #C9C6D6;border-radius:5px"></span>Rent / Lease</label>
+            <label style="display:flex;align-items:center;gap:9px;font-size:14px;padding:5px 0;color:#3B3A4A"><span style="width:16px;height:16px;border:1.5px solid #C9C6D6;border-radius:5px"></span>Subscription</label>
+            <div style="font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#615F72;margin:18px 0 8px">Trust</div>
+            <label style="display:flex;align-items:center;gap:9px;font-size:14px;padding:5px 0;color:#3B3A4A"><span style="width:16px;height:16px;border:1.5px solid #6C5CE0;border-radius:5px;background:#6C5CE0;display:grid;place-items:center"><i data-lucide="check" style="width:12px;color:#fff"></i></span>Verified vendor</label>
+            <label style="display:flex;align-items:center;gap:9px;font-size:14px;padding:5px 0;color:#3B3A4A"><span style="width:16px;height:16px;border:1.5px solid #C9C6D6;border-radius:5px"></span>Installation available</label>
+            <label style="display:flex;align-items:center;gap:9px;font-size:14px;padding:5px 0;color:#3B3A4A"><span style="width:16px;height:16px;border:1.5px solid #C9C6D6;border-radius:5px"></span>Warranty</label>
+            <label style="display:flex;align-items:center;gap:9px;font-size:14px;padding:5px 0;color:#3B3A4A"><span style="width:16px;height:16px;border:1.5px solid #C9C6D6;border-radius:5px"></span>Emergency response</label>
+            <div style="font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#615F72;margin:18px 0 8px">Lead time</div>
+            <label style="display:flex;align-items:center;gap:9px;font-size:14px;padding:5px 0;color:#3B3A4A"><span style="width:16px;height:16px;border:1.5px solid #C9C6D6;border-radius:5px"></span>Same day</label>
+            <label style="display:flex;align-items:center;gap:9px;font-size:14px;padding:5px 0;color:#3B3A4A"><span style="width:16px;height:16px;border:1.5px solid #C9C6D6;border-radius:5px"></span>Within 1 week</label>
+          </aside>
+          <!-- results -->
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;padding:18px;display:flex;gap:18px">
+              <div style="width:150px;height:120px;border-radius:12px;background:repeating-linear-gradient(120deg,#EFEDF5 0 10px,#E7E4F0 10px 20px);flex-shrink:0;display:grid;place-items:center;font-family:'IBM Plex Mono';font-size:11px;color:#8B889C">SERVICE</div>
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;justify-content:space-between;gap:12px"><div><div style="font-family:'Space Grotesk';font-weight:600;font-size:17px">Preventive Forklift Maintenance Plan</div><div style="font-size:13px;color:#615F72;margin-top:2px">MidWest Handling · El Paso, TX</div></div><i data-lucide="heart" style="width:20px;color:#C9C6D6"></i></div>
+                <div style="margin:10px 0;padding:8px 12px;background:#F3F1FB;border-left:3px solid #6C5CE0;border-radius:8px;font-size:13px;color:#4A3DB0"><b>Matches</b> because this vendor supports Crown forklifts in El Paso and offers 4-hour emergency response.</div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px">
+                  <span style="display:flex;align-items:center;gap:5px;font-family:'IBM Plex Mono';font-size:11px;padding:4px 8px;background:#EDF7F1;color:#2F9E6A;border-radius:6px"><i data-lucide="badge-check" style="width:13px"></i>Verified</span>
+                  <span style="font-family:'IBM Plex Mono';font-size:11px;padding:4px 8px;background:#EFEDF5;border-radius:6px;color:#3B3A4A">Warranty</span>
+                  <span style="font-family:'IBM Plex Mono';font-size:11px;padding:4px 8px;background:#EFEDF5;border-radius:6px;color:#3B3A4A">4h response</span>
+                  <span style="margin-left:auto;font-family:'IBM Plex Mono';font-weight:600;font-size:16px">From $480<span style="font-size:12px;color:#615F72;font-weight:400">/mo</span></span>
+                  <button style="height:38px;padding:0 16px;background:#6C5CE0;color:#fff;border:none;border-radius:9px;font-family:'IBM Plex Sans';font-weight:600;font-size:13px;cursor:pointer">Request Quote</button>
+                </div>
+              </div>
+            </div>
+            <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;padding:18px;display:flex;gap:18px">
+              <div style="width:150px;height:120px;border-radius:12px;background:repeating-linear-gradient(120deg,#EFEDF5 0 10px,#E7E4F0 10px 20px);flex-shrink:0;display:grid;place-items:center;font-family:'IBM Plex Mono';font-size:11px;color:#8B889C">EQUIPMENT</div>
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;justify-content:space-between;gap:12px"><div><div style="font-family:'Space Grotesk';font-weight:600;font-size:17px">Crown FC 5252 Electric Forklift</div><div style="font-size:13px;color:#615F72;margin-top:2px">Border Equipment Co · Buy / Lease</div></div><i data-lucide="heart" style="width:20px;color:#C9C6D6"></i></div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px">
+                  <span style="display:flex;align-items:center;gap:5px;font-family:'IBM Plex Mono';font-size:11px;padding:4px 8px;background:#EDF7F1;color:#2F9E6A;border-radius:6px"><i data-lucide="badge-check" style="width:13px"></i>Verified</span>
+                  <span style="font-family:'IBM Plex Mono';font-size:11px;padding:4px 8px;background:#EFEDF5;border-radius:6px;color:#3B3A4A">Delivery</span>
+                  <span style="font-family:'IBM Plex Mono';font-size:11px;padding:4px 8px;background:#EFEDF5;border-radius:6px;color:#3B3A4A">Lead: 2–3 wks</span>
+                  <span style="margin-left:auto;font-family:'IBM Plex Mono';font-weight:600;font-size:16px">$32,900</span>
+                  <button style="height:38px;padding:0 16px;background:#6C5CE0;color:#fff;border:none;border-radius:9px;font-family:'IBM Plex Sans';font-weight:600;font-size:13px;cursor:pointer">Request Quote</button>
+                </div>
+              </div>
+            </div>
+            <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;padding:18px;display:flex;gap:18px">
+              <div style="width:150px;height:120px;border-radius:12px;background:repeating-linear-gradient(120deg,#EFEDF5 0 10px,#E7E4F0 10px 20px);flex-shrink:0;display:grid;place-items:center;font-family:'IBM Plex Mono';font-size:11px;color:#8B889C">TECHNOLOGY</div>
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;justify-content:space-between;gap:12px"><div><div style="font-family:'Space Grotesk';font-weight:600;font-size:17px">Fleet Telematics &amp; Maintenance Software</div><div style="font-size:13px;color:#615F72;margin-top:2px">ClearView WMS · Cloud · EN/ES</div></div><i data-lucide="heart" style="width:20px;color:#C9C6D6"></i></div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px">
+                  <span style="display:flex;align-items:center;gap:5px;font-family:'IBM Plex Mono';font-size:11px;padding:4px 8px;background:#EDF7F1;color:#2F9E6A;border-radius:6px"><i data-lucide="badge-check" style="width:13px"></i>Verified</span>
+                  <span style="font-family:'IBM Plex Mono';font-size:11px;padding:4px 8px;background:#EFEDF5;border-radius:6px;color:#3B3A4A">Demo available</span>
+                  <span style="font-family:'IBM Plex Mono';font-size:11px;padding:4px 8px;background:#EFEDF5;border-radius:6px;color:#3B3A4A">Support</span>
+                  <span style="margin-left:auto;font-family:'IBM Plex Mono';font-weight:600;font-size:16px">From $140<span style="font-size:12px;color:#615F72;font-weight:400">/mo</span></span>
+                  <button style="height:38px;padding:0 16px;background:#6C5CE0;color:#fff;border:none;border-radius:9px;font-family:'IBM Plex Sans';font-weight:600;font-size:13px;cursor:pointer">Request Quote</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ============================================================= VENDOR PROFILE -->
+    <sc-if value="{{ isVendor }}" hint-placeholder-val="{{ true }}">
+      <div style="max-width:1120px;margin:0 auto">
+        <div style="border:1px solid #E2DFEC;border-radius:20px;overflow:hidden;background:#fff">
+          <div style="height:180px;background:#141320;position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:repeating-linear-gradient(118deg,transparent 0 26px,rgba(108,92,224,.1) 26px 29px)"></div></div>
+          <div style="padding:0 32px 28px;position:relative">
+            <div style="display:flex;gap:20px;align-items:flex-end;margin-top:-44px">
+              <div style="width:96px;height:96px;border-radius:20px;background:#6C5CE0;display:grid;place-items:center;font-family:'Space Grotesk';font-weight:700;font-size:36px;color:#fff;border:4px solid #fff">MW</div>
+              <div style="flex:1;padding-bottom:6px">
+                <div style="display:flex;align-items:center;gap:10px"><h1 style="font-family:'Space Grotesk';font-weight:700;font-size:28px;margin:0;letter-spacing:-.02em">MidWest Handling</h1><i data-lucide="badge-check" style="width:22px;color:#6C5CE0"></i></div>
+                <div style="font-size:14px;color:#615F72;margin-top:3px">Forklift service, parts &amp; fleet maintenance · El Paso, TX · Serves TX / NM / MX border · EN / ES</div>
+              </div>
+              <div style="display:flex;gap:10px;padding-bottom:6px">
+                <button style="height:44px;padding:0 18px;background:#fff;border:1px solid #E2DFEC;border-radius:10px;font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px;cursor:pointer"><i data-lucide="heart" style="width:17px"></i>Save</button>
+                <button style="height:44px;padding:0 22px;background:#6C5CE0;color:#fff;border:none;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer">Request Quote</button>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
+              <span style="display:flex;align-items:center;gap:6px;font-size:13px;padding:6px 12px;background:#EDF7F1;color:#2F9E6A;border-radius:8px;font-weight:500"><i data-lucide="badge-check" style="width:15px"></i>Business identity verified</span>
+              <span style="display:flex;align-items:center;gap:6px;font-size:13px;padding:6px 12px;background:#F3F1FB;color:#4A3DB0;border-radius:8px;font-weight:500"><i data-lucide="shield-check" style="width:15px"></i>Insurance reviewed</span>
+              <span style="display:flex;align-items:center;gap:6px;font-size:13px;padding:6px 12px;background:#EFEDF5;color:#3B3A4A;border-radius:8px;font-weight:500"><i data-lucide="clock" style="width:15px"></i>Responds in ~4h</span>
+            </div>
+            <div style="display:flex;gap:26px;margin-top:22px;border-bottom:1px solid #E2DFEC">
+              <span style="padding:0 2px 14px;border-bottom:2px solid #6C5CE0;font-weight:600;font-size:15px;color:#141320">Overview</span>
+              <span style="padding:0 2px 14px;font-size:15px;color:#615F72">Offerings</span>
+              <span style="padding:0 2px 14px;font-size:15px;color:#615F72">Proof</span>
+              <span style="padding:0 2px 14px;font-size:15px;color:#615F72">About</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 300px;gap:28px;margin-top:24px">
+              <div>
+                <h3 style="font-family:'Space Grotesk';font-weight:600;font-size:18px;margin:0 0 12px">Featured offerings</h3>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                  <div style="border:1px solid #E2DFEC;border-radius:14px;overflow:hidden"><div style="height:96px;background:repeating-linear-gradient(120deg,#EFEDF5 0 10px,#E7E4F0 10px 20px)"></div><div style="padding:14px"><div style="font-weight:600;font-size:15px">Preventive Maintenance Plan</div><div style="font-size:12px;color:#615F72;margin:4px 0 8px">Scheduled service · all brands</div><div style="font-family:'IBM Plex Mono';font-weight:600;font-size:15px">From $480/mo</div></div></div>
+                  <div style="border:1px solid #E2DFEC;border-radius:14px;overflow:hidden"><div style="height:96px;background:repeating-linear-gradient(120deg,#EFEDF5 0 10px,#E7E4F0 10px 20px)"></div><div style="padding:14px"><div style="font-weight:600;font-size:15px">Emergency Repair</div><div style="font-size:12px;color:#615F72;margin:4px 0 8px">4-hour response · on-site</div><div style="font-family:'IBM Plex Mono';font-weight:600;font-size:15px">Request Quote</div></div></div>
+                </div>
+                <h3 style="font-family:'Space Grotesk';font-weight:600;font-size:18px;margin:24px 0 10px">Problems solved</h3>
+                <p style="font-size:14px;color:#3B3A4A;margin:0">Unplanned downtime, aging fleets, compliance inspections, and slow OEM parts sourcing for warehouses and distribution centers across the border region.</p>
+              </div>
+              <div style="border:1px solid #E2DFEC;border-radius:14px;padding:20px;background:#F8F7FB;height:fit-content">
+                <div style="font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#615F72;margin-bottom:14px">Trust summary</div>
+                <div style="display:flex;flex-direction:column;gap:12px;font-size:14px">
+                  <div style="display:flex;justify-content:space-between"><span style="color:#615F72">Completed projects</span><span style="font-family:'IBM Plex Mono';font-weight:600">128</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#615F72">Avg rating</span><span style="font-family:'IBM Plex Mono';font-weight:600">4.9 ★</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#615F72">Years active</span><span style="font-family:'IBM Plex Mono';font-weight:600">14</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#615F72">Response time</span><span style="font-family:'IBM Plex Mono';font-weight:600">~4h</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ============================================================= BUYER DASHBOARD -->
+    <sc-if value="{{ isBuyer }}" hint-placeholder-val="{{ true }}">
+      <div style="max-width:1120px;margin:0 auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px"><div><h1 style="font-family:'Space Grotesk';font-weight:600;font-size:26px;margin:0;letter-spacing:-.02em">Good morning</h1><p style="font-size:14px;color:#615F72;margin:4px 0 0">3 quotes need your review today.</p></div><button style="height:44px;padding:0 20px;background:#6C5CE0;color:#fff;border:none;border-radius:10px;font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px;cursor:pointer"><i data-lucide="plus" style="width:17px"></i>Create a Project</button></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px">
+          <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;padding:20px"><div style="color:#6C5CE0"><i data-lucide="clipboard-list" style="width:20px"></i></div><div style="font-family:'Space Grotesk';font-weight:700;font-size:34px;margin-top:12px;letter-spacing:-.02em">4</div><div style="font-size:13px;color:#615F72">Active projects</div></div>
+          <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;padding:20px"><div style="color:#6C5CE0"><i data-lucide="file-text" style="width:20px"></i></div><div style="font-family:'Space Grotesk';font-weight:700;font-size:34px;margin-top:12px;letter-spacing:-.02em">9</div><div style="font-size:13px;color:#615F72">Quotes to review</div></div>
+          <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;padding:20px"><div style="color:#6C5CE0"><i data-lucide="building-2" style="width:20px"></i></div><div style="font-family:'Space Grotesk';font-weight:700;font-size:34px;margin-top:12px;letter-spacing:-.02em">18</div><div style="font-size:13px;color:#615F72">Vendors matched</div></div>
+          <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;padding:20px"><div style="color:#6C5CE0"><i data-lucide="calendar-clock" style="width:20px"></i></div><div style="font-family:'Space Grotesk';font-weight:700;font-size:34px;margin-top:12px;letter-spacing:-.02em">2</div><div style="font-size:13px;color:#615F72">Upcoming milestones</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:20px">
+          <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;overflow:hidden">
+            <div style="padding:18px 20px;border-bottom:1px solid #EFEDF5;font-family:'Space Grotesk';font-weight:600;font-size:16px">Active projects</div>
+            <div style="padding:8px 20px 16px">
+              <div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid #F3F1F9">
+                <div style="width:42px;height:42px;border-radius:11px;background:#EFEDF5;display:grid;place-items:center;color:#6C5CE0"><i data-lucide="wrench" style="width:19px"></i></div>
+                <div style="flex:1"><div style="font-weight:600;font-size:15px">Forklift fleet maintenance contract</div><div style="font-size:12px;color:#615F72">El Paso, TX · 5 vendors invited · 3 quotes received</div></div>
+                <span style="font-size:12px;padding:5px 10px;background:#FBF3E4;color:#C68A28;border-radius:7px;font-weight:600">Comparing</span>
+                <button style="height:34px;padding:0 14px;background:#141320;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Review</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid #F3F1F9">
+                <div style="width:42px;height:42px;border-radius:11px;background:#EFEDF5;display:grid;place-items:center;color:#6C5CE0"><i data-lucide="cpu" style="width:19px"></i></div>
+                <div style="flex:1"><div style="font-weight:600;font-size:15px">Warehouse management software</div><div style="font-size:12px;color:#615F72">Cloud · 4 vendors invited · 2 quotes received</div></div>
+                <span style="font-size:12px;padding:5px 10px;background:#EDF3FC;color:#3E6FD0;border-radius:7px;font-weight:600">Quoting</span>
+                <button style="height:34px;padding:0 14px;background:#141320;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Review</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:14px;padding:14px 0">
+                <div style="width:42px;height:42px;border-radius:11px;background:#EFEDF5;display:grid;place-items:center;color:#6C5CE0"><i data-lucide="bot" style="width:19px"></i></div>
+                <div style="flex:1"><div style="font-weight:600;font-size:15px">Conveyor line installation</div><div style="font-size:12px;color:#615F72">Line 3 retrofit · 6 vendors matched</div></div>
+                <span style="font-size:12px;padding:5px 10px;background:#F3F1FB;color:#4A3DB0;border-radius:7px;font-weight:600">Matching</span>
+                <button style="height:34px;padding:0 14px;background:#141320;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Review</button>
+              </div>
+            </div>
+          </div>
+          <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;overflow:hidden">
+            <div style="padding:18px 20px;border-bottom:1px solid #EFEDF5;font-family:'Space Grotesk';font-weight:600;font-size:16px">Needs your answer</div>
+            <div style="padding:6px 20px 16px">
+              <div style="display:flex;gap:12px;padding:13px 0;border-bottom:1px solid #F3F1F9"><i data-lucide="message-circle-question" style="width:18px;color:#C68A28;margin-top:2px"></i><div><div style="font-size:14px;font-weight:500">Axiom asked about ceiling height</div><div style="font-size:12px;color:#615F72">Conveyor install · 2h ago</div></div></div>
+              <div style="display:flex;gap:12px;padding:13px 0;border-bottom:1px solid #F3F1F9"><i data-lucide="file-text" style="width:18px;color:#6C5CE0;margin-top:2px"></i><div><div style="font-size:14px;font-weight:500">New quote from MidWest Handling</div><div style="font-size:12px;color:#615F72">Maintenance · 5h ago</div></div></div>
+              <div style="display:flex;gap:12px;padding:13px 0"><i data-lucide="calendar-clock" style="width:18px;color:#CE4B43;margin-top:2px"></i><div><div style="font-size:14px;font-weight:500">Quote QT-2044 expires in 2 days</div><div style="font-size:12px;color:#615F72">WMS project</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ============================================================= QUOTE COMPARISON -->
+    <sc-if value="{{ isCompare }}" hint-placeholder-val="{{ true }}">
+      <div style="max-width:1120px;margin:0 auto">
+        <h1 style="font-family:'Space Grotesk';font-weight:600;font-size:24px;margin:0 0 4px;letter-spacing:-.02em">Compare quotes · Forklift fleet maintenance</h1>
+        <p style="font-size:14px;color:#615F72;margin:0 0 22px">3 vendors · differences highlighted</p>
+        <div style="border:1px solid #E2DFEC;border-radius:16px;overflow:hidden;background:#fff">
+          <div style="display:grid;grid-template-columns:200px repeat(3,1fr)">
+            <div style="padding:18px 20px;background:#F8F7FB;border-bottom:1px solid #E2DFEC"></div>
+            <div style="padding:18px 20px;background:#F8F7FB;border-bottom:1px solid #E2DFEC;border-left:1px solid #EFEDF5"><div style="display:flex;align-items:center;gap:7px;font-family:'Space Grotesk';font-weight:600;font-size:15px">MidWest <i data-lucide="badge-check" style="width:15px;color:#6C5CE0"></i></div><div style="font-size:12px;color:#615F72">Recommended</div></div>
+            <div style="padding:18px 20px;background:#F8F7FB;border-bottom:1px solid #E2DFEC;border-left:1px solid #EFEDF5"><div style="font-family:'Space Grotesk';font-weight:600;font-size:15px">Border Equip.</div><div style="font-size:12px;color:#615F72">Verified</div></div>
+            <div style="padding:18px 20px;background:#F8F7FB;border-bottom:1px solid #E2DFEC;border-left:1px solid #EFEDF5"><div style="font-family:'Space Grotesk';font-weight:600;font-size:15px">RioServ</div><div style="font-size:12px;color:#615F72">Verified</div></div>
+
+            <div style="padding:16px 20px;font-size:13px;color:#615F72;border-bottom:1px solid #F3F1F9">Total (annual)</div>
+            <div style="padding:16px 20px;font-family:'IBM Plex Mono';font-weight:600;font-size:16px;border-bottom:1px solid #F3F1F9;border-left:1px solid #EFEDF5;background:#F3F1FB;color:#4A3DB0">$5,760</div>
+            <div style="padding:16px 20px;font-family:'IBM Plex Mono';font-weight:600;font-size:16px;border-bottom:1px solid #F3F1F9;border-left:1px solid #EFEDF5">$6,340</div>
+            <div style="padding:16px 20px;font-family:'IBM Plex Mono';font-weight:600;font-size:16px;border-bottom:1px solid #F3F1F9;border-left:1px solid #EFEDF5">$5,980</div>
+
+            <div style="padding:16px 20px;font-size:13px;color:#615F72;border-bottom:1px solid #F3F1F9">Response time</div>
+            <div style="padding:16px 20px;font-size:14px;border-bottom:1px solid #F3F1F9;border-left:1px solid #EFEDF5;background:#F3F1FB;color:#4A3DB0;font-weight:600">4 hours</div>
+            <div style="padding:16px 20px;font-size:14px;border-bottom:1px solid #F3F1F9;border-left:1px solid #EFEDF5">Next business day</div>
+            <div style="padding:16px 20px;font-size:14px;border-bottom:1px solid #F3F1F9;border-left:1px solid #EFEDF5">8 hours</div>
+
+            <div style="padding:16px 20px;font-size:13px;color:#615F72;border-bottom:1px solid #F3F1F9">Warranty</div>
+            <div style="padding:16px 20px;font-size:14px;border-bottom:1px solid #F3F1F9;border-left:1px solid #EFEDF5">12 months</div>
+            <div style="padding:16px 20px;font-size:14px;border-bottom:1px solid #F3F1F9;border-left:1px solid #EFEDF5;background:#F3F1FB;color:#4A3DB0;font-weight:600">24 months</div>
+            <div style="padding:16px 20px;font-size:14px;border-bottom:1px solid #F3F1F9;border-left:1px solid #EFEDF5">12 months</div>
+
+            <div style="padding:16px 20px;font-size:13px;color:#615F72">Parts included</div>
+            <div style="padding:16px 20px;border-left:1px solid #EFEDF5;background:#F3F1FB"><i data-lucide="check" style="width:18px;color:#2F9E6A"></i></div>
+            <div style="padding:16px 20px;border-left:1px solid #EFEDF5"><i data-lucide="x" style="width:18px;color:#CE4B43"></i></div>
+            <div style="padding:16px 20px;border-left:1px solid #EFEDF5"><i data-lucide="check" style="width:18px;color:#2F9E6A"></i></div>
+          </div>
+          <div style="display:grid;grid-template-columns:200px repeat(3,1fr);border-top:1px solid #E2DFEC">
+            <div style="padding:16px 20px"></div>
+            <div style="padding:16px 20px;border-left:1px solid #EFEDF5"><button style="width:100%;height:40px;background:#6C5CE0;color:#fff;border:none;border-radius:9px;font-weight:600;font-size:13px;cursor:pointer">Select</button></div>
+            <div style="padding:16px 20px;border-left:1px solid #EFEDF5"><button style="width:100%;height:40px;background:#fff;border:1px solid #E2DFEC;border-radius:9px;font-weight:600;font-size:13px;cursor:pointer">Select</button></div>
+            <div style="padding:16px 20px;border-left:1px solid #EFEDF5"><button style="width:100%;height:40px;background:#fff;border:1px solid #E2DFEC;border-radius:9px;font-weight:600;font-size:13px;cursor:pointer">Select</button></div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ============================================================= VENDOR DASHBOARD -->
+    <sc-if value="{{ isVendorDash }}" hint-placeholder-val="{{ true }}">
+      <div style="max-width:1120px;margin:0 auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px"><div><h1 style="font-family:'Space Grotesk';font-weight:600;font-size:26px;margin:0;letter-spacing:-.02em">MidWest Handling</h1><p style="font-size:14px;color:#615F72;margin:4px 0 0">5 new opportunities match your profile.</p></div><button style="height:44px;padding:0 20px;background:#6C5CE0;color:#fff;border:none;border-radius:10px;font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px;cursor:pointer"><i data-lucide="inbox" style="width:17px"></i>View Opportunities</button></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px">
+          <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;padding:20px"><div style="color:#6C5CE0"><i data-lucide="inbox" style="width:20px"></i></div><div style="font-family:'Space Grotesk';font-weight:700;font-size:34px;margin-top:12px;letter-spacing:-.02em">5</div><div style="font-size:13px;color:#615F72">New opportunities</div></div>
+          <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;padding:20px"><div style="color:#6C5CE0"><i data-lucide="file-text" style="width:20px"></i></div><div style="font-family:'Space Grotesk';font-weight:700;font-size:34px;margin-top:12px;letter-spacing:-.02em">3</div><div style="font-size:13px;color:#615F72">Quotes to send</div></div>
+          <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;padding:20px"><div style="color:#6C5CE0"><i data-lucide="clipboard-list" style="width:20px"></i></div><div style="font-family:'Space Grotesk';font-weight:700;font-size:34px;margin-top:12px;letter-spacing:-.02em">7</div><div style="font-size:13px;color:#615F72">Active projects</div></div>
+          <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;padding:20px"><div style="color:#6C5CE0"><i data-lucide="pie-chart" style="width:20px"></i></div><div style="font-family:'Space Grotesk';font-weight:700;font-size:34px;margin-top:12px;letter-spacing:-.02em">86%</div><div style="font-size:13px;color:#615F72">Profile complete</div></div>
+        </div>
+        <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;overflow:hidden">
+          <div style="padding:18px 20px;border-bottom:1px solid #EFEDF5;font-family:'Space Grotesk';font-weight:600;font-size:16px">New opportunities</div>
+          <div style="padding:8px 20px 16px">
+            <div style="display:flex;align-items:center;gap:16px;padding:16px 0;border-bottom:1px solid #F3F1F9">
+              <div><div style="font-family:'IBM Plex Mono';font-size:12px;color:#615F72">OPP-3041</div><div style="font-weight:600;font-size:15px;margin-top:2px">Preventive maintenance · 12-unit fleet</div></div>
+              <div style="margin-left:auto;text-align:right;font-size:12px;color:#615F72">Warehouse · El Paso, TX<br>Budget $5–7k · 2 weeks</div>
+              <span style="font-size:12px;padding:5px 10px;background:#F3F1FB;color:#4A3DB0;border-radius:7px;font-weight:600">92% match</span>
+              <div style="display:flex;gap:8px"><button style="height:36px;padding:0 14px;background:#6C5CE0;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Interested</button><button style="height:36px;padding:0 12px;background:#fff;border:1px solid #E2DFEC;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Question</button></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:16px;padding:16px 0;border-bottom:1px solid #F3F1F9">
+              <div><div style="font-family:'IBM Plex Mono';font-size:12px;color:#615F72">OPP-3038</div><div style="font-weight:600;font-size:15px;margin-top:2px">Emergency repair · reach truck down</div></div>
+              <div style="margin-left:auto;text-align:right;font-size:12px;color:#615F72">Distribution · Las Cruces, NM<br>Urgent · same day</div>
+              <span style="font-size:12px;padding:5px 10px;background:#F3F1FB;color:#4A3DB0;border-radius:7px;font-weight:600">88% match</span>
+              <div style="display:flex;gap:8px"><button style="height:36px;padding:0 14px;background:#6C5CE0;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Interested</button><button style="height:36px;padding:0 12px;background:#fff;border:1px solid #E2DFEC;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Question</button></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:16px;padding:16px 0">
+              <div><div style="font-family:'IBM Plex Mono';font-size:12px;color:#615F72">OPP-3035</div><div style="font-weight:600;font-size:15px;margin-top:2px">Annual inspection contract · 3 sites</div></div>
+              <div style="margin-left:auto;text-align:right;font-size:12px;color:#615F72">Manufacturing · Juárez, MX<br>Budget $10k+ · 1 month</div>
+              <span style="font-size:12px;padding:5px 10px;background:#EFEDF5;color:#3B3A4A;border-radius:7px;font-weight:600">74% match</span>
+              <div style="display:flex;gap:8px"><button style="height:36px;padding:0 14px;background:#6C5CE0;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Interested</button><button style="height:36px;padding:0 12px;background:#fff;border:1px solid #E2DFEC;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Question</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ============================================================= OPERATOR DASHBOARD -->
+    <sc-if value="{{ isOperator }}" hint-placeholder-val="{{ true }}">
+      <div style="max-width:1120px;margin:0 auto">
+        <h1 style="font-family:'Space Grotesk';font-weight:600;font-size:26px;margin:0 0 4px;letter-spacing:-.02em">Operations queue</h1>
+        <p style="font-size:14px;color:#615F72;margin:0 0 22px">NXT//LINK internal · items needing action</p>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px">
+          <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;padding:18px"><div style="font-family:'Space Grotesk';font-weight:700;font-size:30px;letter-spacing:-.02em">7</div><div style="font-size:13px;color:#615F72">Vendors awaiting review</div></div>
+          <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;padding:18px"><div style="font-family:'Space Grotesk';font-weight:700;font-size:30px;letter-spacing:-.02em;color:#CE4B43">3</div><div style="font-size:13px;color:#615F72">Projects without matches</div></div>
+          <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;padding:18px"><div style="font-family:'Space Grotesk';font-weight:700;font-size:30px;letter-spacing:-.02em;color:#C68A28">5</div><div style="font-size:13px;color:#615F72">Quotes overdue</div></div>
+          <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;padding:18px"><div style="font-family:'Space Grotesk';font-weight:700;font-size:30px;letter-spacing:-.02em">2</div><div style="font-size:13px;color:#615F72">Open disputes</div></div>
+        </div>
+        <div style="border:1px solid #E2DFEC;border-radius:16px;background:#fff;overflow:hidden">
+          <div style="display:flex;align-items:center;padding:16px 20px;border-bottom:1px solid #EFEDF5;gap:12px"><span style="font-family:'Space Grotesk';font-weight:600;font-size:16px">Vendor review pipeline</span><span style="margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;color:#615F72"><i data-lucide="filter" style="width:16px"></i>Filters</span><span style="display:flex;align-items:center;gap:8px;font-size:13px;color:#615F72"><i data-lucide="bookmark" style="width:16px"></i>Saved views</span></div>
+          <div style="display:grid;grid-template-columns:2fr 1.2fr 1fr 1fr 100px;padding:12px 20px;font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#615F72;border-bottom:1px solid #EFEDF5"><span>Vendor</span><span>Category</span><span>Stage</span><span>Priority</span><span></span></div>
+          <div style="display:grid;grid-template-columns:2fr 1.2fr 1fr 1fr 100px;padding:15px 20px;align-items:center;border-bottom:1px solid #F3F1F9;font-size:14px"><span style="font-weight:600">Axiom Automation</span><span style="color:#615F72">Automation</span><span><span style="font-size:12px;padding:4px 9px;background:#FBF3E4;color:#C68A28;border-radius:6px;font-weight:600">Docs review</span></span><span style="color:#CE4B43;font-weight:600">High</span><button style="height:32px;padding:0 12px;background:#141320;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">Open</button></div>
+          <div style="display:grid;grid-template-columns:2fr 1.2fr 1fr 1fr 100px;padding:15px 20px;align-items:center;border-bottom:1px solid #F3F1F9;font-size:14px"><span style="font-weight:600">RioServ Logistics</span><span style="color:#615F72">Logistics</span><span><span style="font-size:12px;padding:4px 9px;background:#EDF3FC;color:#3E6FD0;border-radius:6px;font-weight:600">Insurance</span></span><span style="color:#C68A28;font-weight:600">Medium</span><button style="height:32px;padding:0 12px;background:#141320;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">Open</button></div>
+          <div style="display:grid;grid-template-columns:2fr 1.2fr 1fr 1fr 100px;padding:15px 20px;align-items:center;font-size:14px"><span style="font-weight:600">Frontera Staffing</span><span style="color:#615F72">Staffing</span><span><span style="font-size:12px;padding:4px 9px;background:#EDF7F1;color:#2F9E6A;border-radius:6px;font-weight:600">Ready</span></span><span style="color:#615F72;font-weight:600">Low</span><button style="height:32px;padding:0 12px;background:#141320;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">Open</button></div>
+        </div>
+      </div>
+    </sc-if>
+
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { view: 'home' };
+  drawIcons() {
+    const draw = () => {
+      if (window.lucide && window.lucide.createIcons) {
+        window.lucide.createIcons({ attrs: { 'stroke-width': 1.75 } });
+      } else { setTimeout(draw, 120); }
+    };
+    draw();
+  }
+  componentDidMount() { this.drawIcons(); }
+  componentDidUpdate() { this.drawIcons(); }
+  nav(active) {
+    const base = 'width:100%;display:flex;align-items:center;gap:11px;padding:10px 12px;margin:2px 0;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;text-align:left;';
+    return base + (active
+      ? 'background:#6C5CE0;color:#fff;'
+      : 'background:transparent;color:#C9C6D6;');
+  }
+  renderVals() {
+    const v = this.state.view;
+    const set = (x) => () => this.setState({ view: x });
+    return {
+      isHome: v==='home', isSearch: v==='search', isVendor: v==='vendor',
+      isBuyer: v==='buyer', isCompare: v==='compare', isVendorDash: v==='vendorDash', isOperator: v==='operator',
+      goHome: set('home'), goSearch: set('search'), goVendor: set('vendor'),
+      goBuyer: set('buyer'), goCompare: set('compare'), goVendorDash: set('vendorDash'), goOperator: set('operator'),
+      navHome: this.nav(v==='home'), navSearch: this.nav(v==='search'), navVendor: this.nav(v==='vendor'),
+      navBuyer: this.nav(v==='buyer'), navCompare: this.nav(v==='compare'), navVendorDash: this.nav(v==='vendorDash'), navOperator: this.nav(v==='operator'),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,179 @@
+name: NXT LINK Agents
+
+on:
+  schedule:
+    # Feed refresh + signal scan — every 2 hours
+    - cron: '0 */2 * * *'
+    # Vendor discovery — every 6 hours
+    - cron: '30 */6 * * *'
+    # Daily agents (product scanner, docs sync) — 06:00 UTC
+    - cron: '0 6 * * *'
+    # Weekly source quality audit — Sunday 04:00 UTC
+    - cron: '0 4 * * 0'
+    # Weekly entity seed — Sunday 07:00 UTC
+    - cron: '0 7 * * 0'
+    # Weekly Python source discovery — Saturday 02:00 UTC
+    - cron: '0 2 * * 6'
+  workflow_dispatch:
+    inputs:
+      agent:
+        description: 'Which agent to run (all, feeds, signals, vendors, products, sources, docs, seed, discover, enrich, expand-sources)'
+        required: false
+        default: 'all'
+
+env:
+  SITE_URL: https://www.nxtlinktech.com
+
+jobs:
+  feed-refresh:
+    if: >-
+      github.event_name == 'workflow_dispatch' && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'feeds')
+      || github.event.schedule == '0 */2 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Refresh RSS feeds
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$SITE_URL/api/feeds")
+          echo "Feed refresh: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::Feed refresh returned HTTP $STATUS"; fi
+
+  signal-scan:
+    needs: feed-refresh
+    if: >-
+      github.event_name == 'workflow_dispatch' && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'signals')
+      || github.event.schedule == '0 */2 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Run signal engine
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$SITE_URL/api/intel-signals")
+          echo "Signal scan: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::Signal scan returned HTTP $STATUS"; fi
+
+  vendor-discovery:
+    if: >-
+      github.event_name == 'workflow_dispatch' && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'vendors')
+      || github.event.schedule == '30 */6 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Discover new vendors
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$SITE_URL/api/agents/vendor-discovery")
+          echo "Vendor discovery: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::Vendor discovery returned HTTP $STATUS"; fi
+
+  product-scanner:
+    if: >-
+      github.event_name == 'workflow_dispatch' && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'products')
+      || github.event.schedule == '0 6 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Scan for new products
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$SITE_URL/api/agents/product-scanner")
+          echo "Product scanner: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::Product scanner returned HTTP $STATUS"; fi
+
+  docs-sync:
+    if: >-
+      github.event_name == 'workflow_dispatch' && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'docs')
+      || github.event.schedule == '0 6 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Sync documentation
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$SITE_URL/api/agents/docs-sync")
+          echo "Docs sync: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::Docs sync returned HTTP $STATUS"; fi
+
+  quality-sources:
+    if: >-
+      github.event_name == 'workflow_dispatch' && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'sources')
+      || github.event.schedule == '0 4 * * 0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Audit source quality
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$SITE_URL/api/agents/quality-sources")
+          echo "Source quality: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::Source quality returned HTTP $STATUS"; fi
+
+  auto-discover:
+    if: >-
+      github.event_name == 'workflow_dispatch' && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'discover')
+      || github.event.schedule == '0 6 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Run auto-discovery engine
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$SITE_URL/api/agents/auto-discover")
+          echo "Auto-discover: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::Auto-discover returned HTTP $STATUS"; fi
+
+  enrich-entities:
+    needs: auto-discover
+    if: >-
+      github.event_name == 'workflow_dispatch' && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'enrich')
+      || github.event.schedule == '0 6 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Enrich spiking company profiles via Gemini
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$SITE_URL/api/agents/enrich-entity")
+          echo "Enrich entities: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::Enrich entities returned HTTP $STATUS"; fi
+
+  entity-seed:
+    if: >-
+      github.event_name == 'workflow_dispatch' && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'seed')
+      || github.event.schedule == '0 7 * * 0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Seed entities into knowledge graph
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
+            -X POST "$SITE_URL/api/agents/seed-entities" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "Entity seed: HTTP $STATUS"
+          if [ "$STATUS" -ge 400 ]; then echo "::warning::Entity seed returned HTTP $STATUS"; fi
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
+  expand-sources:
+    # Runs Python discovery pipeline weekly (Sat 02:00 UTC) or manually
+    if: >-
+      github.event_name == 'workflow_dispatch' && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'expand-sources')
+      || github.event.schedule == '0 2 * * 6'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: pip install requests python-dotenv
+
+      - name: Run source discovery pipeline
+        run: python scripts/expand_sources.py --mode all --limit 200000
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Summary
+        if: always()
+        run: echo "### Source Discovery Complete" >> $GITHUB_STEP_SUMMARY

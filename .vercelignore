@@ -1,0 +1,7 @@
+archive
+.tmp
+.next
+node_modules
+docs/project
+docs/superpowers
+n8n

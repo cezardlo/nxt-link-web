@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style data-omelette-injected>html,body{background:transparent}</style><script data-omelette-injected>(()=>{{const W=new URLSearchParams(location.search).get("theme");if(W==="light"||W==="dark"){document.documentElement.dataset.theme=W}}{if(new URLSearchParams(location.search).get("_omthumb")==="1"){const W=(q)=>{const X=q.focus;if(!X)return;q.focus=function(H){X.call(this,{...H,preventScroll:true})}};W(HTMLElement.prototype);W(SVGElement.prototype);if(typeof MathMLElement!=="undefined"){W(MathMLElement.prototype)}const $=(q)=>{q.removeAttribute("autofocus");q.inert=true;if(!(q instanceof HTMLElement))q.removeAttribute("tabindex")};const z=(q)=>{if(q.hasAttribute("autofocus"))$(q);for(const X of q.querySelectorAll("[autofocus]")){$(X)}};z(document.documentElement);new MutationObserver((q)=>{for(const X of q){for(const H of X.addedNodes){if(H.nodeType===1)z(H)}}}).observe(document,{childList:true,subtree:true})}}{const W=()=>{try{if(document.querySelector('meta[name="color-scheme"]'))return;const $=getComputedStyle(document.documentElement).getPropertyValue("color-scheme").trim();if($&&$!=="normal")return;const z=(j)=>{if(!j)return null;const F=getComputedStyle(j).backgroundColor.match(/^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)(?:[,\s/]+([\d.]+%?))?\s*\)$/);if(!F)return null;const G=F[4]==null?1:parseFloat(F[4])/(F[4].endsWith("%")?100:1);if(G<0.99)return null;return[+F[1],+F[2],+F[3]]};const q=z(document.body)||z(document.documentElement);if(!q)return;const X=(j)=>{const F=j/255;return F<=0.04045?F/12.92:((F+0.055)/1.055)**2.4};const H=0.2126*X(q[0])+0.7152*X(q[1])+0.0722*X(q[2]);document.documentElement.style.setProperty("color-scheme",H<0.4?"dark":"light")}catch{}};if(document.readyState==="complete")W();else window.addEventListener("load",W)}var b=[];var p=false;var u=30000;var d=3000;document.addEventListener("DOMContentLoaded",()=>{const W=window.Babel;const $="om-src-id";if(W&&W.registerPlugin&&!(W.availablePlugins&&W.availablePlugins[$])){W.registerPlugin($,({types:H})=>({visitor:{JSXOpeningElement(j,F){const G=j.node;if(G.name&&G.name.type==="JSXMemberExpression")return;for(let Q=0;Q<G.attributes.length;Q++){const V=G.attributes[Q];if(V.type==="JSXAttribute"&&V.name&&V.name.name==="data-om-id")return}const P=F.file&&F.file.opts&&F.file.opts.filename||"?";const R=G.loc&&G.loc.start;const J=`jsx:${P}:${G.start??0}:${R?R.line:0}:${R?R.column+1:0}`;G.attributes.push(H.jsxAttribute(H.jsxIdentifier("data-om-id"),H.stringLiteral(J)))}}}))}const z="om-text-extract";let q=false;if(p&&W&&W.registerPlugin&&!(W.availablePlugins&&W.availablePlugins[z])){const H=window.React;if(H&&H.useSyncExternalStore&&H.createElement){q=true;const j={};const F=new Set;let G=0;window.__omTextO=j;window.__omTextSet=(J)=>{for(const Q in J){const V=J[Q];if(V==null)delete j[Q];else j[Q]=V}G++;F.forEach((Q)=>Q())};const P=(J)=>{F.add(J);return()=>F.delete(J)};const R=()=>G;window.__OmT=function J(Q){H.useSyncExternalStore(P,R,R);return H.createElement("span",{"data-om-text":Q.i,className:"__om-t"},Q.i in j?j[Q.i]:Q.children)};W.registerPlugin(z,({types:J})=>{const Q={style:1,script:1,noscript:1,textarea:1,title:1,option:1,text:1,tspan:1,textPath:1};const V={placeholder:1,alt:1,title:1,label:1,"aria-label":1,"aria-description":1,"aria-placeholder":1};const Y=(K,M)=>J.logicalExpression("??",J.memberExpression(J.logicalExpression("||",J.memberExpression(J.identifier("window"),J.identifier("__omTextO")),J.objectExpression([])),J.stringLiteral(K),true),M);const Z=(K)=>K.file&&K.file.opts&&K.file.opts.filename||"?";const B=(K)=>K.file&&K.file.code||"";const U=(K,M)=>{const L=(D)=>D&&D.start!=null&&D.end!=null&&(D.type==="StringLiteral"||D.type==="TemplateLiteral"&&D.expressions.length===0)?[D.start,D.end]:null;const N=L(M);if(N)return N;if(M&&M.type==="Identifier"){const D=K.scope.getBinding(M.name);if(D&&D.constant&&D.path.node.type==="VariableDeclarator"){return L(D.path.node.init)}}return null};const x=(K,M,L)=>{const N=K.node;let D=false;const f=(w,A)=>{D=true;return J.jsxElement(J.jsxOpeningElement(J.jsxIdentifier("__OmT"),[J.jsxAttribute(J.jsxIdentifier("i"),J.stringLiteral(w))],false),J.jsxClosingElement(J.jsxIdentifier("__OmT")),[A],false)};const C=N.children.map((w)=>{if(w.type==="JSXText"){if(w.start==null||w.end==null)return w;const A=L.slice(w.start,w.end);const S=A.length-A.trimStart().length;const O=A.length-A.trimEnd().length;if(S+O>=A.length)return w;return f(`txt:${M}:${w.start+S}:${w.end-O}`,w)}if(w.type==="JSXExpressionContainer"){const A=U(K,w.expression);if(A)return f(`str:${M}:${A[0]}:${A[1]}`,w)}return w});if(D)N.children=C};return{visitor:{JSXOpeningElement(K,M){const L=K.node;const N=Z(M);const D={};for(let f=0;f<L.attributes.length;f++){const C=L.attributes[f];if(C.type!=="JSXAttribute"||!C.name)continue;const w=C.name.name;if(!V[w])continue;if(!C.value||C.value.type!=="StringLiteral")continue;if(C.value.start==null||C.value.end==null)continue;const A=`txt:${N}:${C.value.start}:${C.value.end}`;D[w]=A;C.value=J.jsxExpressionContainer(Y(A,J.stringLiteral(C.value.value)))}if(Object.keys(D).length){L.attributes.push(J.jsxAttribute(J.jsxIdentifier("data-om-text-attrs"),J.stringLiteral(JSON.stringify(D))))}},JSXElement(K,M){const L=K.node.openingElement;const N=L&&L.name&&L.name.name;if(N==="__OmT")return;if(typeof N==="string"&&Q[N])return;x(K,Z(M),B(M))},JSXFragment(K,M){x(K,Z(M),B(M))}}}})}}const X=q?["transform-react-jsx-source",$,z]:["transform-react-jsx-source",$];document.querySelectorAll('script[type="text/babel"],script[type="text/jsx"]').forEach((H,j)=>{const F=H.getAttribute("data-plugins")||"";const G=X.filter((P)=>F.indexOf(P)<0);if(G.length){H.setAttribute("data-plugins",F?`${F},${G.join(",")}`:G.join(","))}if(!H.hasAttribute("data-filename")){H.setAttribute("data-filename",H.getAttribute("src")||`inline-${j}`)}})});var I=window.parent;var g="not editable here — open the project in the Claude Design editor to save";var n=()=>Promise.resolve({persisted:false,noHost:true,reason:g});var k=n;var v="data/storage.json";var l=()=>{try{const W=new URL(document.baseURI);const $=W.pathname.match(/\/projects\/([^/]+)\/serve\//);if($)return $[1];return W.hostname.split(".")[0]||""}catch{return location.hostname.split(".")[0]||""}};var o=()=>{try{const W=new URL(document.baseURI);const $=W.pathname.indexOf("/serve/");if($>=0)return W.origin+W.pathname.slice(0,$+"/serve/".length)+v}catch{}return"./"+v};var E=null;var _=()=>{if(!E){E=fetch(o(),{cache:"no-store"}).then((W)=>{if(W.ok)return W.text();return W.status===404?"":null}).catch(()=>null).then((W)=>{if(W===null){E=null;return null}const $=new Map;if(!W)return $;let z;try{z=JSON.parse(W)}catch{console.warn("[omelette.storage] "+v+" is not valid JSON; treating the store as unreadable so a save cannot overwrite the "+"hand-edited bytes. Fix the JSON (or delete the file) to re-enable persistence.");E=null;return null}if(z===null||typeof z!=="object"||Array.isArray(z)){console.warn("[omelette.storage] "+v+" doesn't hold a JSON object; treating the store as unreadable so a save cannot "+"overwrite the hand-edited bytes. Make the top level a JSON object to re-enable persistence.");E=null;return null}const q=z;if("data"in q){const X=q.data;if(X===null||typeof X!=="object"||Array.isArray(X)){console.warn("[omelette.storage] "+v+' has a "data" field that is not a JSON object; treating the store as unreadable so a '+'save cannot overwrite the hand-edited bytes. Make "data" a JSON object to re-enable persistence.');E=null;return null}const H=q._meta;const j=H!==null&&typeof H==="object"?H.project:undefined;if(typeof j==="string"&&j!==""&&j!==l())return $;for(const F of Object.keys(X))$.set(F,X[F]);return $}for(const X of Object.keys(q)){if(X!=="_meta")$.set(X,q[X])}return $})}return E};var y=(W)=>k(v,JSON.stringify({_meta:{project:l(),version:1},data:Object.fromEntries(W)},null,2));var m=Promise.resolve();var T=(W)=>{const $=m.then(W);m=$.then(()=>{return},()=>{return});return $};var s=/sk-(?:ant-)?[A-Za-z0-9_-]{16,}|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{20,}|xox[a-z]-[A-Za-z0-9][A-Za-z0-9-]{9,}|AIza[0-9A-Za-z_-]{30,}|-----BEGIN [A-Z ]*PRIVATE KEY-----/;var a=/password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token|credential/i;var r=(W,$,z)=>{if(s.test($)||a.test(W)&&typeof z==="string"&&z.length>=8){console.warn('[omelette.storage] the value for "'+W+'" looks like a credential. The storage file is a plaintext project file — visible to '+"everyone with project access and copied when the project is duplicated. Do not store secrets here.")}};var c={persisted:false,reason:"could not load the existing store — not overwriting it"};var i={persisted:false,reason:"stored value changed since a failed read — re-read this key before saving"};var h=new Set;var t={get:(W)=>{if(typeof W!=="string"){return Promise.reject(new TypeError("storage.get: key must be a string"))}return T(_).then(($)=>{if($===null){h.add(W);return null}h.delete(W);if(!$.has(W))return null;const z=$.get(W);return z==null?null:JSON.parse(JSON.stringify(z))})},set:(W,$)=>{if(typeof W!=="string"){return Promise.reject(new TypeError("storage.set: key must be a string"))}let z;try{z=JSON.stringify($)}catch(X){return Promise.reject(new TypeError("storage.set: value must be JSON-serializable ("+String(X)+")"))}if(z===undefined){return Promise.reject(new TypeError("storage.set: value must be JSON-serializable"))}r(W,z,$);const q=JSON.parse(z);return T(()=>_().then((X)=>{if(X===null)return c;if(h.has(W)){if(X.has(W))return i;h.delete(W)}X.set(W,q);return y(X)}))},delete:(W)=>{if(typeof W!=="string"){return Promise.reject(new TypeError("storage.delete: key must be a string"))}return T(()=>_().then(($)=>{if($===null)return c;if(h.has(W)){if($.has(W))return i;h.delete(W)}$.delete(W);return y($)}))},keys:()=>T(_).then((W)=>W===null?[]:Array.from(W.keys()))};window.omelette={writeFile:(W,$)=>k(W,$).then((z)=>{if(!z.persisted&&!z.noHost){throw new Error(z.reason||"write failed")}}),storage:t};if(I&&I!==window){const W=(J,Q)=>{try{I.postMessage({__omelette_log:true,type:J,data:Q},"*")}catch{}};["log","warn","error"].forEach((J)=>{const Q=console[J];console[J]=(...V)=>{const Y=V.map((Z)=>{try{return typeof Z==="object"?JSON.stringify(Z):String(Z)}catch{try{return String(Z)}catch{return"[unstringifiable]"}}}).join(" ");W(J,Y);Q.apply(console,V)}});window.addEventListener("error",(J)=>{const Q=J.target;if(Q&&Q!==window&&Q.tagName){const V=Q.src||Q.href||"";W("resource_error",`${Q.tagName} failed to load: ${V}`)}else{W("error",`${J.message||"Unknown error"} at ${J.filename||"?"}:${J.lineno||0}:${J.colno||0}`)}},true);window.addEventListener("unhandledrejection",(J)=>{const Q=J.reason;const V=Q instanceof Error?`${Q.message} ${Q.stack}`:String(Q);W("error",`Unhandled rejection: ${V}`)});window.addEventListener("click",(J)=>{if(J.defaultPrevented||J.button!==0)return;if(J.metaKey||J.ctrlKey||J.shiftKey||J.altKey)return;const Q=J.composedPath?J.composedPath():[];const V=["button","input","select","textarea","summary","label"];let Y=null;for(const x of Q){if(!(x instanceof Element))continue;if(x.localName==="a"){if(!(x instanceof HTMLAnchorElement))return;Y=x;break}if(V.indexOf(x.localName)!==-1)return}if(!Y)return;if(Y.isContentEditable)return;const Z=Y.closest("[contenteditable]");if(Z&&Z.getAttribute("contenteditable")!=="false")return;const B=(Y.getAttribute("target")||"_self").toLowerCase();if(B!=="_self"&&B!=="_top"&&B!=="_parent")return;let U;try{U=new URL(Y.href)}catch{return}if(U.protocol!=="http:"&&U.protocol!=="https:")return;if(location.origin==="null")return;if(U.origin===location.origin)return;J.preventDefault();window.open(U.href,"_blank","noopener,noreferrer")});const $=()=>{try{I.postMessage({type:"omelette:height",height:document.documentElement.scrollHeight},"*")}catch{}};if(window.ResizeObserver)new ResizeObserver($).observe(document.documentElement);const z=()=>{$();if(!document.querySelector('script[type="text/babel"],script[type="text/jsx"]'))return;const J=()=>document.getElementById("root")||document.querySelector("body > div[id]");const Q=J()?.firstElementChild??null;let V=0;const Y=()=>{const Z=J();if(Z&&Z.firstElementChild!==Q||++V>30){$();return}setTimeout(Y,100)};setTimeout(Y,100)};if(document.readyState==="complete")z();else window.addEventListener("load",z);const q={};let X=0;const H=(J)=>new Promise((Q,V)=>{if(!b.length){V(new Error("claude.complete: no parent origin"));return}const Y=`c${++X}`;const Z=()=>setTimeout(()=>{delete q[Y];V(new Error(`claude.complete: no data for ${u/1000}s`))},u);const B=Z();q[Y]={resolve:Q,reject:V,text:"",t:B,arm:Z};try{for(const U of b){I.postMessage({__om_api:true,id:Y,body:J},U)}}catch(U){clearTimeout(B);delete q[Y];V(U)}});const j=8;const F=async(J,Q)=>{if(!Array.isArray(J.messages)){throw new Error("claude.complete: tools require a messages array")}const V=J.messages.slice();const Y={...J,tools:J.tools.map((U)=>{if(U===null||typeof U!=="object")return U;const x={};for(const K of Object.keys(U)){if(typeof U[K]!=="function")x[K]=U[K]}return x})};const Z=Y.tool_choice;const B=Z!=null&&(Z.type==="any"||Z.type==="tool")?{...Y,tool_choice:Z.disable_parallel_tool_use!==undefined?{type:"auto",disable_parallel_tool_use:Z.disable_parallel_tool_use}:{type:"auto"}}:Y;for(let U=0;U<j;U++){const x=await H({...U===0?Y:B,messages:V});const K=x.message;const M=K&&Array.isArray(K.content)?K.content:null;const L=M?M.filter((D)=>D?.type==="tool_use"):[];if(K?.stop_reason!=="tool_use"||L.length===0){return x.text}const N=[];for(const D of L){const f=Q.get(D.name);if(!f){N.push({type:"tool_result",tool_use_id:D.id,content:`no handler for tool "${D.name}"`,is_error:true});continue}try{const C=await f(D.input);const w=typeof C==="string"?C:R(C)??"";N.push({type:"tool_result",tool_use_id:D.id,content:w})}catch(C){N.push({type:"tool_result",tool_use_id:D.id,content:String(C?.message??C??"tool handler failed"),is_error:true})}}V.push({role:"assistant",content:M},{role:"user",content:N})}throw new Error(`claude.complete: exceeded ${j} tool turns`)};window.claude={complete(J){const Q=J;if(Q!==null&&typeof Q==="object"&&Array.isArray(Q.tools)&&Q.tools.some((V)=>V!==null&&typeof V==="object"&&typeof V.run==="function")){const V=new Map;for(const Y of Q.tools){if(Y!==null&&typeof Y==="object"&&typeof Y.run==="function"){V.set(String(Y.name),Y.run)}}return F(Q,V)}return H(J).then((V)=>V.text)}};const G={};let P=0;k=(J,Q)=>new Promise((V)=>{if(!b.length){V({persisted:false,noHost:true,reason:g});return}const Y=`f${++P}`;const Z=setTimeout(()=>{delete G[Y];V({persisted:false,noHost:true,reason:g})},d);G[Y]={settle:V,t:Z};try{for(const B of b){I.postMessage({__om_file:true,id:Y,op:"write",path:J,content:Q},B)}}catch{clearTimeout(Z);delete G[Y];V({persisted:false,noHost:true,reason:g})}});const R=(J)=>{try{return JSON.stringify(J)}catch{return JSON.stringify(String(J))}};window.addEventListener("message",(J)=>{if(b.indexOf(J.origin)<0)return;if(J.source!==I)return;const Q=J.data;if(!Q)return;if(Q.type==="omelette-preview-refresh"){if(typeof Q.token!=="string"||!/^[0-9a-f.-]+(\.(rc|pr-[0-9]+))?(\.[0-9]+\.[0-9a-f]{16})?$/.test(Q.token))return;const Z=Math.max(1,Math.floor((Q.expiresAt||0)-Date.now()/1000));document.cookie="__Host-omelette-preview="+Q.token+"; Path=/; Secure; SameSite=None; Partitioned; Max-Age="+Z;return}if(Q.__om_file_r){const Z=G[Q.id];if(!Z)return;clearTimeout(Z.t);delete G[Q.id];Z.settle(Q.ok?{persisted:true}:{persisted:false,reason:Q.error||"write failed"});return}if(Q.__om_api_r){const Z=q[Q.id];if(!Z)return;if(Q.error!=null){clearTimeout(Z.t);delete q[Q.id];Z.reject(new Error(Q.error));return}if(Q.chunk!=null){clearTimeout(Z.t);Z.t=Z.arm();Z.text+=Q.chunk;return}if(Q.done){clearTimeout(Z.t);delete q[Q.id];Z.resolve({text:Q.text!=null?Q.text:Z.text,message:Q.message});return}return}if(!Q.__om_eval)return;const V=Q;const Y=(Z)=>{J.source.postMessage({...Z,__om_eval_r:1,id:V.id},J.origin)};try{const Z=(0,eval)(V.code);if(Z&&typeof Z.then==="function"){Z.then((B)=>Y({ok:1,v:R(B)}),(B)=>Y({ok:0,e:String(B)}))}else{Y({ok:1,v:R(Z)})}}catch(Z){Y({ok:0,e:String(Z)})}})}})();
+</script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  ::selection { background: #6C5CE0; color: #fff; }
+  a { color: #6C5CE0; text-decoration: none; }
+  a:hover { color: #4A3DB0; }
+  .lucide { display: block; }
+</style>
+</helmet>
+<div style="background:#F8F7FB;font-family:'IBM Plex Sans',sans-serif;color:#141320;line-height:1.55;-webkit-font-smoothing:antialiased">
+
+  <!-- ============ COVER ============ -->
+  <section style="position:relative;min-height:760px;background:#141320;color:#F8F7FB;display:flex;flex-direction:column;justify-content:space-between;padding:56px 64px;overflow:hidden">
+    <div style="position:absolute;inset:0;background:repeating-linear-gradient(118deg, transparent 0 26px, rgba(108,92,224,.07) 26px 29px);pointer-events:none"></div>
+    <div style="position:relative;display:flex;justify-content:space-between;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#A99DF2">
+      <span>Brand Guidelines</span>
+      <span>v1.0 — 2026</span>
+    </div>
+    <div style="position:relative">
+      <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(64px,10vw,132px);letter-spacing:-.03em;line-height:.95">NXT<span style="color:#6C5CE0">//</span>LINK</div>
+      <p style="max-width:640px;margin:28px 0 0;font-size:20px;color:#C9C6D6;font-weight:300">The global industrial marketplace. A trusted connection point between businesses that need a solution and the vendors who provide it.</p>
+    </div>
+    <div style="position:relative;display:flex;gap:40px;flex-wrap:wrap;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#8B889C">
+      <span style="color:#F8F7FB">Industrial solutions, connected.</span>
+      <span>Discover · Compare · Connect</span>
+      <span>EN / ES</span>
+    </div>
+  </section>
+
+  <!-- ============ POSITIONING ============ -->
+  <section style="max-width:1120px;margin:0 auto;padding:88px 48px 40px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#6C5CE0;margin-bottom:20px">01 — The brand</div>
+    <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:56px;align-items:start">
+      <div>
+        <h2 style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:38px;letter-spacing:-.02em;margin:0 0 20px;line-height:1.15">A bridge, not a directory.</h2>
+        <p style="font-size:18px;color:#3B3A4A;margin:0 0 16px">NXT//LINK connects warehouses, manufacturers, logistics companies, and production facilities with trusted vendors for technology, equipment, products, and specialized services — worldwide.</p>
+        <p style="font-size:16px;color:#615F72;margin:0">Instead of searching hundreds of sites, businesses explain what they need, discover relevant vendors, compare options, and move projects forward through one connection point. The brand should feel modern, human, global, and industrial — professional without feeling rigid.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#615F72;margin-bottom:2px">Brand attributes</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <span style="padding:8px 14px;background:#EFEDF5;border:1px solid #E2DFEC;border-radius:999px;font-size:13px;font-weight:500">Modern</span>
+          <span style="padding:8px 14px;background:#EFEDF5;border:1px solid #E2DFEC;border-radius:999px;font-size:13px;font-weight:500">Human</span>
+          <span style="padding:8px 14px;background:#EFEDF5;border:1px solid #E2DFEC;border-radius:999px;font-size:13px;font-weight:500">Global</span>
+          <span style="padding:8px 14px;background:#EFEDF5;border:1px solid #E2DFEC;border-radius:999px;font-size:13px;font-weight:500">Industrial</span>
+          <span style="padding:8px 14px;background:#EFEDF5;border:1px solid #E2DFEC;border-radius:999px;font-size:13px;font-weight:500">Intelligent</span>
+          <span style="padding:8px 14px;background:#EFEDF5;border:1px solid #E2DFEC;border-radius:999px;font-size:13px;font-weight:500">Trustworthy</span>
+          <span style="padding:8px 14px;background:#EFEDF5;border:1px solid #E2DFEC;border-radius:999px;font-size:13px;font-weight:500">Organized</span>
+          <span style="padding:8px 14px;background:#EFEDF5;border:1px solid #E2DFEC;border-radius:999px;font-size:13px;font-weight:500">Approachable</span>
+        </div>
+        <div style="margin-top:18px;padding:20px;background:#141320;border-radius:14px;color:#F8F7FB">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#A99DF2;margin-bottom:8px">The device</div>
+          <p style="margin:0;font-size:14px;color:#C9C6D6">The double slash <span style="color:#6C5CE0;font-family:'Space Grotesk';font-weight:700">//</span> is our owned mark — the point where a need links to a solution. It carries the brand alone, in the wordmark, and as a texture.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LOGO ============ -->
+  <section style="max-width:1120px;margin:0 auto;padding:64px 48px 40px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#6C5CE0;margin-bottom:20px">02 — Logo</div>
+    <div style="border:1px solid #E2DFEC;border-radius:20px;overflow:hidden;background:#fff">
+      <div style="display:grid;place-items:center;padding:96px 32px;background:#F8F7FB">
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:72px;letter-spacing:-.03em;color:#141320">NXT<span style="color:#6C5CE0">//</span>LINK</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:20px 28px;border-top:1px solid #E2DFEC;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#615F72;letter-spacing:.06em">
+        <span>PRIMARY LOGO — HORIZONTAL LOCKUP</span>
+        <span>Space Grotesk Bold · slash in Violet #6C5CE0</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LOGO VARIATIONS ============ -->
+  <section style="max-width:1120px;margin:0 auto;padding:24px 48px 40px">
+    <h3 style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:22px;margin:0 0 24px;letter-spacing:-.01em">Four core variations</h3>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:20px">
+
+      <div style="border:1px solid #E2DFEC;border-radius:16px;overflow:hidden;background:#fff">
+        <div style="height:200px;display:grid;place-items:center;background:#F8F7FB">
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:44px;letter-spacing:-.03em;color:#141320">NXT<span style="color:#6C5CE0">//</span>LINK</div>
+        </div>
+        <div style="padding:14px 18px;border-top:1px solid #E2DFEC;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:#615F72">01 · PRIMARY / LIGHT</div>
+      </div>
+
+      <div style="border:1px solid #E2DFEC;border-radius:16px;overflow:hidden;background:#fff">
+        <div style="height:200px;display:grid;place-items:center;background:#141320">
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:44px;letter-spacing:-.03em;color:#F8F7FB">NXT<span style="color:#8B7FEC">//</span>LINK</div>
+        </div>
+        <div style="padding:14px 18px;border-top:1px solid #E2DFEC;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:#615F72">02 · REVERSED / DARK</div>
+      </div>
+
+      <div style="border:1px solid #E2DFEC;border-radius:16px;overflow:hidden;background:#fff">
+        <div style="height:200px;display:grid;place-items:center;background:#F8F7FB">
+          <div style="text-align:center">
+            <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:40px;letter-spacing:-.03em;color:#141320;line-height:.9">NXT<span style="color:#6C5CE0">//</span>LINK</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.34em;text-transform:uppercase;color:#615F72;margin-top:12px">Industrial marketplace</div>
+          </div>
+        </div>
+        <div style="padding:14px 18px;border-top:1px solid #E2DFEC;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:#615F72">03 · LOCKUP + DESCRIPTOR</div>
+      </div>
+
+      <div style="border:1px solid #E2DFEC;border-radius:16px;overflow:hidden;background:#fff">
+        <div style="height:200px;display:grid;place-items:center;background:#EFEDF5">
+          <div style="display:flex;align-items:center;gap:16px">
+            <div style="width:64px;height:64px;border-radius:16px;background:#141320;display:grid;place-items:center">
+              <span style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:34px;color:#6C5CE0;line-height:1">//</span>
+            </div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:30px;letter-spacing:-.02em;color:#141320">NXT<span style="color:#6C5CE0">//</span>LINK</div>
+          </div>
+        </div>
+        <div style="padding:14px 18px;border-top:1px solid #E2DFEC;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:#615F72">04 · MARK + WORDMARK</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ THE MARK / MONOGRAM ============ -->
+  <section style="max-width:1120px;margin:0 auto;padding:24px 48px 40px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px">
+      <div style="border:1px solid #E2DFEC;border-radius:16px;padding:32px;background:#fff;text-align:center">
+        <div style="width:120px;height:120px;margin:0 auto 20px;border-radius:28px;background:#141320;display:grid;place-items:center">
+          <span style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:60px;color:#6C5CE0;line-height:1">//</span>
+        </div>
+        <div style="font-family:'Space Grotesk';font-weight:600;font-size:16px">App Icon / Symbol</div>
+        <p style="font-size:13px;color:#615F72;margin:6px 0 0">The slash mark on ink. Used as the app icon and avatar.</p>
+      </div>
+      <div style="border:1px solid #E2DFEC;border-radius:16px;padding:32px;background:#fff;text-align:center">
+        <div style="width:120px;height:120px;margin:0 auto 20px;border-radius:28px;background:#6C5CE0;display:grid;place-items:center">
+          <span style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:52px;color:#fff;line-height:1;letter-spacing:-.04em">N/L</span>
+        </div>
+        <div style="font-family:'Space Grotesk';font-weight:600;font-size:16px">Monogram</div>
+        <p style="font-size:13px;color:#615F72;margin:6px 0 0">N/L on violet for compact, single-color placements.</p>
+      </div>
+      <div style="border:1px solid #E2DFEC;border-radius:16px;padding:32px;background:#fff;text-align:center">
+        <div style="width:120px;height:120px;margin:0 auto 20px;border-radius:20px;background:repeating-linear-gradient(120deg,#141320 0 12px,#1C1B28 12px 14px);display:grid;place-items:center;overflow:hidden">
+          <span style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:26px;color:#F8F7FB;line-height:1">NXT<span style="color:#8B7FEC">//</span></span>
+        </div>
+        <div style="font-family:'Space Grotesk';font-weight:600;font-size:16px">Favicon (16–64px)</div>
+        <p style="font-size:13px;color:#615F72;margin:6px 0 0">Simplified “NXT//” for browser tabs at tiny sizes.</p>
+      </div>
+    </div>
+
+    <!-- clearspace + misuse -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px">
+      <div style="border:1px solid #E2DFEC;border-radius:16px;padding:28px 32px;background:#fff">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#6C5CE0;margin-bottom:16px">Clearspace &amp; minimum size</div>
+        <div style="border:1px dashed #C9C6D6;border-radius:10px;padding:28px;display:grid;place-items:center;background:#F8F7FB">
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:34px;letter-spacing:-.03em;color:#141320">NXT<span style="color:#6C5CE0">//</span>LINK</div>
+        </div>
+        <p style="font-size:13px;color:#615F72;margin:14px 0 0">Keep clearspace equal to the cap-height of “N” on all sides. Minimum wordmark width: 96px digital, 22mm print.</p>
+      </div>
+      <div style="border:1px solid #E2DFEC;border-radius:16px;padding:28px 32px;background:#fff">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#CE4B43;margin-bottom:16px">Don't</div>
+        <ul style="margin:0;padding-left:18px;font-size:14px;color:#3B3A4A;display:flex;flex-direction:column;gap:8px">
+          <li>Recolor the slash to anything but Violet or its reversed tint.</li>
+          <li>Stretch, condense, outline, or add drop shadows.</li>
+          <li>Replace the “//” with other characters or spacing.</li>
+          <li>Place on busy imagery without an ink or white plate.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ COLOR ============ -->
+  <section style="max-width:1120px;margin:0 auto;padding:64px 48px 40px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#6C5CE0;margin-bottom:20px">03 — Color</div>
+    <h3 style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:22px;margin:0 0 20px;letter-spacing:-.01em">Core palette</h3>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
+      <div style="border-radius:14px;overflow:hidden;border:1px solid #E2DFEC">
+        <div style="height:110px;background:#6C5CE0"></div>
+        <div style="padding:12px 14px;background:#fff"><div style="font-weight:600;font-size:14px">Violet — Primary</div><div style="font-family:'IBM Plex Mono';font-size:12px;color:#615F72;margin-top:2px">#6C5CE0</div></div>
+      </div>
+      <div style="border-radius:14px;overflow:hidden;border:1px solid #E2DFEC">
+        <div style="height:110px;background:#4A3DB0"></div>
+        <div style="padding:12px 14px;background:#fff"><div style="font-weight:600;font-size:14px">Violet Deep</div><div style="font-family:'IBM Plex Mono';font-size:12px;color:#615F72;margin-top:2px">#4A3DB0</div></div>
+      </div>
+      <div style="border-radius:14px;overflow:hidden;border:1px solid #E2DFEC">
+        <div style="height:110px;background:#A99DF2"></div>
+        <div style="padding:12px 14px;background:#fff"><div style="font-weight:600;font-size:14px">Lilac — Accent</div><div style="font-family:'IBM Plex Mono';font-size:12px;color:#615F72;margin-top:2px">#A99DF2</div></div>
+      </div>
+      <div style="border-radius:14px;overflow:hidden;border:1px solid #E2DFEC">
+        <div style="height:110px;background:#3B3A4A"></div>
+        <div style="padding:12px 14px;background:#fff"><div style="font-weight:600;font-size:14px">Slate — Secondary</div><div style="font-family:'IBM Plex Mono';font-size:12px;color:#615F72;margin-top:2px">#3B3A4A</div></div>
+      </div>
+    </div>
+
+    <h3 style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:22px;margin:36px 0 20px;letter-spacing:-.01em">Neutrals &amp; surfaces</h3>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px">
+      <div style="border-radius:14px;overflow:hidden;border:1px solid #E2DFEC">
+        <div style="height:88px;background:#141320"></div>
+        <div style="padding:10px 12px;background:#fff"><div style="font-weight:600;font-size:13px">Ink / Dark BG</div><div style="font-family:'IBM Plex Mono';font-size:11px;color:#615F72">#141320</div></div>
+      </div>
+      <div style="border-radius:14px;overflow:hidden;border:1px solid #E2DFEC">
+        <div style="height:88px;background:#615F72"></div>
+        <div style="padding:10px 12px;background:#fff"><div style="font-weight:600;font-size:13px">Text Secondary</div><div style="font-family:'IBM Plex Mono';font-size:11px;color:#615F72">#615F72</div></div>
+      </div>
+      <div style="border-radius:14px;overflow:hidden;border:1px solid #E2DFEC">
+        <div style="height:88px;background:#EFEDF5"></div>
+        <div style="padding:10px 12px;background:#fff"><div style="font-weight:600;font-size:13px">Surface</div><div style="font-family:'IBM Plex Mono';font-size:11px;color:#615F72">#EFEDF5</div></div>
+      </div>
+      <div style="border-radius:14px;overflow:hidden;border:1px solid #E2DFEC">
+        <div style="height:88px;background:#E2DFEC"></div>
+        <div style="padding:10px 12px;background:#fff"><div style="font-weight:600;font-size:13px">Border</div><div style="font-family:'IBM Plex Mono';font-size:11px;color:#615F72">#E2DFEC</div></div>
+      </div>
+      <div style="border-radius:14px;overflow:hidden;border:1px solid #E2DFEC">
+        <div style="height:88px;background:#F8F7FB"></div>
+        <div style="padding:10px 12px;background:#fff"><div style="font-weight:600;font-size:13px">Warm White</div><div style="font-family:'IBM Plex Mono';font-size:11px;color:#615F72">#F8F7FB</div></div>
+      </div>
+    </div>
+
+    <h3 style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:22px;margin:36px 0 20px;letter-spacing:-.01em">Semantic &amp; marketplace states</h3>
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:14px">
+      <div style="text-align:center"><div style="height:64px;border-radius:12px;background:#2F9E6A"></div><div style="font-size:12px;font-weight:600;margin-top:8px">Success</div><div style="font-family:'IBM Plex Mono';font-size:11px;color:#615F72">#2F9E6A</div></div>
+      <div style="text-align:center"><div style="height:64px;border-radius:12px;background:#C68A28"></div><div style="font-size:12px;font-weight:600;margin-top:8px">Warning / Pending</div><div style="font-family:'IBM Plex Mono';font-size:11px;color:#615F72">#C68A28</div></div>
+      <div style="text-align:center"><div style="height:64px;border-radius:12px;background:#CE4B43"></div><div style="font-size:12px;font-weight:600;margin-top:8px">Error</div><div style="font-family:'IBM Plex Mono';font-size:11px;color:#615F72">#CE4B43</div></div>
+      <div style="text-align:center"><div style="height:64px;border-radius:12px;background:#3E6FD0"></div><div style="font-size:12px;font-weight:600;margin-top:8px">Info</div><div style="font-family:'IBM Plex Mono';font-size:11px;color:#615F72">#3E6FD0</div></div>
+      <div style="text-align:center"><div style="height:64px;border-radius:12px;background:#6C5CE0"></div><div style="font-size:12px;font-weight:600;margin-top:8px">Verified</div><div style="font-family:'IBM Plex Mono';font-size:11px;color:#615F72">#6C5CE0</div></div>
+      <div style="text-align:center"><div style="height:64px;border-radius:12px;background:#0E9C8A"></div><div style="font-size:12px;font-weight:600;margin-top:8px">Active</div><div style="font-family:'IBM Plex Mono';font-size:11px;color:#615F72">#0E9C8A</div></div>
+    </div>
+  </section>
+
+  <!-- ============ TYPOGRAPHY ============ -->
+  <section style="max-width:1120px;margin:0 auto;padding:64px 48px 40px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#6C5CE0;margin-bottom:20px">04 — Typography</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px">
+      <div style="border:1px solid #E2DFEC;border-radius:16px;padding:28px;background:#fff">
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:56px;line-height:1;letter-spacing:-.02em">Aa</div>
+        <div style="font-family:'Space Grotesk';font-weight:600;font-size:16px;margin:16px 0 4px">Space Grotesk</div>
+        <div style="font-family:'IBM Plex Mono';font-size:12px;color:#615F72">HEADINGS · LOGO · DISPLAY</div>
+        <p style="font-size:13px;color:#615F72;margin:10px 0 0">400 / 500 / 600 / 700 · fallback: Söhne, Helvetica, sans-serif</p>
+      </div>
+      <div style="border:1px solid #E2DFEC;border-radius:16px;padding:28px;background:#fff">
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-weight:400;font-size:56px;line-height:1;letter-spacing:-.01em">Aa</div>
+        <div style="font-family:'Space Grotesk';font-weight:600;font-size:16px;margin:16px 0 4px">IBM Plex Sans</div>
+        <div style="font-family:'IBM Plex Mono';font-size:12px;color:#615F72">BODY · UI · TABLES · FORMS</div>
+        <p style="font-size:13px;color:#615F72;margin:10px 0 0">300 / 400 / 500 / 600 / 700 · fallback: Helvetica, Arial, sans-serif</p>
+      </div>
+      <div style="border:1px solid #E2DFEC;border-radius:16px;padding:28px;background:#fff">
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:56px;line-height:1">Aa</div>
+        <div style="font-family:'Space Grotesk';font-weight:600;font-size:16px;margin:16px 0 4px">IBM Plex Mono</div>
+        <div style="font-family:'IBM Plex Mono';font-size:12px;color:#615F72">PRICES · IDs · METRICS · LABELS</div>
+        <p style="font-size:13px;color:#615F72;margin:10px 0 0">400 / 500 / 600 · fallback: SFMono, Menlo, monospace</p>
+      </div>
+    </div>
+
+    <div style="border:1px solid #E2DFEC;border-radius:16px;padding:36px 40px;background:#fff;margin-top:20px">
+      <div style="display:flex;align-items:baseline;gap:16px;padding:14px 0;border-bottom:1px solid #EFEDF5"><span style="font-family:'IBM Plex Mono';font-size:12px;color:#615F72;width:150px">Display · 64/1.0</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:56px;letter-spacing:-.02em;line-height:1">Find what your operation needs</span></div>
+      <div style="display:flex;align-items:baseline;gap:16px;padding:14px 0;border-bottom:1px solid #EFEDF5"><span style="font-family:'IBM Plex Mono';font-size:12px;color:#615F72;width:150px">H1 · 40/1.1</span><span style="font-family:'Space Grotesk';font-weight:600;font-size:40px;letter-spacing:-.02em">Industrial solutions, connected</span></div>
+      <div style="display:flex;align-items:baseline;gap:16px;padding:14px 0;border-bottom:1px solid #EFEDF5"><span style="font-family:'IBM Plex Mono';font-size:12px;color:#615F72;width:150px">H2 · 30/1.2</span><span style="font-family:'Space Grotesk';font-weight:600;font-size:30px;letter-spacing:-.01em">Discover, compare, connect</span></div>
+      <div style="display:flex;align-items:baseline;gap:16px;padding:14px 0;border-bottom:1px solid #EFEDF5"><span style="font-family:'IBM Plex Mono';font-size:12px;color:#615F72;width:150px">H3 · 22/1.3</span><span style="font-family:'Space Grotesk';font-weight:500;font-size:22px">Verified vendors, real proof</span></div>
+      <div style="display:flex;align-items:baseline;gap:16px;padding:14px 0;border-bottom:1px solid #EFEDF5"><span style="font-family:'IBM Plex Mono';font-size:12px;color:#615F72;width:150px">Body · 16/1.55</span><span style="font-size:16px;color:#3B3A4A">Explain what you need, discover relevant vendors, compare quotes, and move projects forward through one trusted connection point.</span></div>
+      <div style="display:flex;align-items:baseline;gap:16px;padding:14px 0"><span style="font-family:'IBM Plex Mono';font-size:12px;color:#615F72;width:150px">Data · Mono 20</span><span style="font-family:'IBM Plex Mono';font-weight:500;font-size:20px;color:#141320">$12,450.00 · RFQ-2048 · 4–6 wks</span></div>
+    </div>
+  </section>
+
+  <!-- ============ ICON SYSTEM ============ -->
+  <section style="max-width:1120px;margin:0 auto;padding:64px 48px 40px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#6C5CE0;margin-bottom:20px">05 — Icon system</div>
+    <h3 style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:22px;margin:0 0 6px;letter-spacing:-.01em">20 core icons · 1.75px stroke · rounded</h3>
+    <p style="font-size:15px;color:#615F72;margin:0 0 24px;max-width:640px">One consistent line family across the platform — even weight, matching corner radius, drawn on a 24px grid. No detailed industrial illustrations inside small icons.</p>
+    <div id="icon-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px">
+      <div style="border:1px solid #E2DFEC;border-radius:14px;padding:22px 12px;background:#fff;text-align:center"><div style="color:#6C5CE0;display:grid;place-items:center;height:32px"><i data-lucide="package"></i></div><div style="font-size:12px;color:#3B3A4A;margin-top:12px;font-weight:500">Equipment</div></div>
+      <div style="border:1px solid #E2DFEC;border-radius:14px;padding:22px 12px;background:#fff;text-align:center"><div style="color:#6C5CE0;display:grid;place-items:center;height:32px"><i data-lucide="boxes"></i></div><div style="font-size:12px;color:#3B3A4A;margin-top:12px;font-weight:500">Products</div></div>
+      <div style="border:1px solid #E2DFEC;border-radius:14px;padding:22px 12px;background:#fff;text-align:center"><div style="color:#6C5CE0;display:grid;place-items:center;height:32px"><i data-lucide="cpu"></i></div><div style="font-size:12px;color:#3B3A4A;margin-top:12px;font-weight:500">Technology</div></div>
+      <div style="border:1px solid #E2DFEC;border-radius:14px;padding:22px 12px;background:#fff;text-align:center"><div style="color:#6C5CE0;display:grid;place-items:center;height:32px"><i data-lucide="wrench"></i></div><div style="font-size:12px;color:#3B3A4A;margin-top:12px;font-weight:500">Services</div></div>
+      <div style="border:1px solid #E2DFEC;border-radius:14px;padding:22px 12px;background:#fff;text-align:center"><div style="color:#6C5CE0;display:grid;place-items:center;height:32px"><i data-lucide="building-2"></i></div><div style="font-size:12px;color:#3B3A4A;margin-top:12px;font-weight:500">Vendors</div></div>
+      <div style="border:1px solid #E2DFEC;border-radius:14px;padding:22px 12px;background:#fff;text-align:center"><div style="color:#6C5CE0;display:grid;place-items:center;height:32px"><i data-lucide="search"></i></div><div style="font-size:12px;color:#3B3A4A;margin-top:12px;font-weight:500">Search</div></div>
+      <div style="border:1px solid #E2DFEC;border-radius:14px;padding:22px 12px;background:#fff;text-align:center"><div style="color:#6C5CE0;display:grid;place-items:center;height:32px"><i data-lucide="git-compare-arrows"></i></div><div style="font-size:12px;color:#3B3A4A;margin-top:12px;font-weight:500">Matching</div></div>
+      <div style="border:1px solid #E2DFEC;border-radius:14px;padding:22px 12px;background:#fff;text-align:center"><div style="color:#6C5CE0;display:grid;place-items:center;height:32px"><i data-lucide="file-text"></i></div><div style="font-size:12px;color:#3B3A4A;margin-top:12px;font-weight:500">Quotes</div></div>
+      <div style="border:1px solid #E2DFEC;border-radius:14px;padding:22px 12px;background:#fff;text-align:center"><div style="color:#6C5CE0;display:grid;place-items:center;height:32px"><i data-lucide="clipboard-list"></i></div><div style="font-size:12px;color:#3B3A4A;margin-top:12px;font-weight:500">Projects</div></div>
+      <div style="border:1px solid #E2DFEC;border-radius:14px;padding:22px 12px;background:#fff;text-align:center"><div style="color:#6C5CE0;display:grid;place-items:center;height:32px"><i data-lucide="messages-square"></i></div><div style="font-size:12px;color:#3B3A4A;margin-top:12px;font-weight:500">Messages</div></div>
+      <div style="border:1px solid #E2DFEC;border-radius:14px;padding:22px 12px;background:#fff;text-align:center"><div style="color:#6C5CE0;display:grid;place-items:center;height:32px"><i data-lucide="folder-open"></i></div><div style="font-size:12px;color:#3B3A4A;margin-top:12px;font-weight:500">Documents</div></div>
+      <div style="border:1px solid #E2DFEC;border-radius:14px;padding:22px 12px;background:#fff;text-align:center"><div style="color:#6C5CE0;display:grid;place-items:center;height:32px"><i data-lucide="badge-check"></i></div><div style="font-size:12px;color:#3B3A4A;margin-top:12px;font-weight:500">Verification</div></div>
+      <div style="border:1px solid #E2DFEC;border-radius:14px;padding:22px 12px;background:#fff;text-align:center"><div style="color:#6C5CE0;display:grid;place-items:center;height:32px"><i data-lucide="map-pin"></i></div><div style="font-size:12px;color:#3B3A4A;margin-top:12px;font-weight:500">Location</div></div>
+      <div style="border:1px solid #E2DFEC;border-radius:14px;padding:22px 12px;background:#fff;text-align:center"><div style="color:#6C5CE0;display:grid;place-items:center;height:32px"><i data-lucide="truck"></i></div><div style="font-size:12px;color:#3B3A4A;margin-top:12px;font-weight:500">Delivery</div></div>
+      <div style="border:1px solid #E2DFEC;border-radius:14px;padding:22px 12px;background:#fff;text-align:center"><div style="color:#6C5CE0;display:grid;place-items:center;height:32px"><i data-lucide="hard-hat"></i></div><div style="font-size:12px;color:#3B3A4A;margin-top:12px;font-weight:500">Installation</div></div>
+      <div style="border:1px solid #E2DFEC;border-radius:14px;padding:22px 12px;background:#fff;text-align:center"><div style="color:#6C5CE0;display:grid;place-items:center;height:32px"><i data-lucide="shield-check"></i></div><div style="font-size:12px;color:#3B3A4A;margin-top:12px;font-weight:500">Warranty</div></div>
+      <div style="border:1px solid #E2DFEC;border-radius:14px;padding:22px 12px;background:#fff;text-align:center"><div style="color:#6C5CE0;display:grid;place-items:center;height:32px"><i data-lucide="life-buoy"></i></div><div style="font-size:12px;color:#3B3A4A;margin-top:12px;font-weight:500">Support</div></div>
+      <div style="border:1px solid #E2DFEC;border-radius:14px;padding:22px 12px;background:#fff;text-align:center"><div style="color:#6C5CE0;display:grid;place-items:center;height:32px"><i data-lucide="credit-card"></i></div><div style="font-size:12px;color:#3B3A4A;margin-top:12px;font-weight:500">Payment</div></div>
+      <div style="border:1px solid #E2DFEC;border-radius:14px;padding:22px 12px;background:#fff;text-align:center"><div style="color:#6C5CE0;display:grid;place-items:center;height:32px"><i data-lucide="bar-chart-3"></i></div><div style="font-size:12px;color:#3B3A4A;margin-top:12px;font-weight:500">Analytics</div></div>
+      <div style="border:1px solid #E2DFEC;border-radius:14px;padding:22px 12px;background:#fff;text-align:center"><div style="color:#6C5CE0;display:grid;place-items:center;height:32px"><i data-lucide="settings-2"></i></div><div style="font-size:12px;color:#3B3A4A;margin-top:12px;font-weight:500">Settings</div></div>
+    </div>
+  </section>
+
+  <!-- ============ APPLICATIONS ============ -->
+  <section style="max-width:1120px;margin:0 auto;padding:64px 48px 40px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#6C5CE0;margin-bottom:20px">06 — Applications</div>
+
+    <!-- Business card -->
+    <h3 style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:22px;margin:0 0 20px;letter-spacing:-.01em">Business card · 3.5 × 2 in</h3>
+    <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:44px">
+      <div style="width:420px;height:240px;border-radius:16px;background:#141320;color:#F8F7FB;position:relative;overflow:hidden;box-shadow:0 20px 40px -20px rgba(20,19,32,.5)">
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(118deg, transparent 0 22px, rgba(108,92,224,.09) 22px 24px)"></div>
+        <div style="position:relative;height:100%;display:flex;flex-direction:column;justify-content:space-between;padding:32px">
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:34px;letter-spacing:-.03em">NXT<span style="color:#8B7FEC">//</span>LINK</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#A99DF2">Industrial solutions, connected</div>
+        </div>
+      </div>
+      <div style="width:420px;height:240px;border-radius:16px;background:#fff;border:1px solid #E2DFEC;position:relative;overflow:hidden;box-shadow:0 20px 40px -24px rgba(20,19,32,.3)">
+        <div style="height:100%;display:flex;flex-direction:column;justify-content:space-between;padding:32px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:44px;height:44px;border-radius:12px;background:#141320;display:grid;place-items:center"><span style="font-family:'Space Grotesk';font-weight:700;font-size:24px;color:#6C5CE0">//</span></div>
+            <div>
+              <div style="font-family:'Space Grotesk';font-weight:600;font-size:18px">Your Name</div>
+              <div style="font-size:13px;color:#615F72">Founder · Industrial Solutions Facilitator</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#3B3A4A">
+            <span>hello@nxtlink.co</span>
+            <span>+1 000 000 0000</span>
+            <span style="color:#6C5CE0">nxtlink.co</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Email signature -->
+    <h3 style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:22px;margin:0 0 20px;letter-spacing:-.01em">Email signature</h3>
+    <div style="border:1px solid #E2DFEC;border-radius:16px;padding:32px;background:#fff;margin-bottom:44px">
+      <div style="display:flex;align-items:center;gap:20px">
+        <div style="width:60px;height:60px;border-radius:14px;background:#141320;display:grid;place-items:center;flex-shrink:0"><span style="font-family:'Space Grotesk';font-weight:700;font-size:30px;color:#6C5CE0">//</span></div>
+        <div style="width:1px;height:64px;background:#E2DFEC"></div>
+        <div>
+          <div style="font-family:'Space Grotesk';font-weight:600;font-size:17px;color:#141320">Your Name</div>
+          <div style="font-size:13px;color:#615F72;margin-bottom:6px">Founder, NXT//LINK — Industrial Marketplace</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#3B3A4A">hello@nxtlink.co · +1 000 000 0000 · <span style="color:#6C5CE0">nxtlink.co</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LinkedIn banner -->
+    <h3 style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:22px;margin:0 0 8px;letter-spacing:-.01em">LinkedIn banner</h3>
+    <div style="font-family:'IBM Plex Mono';font-size:12px;color:#615F72;margin-bottom:16px">1584 × 396 px</div>
+    <div style="width:100%;aspect-ratio:1584/396;border-radius:16px;background:#141320;color:#F8F7FB;position:relative;overflow:hidden;margin-bottom:44px;box-shadow:0 20px 40px -24px rgba(20,19,32,.4)">
+      <div style="position:absolute;inset:0;background:repeating-linear-gradient(118deg, transparent 0 34px, rgba(108,92,224,.08) 34px 37px)"></div>
+      <div style="position:relative;height:100%;display:flex;flex-direction:column;justify-content:center;padding:0 8%">
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(28px,5vw,58px);letter-spacing:-.03em;line-height:1">NXT<span style="color:#8B7FEC">//</span>LINK</div>
+        <div style="font-size:clamp(12px,1.7vw,20px);color:#C9C6D6;margin-top:12px;max-width:60%">I connect industrial businesses with the vendors, technology, products, and services that help them operate better.</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(9px,1.1vw,13px);letter-spacing:.2em;text-transform:uppercase;color:#A99DF2;margin-top:16px">Discover · Compare · Connect — worldwide</div>
+      </div>
+    </div>
+
+    <!-- IG story + presentation cover -->
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:32px;align-items:start">
+      <div>
+        <h3 style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:22px;margin:0 0 8px;letter-spacing:-.01em">IG Story</h3>
+        <div style="font-family:'IBM Plex Mono';font-size:12px;color:#615F72;margin-bottom:16px">1080 × 1920 px</div>
+        <div style="width:280px;height:498px;border-radius:20px;background:#6C5CE0;color:#fff;position:relative;overflow:hidden;box-shadow:0 20px 40px -20px rgba(108,92,224,.6)">
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(118deg, transparent 0 30px, rgba(255,255,255,.08) 30px 33px)"></div>
+          <div style="position:relative;height:100%;display:flex;flex-direction:column;justify-content:space-between;padding:36px 30px">
+            <div style="font-family:'Space Grotesk';font-weight:700;font-size:26px;letter-spacing:-.02em">NXT<span style="color:#141320">//</span>LINK</div>
+            <div>
+              <div style="font-family:'Space Grotesk';font-weight:700;font-size:38px;line-height:1.05;letter-spacing:-.02em">Find what your operation needs.</div>
+              <div style="font-size:15px;color:#EAE7FA;margin-top:16px">One trusted place for industrial technology, equipment, products &amp; services.</div>
+            </div>
+            <div style="align-self:flex-start;padding:12px 22px;background:#141320;border-radius:999px;font-family:'IBM Plex Mono';font-size:12px;letter-spacing:.14em;text-transform:uppercase">nxtlink.co →</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3 style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:22px;margin:0 0 8px;letter-spacing:-.01em">Presentation cover &amp; document header</h3>
+        <div style="font-family:'IBM Plex Mono';font-size:12px;color:#615F72;margin-bottom:16px">16 : 9</div>
+        <div style="width:100%;aspect-ratio:16/9;border-radius:16px;background:#F8F7FB;border:1px solid #E2DFEC;position:relative;overflow:hidden">
+          <div style="position:absolute;left:0;top:0;bottom:0;width:10px;background:#6C5CE0"></div>
+          <div style="height:100%;display:flex;flex-direction:column;justify-content:center;padding:0 9%">
+            <div style="font-family:'IBM Plex Mono';font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#6C5CE0;margin-bottom:16px">Company Overview · 2026</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(28px,4.5vw,52px);letter-spacing:-.03em;line-height:1;color:#141320">NXT<span style="color:#6C5CE0">//</span>LINK</div>
+            <div style="font-size:clamp(13px,1.6vw,18px);color:#615F72;margin-top:14px;max-width:70%">The global marketplace where industrial businesses find everything they need to improve operations.</div>
+          </div>
+        </div>
+        <div style="margin-top:20px;border:1px solid #E2DFEC;border-radius:12px;overflow:hidden;background:#fff">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #EFEDF5">
+            <div style="font-family:'Space Grotesk';font-weight:700;font-size:16px;letter-spacing:-.02em">NXT<span style="color:#6C5CE0">//</span>LINK</div>
+            <div style="font-family:'IBM Plex Mono';font-size:11px;color:#615F72;letter-spacing:.12em">DOCUMENT HEADER</div>
+          </div>
+          <div style="padding:16px 20px;font-size:13px;color:#615F72">Applied to quotes, RFQ documents, proposals, and vendor agreements.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <section style="background:#141320;color:#8B889C;margin-top:48px;padding:48px 64px;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px">
+    <span style="color:#F8F7FB;font-family:'Space Grotesk';font-weight:700;letter-spacing:-.02em;text-transform:none;font-size:18px">NXT<span style="color:#6C5CE0">//</span>LINK</span>
+    <span>Brand Guidelines v1.0 — © 2026</span>
+  </section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const draw = () => {
+      if (window.lucide && window.lucide.createIcons) {
+        window.lucide.createIcons({ attrs: { width: 26, height: 26, 'stroke-width': 1.75 } });
+      } else {
+        setTimeout(draw, 120);
+      }
+    };
+    draw();
+  }
+}
+</script>
+</body>
+</html>
