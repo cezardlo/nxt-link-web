@@ -4,10 +4,17 @@
 // admin AccessGate via the /admin layout). Type company + contact + email,
 // pick the language, hit Send — the vendor gets a bilingual invite email with
 // their personal /join/<token> link. Below: the live funnel list (one row per
-// invite, status chip, resend / decline / copy-link) and a counts strip.
+// invite, status chip, resend / decline / copy-link / QR) and a counts strip.
 // Reminders (day 2 / 5 / 9) are automated by /api/cron/invite-reminders.
+//
+// Conference mode: every invite row has a QR of its personal /join link, and
+// the "Scan to join" button opens a full-screen QR of the organic quick
+// signup (/vendor-signup) — hold the phone up, the vendor scans, they're
+// signing up in under a minute. QR codes are generated in-app (src/lib/qr.ts,
+// no external service, no new package).
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import QRCode from '@/components/QRCode';
 
 interface Invite {
   id: string; token: string; contact_name: string; company_name: string;
@@ -28,6 +35,33 @@ const LABEL: Record<string, string> = {
 const RESENDABLE = ['invited', 'reminded', 'clicked', 'expired'];
 const DECLINABLE = ['invited', 'reminded', 'clicked', 'expired'];
 
+interface QrView { url: string; title: string; sub: string }
+
+// Full-screen QR overlay — white so any phone camera scans it instantly.
+// Vendor-facing text is bilingual on one screen (it's what the vendor reads
+// over Cesar's shoulder at a conference).
+function QROverlay({ qr, onClose }: { qr: QrView; onClose: () => void }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  return (
+    <div className="qro" role="dialog" aria-modal="true" aria-label={qr.title} onClick={onClose}>
+      <div className="qro-inner" onClick={(e) => e.stopPropagation()}>
+        <button ref={closeRef} type="button" className="qro-x" onClick={onClose} aria-label="Close">✕</button>
+        <div className="qro-brand">NXT<i>{'//'}</i>LINK</div>
+        <h2>{qr.title}</h2>
+        <p className="qro-sub">{qr.sub}</p>
+        <div className="qro-code"><QRCode value={qr.url} size={420} label={`QR code: ${qr.title}`} /></div>
+        <p className="qro-url">{qr.url}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminInvitesPage() {
   const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,6 +73,22 @@ export default function AdminInvitesPage() {
   const [locale, setLocale] = useState<'en' | 'es'>('en');
   const [sending, setSending] = useState(false);
   const [busyId, setBusyId] = useState('');
+  const [qr, setQr] = useState<QrView | null>(null);
+
+  function showGeneralQr() {
+    setQr({
+      url: `${window.location.origin}/vendor-signup?src=qr`,
+      title: 'Scan to join — free, under a minute',
+      sub: 'Escanea para unirte — gratis, en menos de un minuto',
+    });
+  }
+  function showInviteQr(inv: Invite) {
+    setQr({
+      url: inv.join_url,
+      title: inv.company_name,
+      sub: 'Personal invite — scan to accept · Invitación personal — escanea para aceptar',
+    });
+  }
 
   const say = useCallback((msg: string, kind: 'ok' | 'err' = 'ok') => {
     setFlash(msg); setFlashKind(kind);
@@ -116,6 +166,14 @@ export default function AdminInvitesPage() {
         <p style={{ margin: '6px 0 0' }}><a href="/admin/vendor-applications" style={{ color: '#A78BFA', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>Full vendor applications (/apply) →</a></p>
         <p className="iv-sub">Met a vendor you vouch for? Three fields and they get a personal invite link — their account takes them under a minute, and reminders (day 2, 5, 9) run automatically. Inviting them <b>is</b> the review: they skip the application queue.</p>
 
+        <div className="iv-conf">
+          <div>
+            <b>Conference mode</b>
+            <span>Full-screen QR anyone can scan to sign up on their phone — no invite needed (they go through normal review).</span>
+          </div>
+          <button type="button" className="iv-adv" onClick={showGeneralQr}>Show &ldquo;Scan to join&rdquo; QR</button>
+        </div>
+
         <form className="iv-form" onSubmit={send}>
           <input placeholder="Company name" value={company} onChange={(e) => setCompany(e.target.value)} required />
           <input placeholder="Contact name" value={contact} onChange={(e) => setContact(e.target.value)} required />
@@ -161,6 +219,7 @@ export default function AdminInvitesPage() {
                 <div className="iv-actions">
                   {RESENDABLE.includes(i.status) && <button className="iv-adv" disabled={busyId === i.id} onClick={() => resend(i.id)}>{i.status === 'expired' ? 'Re-invite' : 'Resend'}</button>}
                   {RESENDABLE.includes(i.status) && <button className="iv-ghost" onClick={() => copyLink(i)}>Copy link</button>}
+                  {RESENDABLE.includes(i.status) && <button className="iv-ghost" onClick={() => showInviteQr(i)}>QR</button>}
                   {DECLINABLE.includes(i.status) && <button className="iv-decline" disabled={busyId === i.id} onClick={() => decline(i.id)}>Decline</button>}
                 </div>
               </div>
@@ -168,6 +227,7 @@ export default function AdminInvitesPage() {
           </div>
         )}
       </div>
+      {qr && <QROverlay qr={qr} onClose={() => setQr(null)} />}
     </div>
   );
 }
@@ -224,5 +284,20 @@ const CSS = `
 .iv-ghost:hover{border-color:#7C5CFC;color:#C4B5FD;}
 .iv-decline{font-family:inherit;font-size:12px;font-weight:600;padding:7px 14px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background:none;color:#8080A0;cursor:pointer;}
 .iv-decline:hover{color:#FCA5A5;border-color:rgba(248,113,113,.3);}
+.iv-conf{display:flex;justify-content:space-between;align-items:center;gap:16px;background:linear-gradient(120deg,rgba(124,92,252,.12),rgba(52,211,153,.05));border:1px solid rgba(124,92,252,.3);border-radius:14px;padding:14px 16px;margin-bottom:14px;flex-wrap:wrap;}
+.iv-conf b{display:block;font-size:14.5px;}
+.iv-conf span{display:block;font-size:12.5px;color:#8080A0;margin-top:3px;max-width:520px;line-height:1.5;}
+.qro{position:fixed;inset:0;z-index:100;background:#fff;color:#141320;display:flex;align-items:center;justify-content:center;padding:20px;cursor:pointer;}
+.qro-inner{cursor:default;text-align:center;max-width:560px;width:100%;}
+.qro-x{position:fixed;top:16px;right:16px;width:44px;height:44px;border-radius:99px;border:1px solid #E2DFEC;background:#fff;color:#615F72;font-size:18px;cursor:pointer;}
+.qro-x:hover{border-color:#6C5CE0;color:#6C5CE0;}
+.qro-x:focus-visible{outline:2px solid #6C5CE0;outline-offset:2px;}
+.qro-brand{font-size:17px;font-weight:800;letter-spacing:1.5px;margin-bottom:10px;}
+.qro-brand i{color:#6C5CE0;font-style:normal;}
+.qro-inner h2{font-size:22px;font-weight:800;letter-spacing:-.01em;margin:0 0 4px;}
+.qro-sub{font-size:14px;color:#615F72;margin:0 0 18px;}
+.qro-code{display:flex;justify-content:center;}
+.qro-code svg{width:min(76vw,52vh);height:auto;border:1px solid #E2DFEC;border-radius:16px;padding:8px;background:#fff;}
+.qro-url{font-size:12px;color:#8A87A0;word-break:break-all;margin-top:14px;}
 @media (max-width:640px){.iv-form{grid-template-columns:1fr;}.iv-card{flex-direction:column;}.iv-actions{flex-direction:row;flex-wrap:wrap;}}
 `;

@@ -92,11 +92,17 @@ export async function PATCH(req: Request) {
   const wantsPublish = body.status === 'published';
   if (typeof body.status === 'string' && VENDOR_STATUSES.includes(body.status)) {
     if (wantsPublish) {
-      // Publishing gate: accepted NXT//LINK terms + verified email + accuracy.
+      // Publishing gate: accepted NXT//LINK terms + APPROVED account (admin
+      // review — quick-signup vendors build in draft while pending, but
+      // nothing goes public before an operator approves; process doc §4)
+      // + verified email + accuracy.
       const dbGate = getSupabaseClient({ admin: true });
       const { data: termsRow } = await dbGate.from('vendor_profiles').select('terms_accepted_version').eq('id', vendor.id).maybeSingle();
       if (termsRow?.terms_accepted_version !== VENDOR_TERMS_VERSION) {
         return NextResponse.json({ ok: false, code: 'terms_required', message: 'Accept the NXT//LINK vendor terms before publishing — open your profile to review and accept them.' }, { status: 403 });
+      }
+      if (vendor.status !== 'approved') {
+        return NextResponse.json({ ok: false, code: 'review_required', message: 'Your company is still in review — listings stay saved as drafts and go live the moment an operator approves your account. / Tu empresa sigue en revisión — tus publicaciones quedan guardadas como borradores y salen en vivo en cuanto un operador apruebe tu cuenta.' }, { status: 403 });
       }
       if (!session.emailConfirmed) {
         return NextResponse.json({ ok: false, code: 'email_unverified', message: 'Verify your email before publishing — check your inbox for the confirmation link.' }, { status: 403 });

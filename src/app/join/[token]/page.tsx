@@ -10,8 +10,15 @@
 // card, violet CTA — experience-design plan §3.1). Mobile-first, EN/ES toggle
 // defaulting to the invite's locale. Copy from growth-and-invites.md §3,
 // pre-escrow variants only (no escrow promises, no credit mentions).
+//
+// Quick-signup fields (fast-signup brief §3 — same 3 fields as the organic
+// lane): company name pre-filled from the invite (editable), email (already
+// known for emailed invites), and the "what do you supply?" chips. Answers
+// flow into the vendor profile via the invite API — never asked twice.
 
 import { useCallback, useEffect, useState } from 'react';
+import LanguageToggle, { readStoredLang } from '@/components/LanguageToggle';
+import SupplyChips from '@/components/SupplyChips';
 
 interface InviteView {
   contact_name: string | null;
@@ -37,6 +44,10 @@ const T = {
       ['Real requests, real people.', 'Every buyer request is reviewed by our team. Bilingual support.'],
     ],
     emailLabel: 'Your email (this becomes your sign-in)',
+    companyLabel: 'Company name',
+    supplyLabel: 'What do you supply?',
+    supplyHint: 'Tap what fits — you can refine it later.',
+    errSupply: 'Tap at least one category — or type what you supply.',
     agreePre: 'I agree to the',
     agreeTos: 'Terms of Service',
     agreeAnd: 'and',
@@ -49,8 +60,8 @@ const T = {
     sentTitle: 'Check your email',
     sent: (masked: string) => `We sent a secure sign-in link to ${masked}. Tap it and you’re in — no password needed. It expires in a few minutes.`,
     deadTitle: 'This invite link is no longer active',
-    dead: 'It may have expired. You can still join NXT//LINK as a vendor — it’s free.',
-    deadCta: 'Apply as a vendor →',
+    dead: 'It may have expired. You can still join NXT//LINK as a vendor — it’s free and takes under a minute.',
+    deadCta: 'Join as a vendor →',
     notYou: (company: string) => `Not ${company}? Start fresh →`,
     loading: 'Loading your invite…',
     errGeneric: 'Something went wrong. Try again.',
@@ -67,6 +78,10 @@ const T = {
       ['Solicitudes reales, gente real.', 'Cada solicitud de compra la revisa nuestro equipo. Soporte bilingüe.'],
     ],
     emailLabel: 'Su correo (será su inicio de sesión)',
+    companyLabel: 'Nombre de la empresa',
+    supplyLabel: '¿Qué ofrece?',
+    supplyHint: 'Toque lo que aplique — puede afinarlo después.',
+    errSupply: 'Toque al menos una categoría — o escriba lo que ofrece.',
     agreePre: 'Acepto los',
     agreeTos: 'Términos de Servicio',
     agreeAnd: 'y el',
@@ -79,8 +94,8 @@ const T = {
     sentTitle: 'Revise su correo',
     sent: (masked: string) => `Le enviamos un enlace seguro de inicio de sesión a ${masked}. Tóquelo y ya está adentro — sin contraseña. Expira en unos minutos.`,
     deadTitle: 'Este enlace de invitación ya no está activo',
-    dead: 'Puede haber expirado. Aún puede unirse a NXT//LINK como proveedor — es gratis.',
-    deadCta: 'Aplicar como proveedor →',
+    dead: 'Puede haber expirado. Aún puede unirse a NXT//LINK como proveedor — es gratis y toma menos de un minuto.',
+    deadCta: 'Únase como proveedor →',
     notYou: (company: string) => `¿No es ${company}? Empezar de cero →`,
     loading: 'Cargando su invitación…',
     errGeneric: 'Algo salió mal. Intente de nuevo.',
@@ -93,11 +108,19 @@ export default function JoinPage({ params }: { params: { token: string } }) {
   const [dead, setDead] = useState(false);
   const [loading, setLoading] = useState(true);
   const [lang, setLang] = useState<Lang>('en');
+  const [company, setCompany] = useState('');
   const [email, setEmail] = useState('');
+  const [cats, setCats] = useState<string[]>([]);
+  const [otherCat, setOtherCat] = useState('');
   const [agree, setAgree] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sentTo, setSentTo] = useState('');
   const [err, setErr] = useState('');
+
+  const switchLang = (l: Lang) => {
+    setLang(l);
+    try { localStorage.setItem('nxt_lang', l); } catch { /* private mode */ }
+  };
 
   useEffect(() => {
     let alive = true;
@@ -107,8 +130,12 @@ export default function JoinPage({ params }: { params: { token: string } }) {
         if (!alive) return;
         if (!r.ok) { setDead(true); setLoading(false); return; }
         const j = await r.json();
-        if (j.ok && j.invite) { setInvite(j.invite); setLang(j.invite.locale === 'es' ? 'es' : 'en'); }
-        else setDead(true);
+        if (j.ok && j.invite) {
+          setInvite(j.invite);
+          setCompany((j.invite.company_name || '').trim());
+          // The vendor's own saved language wins; the invite's locale is the default.
+          setLang(readStoredLang() || (j.invite.locale === 'es' ? 'es' : 'en'));
+        } else setDead(true);
       } catch { if (alive) setDead(true); }
       if (alive) setLoading(false);
     })();
@@ -119,6 +146,8 @@ export default function JoinPage({ params }: { params: { token: string } }) {
 
   const send = useCallback(async () => {
     if (busy) return;
+    const supply = [...cats, ...(otherCat.trim() ? [otherCat.trim()] : [])];
+    if (supply.length === 0) { setErr(t.errSupply); return; }
     if (!agree) { setErr(t.errAgree); return; }
     setBusy(true); setErr('');
     try {
@@ -127,6 +156,8 @@ export default function JoinPage({ params }: { params: { token: string } }) {
         body: JSON.stringify({
           terms_accepted: agree,
           terms_language: lang,
+          company_name: company.trim(),
+          supply_categories: supply,
           ...(invite?.has_email ? {} : { email: email.trim() }),
         }),
       });
@@ -135,20 +166,19 @@ export default function JoinPage({ params }: { params: { token: string } }) {
       else setErr(j.message || t.errGeneric);
     } catch { setErr(t.errGeneric); }
     setBusy(false);
-  }, [busy, agree, token, invite, email, lang, t]);
+  }, [busy, agree, token, invite, email, lang, t, company, cats, otherCat]);
 
   const firstName = (invite?.contact_name || '').trim().split(/\s+/)[0] || '';
-  const company = (invite?.company_name || '').trim();
+  // Headline personalization follows the invite's original company name;
+  // the editable `company` state is what gets submitted.
+  const inviteCompany = (invite?.company_name || '').trim();
 
   return (
     <div className="jn">
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div className="jn-top">
         <a className="jn-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b></a>
-        <div className="jn-lang" role="group" aria-label="Language">
-          <button type="button" className={lang === 'en' ? 'on' : ''} onClick={() => setLang('en')}>EN</button>
-          <button type="button" className={lang === 'es' ? 'on' : ''} onClick={() => setLang('es')}>ES</button>
-        </div>
+        <LanguageToggle lang={lang} onChange={switchLang} variant="light" />
       </div>
 
       <div className="jn-card">
@@ -169,7 +199,7 @@ export default function JoinPage({ params }: { params: { token: string } }) {
         ) : (
           <>
             <p className="jn-tag">{t.tagline}</p>
-            <h1>{company ? t.headline(firstName, company) : t.headlineGeneric}</h1>
+            <h1>{inviteCompany ? t.headline(firstName, inviteCompany) : t.headlineGeneric}</h1>
 
             <ul className="jn-bullets">
               {t.bullets.map(([head, rest]) => (
@@ -177,12 +207,29 @@ export default function JoinPage({ params }: { params: { token: string } }) {
               ))}
             </ul>
 
+            <label className="jn-field">
+              <span>{t.companyLabel}</span>
+              <input type="text" value={company} maxLength={120} onChange={(e) => setCompany(e.target.value)} autoComplete="organization" />
+            </label>
+
             {!invite?.has_email && (
               <label className="jn-field">
                 <span>{t.emailLabel}</span>
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" inputMode="email" />
               </label>
             )}
+
+            <div className="jn-supply">
+              <span className="jn-supplylbl">{t.supplyLabel}</span>
+              <span className="jn-supplyhint">{t.supplyHint}</span>
+              <SupplyChips
+                selected={cats}
+                onToggle={(v) => { setCats((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v])); setErr(''); }}
+                freeText={otherCat}
+                onFreeText={(v) => { setOtherCat(v); setErr(''); }}
+                lang={lang}
+              />
+            </div>
 
             <label className="jn-agree">
               <input type="checkbox" checked={agree} onChange={(e) => { setAgree(e.target.checked); if (e.target.checked) setErr(''); }} />
@@ -202,8 +249,8 @@ export default function JoinPage({ params }: { params: { token: string } }) {
         )}
       </div>
 
-      {!loading && !dead && !sentTo && company && (
-        <a className="jn-notyou" href="/vendor-signup">{t.notYou(company)}</a>
+      {!loading && !dead && !sentTo && inviteCompany && (
+        <a className="jn-notyou" href="/vendor-signup">{t.notYou(inviteCompany)}</a>
       )}
     </div>
   );
@@ -216,9 +263,9 @@ const CSS = `
 .jn-brand{color:#141320;text-decoration:none;}
 .jn-brand b{font-size:17px;letter-spacing:1.5px;}
 .jn-brand i{color:#6C5CE0;font-style:normal;}
-.jn-lang{display:flex;border:1px solid #E2DFEC;border-radius:10px;overflow:hidden;background:#fff;}
-.jn-lang button{font-family:inherit;font-size:12.5px;font-weight:700;padding:8px 14px;border:none;background:none;color:#615F72;cursor:pointer;min-height:36px;}
-.jn-lang button.on{background:#6C5CE0;color:#fff;}
+.jn-supply{display:block;margin:16px 0 2px;}
+.jn-supplylbl{display:block;font-size:12.5px;font-weight:600;color:#615F72;}
+.jn-supplyhint{display:block;font-size:12px;color:#8A87A0;margin:2px 0 8px;}
 .jn-card{width:100%;max-width:460px;background:#fff;border:1px solid #E2DFEC;border-radius:16px;padding:26px 22px;box-shadow:0 8px 30px rgba(74,61,176,.08);}
 .jn-card h1{font-size:21px;font-weight:700;letter-spacing:-.01em;line-height:1.35;margin:6px 0 0;}
 .jn-tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.18em;color:#6C5CE0;margin:0;}

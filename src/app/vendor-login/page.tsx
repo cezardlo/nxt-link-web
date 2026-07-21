@@ -81,7 +81,7 @@ export default function VendorLoginPage() {
             {mode === 'signin' ? <>New here? <button onClick={() => { setMode('signup'); setError(''); }}>Create an account</button></>
               : <>Already registered? <button onClick={() => { setMode('signin'); setError(''); }}>Sign in</button></>}
           </div>
-          <a className="vl-alt" href="/vendor-signup">Just want to register your company without an account? →</a>
+          <a className="vl-alt" href="/vendor-signup">New vendor? Quick signup — under a minute, no password. / ¿Nuevo proveedor? Registro rápido — menos de un minuto, sin contraseña. →</a>
         </div>
       </main>
     </div>

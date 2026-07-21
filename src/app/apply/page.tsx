@@ -1,12 +1,15 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 // Public, low-friction vendor intake form. No login required to submit.
 // Posts multipart/form-data (text fields + optional logo + up to 3 product
-// images) to /api/apply/submit. This is a brand-new, standalone flow —
-// unrelated to the older /vendor-signup, /vendor-login, /vendor/portal
-// system (which uses a different table, vendor_profiles).
+// images) to /api/apply/submit.
+//
+// Signed-in vendors (e.g. quick-signup accounts arriving from the portal's
+// "finish your review application" card) get the form PRE-FILLED from their
+// vendor profile — company, contact, email, phone, what they said they
+// supply (fast-signup brief §4: never ask for the same data twice).
 
 const CATEGORIES = [
   'TMS',
@@ -107,6 +110,37 @@ export default function ApplyPage() {
   // Anti-bot: honeypot field (humans never see/fill it) + time the form was opened.
   const [websiteUrl, setWebsiteUrl] = useState('');
   const startedAtRef = useRef(Date.now());
+
+  // Signed-in vendors get the form pre-filled from their profile — the quick
+  // signup already asked for company / email / supply, so we never ask twice.
+  const [prefilled, setPrefilled] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch('/api/vendor/profile');
+        if (r.status !== 200) return;
+        const j = await r.json();
+        const v = j?.vendor;
+        if (!alive || !j?.ok || !v) return;
+        const keep = (setter: (fn: (p: string) => string) => void, val: unknown) => {
+          const s = String(val || '').trim();
+          if (s) setter((p) => (p.trim() ? p : s));
+        };
+        const hasCompany = v.company_name && v.company_name !== 'New company';
+        if (hasCompany) keep(setCompanyName, v.company_name);
+        keep(setContactName, v.contact_name);
+        keep(setEmail, v.email);
+        keep(setPhone, v.phone);
+        keep(setProblemSolved, v.description);
+        const cats: string[] = Array.isArray(v.categories) ? v.categories : [];
+        const catHit = CATEGORIES.find((c) => cats.some((x) => String(x).toLowerCase() === c.toLowerCase()));
+        if (catHit) setCategory((p) => p || catHit);
+        if (hasCompany || v.email) setPrefilled(true);
+      } catch { /* not signed in — the blank form is the normal path */ }
+    })();
+    return () => { alive = false; };
+  }, []);
 
   const emailValid = email.trim().length === 0 || EMAIL_RE.test(email.trim());
 
@@ -247,6 +281,11 @@ export default function ApplyPage() {
             </header>
 
             <form className="ap-card" onSubmit={handleSubmit} noValidate>
+              {prefilled && (
+                <p className="ap-prefill">
+                  ✓ Pre-filled from your account — check it and submit. <i>Prellenado desde tu cuenta — revísalo y envíalo.</i>
+                </p>
+              )}
               <input
                 type="text"
                 name="website_url"
@@ -658,6 +697,8 @@ const CSS = `
 .ap-addbtn:hover{border-color:var(--p);color:var(--ink);}
 .ap-fielderror{color:var(--red);font-size:12.5px;margin:0;}
 .ap-error{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--red);border-radius:11px;padding:12px 14px;font-size:14px;margin:4px 0 18px;}
+.ap-prefill{background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);color:var(--green);border-radius:11px;padding:11px 14px;font-size:13px;margin:0 0 18px;line-height:1.5;}
+.ap-prefill i{color:var(--muted);font-style:normal;}
 .ap-agree{display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin:6px 0 16px;}
 .ap-agree input{width:16px;height:16px;margin-top:2px;flex-shrink:0;accent-color:var(--p);cursor:pointer;}
 .ap-agree input:focus-visible{outline:2px solid var(--p);outline-offset:2px;}

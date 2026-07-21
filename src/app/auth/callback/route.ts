@@ -8,6 +8,17 @@ import { createServerSupabaseClient } from '@/lib/supabase/server-auth';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { ensureVendorProfile } from '@/lib/vendor/profile';
 
+function metaCategories(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  const out: string[] = [];
+  for (const raw of v) {
+    const s = String(raw).trim().slice(0, 80);
+    if (s && !out.includes(s)) out.push(s);
+    if (out.length >= 10) break;
+  }
+  return out;
+}
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const code = url.searchParams.get('code');
@@ -82,6 +93,7 @@ export async function GET(req: Request) {
                   // unowned same-email row, otherwise creates fresh from the
                   // invite. lane 'invite' = born approved (the review skip —
                   // see note above).
+                  const inviteCats = metaCategories(data.user.user_metadata?.supply_categories);
                   const ensured = await ensureVendorProfile(db, {
                     lane: 'invite',
                     authId: data.user.id,
@@ -93,6 +105,9 @@ export async function GET(req: Request) {
                       phone: inv.phone || null,
                       locale: inv.locale === 'es' ? 'es' : 'en',
                       source: 'invite',
+                      // "What do you supply?" chips tapped on /join — carried
+                      // in the OTP metadata so we never ask twice.
+                      ...(inviteCats.length ? { categories: inviteCats } : {}),
                     },
                   });
                   vendorId = ensured.ok ? ensured.id : null;
@@ -108,31 +123,57 @@ export async function GET(req: Request) {
             } catch { /* best-effort: never block sign-in on invite linking */ }
           }
 
-          // ORGANIC lane routing (two lanes, ONE system): a self-served
-          // vendor-role account with NO vendor profile yet must go through
-          // the application/review flow — /signup never drops a vendor into
-          // the portal unreviewed. Invited vendors were handled above
-          // (isVendor); accounts that already own a profile keep today's
-          // routing. Best-effort — a lookup hiccup falls back to defaults.
+          // ORGANIC lane routing (two lanes, ONE system).
+          //
+          // Quick signup (signup_lane 'quick' metadata, set by the magic mode
+          // of /api/auth/signup): account + dashboard IMMEDIATELY — the
+          // profile is created here through ensureVendorProfile lane
+          // 'organic', which is born PENDING. Admin review still gates
+          // anything going public (the publish gate checks vendor status);
+          // the portal shows what they can do meanwhile. Never weaken this.
+          //
+          // Legacy password signups keep the old routing: a vendor-role
+          // account with NO profile goes to the application/review flow.
+          // Best-effort — a lookup hiccup falls back to defaults.
           if (role === 'vendor' && !isVendor) {
-            try {
-              const { data: vp2 } = await db.from('vendor_profiles').select('id').eq('auth_id', data.user.id).maybeSingle();
-              if (!vp2) {
-                let hasApplication = false;
-                const { data: appByAuth } = await db.from('vendor_applications')
-                  .select('id').eq('auth_id', data.user.id)
-                  .order('created_at', { ascending: false }).limit(1).maybeSingle();
-                hasApplication = Boolean(appByAuth);
-                if (!hasApplication && data.user.email) {
-                  const esc = data.user.email.replace(/[\\%_]/g, (c) => `\\${c}`);
-                  const { data: appByEmail } = await db.from('vendor_applications')
-                    .select('id').ilike('email', esc)
+            const meta = data.user.user_metadata || {};
+            if (meta.signup_lane === 'quick' && data.user.email) {
+              try {
+                const quickCats = metaCategories(meta.supply_categories);
+                const ensured = await ensureVendorProfile(db, {
+                  lane: 'organic', // born PENDING — review decides what goes public
+                  authId: data.user.id,
+                  email: data.user.email,
+                  profile: {
+                    company_name: String(meta.company_name || '').trim().slice(0, 120) || 'New company',
+                    email: data.user.email.toLowerCase(),
+                    locale: meta.locale === 'es' ? 'es' : 'en',
+                    source: 'quick_signup',
+                    ...(quickCats.length ? { categories: quickCats } : {}),
+                  },
+                });
+                if (ensured.ok) isVendor = true;
+              } catch { /* best-effort: the portal's get-or-create still catches them */ }
+            } else {
+              try {
+                const { data: vp2 } = await db.from('vendor_profiles').select('id').eq('auth_id', data.user.id).maybeSingle();
+                if (!vp2) {
+                  let hasApplication = false;
+                  const { data: appByAuth } = await db.from('vendor_applications')
+                    .select('id').eq('auth_id', data.user.id)
                     .order('created_at', { ascending: false }).limit(1).maybeSingle();
-                  hasApplication = Boolean(appByEmail);
+                  hasApplication = Boolean(appByAuth);
+                  if (!hasApplication && data.user.email) {
+                    const esc = data.user.email.replace(/[\\%_]/g, (c) => `\\${c}`);
+                    const { data: appByEmail } = await db.from('vendor_applications')
+                      .select('id').ilike('email', esc)
+                      .order('created_at', { ascending: false }).limit(1).maybeSingle();
+                    hasApplication = Boolean(appByEmail);
+                  }
+                  organicDest = hasApplication ? '/apply/status' : '/apply?from=signup';
                 }
-                organicDest = hasApplication ? '/apply/status' : '/apply?from=signup';
-              }
-            } catch { /* fall back to default routing */ }
+              } catch { /* fall back to default routing */ }
+            }
           }
         }
         dest = next || organicDest || (role === 'admin' || role === 'super_admin' ? '/admin'

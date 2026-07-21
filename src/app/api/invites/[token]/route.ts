@@ -76,7 +76,7 @@ export async function POST(req: Request, { params }: Ctx) {
   if (!token || !isSupabaseConfigured()) return NextResponse.json({ ok: false, message: 'Not available' }, { status: 404 });
   const db = getSupabaseClient({ admin: true });
 
-  let body: { email?: string; terms_accepted?: boolean; terms_language?: string } = {};
+  let body: { email?: string; terms_accepted?: boolean; terms_language?: string; company_name?: string; supply_categories?: unknown } = {};
   try { body = await req.json(); } catch { /* tolerated — the click-wrap check below still applies */ }
 
   const inv = await loadInvite(db, token);
@@ -104,6 +104,24 @@ export async function POST(req: Request, { params }: Ctx) {
     return NextResponse.json({ ok: false, message: 'This email cannot be used. Contact us for help.' }, { status: 403 });
   }
 
+  // Quick-signup answers from the landing page (never ask twice):
+  //  - a corrected company name updates the invite row (the operator may
+  //    have typed it slightly wrong — the vendor knows best);
+  //  - "what do you supply" chips ride in the OTP metadata below, and
+  //    /auth/callback writes them onto the new vendor profile.
+  const companyEdit = String(body.company_name || '').trim().slice(0, 120);
+  if (companyEdit && companyEdit !== inv.company_name) {
+    await db.from('vendor_invites').update({ company_name: companyEdit }).eq('id', inv.id);
+  }
+  const supplyCategories: string[] = [];
+  if (Array.isArray(body.supply_categories)) {
+    for (const raw of body.supply_categories) {
+      const s = String(raw).trim().slice(0, 80);
+      if (s && !supplyCategories.includes(s)) supplyCategories.push(s);
+      if (supplyCategories.length >= 10) break;
+    }
+  }
+
   // Record the ToS/Privacy acceptance BEFORE sending the sign-in link — no
   // evidence row, no account email. user_id is linked at /auth/callback.
   const recorded = await recordLegalAcceptance(db, {
@@ -125,7 +143,11 @@ export async function POST(req: Request, { params }: Ctx) {
   const redirect = `${SITE}/auth/callback?next=${encodeURIComponent('/vendor/portal?welcome=1')}`;
   const { error } = await anon.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: redirect, shouldCreateUser: true },
+    options: {
+      emailRedirectTo: redirect,
+      shouldCreateUser: true,
+      data: supplyCategories.length ? { supply_categories: supplyCategories } : undefined,
+    },
   });
   if (error) return NextResponse.json({ ok: false, message: 'Could not send the sign-in link. Try again in a minute.' }, { status: 500 });
 

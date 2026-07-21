@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import ChatWidget from '@/components/ChatWidget';
 import CategoryPicker from '@/components/CategoryPicker';
+import LanguageToggle, { useLang } from '@/components/LanguageToggle';
+import ProfileStrengthMeter, { computeProfileStrength } from '@/components/ProfileStrengthMeter';
 
 const AREAS = ['El Paso', 'Juárez', 'New Mexico', 'West Texas', 'Cross-border', 'National'];
 const INDUSTRIES = [
@@ -38,18 +40,14 @@ const TR: Record<string, { en: string; es: string }> = {
   saving: { en: 'Saving…', es: 'Guardando…' },
   saved: { en: '✓ Saved', es: '✓ Guardado' },
   autosave: { en: 'Auto-saves as you type', es: 'Se guarda solo mientras escribes' },
-  strength: { en: 'Profile strength', es: 'Perfil completo' },
-  finish_pre: { en: 'Finish', es: 'Completa' },
-  finish_post_one: { en: 'more step so buyers can find and trust you.', es: 'paso más para que los compradores te encuentren y confíen en ti.' },
-  finish_post_many: { en: 'more steps so buyers can find and trust you.', es: 'pasos más para que los compradores te encuentren y confíen en ti.' },
-  step_logo: { en: 'Add your logo', es: 'Agrega tu logo' },
-  step_about: { en: 'Describe your company (40+ characters)', es: 'Describe tu empresa (40+ caracteres)' },
-  step_cats: { en: 'Pick your categories', es: 'Elige tus categorías' },
-  step_listings: { en: 'Add products / services with prices', es: 'Agrega productos / servicios con precios' },
-  step_proof: { en: 'Add a photo or a case study', es: 'Agrega una foto o un caso de éxito' },
-  step_trust: { en: 'Add a certification (earns buyer trust)', es: 'Agrega una certificación (genera confianza)' },
-  add_now: { en: 'Add now →', es: 'Agregar →' },
   live: { en: '🎉 Your profile is complete and buyer-ready.', es: '🎉 Tu perfil está completo y listo para compradores.' },
+  rv_title: { en: 'You’re in — your storefront is in review', es: 'Ya estás dentro — tu tienda está en revisión' },
+  rv_body: { en: 'A human on our team reviews every new company. While that happens you can do everything below — nothing you build is lost, and your listings go live the moment you’re approved.', es: 'Una persona de nuestro equipo revisa cada empresa nueva. Mientras tanto puedes hacer todo lo de abajo — nada de lo que construyas se pierde, y tus publicaciones salen en vivo en cuanto te aprueben.' },
+  rv_now_1: { en: 'Build your profile and storefront', es: 'Construye tu perfil y tu tienda' },
+  rv_now_2: { en: 'Create listings as drafts', es: 'Crea publicaciones como borradores' },
+  rv_now_3: { en: 'Add photos, certifications, and proof', es: 'Agrega fotos, certificaciones y pruebas' },
+  rv_cta: { en: 'Speed it up — finish your review application (2 min) →', es: 'Acelera la revisión — completa tu solicitud (2 min) →' },
+  rv_cta_hint: { en: 'We pre-filled it with what you already told us — never twice.', es: 'Ya la prellenamos con lo que nos dijiste — nunca dos veces.' },
   live_link: { en: 'See how buyers see it →', es: 'Mira cómo lo ven los compradores →' },
   cx_start: { en: '✦ Set up with NXT AI — answer 2 questions, I’ll draft it all', es: '✦ Configura con NXT AI — responde 2 preguntas y lo redacto todo' },
   cx_title: { en: '✦ NXT AI · Set up your profile', es: '✦ NXT AI · Configura tu perfil' },
@@ -148,10 +146,9 @@ export default function VendorPortalPage() {
   const [cxSummary, setCxSummary] = useState('');
   const [cxBusy, setCxBusy] = useState(false);
   const [cxDraft, setCxDraft] = useState<{ description: string; tagline: string; categories: string[]; offerings: Array<{ kind: 'product' | 'service'; name: string; category: string }> } | null>(null);
-  const [lang, setLang] = useState<Lang>('en');
+  // Shared language state — the one LanguageToggle + `nxt_lang` key app-wide.
+  const [lang, switchLang] = useLang('en');
   const t = (k: string) => (TR[k] ? (lang === 'es' ? TR[k].es : TR[k].en) : k);
-  function switchLang(l: Lang) { setLang(l); try { localStorage.setItem('nxt_lang', l); } catch { /* */ } }
-  useEffect(() => { try { const s = localStorage.getItem('nxt_lang'); if (s === 'es' || s === 'en') setLang(s); } catch { /* */ } }, []);
 
   const load = useCallback(async () => {
     const res = await fetch('/api/vendor/profile');
@@ -459,19 +456,21 @@ export default function VendorPortalPage() {
     );
   }
 
-  // Profile Strength — the tasks that make a profile buyers can actually use
-  // and trust. Each completed task lifts the score; buyers see the result.
-  const steps = [
-    { key: 'logo', label: t('step_logo'), done: !!logoUrl, href: undefined as string | undefined },
-    { key: 'about', label: t('step_about'), done: (vendor.description || '').trim().length >= 40, href: undefined },
-    { key: 'cats', label: t('step_cats'), done: (vendor.categories || []).length > 0, href: undefined },
-    { key: 'listings', label: t('step_listings'), done: listingCount > 0, href: '/vendor/listings' },
-    { key: 'proof', label: t('step_proof'), done: photos.length > 0 || caseStudies.length > 0, href: undefined },
-    { key: 'trust', label: t('step_trust'), done: certs.length > 0, href: undefined },
-  ];
-  const doneCount = steps.filter((s) => s.done).length;
-  const pct = Math.round((doneCount / steps.length) * 100);
+  // Profile Strength — computed by THE one shared meter (30% pre-credited at
+  // signup; 5 items max, each naming its unlock; disappears at 100%).
+  const meterInput = {
+    hasLogo: !!logoUrl,
+    taglineLen: (vendor.tagline || '').trim().length,
+    descriptionLen: (vendor.description || '').trim().length,
+    listingCount,
+    hasWebsite: !!(vendor.website || '').trim(),
+    hasPhone: !!(vendor.phone || '').trim(),
+    hasCity: !!(vendor.city || '').trim(),
+    proofCount: certs.length + photos.length + caseStudies.length,
+  };
+  const pct = computeProfileStrength(meterInput).pct;
   const firstName = (vendor.contact_name || '').trim().split(/\s+/)[0] || '';
+  const inReview = vendor.status !== 'approved';
 
   // Software / technology is delivered digitally — no physical install site or
   // service region — so we skip the Service areas question for software-only vendors.
@@ -489,10 +488,7 @@ export default function VendorPortalPage() {
           <a className="vp-navlink" href="/vendor/deals">{t('nav_deals')}</a>
           <a className="vp-navlink" href={`/marketplace/vendor/${vendor.id}`}>{t('nav_store')}</a>
           <a className="vp-navlink" href="/account">{t('nav_account')}</a>
-          <div className="vp-lang" role="group" aria-label="Language">
-            <button className={lang === 'en' ? 'on' : ''} onClick={() => switchLang('en')}>EN</button>
-            <button className={lang === 'es' ? 'on' : ''} onClick={() => switchLang('es')}>ES</button>
-          </div>
+          <LanguageToggle lang={lang} onChange={switchLang} variant="dark" />
           <span className={'vp-badge ' + vendor.status}>{vendor.status}</span>
           <button className="vp-signout" onClick={signOut}>{t('signout')}</button>
         </div>
@@ -543,30 +539,29 @@ export default function VendorPortalPage() {
           </section>
         )}
 
+        {inReview && (
+          <section className="vp-review">
+            <b>{t('rv_title')}</b>
+            <p>{t('rv_body')}</p>
+            <ul>
+              <li>{t('rv_now_1')}</li>
+              <li>{t('rv_now_2')}</li>
+              <li>{t('rv_now_3')}</li>
+            </ul>
+            <a className="vp-reviewcta" href="/apply?from=portal">{t('rv_cta')}</a>
+            <span className="vp-reviewhint">{t('rv_cta_hint')}</span>
+          </section>
+        )}
+
         {pct === 100 ? (
           <div className="vp-live">{t('live')} <a href={`/marketplace/vendor/${vendor.id}`} target="_blank" rel="noreferrer">{t('live_link')}</a></div>
         ) : (
-          <section className="vp-onboard">
+          <>
             {!cxOpen && (
               <button className="vp-cxstart" onClick={openConcierge}>{t('cx_start')}</button>
             )}
-            <div className="vp-onhead">
-              <div>
-                <b>{t('strength')} — {pct}%</b>
-                <span>{t('finish_pre')} {steps.length - doneCount} {steps.length - doneCount === 1 ? t('finish_post_one') : t('finish_post_many')}</span>
-              </div>
-              <div className="vp-onbar" aria-hidden><i style={{ width: `${pct}%` }} /></div>
-            </div>
-            <div className="vp-onsteps">
-              {steps.map((s) => (
-                <div key={s.key} className={'vp-onstep' + (s.done ? ' done' : '')}>
-                  <span className="vp-ontick">{s.done ? '✓' : ''}</span>
-                  <span>{s.label}</span>
-                  {s.href && !s.done && <a className="vp-onlink" href={s.href}>{t('add_now')}</a>}
-                </div>
-              ))}
-            </div>
-          </section>
+            <ProfileStrengthMeter input={meterInput} lang={lang} links={{ listing: '/vendor/listings' }} />
+          </>
         )}
 
         {agreement && !agreement.accepted && (
@@ -912,29 +907,22 @@ const CSS = `
 .vp-badge.pending{background:rgba(251,191,36,.12);color:#FBBF24;}
 .vp-badge.approved{background:rgba(52,211,153,.12);color:var(--green);}
 .vp-badge.paused,.vp-badge.rejected{background:var(--surf2);color:var(--muted);}
-.vp-lang{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
-.vp-lang button{font-family:var(--sans);font-size:11.5px;font-weight:700;letter-spacing:.04em;color:var(--muted);background:none;border:none;padding:6px 10px;cursor:pointer;}
-.vp-lang button.on{background:var(--pbg);color:var(--p3);}
 .vp-signout{background:none;border:1px solid var(--line);color:var(--ink2);font:500 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer;}
 .vp-signout:hover{border-color:var(--p2);color:var(--ink);}
 .vp-wrap{max-width:760px;margin:0 auto;padding:44px 24px 100px;}
 .vp-wrap h1{font-size:30px;font-weight:800;letter-spacing:-.02em;margin-bottom:8px;}
 .vp-sub{color:var(--muted);font-size:15px;line-height:1.6;font-weight:300;margin-bottom:28px;}
 .vp-msg{background:var(--pbg);border:1px solid rgba(124,92,252,.25);color:var(--p3);padding:11px 15px;border-radius:12px;font-size:13.5px;margin-bottom:20px;}
-.vp-onboard{background:linear-gradient(120deg,rgba(124,92,252,.14),rgba(52,211,153,.06));border:1px solid rgba(124,92,252,.3);border-radius:18px;padding:22px 24px;margin-bottom:22px;}
-.vp-onhead{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;}
-.vp-onhead b{font-size:16px;font-weight:800;display:block;}
-.vp-onhead span{font-size:13px;color:var(--ink2);display:block;margin-top:4px;font-weight:300;}
-.vp-onbar{flex:1;min-width:140px;max-width:240px;height:8px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden;}
-.vp-onbar i{display:block;height:100%;background:linear-gradient(90deg,var(--p),var(--green));border-radius:99px;transition:width .4s ease;}
-.vp-onsteps{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;margin-top:18px;}
-@media(max-width:520px){.vp-onsteps{grid-template-columns:1fr;}}
-.vp-onstep{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--ink2);}
-.vp-onstep.done{color:var(--muted);}
-.vp-ontick{width:20px;height:20px;flex-shrink:0;border-radius:50%;border:1.5px solid var(--muted2);display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff;}
-.vp-onstep.done .vp-ontick{background:var(--green);border-color:transparent;}
-.vp-onlink{margin-left:auto;color:var(--p2);font-size:12.5px;font-weight:700;text-decoration:none;white-space:nowrap;}
-.vp-onlink:hover{color:var(--p3);}
+.vp-review{background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.3);border-radius:18px;padding:20px 22px;margin-bottom:22px;}
+.vp-review b{font-size:15.5px;font-weight:800;display:block;color:#FBD38D;}
+.vp-review p{font-size:13.5px;color:var(--ink2);line-height:1.6;margin:8px 0 10px;}
+.vp-review ul{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:7px;}
+.vp-review li{font-size:13.5px;color:var(--ink2);padding-left:24px;position:relative;}
+.vp-review li::before{content:'✓';position:absolute;left:0;top:0;color:var(--green);font-weight:800;}
+.vp-reviewcta{display:inline-block;font-size:13.5px;font-weight:700;color:#fff;background:var(--p);border-radius:10px;padding:11px 16px;text-decoration:none;}
+.vp-reviewcta:hover{background:var(--pd);}
+.vp-reviewcta:focus-visible{outline:2px solid var(--p3);outline-offset:2px;}
+.vp-reviewhint{display:block;font-size:12px;color:var(--muted);margin-top:8px;}
 .vp-titlerow{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;}
 .vp-preview{flex-shrink:0;color:var(--p2);font-size:13px;font-weight:600;text-decoration:none;border:1px solid var(--line);border-radius:10px;padding:9px 14px;background:var(--surf);}
 .vp-preview:hover{border-color:var(--p2);color:var(--p3);}
