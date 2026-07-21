@@ -164,6 +164,16 @@ Still open, in rough priority order:
 14. **Honest anchor pricing** — strike-through compare-at price with % badge,
     ONLY where a real list price exists (never fabricate discounts).
 
+## Accepted risks (documented, deliberately not fixed)
+- **Timing side channel on restricted-vendor 404s** (G5 review of `dd7ae17`,
+  2026-07-21): listing-detail and single-request routes return a byte-identical
+  "Listing not found" for suspended/banned vendors, but reach it after 2
+  sequential DB queries vs 1 for a truly missing listing — response latency
+  could statistically reveal "exists but suspended" to an attacker enumerating
+  IDs. Content identical; bundle path already indistinguishable. Fixing means
+  padding latency or extra queries on hot public paths — poor trade at this
+  stage. Revisit if suspension status ever becomes commercially sensitive.
+
 ## Standing reminders
 - User applies the combined patch + pushes to deploy; help with `git am` errors.
 - A live preview can't be produced from the sandbox (see [[Gotchas]]).
