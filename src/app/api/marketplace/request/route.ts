@@ -8,6 +8,7 @@ import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { tableFor } from '@/lib/marketplace/types';
 import { notifyVendor } from '@/lib/notify';
 import { sendMail } from '@/lib/mail';
+import { isRestricted } from '@/lib/vendor/moderation';
 
 export async function POST(req: Request) {
   let body: Record<string, unknown>;
@@ -54,6 +55,14 @@ export async function POST(req: Request) {
   // The listing must actually be published; vendor_id comes from the row, never the client.
   const { data: listing } = await db.from(tableFor(kind)).select('id, name, vendor_id').eq('id', listingId).eq('status', 'published').maybeSingle();
   if (!listing) return NextResponse.json({ ok: false, code: 'listing_not_found', message: 'Listing not found' }, { status: 404 });
+
+  // A restricted (suspended/banned) vendor's listing is rejected exactly like
+  // an unpublished/unknown one — same code, no separate "suspended" signal
+  // leaks to the buyer. Pure read-side check, no write here.
+  const { data: modVendor } = await db.from('vendor_profiles').select('moderation_status, suspended_until').eq('id', listing.vendor_id).maybeSingle();
+  if (modVendor && isRestricted({ moderation_status: (modVendor.moderation_status as string) || null, suspended_until: (modVendor.suspended_until as string) || null })) {
+    return NextResponse.json({ ok: false, code: 'listing_not_found', message: 'Listing not found' }, { status: 404 });
+  }
 
   const { data, error } = await db.from('quote_requests').insert({
     kind,
@@ -130,22 +139,36 @@ async function handleBundle(rawItems: unknown[], c: BundleContact) {
     if (r.vendor_id) found.set(r.id as string, { name: r.name as string, vendor_id: r.vendor_id as string });
   }
 
-  // Group by the listing's REAL vendor (server truth).
+  // Batch vendor lookup (one query for every candidate vendor in this cart) —
+  // reused both for the moderation gate below and for the email/company_name
+  // needed once requests are created, so a restricted vendor never costs an
+  // extra round trip.
+  const candidateVendorIds = Array.from(new Set(Array.from(found.values()).map((f) => f.vendor_id)));
+  const { data: vRows } = candidateVendorIds.length
+    ? await db.from('vendor_profiles').select('id, email, company_name, moderation_status, suspended_until').in('id', candidateVendorIds)
+    : { data: [] };
+  const vendorInfo = new Map<string, { email: string | null; company_name: string | null }>();
+  const restrictedVendorIds = new Set<string>();
+  for (const v of vRows || []) {
+    vendorInfo.set(v.id as string, { email: (v.email as string) || null, company_name: (v.company_name as string) || null });
+    if (isRestricted({ moderation_status: (v.moderation_status as string) || null, suspended_until: (v.suspended_until as string) || null })) {
+      restrictedVendorIds.add(v.id as string);
+    }
+  }
+
+  // Group by the listing's REAL vendor (server truth). A restricted vendor's
+  // listings are skipped exactly like an unpublished/unknown one — reuses the
+  // same skipped[] mechanism, no separate "suspended" signal leaks out.
   const byVendor = new Map<string, Array<{ listing_id: string; kind: string; name: string; qty: number; note?: string }>>();
   const skipped: string[] = [];
   for (const w of wanted) {
     const f = found.get(w.listing_id);
-    if (!f) { skipped.push(w.listing_id); continue; }
+    if (!f || restrictedVendorIds.has(f.vendor_id)) { skipped.push(w.listing_id); continue; }
     const arr = byVendor.get(f.vendor_id) || [];
     arr.push({ listing_id: w.listing_id, kind: w.kind, name: f.name, qty: w.qty, ...(w.note ? { note: w.note } : {}) });
     byVendor.set(f.vendor_id, arr);
   }
   if (byVendor.size === 0) return NextResponse.json({ ok: false, code: 'no_published_listings', message: 'No published listings in your cart — they may have been removed', skipped }, { status: 404 });
-
-  const vendorIds = Array.from(byVendor.keys());
-  const { data: vRows } = await db.from('vendor_profiles').select('id, email, company_name').in('id', vendorIds);
-  const vendorInfo = new Map<string, { email: string | null; company_name: string | null }>();
-  for (const v of vRows || []) vendorInfo.set(v.id as string, { email: (v.email as string) || null, company_name: (v.company_name as string) || null });
 
   const requests: Array<{ public_ref: string; vendor_name: string | null; item_count: number }> = [];
   const failures: string[] = [];

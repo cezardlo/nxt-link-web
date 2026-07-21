@@ -6,6 +6,7 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { isRestricted } from '@/lib/vendor/moderation';
 
 const CARD_BASE = 'id, public_ref, vendor_id, name, category, functional_group, overview, best_for, industries, image_paths, pilot, pricing, warranty_support, status, published_at';
 const CARD_PRODUCT = `${CARD_BASE}, availability, lead_time`;
@@ -52,13 +53,28 @@ export async function GET(req: Request) {
   kinds.forEach((k, i) => { rows = rows.concat(results[i].map((r) => ({ ...r, kind: k }))); });
   if (pilotOnly) rows = rows.filter((r) => Boolean(r.pilot && (r.pilot as { available?: boolean }).available));
 
-  // Vendor names (bulk) + signed first image per card.
+  // Vendor names (bulk) + signed first image per card. Same query also carries
+  // the moderation columns so the restricted-vendor filter below costs no
+  // extra round trip.
   const vendorIds = Array.from(new Set(rows.map((r) => r.vendor_id)));
   const { data: vendors } = vendorIds.length
-    ? await db.from('vendor_profiles').select('id, company_name, city, status, verification_level').in('id', vendorIds)
+    ? await db.from('vendor_profiles').select('id, company_name, city, status, verification_level, moderation_status, suspended_until').in('id', vendorIds)
     : { data: [] };
   const vmap = new Map<string, { company_name: string; city: string | null; verified: boolean; verification_level: string | null }>();
   for (const v of vendors || []) vmap.set(v.id as string, { company_name: v.company_name as string, city: (v.city as string) || null, verified: v.status === 'approved', verification_level: (v.verification_level as string) || null });
+
+  // Suspended/banned vendors' listings are hidden from the public marketplace
+  // (moderation gate — mirrors api/marketplace/vendor/[id] + requests/dispatch).
+  // Pure read-side check, no write: a lapsed suspension already reads as
+  // active via isRestricted(), and this is a list context, not a single
+  // record view, so we don't want the write-on-read behavior of
+  // autoReactivateIfExpired firing once per page load.
+  const restrictedVendorIds = new Set(
+    (vendors || [])
+      .filter((v) => isRestricted({ moderation_status: (v.moderation_status as string) || null, suspended_until: (v.suspended_until as string) || null }))
+      .map((v) => v.id as string),
+  );
+  if (restrictedVendorIds.size) rows = rows.filter((r) => !restrictedVendorIds.has(r.vendor_id));
 
   // "Verified vendors only" facet — drop listings whose vendor isn't verified.
   if (verifiedOnly) rows = rows.filter((r) => vmap.get(r.vendor_id)?.verified);

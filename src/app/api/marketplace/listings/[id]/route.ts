@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { colsFor, tableFor } from '@/lib/marketplace/types';
+import { isRestricted } from '@/lib/vendor/moderation';
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   if (!isSupabaseConfigured()) return NextResponse.json({ ok: false, message: 'Not configured' }, { status: 503 });
@@ -21,8 +22,20 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const row = listing as unknown as { id: string; vendor_id: string; category: string; image_paths?: string[] };
   const fk = kind === 'product' ? 'product_id' : 'service_id';
 
-  const [{ data: vendor }, { data: docs }, { data: cases }, { data: sameVendorP }, { data: sameVendorS }, { data: sameCat }, { data: reviewRows }] = await Promise.all([
-    db.from('vendor_profiles').select('id, company_name, city, website, description').eq('id', row.vendor_id).maybeSingle(),
+  // Fetch the vendor up front (before the rest of the detail queries fire) so
+  // a suspended/banned vendor's listing can short-circuit to the exact same
+  // "not found" shape the missing/unpublished-listing path already returns —
+  // no separate "suspended" signal leaks into the public payload. Pure
+  // read-side check (isRestricted), same as the marketplace browse route —
+  // no write-on-read here.
+  const { data: vendor } = await db.from('vendor_profiles')
+    .select('id, company_name, city, website, description, moderation_status, suspended_until')
+    .eq('id', row.vendor_id).maybeSingle();
+  if (vendor && isRestricted({ moderation_status: (vendor.moderation_status as string) || null, suspended_until: (vendor.suspended_until as string) || null })) {
+    return NextResponse.json({ ok: false, message: 'Listing not found' }, { status: 404 });
+  }
+
+  const [{ data: docs }, { data: cases }, { data: sameVendorP }, { data: sameVendorS }, { data: sameCat }, { data: reviewRows }] = await Promise.all([
     db.from('listing_documents').select('id, file_name, title, doc_type, ai_summary, size_bytes, storage_path').eq(fk, id).order('uploaded_at', { ascending: false }).limit(12),
     db.from('case_studies').select('id, title, challenge, solution, results').eq(fk, id).eq('status', 'published').limit(6),
     db.from('marketplace_products').select('id, name, category, overview').eq('vendor_id', row.vendor_id).eq('status', 'published').neq('id', id).limit(4),
