@@ -211,3 +211,24 @@ test('resolveFirstDealCredit: second deal for the same company is ineligible', (
   assert.equal(result.eligible, false);
   assert.equal(result.creditApplied, 0);
 });
+
+test('resolveFirstDealCredit: malformed inputs throw instead of silently resolving', () => {
+  const signupAt = new Date('2026-01-01T00:00:00Z');
+  const now = new Date('2026-01-05T00:00:00Z');
+  const ok = { tier: 'standard' as const, signupAt, now, priorCreditedDeals: 0, fee: 1_000 };
+
+  // Unknown tier must never silently pick a cap — not even the smaller one.
+  assert.throws(() => resolveFirstDealCredit({ ...ok, tier: 'vip' as never }), /tier must be/);
+  assert.throws(() => resolveFirstDealCredit({ ...ok, tier: undefined as never }), /tier must be/);
+
+  assert.throws(() => resolveFirstDealCredit({ ...ok, fee: Number.NaN }), /fee/);
+  assert.throws(() => resolveFirstDealCredit({ ...ok, fee: Number.POSITIVE_INFINITY }), /fee/);
+
+  assert.throws(() => resolveFirstDealCredit({ ...ok, signupAt: null as never }), /signupAt/);
+  assert.throws(() => resolveFirstDealCredit({ ...ok, signupAt: new Date('garbage') }), /signupAt/);
+  assert.throws(() => resolveFirstDealCredit({ ...ok, now: null as never }), /now/);
+  assert.throws(() => resolveFirstDealCredit({ ...ok, now: new Date(Number.NaN) }), /now/);
+
+  assert.throws(() => resolveFirstDealCredit({ ...ok, priorCreditedDeals: -1 }), /priorCreditedDeals/);
+  assert.throws(() => resolveFirstDealCredit({ ...ok, priorCreditedDeals: 0.5 }), /priorCreditedDeals/);
+});

@@ -112,6 +112,11 @@ export function resolveFirstDealCredit(input: FirstDealCreditInput): FirstDealCr
   if (!Number.isInteger(priorCreditedDeals) || priorCreditedDeals < 0) {
     throw new Error('priorCreditedDeals must be a non-negative integer');
   }
+  // Money code fails loudly: a typo or miscast DB value must never silently
+  // pick a cap (even the smaller one).
+  if (tier !== 'standard' && tier !== 'founding') {
+    throw new Error("tier must be 'standard' or 'founding'");
+  }
 
   const cap = tier === 'founding' ? FIRST_DEAL_CREDIT_FOUNDING : FIRST_DEAL_CREDIT_STANDARD;
   const expiresAt = new Date(signupAt.getTime() + CREDIT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
