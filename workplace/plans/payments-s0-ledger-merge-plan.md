@@ -1,6 +1,6 @@
 # Payments S0 — One deal ledger (approved architecture plan)
 
-Status: PLAN ONLY — awaiting Cesar's approval before any implementation. Produced 2026-07-21 by the Architecture Advisor (Opus, read-only pass per the model-routing policy). Implementation goes to Sonnet in the four phases below; the fee engine (`src/lib/fees/engine.ts`) is read-only guardrail throughout.
+Status: **APPROVED by Cesar 2026-07-21** (see `DECISIONS-2026-07-21.md` §1) with added requirements: the unified ledger record must show buyer, vendor, contract/order, amount, NXT//LINK fee, processing fee, vendor payout, refunds/disputes, and current payment status (processing fee / payout / refunds as nullable Stripe-era columns for now); the status model must distinguish ACH initiated vs settled — nothing counts as paid until Stripe confirms settlement. Produced 2026-07-21 by the Architecture Advisor (Opus, read-only pass per the model-routing policy). Implementation goes to Sonnet in the four phases below; the fee engine (`src/lib/fees/engine.ts`) is read-only guardrail throughout.
 
 ## Decisive finding
 `commissions` is migration-backed (FKs + RLS in repo). **`manual_deals` has NO migration anywhere in the repo — it exists only in the live database.** Every step below is shaped by that gap: the first deliverable is a source-controlled baseline snapshot of `manual_deals`.

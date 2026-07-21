@@ -112,6 +112,11 @@ INVITE ──── SIGN UP ──── PROFILE ──── LISTED ───�
 
 ## 4. Cesar's consolidated decision & action list
 
+> **2026-07-21:** items #6, #7, #8, #9, #11 are DECIDED — binding answers in
+> `DECISIONS-2026-07-21.md` (tiered payment methods, per-type approval periods,
+> approved payment-partner wording, $250 standard / $1,250 founding-only credit,
+> plus S0 one-ledger approval). Items #1–4, #10, #12–14 remain open.
+
 **Accounts / money (gates Wave 2):**
 1. Create the Stripe account, activate it, enable Connect (Express) + ACH,
    paste keys into Vercel — numbered walkthrough in payments plan §5.
