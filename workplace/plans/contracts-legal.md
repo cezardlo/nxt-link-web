@@ -3,7 +3,16 @@
 **Author:** Legal dept (AI paralegal — NOT a lawyer; nothing here is legal advice)
 **Date:** 2026-07-20
 **Status:** PLAN ONLY. No document here is ready to publish. Every item marked
-`[ATTORNEY]` requires a licensed attorney before it goes live. Sources of truth
+`[ATTORNEY]` requires a licensed attorney before it goes live.
+**Engineering status (2026-07-20):** §5 groundwork BUILT — `legal_documents` +
+`terms_acceptances` migration (`supabase/migrations/20260720_legal_acceptances.sql`,
+FILE only, not applied) with immutability guards + seeded DRAFT /terms + /privacy
+snapshots; click-wrap checkbox + fail-closed server recording at every
+account-creation lane (signup, apply, /join invite, vendor-signup, the two
+login-page signup modes) via `src/lib/legal/acceptance.ts`. Later flow points
+(§1.2 quote-submit / quote-accept / re-acceptance) and rendering docs from
+`legal_documents` are NOT built yet — until then, page edits to /terms or
+/privacy require a new seeded version row. Sources of truth
 read: `vault/Home.md`, `vault/Project.md`, `vault/Fees.md`, `vault/Payments.md`.
 
 **Money facts this plan protects** (from `vault/Fees.md` / `vault/Payments.md`):

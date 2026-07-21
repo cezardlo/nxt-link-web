@@ -20,13 +20,12 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { isAdminRequest } from '@/lib/assistant/auth';
+import { ensureVendorProfile } from '@/lib/vendor/profile';
 import { sendMail } from '@/lib/mail';
 
 const LOGIN_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://nxt-link-web.vercel.app').replace(/\/$/, '') + '/login';
 
 const APP_COLS = 'id, public_ref, company_name, contact_name, email, phone, category, offering_types, supply_chain_stages, company_size, region, problem_solved, target_customer, price_range, logo_path, product_image_paths, status, admin_notes, approved_at, auth_id, created_at';
-
-function esc(v: string): string { return v.replace(/[\\%_]/g, (c) => `\\${c}`); }
 
 function welcomeEmail(name: string, company: string): { subject: string; body: string } {
   const hi = name ? name : (company || 'there');
@@ -123,35 +122,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, action, status_advanced: after?.status === 'rejected', status: after?.status });
   }
 
-  // approve — idempotently create or link a live vendor_profiles row.
+  // approve — idempotently create or link a live vendor_profiles row through
+  // the ONE shared creator (src/lib/vendor/profile.ts). lane 'admin_approval'
+  // is the human review decision: it may claim any same-email profile (even a
+  // pending one auto-created by a portal visit) and flip it approved + active,
+  // or mint a fresh approved profile from the application data.
   const email = String(app.email || '');
   const authId = (app.auth_id as string) || null;
-  const cols = 'id, status, auth_id, email';
 
-  let profile: { id: string; status: string } | null = null;
-  let created = false;
-  let wasAlreadyApproved = false;
-
-  // 1) existing profile linked by auth_id
-  if (authId) {
-    const { data: p } = await db.from('vendor_profiles').select(cols).eq('auth_id', authId).maybeSingle();
-    if (p) profile = { id: p.id as string, status: p.status as string };
-  }
-  // 2) existing profile linked by email (case-insensitive)
-  if (!profile && email) {
-    const { data: p } = await db.from('vendor_profiles').select(cols).ilike('email', esc(email)).order('created_at', { ascending: false }).maybeSingle();
-    if (p) profile = { id: p.id as string, status: p.status as string };
-  }
-
-  if (profile) {
-    wasAlreadyApproved = profile.status === 'approved';
-    const patch: Record<string, unknown> = { status: 'approved', moderation_status: 'active' };
-    if (authId) patch.auth_id = authId;
-    const { data: upd } = await db.from('vendor_profiles').update(patch).eq('id', profile.id).select('id, status').maybeSingle();
-    profile = upd ? { id: upd.id as string, status: upd.status as string } : profile;
-  } else {
-    // 3) create fresh from the application data
-    const insert: Record<string, unknown> = {
+  const ensured = await ensureVendorProfile(db, {
+    lane: 'admin_approval',
+    authId,
+    email,
+    profile: {
       company_name: app.company_name || 'New company',
       contact_name: app.contact_name || null,
       email: email || null,
@@ -162,16 +145,13 @@ export async function POST(req: Request) {
       client_types: app.target_customer ? [app.target_customer] : [],
       description: app.problem_solved || null,
       logo_path: app.logo_path || null,
-      status: 'approved',
-      moderation_status: 'active',
       source: 'application',
-      auth_id: authId,
-    };
-    const { data: ins, error } = await db.from('vendor_profiles').insert(insert).select('id, status').single();
-    if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
-    profile = { id: ins.id as string, status: ins.status as string };
-    created = true;
-  }
+    },
+  });
+  if (!ensured.ok) return NextResponse.json({ ok: false, message: ensured.error }, { status: 500 });
+  const profile = { id: ensured.id, status: ensured.status };
+  const created = ensured.created;
+  const wasAlreadyApproved = ensured.wasAlreadyApproved;
 
   // Advance the application status (best-effort; guard may keep it — reported).
   await db.from('vendor_applications').update({ status: 'approved', approved_at: new Date().toISOString() }).eq('id', id);

@@ -17,6 +17,8 @@ const T = {
     broch: 'Brochures & documents', brochSub: 'Upload a capabilities deck, line card, or brochure (PDF, images, slides — up to 15 MB each).',
     add: 'Choose files', submit: 'Register company', submitting: 'Registering…',
     req: 'Please add a company name and a valid email.',
+    agreePre: 'I agree to the', agreeTos: 'Terms of Service', agreeAnd: 'and', agreePrivacy: 'Privacy Policy',
+    agreeErr: 'Please accept the Terms of Service and Privacy Policy to continue.',
     doneT: "You're registered", doneS: 'Your company profile is under review. A member of the NXT//LINK team will follow up shortly.',
     ref: 'Reference', another: 'Register another', next: 'Continue', back: 'Back',
     step: ['Company', 'What you do', 'Brochures'],
@@ -32,6 +34,8 @@ const T = {
     broch: 'Folletos y documentos', brochSub: 'Sube tu presentación, line card o folleto (PDF, imágenes, slides — hasta 15 MB c/u).',
     add: 'Elegir archivos', submit: 'Registrar empresa', submitting: 'Registrando…',
     req: 'Agrega el nombre de la empresa y un correo válido.',
+    agreePre: 'Acepto los', agreeTos: 'Términos de Servicio', agreeAnd: 'y el', agreePrivacy: 'Aviso de Privacidad',
+    agreeErr: 'Para continuar, acepta los Términos de Servicio y el Aviso de Privacidad.',
     doneT: 'Empresa registrada', doneS: 'Tu perfil está en revisión. Un miembro del equipo de NXT//LINK te dará seguimiento pronto.',
     ref: 'Referencia', another: 'Registrar otra', next: 'Continuar', back: 'Atrás',
     step: ['Empresa', 'Qué ofreces', 'Folletos'],
@@ -46,6 +50,7 @@ export default function VendorSignupPage() {
   const [cats, setCats] = useState<string[]>([]);
   const [areas, setAreas] = useState<string[]>([]);
   const [files, setFiles] = useState<File[]>([]);
+  const [agree, setAgree] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState<{ ref: string } | null>(null);
   const [error, setError] = useState('');
@@ -57,11 +62,12 @@ export default function VendorSignupPage() {
 
   async function submit() {
     if (!form.company_name.trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email)) { setError(t.req); setStep(0); return; }
+    if (!agree) { setError(t.agreeErr); return; }
     setError(''); setSubmitting(true);
     try {
       const res = await fetch('/api/vendors/signup', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, categories: cats, service_areas: areas, locale: lang }),
+        body: JSON.stringify({ ...form, categories: cats, service_areas: areas, locale: lang, terms_accepted: agree }),
       });
       const data = await res.json();
       const vendorId = data.id as string | undefined;
@@ -149,6 +155,16 @@ export default function VendorSignupPage() {
                 </>
               )}
 
+              {step === 2 && (
+                <label className="vs-agree">
+                  <input type="checkbox" checked={agree} onChange={(e) => { setAgree(e.target.checked); if (e.target.checked) setError(''); }} />
+                  <span>
+                    {t.agreePre} <a href="/terms" target="_blank" rel="noopener">{t.agreeTos}</a> {t.agreeAnd}{' '}
+                    <a href="/privacy" target="_blank" rel="noopener">{t.agreePrivacy}</a>.
+                  </span>
+                </label>
+              )}
+
               <div className="vs-actions">
                 {step > 0 && <button className="vs-btn ghost" onClick={() => setStep(step - 1)}>{t.back}</button>}
                 {step < 2 && <button className="vs-btn" onClick={() => setStep(step + 1)}>{t.next}</button>}
@@ -225,6 +241,11 @@ const CSS = `
 .vs-btn.ghost{background:var(--surf);border:1px solid var(--line);color:var(--ink);box-shadow:none;}
 .vs-btn.ghost:hover{border-color:var(--p2);}
 .vs-err{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:#FCA5A5;padding:12px 16px;border-radius:12px;font-size:13.5px;margin-bottom:18px;}
+.vs-agree{display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin-top:22px;}
+.vs-agree input{width:17px;height:17px;margin-top:2px;flex-shrink:0;accent-color:var(--p);cursor:pointer;}
+.vs-agree input:focus-visible{outline:2px solid var(--p);outline-offset:2px;}
+.vs-agree span{font-size:13px;color:var(--muted);line-height:1.55;}
+.vs-agree span a{color:var(--p3);}
 .vs-done{max-width:460px;margin:40px auto;text-align:center;}
 .vs-check{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--p),var(--pd));display:grid;place-items:center;margin:0 auto 18px;box-shadow:0 8px 30px rgba(124,92,252,.4);}
 .vs-done h1{font-size:30px;font-weight:800;letter-spacing:-.02em;margin-bottom:10px;}

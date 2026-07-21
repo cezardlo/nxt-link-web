@@ -7,17 +7,30 @@ export default function VendorLoginPage() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [agree, setAgree] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
 
   async function submit() {
+    if (mode === 'signup' && !agree) {
+      setError('Please accept the Terms of Service and Privacy Policy. / Por favor acepta los Términos de Servicio y el Aviso de Privacidad.');
+      return;
+    }
     setError(''); setBusy(true);
     try {
       const sb = createBrowserSupabaseClient();
       if (mode === 'signup') {
-        const { error: err } = await sb.auth.signUp({ email, password });
-        if (err) throw err;
+        // ONE signup system: account creation goes through the server route
+        // so the ToS/Privacy click-wrap is recorded fail-closed.
+        const r = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, role: 'vendor', terms_accepted: agree }),
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!j.ok) throw new Error(j.message || 'Something went wrong');
+        if (j.session) { window.location.href = '/vendor/portal'; return; }
         setSent(true);
       } else {
         const { error: err } = await sb.auth.signInWithPassword({ email, password });
@@ -49,6 +62,17 @@ export default function VendorLoginPage() {
               {error && <div className="vl-err">{error}</div>}
               <label className="vl-field"><span>Email</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
               <label className="vl-field"><span>Password</span><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} /></label>
+              {mode === 'signup' && (
+                <label className="vl-agree">
+                  <input type="checkbox" checked={agree} onChange={(e) => { setAgree(e.target.checked); if (e.target.checked) setError(''); }} />
+                  <span>
+                    I agree to the <a href="/terms" target="_blank" rel="noopener">Terms of Service</a> and{' '}
+                    <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.{' '}
+                    <i>Acepto los <a href="/terms" target="_blank" rel="noopener">Términos de Servicio</a> y el{' '}
+                    <a href="/privacy" target="_blank" rel="noopener">Aviso de Privacidad</a>.</i>
+                  </span>
+                </label>
+              )}
               <button className="vl-btn" disabled={busy} onClick={submit}>{busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}</button>
             </>
           )}
@@ -88,6 +112,12 @@ const CSS = `
 .vl-btn{width:100%;font-family:var(--sans);border:none;cursor:pointer;font-size:15px;font-weight:600;border-radius:12px;padding:14px;background:var(--p);color:#fff;margin-top:6px;box-shadow:0 4px 20px rgba(124,92,252,.35);}
 .vl-btn:hover{background:var(--pd);}.vl-btn:disabled{opacity:.6;}
 .vl-err{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:#FCA5A5;padding:11px 15px;border-radius:12px;font-size:13.5px;margin-bottom:16px;}
+.vl-agree{display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin-bottom:4px;}
+.vl-agree input{width:16px;height:16px;margin-top:2px;flex-shrink:0;accent-color:var(--p);cursor:pointer;}
+.vl-agree input:focus-visible{outline:2px solid var(--p);outline-offset:2px;}
+.vl-agree span{color:var(--muted);font-size:12.5px;line-height:1.55;}
+.vl-agree span a{color:var(--p2);}
+.vl-agree span i{color:var(--muted2);font-style:normal;}
 .vl-sent{background:var(--pbg);border:1px solid rgba(124,92,252,.25);color:var(--p2);padding:14px 16px;border-radius:12px;font-size:14px;line-height:1.5;}
 .vl-switch{text-align:center;margin-top:22px;font-size:13.5px;color:var(--muted);}
 .vl-switch button{background:none;border:none;color:var(--p2);font:600 13.5px var(--sans);cursor:pointer;}

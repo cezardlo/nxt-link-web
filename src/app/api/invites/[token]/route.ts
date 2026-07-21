@@ -15,6 +15,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { isEmailBanned } from '@/lib/vendor/moderation';
+import { recordLegalAcceptance, LEGAL_MSG, bilingual } from '@/lib/legal/acceptance';
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL || 'https://nxt-link-web.vercel.app').replace(/\/$/, '');
 const DEAD = ['expired', 'opted_out', 'declined', 'already_vendor'];
@@ -75,16 +76,24 @@ export async function POST(req: Request, { params }: Ctx) {
   if (!token || !isSupabaseConfigured()) return NextResponse.json({ ok: false, message: 'Not available' }, { status: 404 });
   const db = getSupabaseClient({ admin: true });
 
+  let body: { email?: string; terms_accepted?: boolean; terms_language?: string } = {};
+  try { body = await req.json(); } catch { /* tolerated — the click-wrap check below still applies */ }
+
   const inv = await loadInvite(db, token);
   if (!inv || DEAD.includes(inv.status as string)) return NextResponse.json({ ok: false, message: 'This invite is no longer active.' }, { status: 404 });
   if (new Date(inv.expires_at as string).getTime() < Date.now()) return NextResponse.json({ ok: false, message: 'This invite has expired.' }, { status: 404 });
+
+  // Click-wrap gate — fail closed (process doc §4): the invited lane skips
+  // admin review, never the terms. Error leads with the language they saw.
+  const langShown: 'en' | 'es' = body.terms_language === 'es' ? 'es' : body.terms_language === 'en' ? 'en' : (inv.locale === 'es' ? 'es' : 'en');
+  if (body.terms_accepted !== true) {
+    return NextResponse.json({ ok: false, message: bilingual(LEGAL_MSG.required, langShown) }, { status: 400 });
+  }
 
   // Resolve the email to send the sign-in link to: the invite's own email,
   // or (phone-only invites) one supplied by the vendor on the landing page.
   let email = (inv.email as string | null)?.toLowerCase() || '';
   if (!email) {
-    let body: { email?: string } = {};
-    try { body = await req.json(); } catch { /* empty body is fine when invite has an email */ }
     const supplied = String(body.email || '').trim().toLowerCase();
     if (!EMAIL_RE.test(supplied)) return NextResponse.json({ ok: false, message: 'Enter a valid email address.' }, { status: 400 });
     email = supplied;
@@ -93,6 +102,20 @@ export async function POST(req: Request, { params }: Ctx) {
 
   if (await isEmailBanned(db, email)) {
     return NextResponse.json({ ok: false, message: 'This email cannot be used. Contact us for help.' }, { status: 403 });
+  }
+
+  // Record the ToS/Privacy acceptance BEFORE sending the sign-in link — no
+  // evidence row, no account email. user_id is linked at /auth/callback.
+  const recorded = await recordLegalAcceptance(db, {
+    email,
+    context: 'invite_join',
+    languageShown: langShown,
+    relatedObjectType: 'vendor_invite',
+    relatedObjectId: inv.id as string,
+    req,
+  });
+  if (!recorded.ok) {
+    return NextResponse.json({ ok: false, message: bilingual(LEGAL_MSG.recordFailed, langShown) }, { status: 500 });
   }
 
   // Same magic-link flow as /login (signInWithOtp), with shouldCreateUser so

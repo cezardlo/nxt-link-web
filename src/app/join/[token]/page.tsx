@@ -37,6 +37,11 @@ const T = {
       ['Real requests, real people.', 'Every buyer request is reviewed by our team. Bilingual support.'],
     ],
     emailLabel: 'Your email (this becomes your sign-in)',
+    agreePre: 'I agree to the',
+    agreeTos: 'Terms of Service',
+    agreeAnd: 'and',
+    agreePrivacy: 'Privacy Policy',
+    errAgree: 'Please accept the terms to continue.',
     cta: 'Create my free account',
     ctaBusy: 'Sending your link…',
     under: 'Under a minute · No credit card',
@@ -62,6 +67,11 @@ const T = {
       ['Solicitudes reales, gente real.', 'Cada solicitud de compra la revisa nuestro equipo. Soporte bilingüe.'],
     ],
     emailLabel: 'Su correo (será su inicio de sesión)',
+    agreePre: 'Acepto los',
+    agreeTos: 'Términos de Servicio',
+    agreeAnd: 'y el',
+    agreePrivacy: 'Aviso de Privacidad',
+    errAgree: 'Para continuar, acepte los términos.',
     cta: 'Crear mi cuenta gratis',
     ctaBusy: 'Enviando su enlace…',
     under: 'Menos de un minuto · Sin tarjeta',
@@ -84,6 +94,7 @@ export default function JoinPage({ params }: { params: { token: string } }) {
   const [loading, setLoading] = useState(true);
   const [lang, setLang] = useState<Lang>('en');
   const [email, setEmail] = useState('');
+  const [agree, setAgree] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sentTo, setSentTo] = useState('');
   const [err, setErr] = useState('');
@@ -108,18 +119,23 @@ export default function JoinPage({ params }: { params: { token: string } }) {
 
   const send = useCallback(async () => {
     if (busy) return;
+    if (!agree) { setErr(t.errAgree); return; }
     setBusy(true); setErr('');
     try {
       const r = await fetch(`/api/invites/${encodeURIComponent(token)}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(invite?.has_email ? {} : { email: email.trim() }),
+        body: JSON.stringify({
+          terms_accepted: agree,
+          terms_language: lang,
+          ...(invite?.has_email ? {} : { email: email.trim() }),
+        }),
       });
       const j = await r.json().catch(() => ({}));
       if (j.ok) setSentTo(j.email_masked || invite?.email_masked || '');
       else setErr(j.message || t.errGeneric);
     } catch { setErr(t.errGeneric); }
     setBusy(false);
-  }, [busy, token, invite, email, t]);
+  }, [busy, agree, token, invite, email, lang, t]);
 
   const firstName = (invite?.contact_name || '').trim().split(/\s+/)[0] || '';
   const company = (invite?.company_name || '').trim();
@@ -168,6 +184,14 @@ export default function JoinPage({ params }: { params: { token: string } }) {
               </label>
             )}
 
+            <label className="jn-agree">
+              <input type="checkbox" checked={agree} onChange={(e) => { setAgree(e.target.checked); if (e.target.checked) setErr(''); }} />
+              <span>
+                {t.agreePre} <a href="/terms" target="_blank" rel="noopener">{t.agreeTos}</a> {t.agreeAnd}{' '}
+                <a href="/privacy" target="_blank" rel="noopener">{t.agreePrivacy}</a>.
+              </span>
+            </label>
+
             {err && <div className="jn-err">{err}</div>}
             <button type="button" className="jn-cta" onClick={send} disabled={busy}>
               {busy ? t.ctaBusy : t.cta}
@@ -207,6 +231,11 @@ const CSS = `
 .jn-field input{width:100%;min-height:48px;font-family:inherit;font-size:15px;padding:12px 14px;border-radius:12px;border:1px solid #E2DFEC;background:#F8F7FB;color:#141320;outline:none;}
 .jn-field input:focus{border-color:#6C5CE0;background:#fff;}
 .jn-err{background:#FDF2F2;border:1px solid #F3C9C9;color:#B04A4A;font-size:13px;border-radius:10px;padding:10px 12px;margin-top:12px;}
+.jn-agree{display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin-top:14px;}
+.jn-agree input{width:18px;height:18px;margin-top:1px;flex-shrink:0;accent-color:#6C5CE0;cursor:pointer;}
+.jn-agree input:focus-visible{outline:2px solid #6C5CE0;outline-offset:2px;}
+.jn-agree span{font-size:13px;color:#615F72;line-height:1.5;}
+.jn-agree span a{color:#6C5CE0;}
 .jn-cta{display:block;width:100%;text-align:center;font-family:inherit;font-size:15.5px;font-weight:700;padding:14px;min-height:52px;border-radius:12px;border:none;background:#6C5CE0;color:#fff;cursor:pointer;margin-top:16px;text-decoration:none;}
 .jn-cta:hover{background:#4A3DB0;}
 .jn-cta:disabled{opacity:.65;cursor:wait;}

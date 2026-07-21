@@ -6,6 +6,7 @@
 
 import { createServerSupabaseClient } from '@/lib/supabase/server-auth';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { ensureVendorProfile } from '@/lib/vendor/profile';
 
 export interface VendorSession {
   authId: string;
@@ -49,7 +50,9 @@ export interface VendorRow {
 
 /**
  * Get-or-create the vendor_profiles row for the signed-in user.
- * 1) match by auth_id  2) link by email (legacy anonymous signup)  3) create fresh.
+ * Delegates to the ONE shared creator (src/lib/vendor/profile.ts), lane
+ * 'portal': match by auth_id → link an unowned same-email row → create a
+ * blank PENDING placeholder (the review gate stays with the admin queue).
  */
 export async function getOrCreateVendorProfile(session: VendorSession): Promise<VendorRow | null> {
   if (!isSupabaseConfigured()) return null;
@@ -57,27 +60,12 @@ export async function getOrCreateVendorProfile(session: VendorSession): Promise<
 
   const cols = 'id, public_ref, company_name, contact_name, email, phone, website, city, categories, service_areas, industries, client_types, description, status, auth_id';
 
-  const { data: byAuth } = await db.from('vendor_profiles').select(cols).eq('auth_id', session.authId).maybeSingle();
-  if (byAuth) return byAuth as VendorRow;
-
-  if (session.email) {
-    const { data: byEmail } = await db
-      .from('vendor_profiles')
-      .select(cols)
-      .ilike('email', session.email.replace(/[\\%_]/g, (c) => `\\${c}`))
-      .is('auth_id', null)
-      .order('created_at', { ascending: false })
-      .maybeSingle();
-    if (byEmail) {
-      const { data: linked } = await db.from('vendor_profiles').update({ auth_id: session.authId }).eq('id', byEmail.id).select(cols).single();
-      if (linked) return linked as VendorRow;
-    }
-  }
-
-  const { data: created } = await db
-    .from('vendor_profiles')
-    .insert({ company_name: 'New company', email: session.email, auth_id: session.authId, status: 'pending', source: 'vendor_portal' })
-    .select(cols)
-    .single();
-  return (created as VendorRow) ?? null;
+  const ensured = await ensureVendorProfile(db, {
+    lane: 'portal',
+    authId: session.authId,
+    email: session.email,
+    select: cols,
+    profile: { company_name: 'New company', email: session.email, source: 'vendor_portal' },
+  });
+  return ensured.ok ? (ensured.row as unknown as VendorRow) : null;
 }

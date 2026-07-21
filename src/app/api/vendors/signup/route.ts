@@ -1,11 +1,16 @@
 // POST /api/vendors/signup
-// A company signs up to receive opportunities. Stores a vendor_profiles row
-// (server-side, service role). Optionally drafts a welcome email via Zoho.
-// Degrades gracefully when Supabase/Zoho are not configured.
+// A company signs up to receive opportunities (the ORGANIC lane — always
+// review-gated). Stores a PENDING vendor_profiles row through the shared
+// creator (src/lib/vendor/profile.ts) so a same-email profile is reused, not
+// duplicated. Click-wrap is enforced fail-closed: the ToS/Privacy acceptance
+// row is written before the profile. Optionally drafts a welcome email via
+// Zoho. Degrades gracefully when Supabase/Zoho are not configured.
 
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { ensureVendorProfile } from '@/lib/vendor/profile';
+import { recordLegalAcceptance, LEGAL_MSG, bilingual } from '@/lib/legal/acceptance';
 import { sendZohoMail } from '@/lib/zoho/mail';
 
 interface SignupBody {
@@ -19,6 +24,7 @@ interface SignupBody {
   service_areas?: string[];
   description?: string;
   locale?: string;
+  terms_accepted?: boolean;
 }
 
 export async function POST(req: Request) {
@@ -31,9 +37,15 @@ export async function POST(req: Request) {
 
   const companyName = String(body.company_name || '').trim();
   const email = String(body.email || '').trim();
+  const locale: 'en' | 'es' = body.locale === 'es' ? 'es' : 'en';
   if (!companyName) return NextResponse.json({ ok: false, message: 'Company name is required' }, { status: 400 });
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
     return NextResponse.json({ ok: false, message: 'A valid email is required' }, { status: 400 });
+
+  // Click-wrap gate — fail closed (process doc §4): no accepted terms, no registration.
+  if (body.terms_accepted !== true) {
+    return NextResponse.json({ ok: false, message: bilingual(LEGAL_MSG.required, locale) }, { status: 400 });
+  }
 
   const row = {
     company_name: companyName,
@@ -55,27 +67,48 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, stored: false, degraded: true, public_ref: ref, vendor: row });
   }
 
+  // Record the ToS/Privacy acceptance BEFORE the profile — if the evidence
+  // row can't be written, the registration is rejected (fail closed).
+  const dbLegal = getSupabaseClient({ admin: true });
+  const recorded = await recordLegalAcceptance(dbLegal, {
+    email,
+    context: 'vendor_signup',
+    languageShown: locale,
+    req,
+  });
+  if (!recorded.ok) {
+    return NextResponse.json({ ok: false, message: bilingual(LEGAL_MSG.recordFailed, locale) }, { status: 500 });
+  }
+
   try {
     const db = getSupabaseClient({ admin: true });
-    const { data, error } = await db
-      .from('vendor_profiles')
-      .insert(row)
-      .select('id, public_ref, company_name, email')
-      .single();
-    if (error) throw error;
+    // ONE shared creator — reuses a same-email profile instead of inserting a
+    // duplicate; the 'organic' lane is always born pending (review-gated).
+    const ensured = await ensureVendorProfile(db, {
+      lane: 'organic',
+      email,
+      select: 'id, public_ref, status, auth_id, email, company_name',
+      profile: row,
+    });
+    if (!ensured.ok) throw new Error(ensured.error);
+    const data = ensured.row as { id?: string; public_ref?: string };
 
-    // Best-effort welcome email (draft if Zoho not connected).
-    const mail = await sendZohoMail({
-      to: email,
-      subject: 'Welcome to NXT//LINK — your company is registered',
-      body: welcomeEmail(companyName, data?.public_ref || ''),
-    }).catch(() => ({ ok: true, sent: false, provider: 'fallback' as const }));
+    // Best-effort welcome email (draft if Zoho not connected) — only for a
+    // NEW registration, never re-sent to an already-registered company.
+    const mail = ensured.created
+      ? await sendZohoMail({
+          to: email,
+          subject: 'Welcome to NXT//LINK — your company is registered',
+          body: welcomeEmail(companyName, data?.public_ref || ''),
+        }).catch(() => ({ ok: true, sent: false, provider: 'fallback' as const }))
+      : { ok: true, sent: false, provider: 'fallback' as const };
 
     return NextResponse.json({
       ok: true,
       stored: true,
       id: data?.id,
       public_ref: data?.public_ref,
+      already_registered: !ensured.created,
       email_sent: mail.sent,
       email_provider: mail.provider,
     });

@@ -2,13 +2,16 @@
 
 // Create account — two clear steps:
 //   1) Choose account type first: Buyer, or Vendor/Supplier (+ business type).
-//   2) Enter email + password.
+//   2) Enter email + password + accept the Terms/Privacy (click-wrap).
 // Operator accounts are granted by the NXT Link team, never self-served.
-// Sends the Supabase confirmation email; the account stays limited until
-// the email is verified.
+// Account creation happens SERVER-SIDE via POST /api/auth/signup (one signup
+// system, all lanes) so the terms acceptance is recorded fail-closed before
+// the account exists. Sends the Supabase confirmation email; the account
+// stays limited until the email is verified.
+// Vendors from this ORGANIC lane are routed into /apply — the admin-reviewed
+// application flow (invited vendors join via /join/<token> instead).
 
 import { useState } from 'react';
-import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 
 type Role = 'client' | 'vendor';
 type Step = 'type' | 'details';
@@ -31,6 +34,7 @@ export default function SignupPage() {
   const [vendorType, setVendorType] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [agree, setAgree] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [sent, setSent] = useState(false);
@@ -41,22 +45,30 @@ export default function SignupPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!role) return;
+    if (!agree) {
+      setErr('Please accept the Terms of Service and Privacy Policy. / Por favor acepta los Términos de Servicio y el Aviso de Privacidad.');
+      return;
+    }
     setBusy(true); setErr('');
     try {
-      const sb = createBrowserSupabaseClient();
-      const { data, error } = await sb.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: { role, vendor_type: role === 'vendor' ? vendorType : null },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
+      const r = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          role,
+          vendor_type: role === 'vendor' ? vendorType : null,
+          terms_accepted: agree,
+        }),
       });
-      if (error) { setErr(error.message); setBusy(false); return; }
-      if (data.session) {
+      const j = await r.json().catch(() => ({}));
+      if (!j.ok) { setErr(j.message || 'Could not create the account. Try again.'); setBusy(false); return; }
+      if (j.session) {
         // Email confirmation disabled in project settings — go straight in.
+        // Organic vendors go to the application/review flow, buyers to /buyer.
         await fetch('/api/auth/me');
-        window.location.href = role === 'vendor' ? '/vendor/start' : '/buyer';
+        window.location.href = role === 'vendor' ? '/apply?from=signup' : '/buyer';
         return;
       }
       setSent(true);
@@ -81,7 +93,9 @@ export default function SignupPage() {
             account, and you&apos;ll be signed in automatically.
           </p>
           <p className="su-hint">
-            Until your email is verified, {role === 'vendor' ? 'you can build listings but not publish them.' : 'some actions stay limited.'}
+            {role === 'vendor'
+              ? 'After you verify, the next step is a short vendor application — a human on our team reviews every one. / Después de verificar, el siguiente paso es una breve solicitud de proveedor — nuestro equipo revisa cada una.'
+              : 'Until your email is verified, some actions stay limited.'}
           </p>
           <a className="su-link" href="/login">Already confirmed? Sign in</a>
         </div>
@@ -133,9 +147,15 @@ export default function SignupPage() {
               <input type={showPw ? 'text' : 'password'} placeholder="Password (8+ characters)" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" />
               <button type="button" className="su-pwtoggle" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? 'Hide password' : 'Show password'}>{showPw ? 'Hide' : 'Show'}</button>
             </div>
+            <label className="su-agree">
+              <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} required />
+              <span>
+                I agree to the <a href="/terms" target="_blank" rel="noopener">Terms of Service</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.
+                {' '}<i>Acepto los <a href="/terms" target="_blank" rel="noopener">Términos de Servicio</a> y el <a href="/privacy" target="_blank" rel="noopener">Aviso de Privacidad</a>.</i>
+              </span>
+            </label>
             {err && <div className="su-err">{err}</div>}
             <button className="su-btn" type="submit" disabled={busy}>{busy ? 'Creating…' : 'Create account'}</button>
-            <p className="su-legal">By creating an account you agree to the <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>.</p>
           </form>
 
           <a className="su-link" href="/login">Already have an account? Sign in</a>
@@ -178,8 +198,12 @@ const CSS = `
 .su-btn{font-family:inherit;font-size:15px;font-weight:700;padding:13px;border-radius:11px;border:none;background:#7C5CFC;color:#fff;cursor:pointer;width:100%;margin-top:4px;}
 .su-btn:hover{background:#6344DF;}.su-btn:disabled{opacity:.45;cursor:not-allowed;}
 .su-err{color:#FCA5A5;font-size:13px;}
-.su-legal{color:#63607A;font-size:11.5px;line-height:1.5;margin:2px 0 0;}
-.su-legal a{color:#9A97AF;}
+.su-agree{display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin:2px 0 0;}
+.su-agree input{width:16px;height:16px;margin-top:2px;flex-shrink:0;accent-color:#7C5CFC;cursor:pointer;}
+.su-agree input:focus-visible{outline:2px solid #7C5CFC;outline-offset:2px;}
+.su-agree span{color:#9A97AF;font-size:12px;line-height:1.55;}
+.su-agree span a{color:#C4B5FD;}
+.su-agree span i{color:#63607A;font-style:normal;}
 .su-hint{color:#63607A;font-size:12.5px;line-height:1.6;margin:16px 0 0;}
 .su-hint a{color:#9A97AF;}
 .su-link{display:block;margin-top:12px;color:#A78BFA;font-size:13.5px;text-decoration:none;}

@@ -14,6 +14,7 @@ export default function ApplyLoginPage() {
   const [mode, setMode] = useState<Mode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [agree, setAgree] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
@@ -27,12 +28,19 @@ export default function ApplyLoginPage() {
       const supabase = createBrowserSupabaseClient();
 
       if (mode === 'signup') {
-        const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
-        if (signUpError) {
-          setError(signUpError.message);
+        // ONE signup system: account creation goes through the server route
+        // so the ToS/Privacy click-wrap is recorded fail-closed.
+        const r = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, role: 'vendor', terms_accepted: agree }),
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!j.ok) {
+          setError(j.message || 'Something went wrong. Please try again.');
           return;
         }
-        if (!data.session) {
+        if (!j.session) {
           setNotice('Check your email to confirm your account, then sign in.');
           setMode('signin');
           return;
@@ -97,11 +105,23 @@ export default function ApplyLoginPage() {
               type="password"
               autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
               required
-              minLength={6}
+              minLength={mode === 'signup' ? 8 : 6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
             />
+
+            {mode === 'signup' && (
+              <label className="axl-agree">
+                <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} required />
+                <span>
+                  I agree to the <a href="/terms" target="_blank" rel="noopener">Terms of Service</a> and{' '}
+                  <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.{' '}
+                  <i>Acepto los <a href="/terms" target="_blank" rel="noopener">Términos de Servicio</a> y el{' '}
+                  <a href="/privacy" target="_blank" rel="noopener">Aviso de Privacidad</a>.</i>
+                </span>
+              </label>
+            )}
 
             <button className="axl-btn" type="submit" disabled={busy}>
               {busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}
@@ -156,6 +176,12 @@ const CSS = `
 .axl-input{width:100%;padding:12px 14px;background:var(--bg);border:1px solid var(--line);border-radius:11px;color:var(--ink);font:400 15px 'Outfit';outline:none;margin-bottom:18px;transition:border-color .15s,box-shadow .15s;}
 .axl-input:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
 .axl-input::placeholder{color:var(--muted2);}
+.axl-agree{display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin:0 0 18px;}
+.axl-agree input{width:16px;height:16px;margin-top:2px;flex-shrink:0;accent-color:var(--p);cursor:pointer;}
+.axl-agree input:focus-visible{outline:2px solid var(--p);outline-offset:2px;}
+.axl-agree span{color:var(--muted);font:400 12.5px/1.55 'Outfit';}
+.axl-agree span a{color:var(--p3);}
+.axl-agree span i{color:var(--muted2);font-style:normal;}
 .axl-btn{width:100%;padding:13px 18px;background:var(--p);color:#fff;border:none;border-radius:12px;font:600 15px 'Outfit';cursor:pointer;box-shadow:0 8px 24px rgba(124,92,252,.35);transition:background .15s;}
 .axl-btn:hover:not(:disabled){background:var(--pd);}
 .axl-btn:disabled{opacity:.6;cursor:not-allowed;}

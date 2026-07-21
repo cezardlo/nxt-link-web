@@ -10,6 +10,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getApplicantSession } from '@/lib/apply/auth';
+import { recordLegalAcceptance, LEGAL_MSG, bilingual } from '@/lib/legal/acceptance';
 
 const CATEGORIES = ['TMS', 'WMS', 'Telematics/ELD', 'Forklifts', 'Customs/Cross-Border', 'Cold Chain', 'Robotics', 'Other'];
 const OFFERING_TYPES = ['Product', 'Software / platform', 'Service', 'Innovation / frontier tool'];
@@ -60,6 +61,11 @@ export async function POST(req: Request) {
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return NextResponse.json({ ok: false, message: 'A valid email is required' }, { status: 400 });
   if (!CATEGORIES.includes(category)) return NextResponse.json({ ok: false, message: 'Choose a valid category' }, { status: 400 });
 
+  // Click-wrap gate — fail closed (process doc §4): no accepted terms, no application.
+  if (get('terms_accepted') !== 'true') {
+    return NextResponse.json({ ok: false, message: bilingual(LEGAL_MSG.required) }, { status: 400 });
+  }
+
   const session = await getApplicantSession();
 
   const offeringTypesRaw = form.getAll('offering_types').map((v) => String(v));
@@ -87,6 +93,19 @@ export async function POST(req: Request) {
   if (!isSupabaseConfigured()) {
     const ref = 'APP-' + Math.abs(hash(JSON.stringify(row))).toString(36).slice(0, 8).toUpperCase();
     return NextResponse.json({ ok: true, stored: false, degraded: true, public_ref: ref });
+  }
+
+  // Record the ToS/Privacy acceptance BEFORE storing the application — if the
+  // evidence row can't be written, the submission is rejected (fail closed).
+  const dbLegal = getSupabaseClient({ admin: true });
+  const recorded = await recordLegalAcceptance(dbLegal, {
+    email,
+    authId: session?.authId ?? null,
+    context: 'apply',
+    req,
+  });
+  if (!recorded.ok) {
+    return NextResponse.json({ ok: false, message: bilingual(LEGAL_MSG.recordFailed) }, { status: 500 });
   }
 
   try {

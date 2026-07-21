@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server-auth';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { ensureVendorProfile } from '@/lib/vendor/profile';
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -20,10 +21,21 @@ export async function GET(req: Request) {
       if (!error && data?.user) {
         let role = String(data.user.user_metadata?.role || 'client');
         let isVendor = false;
+        let organicDest: string | null = null;
         if (isSupabaseConfigured()) {
           const db = getSupabaseClient({ admin: true });
           const { data: pu } = await db.from('platform_users').select('role').eq('auth_id', data.user.id).maybeSingle();
           if (pu?.role) role = pu.role as string;
+
+          // Link pre-account click-wrap acceptance rows (/signup, /apply,
+          // /join) to this now-confirmed auth id. The DB guard only permits
+          // this null → id transition. Best-effort — never blocks sign-in.
+          if (data.user.email) {
+            try {
+              await db.from('terms_acceptances').update({ user_id: data.user.id })
+                .eq('email', data.user.email.toLowerCase()).is('user_id', null);
+            } catch { /* best-effort */ }
+          }
 
           // A passwordless early-access vendor never had a role set, so they'd
           // otherwise be treated as a buyer. Recognize them as a vendor if they
@@ -65,25 +77,25 @@ export async function GET(req: Request) {
               if (inv) {
                 let vendorId = (inv.vendor_id as string | null) || null;
                 if (!vendorId) {
-                  // Reuse an existing profile if one already belongs to this
-                  // account (idempotent), otherwise create it from the invite.
-                  const { data: mine } = await db.from('vendor_profiles').select('id').eq('auth_id', data.user.id).maybeSingle();
-                  if (mine) {
-                    vendorId = mine.id as string;
-                  } else {
-                    const { data: ins } = await db.from('vendor_profiles').insert({
+                  // ONE shared creator for every lane (src/lib/vendor/profile.ts).
+                  // Reuses this account's existing profile (idempotent) or an
+                  // unowned same-email row, otherwise creates fresh from the
+                  // invite. lane 'invite' = born approved (the review skip —
+                  // see note above).
+                  const ensured = await ensureVendorProfile(db, {
+                    lane: 'invite',
+                    authId: data.user.id,
+                    email: data.user.email,
+                    profile: {
                       company_name: inv.company_name || 'New company',
                       contact_name: inv.contact_name || null,
                       email: data.user.email.toLowerCase(),
                       phone: inv.phone || null,
                       locale: inv.locale === 'es' ? 'es' : 'en',
-                      status: 'approved',            // ← the review skip (see note above)
-                      moderation_status: 'active',
                       source: 'invite',
-                      auth_id: data.user.id,
-                    }).select('id').maybeSingle();
-                    vendorId = (ins?.id as string) || null;
-                  }
+                    },
+                  });
+                  vendorId = ensured.ok ? ensured.id : null;
                 }
                 await db.from('vendor_invites').update({
                   auth_id: data.user.id,
@@ -95,8 +107,35 @@ export async function GET(req: Request) {
               }
             } catch { /* best-effort: never block sign-in on invite linking */ }
           }
+
+          // ORGANIC lane routing (two lanes, ONE system): a self-served
+          // vendor-role account with NO vendor profile yet must go through
+          // the application/review flow — /signup never drops a vendor into
+          // the portal unreviewed. Invited vendors were handled above
+          // (isVendor); accounts that already own a profile keep today's
+          // routing. Best-effort — a lookup hiccup falls back to defaults.
+          if (role === 'vendor' && !isVendor) {
+            try {
+              const { data: vp2 } = await db.from('vendor_profiles').select('id').eq('auth_id', data.user.id).maybeSingle();
+              if (!vp2) {
+                let hasApplication = false;
+                const { data: appByAuth } = await db.from('vendor_applications')
+                  .select('id').eq('auth_id', data.user.id)
+                  .order('created_at', { ascending: false }).limit(1).maybeSingle();
+                hasApplication = Boolean(appByAuth);
+                if (!hasApplication && data.user.email) {
+                  const esc = data.user.email.replace(/[\\%_]/g, (c) => `\\${c}`);
+                  const { data: appByEmail } = await db.from('vendor_applications')
+                    .select('id').ilike('email', esc)
+                    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+                  hasApplication = Boolean(appByEmail);
+                }
+                organicDest = hasApplication ? '/apply/status' : '/apply?from=signup';
+              }
+            } catch { /* fall back to default routing */ }
+          }
         }
-        dest = next || (role === 'admin' || role === 'super_admin' ? '/admin'
+        dest = next || organicDest || (role === 'admin' || role === 'super_admin' ? '/admin'
           : role === 'vendor' || isVendor ? '/vendor/portal?welcome=1'
           : '/buyer');
       }

@@ -97,6 +97,7 @@ export default function ApplyPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [emailTouched, setEmailTouched] = useState(false);
+  const [agree, setAgree] = useState(false);
 
   const [result, setResult] = useState<{ publicRef: string; degraded: boolean } | null>(null);
 
@@ -183,6 +184,7 @@ export default function ApplyPage() {
     if (!email.trim() || !EMAIL_RE.test(email.trim())) { setError('A valid email is required.'); return; }
     if (!category) { setError('Please choose a category.'); return; }
     if (!problemSolved.trim()) { setError('Please tell us what problem you solve.'); return; }
+    if (!agree) { setError('Please accept the Terms of Service and Privacy Policy. / Por favor acepta los Términos de Servicio y el Aviso de Privacidad.'); return; }
 
     setSubmitting(true);
     try {
@@ -201,6 +203,7 @@ export default function ApplyPage() {
       fd.append('price_range', resolvedPriceRange());
       fd.append('website_url', websiteUrl);
       fd.append('started_at', String(startedAtRef.current));
+      fd.append('terms_accepted', agree ? 'true' : 'false');
       if (logo) fd.append('logo', logo.file);
       for (const img of images) fd.append('images', img.file);
 
@@ -508,6 +511,20 @@ export default function ApplyPage() {
                 </Field>
               </div>
 
+              <label className="ap-agree">
+                <input
+                  type="checkbox"
+                  checked={agree}
+                  onChange={(e) => setAgree(e.target.checked)}
+                />
+                <span>
+                  I agree to the <a href="/terms" target="_blank" rel="noopener">Terms of Service</a> and{' '}
+                  <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.{' '}
+                  <i>Acepto los <a href="/terms" target="_blank" rel="noopener">Términos de Servicio</a> y el{' '}
+                  <a href="/privacy" target="_blank" rel="noopener">Aviso de Privacidad</a>.</i>
+                </span>
+              </label>
+
               {error && <p className="ap-error">{error}</p>}
 
               <button type="submit" className="ap-submit" disabled={submitting}>
@@ -641,6 +658,12 @@ const CSS = `
 .ap-addbtn:hover{border-color:var(--p);color:var(--ink);}
 .ap-fielderror{color:var(--red);font-size:12.5px;margin:0;}
 .ap-error{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--red);border-radius:11px;padding:12px 14px;font-size:14px;margin:4px 0 18px;}
+.ap-agree{display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin:6px 0 16px;}
+.ap-agree input{width:16px;height:16px;margin-top:2px;flex-shrink:0;accent-color:var(--p);cursor:pointer;}
+.ap-agree input:focus-visible{outline:2px solid var(--p);outline-offset:2px;}
+.ap-agree span{color:var(--muted);font-size:12.5px;line-height:1.55;}
+.ap-agree span a{color:var(--p3);}
+.ap-agree span i{color:var(--muted2);font-style:normal;}
 .ap-filebtn{display:inline-flex;align-items:center;gap:8px;background:var(--surf2);border:1px solid var(--line);border-radius:10px;padding:10px 16px;font-size:13.5px;font-weight:600;color:var(--ink2);cursor:pointer;width:fit-content;transition:border-color .15s;}
 .ap-filebtn:hover{border-color:var(--p);color:var(--ink);}
 .ap-filebtn.ap-disabled{opacity:.5;cursor:not-allowed;}

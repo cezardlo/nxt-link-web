@@ -20,6 +20,15 @@ these three are under-planned — scope them after Wave 2:
   needs; the seed of the future CRM-lite tier (see finance plan §4).
 
 ## Ready when user says go
+- ~~**One signup system + legal click-wrap (Wave 1)**~~ — **SHIPPED 2026-07-20**:
+  all account doors merged into one system (shared `ensureVendorProfile()` in
+  `src/lib/vendor/profile.ts`; organic /signup vendors now route into /apply
+  review — invited /join vendors still skip it, decision #5); ToS/Privacy
+  click-wrap checkbox + fail-closed server recording at every lane
+  (`terms_acceptances`), server-side signup via `POST /api/auth/signup`.
+  Migration `supabase/migrations/20260720_legal_acceptances.sql` must be
+  applied to the live DB before acceptances record (until then signup lanes
+  fail closed with a clear bilingual error).
 - ~~**Easy vendor onboarding (invite funnel)**~~ — **SHIPPED 2026-07-20**
   (slices 1–4): `/admin/invites` 3-field capture → bilingual invite email →
   `/join/<token>` magic-link quick account → pre-approved profile at

@@ -1,6 +1,13 @@
 # Easy Vendor Onboarding — Invite Funnel Plan
 
 **Status: PLAN (no code written). 2026-07-20.**
+**Update (2026-07-20, one-signup-system task):** slices 1–4 are shipped, and the
+signup doors are now ONE system — `/join/[token]` gained a required ToS/Privacy
+click-wrap checkbox (recorded server-side, fail closed, before the magic link
+sends); profile creation in `/auth/callback` goes through the shared
+`ensureVendorProfile()` (`src/lib/vendor/profile.ts`, lane `invite` = still
+pre-approved per decision #5); organic `/signup` vendors now route into `/apply`
+admin review instead of dead-ending in the portal.
 Founder's ask, verbatim: *"Just their name and their company name and their email
 or phone number → send them a reminder → they click the website link → they make
 a quick account → later they can put their publishing and stuff."*
