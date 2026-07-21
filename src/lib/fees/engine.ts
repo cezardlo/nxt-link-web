@@ -50,10 +50,89 @@ export const DEFAULT_FEE_POLICY: FeePolicy = {
   negotiatedRate: null,
 };
 
-/** First two eligible deals per company receive up to this commission credit each. */
+/**
+ * @deprecated Retired policy alias — the old rule was "first TWO deals, up to
+ * $1,250 each". Cesar's decision 2026-07-21 replaced this with a tiered,
+ * server-authoritative first-deal credit: see FIRST_DEAL_CREDIT_STANDARD /
+ * FIRST_DEAL_CREDIT_FOUNDING / resolveFirstDealCredit below. Kept only until
+ * its three remaining importers (admin/deals routes + vendor/deals) migrate
+ * in a later slice — do not add new usages.
+ */
 export const FREE_DEAL_CREDIT = 1250;
 /** Protected-introduction window (months) from the NXT//LINK introduction. */
 export const PROTECTION_MONTHS = 12;
+
+/** Standard first-deal fee credit for a normal invited vendor. */
+export const FIRST_DEAL_CREDIT_STANDARD = 250;
+/** First-deal fee credit for a manually-approved founding vendor. */
+export const FIRST_DEAL_CREDIT_FOUNDING = 1250;
+/** Credit eligibility window, in days after vendor signup (strictly before day 90). */
+export const CREDIT_WINDOW_DAYS = 90;
+
+/** Vendor credit tier — 'founding' is an operator-only, manually-set flag. */
+export type VendorTier = 'standard' | 'founding';
+
+export interface FirstDealCreditInput {
+  tier: VendorTier;
+  /** Vendor signup anchor — `vendor_profiles.created_at`. */
+  signupAt: Date;
+  /** Evaluation time (injectable for tests; production passes `new Date()`). */
+  now: Date;
+  /** Count of this company's deals already credited (credit_applied > 0, not cancelled). */
+  priorCreditedDeals: number;
+  /** The calculated fee (from calculateFee) the credit would apply against. */
+  fee: number;
+}
+
+export interface FirstDealCreditResult {
+  eligible: boolean;
+  /** The credit ceiling for this vendor's tier ($250 or $1,250). */
+  cap: number;
+  /** min(cap, fee) when eligible, otherwise 0. */
+  creditApplied: number;
+  reason: string;
+  /** signupAt + CREDIT_WINDOW_DAYS days — the moment eligibility ends. */
+  expiresAt: Date;
+}
+
+/**
+ * Pure, server-authoritative resolver for the one-per-company first-deal
+ * credit. No DB access, no client input trusted beyond what the caller
+ * already looked up (tier + signup date + prior credited count).
+ */
+export function resolveFirstDealCredit(input: FirstDealCreditInput): FirstDealCreditResult {
+  const { tier, signupAt, now, priorCreditedDeals, fee } = input;
+  assertFinite(fee, 'fee');
+  if (!(signupAt instanceof Date) || Number.isNaN(signupAt.getTime())) {
+    throw new Error('signupAt must be a valid Date');
+  }
+  if (!(now instanceof Date) || Number.isNaN(now.getTime())) {
+    throw new Error('now must be a valid Date');
+  }
+  if (!Number.isInteger(priorCreditedDeals) || priorCreditedDeals < 0) {
+    throw new Error('priorCreditedDeals must be a non-negative integer');
+  }
+
+  const cap = tier === 'founding' ? FIRST_DEAL_CREDIT_FOUNDING : FIRST_DEAL_CREDIT_STANDARD;
+  const expiresAt = new Date(signupAt.getTime() + CREDIT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+
+  let eligible: boolean;
+  let reason: string;
+  if (priorCreditedDeals > 0) {
+    eligible = false;
+    reason = 'ineligible: this company already used its one-per-company first-deal credit';
+  } else if (now.getTime() >= expiresAt.getTime()) {
+    eligible = false;
+    reason = `ineligible: more than ${CREDIT_WINDOW_DAYS} days since signup`;
+  } else {
+    eligible = true;
+    reason = 'eligible: first deal, within the credit window';
+  }
+
+  const creditApplied = eligible ? Math.min(cap, fee) : 0;
+
+  return { eligible, cap, creditApplied, reason, expiresAt };
+}
 
 export type LineKind =
   | 'product'
