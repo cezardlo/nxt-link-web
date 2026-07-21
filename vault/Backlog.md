@@ -59,7 +59,18 @@ these three are under-planned — scope them after Wave 2:
   `/api/buyer/cart`. Vendor leads inbox + buyer dashboard render ALL bundle
   items. Migration `supabase/migrations/20260721_cart_items.sql` must be
   applied to the live DB before signed-in cart sync works (anonymous carts
-  work without it). NOT deployed.
+  work without it). NOT deployed. **2026-07-21 G5 review of commit 85dcf35**
+  found 3 Important findings (cross-account cart leakage on shared devices;
+  raw English error text shown to Spanish /cart users; hardcoded Terms/Privacy
+  labels) — all 3 fixed same day. 5 Minor cleanup items from that review still
+  open (not urgent, do in a later pass): non-transactional cart replace in
+  `POST /api/buyer/cart` (partial failure can leave it half-written); no
+  debounce on `pushToAccount()` in `useCart.ts` (fires a network call per
+  keystroke on qty/note edits); `clampQty`/`UUID_RE`/the 999 qty cap are each
+  duplicated in `useCart.ts` and `api/marketplace/request/route.ts` instead of
+  a shared helper; the `'·'` fallback group-key in `/cart`'s vendor grouping
+  can collapse two different no-vendor-name items into one group; the qty `+`
+  button has no `disabled` at the 999 cap (the `−` button does disable at 1).
 - **Payments P1 — Stripe Connect escrow** (see [[Payments]]): vendor payout
   onboarding (Connect Express) + fixed-price flow: pay-into-escrow on quote
   accept, manual capture, ship → 5-day inspection → auto-release day 6,

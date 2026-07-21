@@ -8,6 +8,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
+import { clearLocalCart } from '@/components/cart/useCart';
 
 const CATEGORIES = [
   'TMS',
@@ -146,6 +147,7 @@ export default function ApplyStatusPage() {
       const supabase = createBrowserSupabaseClient();
       await supabase.auth.signOut();
     } finally {
+      clearLocalCart();
       window.location.href = '/apply/login';
     }
   }

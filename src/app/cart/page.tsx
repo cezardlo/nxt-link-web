@@ -44,6 +44,11 @@ const T: Record<Lang, Record<string, string>> = {
     safety: 'Free to send · no commitment until you accept a quote',
     disclosure: 'Managed through NXT//LINK. NXT//LINK may receive a commission from the vendor. You compare offers and communicate through the platform; your contact info is never shown publicly.',
     couldNotSend: 'Could not send — please try again',
+    errCompanyRequired: 'Company is required',
+    errEmailInvalid: 'A valid email is required',
+    errNoValidItems: 'No valid items in the cart',
+    errNoPublishedListings: 'No published listings in your cart — they may have been removed',
+    errCreateFailed: 'Could not create the request — please try again',
     sentTitle: 'Request sent through NXT//LINK',
     sentBody: 'Vendors respond inside NXT//LINK — track everything in your dashboard.',
     reference: 'Reference',
@@ -51,6 +56,8 @@ const T: Record<Lang, Record<string, string>> = {
     dashboard: 'Go to my dashboard',
     product: 'Product',
     service: 'Service',
+    terms: 'Terms',
+    privacy: 'Privacy',
   },
   es: {
     navTag: 'Carrito de cotización',
@@ -84,6 +91,11 @@ const T: Record<Lang, Record<string, string>> = {
     safety: 'Gratis enviar · sin compromiso hasta que aceptes una cotización',
     disclosure: 'Gestionado a través de NXT//LINK. NXT//LINK puede recibir una comisión del proveedor. Comparas ofertas y te comunicas por la plataforma; tu información de contacto nunca se muestra públicamente.',
     couldNotSend: 'No se pudo enviar — inténtalo de nuevo',
+    errCompanyRequired: 'La empresa es obligatoria',
+    errEmailInvalid: 'Se requiere un correo válido',
+    errNoValidItems: 'No hay artículos válidos en el carrito',
+    errNoPublishedListings: 'No hay publicaciones activas en tu carrito — es posible que hayan sido eliminadas',
+    errCreateFailed: 'No se pudo crear la solicitud — inténtalo de nuevo',
     sentTitle: 'Solicitud enviada a través de NXT//LINK',
     sentBody: 'Los proveedores responden dentro de NXT//LINK — sigue todo en tu panel.',
     reference: 'Referencia',
@@ -91,10 +103,23 @@ const T: Record<Lang, Record<string, string>> = {
     dashboard: 'Ir a mi panel',
     product: 'Producto',
     service: 'Servicio',
+    terms: 'Términos',
+    privacy: 'Privacidad',
   },
 };
 
 interface SentRequest { public_ref: string; vendor_name: string | null; item_count: number }
+
+// Stable error codes from /api/marketplace/request's bundle branch, mapped to
+// bilingual copy. Unknown/absent codes fall back to the server's English
+// `message` (kept for API compat) or the generic couldNotSend string.
+const ERROR_CODE_KEY: Record<string, string> = {
+  company_required: 'errCompanyRequired',
+  email_invalid: 'errEmailInvalid',
+  no_valid_items: 'errNoValidItems',
+  no_published_listings: 'errNoPublishedListings',
+  create_failed: 'errCreateFailed',
+};
 
 export default function CartPage() {
   const { items, count, remove, setQty, setNote, clear } = useCart();
@@ -161,7 +186,8 @@ export default function CartPage() {
         setSentSkipped(Array.isArray(data.skipped) && data.skipped.length > 0);
         clear();
       } else {
-        setFormMsg(data.message || t.couldNotSend);
+        const key = data.code ? ERROR_CODE_KEY[String(data.code)] : undefined;
+        setFormMsg((key && t[key]) || data.message || t.couldNotSend);
       }
     } catch { setFormMsg(t.couldNotSend); }
     setSending(false);
@@ -266,7 +292,7 @@ export default function CartPage() {
                     {sending ? t.sending : groups.length > 1 ? t.sendMulti.replace('{n}', String(groups.length)) : t.send}
                   </button>
                   <p className="qc-safenote">{t.safety}</p>
-                  <p className="qc-disclosure">{t.disclosure} <Link href="/terms">Terms</Link> · <Link href="/privacy">Privacy</Link></p>
+                  <p className="qc-disclosure">{t.disclosure} <Link href="/terms">{t.terms}</Link> · <Link href="/privacy">{t.privacy}</Link></p>
                 </form>
               </>
             )}

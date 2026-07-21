@@ -94,8 +94,8 @@ const MAX_BUNDLE_ITEMS = 50;
 interface BundleContact { company: string; contact: string; email: string; phone: string; message: string }
 
 async function handleBundle(rawItems: unknown[], c: BundleContact) {
-  if (!c.company) return NextResponse.json({ ok: false, message: 'Company is required' }, { status: 400 });
-  if (!c.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c.email)) return NextResponse.json({ ok: false, message: 'A valid email is required' }, { status: 400 });
+  if (!c.company) return NextResponse.json({ ok: false, code: 'company_required', message: 'Company is required' }, { status: 400 });
+  if (!c.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c.email)) return NextResponse.json({ ok: false, code: 'email_invalid', message: 'A valid email is required' }, { status: 400 });
 
   // Sanitize + dedupe the requested items.
   const seen = new Set<string>();
@@ -115,7 +115,7 @@ async function handleBundle(rawItems: unknown[], c: BundleContact) {
     });
     if (wanted.length >= MAX_BUNDLE_ITEMS) break;
   }
-  if (!wanted.length) return NextResponse.json({ ok: false, message: 'No valid items in the cart' }, { status: 400 });
+  if (!wanted.length) return NextResponse.json({ ok: false, code: 'no_valid_items', message: 'No valid items in the cart' }, { status: 400 });
   if (!isSupabaseConfigured()) return NextResponse.json({ ok: true, stored: false, degraded: true });
 
   const db = getSupabaseClient({ admin: true });
@@ -140,7 +140,7 @@ async function handleBundle(rawItems: unknown[], c: BundleContact) {
     arr.push({ listing_id: w.listing_id, kind: w.kind, name: f.name, qty: w.qty, ...(w.note ? { note: w.note } : {}) });
     byVendor.set(f.vendor_id, arr);
   }
-  if (byVendor.size === 0) return NextResponse.json({ ok: false, message: 'No published listings in your cart — they may have been removed', skipped }, { status: 404 });
+  if (byVendor.size === 0) return NextResponse.json({ ok: false, code: 'no_published_listings', message: 'No published listings in your cart — they may have been removed', skipped }, { status: 404 });
 
   const vendorIds = Array.from(byVendor.keys());
   const { data: vRows } = await db.from('vendor_profiles').select('id, email, company_name').in('id', vendorIds);
@@ -177,6 +177,6 @@ async function handleBundle(rawItems: unknown[], c: BundleContact) {
     requests.push({ public_ref: data.public_ref as string, vendor_name: v?.company_name || null, item_count: items.length });
   }
 
-  if (!requests.length) return NextResponse.json({ ok: false, message: failures.length ? 'Could not create the request — please try again' : 'No published listings in your cart' }, { status: 500 });
+  if (!requests.length) return NextResponse.json({ ok: false, code: 'create_failed', message: failures.length ? 'Could not create the request — please try again' : 'No published listings in your cart' }, { status: 500 });
   return NextResponse.json({ ok: true, bundle: true, requests, skipped, failed: failures });
 }

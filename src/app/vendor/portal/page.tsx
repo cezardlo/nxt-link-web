@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
+import { clearLocalCart } from '@/components/cart/useCart';
 import ChatWidget from '@/components/ChatWidget';
 import CategoryPicker from '@/components/CategoryPicker';
 import LanguageToggle, { useLang } from '@/components/LanguageToggle';
@@ -412,6 +413,7 @@ export default function VendorPortalPage() {
   async function signOut() {
     const sb = createBrowserSupabaseClient();
     await sb.auth.signOut();
+    clearLocalCart();
     window.location.href = '/vendor-login';
   }
 

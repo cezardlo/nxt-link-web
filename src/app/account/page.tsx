@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
+import { clearLocalCart } from '@/components/cart/useCart';
 
 export default function AccountPage() {
   const [checking, setChecking] = useState(true);
@@ -69,6 +70,7 @@ export default function AccountPage() {
   async function signOut() {
     const sb = createBrowserSupabaseClient();
     await sb.auth.signOut();
+    clearLocalCart();
     window.location.href = '/login';
   }
 

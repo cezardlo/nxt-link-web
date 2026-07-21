@@ -65,6 +65,19 @@ function writeCart(items: CartItem[]) {
   try { window.dispatchEvent(new Event(EVT)); } catch { /* non-browser */ }
 }
 
+/**
+ * Sign-out hook: wipes the local cart so the next person on a shared device
+ * never inherits the previous account's items. Call BEFORE redirecting away
+ * from sign-out. Also resets the module-level account-sync state so a fresh
+ * sign-in re-checks /api/buyer/cart instead of reusing a stale linked state.
+ */
+export function clearLocalCart() {
+  try { localStorage.removeItem(KEY); } catch { /* private mode */ }
+  accountLinked = false;
+  syncPromise = null;
+  try { window.dispatchEvent(new Event(EVT)); } catch { /* non-browser */ }
+}
+
 // ---- account sync (signed-in buyers only; anonymous stays localStorage) ----
 // Module-level so 50 mounted hooks (one per listing card) share ONE fetch.
 let accountLinked = false;
