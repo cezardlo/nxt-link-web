@@ -43,7 +43,7 @@ export async function GET() {
   // Marketplace quote/service requests (the self-service "request a quote" path).
   const { data: quotes } = await db
     .from('quote_requests')
-    .select('id, public_ref, kind, product_id, service_id, company, message, status, created_at, quote_amount, quote_currency, quote_message, quote_timeline, quote_valid_until, quoted_at, buyer_decision')
+    .select('id, public_ref, kind, product_id, service_id, company, message, status, created_at, quote_amount, quote_currency, quote_message, quote_timeline, quote_valid_until, quoted_at, buyer_decision, answers')
     .ilike('email', emailMatch)
     .order('created_at', { ascending: false })
     .limit(100);

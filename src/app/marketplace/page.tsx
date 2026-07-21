@@ -10,6 +10,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { levelAtLeast } from '@/components/marketplace/TrustBadges';
+import CartButton from '@/components/cart/CartButton';
+import AddToCartButton from '@/components/cart/AddToCartButton';
 
 interface Card {
   id: string; vendor_id?: string; kind: 'product' | 'service'; name: string; category: string;
@@ -360,6 +362,7 @@ export default function MarketplacePage() {
       <nav className="mk-nav">
         <Link className="mk-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>Marketplace</span></Link>
         <div className="mk-navr">
+          <CartButton />
           <button className={'mk-pill' + (savedOnly ? ' on' : '')} onClick={() => setSavedOnly((v) => !v)}>Saved ({saved.size})</button>
           <Link className="mk-pill" href="/buyer">My dashboard</Link>
           <Link className="mk-pill" href="/vendor-login">For vendors</Link>
@@ -634,6 +637,11 @@ function ListingCard({ c, saved, inCompare, onSave, onCompare }: { c: Card; save
         <div className="mk-actions">
           <button className={'mk-mini' + (saved ? ' on' : '')} onClick={onSave}>{saved ? 'Saved' : 'Save'}</button>
           <button className={'mk-mini' + (inCompare ? ' on' : '')} onClick={onCompare}>{inCompare ? 'In compare' : 'Compare'}</button>
+          <AddToCartButton
+            listing={{ id: c.id, kind: c.kind, name: c.name, vendor_id: c.vendor_id || null, vendor_name: c.vendor_name || null }}
+            className="mk-mini"
+            activeClassName="on"
+          />
           <Link className="mk-quote" href={`/marketplace/${c.kind}/${c.id}#quote`}>Request quote</Link>
         </div>
       </div>
@@ -861,7 +869,7 @@ const CSS = `
 .mk-tags{display:flex;flex-wrap:wrap;gap:5px;}
 .mk-tags span{font-size:11px;color:#A78BFA;background:rgba(124,92,252,.08);padding:3px 8px;border-radius:6px;}
 .mk-meta{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:#8080A0;margin-top:auto;padding-top:4px;}
-.mk-actions{display:flex;gap:8px;margin-top:10px;align-items:center;}
+.mk-actions{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap;}
 .mk-mini{font-family:inherit;font-size:12px;font-weight:600;padding:8px 10px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background:none;color:#C0C0D0;cursor:pointer;text-decoration:none;}
 .mk-mini.on{border-color:#7C5CFC;color:#C4B5FD;background:rgba(124,92,252,.1);}
 .mk-mini:disabled{opacity:.5;}

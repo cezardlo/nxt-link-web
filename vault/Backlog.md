@@ -48,6 +48,18 @@ these three are under-planned — scope them after Wave 2:
   (`nxt_lang`); `/admin/invites` has per-invite QR + full-screen conference
   "Scan to join" QR (in-repo generator `src/lib/qr.ts`, no new deps).
   No new migrations. NOT deployed.
+- ~~**Quote cart / bundled RFQ (Wave 1 task #4)**~~ — **SHIPPED 2026-07-21**:
+  buyers collect listings into a cart ("Add to cart" on marketplace cards +
+  listing detail, cart icon w/ live count in both navs) and submit them from
+  `/cart` (fully EN/ES) as ONE bundled quote request through the EXISTING
+  pipeline — one `quote_requests` row per vendor, items in `answers.items`
+  (jsonb), so one vendor quote + one accept + one commission (fee engine
+  untouched). Anonymous cart = localStorage `nxt_cart` (survives magic-link
+  round trip); signed-in cart merges into new `cart_items` table via
+  `/api/buyer/cart`. Vendor leads inbox + buyer dashboard render ALL bundle
+  items. Migration `supabase/migrations/20260721_cart_items.sql` must be
+  applied to the live DB before signed-in cart sync works (anonymous carts
+  work without it). NOT deployed.
 - **Payments P1 — Stripe Connect escrow** (see [[Payments]]): vendor payout
   onboarding (Connect Express) + fixed-price flow: pay-into-escrow on quote
   accept, manual capture, ship → 5-day inspection → auto-release day 6,

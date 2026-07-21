@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
+import { useLang } from '@/components/LanguageToggle';
 import { Megaphone } from 'lucide-react';
 import { MatchReasons, MATCH_REASONS_CSS } from '@/components/marketplace/MatchReasons';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
@@ -18,13 +19,14 @@ interface Pilot {
   location: string | null; scope: string | null; success_criteria: string | null;
   results: string | null; outcome: string | null;
 }
+interface BundleItem { listing_id: string; kind: string; name: string; qty: number; note?: string }
 interface Lead {
   id: string; public_ref: string; kind: string; listing_name: string | null;
   company: string; contact_name: string | null; email: string | null; phone: string | null;
   contact_hidden?: boolean;
   buyer_profile?: { company_name: string | null; contact_name: string | null; position: string | null; industry: string | null; city: string | null; phone: string | null; logo_url: string | null } | null;
   message: string | null; status: string; created_at: string;
-  answers?: { request_type?: string } | null;
+  answers?: { request_type?: string; bundle?: boolean; items?: BundleItem[] } | null;
   quote_amount?: number | null; quote_currency?: string | null; quote_message?: string | null;
   quote_timeline?: string | null; quote_valid_until?: string | null; quoted_at?: string | null;
   buyer_decision?: string | null; commission?: Commission | null; pilots?: Pilot[];
@@ -48,6 +50,7 @@ function estimateCommission(amount: number): number {
 }
 
 export default function VendorLeadsPage() {
+  const [lang] = useLang(); // stored `nxt_lang` — new bundle strings are EN/ES
   const [checking, setChecking] = useState(true);
   const [signedIn, setSignedIn] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -270,6 +273,26 @@ export default function VendorLeadsPage() {
                     <small>{l.listing_name ? `→ ${l.listing_name}` : ''} · {new Date(l.created_at).toLocaleDateString()}</small>
                     <span className="ld-ref">{l.public_ref}</span>
                   </div>
+
+                  {/* Bundled quote request (quote cart): show EVERY item, not just the first */}
+                  {(l.answers?.items?.length || 0) > 0 && (
+                    <div className="ld-bundle">
+                      <b>
+                        {lang === 'es'
+                          ? `Paquete · ${l.answers!.items!.length} ${l.answers!.items!.length === 1 ? 'artículo' : 'artículos'} — una cotización cubre todo`
+                          : `Bundle · ${l.answers!.items!.length} ${l.answers!.items!.length === 1 ? 'item' : 'items'} — one quote covers everything`}
+                      </b>
+                      <ul>
+                        {l.answers!.items!.map((it) => (
+                          <li key={it.listing_id}>
+                            <span className="ld-bqty">{it.qty}×</span> {it.name}
+                            {it.note ? <em> — {it.note}</em> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   <div className="ld-contact">
                     {l.contact_name && <span>{l.contact_name}</span>}
                     {l.email ? (
@@ -513,6 +536,12 @@ const CSS = `
 .ld-status.new{background:rgba(124,92,252,.15);color:#C4B5FD;}
 .ld-status.won{background:rgba(52,211,153,.12);color:#34D399;}
 .ld-status.lost{background:rgba(252,165,165,.1);color:#FCA5A5;}
+.ld-bundle{margin-top:12px;background:rgba(124,92,252,.06);border:1px solid rgba(124,92,252,.25);border-radius:12px;padding:12px 14px;}
+.ld-bundle b{font-size:12.5px;color:#C4B5FD;}
+.ld-bundle ul{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:5px;}
+.ld-bundle li{font-size:13.5px;color:#D5D4E0;line-height:1.5;}
+.ld-bundle li em{font-style:normal;color:#8080A0;}
+.ld-bqty{display:inline-block;min-width:30px;font-weight:700;color:#C4B5FD;}
 .ld-contact{display:flex;gap:14px;flex-wrap:wrap;font-size:13.5px;color:#C0C0D0;margin-top:10px;}
 .ld-contact a{color:#A78BFA;}
 .ld-hiddenc{color:#FBBF24;font-size:12.5px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:5px 10px;}

@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
+import { useLang } from '@/components/LanguageToggle';
 import { PackageSearch, Inbox } from 'lucide-react';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
 
@@ -21,6 +22,7 @@ interface QuoteRequest {
   quote_amount?: number | null; quote_currency?: string | null; quote_message?: string | null;
   quote_timeline?: string | null; quote_valid_until?: string | null; quoted_at?: string | null;
   buyer_decision?: string | null; reviewed?: boolean;
+  answers?: { request_type?: string; bundle?: boolean; items?: Array<{ listing_id: string; kind: string; name: string; qty: number; note?: string }> } | null;
   pilots?: Array<{ kind: string; status: string; scheduled_for: string | null; location: string | null; scope: string | null; outcome: string | null }>;
 }
 interface DashboardData {
@@ -53,6 +55,7 @@ const fmtValidUntil = (s: string) => {
 const money = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 
 export default function BuyerDashboardPage() {
+  const [lang] = useLang(); // stored `nxt_lang` — new bundle strings are EN/ES
   const [checking, setChecking] = useState(true);
   const [data, setData] = useState<DashboardData>({ signed_in: false });
   const [savedCount, setSavedCount] = useState(0);
@@ -267,6 +270,24 @@ export default function BuyerDashboardPage() {
                         <small>{fmtDate(q.created_at)}</small>
                         <span className="by-ref">{q.public_ref}</span>
                       </div>
+                      {/* Bundled request (quote cart): every item, one vendor quote */}
+                      {(q.answers?.items?.length || 0) > 0 && (
+                        <div className="by-bundle">
+                          <b>
+                            {lang === 'es'
+                              ? `Paquete · ${q.answers!.items!.length} ${q.answers!.items!.length === 1 ? 'artículo' : 'artículos'}`
+                              : `Bundle · ${q.answers!.items!.length} ${q.answers!.items!.length === 1 ? 'item' : 'items'}`}
+                          </b>
+                          <ul>
+                            {q.answers!.items!.map((it) => (
+                              <li key={it.listing_id}>
+                                <span className="by-bqty">{it.qty}×</span> {it.name}
+                                {it.note ? <em> — {it.note}</em> : null}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                       {q.message && <p className="by-msg">{q.message}</p>}
                       {/* Message the vendor — inside NXT//LINK */}
                       <div className="by-chat">
@@ -414,6 +435,12 @@ const CSS = `
 .by-status{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:4px 9px;border-radius:99px;background:rgba(124,92,252,.15);color:#C4B5FD;}
 .by-status.resp{background:rgba(52,211,153,.12);color:#34D399;}
 .by-msg{margin:12px 0 0;font-size:14px;color:#D5D4E0;line-height:1.6;background:#111118;border-radius:10px;padding:11px 13px;white-space:pre-wrap;}
+.by-bundle{margin-top:12px;background:rgba(124,92,252,.06);border:1px solid rgba(124,92,252,.25);border-radius:12px;padding:12px 14px;}
+.by-bundle b{font-size:12.5px;color:#C4B5FD;}
+.by-bundle ul{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:5px;}
+.by-bundle li{font-size:13.5px;color:#D5D4E0;line-height:1.5;}
+.by-bundle li em{font-style:normal;color:#8080A0;}
+.by-bqty{display:inline-block;min-width:30px;font-weight:700;color:#C4B5FD;}
 .by-meta{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:#9090A8;margin-top:10px;}
 .by-savedgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;}
 .by-saveditem{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:11px 14px;color:#D5D4E0;text-decoration:none;font-size:13.5px;}

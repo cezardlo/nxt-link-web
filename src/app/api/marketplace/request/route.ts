@@ -36,6 +36,15 @@ export async function POST(req: Request) {
   const phone = String(body.phone || '').trim().slice(0, 60);
   const message = String(body.message || '').trim().slice(0, 3000);
 
+  // ---- Bundle mode (quote cart): several listings, ONE request per vendor ----
+  // The cart may span vendors; each vendor gets exactly one quote_requests row,
+  // so the opportunity stays the unit of the existing pipeline (one quote, one
+  // accept, one commission via calculateFee — nothing new). The item list lives
+  // in answers.items (jsonb) — same no-schema-change pattern as request_type.
+  if (Array.isArray(body.items) && body.items.length > 0) {
+    return handleBundle(body.items, { company, contact, email, phone, message });
+  }
+
   if (!listingId) return NextResponse.json({ ok: false, message: 'listing_id is required' }, { status: 400 });
   if (!company) return NextResponse.json({ ok: false, message: 'Company is required' }, { status: 400 });
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return NextResponse.json({ ok: false, message: 'A valid email is required' }, { status: 400 });
@@ -70,4 +79,104 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ ok: true, public_ref: data.public_ref });
+}
+
+// ---------------------------------------------------------------------------
+// Quote cart submission. Validates every listing server-side (vendor_id always
+// comes from the listing row, never the client), groups items by vendor, and
+// inserts one bundled quote_requests row per vendor. Unpublished/unknown
+// listings are skipped and reported back. Buyer contact stays hidden from
+// vendors until acceptance exactly like single requests (vendor/leads masking).
+// ---------------------------------------------------------------------------
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MAX_BUNDLE_ITEMS = 50;
+
+interface BundleContact { company: string; contact: string; email: string; phone: string; message: string }
+
+async function handleBundle(rawItems: unknown[], c: BundleContact) {
+  if (!c.company) return NextResponse.json({ ok: false, message: 'Company is required' }, { status: 400 });
+  if (!c.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c.email)) return NextResponse.json({ ok: false, message: 'A valid email is required' }, { status: 400 });
+
+  // Sanitize + dedupe the requested items.
+  const seen = new Set<string>();
+  const wanted: Array<{ listing_id: string; kind: 'product' | 'service'; qty: number; note: string }> = [];
+  for (const raw of rawItems) {
+    if (!raw || typeof raw !== 'object') continue;
+    const it = raw as Record<string, unknown>;
+    const id = String(it.listing_id || '');
+    if (!UUID_RE.test(id) || seen.has(id)) continue;
+    seen.add(id);
+    const qty = Math.round(Number(it.qty));
+    wanted.push({
+      listing_id: id,
+      kind: it.kind === 'service' ? 'service' : 'product',
+      qty: Number.isFinite(qty) ? Math.min(999, Math.max(1, qty)) : 1,
+      note: String(it.note || '').trim().slice(0, 300),
+    });
+    if (wanted.length >= MAX_BUNDLE_ITEMS) break;
+  }
+  if (!wanted.length) return NextResponse.json({ ok: false, message: 'No valid items in the cart' }, { status: 400 });
+  if (!isSupabaseConfigured()) return NextResponse.json({ ok: true, stored: false, degraded: true });
+
+  const db = getSupabaseClient({ admin: true });
+  const pIds = wanted.filter((w) => w.kind === 'product').map((w) => w.listing_id);
+  const sIds = wanted.filter((w) => w.kind === 'service').map((w) => w.listing_id);
+  const [pRes, sRes] = await Promise.all([
+    pIds.length ? db.from('marketplace_products').select('id, name, vendor_id').in('id', pIds).eq('status', 'published') : Promise.resolve({ data: [] }),
+    sIds.length ? db.from('marketplace_services').select('id, name, vendor_id').in('id', sIds).eq('status', 'published') : Promise.resolve({ data: [] }),
+  ]);
+  const found = new Map<string, { name: string; vendor_id: string }>();
+  for (const r of [...(pRes.data || []), ...(sRes.data || [])]) {
+    if (r.vendor_id) found.set(r.id as string, { name: r.name as string, vendor_id: r.vendor_id as string });
+  }
+
+  // Group by the listing's REAL vendor (server truth).
+  const byVendor = new Map<string, Array<{ listing_id: string; kind: string; name: string; qty: number; note?: string }>>();
+  const skipped: string[] = [];
+  for (const w of wanted) {
+    const f = found.get(w.listing_id);
+    if (!f) { skipped.push(w.listing_id); continue; }
+    const arr = byVendor.get(f.vendor_id) || [];
+    arr.push({ listing_id: w.listing_id, kind: w.kind, name: f.name, qty: w.qty, ...(w.note ? { note: w.note } : {}) });
+    byVendor.set(f.vendor_id, arr);
+  }
+  if (byVendor.size === 0) return NextResponse.json({ ok: false, message: 'No published listings in your cart — they may have been removed', skipped }, { status: 404 });
+
+  const vendorIds = Array.from(byVendor.keys());
+  const { data: vRows } = await db.from('vendor_profiles').select('id, email, company_name').in('id', vendorIds);
+  const vendorInfo = new Map<string, { email: string | null; company_name: string | null }>();
+  for (const v of vRows || []) vendorInfo.set(v.id as string, { email: (v.email as string) || null, company_name: (v.company_name as string) || null });
+
+  const requests: Array<{ public_ref: string; vendor_name: string | null; item_count: number }> = [];
+  const failures: string[] = [];
+  for (const [vendorId, items] of byVendor) {
+    const first = items[0];
+    const { data, error } = await db.from('quote_requests').insert({
+      kind: first.kind,
+      product_id: first.kind === 'product' ? first.listing_id : null,
+      service_id: first.kind === 'service' ? first.listing_id : null,
+      vendor_id: vendorId,
+      company: c.company, contact_name: c.contact, email: c.email, phone: c.phone, message: c.message,
+      answers: { request_type: 'quote', bundle: true, items },
+      status: 'new',
+    }).select('id, public_ref').single();
+    if (error || !data) { failures.push(vendorInfo.get(vendorId)?.company_name || vendorId); continue; }
+
+    const v = vendorInfo.get(vendorId);
+    const itemLines = items.map((i) => `• ${i.qty} × ${i.name}${i.note ? ` — ${i.note}` : ''}`).join('\n');
+    // Best-effort vendor alerts (never block the response). No buyer contact in
+    // the email — the conversation stays inside NXT//LINK until acceptance.
+    await notifyVendor(db, vendorId, data.id as string, 'new_lead', `New bundled quote request from ${c.company} — ${items.length} item${items.length === 1 ? '' : 's'}`);
+    if (v?.email) {
+      sendMail({
+        to: v.email,
+        subject: `NXT//LINK: new bundled quote request (${items.length} item${items.length === 1 ? '' : 's'}) from ${c.company}`,
+        body: `You have a new bundled quote request (${data.public_ref}) from ${c.company}:\n${itemLines}\n\nSend ONE quote covering all items. Respond inside NXT//LINK — do not contact the buyer off-platform. Open your leads inbox: /vendor/leads`,
+      }).catch(() => {});
+    }
+    requests.push({ public_ref: data.public_ref as string, vendor_name: v?.company_name || null, item_count: items.length });
+  }
+
+  if (!requests.length) return NextResponse.json({ ok: false, message: failures.length ? 'Could not create the request — please try again' : 'No published listings in your cart' }, { status: 500 });
+  return NextResponse.json({ ok: true, bundle: true, requests, skipped, failed: failures });
 }

@@ -7,6 +7,8 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import CartButton from '@/components/cart/CartButton';
+import AddToCartButton from '@/components/cart/AddToCartButton';
 
 interface Detail {
   kind: 'product' | 'service';
@@ -144,6 +146,7 @@ export default function ListingDetailPage() {
           <span>›</span><em>{s(L.name).slice(0, 40)}{s(L.name).length > 40 ? '…' : ''}</em>
         </div>
         <div className="dt-navr">
+          <CartButton />
           <button className="dt-share" onClick={copyLink}>{copied ? 'Link copied ✓' : 'Share'}</button>
           <span className={'dt-kind ' + kind}>{kind}</span>
         </div>
@@ -290,6 +293,14 @@ export default function ListingDetailPage() {
         <aside className="dt-side" id="quote">
           <div className="dt-quote">
             <div className="dt-thru">Through NXT<span>{'//'}</span>LINK</div>
+            <div className="dt-cartrow">
+              <AddToCartButton
+                listing={{ id: String(params.id), kind, name: s(L.name), vendor_id: s(L.vendor_id) || null, vendor_name: d.vendor?.company_name || null }}
+                className="dt-cartadd"
+                activeClassName="on"
+                showHint
+              />
+            </div>
             {(() => { const a = REQUEST_ACTIONS.find((x) => x.key === requestType)!; return (
             <>
             <h3>{a.heading}</h3>
@@ -459,6 +470,10 @@ const CSS = `
 .dt-quote{background:#14141F;border:1px solid rgba(124,92,252,.3);border-radius:16px;padding:20px;position:sticky;top:74px;}
 .dt-thru{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#C4B5FD;background:rgba(124,92,252,.14);border:1px solid rgba(124,92,252,.3);padding:4px 10px;border-radius:99px;margin-bottom:12px;}
 .dt-thru span{color:#7C5CFC;}
+.dt-cartrow{margin:0 0 14px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.07);}
+.dt-cartadd{width:100%;font-family:inherit;font-size:13.5px;font-weight:700;padding:11px;border-radius:10px;border:1px solid rgba(124,92,252,.5);background:none;color:#C4B5FD;cursor:pointer;}
+.dt-cartadd:hover{background:rgba(124,92,252,.1);}
+.dt-cartadd.on{background:rgba(124,92,252,.15);border-color:#7C5CFC;}
 .dt-quote h3{font-size:17px;margin-bottom:6px;}
 .dt-actions{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 4px;}
 .dt-actions button{font-family:inherit;font-size:12.5px;font-weight:600;padding:7px 11px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background:none;color:#C0C0D0;cursor:pointer;transition:all .12s;}
