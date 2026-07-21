@@ -3,12 +3,14 @@
 // Public listing detail page — Carvana-style tabs: Overview, Specs/Process,
 // Pilot, Implementation, Pricing, Warranty & Support, Documents, Case Studies,
 // plus related listings and an inline Request Quote / Request Service form.
+// Fully EN/ES via the shared LanguageToggle/useLang pattern (see /cart).
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import CartButton from '@/components/cart/CartButton';
 import AddToCartButton from '@/components/cart/AddToCartButton';
+import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
 
 interface Detail {
   kind: 'product' | 'service';
@@ -27,19 +29,236 @@ const arr = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : []);
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' ? (v as Record<string, unknown>) : {});
 
 // Every deal-starting action runs THROUGH NXT//LINK (never "email the vendor"
-// or "visit their site"). One tracked request record per action.
-const REQUEST_ACTIONS = [
-  { key: 'quote', label: 'Request Quote', heading: 'Request a quote', cta: 'Send request', placeholder: 'What do you need? Quantity, timeline, site details…' },
-  { key: 'contact_sales', label: 'Contact Sales', heading: 'Contact sales', cta: 'Send message', placeholder: 'What would you like to discuss with the sales team?' },
-  { key: 'demo', label: 'Request Demo', heading: 'Request a demo', cta: 'Request demo', placeholder: 'What would you like the demo to show? Any preferred dates?' },
-  { key: 'pilot', label: 'Request Pilot', heading: 'Request a pilot', cta: 'Request pilot', placeholder: 'What outcome should a pilot prove? Site, timeline, success measure?' },
-  { key: 'question', label: 'Ask a Question', heading: 'Ask a question', cta: 'Send question', placeholder: 'What would you like to ask about this listing?' },
-] as const;
-type RequestKey = (typeof REQUEST_ACTIONS)[number]['key'];
+// or "visit their site"). One tracked request record per action. Keys only —
+// labels/headings/cta/placeholder come from the T table below (bilingual).
+const REQUEST_KEYS = ['quote', 'contact_sales', 'demo', 'pilot', 'question'] as const;
+type RequestKey = (typeof REQUEST_KEYS)[number];
+
+// Stable error codes from /api/marketplace/request's single-listing branch,
+// mapped to bilingual copy (same pattern as /cart's bundle-branch mapping).
+const ERROR_CODE_KEY: Record<string, string> = {
+  too_fast: 'errTooFast',
+  listing_id_required: 'errListingIdRequired',
+  company_required: 'errCompanyRequired',
+  email_invalid: 'errEmailInvalid',
+  listing_not_found: 'errListingNotFound',
+  create_failed: 'errCreateFailed',
+};
+
+const ACTIONS: Record<Lang, Record<RequestKey, { label: string; heading: string; cta: string; placeholder: string }>> = {
+  en: {
+    quote: { label: 'Request Quote', heading: 'Request a quote', cta: 'Send request', placeholder: 'What do you need? Quantity, timeline, site details…' },
+    contact_sales: { label: 'Contact Sales', heading: 'Contact sales', cta: 'Send message', placeholder: 'What would you like to discuss with the sales team?' },
+    demo: { label: 'Request Demo', heading: 'Request a demo', cta: 'Request demo', placeholder: 'What would you like the demo to show? Any preferred dates?' },
+    pilot: { label: 'Request Pilot', heading: 'Request a pilot', cta: 'Request pilot', placeholder: 'What outcome should a pilot prove? Site, timeline, success measure?' },
+    question: { label: 'Ask a Question', heading: 'Ask a question', cta: 'Send question', placeholder: 'What would you like to ask about this listing?' },
+  },
+  es: {
+    quote: { label: 'Solicitar cotización', heading: 'Solicitar una cotización', cta: 'Enviar solicitud', placeholder: '¿Qué necesitas? Cantidad, plazos, detalles del sitio…' },
+    contact_sales: { label: 'Contactar ventas', heading: 'Contactar a ventas', cta: 'Enviar mensaje', placeholder: '¿Qué te gustaría hablar con el equipo de ventas?' },
+    demo: { label: 'Solicitar demo', heading: 'Solicitar una demo', cta: 'Solicitar demo', placeholder: '¿Qué te gustaría que mostrara la demo? ¿Fechas preferidas?' },
+    pilot: { label: 'Solicitar piloto', heading: 'Solicitar un piloto', cta: 'Solicitar piloto', placeholder: '¿Qué resultado debe demostrar un piloto? Sitio, plazos, medida de éxito?' },
+    question: { label: 'Hacer una pregunta', heading: 'Hacer una pregunta', cta: 'Enviar pregunta', placeholder: '¿Qué te gustaría preguntar sobre esta publicación?' },
+  },
+};
+
+const T: Record<Lang, Record<string, string>> = {
+  en: {
+    navMarketplace: 'Marketplace',
+    loading: 'Loading…',
+    notFound: 'Listing not found.',
+    backToMarketplace: 'Back to marketplace',
+    linkCopied: 'Link copied ✓',
+    share: 'Share',
+    kindProduct: 'product',
+    kindService: 'service',
+    ratingReview: 'review',
+    ratingReviews: 'reviews',
+    pilotAvailable: 'Pilot available',
+    warranty: 'Warranty',
+    leadTime: 'Lead time',
+    response: 'Response',
+    emergency: '24/7 emergency',
+    tabOverview: 'Overview',
+    tabSpecs: 'Specs',
+    tabProcess: 'Process',
+    tabPilot: 'Pilot / Demo',
+    tabImplementation: 'Implementation',
+    tabPricing: 'Pricing',
+    tabWarranty: 'Warranty & Support',
+    tabDocuments: 'Documents',
+    tabCases: 'Case Studies',
+    tabReviews: 'Reviews',
+    noDescription: 'No description provided yet.',
+    rowBestFor: 'Best for',
+    rowIndustries: 'Industries',
+    rowUseCases: 'Use cases',
+    rowServiceAreas: 'Service areas',
+    rowCertifications: 'Certifications',
+    rowCompanySizes: 'Company sizes',
+    rowRoiDrivers: 'ROI drivers',
+    itemPilot: 'Pilot',
+    itemAvailable: 'Available',
+    itemDuration: 'Duration',
+    itemCost: 'Cost',
+    itemScope: 'Scope',
+    itemSuccessCriteria: 'Success criteria',
+    itemRequirements: 'Requirements',
+    itemTypicalTimeline: 'Typical timeline',
+    itemTraining: 'Training',
+    itemIntegrations: 'Integrations',
+    itemModel: 'Model',
+    itemRange: 'Range',
+    itemOptions: 'Options',
+    itemNotes: 'Notes',
+    pricingHint: 'Exact pricing depends on your situation — request a quote below.',
+    itemWarranty: 'Warranty',
+    itemSupport: 'Support',
+    itemSla: 'SLA',
+    itemMaintenance: 'Maintenance',
+    caseChallenge: 'Challenge:',
+    caseSolution: 'Solution:',
+    caseResults: 'Results:',
+    reviewsHint: 'Reviews come only from buyers who accepted a quote through NXT//LINK — verified engagements.',
+    relatedListings: 'Related listings',
+    through: 'Through NXT',
+    requestSentPrefix: 'Request sent through NXT//LINK. Reference:',
+    respondsInside: 'responds inside NXT//LINK — track it in',
+    theVendor: 'The vendor',
+    yourDashboard: 'your dashboard',
+    fCompany: 'Company *',
+    fName: 'Your name',
+    fEmail: 'Work email *',
+    fPhone: 'Phone',
+    sending: 'Sending…',
+    safety: 'Free to send · no commitment until you accept a quote',
+    disclosure: 'Managed through NXT//LINK. NXT//LINK may receive a commission from the vendor. You compare offers and communicate through the platform; your contact info is never shown publicly.',
+    terms: 'Terms',
+    privacy: 'Privacy',
+    storefront: 'View storefront →',
+    reportThanks: 'Thanks — our team will review this listing.',
+    reportLink: 'Something wrong with this listing? Report it',
+    reportTitle: 'Report this listing',
+    reasonWrongInfo: 'Information is wrong',
+    reasonMisleading: 'Misleading claims',
+    reasonSpam: 'Spam or fake',
+    reasonNotAvailable: 'No longer available',
+    reasonOther: 'Other',
+    reportDetailsPh: 'What is wrong? (optional)',
+    reportEmailPh: 'Your email (optional)',
+    sendReport: 'Send report',
+    cancel: 'Cancel',
+    mobileCtaSuffix: '— through NXT//LINK',
+    errTooFast: 'Form submitted too quickly — please try again',
+    errListingIdRequired: 'listing_id is required',
+    errCompanyRequired: 'Company is required',
+    errEmailInvalid: 'A valid email is required',
+    errListingNotFound: 'Listing not found',
+    errCreateFailed: 'Could not send — please try again',
+    couldNotSend: 'Could not send',
+  },
+  es: {
+    navMarketplace: 'Marketplace',
+    loading: 'Cargando…',
+    notFound: 'Publicación no encontrada.',
+    backToMarketplace: 'Volver al marketplace',
+    linkCopied: 'Enlace copiado ✓',
+    share: 'Compartir',
+    kindProduct: 'producto',
+    kindService: 'servicio',
+    ratingReview: 'reseña',
+    ratingReviews: 'reseñas',
+    pilotAvailable: 'Piloto disponible',
+    warranty: 'Garantía',
+    leadTime: 'Tiempo de entrega',
+    response: 'Respuesta',
+    emergency: 'Emergencia 24/7',
+    tabOverview: 'Resumen',
+    tabSpecs: 'Especificaciones',
+    tabProcess: 'Proceso',
+    tabPilot: 'Piloto / Demo',
+    tabImplementation: 'Implementación',
+    tabPricing: 'Precios',
+    tabWarranty: 'Garantía y soporte',
+    tabDocuments: 'Documentos',
+    tabCases: 'Casos de éxito',
+    tabReviews: 'Reseñas',
+    noDescription: 'Aún no se ha agregado una descripción.',
+    rowBestFor: 'Ideal para',
+    rowIndustries: 'Industrias',
+    rowUseCases: 'Casos de uso',
+    rowServiceAreas: 'Áreas de servicio',
+    rowCertifications: 'Certificaciones',
+    rowCompanySizes: 'Tamaños de empresa',
+    rowRoiDrivers: 'Factores de ROI',
+    itemPilot: 'Piloto',
+    itemAvailable: 'Disponible',
+    itemDuration: 'Duración',
+    itemCost: 'Costo',
+    itemScope: 'Alcance',
+    itemSuccessCriteria: 'Criterios de éxito',
+    itemRequirements: 'Requisitos',
+    itemTypicalTimeline: 'Plazo típico',
+    itemTraining: 'Capacitación',
+    itemIntegrations: 'Integraciones',
+    itemModel: 'Modelo',
+    itemRange: 'Rango',
+    itemOptions: 'Opciones',
+    itemNotes: 'Notas',
+    pricingHint: 'El precio exacto depende de tu situación — solicita una cotización abajo.',
+    itemWarranty: 'Garantía',
+    itemSupport: 'Soporte',
+    itemSla: 'SLA',
+    itemMaintenance: 'Mantenimiento',
+    caseChallenge: 'Reto:',
+    caseSolution: 'Solución:',
+    caseResults: 'Resultados:',
+    reviewsHint: 'Las reseñas provienen solo de compradores que aceptaron una cotización a través de NXT//LINK — participaciones verificadas.',
+    relatedListings: 'Publicaciones relacionadas',
+    through: 'A través de NXT',
+    requestSentPrefix: 'Solicitud enviada a través de NXT//LINK. Referencia:',
+    respondsInside: 'responde dentro de NXT//LINK — síguelo en',
+    theVendor: 'El proveedor',
+    yourDashboard: 'tu panel',
+    fCompany: 'Empresa *',
+    fName: 'Tu nombre',
+    fEmail: 'Correo de trabajo *',
+    fPhone: 'Teléfono',
+    sending: 'Enviando…',
+    safety: 'Gratis enviar · sin compromiso hasta que aceptes una cotización',
+    disclosure: 'Gestionado a través de NXT//LINK. NXT//LINK puede recibir una comisión del proveedor. Comparas ofertas y te comunicas por la plataforma; tu información de contacto nunca se muestra públicamente.',
+    terms: 'Términos',
+    privacy: 'Privacidad',
+    storefront: 'Ver perfil del proveedor →',
+    reportThanks: 'Gracias — nuestro equipo revisará esta publicación.',
+    reportLink: '¿Algo incorrecto en esta publicación? Repórtalo',
+    reportTitle: 'Reportar esta publicación',
+    reasonWrongInfo: 'La información es incorrecta',
+    reasonMisleading: 'Afirmaciones engañosas',
+    reasonSpam: 'Spam o falso',
+    reasonNotAvailable: 'Ya no está disponible',
+    reasonOther: 'Otro',
+    reportDetailsPh: '¿Qué está mal? (opcional)',
+    reportEmailPh: 'Tu correo (opcional)',
+    sendReport: 'Enviar reporte',
+    cancel: 'Cancelar',
+    mobileCtaSuffix: '— a través de NXT//LINK',
+    errTooFast: 'Formulario enviado demasiado rápido — inténtalo de nuevo',
+    errListingIdRequired: 'Se requiere listing_id',
+    errCompanyRequired: 'La empresa es obligatoria',
+    errEmailInvalid: 'Se requiere un correo válido',
+    errListingNotFound: 'Publicación no encontrada',
+    errCreateFailed: 'No se pudo enviar — inténtalo de nuevo',
+    couldNotSend: 'No se pudo enviar',
+  },
+};
 
 export default function ListingDetailPage() {
   const params = useParams<{ kind: string; id: string }>();
   const kind = params.kind === 'service' ? 'service' : 'product';
+  const [lang, setLang] = useLang();
+  const t = T[lang];
+  const actionsT = ACTIONS[lang];
   const [d, setD] = useState<Detail | null>(null);
   const [missing, setMissing] = useState(false);
   const [tab, setTab] = useState('overview');
@@ -99,8 +318,11 @@ export default function ListingDetailPage() {
       });
       const data = await res.json();
       if (data.ok) setSentRef(data.public_ref || 'received');
-      else setFormMsg(data.message || 'Could not send');
-    } catch { setFormMsg('Could not send'); }
+      else {
+        const key = data.code ? ERROR_CODE_KEY[String(data.code)] : undefined;
+        setFormMsg((key && t[key]) || data.message || t.couldNotSend);
+      }
+    } catch { setFormMsg(t.couldNotSend); }
     setSending(false);
   }
 
@@ -114,41 +336,44 @@ export default function ListingDetailPage() {
     setRepDone(true);
   }
 
-  if (missing) return <div className="dt"><style dangerouslySetInnerHTML={{ __html: CSS }} /><div className="dt-empty">Listing not found. <Link href="/marketplace">Back to marketplace</Link></div></div>;
-  if (!d) return <div className="dt"><style dangerouslySetInnerHTML={{ __html: CSS }} /><div className="dt-empty">Loading…</div></div>;
+  if (missing) return <div className="dt"><style dangerouslySetInnerHTML={{ __html: CSS }} /><div className="dt-empty">{t.notFound} <Link href="/marketplace">{t.backToMarketplace}</Link></div></div>;
+  if (!d) return <div className="dt"><style dangerouslySetInnerHTML={{ __html: CSS }} /><div className="dt-empty">{t.loading}</div></div>;
 
   const L = d.listing;
   const pilot = obj(L.pilot); const impl = obj(L.implementation); const ws = obj(L.warranty_support);
   const pricing = obj(L.pricing); const fit = obj(L.fit); const roi = obj(L.roi);
   const specs = obj(L.specs);
+  const kindLabel = (k: string) => (k === 'service' ? t.kindService : t.kindProduct);
 
   const TABS: Array<[string, string, boolean]> = [
-    ['overview', 'Overview', true],
-    [kind === 'product' ? 'specs' : 'process', kind === 'product' ? 'Specs' : 'Process', kind === 'product' ? Object.keys(specs).length > 0 : arr(L.process).length > 0],
-    ['pilot', 'Pilot / Demo', Object.keys(pilot).length > 0],
-    ['implementation', 'Implementation', Object.keys(impl).length > 0],
-    ['pricing', 'Pricing', Object.keys(pricing).length > 0 || Boolean(s(L.pricing_model))],
-    ['warranty', 'Warranty & Support', Object.keys(ws).length > 0],
-    ['documents', 'Documents', d.documents.length > 0],
-    ['cases', 'Case Studies', d.case_studies.length > 0],
-    ['reviews', 'Reviews', (d.reviews?.length || 0) > 0],
+    ['overview', t.tabOverview, true],
+    [kind === 'product' ? 'specs' : 'process', kind === 'product' ? t.tabSpecs : t.tabProcess, kind === 'product' ? Object.keys(specs).length > 0 : arr(L.process).length > 0],
+    ['pilot', t.tabPilot, Object.keys(pilot).length > 0],
+    ['implementation', t.tabImplementation, Object.keys(impl).length > 0],
+    ['pricing', t.tabPricing, Object.keys(pricing).length > 0 || Boolean(s(L.pricing_model))],
+    ['warranty', t.tabWarranty, Object.keys(ws).length > 0],
+    ['documents', t.tabDocuments, d.documents.length > 0],
+    ['cases', t.tabCases, d.case_studies.length > 0],
+    ['reviews', t.tabReviews, (d.reviews?.length || 0) > 0],
   ];
 
   const related = [...d.related.same_vendor, ...d.related.same_category];
+  const a = actionsT[requestType];
 
   return (
     <div className="dt">
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <nav className="dt-nav">
         <div className="dt-crumbs">
-          <Link href="/marketplace">Marketplace</Link>
+          <Link href="/marketplace">{t.navMarketplace}</Link>
           {s(L.category) && <><span>›</span><Link href={`/marketplace?tab=${kind}`}>{s(L.category)}</Link></>}
           <span>›</span><em>{s(L.name).slice(0, 40)}{s(L.name).length > 40 ? '…' : ''}</em>
         </div>
         <div className="dt-navr">
           <CartButton />
-          <button className="dt-share" onClick={copyLink}>{copied ? 'Link copied ✓' : 'Share'}</button>
-          <span className={'dt-kind ' + kind}>{kind}</span>
+          <button className="dt-share" onClick={copyLink}>{copied ? t.linkCopied : t.share}</button>
+          <span className={'dt-kind ' + kind}>{kindLabel(kind)}</span>
+          <LanguageToggle lang={lang} onChange={setLang} variant="dark" />
         </div>
       </nav>
 
@@ -166,20 +391,20 @@ export default function ListingDetailPage() {
                   </div>
                 )}
               </>
-            ) : <div className="dt-img dt-noimg">{kind === 'product' ? 'Product' : 'Service'}</div>}
+            ) : <div className="dt-img dt-noimg">{kindLabel(kind)}</div>}
           </div>
 
           <div className="dt-head">
             <h1>{s(L.name)}</h1>
             <div className="dt-sub">{s(L.category)}{d.vendor ? ` · ${d.vendor.company_name}` : ''}{d.vendor?.city ? ` · ${d.vendor.city}` : ''}</div>
             <div className="dt-badges">
-              {typeof d.vendor?.rating === 'number' && (d.vendor.review_count || 0) > 0 && <span className="rating">★ {d.vendor.rating.toFixed(1)} ({d.vendor.review_count} review{d.vendor.review_count === 1 ? '' : 's'})</span>}
-              {Boolean(pilot.available) && <span>Pilot available</span>}
-              {s(ws.warranty) && <span>Warranty</span>}
-              {s(L.lead_time) && <span>Lead time: {s(L.lead_time)}</span>}
-              {s(L.response_time) && <span>Response: {s(L.response_time)}</span>}
-              {Boolean(L.emergency_available) && <span className="urgent">24/7 emergency</span>}
-              {arr(L.availability).map((a) => <span key={a}>{a}</span>)}
+              {typeof d.vendor?.rating === 'number' && (d.vendor.review_count || 0) > 0 && <span className="rating">★ {d.vendor.rating.toFixed(1)} ({d.vendor.review_count} {d.vendor.review_count === 1 ? t.ratingReview : t.ratingReviews})</span>}
+              {Boolean(pilot.available) && <span>{t.pilotAvailable}</span>}
+              {s(ws.warranty) && <span>{t.warranty}</span>}
+              {s(L.lead_time) && <span>{t.leadTime}: {s(L.lead_time)}</span>}
+              {s(L.response_time) && <span>{t.response}: {s(L.response_time)}</span>}
+              {Boolean(L.emergency_available) && <span className="urgent">{t.emergency}</span>}
+              {arr(L.availability).map((av) => <span key={av}>{av}</span>)}
             </div>
           </div>
 
@@ -192,14 +417,14 @@ export default function ListingDetailPage() {
           <div className="dt-panel">
             {tab === 'overview' && (
               <>
-                <p className="dt-overview">{s(L.overview) || 'No description provided yet.'}</p>
-                {arr(L.best_for).length > 0 && <Row label="Best for" items={arr(L.best_for)} />}
-                {arr(L.industries).length > 0 && <Row label="Industries" items={arr(L.industries)} />}
-                {arr(L.use_cases).length > 0 && <Row label="Use cases" items={arr(L.use_cases)} />}
-                {arr(L.service_areas).length > 0 && <Row label="Service areas" items={arr(L.service_areas)} />}
-                {arr(L.certifications).length > 0 && <Row label="Certifications" items={arr(L.certifications)} />}
-                {arr(fit.company_sizes).length > 0 && <Row label="Company sizes" items={arr(fit.company_sizes)} />}
-                {arr(roi.drivers).length > 0 && <Row label="ROI drivers" items={arr(roi.drivers)} />}
+                <p className="dt-overview">{s(L.overview) || t.noDescription}</p>
+                {arr(L.best_for).length > 0 && <Row label={t.rowBestFor} items={arr(L.best_for)} />}
+                {arr(L.industries).length > 0 && <Row label={t.rowIndustries} items={arr(L.industries)} />}
+                {arr(L.use_cases).length > 0 && <Row label={t.rowUseCases} items={arr(L.use_cases)} />}
+                {arr(L.service_areas).length > 0 && <Row label={t.rowServiceAreas} items={arr(L.service_areas)} />}
+                {arr(L.certifications).length > 0 && <Row label={t.rowCertifications} items={arr(L.certifications)} />}
+                {arr(fit.company_sizes).length > 0 && <Row label={t.rowCompanySizes} items={arr(fit.company_sizes)} />}
+                {arr(roi.drivers).length > 0 && <Row label={t.rowRoiDrivers} items={arr(roi.drivers)} />}
               </>
             )}
             {tab === 'specs' && (
@@ -212,31 +437,31 @@ export default function ListingDetailPage() {
             )}
             {tab === 'pilot' && (
               <dl className="dt-kv">
-                {Boolean(pilot.available) && <Item k="Pilot" v="Available" />}
-                <Item k="Duration" v={s(pilot.duration)} /><Item k="Cost" v={s(pilot.cost)} /><Item k="Scope" v={s(pilot.scope)} />
-                {arr(pilot.success_criteria).length > 0 && <Item k="Success criteria" v={arr(pilot.success_criteria).join(' · ')} />}
+                {Boolean(pilot.available) && <Item k={t.itemPilot} v={t.itemAvailable} />}
+                <Item k={t.itemDuration} v={s(pilot.duration)} /><Item k={t.itemCost} v={s(pilot.cost)} /><Item k={t.itemScope} v={s(pilot.scope)} />
+                {arr(pilot.success_criteria).length > 0 && <Item k={t.itemSuccessCriteria} v={arr(pilot.success_criteria).join(' · ')} />}
               </dl>
             )}
             {tab === 'implementation' && (
               <dl className="dt-kv">
-                {arr(impl.requirements).length > 0 && <Item k="Requirements" v={arr(impl.requirements).join(' · ')} />}
-                <Item k="Typical timeline" v={s(impl.typical_timeline)} /><Item k="Training" v={s(impl.training)} />
-                {arr(impl.integrations).length > 0 && <Item k="Integrations" v={arr(impl.integrations).join(' · ')} />}
+                {arr(impl.requirements).length > 0 && <Item k={t.itemRequirements} v={arr(impl.requirements).join(' · ')} />}
+                <Item k={t.itemTypicalTimeline} v={s(impl.typical_timeline)} /><Item k={t.itemTraining} v={s(impl.training)} />
+                {arr(impl.integrations).length > 0 && <Item k={t.itemIntegrations} v={arr(impl.integrations).join(' · ')} />}
               </dl>
             )}
             {tab === 'pricing' && (
               <dl className="dt-kv">
-                <Item k="Model" v={s(pricing.model) || s(L.pricing_model)} /><Item k="Range" v={s(pricing.range)} />
-                {(pricing.buy || pricing.rent || pricing.lease) ? <Item k="Options" v={['buy', 'rent', 'lease'].filter((o) => pricing[o]).join(' · ')} /> : null}
-                <Item k="Notes" v={s(pricing.notes)} />
-                {!s(pricing.range) && <p className="dt-hint">Exact pricing depends on your situation — request a quote below.</p>}
+                <Item k={t.itemModel} v={s(pricing.model) || s(L.pricing_model)} /><Item k={t.itemRange} v={s(pricing.range)} />
+                {(pricing.buy || pricing.rent || pricing.lease) ? <Item k={t.itemOptions} v={['buy', 'rent', 'lease'].filter((o) => pricing[o]).join(' · ')} /> : null}
+                <Item k={t.itemNotes} v={s(pricing.notes)} />
+                {!s(pricing.range) && <p className="dt-hint">{t.pricingHint}</p>}
               </dl>
             )}
             {tab === 'warranty' && (
               <dl className="dt-kv">
-                <Item k="Warranty" v={s(ws.warranty)} />
-                {arr(ws.support_channels).length > 0 && <Item k="Support" v={arr(ws.support_channels).join(' · ')} />}
-                <Item k="SLA" v={s(ws.sla)} /><Item k="Maintenance" v={s(ws.maintenance)} />
+                <Item k={t.itemWarranty} v={s(ws.warranty)} />
+                {arr(ws.support_channels).length > 0 && <Item k={t.itemSupport} v={arr(ws.support_channels).join(' · ')} />}
+                <Item k={t.itemSla} v={s(ws.sla)} /><Item k={t.itemMaintenance} v={s(ws.maintenance)} />
               </dl>
             )}
             {tab === 'documents' && (
@@ -254,16 +479,16 @@ export default function ListingDetailPage() {
                 {d.case_studies.map((c) => (
                   <div className="dt-case" key={c.id}>
                     <b>{c.title}</b>
-                    {c.challenge && <p><span>Challenge:</span> {c.challenge}</p>}
-                    {c.solution && <p><span>Solution:</span> {c.solution}</p>}
-                    {Array.isArray(c.results) && c.results.length > 0 && <p><span>Results:</span> {c.results.join(' · ')}</p>}
+                    {c.challenge && <p><span>{t.caseChallenge}</span> {c.challenge}</p>}
+                    {c.solution && <p><span>{t.caseSolution}</span> {c.solution}</p>}
+                    {Array.isArray(c.results) && c.results.length > 0 && <p><span>{t.caseResults}</span> {c.results.join(' · ')}</p>}
                   </div>
                 ))}
               </div>
             )}
             {tab === 'reviews' && (
               <div className="dt-reviews">
-                <p className="dt-hint">Reviews come only from buyers who accepted a quote through NXT//LINK — verified engagements.</p>
+                <p className="dt-hint">{t.reviewsHint}</p>
                 {(d.reviews || []).map((rv, i) => (
                   <div className="dt-review" key={i}>
                     <div className="dt-rvhead"><span className="dt-rvstars">{stars(rv.rating)}</span>{rv.title && <b>{rv.title}</b>}<small className="dt-rvdate">{new Date(rv.created_at).toLocaleDateString()}</small></div>
@@ -276,11 +501,11 @@ export default function ListingDetailPage() {
 
           {related.length > 0 && (
             <div className="dt-related">
-              <h3>Related listings</h3>
+              <h3>{t.relatedListings}</h3>
               <div className="dt-relgrid">
                 {related.slice(0, 4).map((r) => (
                   <Link key={r.id} href={`/marketplace/${r.kind}/${r.id}`} className="dt-relcard">
-                    <span className={'dt-kind ' + r.kind}>{r.kind}</span>
+                    <span className={'dt-kind ' + r.kind}>{kindLabel(r.kind)}</span>
                     <b>{r.name}</b>
                     <small>{r.category}</small>
                   </Link>
@@ -292,7 +517,7 @@ export default function ListingDetailPage() {
 
         <aside className="dt-side" id="quote">
           <div className="dt-quote">
-            <div className="dt-thru">Through NXT<span>{'//'}</span>LINK</div>
+            <div className="dt-thru">{t.through}<span>{'//'}</span>LINK</div>
             <div className="dt-cartrow">
               <AddToCartButton
                 listing={{ id: String(params.id), kind, name: s(L.name), vendor_id: s(L.vendor_id) || null, vendor_name: d.vendor?.company_name || null }}
@@ -301,70 +526,66 @@ export default function ListingDetailPage() {
                 showHint
               />
             </div>
-            {(() => { const a = REQUEST_ACTIONS.find((x) => x.key === requestType)!; return (
-            <>
             <h3>{a.heading}</h3>
             <div className="dt-actions" role="tablist" aria-label="Request type">
-              {REQUEST_ACTIONS.map((act) => (
+              {REQUEST_KEYS.map((key) => (
                 <button
-                  key={act.key}
+                  key={key}
                   type="button"
                   role="tab"
-                  aria-selected={requestType === act.key}
-                  className={requestType === act.key ? 'on' : ''}
-                  onClick={() => { setRequestType(act.key); setSentRef(''); setFormMsg(''); }}
+                  aria-selected={requestType === key}
+                  className={requestType === key ? 'on' : ''}
+                  onClick={() => { setRequestType(key); setSentRef(''); setFormMsg(''); }}
                 >
-                  {act.label}
+                  {actionsT[key].label}
                 </button>
               ))}
             </div>
             {sentRef ? (
-              <div className="dt-sent">Request sent through NXT//LINK. Reference: <b>{sentRef}</b>. {d.vendor ? d.vendor.company_name : 'The vendor'} responds inside NXT//LINK — track it in <Link href="/buyer">your dashboard</Link>.</div>
+              <div className="dt-sent">{t.requestSentPrefix} <b>{sentRef}</b>. {d.vendor ? d.vendor.company_name : t.theVendor} {t.respondsInside} <Link href="/buyer">{t.yourDashboard}</Link>.</div>
             ) : (
               <form onSubmit={submitQuote}>
                 <input type="text" name="website_url" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }} />
-                <input placeholder="Company *" value={company} onChange={(e) => setCompany(e.target.value)} required />
-                <input placeholder="Your name" value={contact} onChange={(e) => setContact(e.target.value)} />
-                <input placeholder="Work email *" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                <input placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                <input placeholder={t.fCompany} value={company} onChange={(e) => setCompany(e.target.value)} required />
+                <input placeholder={t.fName} value={contact} onChange={(e) => setContact(e.target.value)} />
+                <input placeholder={t.fEmail} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <input placeholder={t.fPhone} value={phone} onChange={(e) => setPhone(e.target.value)} />
                 <textarea placeholder={a.placeholder} rows={4} value={message} onChange={(e) => setMessage(e.target.value)} />
                 {formMsg && <div className="dt-err">{formMsg}</div>}
-                <button type="submit" disabled={sending}>{sending ? 'Sending…' : a.cta}</button>
-                <p className="dt-safenote">Free to send · no commitment until you accept a quote</p>
-                <p className="dt-disclosure">Managed through NXT//LINK. NXT//LINK may receive a commission from the vendor. You compare offers and communicate through the platform; your contact info is never shown publicly. <Link href="/terms">Terms</Link> · <Link href="/privacy">Privacy</Link></p>
+                <button type="submit" disabled={sending}>{sending ? t.sending : a.cta}</button>
+                <p className="dt-safenote">{t.safety}</p>
+                <p className="dt-disclosure">{t.disclosure} <Link href="/terms">{t.terms}</Link> · <Link href="/privacy">{t.privacy}</Link></p>
               </form>
             )}
-            </>
-            ); })()}
           </div>
           {d.vendor && (
             <div className="dt-vendorcard">
               <h4>{d.vendor.company_name}</h4>
               {d.vendor.description && <p>{d.vendor.description.slice(0, 300)}</p>}
-              <Link className="dt-storelink" href={`/marketplace/vendor/${s(L.vendor_id)}`}>View storefront →</Link>
+              <Link className="dt-storelink" href={`/marketplace/vendor/${s(L.vendor_id)}`}>{t.storefront}</Link>
             </div>
           )}
 
           <div className="dt-report">
             {repDone ? (
-              <p>Thanks — our team will review this listing.</p>
+              <p>{t.reportThanks}</p>
             ) : !repOpen ? (
-              <button className="dt-replink" onClick={() => setRepOpen(true)}>Something wrong with this listing? Report it</button>
+              <button className="dt-replink" onClick={() => setRepOpen(true)}>{t.reportLink}</button>
             ) : (
               <div className="dt-repform">
-                <b>Report this listing</b>
+                <b>{t.reportTitle}</b>
                 <select value={repReason} onChange={(e) => setRepReason(e.target.value)}>
-                  <option value="wrong_info">Information is wrong</option>
-                  <option value="misleading">Misleading claims</option>
-                  <option value="spam">Spam or fake</option>
-                  <option value="not_available">No longer available</option>
-                  <option value="other">Other</option>
+                  <option value="wrong_info">{t.reasonWrongInfo}</option>
+                  <option value="misleading">{t.reasonMisleading}</option>
+                  <option value="spam">{t.reasonSpam}</option>
+                  <option value="not_available">{t.reasonNotAvailable}</option>
+                  <option value="other">{t.reasonOther}</option>
                 </select>
-                <textarea rows={3} placeholder="What is wrong? (optional)" value={repDetails} onChange={(e) => setRepDetails(e.target.value)} />
-                <input type="email" placeholder="Your email (optional)" value={repEmail} onChange={(e) => setRepEmail(e.target.value)} />
+                <textarea rows={3} placeholder={t.reportDetailsPh} value={repDetails} onChange={(e) => setRepDetails(e.target.value)} />
+                <input type="email" placeholder={t.reportEmailPh} value={repEmail} onChange={(e) => setRepEmail(e.target.value)} />
                 <div className="dt-repactions">
-                  <button className="dt-repsend" onClick={submitReport}>Send report</button>
-                  <button className="dt-replink" onClick={() => setRepOpen(false)}>Cancel</button>
+                  <button className="dt-repsend" onClick={submitReport}>{t.sendReport}</button>
+                  <button className="dt-replink" onClick={() => setRepOpen(false)}>{t.cancel}</button>
                 </div>
               </div>
             )}
@@ -375,7 +596,7 @@ export default function ListingDetailPage() {
       {/* Mobile: sticky request bar so the action is always reachable */}
       {!sentRef && (
         <div className="dt-mobilecta">
-          <a href="#quote">{REQUEST_ACTIONS.find((x) => x.key === requestType)?.label || 'Request Quote'} — through NXT{'//'}LINK</a>
+          <a href="#quote">{a.label} {t.mobileCtaSuffix}</a>
         </div>
       )}
     </div>

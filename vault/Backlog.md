@@ -71,6 +71,23 @@ these three are under-planned — scope them after Wave 2:
   a shared helper; the `'·'` fallback group-key in `/cart`'s vendor grouping
   can collapse two different no-vendor-name items into one group; the qty `+`
   button has no `disabled` at the 999 cap (the `−` button does disable at 1).
+- ~~**Contact-flow verify/polish (Wave 1 task #5)**~~ — **SHIPPED 2026-07-21**:
+  assisted-RFQ dispatch (`src/lib/requests/dispatch.ts`) now emails each
+  matched vendor (was in-app-notification-only) and gates matching on BOTH
+  `vendor_profiles.status='approved'` AND `moderation_status` (not-suspended/
+  banned) — the old status-only filter could still fan a lead out to a vendor
+  an admin had just suspended; verified against `src/lib/vendor/profile.ts` +
+  `src/lib/vendor/moderation.ts`. Listing detail (`/marketplace/[kind]/[id]`),
+  vendor storefront (`/marketplace/vendor/[id]`), vendor leads inbox
+  (`/vendor/leads`), and the buyer dashboard (`/buyer`) are now fully EN/ES via
+  the shared `LanguageToggle`/`useLang` pattern (previously hardcoded English
+  except one bundle-note string on leads/buyer). Vendor storefronts with no
+  published listings now route their "Request a quote" CTAs to `/intake`
+  (assisted RFQ) instead of dead-ending on `/marketplace`; `/intake` reads a
+  cheap `?vendor=&vendor_id=` hint to prefill + banner-reference the vendor
+  (no schema change). `sendMail` (`src/lib/mail.ts`) now logs to
+  `console.error` (domain-only, no PII) when both Resend and Zoho fail to
+  send, instead of vanishing silently. No migrations, no new deps.
 - **Payments P1 — Stripe Connect escrow** (see [[Payments]]): vendor payout
   onboarding (Connect Express) + fixed-price flow: pay-into-escrow on quote
   accept, manual capture, ship → 5-day inspection → auto-release day 6,
@@ -91,6 +108,21 @@ these three are under-planned — scope them after Wave 2:
 ## Nice-to-have (from marketplace study)
 - Dynamic per-category filters.
 - Image / part-number search (study Phase 2/3).
+
+## Known gaps — deliberately deferred (contact-flow recon, 2026-07-21)
+Found during Wave 1 task #5 recon (`workplace/research/contact-flow-recon.md`);
+explicitly out of scope for that task, needs its own pass:
+- **Anonymous listing-request senders can't track replies** — `/api/marketplace/request`
+  has no auth, and the buyer dashboard only matches requests to a verified
+  signed-in email, so a buyer who submits a quote request without an account
+  has no page to come back to and see the vendor's reply. Needs either a
+  magic-link-to-claim flow or a public per-request tracking page.
+- **Phone-mask false positives on long part numbers** — `src/lib/guard.ts`
+  masks any 7+ digit run as hidden contact info, so long part/PO numbers in
+  pre-acceptance chat get replaced with "[hidden until accepted]". Cosmetic
+  but confusing. Do NOT loosen the mask casually — it's anti-circumvention
+  surface (stops buyers/vendors swapping phone numbers to go off-platform);
+  needs a dedicated review, not a quick regex tweak.
 
 ## Competitive-research backlog (2026-07-16, from Cesar's Amazon/Grainger/Alibaba/Fiverr/Upwork study)
 Shipped already: quote compare with fill bars; buyer "Needs attention" strip;

@@ -3,10 +3,11 @@
 // Buyer dashboard: the signed-in buyer's marketplace footprint — intake
 // requests (NXT-assisted) and marketplace quote/service requests (self-service),
 // matched server-side to their verified email, plus saved listings (localStorage).
+// Fully EN/ES via the shared LanguageToggle/useLang pattern (see /cart).
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
-import { useLang } from '@/components/LanguageToggle';
+import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
 import { PackageSearch, Inbox } from 'lucide-react';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
 
@@ -30,32 +31,113 @@ interface DashboardData {
   requests?: IntakeRequest[]; quotes?: QuoteRequest[];
 }
 
-// Buyer-facing status labels (internal vendor states are softened, never raw).
-const QUOTE_LABEL: Record<string, string> = {
-  new: 'Sent', viewed: 'Seen by vendor', responded: 'Vendor responding',
-  won: 'Closed', lost: 'Closed', spam: 'Closed',
-};
-const REQUEST_LABEL: Record<string, string> = {
-  request_received: 'Received', new_request: 'Received',
-};
-const fmtDate = (s: string) => { try { return new Date(s).toLocaleDateString(); } catch { return ''; } };
-// "Valid until Fri, Mar 28 · 6 days left" — day names + countdown make the
-// deadline concrete (specificity converts better than a bare date).
-const fmtValidUntil = (s: string) => {
-  try {
-    const d = new Date(s);
-    if (isNaN(d.getTime())) return `Valid until ${s}`;
-    const date = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    const days = Math.ceil((d.getTime() - Date.now()) / 86400000);
-    if (days < 0) return `Expired ${date}`;
-    if (days === 0) return `Valid until ${date} · expires today`;
-    return `Valid until ${date} · ${days} day${days === 1 ? '' : 's'} left`;
-  } catch { return `Valid until ${s}`; }
-};
 const money = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 
+const T: Record<Lang, Record<string, string>> = {
+  en: {
+    dashboardTag: 'Dashboard', alerts: 'Alerts', refresh: 'Refresh',
+    browseMarketplace: 'Browse marketplace', describeNeed: 'Describe a need', myProfile: 'My profile', account: 'Account',
+    yourDashboard: 'Your dashboard', signedInAs: 'Signed in as',
+    notifications: 'Notifications', close: 'Close', notifEmpty: 'Nothing yet — you’ll see quotes, messages, and pilot updates here.',
+    loading: 'Loading…', signInFirst: 'Sign in to see your requests —', goToSignIn: 'go to sign in',
+    verifyEmail: 'Verify your email to see your requests.', checkInbox: 'Check your inbox for the confirmation link, then reload this page.',
+    needsAttention: 'Needs attention', reviewNow: 'Review now →',
+    quoteAwaiting: 'quote', quotesAwaiting: 'quotes', awaitingDecision: 'awaiting your decision',
+    expiringWithin: 'expiring within 3 days',
+    savedListings: 'Saved listings', browseMore: 'Browse more',
+    savedOnDevice: 'saved on this device', viewInMarketplace: '→ view in marketplace (sign-in saves them to your account)',
+    nothingSaved: 'Nothing saved yet.', browseTheMarketplace: 'Browse the marketplace', tapSave: 'and tap Save on listings you like.',
+    yourRequests: 'Your requests', newRequest: '+ New request',
+    noRequestsYet: 'No requests yet', noRequestsHint: 'Describe what you need and NXT//LINK will source vendors for you.', describeWhatYouNeed: 'Describe what you need',
+    quoteRequests: 'Quote requests', browseListings: 'Browse listings',
+    noQuoteRequestsYet: 'No quote requests yet', noQuoteRequestsHint: 'Find a product or service and request a quote — vendor replies land here.',
+    received: 'Received', request: 'Request', urgency: 'Urgency',
+    serviceRequest: 'Service request', productRequest: 'Product request',
+    statusSent: 'Sent', statusSeenByVendor: 'Seen by vendor', statusVendorResponding: 'Vendor responding', statusClosed: 'Closed',
+    bundlePrefix: 'Bundle', bundleItem: 'item', bundleItems: 'items',
+    noMessagesVendor: 'No messages yet — ask the vendor anything.', messageVendorPh: 'Message the vendor…', send: 'Send',
+    guardChat: 'For your protection, contact details are hidden in chat until you accept a quote — keep the conversation on NXT//LINK.',
+    messageVendor: 'Message vendor',
+    pkDemo: 'Demo', pkPilot: 'Pilot', pkSiteVisit: 'Site visit',
+    psProposed: 'Proposed', psScheduled: 'Scheduled', psInProgress: 'In progress', psCompleted: 'Completed', psCancelled: 'Cancelled',
+    poPassed: 'Passed', poFailed: 'Failed', poInconclusive: 'Inconclusive',
+    quoteReceived: 'Quote received:',
+    validUntil: 'Valid until', expiresToday: 'expires today', dayLeft: 'day left', daysLeft: 'days left', expired: 'Expired',
+    youAccepted: 'You accepted this quote', youDeclined: 'You declined this quote',
+    accept: 'Accept —', decline: 'Decline',
+    guardAccept: 'Accepting doesn’t charge you anything — it connects you with the vendor to finalize the deal on your terms.',
+    reviewedVendor: '✓ You reviewed this vendor',
+    titleOptional: 'Title (optional)', howDidItGo: 'How did it go? (optional)',
+    submitReview: 'Submit review', saving: 'Saving…', cancel: 'Cancel', leaveReview: 'Leave a review',
+    noActivity: 'You have no activity yet. Start by', browsingMarketplace: 'browsing the marketplace', or: 'or', describingNeed: 'describing what you need',
+    docTitle: 'My dashboard — NXT//LINK',
+    kindProduct: 'product', kindService: 'service',
+  },
+  es: {
+    dashboardTag: 'Panel', alerts: 'Alertas', refresh: 'Actualizar',
+    browseMarketplace: 'Explorar marketplace', describeNeed: 'Describir una necesidad', myProfile: 'Mi perfil', account: 'Cuenta',
+    yourDashboard: 'Tu panel', signedInAs: 'Sesión iniciada como',
+    notifications: 'Notificaciones', close: 'Cerrar', notifEmpty: 'Nada por aquí todavía — verás cotizaciones, mensajes y actualizaciones de pilotos aquí.',
+    loading: 'Cargando…', signInFirst: 'Inicia sesión para ver tus solicitudes —', goToSignIn: 'ir a iniciar sesión',
+    verifyEmail: 'Verifica tu correo para ver tus solicitudes.', checkInbox: 'Revisa tu bandeja de entrada por el enlace de confirmación y recarga esta página.',
+    needsAttention: 'Necesita atención', reviewNow: 'Revisar ahora →',
+    quoteAwaiting: 'cotización', quotesAwaiting: 'cotizaciones', awaitingDecision: 'esperando tu decisión',
+    expiringWithin: 'vencen en 3 días',
+    savedListings: 'Publicaciones guardadas', browseMore: 'Ver más',
+    savedOnDevice: 'guardado(s) en este dispositivo', viewInMarketplace: '→ ver en el marketplace (inicia sesión para guardarlos en tu cuenta)',
+    nothingSaved: 'Aún no has guardado nada.', browseTheMarketplace: 'Explora el marketplace', tapSave: 'y toca Guardar en las publicaciones que te gusten.',
+    yourRequests: 'Tus solicitudes', newRequest: '+ Nueva solicitud',
+    noRequestsYet: 'Aún no hay solicitudes', noRequestsHint: 'Describe lo que necesitas y NXT//LINK buscará proveedores por ti.', describeWhatYouNeed: 'Describe lo que necesitas',
+    quoteRequests: 'Solicitudes de cotización', browseListings: 'Ver publicaciones',
+    noQuoteRequestsYet: 'Aún no hay solicitudes de cotización', noQuoteRequestsHint: 'Encuentra un producto o servicio y solicita una cotización — las respuestas del proveedor llegan aquí.',
+    received: 'Recibida', request: 'Solicitud', urgency: 'Urgencia',
+    serviceRequest: 'Solicitud de servicio', productRequest: 'Solicitud de producto',
+    statusSent: 'Enviada', statusSeenByVendor: 'Vista por el proveedor', statusVendorResponding: 'El proveedor está respondiendo', statusClosed: 'Cerrada',
+    bundlePrefix: 'Paquete', bundleItem: 'artículo', bundleItems: 'artículos',
+    noMessagesVendor: 'Aún no hay mensajes — pregúntale algo al proveedor.', messageVendorPh: 'Mensaje para el proveedor…', send: 'Enviar',
+    guardChat: 'Para tu protección, los datos de contacto se ocultan en el chat hasta que aceptes una cotización — mantén la conversación en NXT//LINK.',
+    messageVendor: 'Mensaje al proveedor',
+    pkDemo: 'Demo', pkPilot: 'Piloto', pkSiteVisit: 'Visita al sitio',
+    psProposed: 'Propuesto', psScheduled: 'Programado', psInProgress: 'En progreso', psCompleted: 'Completado', psCancelled: 'Cancelado',
+    poPassed: 'Aprobado', poFailed: 'Fallido', poInconclusive: 'No concluyente',
+    quoteReceived: 'Cotización recibida:',
+    validUntil: 'Válido hasta', expiresToday: 'vence hoy', dayLeft: 'día restante', daysLeft: 'días restantes', expired: 'Venció',
+    youAccepted: 'Aceptaste esta cotización', youDeclined: 'Rechazaste esta cotización',
+    accept: 'Aceptar —', decline: 'Rechazar',
+    guardAccept: 'Aceptar no te cobra nada — te conecta con el proveedor para cerrar el trato en tus términos.',
+    reviewedVendor: '✓ Reseñaste a este proveedor',
+    titleOptional: 'Título (opcional)', howDidItGo: '¿Cómo te fue? (opcional)',
+    submitReview: 'Enviar reseña', saving: 'Guardando…', cancel: 'Cancelar', leaveReview: 'Dejar una reseña',
+    noActivity: 'Aún no tienes actividad. Empieza', browsingMarketplace: 'explorando el marketplace', or: 'o', describingNeed: 'describiendo lo que necesitas',
+    docTitle: 'Mi panel — NXT//LINK',
+    kindProduct: 'producto', kindService: 'servicio',
+  },
+};
+
 export default function BuyerDashboardPage() {
-  const [lang] = useLang(); // stored `nxt_lang` — new bundle strings are EN/ES
+  const [lang, setLang] = useLang(); // stored `nxt_lang` — shared across marketplace pages
+  const t = T[lang];
+  const dateLocale = lang === 'es' ? 'es-MX' : 'en-US';
+  const REQUEST_LABEL: Record<string, string> = { request_received: t.received, new_request: t.received };
+  const QUOTE_LABEL: Record<string, string> = { new: t.statusSent, viewed: t.statusSeenByVendor, responded: t.statusVendorResponding, won: t.statusClosed, lost: t.statusClosed, spam: t.statusClosed };
+  const PILOT_KIND_LABEL: Record<string, string> = { demo: t.pkDemo, pilot: t.pkPilot, site_visit: t.pkSiteVisit };
+  const PILOT_STATUS_LABEL: Record<string, string> = { proposed: t.psProposed, scheduled: t.psScheduled, in_progress: t.psInProgress, completed: t.psCompleted, cancelled: t.psCancelled };
+  const PILOT_OUTCOME_LABEL: Record<string, string> = { passed: t.poPassed, failed: t.poFailed, inconclusive: t.poInconclusive };
+  const fmtDate = (s: string) => { try { return new Date(s).toLocaleDateString(dateLocale); } catch { return ''; } };
+  // "Valid until Fri, Mar 28 · 6 days left" — day names + countdown make the
+  // deadline concrete (specificity converts better than a bare date).
+  const fmtValidUntil = (s: string) => {
+    try {
+      const d = new Date(s);
+      if (isNaN(d.getTime())) return `${t.validUntil} ${s}`;
+      const date = d.toLocaleDateString(dateLocale, { weekday: 'short', month: 'short', day: 'numeric' });
+      const days = Math.ceil((d.getTime() - Date.now()) / 86400000);
+      if (days < 0) return `${t.expired} ${date}`;
+      if (days === 0) return `${t.validUntil} ${date} · ${t.expiresToday}`;
+      return `${t.validUntil} ${date} · ${days} ${days === 1 ? t.dayLeft : t.daysLeft}`;
+    } catch { return `${t.validUntil} ${s}`; }
+  };
+
   const [checking, setChecking] = useState(true);
   const [data, setData] = useState<DashboardData>({ signed_in: false });
   const [savedCount, setSavedCount] = useState(0);
@@ -98,11 +180,12 @@ export default function BuyerDashboardPage() {
   }, []);
 
   useEffect(() => {
-    document.title = 'My dashboard — NXT//LINK';
     try { setSavedCount(new Set(JSON.parse(localStorage.getItem('nxt_saved') || '[]')).size); } catch { /* ignore */ }
     const sb = createBrowserSupabaseClient();
     sb.auth.getSession().then(({ data: s }) => { if (s.session) load(); else setChecking(false); });
   }, [load]);
+
+  useEffect(() => { document.title = t.docTitle; }, [t.docTitle]);
 
   async function decide(id: string, decision: 'accepted' | 'declined') {
     setData((d) => ({ ...d, quotes: (d.quotes || []).map((q) => (q.id === id ? { ...q, buyer_decision: decision, status: decision === 'accepted' ? 'won' : 'lost' } : q)) }));
@@ -143,27 +226,28 @@ export default function BuyerDashboardPage() {
     <div className="by">
       <style dangerouslySetInnerHTML={{ __html: CSS + EMPTY_ACTION_CSS + ATTENTION_CSS }} />
       <nav className="by-nav">
-        <a className="by-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>Dashboard</span></a>
+        <a className="by-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>{t.dashboardTag}</span></a>
         <div className="by-navlinks">
           <button className="by-bell" onClick={toggleNotifs} aria-label="Notifications">
-            Alerts{notifUnread > 0 && <span className="by-belldot">{notifUnread}</span>}
+            {t.alerts}{notifUnread > 0 && <span className="by-belldot">{notifUnread}</span>}
           </button>
-          <button className="by-link by-refresh" onClick={() => { setChecking(true); load(); }} aria-label="Refresh">Refresh</button>
-          <a className="by-link" href="/marketplace">Browse marketplace</a>
-          <a className="by-link" href="/intake">Describe a need</a>
-          <a className="by-link" href="/buyer/profile">My profile</a>
-          <a className="by-link" href="/account">Account</a>
+          <button className="by-link by-refresh" onClick={() => { setChecking(true); load(); }} aria-label="Refresh">{t.refresh}</button>
+          <a className="by-link" href="/marketplace">{t.browseMarketplace}</a>
+          <a className="by-link" href="/intake">{t.describeNeed}</a>
+          <a className="by-link" href="/buyer/profile">{t.myProfile}</a>
+          <a className="by-link" href="/account">{t.account}</a>
+          <LanguageToggle lang={lang} onChange={setLang} variant="dark" />
         </div>
       </nav>
 
       <main className="by-wrap">
-        <h1>Your dashboard</h1>
-        {data.email && <p className="by-sub">Signed in as {data.email}</p>}
+        <h1>{t.yourDashboard}</h1>
+        {data.email && <p className="by-sub">{t.signedInAs} {data.email}</p>}
 
         {notifOpen && (
           <div className="by-notifs">
-            <div className="by-notifhead"><b>Notifications</b><button onClick={() => setNotifOpen(false)}>Close</button></div>
-            {notifs.length === 0 ? <p className="by-notifempty">Nothing yet — you&apos;ll see quotes, messages, and pilot updates here.</p> : (
+            <div className="by-notifhead"><b>{t.notifications}</b><button onClick={() => setNotifOpen(false)}>{t.close}</button></div>
+            {notifs.length === 0 ? <p className="by-notifempty">{t.notifEmpty}</p> : (
               <ul>
                 {notifs.map((n) => (
                   <li key={n.id} className={n.read_at ? '' : 'unread'}>
@@ -177,13 +261,13 @@ export default function BuyerDashboardPage() {
         )}
 
         {checking ? (
-          <div className="by-empty">Loading…</div>
+          <div className="by-empty">{t.loading}</div>
         ) : !data.signed_in ? (
-          <div className="by-empty">Sign in to see your requests — <a href="/login">go to sign in</a></div>
+          <div className="by-empty">{t.signInFirst} <a href="/login">{t.goToSignIn}</a></div>
         ) : data.email_verified === false ? (
           <div className="by-empty">
-            Verify your email to see your requests.<br />
-            <small>Check your inbox for the confirmation link, then reload this page.</small>
+            {t.verifyEmail}<br />
+            <small>{t.checkInbox}</small>
           </div>
         ) : (
           <>
@@ -198,52 +282,52 @@ export default function BuyerDashboardPage() {
               if (toReview.length === 0) return null;
               return (
                 <div className="by-attn">
-                  <b>Needs attention</b>
-                  <span>{toReview.length} quote{toReview.length === 1 ? '' : 's'} awaiting your decision{expiring.length > 0 ? ` · ${expiring.length} expiring within 3 days` : ''}</span>
-                  <a href="#quotes">Review now →</a>
+                  <b>{t.needsAttention}</b>
+                  <span>{toReview.length} {toReview.length === 1 ? t.quoteAwaiting : t.quotesAwaiting} {t.awaitingDecision}{expiring.length > 0 ? ` · ${expiring.length} ${t.expiringWithin}` : ''}</span>
+                  <a href="#quotes">{t.reviewNow}</a>
                 </div>
               );
             })()}
             {/* Saved listings — account-level, follow the buyer across devices */}
             <section className="by-sec">
-              <div className="by-sechead"><h2>Saved listings {savedItems.length > 0 && <small className="by-cnt">{savedItems.length}</small>}</h2><a className="by-link" href="/marketplace">Browse more</a></div>
+              <div className="by-sechead"><h2>{t.savedListings} {savedItems.length > 0 && <small className="by-cnt">{savedItems.length}</small>}</h2><a className="by-link" href="/marketplace">{t.browseMore}</a></div>
               {savedItems.length > 0 ? (
                 <div className="by-savedgrid">
                   {savedItems.filter((s) => s.name).map((s) => (
                     <a key={s.listing_id} className="by-saveditem" href={`/marketplace/${s.kind}/${s.listing_id}`}>
-                      <i className={s.kind}>{s.kind}</i>
+                      <i className={s.kind}>{s.kind === 'service' ? t.kindService : t.kindProduct}</i>
                       <span>{s.name}</span>
                     </a>
                   ))}
                 </div>
               ) : savedCount > 0 ? (
                 <a className="by-saved" href="/marketplace">
-                  <b>{savedCount}</b> saved on this device <span>→ view in marketplace (sign-in saves them to your account)</span>
+                  <b>{savedCount}</b> {t.savedOnDevice} <span>{t.viewInMarketplace}</span>
                 </a>
               ) : (
-                <div className="by-empty sm">Nothing saved yet. <a href="/marketplace">Browse the marketplace</a> and tap Save on listings you like.</div>
+                <div className="by-empty sm">{t.nothingSaved} <a href="/marketplace">{t.browseTheMarketplace}</a> {t.tapSave}</div>
               )}
             </section>
 
             {/* NXT-assisted intake requests */}
             <section className="by-sec">
-              <div className="by-sechead"><h2>Your requests {requests.length > 0 && <small className="by-cnt">{requests.length}</small>}</h2><a className="by-link" href="/intake">+ New request</a></div>
+              <div className="by-sechead"><h2>{t.yourRequests} {requests.length > 0 && <small className="by-cnt">{requests.length}</small>}</h2><a className="by-link" href="/intake">{t.newRequest}</a></div>
               {requests.length === 0 ? (
-                <EmptyAction size="sm" icon={<Inbox strokeWidth={1.75} />} title="No requests yet" hint="Describe what you need and NXT//LINK will source vendors for you." actionLabel="Describe what you need" actionHref="/intake" />
+                <EmptyAction size="sm" icon={<Inbox strokeWidth={1.75} />} title={t.noRequestsYet} hint={t.noRequestsHint} actionLabel={t.describeWhatYouNeed} actionHref="/intake" />
               ) : (
                 <div className="by-list">
                   {requests.map((r) => (
                     <div className="by-card" key={r.id}>
                       <div className="by-top">
-                        <span className="by-status">{REQUEST_LABEL[r.status || ''] || r.status || 'Received'}</span>
-                        <b>{r.category || 'Request'}</b>
+                        <span className="by-status">{REQUEST_LABEL[r.status || ''] || r.status || t.received}</span>
+                        <b>{r.category || t.request}</b>
                         <small>{fmtDate(r.created_at)}</small>
                         <span className="by-ref">{r.public_ref}</span>
                       </div>
                       {r.problem && <p className="by-msg">{r.problem}</p>}
                       <div className="by-meta">
                         {r.location && <span>{r.location}</span>}
-                        {r.urgency && <span>Urgency: {r.urgency}</span>}
+                        {r.urgency && <span>{t.urgency}: {r.urgency}</span>}
                       </div>
                     </div>
                   ))}
@@ -253,9 +337,9 @@ export default function BuyerDashboardPage() {
 
             {/* Self-service marketplace quote requests */}
             <section className="by-sec" id="quotes">
-              <div className="by-sechead"><h2>Quote requests {quotes.length > 0 && <small className="by-cnt">{quotes.length}</small>}</h2><a className="by-link" href="/marketplace">Browse listings</a></div>
+              <div className="by-sechead"><h2>{t.quoteRequests} {quotes.length > 0 && <small className="by-cnt">{quotes.length}</small>}</h2><a className="by-link" href="/marketplace">{t.browseListings}</a></div>
               {quotes.length === 0 ? (
-                <EmptyAction size="sm" icon={<PackageSearch strokeWidth={1.75} />} title="No quote requests yet" hint="Find a product or service and request a quote — vendor replies land here." actionLabel="Browse the marketplace" actionHref="/marketplace" />
+                <EmptyAction size="sm" icon={<PackageSearch strokeWidth={1.75} />} title={t.noQuoteRequestsYet} hint={t.noQuoteRequestsHint} actionLabel={t.browseTheMarketplace} actionHref="/marketplace" />
               ) : (
                 <div className="by-list">
                   {quotes.map((q) => (
@@ -263,9 +347,9 @@ export default function BuyerDashboardPage() {
                       <div className="by-top">
                         <span className={'by-status ' + (q.status === 'responded' ? 'resp' : '')}>{QUOTE_LABEL[q.status] || q.status}</span>
                         {(q.product_id || q.service_id) ? (
-                          <a className="by-listinglink" href={`/marketplace/${q.kind}/${q.product_id || q.service_id}`}><b>{q.listing_name || (q.kind === 'service' ? 'Service request' : 'Product request')}</b></a>
+                          <a className="by-listinglink" href={`/marketplace/${q.kind}/${q.product_id || q.service_id}`}><b>{q.listing_name || (q.kind === 'service' ? t.serviceRequest : t.productRequest)}</b></a>
                         ) : (
-                          <b>{q.listing_name || (q.kind === 'service' ? 'Service request' : 'Product request')}</b>
+                          <b>{q.listing_name || (q.kind === 'service' ? t.serviceRequest : t.productRequest)}</b>
                         )}
                         <small>{fmtDate(q.created_at)}</small>
                         <span className="by-ref">{q.public_ref}</span>
@@ -274,9 +358,7 @@ export default function BuyerDashboardPage() {
                       {(q.answers?.items?.length || 0) > 0 && (
                         <div className="by-bundle">
                           <b>
-                            {lang === 'es'
-                              ? `Paquete · ${q.answers!.items!.length} ${q.answers!.items!.length === 1 ? 'artículo' : 'artículos'}`
-                              : `Bundle · ${q.answers!.items!.length} ${q.answers!.items!.length === 1 ? 'item' : 'items'}`}
+                            {t.bundlePrefix} · {q.answers!.items!.length} {q.answers!.items!.length === 1 ? t.bundleItem : t.bundleItems}
                           </b>
                           <ul>
                             {q.answers!.items!.map((it) => (
@@ -294,57 +376,57 @@ export default function BuyerDashboardPage() {
                         {chatFor === q.id ? (
                           <div className="by-chatbox">
                             <div className="by-chatlist" ref={chatListRef}>
-                              {chatMsgs.length === 0 && <div className="by-chatempty">No messages yet — ask the vendor anything.</div>}
+                              {chatMsgs.length === 0 && <div className="by-chatempty">{t.noMessagesVendor}</div>}
                               {chatMsgs.map((m) => (
                                 <div key={m.id} className={'by-bubble ' + (m.sender === 'buyer' ? 'me' : 'them')}>
                                   {m.body}
-                                  <small>{new Date(m.created_at).toLocaleString()}</small>
+                                  <small>{new Date(m.created_at).toLocaleString(dateLocale)}</small>
                                 </div>
                               ))}
                             </div>
                             <div className="by-chatrow">
-                              <input value={chatInput} placeholder="Message the vendor…" onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') sendChat(q.id); }} />
-                              <button className="by-accept" disabled={chatBusy || !chatInput.trim()} onClick={() => sendChat(q.id)}>Send</button>
-                              <button className="by-decline" onClick={() => setChatFor(null)}>Close</button>
+                              <input value={chatInput} placeholder={t.messageVendorPh} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') sendChat(q.id); }} />
+                              <button className="by-accept" disabled={chatBusy || !chatInput.trim()} onClick={() => sendChat(q.id)}>{t.send}</button>
+                              <button className="by-decline" onClick={() => setChatFor(null)}>{t.close}</button>
                             </div>
-                            {q.buyer_decision !== 'accepted' && <p className="by-guardnote">For your protection, contact details are hidden in chat until you accept a quote — keep the conversation on NXT{'//'}LINK.</p>}
+                            {q.buyer_decision !== 'accepted' && <p className="by-guardnote">{t.guardChat}</p>}
                           </div>
                         ) : (
-                          <button className="by-chatopen" onClick={() => openChat(q.id)}>Message vendor</button>
+                          <button className="by-chatopen" onClick={() => openChat(q.id)}>{t.messageVendor}</button>
                         )}
                       </div>
                       {(q.pilots || []).length > 0 && (
                         <div className="by-pilots">
                           {(q.pilots || []).map((p, i) => (
                             <div className="by-pilot" key={i}>
-                              <span className="by-pkind">{p.kind.replace('_', ' ')}</span>
-                              <span className="by-pstatus">{p.status.replace('_', ' ')}</span>
-                              {p.scheduled_for && <small>{new Date(p.scheduled_for).toLocaleString()}</small>}
+                              <span className="by-pkind">{PILOT_KIND_LABEL[p.kind] || p.kind.replace('_', ' ')}</span>
+                              <span className="by-pstatus">{PILOT_STATUS_LABEL[p.status] || p.status.replace('_', ' ')}</span>
+                              {p.scheduled_for && <small>{new Date(p.scheduled_for).toLocaleString(dateLocale)}</small>}
                               {p.location && <small>· {p.location}</small>}
-                              {p.outcome && <span className={'by-poutcome ' + p.outcome}>{p.outcome}</span>}
+                              {p.outcome && <span className={'by-poutcome ' + p.outcome}>{PILOT_OUTCOME_LABEL[p.outcome] || p.outcome}</span>}
                             </div>
                           ))}
                         </div>
                       )}
                       {q.quote_amount != null && (
                         <div className="by-quote">
-                          <div className="by-qhead">Quote received: <b>{money(q.quote_amount)}</b>{q.quote_timeline ? ` · ${q.quote_timeline}` : ''}</div>
+                          <div className="by-qhead">{t.quoteReceived} <b>{money(q.quote_amount)}</b>{q.quote_timeline ? ` · ${q.quote_timeline}` : ''}</div>
                           {q.quote_message && <p className="by-qmsg">{q.quote_message}</p>}
                           {q.quote_valid_until && <div className="by-qvalid">{fmtValidUntil(q.quote_valid_until)}</div>}
                           {q.buyer_decision ? (
-                            <div className={'by-decided ' + q.buyer_decision}>You {q.buyer_decision} this quote</div>
+                            <div className={'by-decided ' + q.buyer_decision}>{q.buyer_decision === 'accepted' ? t.youAccepted : t.youDeclined}</div>
                           ) : (
                             <>
                               <div className="by-qactions">
-                                <button className="by-accept" onClick={() => decide(q.id, 'accepted')}>Accept — {money(q.quote_amount)}</button>
-                                <button className="by-decline" onClick={() => decide(q.id, 'declined')}>Decline</button>
+                                <button className="by-accept" onClick={() => decide(q.id, 'accepted')}>{t.accept} {money(q.quote_amount)}</button>
+                                <button className="by-decline" onClick={() => decide(q.id, 'declined')}>{t.decline}</button>
                               </div>
-                              <p className="by-guardnote">Accepting doesn&apos;t charge you anything — it connects you with the vendor to finalize the deal on your terms.</p>
+                              <p className="by-guardnote">{t.guardAccept}</p>
                             </>
                           )}
                           {q.buyer_decision === 'accepted' && (
                             q.reviewed ? (
-                              <div className="by-reviewed">✓ You reviewed this vendor</div>
+                              <div className="by-reviewed">{t.reviewedVendor}</div>
                             ) : reviewOpen === q.id ? (
                               <div className="by-rvform">
                                 <div className="by-stars">
@@ -352,15 +434,15 @@ export default function BuyerDashboardPage() {
                                     <button key={n} type="button" className={n <= rv.rating ? 'on' : ''} onClick={() => setRv({ ...rv, rating: n })} aria-label={`${n} star${n > 1 ? 's' : ''}`}>★</button>
                                   ))}
                                 </div>
-                                <input placeholder="Title (optional)" value={rv.title} onChange={(e) => setRv({ ...rv, title: e.target.value })} />
-                                <textarea rows={2} placeholder="How did it go? (optional)" value={rv.body} onChange={(e) => setRv({ ...rv, body: e.target.value })} />
+                                <input placeholder={t.titleOptional} value={rv.title} onChange={(e) => setRv({ ...rv, title: e.target.value })} />
+                                <textarea rows={2} placeholder={t.howDidItGo} value={rv.body} onChange={(e) => setRv({ ...rv, body: e.target.value })} />
                                 <div className="by-rvactions">
-                                  <button className="by-accept" disabled={rvBusy} onClick={() => submitReview(q.id)}>{rvBusy ? 'Saving…' : 'Submit review'}</button>
-                                  <button className="by-decline" onClick={() => setReviewOpen(null)}>Cancel</button>
+                                  <button className="by-accept" disabled={rvBusy} onClick={() => submitReview(q.id)}>{rvBusy ? t.saving : t.submitReview}</button>
+                                  <button className="by-decline" onClick={() => setReviewOpen(null)}>{t.cancel}</button>
                                 </div>
                               </div>
                             ) : (
-                              <button className="by-rvopen" onClick={() => { setRv({ rating: 5, title: '', body: '' }); setReviewOpen(q.id); }}>Leave a review</button>
+                              <button className="by-rvopen" onClick={() => { setRv({ rating: 5, title: '', body: '' }); setReviewOpen(q.id); }}>{t.leaveReview}</button>
                             )
                           )}
                         </div>
@@ -373,7 +455,7 @@ export default function BuyerDashboardPage() {
 
             {!hasActivity && (
               <p className="by-hint">
-                You have no activity yet. Start by <a href="/marketplace">browsing the marketplace</a> or <a href="/intake">describing what you need</a>.
+                {t.noActivity} <a href="/marketplace">{t.browsingMarketplace}</a> {t.or} <a href="/intake">{t.describingNeed}</a>.
               </p>
             )}
           </>
@@ -398,7 +480,7 @@ const CSS = `
 .by-brand{display:flex;align-items:baseline;gap:10px;color:#F0F0F5;text-decoration:none;}
 .by-brand b{font-size:17px;}.by-brand i{color:#A78BFA;font-style:normal;}
 .by-brand span{color:#8080A0;font-size:13px;}
-.by-navlinks{display:flex;gap:18px;}
+.by-navlinks{display:flex;gap:18px;align-items:center;}
 .by-link{color:#A78BFA;font-size:13.5px;font-weight:600;text-decoration:none;white-space:nowrap;}
 .by-link:hover{color:#C4B5FD;}
 .by-wrap{max-width:760px;margin:0 auto;padding:36px 20px 100px;}

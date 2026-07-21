@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ASSISTANT, type Locale } from '@/lib/assistant/branding';
 
 // ---- Types for API responses ----
@@ -90,7 +91,15 @@ const inputStyle: React.CSSProperties = {
   fontFamily: 'system-ui, sans-serif',
 };
 
-export default function IntakePage() {
+// A buyer arriving from a vendor storefront that has no listings yet
+// (marketplace/vendor/[id]/page.tsx's quote CTA) lands here with a cheap,
+// client-only hint — ?vendor=<name>&vendor_id=<id>. No schema/API change:
+// we just prefill the intro message and show a small banner so their intent
+// to reach THAT vendor isn't lost. The mention flows into the free-text
+// `initialText` sent to /api/assistant/intake like any other buyer wording.
+function IntakeInner() {
+  const sp = useSearchParams();
+  const vendorHint = sp.get('vendor') || '';
   const [locale, setLocale] = useState<Locale>('en');
   const [initialText, setInitialText] = useState('');
   const [answers, setAnswers] = useState<Answer[]>([]);
@@ -115,6 +124,13 @@ export default function IntakePage() {
 
   const isEs = locale === 'es';
   const tr = (en: string, es: string) => (isEs ? es : en);
+
+  // Prefill once from the vendor hint so the mention rides along in whatever
+  // the buyer sends — editable, not locked in.
+  useEffect(() => {
+    if (vendorHint) setInput((v) => v || tr(`Regarding ${vendorHint}: `, `Sobre ${vendorHint}: `));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vendorHint]);
 
   const introPlaceholder = tr(
     'I need maintenance for 6 forklifts in El Paso next week.',
@@ -331,6 +347,25 @@ export default function IntakePage() {
           <p style={{ color: TEXT_3, fontSize: 15 }}>
             {isEs ? ASSISTANT.subtitle_es : ASSISTANT.subtitle}
           </p>
+          {vendorHint && phase !== 'submitted' && (
+            <div
+              style={{
+                marginTop: 14,
+                fontSize: 13,
+                color: '#C4B5FD',
+                background: 'rgba(124,92,252,.08)',
+                border: '1px solid rgba(124,92,252,.25)',
+                borderRadius: 10,
+                padding: '9px 12px',
+                lineHeight: 1.5,
+              }}
+            >
+              {tr(
+                `Continuing from ${vendorHint}'s profile — we'll match you with vendors including them.`,
+                `Continuando desde el perfil de ${vendorHint} — te conectaremos con proveedores, incluyéndolos a ellos.`
+              )}
+            </div>
+          )}
         </div>
 
         {/* Submitted success card */}
@@ -760,5 +795,13 @@ function SummaryFields({ summary, isEs }: { summary: RequestSummary; isEs: boole
         </div>
       ))}
     </div>
+  );
+}
+
+export default function IntakePage() {
+  return (
+    <Suspense fallback={null}>
+      <IntakeInner />
+    </Suspense>
   );
 }

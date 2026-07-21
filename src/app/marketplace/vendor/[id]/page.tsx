@@ -5,11 +5,16 @@
 // case studies, verified reviews, and a sidebar (quick facts, brands supported,
 // coverage, certifications, team). Every section degrades gracefully when the
 // vendor hasn't filled it in. Deal actions run through NXT//LINK listing pages.
+// When the vendor has no published listings yet, the quote CTAs route to the
+// assisted RFQ (/intake) with a vendor hint instead of dead-ending on
+// /marketplace — buyer intent isn't lost. Fully EN/ES via the shared
+// LanguageToggle/useLang pattern (see /cart).
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { levelAtLeast } from '@/components/marketplace/TrustBadges';
+import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
 
 interface ListingCard {
   id: string; kind: 'product' | 'service'; name: string; category: string;
@@ -19,13 +24,19 @@ interface ListingCard {
   lead_time?: string | null; implementation?: { typical_timeline?: string } | null;
 }
 
-const MODEL_LABEL: Record<string, string> = {
-  one_time: 'One-time', subscription: 'Subscription', monthly: 'Monthly', hourly: 'Hourly',
-  per_project: 'Per project', quote: 'By quote', usage: 'Usage-based', lease: 'Lease', rental: 'Rental',
+const MODEL_LABEL: Record<Lang, Record<string, string>> = {
+  en: {
+    one_time: 'One-time', subscription: 'Subscription', monthly: 'Monthly', hourly: 'Hourly',
+    per_project: 'Per project', quote: 'By quote', usage: 'Usage-based', lease: 'Lease', rental: 'Rental',
+  },
+  es: {
+    one_time: 'Pago único', subscription: 'Suscripción', monthly: 'Mensual', hourly: 'Por hora',
+    per_project: 'Por proyecto', quote: 'Por cotización', usage: 'Según uso', lease: 'Arrendamiento', rental: 'Renta',
+  },
 };
 // Price shown in the compare table — prefer an explicit range, else the model.
-const priceText = (l: ListingCard) => l.pricing?.range?.trim()
-  || (l.pricing?.model ? (MODEL_LABEL[l.pricing.model] || l.pricing.model) : '') || 'By quote';
+const priceText = (l: ListingCard, lang: Lang, byQuote: string) => l.pricing?.range?.trim()
+  || (l.pricing?.model ? (MODEL_LABEL[lang][l.pricing.model] || l.pricing.model) : '') || byQuote;
 // Numeric key for sorting by price — first dollar figure in the range, else last.
 const priceValue = (l: ListingCard) => {
   const m = (l.pricing?.range || '').replace(/,/g, '').match(/\d+(\.\d+)?/);
@@ -33,13 +44,13 @@ const priceValue = (l: ListingCard) => {
 };
 // Timeline shown in the compare table — product lead time, else implementation
 // timeline, else a service's response time.
-const timelineText = (l: ListingCard) => l.lead_time?.trim()
+const timelineText = (l: ListingCard, respondsIn: string, dash: string) => l.lead_time?.trim()
   || l.implementation?.typical_timeline?.trim()
-  || (l.kind === 'service' && l.response_time ? `Responds in ${l.response_time}` : '') || '—';
+  || (l.kind === 'service' && l.response_time ? `${respondsIn} ${l.response_time}` : '') || dash;
 // Numeric days from a timeline string ("2–4 weeks", "10 days", "4h"), for the
 // length-proportional compare bar. Returns null when nothing parses.
 const daysOf = (l: ListingCard): number | null => {
-  const s = timelineText(l);
+  const s = l.lead_time?.trim() || l.implementation?.typical_timeline?.trim() || (l.kind === 'service' ? l.response_time || '' : '');
   const m = s.match(/(\d+(?:\.\d+)?)\s*(hours?|hrs?|h|days?|d|weeks?|wks?|w|months?|mos?|mo|m)\b/i);
   if (!m) return null;
   const n = parseFloat(m[1]); const u = m[2].toLowerCase();
@@ -71,10 +82,180 @@ interface Storefront {
 
 const stars = (n: number) => '★★★★★'.slice(0, Math.round(n)) + '☆☆☆☆☆'.slice(0, 5 - Math.round(n));
 const initials = (s: string) => s.split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-const TYPE_LABEL: Record<string, string> = { manufacturer: 'Manufacturer', distributor: 'Distributor', integrator: 'Systems Integrator', consultant: 'Consultant', service_provider: 'Service Provider', software: 'Software Company' };
+const TYPE_LABEL: Record<Lang, Record<string, string>> = {
+  en: { manufacturer: 'Manufacturer', distributor: 'Distributor', integrator: 'Systems Integrator', consultant: 'Consultant', service_provider: 'Service Provider', software: 'Software Company' },
+  es: { manufacturer: 'Fabricante', distributor: 'Distribuidor', integrator: 'Integrador de sistemas', consultant: 'Consultor', service_provider: 'Proveedor de servicios', software: 'Empresa de software' },
+};
+
+const T: Record<Lang, Record<string, string>> = {
+  en: {
+    marketplace: 'Marketplace',
+    editProfile: 'Edit my profile',
+    ownerViewing: 'You’re viewing your storefront exactly as buyers see it.',
+    backToEditing: '← Back to editing',
+    notFound: 'Vendor not found.',
+    backToMarketplace: 'Back to marketplace',
+    loading: 'Loading…',
+    requestQuote: 'Request quote through NXT//LINK',
+    viewOfferings: 'View offerings',
+    avgResponse: 'Avg. response',
+    dealsClosed: 'Deals on NXT//LINK',
+    reviews: 'reviews',
+    founded: 'Founded',
+    foundedStaff: 'Founded · {n} staff',
+    navOverview: 'Overview',
+    navExpertise: 'Expertise',
+    navCompare: 'Compare',
+    navProducts: 'Products',
+    navServices: 'Services',
+    navCases: 'Case studies',
+    navReviews: 'Reviews',
+    about: 'About',
+    noDescription: 'This company hasn’t added a description yet.',
+    industriesServed: 'Industries served',
+    clientsSpecialize: 'Clients they specialize in',
+    expertise: 'Expertise',
+    knownFor: 'What they’re known for',
+    problemsSolve: 'Problems they solve',
+    capabilities: 'Capabilities',
+    compareOfferings: 'Compare offerings',
+    sort: 'Sort',
+    sortAz: 'A–Z',
+    sortPriceAsc: 'Price ↑',
+    sortPriceDesc: 'Price ↓',
+    thOffering: 'Offering',
+    thType: 'Type',
+    thPrice: 'Price',
+    thTimeline: 'Timeline',
+    thBestFor: 'Best for',
+    thAction: 'Action',
+    product: 'Product',
+    service: 'Service',
+    dash: '—',
+    byQuote: 'By quote',
+    respondsIn: 'Responds in',
+    viewArrow: 'View →',
+    compareNote: 'Prices and timelines are vendor-provided estimates. Request a quote through NXT//LINK for firm numbers.',
+    productsEquipment: 'Products & equipment',
+    services: 'Services',
+    caseStudies: 'Case studies',
+    challenge: 'Challenge:',
+    solution: 'Solution:',
+    reviewsOnly: '· from verified NXT//LINK deals only',
+    verifiedDeal: '✓ Verified deal',
+    workWithVendor: 'Work with this vendor',
+    protectedIntro: 'All quotes, files, and messaging run through NXT//LINK. Your introduction is protected.',
+    requestAQuote: 'Request a quote',
+    noListingsYet: 'This vendor hasn’t published listings yet — describe what you need and we’ll match you, including with this vendor.',
+    quickFacts: 'Quick facts',
+    companyType: 'Company type',
+    employees: 'Employees',
+    languages: 'Languages',
+    emergencyService: 'Emergency service',
+    website: 'Website',
+    visit: 'Visit ↗',
+    detailsComingSoon: 'Company details coming soon.',
+    brandsSupported: 'Brands & equipment supported',
+    coverage: 'Coverage',
+    certifications: 'Certifications',
+    team: 'Team',
+    teamNote: 'Direct contact is shared after a protected NXT//LINK introduction.',
+    badgeVerifiedIdentity: '✓ Verified identity',
+    badgeVerifiedBusiness: '✓ Verified business',
+    badgeInsurance: '✓ Insurance reviewed',
+    badgeCertified: '✓ Certified',
+    badgePilot: 'Pilot available',
+    badgeCrossBorder: 'Cross-border ready',
+    badgeEmergency: '24/7 emergency',
+    badgeInstallation: 'Installation available',
+  },
+  es: {
+    marketplace: 'Marketplace',
+    editProfile: 'Editar mi perfil',
+    ownerViewing: 'Estás viendo tu perfil exactamente como lo ven los compradores.',
+    backToEditing: '← Volver a editar',
+    notFound: 'Proveedor no encontrado.',
+    backToMarketplace: 'Volver al marketplace',
+    loading: 'Cargando…',
+    requestQuote: 'Solicitar cotización a través de NXT//LINK',
+    viewOfferings: 'Ver publicaciones',
+    avgResponse: 'Respuesta prom.',
+    dealsClosed: 'Tratos en NXT//LINK',
+    reviews: 'reseñas',
+    founded: 'Fundada',
+    foundedStaff: 'Fundada · {n} empleados',
+    navOverview: 'Resumen',
+    navExpertise: 'Experiencia',
+    navCompare: 'Comparar',
+    navProducts: 'Productos',
+    navServices: 'Servicios',
+    navCases: 'Casos de éxito',
+    navReviews: 'Reseñas',
+    about: 'Acerca de',
+    noDescription: 'Esta empresa aún no ha agregado una descripción.',
+    industriesServed: 'Industrias que atiende',
+    clientsSpecialize: 'Clientes en los que se especializa',
+    expertise: 'Experiencia',
+    knownFor: 'Por qué es reconocida',
+    problemsSolve: 'Problemas que resuelve',
+    capabilities: 'Capacidades',
+    compareOfferings: 'Comparar publicaciones',
+    sort: 'Ordenar',
+    sortAz: 'A–Z',
+    sortPriceAsc: 'Precio ↑',
+    sortPriceDesc: 'Precio ↓',
+    thOffering: 'Publicación',
+    thType: 'Tipo',
+    thPrice: 'Precio',
+    thTimeline: 'Plazo',
+    thBestFor: 'Ideal para',
+    thAction: 'Acción',
+    product: 'Producto',
+    service: 'Servicio',
+    dash: '—',
+    byQuote: 'Por cotización',
+    respondsIn: 'Responde en',
+    viewArrow: 'Ver →',
+    compareNote: 'Los precios y plazos son estimaciones del proveedor. Solicita una cotización a través de NXT//LINK para cifras firmes.',
+    productsEquipment: 'Productos y equipo',
+    services: 'Servicios',
+    caseStudies: 'Casos de éxito',
+    challenge: 'Reto:',
+    solution: 'Solución:',
+    reviewsOnly: '· solo de tratos verificados en NXT//LINK',
+    verifiedDeal: '✓ Trato verificado',
+    workWithVendor: 'Trabaja con este proveedor',
+    protectedIntro: 'Todas las cotizaciones, archivos y mensajes se gestionan a través de NXT//LINK. Tu presentación está protegida.',
+    requestAQuote: 'Solicitar cotización',
+    noListingsYet: 'Este proveedor aún no ha publicado publicaciones — describe lo que necesitas y te conectaremos, incluyendo con este proveedor.',
+    quickFacts: 'Datos rápidos',
+    companyType: 'Tipo de empresa',
+    employees: 'Empleados',
+    languages: 'Idiomas',
+    emergencyService: 'Servicio de emergencia',
+    website: 'Sitio web',
+    visit: 'Visitar ↗',
+    detailsComingSoon: 'Detalles de la empresa próximamente.',
+    brandsSupported: 'Marcas y equipos que atiende',
+    coverage: 'Cobertura',
+    certifications: 'Certificaciones',
+    team: 'Equipo',
+    teamNote: 'El contacto directo se comparte después de una presentación protegida por NXT//LINK.',
+    badgeVerifiedIdentity: '✓ Identidad verificada',
+    badgeVerifiedBusiness: '✓ Empresa verificada',
+    badgeInsurance: '✓ Seguro revisado',
+    badgeCertified: '✓ Certificado',
+    badgePilot: 'Piloto disponible',
+    badgeCrossBorder: 'Lista para cruce fronterizo',
+    badgeEmergency: 'Emergencia 24/7',
+    badgeInstallation: 'Instalación disponible',
+  },
+};
 
 export default function VendorStorefrontPage() {
   const params = useParams<{ id: string }>();
+  const [lang, setLang] = useLang();
+  const t = T[lang];
   const [d, setD] = useState<Storefront | null>(null);
   const [missing, setMissing] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
@@ -89,30 +270,36 @@ export default function VendorStorefrontPage() {
       .then((me) => { if (me?.ok && me.vendor?.id === params.id) setIsOwner(true); }).catch(() => {});
   }, [params.id]);
 
-  if (missing) return <div className="vs"><style dangerouslySetInnerHTML={{ __html: CSS }} /><div className="vs-empty">Vendor not found. <Link href="/marketplace">Back to marketplace</Link></div></div>;
-  if (!d) return <div className="vs"><style dangerouslySetInnerHTML={{ __html: CSS }} /><div className="vs-empty">Loading…</div></div>;
+  if (missing) return <div className="vs"><style dangerouslySetInnerHTML={{ __html: CSS }} /><div className="vs-empty">{t.notFound} <Link href="/marketplace">{t.backToMarketplace}</Link></div></div>;
+  if (!d) return <div className="vs"><style dangerouslySetInnerHTML={{ __html: CSS }} /><div className="vs-empty">{t.loading}</div></div>;
 
   const v = d.vendor;
   const products = d.listings.filter((l) => l.kind === 'product');
   const services = d.listings.filter((l) => l.kind === 'service');
   const firstListing = d.listings[0];
+  // No published listings yet: send the buyer into the assisted RFQ instead of
+  // dead-ending on /marketplace, so their intent to reach THIS vendor isn't
+  // lost — /intake reads ?vendor=/&vendor_id= as a cheap hint (see intake page).
+  const quoteHref = firstListing
+    ? `/marketplace/${firstListing.kind}/${firstListing.id}#quote`
+    : `/intake?vendor=${encodeURIComponent(v.company_name)}&vendor_id=${v.id}`;
 
   // Build the badge + stat + nav sets from real data only.
   const badges: Array<[string, string]> = [];
-  if (levelAtLeast(v.verification_level, 'identity_verified')) badges.push(['v', '✓ Verified identity']);
-  else if (v.verified) badges.push(['v', '✓ Verified business']);
-  if (levelAtLeast(v.verification_level, 'insurance_reviewed')) badges.push(['g', '✓ Insurance reviewed']);
-  if (levelAtLeast(v.verification_level, 'certifications_reviewed')) badges.push(['p', '✓ Certified']);
-  if (v.pilot_available) badges.push(['p', 'Pilot available']);
-  if (v.cross_border) badges.push(['a', 'Cross-border ready']);
-  if (v.emergency_available) badges.push(['g', '24/7 emergency']);
-  if (v.installation_available) badges.push(['g', 'Installation available']);
+  if (levelAtLeast(v.verification_level, 'identity_verified')) badges.push(['v', t.badgeVerifiedIdentity]);
+  else if (v.verified) badges.push(['v', t.badgeVerifiedBusiness]);
+  if (levelAtLeast(v.verification_level, 'insurance_reviewed')) badges.push(['g', t.badgeInsurance]);
+  if (levelAtLeast(v.verification_level, 'certifications_reviewed')) badges.push(['p', t.badgeCertified]);
+  if (v.pilot_available) badges.push(['p', t.badgePilot]);
+  if (v.cross_border) badges.push(['a', t.badgeCrossBorder]);
+  if (v.emergency_available) badges.push(['g', t.badgeEmergency]);
+  if (v.installation_available) badges.push(['g', t.badgeInstallation]);
 
   const stats: Array<[string, string]> = [];
-  if (v.response_time) stats.push([v.response_time, 'Avg. response']);
-  if (v.deals_closed > 0) stats.push([String(v.deals_closed), 'Deals on NXT//LINK']);
-  if (v.rating != null) stats.push([`${v.rating}★`, `${v.review_count} reviews`]);
-  if (v.year_founded) stats.push([String(v.year_founded), v.employee_count ? `Founded · ${v.employee_count} staff` : 'Founded']);
+  if (v.response_time) stats.push([v.response_time, t.avgResponse]);
+  if (v.deals_closed > 0) stats.push([String(v.deals_closed), t.dealsClosed]);
+  if (v.rating != null) stats.push([`${v.rating}★`, `${v.review_count} ${t.reviews}`]);
+  if (v.year_founded) stats.push([String(v.year_founded), v.employee_count ? t.foundedStaff.replace('{n}', v.employee_count) : t.founded]);
 
   // Unified compare table across every offering (products, tech, services),
   // sortable by price so buyers can scan value and timeline at a glance.
@@ -129,13 +316,13 @@ export default function VendorStorefrontPage() {
   const cmpMaxDays = dayVals.length ? Math.max(...dayVals) : 0;
   const cmpMinDays = dayVals.length ? Math.min(...dayVals) : 0;
 
-  const nav: Array<[string, string]> = [['about', 'Overview']];
-  if (v.main_expertise.length || v.problems_solved.length || v.capabilities.length) nav.push(['expertise', 'Expertise']);
-  if (d.listings.length >= 2) nav.push(['compare', 'Compare']);
-  if (products.length) nav.push(['products', 'Products']);
-  if (services.length) nav.push(['services', 'Services']);
-  if (d.case_studies.length) nav.push(['cases', 'Case studies']);
-  if (d.reviews.length) nav.push(['reviews', 'Reviews']);
+  const nav: Array<[string, string]> = [['about', t.navOverview]];
+  if (v.main_expertise.length || v.problems_solved.length || v.capabilities.length) nav.push(['expertise', t.navExpertise]);
+  if (d.listings.length >= 2) nav.push(['compare', t.navCompare]);
+  if (products.length) nav.push(['products', t.navProducts]);
+  if (services.length) nav.push(['services', t.navServices]);
+  if (d.case_studies.length) nav.push(['cases', t.navCases]);
+  if (d.reviews.length) nav.push(['reviews', t.navReviews]);
 
   const ListingCards = ({ items }: { items: ListingCard[] }) => (
     <div className="vs-plist">
@@ -143,7 +330,7 @@ export default function VendorStorefrontPage() {
         <Link key={l.id} className="vs-pcard" href={`/marketplace/${l.kind}/${l.id}`}>
           <div className="vs-pimg">{l.image_url ? <img src={l.image_url} alt={l.name} loading="lazy" /> : <div className="vs-noimg">NXT//LINK</div>}</div>
           <div className="vs-pb">
-            {l.pilot?.available && <span className="vs-ptag">Pilot available</span>}
+            {l.pilot?.available && <span className="vs-ptag">{t.badgePilot}</span>}
             <div className="vs-pn">{l.name}</div>
             {l.pricing?.range && <div className="vs-pp">{l.pricing.range}</div>}
             <div className="vs-pm">{l.category}</div>
@@ -159,15 +346,16 @@ export default function VendorStorefrontPage() {
       <nav className="vs-topbar">
         <Link className="vs-brand" href="/"><b>NXT<i>//</i>LINK</b></Link>
         <div className="vs-topr">
-          <Link className="vs-pill" href="/marketplace">Marketplace</Link>
-          {isOwner && <Link className="vs-pill on" href="/vendor/portal">Edit my profile</Link>}
+          <Link className="vs-pill" href="/marketplace">{t.marketplace}</Link>
+          {isOwner && <Link className="vs-pill on" href="/vendor/portal">{t.editProfile}</Link>}
+          <LanguageToggle lang={lang} onChange={setLang} variant="dark" />
         </div>
       </nav>
 
       {isOwner && (
         <div className="vs-ownerbar">
-          <span>👁 You’re viewing your storefront exactly as buyers see it.</span>
-          <Link href="/vendor/portal">← Back to editing</Link>
+          <span>👁 {t.ownerViewing}</span>
+          <Link href="/vendor/portal">{t.backToEditing}</Link>
         </div>
       )}
 
@@ -183,20 +371,20 @@ export default function VendorStorefrontPage() {
               <div className="vs-meta">
                 {v.city && <span>📍 <b>{v.city}</b></span>}
                 {v.service_areas.length > 0 && <span>🌎 {v.service_areas.slice(0, 4).join(' · ')}</span>}
-                {v.response_time && <span>⚡ Responds in <b>{v.response_time}</b></span>}
+                {v.response_time && <span>⚡ {t.respondsIn} <b>{v.response_time}</b></span>}
               </div>
-              {badges.length > 0 && <div className="vs-badges">{badges.map(([c, t], i) => <span key={i} className={`vs-badge ${c}`}>{t}</span>)}</div>}
+              {badges.length > 0 && <div className="vs-badges">{badges.map(([c, tx], i) => <span key={i} className={`vs-badge ${c}`}>{tx}</span>)}</div>}
             </div>
           </div>
 
           <div className="vs-actions">
-            <Link className="vs-btn pri" href={firstListing ? `/marketplace/${firstListing.kind}/${firstListing.id}#quote` : '/marketplace'}>Request quote through NXT//LINK</Link>
-            <button className="vs-btn" onClick={() => document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' })}>View offerings</button>
+            <Link className="vs-btn pri" href={quoteHref}>{t.requestQuote}</Link>
+            <button className="vs-btn" onClick={() => document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' })}>{t.viewOfferings}</button>
           </div>
 
           {stats.length > 0 && (
             <div className="vs-stats" style={{ gridTemplateColumns: `repeat(${Math.min(stats.length, 4)}, 1fr)` }}>
-              {stats.map(([b, s], i) => <div key={i} className="vs-stat"><b>{b}</b><span>{s}</span></div>)}
+              {stats.map(([b, sv], i) => <div key={i} className="vs-stat"><b>{b}</b><span>{sv}</span></div>)}
             </div>
           )}
         </div>
@@ -210,74 +398,74 @@ export default function VendorStorefrontPage() {
         <div className="vs-grid">
           <main>
             <section id="about" className="vs-card">
-              <h2>About</h2>
-              {v.description ? <p className="vs-prose">{v.description}</p> : <p className="vs-prose vs-dim">This company hasn’t added a description yet.</p>}
-              {v.industries.length > 0 && (<><h3>Industries served</h3><div className="vs-chips">{v.industries.map((c) => <span key={c} className="vs-chip">{c}</span>)}</div></>)}
-              {v.client_types.length > 0 && (<><h3>Clients they specialize in</h3><ul className="vs-bullets">{v.client_types.map((c) => <li key={c}>{c}</li>)}</ul></>)}
+              <h2>{t.about}</h2>
+              {v.description ? <p className="vs-prose">{v.description}</p> : <p className="vs-prose vs-dim">{t.noDescription}</p>}
+              {v.industries.length > 0 && (<><h3>{t.industriesServed}</h3><div className="vs-chips">{v.industries.map((c) => <span key={c} className="vs-chip">{c}</span>)}</div></>)}
+              {v.client_types.length > 0 && (<><h3>{t.clientsSpecialize}</h3><ul className="vs-bullets">{v.client_types.map((c) => <li key={c}>{c}</li>)}</ul></>)}
             </section>
 
             {(v.main_expertise.length > 0 || v.problems_solved.length > 0 || v.capabilities.length > 0) && (
               <section id="expertise" className="vs-card">
-                <h2>Expertise</h2>
-                {v.main_expertise.length > 0 && (<><h3>What they’re known for</h3><ul className="vs-bullets">{v.main_expertise.map((c) => <li key={c}>{c}</li>)}</ul></>)}
-                {v.problems_solved.length > 0 && (<><h3>Problems they solve</h3><div className="vs-chips">{v.problems_solved.map((c) => <span key={c} className="vs-chip n">{c}</span>)}</div></>)}
-                {v.capabilities.length > 0 && (<><h3>Capabilities</h3><ul className="vs-bullets g">{v.capabilities.map((c) => <li key={c}>{c}</li>)}</ul></>)}
+                <h2>{t.expertise}</h2>
+                {v.main_expertise.length > 0 && (<><h3>{t.knownFor}</h3><ul className="vs-bullets">{v.main_expertise.map((c) => <li key={c}>{c}</li>)}</ul></>)}
+                {v.problems_solved.length > 0 && (<><h3>{t.problemsSolve}</h3><div className="vs-chips">{v.problems_solved.map((c) => <span key={c} className="vs-chip n">{c}</span>)}</div></>)}
+                {v.capabilities.length > 0 && (<><h3>{t.capabilities}</h3><ul className="vs-bullets g">{v.capabilities.map((c) => <li key={c}>{c}</li>)}</ul></>)}
               </section>
             )}
 
             {d.listings.length >= 2 && (
               <section id="compare" className="vs-card">
                 <div className="vs-cmphead">
-                  <h2>Compare offerings</h2>
+                  <h2>{t.compareOfferings}</h2>
                   <div className="vs-sort">
-                    <span>Sort</span>
-                    <button className={sort === 'name' ? 'on' : ''} onClick={() => setSort('name')}>A–Z</button>
-                    <button className={sort === 'price_asc' ? 'on' : ''} onClick={() => setSort('price_asc')}>Price ↑</button>
-                    <button className={sort === 'price_desc' ? 'on' : ''} onClick={() => setSort('price_desc')}>Price ↓</button>
+                    <span>{t.sort}</span>
+                    <button className={sort === 'name' ? 'on' : ''} onClick={() => setSort('name')}>{t.sortAz}</button>
+                    <button className={sort === 'price_asc' ? 'on' : ''} onClick={() => setSort('price_asc')}>{t.sortPriceAsc}</button>
+                    <button className={sort === 'price_desc' ? 'on' : ''} onClick={() => setSort('price_desc')}>{t.sortPriceDesc}</button>
                   </div>
                 </div>
                 <div className="vs-cmpscroll">
                   <table className="vs-cmp">
                     <thead>
-                      <tr><th>Offering</th><th>Type</th><th>Price</th><th>Timeline</th><th>Best for</th><th aria-label="Action" /></tr>
+                      <tr><th>{t.thOffering}</th><th>{t.thType}</th><th>{t.thPrice}</th><th>{t.thTimeline}</th><th>{t.thBestFor}</th><th aria-label={t.thAction} /></tr>
                     </thead>
                     <tbody>
                       {compareRows.map((l) => (
                         <tr key={l.id}>
                           <td><Link className="vs-cmpname" href={`/marketplace/${l.kind}/${l.id}`}>{l.name}</Link><span className="vs-cmpcat">{l.category}</span></td>
-                          <td><span className={`vs-kind ${l.kind}`}>{l.kind === 'product' ? 'Product' : 'Service'}</span></td>
-                          <td className="vs-cmpprice">{priceText(l)}
+                          <td><span className={`vs-kind ${l.kind}`}>{l.kind === 'product' ? t.product : t.service}</span></td>
+                          <td className="vs-cmpprice">{priceText(l, lang, t.byQuote)}
                             {Number.isFinite(priceValue(l)) && cmpMaxPrice > 0 && (
                               <div className="vs-bar"><i className={priceValue(l) === cmpMinPrice ? 'best' : ''} style={{ width: `${Math.max(6, (priceValue(l) / cmpMaxPrice) * 100)}%` }} /></div>
                             )}
                           </td>
-                          <td className="vs-cmptime">{timelineText(l)}
+                          <td className="vs-cmptime">{timelineText(l, t.respondsIn, t.dash)}
                             {(() => { const dd = daysOf(l); return dd != null && cmpMaxDays > 0 ? (
                               <div className="vs-bar"><i className={dd === cmpMinDays ? 'best' : ''} style={{ width: `${Math.max(6, (dd / cmpMaxDays) * 100)}%` }} /></div>
                             ) : null; })()}
                           </td>
-                          <td className="vs-cmpbest">{(l.best_for && l.best_for.length) ? l.best_for.slice(0, 2).join(', ') : '—'}</td>
-                          <td><Link className="vs-cmpview" href={`/marketplace/${l.kind}/${l.id}`}>View →</Link></td>
+                          <td className="vs-cmpbest">{(l.best_for && l.best_for.length) ? l.best_for.slice(0, 2).join(', ') : t.dash}</td>
+                          <td><Link className="vs-cmpview" href={`/marketplace/${l.kind}/${l.id}`}>{t.viewArrow}</Link></td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-                <p className="vs-cmpnote">Prices and timelines are vendor-provided estimates. Request a quote through NXT//LINK for firm numbers.</p>
+                <p className="vs-cmpnote">{t.compareNote}</p>
               </section>
             )}
 
-            {products.length > 0 && <section id="products" className="vs-card"><h2>Products &amp; equipment</h2><ListingCards items={products} /></section>}
-            {services.length > 0 && <section id="services" className="vs-card"><h2>Services</h2><ListingCards items={services} /></section>}
+            {products.length > 0 && <section id="products" className="vs-card"><h2>{t.productsEquipment}</h2><ListingCards items={products} /></section>}
+            {services.length > 0 && <section id="services" className="vs-card"><h2>{t.services}</h2><ListingCards items={services} /></section>}
 
             {d.case_studies.length > 0 && (
               <section id="cases" className="vs-card">
-                <h2>Case studies</h2>
+                <h2>{t.caseStudies}</h2>
                 {d.case_studies.map((c) => (
                   <div key={c.id} className="vs-cs">
                     <h4>{c.title}</h4>
-                    {c.challenge && <p className="vs-cprob"><b>Challenge:</b> {c.challenge}</p>}
-                    {c.solution && <p className="vs-csol"><b>Solution:</b> {c.solution}</p>}
+                    {c.challenge && <p className="vs-cprob"><b>{t.challenge}</b> {c.challenge}</p>}
+                    {c.solution && <p className="vs-csol"><b>{t.solution}</b> {c.solution}</p>}
                     {c.result && <p className="vs-cres">{c.result}</p>}
                   </div>
                 ))}
@@ -286,10 +474,10 @@ export default function VendorStorefrontPage() {
 
             {d.reviews.length > 0 && (
               <section id="reviews" className="vs-card">
-                <h2>Reviews <span className="vs-subtle">· from verified NXT//LINK deals only</span></h2>
+                <h2>{t.navReviews} <span className="vs-subtle">{t.reviewsOnly}</span></h2>
                 {d.reviews.map((r, i) => (
                   <div key={i} className="vs-rev">
-                    <div className="vs-revtop"><span className="vs-stars">{stars(r.rating)}</span><span className="vs-revverif">✓ Verified deal</span></div>
+                    <div className="vs-revtop"><span className="vs-stars">{stars(r.rating)}</span><span className="vs-revverif">{t.verifiedDeal}</span></div>
                     {r.title && <div className="vs-revtitle">{r.title}</div>}
                     {r.body && <p className="vs-revbody">{r.body}</p>}
                   </div>
@@ -300,37 +488,38 @@ export default function VendorStorefrontPage() {
 
           <aside className="vs-side">
             <div className="vs-card vs-sidecta">
-              <h2>Work with this vendor</h2>
-              <p>All quotes, files, and messaging run through NXT//LINK. Your introduction is protected.</p>
-              <Link className="vs-btn pri vs-full" href={firstListing ? `/marketplace/${firstListing.kind}/${firstListing.id}#quote` : '/marketplace'}>Request a quote</Link>
+              <h2>{t.workWithVendor}</h2>
+              <p>{t.protectedIntro}</p>
+              {!firstListing && <p className="vs-nolisting">{t.noListingsYet}</p>}
+              <Link className="vs-btn pri vs-full" href={quoteHref}>{t.requestAQuote}</Link>
             </div>
 
             <div className="vs-card">
-              <h2>Quick facts</h2>
-              {v.company_type && <div className="vs-qf"><span>Company type</span><b>{TYPE_LABEL[v.company_type] || v.company_type}</b></div>}
-              {v.year_founded && <div className="vs-qf"><span>Founded</span><b>{v.year_founded}</b></div>}
-              {v.employee_count && <div className="vs-qf"><span>Employees</span><b>{v.employee_count}</b></div>}
-              {v.languages.length > 0 && <div className="vs-qf"><span>Languages</span><b>{v.languages.map((l) => l === 'es' ? 'Español' : l === 'en' ? 'English' : l).join(' · ')}</b></div>}
-              {v.emergency_available && <div className="vs-qf"><span>Emergency service</span><b>24/7</b></div>}
-              {v.website && <div className="vs-qf"><span>Website</span><b><a href={v.website.startsWith('http') ? v.website : `https://${v.website}`} target="_blank" rel="noopener noreferrer nofollow" className="vs-link">Visit ↗</a></b></div>}
-              {!v.company_type && !v.year_founded && !v.employee_count && !v.languages.length && <p className="vs-prose vs-dim" style={{ margin: 0 }}>Company details coming soon.</p>}
+              <h2>{t.quickFacts}</h2>
+              {v.company_type && <div className="vs-qf"><span>{t.companyType}</span><b>{TYPE_LABEL[lang][v.company_type] || v.company_type}</b></div>}
+              {v.year_founded && <div className="vs-qf"><span>{t.founded}</span><b>{v.year_founded}</b></div>}
+              {v.employee_count && <div className="vs-qf"><span>{t.employees}</span><b>{v.employee_count}</b></div>}
+              {v.languages.length > 0 && <div className="vs-qf"><span>{t.languages}</span><b>{v.languages.map((l) => l === 'es' ? 'Español' : l === 'en' ? 'English' : l).join(' · ')}</b></div>}
+              {v.emergency_available && <div className="vs-qf"><span>{t.emergencyService}</span><b>24/7</b></div>}
+              {v.website && <div className="vs-qf"><span>{t.website}</span><b><a href={v.website.startsWith('http') ? v.website : `https://${v.website}`} target="_blank" rel="noopener noreferrer nofollow" className="vs-link">{t.visit}</a></b></div>}
+              {!v.company_type && !v.year_founded && !v.employee_count && !v.languages.length && <p className="vs-prose vs-dim" style={{ margin: 0 }}>{t.detailsComingSoon}</p>}
             </div>
 
             {v.brands_supported.length > 0 && (
-              <div className="vs-card"><h2>Brands &amp; equipment supported</h2><div className="vs-brandgrid">{v.brands_supported.map((b) => <span key={b} className="vs-brandpill">{b}</span>)}</div></div>
+              <div className="vs-card"><h2>{t.brandsSupported}</h2><div className="vs-brandgrid">{v.brands_supported.map((b) => <span key={b} className="vs-brandpill">{b}</span>)}</div></div>
             )}
 
             {v.service_areas.length > 0 && (
-              <div className="vs-card"><h2>Coverage</h2><div className="vs-coverage">{v.service_areas.map((a) => <div key={a}><span className="vs-dot" />{a}</div>)}</div></div>
+              <div className="vs-card"><h2>{t.coverage}</h2><div className="vs-coverage">{v.service_areas.map((a) => <div key={a}><span className="vs-dot" />{a}</div>)}</div></div>
             )}
 
             {d.certifications.length > 0 && (
-              <div className="vs-card"><h2>Certifications</h2>{d.certifications.map((c) => <div key={c.id} className="vs-cert"><span className="vs-certi">🛡️</span>{c.name}{c.issuer ? ` · ${c.issuer}` : ''}</div>)}</div>
+              <div className="vs-card"><h2>{t.certifications}</h2>{d.certifications.map((c) => <div key={c.id} className="vs-cert"><span className="vs-certi">🛡️</span>{c.name}{c.issuer ? ` · ${c.issuer}` : ''}</div>)}</div>
             )}
 
             {d.team.length > 0 && (
               <div className="vs-card">
-                <h2>Team</h2>
+                <h2>{t.team}</h2>
                 <div className="vs-team">
                   {d.team.map((m) => (
                     <div key={m.id} className="vs-member">
@@ -339,7 +528,7 @@ export default function VendorStorefrontPage() {
                     </div>
                   ))}
                 </div>
-                <p className="vs-teamnote">Direct contact is shared after a protected NXT//LINK introduction.</p>
+                <p className="vs-teamnote">{t.teamNote}</p>
               </div>
             )}
           </aside>
@@ -357,7 +546,7 @@ const CSS = `
 .vs-empty a{color:#A78BFA;}
 .vs-topbar{position:sticky;top:0;z-index:50;display:flex;justify-content:space-between;align-items:center;padding:13px 22px;background:rgba(9,9,15,.86);backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,.08);}
 .vs-brand b{font-size:16px;font-weight:800;letter-spacing:-.02em;}.vs-brand i{color:#A78BFA;font-style:normal;}
-.vs-topr{display:flex;gap:8px;}
+.vs-topr{display:flex;gap:8px;align-items:center;}
 .vs-pill{font-size:12.5px;font-weight:600;color:#8A88A0;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:99px;padding:7px 13px;}
 .vs-pill.on{background:rgba(124,92,252,.16);border-color:#7C5CFC;color:#C4B5FD;}
 .vs-ownerbar{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;padding:9px 18px;background:rgba(124,92,252,.14);border-bottom:1px solid rgba(124,92,252,.3);font-size:13px;color:#C4B5FD;}
@@ -465,6 +654,7 @@ const CSS = `
 .vs-side .vs-card{margin-bottom:16px;}
 .vs-sidecta{background:linear-gradient(135deg,rgba(124,92,252,.16),rgba(52,211,153,.08));border-color:rgba(124,92,252,.3);}
 .vs-sidecta p{font-size:12.5px;color:#8A88A0;margin:6px 0 12px;line-height:1.5;}
+.vs-nolisting{font-size:12px;color:#FBBF24;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:9px;padding:8px 10px;line-height:1.5;}
 .vs-qf{display:flex;justify-content:space-between;gap:12px;font-size:13.5px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08);}
 .vs-qf:last-child{border-bottom:none;}
 .vs-qf span{color:#8A88A0;}

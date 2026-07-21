@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   if (String(body.website_url || '')) return NextResponse.json({ ok: true, public_ref: 'REQ-RECEIVED' });
   const startedAt = Number(body.started_at || 0);
   if (startedAt && Date.now() - startedAt < 1500) {
-    return NextResponse.json({ ok: false, message: 'Form submitted too quickly — please try again' }, { status: 400 });
+    return NextResponse.json({ ok: false, code: 'too_fast', message: 'Form submitted too quickly — please try again' }, { status: 400 });
   }
 
   const kind = body.kind === 'service' ? 'service' : 'product';
@@ -45,15 +45,15 @@ export async function POST(req: Request) {
     return handleBundle(body.items, { company, contact, email, phone, message });
   }
 
-  if (!listingId) return NextResponse.json({ ok: false, message: 'listing_id is required' }, { status: 400 });
-  if (!company) return NextResponse.json({ ok: false, message: 'Company is required' }, { status: 400 });
-  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return NextResponse.json({ ok: false, message: 'A valid email is required' }, { status: 400 });
+  if (!listingId) return NextResponse.json({ ok: false, code: 'listing_id_required', message: 'listing_id is required' }, { status: 400 });
+  if (!company) return NextResponse.json({ ok: false, code: 'company_required', message: 'Company is required' }, { status: 400 });
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return NextResponse.json({ ok: false, code: 'email_invalid', message: 'A valid email is required' }, { status: 400 });
   if (!isSupabaseConfigured()) return NextResponse.json({ ok: true, stored: false, degraded: true });
 
   const db = getSupabaseClient({ admin: true });
   // The listing must actually be published; vendor_id comes from the row, never the client.
   const { data: listing } = await db.from(tableFor(kind)).select('id, name, vendor_id').eq('id', listingId).eq('status', 'published').maybeSingle();
-  if (!listing) return NextResponse.json({ ok: false, message: 'Listing not found' }, { status: 404 });
+  if (!listing) return NextResponse.json({ ok: false, code: 'listing_not_found', message: 'Listing not found' }, { status: 404 });
 
   const { data, error } = await db.from('quote_requests').insert({
     kind,
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
     answers: { request_type: requestType },
     status: 'new',
   }).select('public_ref').single();
-  if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ ok: false, code: 'create_failed', message: error.message }, { status: 500 });
 
   // Best-effort: tell the vendor a lead arrived (never blocks the response).
   const { data: qrRow } = await db.from('quote_requests').select('id').eq('public_ref', data.public_ref).maybeSingle();

@@ -10,6 +10,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { scoreVendors, type MatchableVendor } from '@/lib/matching';
 import { notifyVendor } from '@/lib/notify';
+import { isRestricted } from '@/lib/vendor/moderation';
+import { sendMail } from '@/lib/mail';
 
 export interface DispatchableRequest {
   id: string;
@@ -49,11 +51,25 @@ export async function dispatchRequestToVendors(
 
     const { data: vendors } = await db
       .from('vendor_profiles')
-      .select('id, company_name, email, categories, service_areas, status')
+      .select('id, company_name, email, categories, service_areas, status, moderation_status, suspended_until')
       .eq('status', 'approved')
       .limit(500);
 
-    const enriched: MatchableVendor[] = (vendors || []).map((v) => ({
+    // INVARIANT (verified against src/lib/vendor/profile.ts + moderation.ts):
+    // `status` is the one-way review/approval gate — 'approved' lanes (invite,
+    // admin_approval) set it once and it never reverts. `moderation_status` is
+    // a SEPARATE active/suspended/banned axis an admin can flip at any time
+    // AFTER approval ("a vendor can be approved AND suspended" — moderation.ts
+    // header). Filtering on `status` alone (the old bug) let RFQ fan-out keep
+    // matching a vendor an admin had just suspended or banned. This mirrors
+    // the same combined gate the public storefront uses to hide a vendor
+    // (api/marketplace/vendor/[id]/route.ts: status for the "verified" badge,
+    // moderation_status/suspended_until for visibility).
+    const eligible = (vendors || []).filter(
+      (v) => !isRestricted({ moderation_status: (v.moderation_status as string) || null, suspended_until: (v.suspended_until as string) || null }),
+    );
+
+    const enriched: MatchableVendor[] = eligible.map((v) => ({
       id: v.id as string,
       company_name: (v.company_name as string) || '',
       email: (v.email as string) || null,
@@ -107,6 +123,17 @@ export async function dispatchRequestToVendors(
           'lead',
           `New request ${ref}${request.category ? ` — ${request.category}` : ''} matched to you`,
         );
+        // Best-effort email alert, mirroring the tone/structure of the single-
+        // listing path (api/marketplace/request/route.ts). No buyer contact
+        // info (email/phone) in the body — same masking discipline as the
+        // leads inbox pre-acceptance (api/vendor/leads/route.ts).
+        if (v.email) {
+          sendMail({
+            to: v.email,
+            subject: `NXT//LINK: new request ${ref}${request.category ? ` — ${request.category}` : ''} matched to you`,
+            body: `A buyer request (${ref}) matches your profile${request.category ? ` — ${request.category}` : ''}.${request.location ? ` Location: ${request.location}.` : ''}\n\n${request.problem || ''}\n\nRespond inside NXT//LINK — do not contact the buyer off-platform. Open your leads inbox: /vendor/leads`,
+          }).catch(() => {});
+        }
         dispatched++;
       } catch {
         skipped++;

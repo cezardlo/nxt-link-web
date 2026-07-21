@@ -1,11 +1,12 @@
 'use client';
 
 // Vendor leads inbox: quote/service requests from marketplace buyers,
-// scoped to the signed-in vendor's own listings.
+// scoped to the signed-in vendor's own listings. Fully EN/ES via the shared
+// LanguageToggle/useLang pattern (see /cart).
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
-import { useLang } from '@/components/LanguageToggle';
+import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
 import { Megaphone } from 'lucide-react';
 import { MatchReasons, MATCH_REASONS_CSS } from '@/components/marketplace/MatchReasons';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
@@ -32,9 +33,6 @@ interface Lead {
   buyer_decision?: string | null; commission?: Commission | null; pilots?: Pilot[];
 }
 const STATUSES = ['new', 'viewed', 'responded', 'won', 'lost'];
-const REQ_LABEL: Record<string, string> = {
-  quote: 'Quote', contact_sales: 'Sales', demo: 'Demo', pilot: 'Pilot', question: 'Question',
-};
 const money = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 // Live estimate mirroring the server fee engine (15% / 12.5% / 10% marginal).
 function estimateCommission(amount: number): number {
@@ -49,8 +47,104 @@ function estimateCommission(amount: number): number {
   return Math.round(fee * 100) / 100;
 }
 
+const T: Record<Lang, Record<string, string>> = {
+  en: {
+    leadsTag: 'Leads', alerts: 'Alerts', profile: 'Profile', yourListings: 'Your listings',
+    notifications: 'Notifications', close: 'Close', notifEmpty: 'Nothing yet — new leads, messages, and buyer decisions show here.',
+    openRequests: 'Open buyer requests', openRequestsHint: 'respond and it becomes a lead — buyer contact stays hidden until they accept your quote',
+    matchesProfile: 'Matches your profile', buyerNeed: 'Buyer need', urgency: 'Urgency', budget: 'Budget',
+    responded: '✓ Responded — see your leads below', respondQuote: 'Respond with a quote', creatingLead: 'Creating lead…',
+    leadsInbox: 'Leads inbox', newBadge: 'new', subtitle: 'Buyers who requested a quote or service from your listings. Respond inside NXT//LINK.',
+    loading: 'Loading…', signInFirst: 'Sign in first —', goToSignIn: 'go to sign in',
+    emptyTitle: 'No leads yet', emptyHint: 'Buyers find you through your listings — publish products and services so requests land here.',
+    manageListings: 'Manage your listings', completeProfile: 'Complete your profile',
+    contactHidden: 'Contact details unlock when the buyer accepts your quote — use Messages below',
+    yourQuote: 'Your quote:', commission: 'NXT//LINK commission:', protectedTo: 'protected to',
+    quoteAmount: 'Quote amount (USD)', timeline: 'Timeline', timelinePh: 'e.g. 4–6 weeks', validUntil: 'Valid until',
+    scopeNotesPh: 'Scope and notes for the buyer…', estCommission: 'Estimated NXT//LINK commission:',
+    estCommissionNote: '— give the buyer the same-scope price; do not add this on top.',
+    sendQuote: 'Send quote through NXT//LINK', sending: 'Sending…', cancel: 'Cancel',
+    updateQuote: 'Update quote', sendQuoteBtn: 'Send quote',
+    finalAmount: 'Final purchase amount (USD)', poNumber: 'PO number', poPh: 'Buyer’s PO #',
+    invoiceNum: 'Your invoice #', invoicePh: 'Your invoice to the buyer',
+    commissionOnAmount: 'NXT//LINK commission on this amount:', commissionBilled: '— billed to you with 30-day terms.',
+    recordPurchase: 'Record purchase', recording: 'Recording…',
+    recordPurchaseRequired: 'Record the purchase (required — closes the deal)',
+    dealClosed: 'Deal closed:', commissionPaid: 'Commission paid', commissionDue: 'Commission due',
+    invoice: 'Invoice', due: 'due',
+    scope: 'Scope:', successEquals: 'Success =', results: 'Results:',
+    resultsPh: 'What happened? Measurements, observations…', saveResults: 'Save results', saving: 'Saving…',
+    markScheduled: 'Mark scheduled', start: 'Start', recordResults: 'Record results',
+    scheduleDemoPilot: '+ Schedule demo / pilot',
+    type: 'Type', when: 'When', location: 'Location', locationPh: 'Buyer site / online',
+    scopePh: 'Scope — what will you show or test?', successCriteriaPh: 'Success criteria — what does success look like?',
+    proposeThrough: 'Propose through NXT//LINK',
+    noMessages: 'No messages yet — say hello.', messageBuyerPh: 'Message the buyer…', send: 'Send',
+    guardNote: 'Emails, phone numbers, and links are hidden automatically until the buyer accepts — deals stay on NXT//LINK (your terms: commission owed during the protected period either way).',
+    messages: 'Messages',
+    mark: 'Mark',
+    reqQuote: 'Quote', reqSales: 'Sales', reqDemo: 'Demo', reqPilot: 'Pilot', reqQuestion: 'Question',
+    stNew: 'new', stViewed: 'viewed', stResponded: 'responded', stWon: 'won', stLost: 'lost',
+    pkDemo: 'Demo', pkPilot: 'Pilot', pkSiteVisit: 'Site visit',
+    psProposed: 'Proposed', psScheduled: 'Scheduled', psInProgress: 'In progress', psCompleted: 'Completed', psCancelled: 'Cancelled',
+    poPassed: 'Passed', poFailed: 'Failed', poInconclusive: 'Inconclusive',
+    buyerAccepted: 'Buyer accepted your quote', buyerDeclined: 'Buyer declined your quote',
+    bundlePrefix: 'Bundle', bundleSuffix: 'one quote covers everything', bundleItem: 'item', bundleItems: 'items',
+  },
+  es: {
+    leadsTag: 'Leads', alerts: 'Alertas', profile: 'Perfil', yourListings: 'Tus publicaciones',
+    notifications: 'Notificaciones', close: 'Cerrar', notifEmpty: 'Nada por aquí todavía — nuevos leads, mensajes y decisiones del comprador aparecerán aquí.',
+    openRequests: 'Solicitudes abiertas de compradores', openRequestsHint: 'responde y se convierte en un lead — el contacto del comprador se mantiene oculto hasta que acepte tu cotización',
+    matchesProfile: 'Coincide con tu perfil', buyerNeed: 'Necesidad del comprador', urgency: 'Urgencia', budget: 'Presupuesto',
+    responded: '✓ Respondido — ve tus leads abajo', respondQuote: 'Responder con una cotización', creatingLead: 'Creando lead…',
+    leadsInbox: 'Bandeja de leads', newBadge: 'nuevos', subtitle: 'Compradores que solicitaron una cotización o servicio de tus publicaciones. Responde dentro de NXT//LINK.',
+    loading: 'Cargando…', signInFirst: 'Inicia sesión primero —', goToSignIn: 'ir a iniciar sesión',
+    emptyTitle: 'Aún no hay leads', emptyHint: 'Los compradores te encuentran a través de tus publicaciones — publica productos y servicios para que lleguen solicitudes aquí.',
+    manageListings: 'Administrar tus publicaciones', completeProfile: 'Completar tu perfil',
+    contactHidden: 'Los datos de contacto se desbloquean cuando el comprador acepta tu cotización — usa Mensajes abajo',
+    yourQuote: 'Tu cotización:', commission: 'Comisión NXT//LINK:', protectedTo: 'protegido hasta',
+    quoteAmount: 'Monto de la cotización (USD)', timeline: 'Plazo', timelinePh: 'ej. 4–6 semanas', validUntil: 'Válido hasta',
+    scopeNotesPh: 'Alcance y notas para el comprador…', estCommission: 'Comisión NXT//LINK estimada:',
+    estCommissionNote: '— dale al comprador el precio del mismo alcance; no la agregues encima.',
+    sendQuote: 'Enviar cotización a través de NXT//LINK', sending: 'Enviando…', cancel: 'Cancelar',
+    updateQuote: 'Actualizar cotización', sendQuoteBtn: 'Enviar cotización',
+    finalAmount: 'Monto final de la compra (USD)', poNumber: 'Número de orden de compra', poPh: 'Orden de compra del comprador',
+    invoiceNum: 'Tu número de factura', invoicePh: 'Tu factura al comprador',
+    commissionOnAmount: 'Comisión NXT//LINK sobre este monto:', commissionBilled: '— facturado a ti con términos de 30 días.',
+    recordPurchase: 'Registrar compra', recording: 'Registrando…',
+    recordPurchaseRequired: 'Registrar la compra (obligatorio — cierra el trato)',
+    dealClosed: 'Trato cerrado:', commissionPaid: 'Comisión pagada', commissionDue: 'Comisión pendiente',
+    invoice: 'Factura', due: 'vence',
+    scope: 'Alcance:', successEquals: 'Éxito =', results: 'Resultados:',
+    resultsPh: '¿Qué pasó? Mediciones, observaciones…', saveResults: 'Guardar resultados', saving: 'Guardando…',
+    markScheduled: 'Marcar programado', start: 'Iniciar', recordResults: 'Registrar resultados',
+    scheduleDemoPilot: '+ Programar demo / piloto',
+    type: 'Tipo', when: 'Cuándo', location: 'Ubicación', locationPh: 'Sitio del comprador / en línea',
+    scopePh: 'Alcance — ¿qué vas a mostrar o probar?', successCriteriaPh: 'Criterios de éxito — ¿cómo se ve el éxito?',
+    proposeThrough: 'Proponer a través de NXT//LINK',
+    noMessages: 'Aún no hay mensajes — saluda.', messageBuyerPh: 'Mensaje para el comprador…', send: 'Enviar',
+    guardNote: 'Los correos, teléfonos y enlaces se ocultan automáticamente hasta que el comprador acepte — los tratos se quedan en NXT//LINK (tus términos: la comisión se debe durante el período protegido de cualquier forma).',
+    messages: 'Mensajes',
+    mark: 'Marcar',
+    reqQuote: 'Cotización', reqSales: 'Ventas', reqDemo: 'Demo', reqPilot: 'Piloto', reqQuestion: 'Pregunta',
+    stNew: 'nuevo', stViewed: 'visto', stResponded: 'respondido', stWon: 'ganado', stLost: 'perdido',
+    pkDemo: 'Demo', pkPilot: 'Piloto', pkSiteVisit: 'Visita al sitio',
+    psProposed: 'Propuesto', psScheduled: 'Programado', psInProgress: 'En progreso', psCompleted: 'Completado', psCancelled: 'Cancelado',
+    poPassed: 'Aprobado', poFailed: 'Fallido', poInconclusive: 'No concluyente',
+    buyerAccepted: 'El comprador aceptó tu cotización', buyerDeclined: 'El comprador rechazó tu cotización',
+    bundlePrefix: 'Paquete', bundleSuffix: 'una cotización cubre todo', bundleItem: 'artículo', bundleItems: 'artículos',
+  },
+};
+
 export default function VendorLeadsPage() {
-  const [lang] = useLang(); // stored `nxt_lang` — new bundle strings are EN/ES
+  const [lang, setLang] = useLang(); // stored `nxt_lang` — shared across marketplace pages
+  const t = T[lang];
+  const REQ_LABEL: Record<string, string> = { quote: t.reqQuote, contact_sales: t.reqSales, demo: t.reqDemo, pilot: t.reqPilot, question: t.reqQuestion };
+  const STATUS_LABEL: Record<string, string> = { new: t.stNew, viewed: t.stViewed, responded: t.stResponded, won: t.stWon, lost: t.stLost };
+  const PILOT_KIND_LABEL: Record<string, string> = { demo: t.pkDemo, pilot: t.pkPilot, site_visit: t.pkSiteVisit };
+  const PILOT_STATUS_LABEL: Record<string, string> = { proposed: t.psProposed, scheduled: t.psScheduled, in_progress: t.psInProgress, completed: t.psCompleted, cancelled: t.psCancelled };
+  const PILOT_OUTCOME_LABEL: Record<string, string> = { passed: t.poPassed, failed: t.poFailed, inconclusive: t.poInconclusive };
+
   const [checking, setChecking] = useState(true);
   const [signedIn, setSignedIn] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -197,18 +291,19 @@ export default function VendorLeadsPage() {
     <div className="ld">
       <style dangerouslySetInnerHTML={{ __html: CSS + MATCH_REASONS_CSS + EMPTY_ACTION_CSS + '.ld-opencard .mrx-chips{margin-bottom:8px;}' }} />
       <nav className="ld-nav">
-        <a className="ld-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>Leads</span></a>
+        <a className="ld-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>{t.leadsTag}</span></a>
         <div className="ld-navr">
-          <button className="ld-bell" onClick={toggleNotifs} aria-label="Notifications">Alerts{notifUnread > 0 && <span className="ld-belldot">{notifUnread}</span>}</button>
-          <a className="ld-link" href="/vendor/portal">Profile</a>
-          <a className="ld-link" href="/vendor/listings">Your listings</a>
+          <button className="ld-bell" onClick={toggleNotifs} aria-label="Notifications">{t.alerts}{notifUnread > 0 && <span className="ld-belldot">{notifUnread}</span>}</button>
+          <a className="ld-link" href="/vendor/portal">{t.profile}</a>
+          <a className="ld-link" href="/vendor/listings">{t.yourListings}</a>
+          <LanguageToggle lang={lang} onChange={setLang} variant="dark" />
         </div>
       </nav>
       <main className="ld-wrap">
         {notifOpen && (
           <div className="ld-notifs">
-            <div className="ld-notifhead"><b>Notifications</b><button onClick={() => setNotifOpen(false)}>Close</button></div>
-            {notifs.length === 0 ? <p className="ld-notifempty">Nothing yet — new leads, messages, and buyer decisions show here.</p> : (
+            <div className="ld-notifhead"><b>{t.notifications}</b><button onClick={() => setNotifOpen(false)}>{t.close}</button></div>
+            {notifs.length === 0 ? <p className="ld-notifempty">{t.notifEmpty}</p> : (
               <ul>
                 {notifs.map((n) => (
                   <li key={n.id} className={n.read_at ? '' : 'unread'}>
@@ -222,43 +317,43 @@ export default function VendorLeadsPage() {
         )}
         {openReqs.length > 0 && (
           <section className="ld-open">
-            <h2>Open buyer requests <small>respond and it becomes a lead — buyer contact stays hidden until they accept your quote</small></h2>
+            <h2>{t.openRequests} <small>{t.openRequestsHint}</small></h2>
             <div className="ld-openlist">
               {openReqs.map((r) => (
                 <div className={'ld-opencard' + (r.relevant ? ' rel' : '')} key={r.id}>
                   <div className="ld-opentop">
-                    {r.relevant && !(r.reasons || []).length && <span className="ld-relbadge">Matches your profile</span>}
-                    <b>{r.category || 'Buyer need'}</b>
+                    {r.relevant && !(r.reasons || []).length && <span className="ld-relbadge">{t.matchesProfile}</span>}
+                    <b>{r.category || t.buyerNeed}</b>
                     <small>{r.public_ref}</small>
                   </div>
                   {(r.reasons || []).length > 0 && <MatchReasons reasons={r.reasons || []} compact />}
                   {r.problem && <p>{r.problem}</p>}
                   <div className="ld-openmeta">
                     {r.location && <span>{r.location}</span>}
-                    {r.urgency && <span>Urgency: {r.urgency}</span>}
-                    {r.budget_range && <span>Budget: {r.budget_range}</span>}
+                    {r.urgency && <span>{t.urgency}: {r.urgency}</span>}
+                    {r.budget_range && <span>{t.budget}: {r.budget_range}</span>}
                   </div>
                   {r.responded
-                    ? <span className="ld-openok">✓ Responded — see your leads below</span>
-                    : <button className="ld-qsend" disabled={orBusy === r.id} onClick={() => respondToRequest(r.id)}>{orBusy === r.id ? 'Creating lead…' : 'Respond with a quote'}</button>}
+                    ? <span className="ld-openok">{t.responded}</span>
+                    : <button className="ld-qsend" disabled={orBusy === r.id} onClick={() => respondToRequest(r.id)}>{orBusy === r.id ? t.creatingLead : t.respondQuote}</button>}
                 </div>
               ))}
             </div>
           </section>
         )}
 
-        <h1>Leads inbox {leads.filter((l) => l.status === 'new').length > 0 && <span className="ld-newcnt">{leads.filter((l) => l.status === 'new').length} new</span>}</h1>
-        <p className="ld-sub">Buyers who requested a quote or service from your listings. Respond inside NXT{'//'}LINK.</p>
-        {checking ? <div className="ld-empty">Loading…</div>
-          : !signedIn ? <div className="ld-empty">Sign in first — <a href="/vendor-login">go to sign in</a></div>
+        <h1>{t.leadsInbox} {leads.filter((l) => l.status === 'new').length > 0 && <span className="ld-newcnt">{leads.filter((l) => l.status === 'new').length} {t.newBadge}</span>}</h1>
+        <p className="ld-sub">{t.subtitle}</p>
+        {checking ? <div className="ld-empty">{t.loading}</div>
+          : !signedIn ? <div className="ld-empty">{t.signInFirst} <a href="/vendor-login">{t.goToSignIn}</a></div>
           : leads.length === 0 ? (
             <EmptyAction
               icon={<Megaphone strokeWidth={1.75} />}
-              title="No leads yet"
-              hint="Buyers find you through your listings — publish products and services so requests land here."
-              actionLabel="Manage your listings"
+              title={t.emptyTitle}
+              hint={t.emptyHint}
+              actionLabel={t.manageListings}
               actionHref="/vendor/listings"
-              secondaryLabel="Complete your profile"
+              secondaryLabel={t.completeProfile}
               secondaryHref="/vendor/portal"
             />
           )
@@ -267,7 +362,7 @@ export default function VendorLeadsPage() {
               {leads.map((l) => (
                 <div className="ld-card" key={l.id}>
                   <div className="ld-top">
-                    <span className={'ld-status ' + l.status}>{l.status}</span>
+                    <span className={'ld-status ' + l.status}>{STATUS_LABEL[l.status] || l.status}</span>
                     <span className="ld-reqtype">{REQ_LABEL[l.answers?.request_type || 'quote'] || l.answers?.request_type}</span>
                     <b>{l.company}</b>
                     <small>{l.listing_name ? `→ ${l.listing_name}` : ''} · {new Date(l.created_at).toLocaleDateString()}</small>
@@ -278,9 +373,7 @@ export default function VendorLeadsPage() {
                   {(l.answers?.items?.length || 0) > 0 && (
                     <div className="ld-bundle">
                       <b>
-                        {lang === 'es'
-                          ? `Paquete · ${l.answers!.items!.length} ${l.answers!.items!.length === 1 ? 'artículo' : 'artículos'} — una cotización cubre todo`
-                          : `Bundle · ${l.answers!.items!.length} ${l.answers!.items!.length === 1 ? 'item' : 'items'} — one quote covers everything`}
+                        {t.bundlePrefix} · {l.answers!.items!.length} {l.answers!.items!.length === 1 ? t.bundleItem : t.bundleItems} — {t.bundleSuffix}
                       </b>
                       <ul>
                         {l.answers!.items!.map((it) => (
@@ -301,7 +394,7 @@ export default function VendorLeadsPage() {
                         {l.phone && <span>{l.phone}</span>}
                       </>
                     ) : (
-                      <span className="ld-hiddenc">Contact details unlock when the buyer accepts your quote — use Messages below</span>
+                      <span className="ld-hiddenc">{t.contactHidden}</span>
                     )}
                   </div>
                   {l.message && <p className="ld-msg">{l.message}</p>}
@@ -324,31 +417,31 @@ export default function VendorLeadsPage() {
 
                   {/* Quote answer + commission — the deal stays inside NXT//LINK */}
                   <div className="ld-quote">
-                    {l.buyer_decision && <div className={'ld-decision ' + l.buyer_decision}>Buyer {l.buyer_decision} your quote</div>}
+                    {l.buyer_decision && <div className={'ld-decision ' + l.buyer_decision}>{l.buyer_decision === 'accepted' ? t.buyerAccepted : t.buyerDeclined}</div>}
                     {l.quote_amount != null && openQuote !== l.id && (
                       <div className="ld-qsum">
-                        <span>Your quote: <b>{money(l.quote_amount)}</b></span>
-                        {l.commission && <span>NXT//LINK commission: <b>{money(l.commission.commission_amount)}</b></span>}
+                        <span>{t.yourQuote} <b>{money(l.quote_amount)}</b></span>
+                        {l.commission && <span>{t.commission} <b>{money(l.commission.commission_amount)}</b></span>}
                         {l.quote_timeline && <span>{l.quote_timeline}</span>}
-                        {l.commission?.protected_until && <span className="ld-prot">protected to {new Date(l.commission.protected_until).toLocaleDateString()}</span>}
+                        {l.commission?.protected_until && <span className="ld-prot">{t.protectedTo} {new Date(l.commission.protected_until).toLocaleDateString()}</span>}
                       </div>
                     )}
                     {openQuote === l.id ? (
                       <div className="ld-qform">
                         <div className="ld-qrow">
-                          <label>Quote amount (USD)<input type="number" min="0" value={qform.amount} onChange={(e) => setQform({ ...qform, amount: e.target.value })} placeholder="e.g. 25000" /></label>
-                          <label>Timeline<input value={qform.timeline} onChange={(e) => setQform({ ...qform, timeline: e.target.value })} placeholder="e.g. 4–6 weeks" /></label>
-                          <label>Valid until<input type="date" value={qform.valid_until} onChange={(e) => setQform({ ...qform, valid_until: e.target.value })} /></label>
+                          <label>{t.quoteAmount}<input type="number" min="0" value={qform.amount} onChange={(e) => setQform({ ...qform, amount: e.target.value })} placeholder="e.g. 25000" /></label>
+                          <label>{t.timeline}<input value={qform.timeline} onChange={(e) => setQform({ ...qform, timeline: e.target.value })} placeholder={t.timelinePh} /></label>
+                          <label>{t.validUntil}<input type="date" value={qform.valid_until} onChange={(e) => setQform({ ...qform, valid_until: e.target.value })} /></label>
                         </div>
-                        <textarea rows={3} value={qform.message} onChange={(e) => setQform({ ...qform, message: e.target.value })} placeholder="Scope and notes for the buyer…" />
-                        <div className="ld-qcom">Estimated NXT//LINK commission: <b>{money(estimateCommission(Number(qform.amount)))}</b> <small>— give the buyer the same-scope price; do not add this on top.</small></div>
+                        <textarea rows={3} value={qform.message} onChange={(e) => setQform({ ...qform, message: e.target.value })} placeholder={t.scopeNotesPh} />
+                        <div className="ld-qcom">{t.estCommission} <b>{money(estimateCommission(Number(qform.amount)))}</b> <small>{t.estCommissionNote}</small></div>
                         <div className="ld-qactions">
-                          <button className="ld-qsend" disabled={qBusy || !(Number(qform.amount) > 0)} onClick={() => sendQuote(l.id)}>{qBusy ? 'Sending…' : 'Send quote through NXT//LINK'}</button>
-                          <button className="ld-qcancel" onClick={() => setOpenQuote(null)}>Cancel</button>
+                          <button className="ld-qsend" disabled={qBusy || !(Number(qform.amount) > 0)} onClick={() => sendQuote(l.id)}>{qBusy ? t.sending : t.sendQuote}</button>
+                          <button className="ld-qcancel" onClick={() => setOpenQuote(null)}>{t.cancel}</button>
                         </div>
                       </div>
                     ) : (
-                      <button className="ld-qopen" onClick={() => openQuoteForm(l)}>{l.quote_amount != null ? 'Update quote' : 'Send quote'}</button>
+                      <button className="ld-qopen" onClick={() => openQuoteForm(l)}>{l.quote_amount != null ? t.updateQuote : t.sendQuoteBtn}</button>
                     )}
                   </div>
 
@@ -358,31 +451,31 @@ export default function VendorLeadsPage() {
                       {l.commission?.invoice_number ? (
                         <div className="ld-bill">
                           <div className="ld-billtop">
-                            <b>Deal closed: {money(l.commission.final_amount || l.quote_amount || 0)}</b>
-                            <span className={'ld-billstatus ' + (l.commission.paid_at ? 'paid' : 'due')}>{l.commission.paid_at ? 'Commission paid' : 'Commission due'}</span>
+                            <b>{t.dealClosed} {money(l.commission.final_amount || l.quote_amount || 0)}</b>
+                            <span className={'ld-billstatus ' + (l.commission.paid_at ? 'paid' : 'due')}>{l.commission.paid_at ? t.commissionPaid : t.commissionDue}</span>
                           </div>
                           <div className="ld-billrow">
-                            <span>NXT{'//'}LINK commission: <b>{money(l.commission.commission_amount)}</b></span>
-                            <span>Invoice {l.commission.invoice_number}</span>
-                            {l.commission.due_date && !l.commission.paid_at && <span>due {new Date(l.commission.due_date).toLocaleDateString()}</span>}
+                            <span>{t.commission} <b>{money(l.commission.commission_amount)}</b></span>
+                            <span>{t.invoice} {l.commission.invoice_number}</span>
+                            {l.commission.due_date && !l.commission.paid_at && <span>{t.due} {new Date(l.commission.due_date).toLocaleDateString()}</span>}
                           </div>
                         </div>
                       ) : purFor === l.id ? (
                         <div className="ld-qform">
                           <div className="ld-qrow">
-                            <label>Final purchase amount (USD)<input type="number" min="0" value={purForm.amount} onChange={(e) => setPurForm({ ...purForm, amount: e.target.value })} placeholder={l.quote_amount != null ? String(l.quote_amount) : 'e.g. 25000'} /></label>
-                            <label>PO number<input value={purForm.po_number} onChange={(e) => setPurForm({ ...purForm, po_number: e.target.value })} placeholder="Buyer's PO #" /></label>
-                            <label>Your invoice #<input value={purForm.invoice_ref} onChange={(e) => setPurForm({ ...purForm, invoice_ref: e.target.value })} placeholder="Your invoice to the buyer" /></label>
+                            <label>{t.finalAmount}<input type="number" min="0" value={purForm.amount} onChange={(e) => setPurForm({ ...purForm, amount: e.target.value })} placeholder={l.quote_amount != null ? String(l.quote_amount) : 'e.g. 25000'} /></label>
+                            <label>{t.poNumber}<input value={purForm.po_number} onChange={(e) => setPurForm({ ...purForm, po_number: e.target.value })} placeholder={t.poPh} /></label>
+                            <label>{t.invoiceNum}<input value={purForm.invoice_ref} onChange={(e) => setPurForm({ ...purForm, invoice_ref: e.target.value })} placeholder={t.invoicePh} /></label>
                           </div>
-                          <div className="ld-qcom">NXT{'//'}LINK commission on this amount: <b>{money(estimateCommission(Number(purForm.amount)))}</b> <small>— billed to you with 30-day terms.</small></div>
+                          <div className="ld-qcom">{t.commissionOnAmount} <b>{money(estimateCommission(Number(purForm.amount)))}</b> <small>{t.commissionBilled}</small></div>
                           <div className="ld-qactions">
-                            <button className="ld-qsend" disabled={purBusy || !(Number(purForm.amount) > 0)} onClick={() => recordPurchase(l.id)}>{purBusy ? 'Recording…' : 'Record purchase'}</button>
-                            <button className="ld-qcancel" onClick={() => setPurFor(null)}>Cancel</button>
+                            <button className="ld-qsend" disabled={purBusy || !(Number(purForm.amount) > 0)} onClick={() => recordPurchase(l.id)}>{purBusy ? t.recording : t.recordPurchase}</button>
+                            <button className="ld-qcancel" onClick={() => setPurFor(null)}>{t.cancel}</button>
                           </div>
                         </div>
                       ) : (
                         <button className="ld-purbtn" onClick={() => { setPurForm({ amount: l.quote_amount != null ? String(l.quote_amount) : '', po_number: '', invoice_ref: '', purchased_at: '' }); setPurFor(l.id); }}>
-                          Record the purchase (required — closes the deal)
+                          {t.recordPurchaseRequired}
                         </button>
                       )}
                     </div>
@@ -393,32 +486,32 @@ export default function VendorLeadsPage() {
                     {(l.pilots || []).map((p) => (
                       <div className="ld-pcard" key={p.id}>
                         <div className="ld-ptop">
-                          <span className={'ld-pkind ' + p.kind}>{p.kind.replace('_', ' ')}</span>
-                          <span className={'ld-pstatus ' + p.status}>{p.status.replace('_', ' ')}</span>
+                          <span className={'ld-pkind ' + p.kind}>{PILOT_KIND_LABEL[p.kind] || p.kind.replace('_', ' ')}</span>
+                          <span className={'ld-pstatus ' + p.status}>{PILOT_STATUS_LABEL[p.status] || p.status.replace('_', ' ')}</span>
                           {p.scheduled_for && <small>{new Date(p.scheduled_for).toLocaleString()}</small>}
                           {p.location && <small>· {p.location}</small>}
-                          {p.outcome && <span className={'ld-poutcome ' + p.outcome}>{p.outcome}</span>}
+                          {p.outcome && <span className={'ld-poutcome ' + p.outcome}>{PILOT_OUTCOME_LABEL[p.outcome] || p.outcome}</span>}
                         </div>
-                        {p.scope && <p className="ld-pscope"><span>Scope:</span> {p.scope}</p>}
-                        {p.success_criteria && <p className="ld-pscope"><span>Success =</span> {p.success_criteria}</p>}
-                        {p.results && <p className="ld-pscope"><span>Results:</span> {p.results}</p>}
+                        {p.scope && <p className="ld-pscope"><span>{t.scope}</span> {p.scope}</p>}
+                        {p.success_criteria && <p className="ld-pscope"><span>{t.successEquals}</span> {p.success_criteria}</p>}
+                        {p.results && <p className="ld-pscope"><span>{t.results}</span> {p.results}</p>}
                         {resultsFor === p.id ? (
                           <div className="ld-presults">
-                            <textarea rows={2} placeholder="What happened? Measurements, observations…" value={rform.results} onChange={(e) => setRform({ ...rform, results: e.target.value })} />
+                            <textarea rows={2} placeholder={t.resultsPh} value={rform.results} onChange={(e) => setRform({ ...rform, results: e.target.value })} />
                             <div className="ld-qactions">
                               <select value={rform.outcome} onChange={(e) => setRform({ ...rform, outcome: e.target.value })}>
-                                <option value="passed">Passed</option><option value="failed">Failed</option><option value="inconclusive">Inconclusive</option>
+                                <option value="passed">{t.poPassed}</option><option value="failed">{t.poFailed}</option><option value="inconclusive">{t.poInconclusive}</option>
                               </select>
-                              <button className="ld-qsend" disabled={pBusy} onClick={() => saveResults(l.id, p.id)}>{pBusy ? 'Saving…' : 'Save results'}</button>
-                              <button className="ld-qcancel" onClick={() => setResultsFor(null)}>Cancel</button>
+                              <button className="ld-qsend" disabled={pBusy} onClick={() => saveResults(l.id, p.id)}>{pBusy ? t.saving : t.saveResults}</button>
+                              <button className="ld-qcancel" onClick={() => setResultsFor(null)}>{t.cancel}</button>
                             </div>
                           </div>
                         ) : (
                           <div className="ld-pactions">
-                            {p.status === 'proposed' && <button onClick={() => patchPilot(l.id, p.id, { status: 'scheduled' })}>Mark scheduled</button>}
-                            {(p.status === 'scheduled' || p.status === 'proposed') && <button onClick={() => patchPilot(l.id, p.id, { status: 'in_progress' })}>Start</button>}
-                            {p.status !== 'completed' && p.status !== 'cancelled' && <button onClick={() => { setRform({ results: p.results || '', outcome: p.outcome || 'passed' }); setResultsFor(p.id); }}>Record results</button>}
-                            {p.status !== 'completed' && p.status !== 'cancelled' && <button onClick={() => patchPilot(l.id, p.id, { status: 'cancelled' })}>Cancel</button>}
+                            {p.status === 'proposed' && <button onClick={() => patchPilot(l.id, p.id, { status: 'scheduled' })}>{t.markScheduled}</button>}
+                            {(p.status === 'scheduled' || p.status === 'proposed') && <button onClick={() => patchPilot(l.id, p.id, { status: 'in_progress' })}>{t.start}</button>}
+                            {p.status !== 'completed' && p.status !== 'cancelled' && <button onClick={() => { setRform({ results: p.results || '', outcome: p.outcome || 'passed' }); setResultsFor(p.id); }}>{t.recordResults}</button>}
+                            {p.status !== 'completed' && p.status !== 'cancelled' && <button onClick={() => patchPilot(l.id, p.id, { status: 'cancelled' })}>{t.cancel}</button>}
                           </div>
                         )}
                       </div>
@@ -426,23 +519,23 @@ export default function VendorLeadsPage() {
                     {openPilot === l.id ? (
                       <div className="ld-qform">
                         <div className="ld-qrow">
-                          <label>Type
+                          <label>{t.type}
                             <select value={pform.kind} onChange={(e) => setPform({ ...pform, kind: e.target.value })}>
-                              <option value="demo">Demo</option><option value="pilot">Pilot</option><option value="site_visit">Site visit</option>
+                              <option value="demo">{t.pkDemo}</option><option value="pilot">{t.pkPilot}</option><option value="site_visit">{t.pkSiteVisit}</option>
                             </select>
                           </label>
-                          <label>When<input type="datetime-local" value={pform.scheduled_for} onChange={(e) => setPform({ ...pform, scheduled_for: e.target.value })} /></label>
-                          <label>Location<input value={pform.location} onChange={(e) => setPform({ ...pform, location: e.target.value })} placeholder="Buyer site / online" /></label>
+                          <label>{t.when}<input type="datetime-local" value={pform.scheduled_for} onChange={(e) => setPform({ ...pform, scheduled_for: e.target.value })} /></label>
+                          <label>{t.location}<input value={pform.location} onChange={(e) => setPform({ ...pform, location: e.target.value })} placeholder={t.locationPh} /></label>
                         </div>
-                        <textarea rows={2} placeholder="Scope — what will you show or test?" value={pform.scope} onChange={(e) => setPform({ ...pform, scope: e.target.value })} />
-                        <textarea rows={2} placeholder="Success criteria — what does success look like?" value={pform.success_criteria} onChange={(e) => setPform({ ...pform, success_criteria: e.target.value })} />
+                        <textarea rows={2} placeholder={t.scopePh} value={pform.scope} onChange={(e) => setPform({ ...pform, scope: e.target.value })} />
+                        <textarea rows={2} placeholder={t.successCriteriaPh} value={pform.success_criteria} onChange={(e) => setPform({ ...pform, success_criteria: e.target.value })} />
                         <div className="ld-qactions">
-                          <button className="ld-qsend" disabled={pBusy} onClick={() => createPilot(l.id)}>{pBusy ? 'Saving…' : 'Propose through NXT//LINK'}</button>
-                          <button className="ld-qcancel" onClick={() => setOpenPilot(null)}>Cancel</button>
+                          <button className="ld-qsend" disabled={pBusy} onClick={() => createPilot(l.id)}>{pBusy ? t.saving : t.proposeThrough}</button>
+                          <button className="ld-qcancel" onClick={() => setOpenPilot(null)}>{t.cancel}</button>
                         </div>
                       </div>
                     ) : (
-                      <button className="ld-popen" onClick={() => setOpenPilot(l.id)}>+ Schedule demo / pilot</button>
+                      <button className="ld-popen" onClick={() => setOpenPilot(l.id)}>{t.scheduleDemoPilot}</button>
                     )}
                   </div>
 
@@ -451,7 +544,7 @@ export default function VendorLeadsPage() {
                     {chatFor === l.id ? (
                       <div className="ld-chatbox">
                         <div className="ld-chatlist" ref={chatListRef}>
-                          {chatMsgs.length === 0 && <div className="ld-chatempty">No messages yet — say hello.</div>}
+                          {chatMsgs.length === 0 && <div className="ld-chatempty">{t.noMessages}</div>}
                           {chatMsgs.map((m) => (
                             <div key={m.id} className={'ld-bubble ' + (m.sender === 'vendor' ? 'me' : 'them')}>
                               {m.body}
@@ -460,20 +553,20 @@ export default function VendorLeadsPage() {
                           ))}
                         </div>
                         <div className="ld-chatrow">
-                          <input value={chatInput} placeholder="Message the buyer…" onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') sendChat(l.id); }} />
-                          <button className="ld-qsend" disabled={chatBusy || !chatInput.trim()} onClick={() => sendChat(l.id)}>Send</button>
-                          <button className="ld-qcancel" onClick={() => setChatFor(null)}>Close</button>
+                          <input value={chatInput} placeholder={t.messageBuyerPh} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') sendChat(l.id); }} />
+                          <button className="ld-qsend" disabled={chatBusy || !chatInput.trim()} onClick={() => sendChat(l.id)}>{t.send}</button>
+                          <button className="ld-qcancel" onClick={() => setChatFor(null)}>{t.close}</button>
                         </div>
-                        {l.buyer_decision !== 'accepted' && <p className="ld-guardnote">Emails, phone numbers, and links are hidden automatically until the buyer accepts — deals stay on NXT{'//'}LINK (your terms: commission owed during the protected period either way).</p>}
+                        {l.buyer_decision !== 'accepted' && <p className="ld-guardnote">{t.guardNote}</p>}
                       </div>
                     ) : (
-                      <button className="ld-chatopen" onClick={() => openChat(l.id)}>Messages</button>
+                      <button className="ld-chatopen" onClick={() => openChat(l.id)}>{t.messages}</button>
                     )}
                   </div>
 
                   <div className="ld-actions">
                     {STATUSES.filter((st) => st !== l.status).map((st) => (
-                      <button key={st} onClick={() => setStatus(l.id, st)}>Mark {st}</button>
+                      <button key={st} onClick={() => setStatus(l.id, st)}>{t.mark} {STATUS_LABEL[st] || st}</button>
                     ))}
                   </div>
                 </div>

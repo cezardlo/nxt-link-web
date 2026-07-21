@@ -20,8 +20,15 @@ function htmlWrap(subject: string, body: string): string {
   </div></body></html>`;
 }
 
+// Domain-only, for safe-to-log context — never log a full recipient address.
+function domainOf(email: string): string {
+  const at = email.lastIndexOf('@');
+  return at >= 0 ? email.slice(at + 1) : '(no-domain)';
+}
+
 export async function sendMail(opts: { to: string; subject: string; body: string }): Promise<void> {
   const key = process.env.RESEND_API_KEY;
+  let resendError = '';
   if (key) {
     try {
       const res = await fetch(RESEND_URL, {
@@ -39,6 +46,7 @@ export async function sendMail(opts: { to: string; subject: string; body: string
       // Domain not verified yet (or similar): retry once from the Resend
       // sandbox sender so at least owner-inbox delivery works during setup.
       const err = await res.text();
+      resendError = `HTTP ${res.status}`;
       if (/domain|from/i.test(err)) {
         const retry = await fetch(RESEND_URL, {
           method: 'POST',
@@ -46,8 +54,29 @@ export async function sendMail(opts: { to: string; subject: string; body: string
           body: JSON.stringify({ from: 'NXT//LINK <onboarding@resend.dev>', to: [opts.to], subject: opts.subject, text: opts.body, html: htmlWrap(opts.subject, opts.body) }),
         });
         if (retry.ok) return;
+        resendError = `HTTP ${retry.status} (sandbox retry)`;
       }
-    } catch { /* fall through to Zoho */ }
+    } catch (e) {
+      resendError = e instanceof Error ? e.message : 'fetch failed';
+    }
+  } else {
+    resendError = 'RESEND_API_KEY not configured';
   }
-  await sendZohoMail({ to: opts.to, subject: opts.subject, body: opts.body }).catch(() => {});
+
+  // sendZohoMail never rejects — it resolves { ok, sent, error } even on
+  // failure (a bare .catch(() => {}) here would never fire). Read the result
+  // instead, and treat "not actually sent" (real Zoho error OR Zoho simply
+  // not configured) as the both-providers-failed case the no-silent-errors
+  // policy requires we log.
+  const result = await sendZohoMail({ to: opts.to, subject: opts.subject, body: opts.body }).catch((e) => ({
+    ok: false, sent: false, provider: 'zoho' as const, error: e instanceof Error ? e.message : 'send failed',
+  }));
+  if (!result.sent) {
+    // Fire-and-forget contract is unchanged — callers never see this and the
+    // request never fails because of it. Domain only (no full address/body)
+    // to avoid logging PII.
+    console.error(
+      `[mail] delivery failed for both providers — to_domain=${domainOf(opts.to)} subject="${opts.subject.slice(0, 80)}" resend="${resendError}" zoho="${result.error || (result.provider === 'fallback' ? 'not configured' : 'failed')}"`,
+    );
+  }
 }
