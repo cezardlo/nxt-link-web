@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getVendorSession, getOrCreateVendorProfile } from '@/lib/vendor/auth';
 import { sendMail } from '@/lib/mail';
+import { maskContacts } from '@/lib/guard';
 
 const STATUSES = ['new', 'viewed', 'responded', 'won', 'lost', 'spam'];
 
@@ -65,9 +66,25 @@ export async function GET() {
     leads: rows.map((l) => {
       // Anti-circumvention: buyer contact details are revealed only after the
       // buyer accepts the quote. Until then, the conversation stays in-app.
+      // Buyer FREE TEXT (message, bundle item notes) is masked pre-acceptance
+      // too — buyers self-disclose emails/phones in it.
       const revealed = l.buyer_decision === 'accepted';
+      const message = !revealed && typeof l.message === 'string' ? maskContacts(l.message).masked : l.message;
+      let answers = l.answers as Record<string, unknown> | null;
+      const items = answers && (answers as { items?: unknown[] }).items;
+      if (!revealed && Array.isArray(items)) {
+        answers = {
+          ...answers,
+          items: items.map((it) => {
+            const item = it as Record<string, unknown> | null;
+            return item && typeof item.note === 'string' ? { ...item, note: maskContacts(item.note).masked } : it;
+          }),
+        };
+      }
       return {
         ...l,
+        message,
+        answers,
         email: revealed ? l.email : null,
         phone: revealed ? l.phone : null,
         contact_hidden: !revealed,

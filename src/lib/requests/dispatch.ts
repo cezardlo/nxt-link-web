@@ -12,6 +12,7 @@ import { scoreVendors, type MatchableVendor } from '@/lib/matching';
 import { notifyVendor } from '@/lib/notify';
 import { isRestricted } from '@/lib/vendor/moderation';
 import { sendMail } from '@/lib/mail';
+import { maskContacts } from '@/lib/guard';
 
 export interface DispatchableRequest {
   id: string;
@@ -131,7 +132,9 @@ export async function dispatchRequestToVendors(
           sendMail({
             to: v.email,
             subject: `NXT//LINK: new request ${ref}${request.category ? ` — ${request.category}` : ''} matched to you`,
-            body: `A buyer request (${ref}) matches your profile${request.category ? ` — ${request.category}` : ''}.${request.location ? ` Location: ${request.location}.` : ''}\n\n${request.problem || ''}\n\nRespond inside NXT//LINK — do not contact the buyer off-platform. Open your leads inbox: /vendor/leads`,
+            // Buyer free text is masked: email leaves our control, and pre-acceptance
+            // no contact info may reach the vendor (anti-circumvention, §4.3).
+            body: `A buyer request (${ref}) matches your profile${request.category ? ` — ${request.category}` : ''}.${request.location ? ` Location: ${maskContacts(request.location).masked}.` : ''}\n\n${maskContacts(request.problem || '').masked}\n\nRespond inside NXT//LINK — do not contact the buyer off-platform. Open your leads inbox: /vendor/leads`,
           }).catch(() => {});
         }
         dispatched++;

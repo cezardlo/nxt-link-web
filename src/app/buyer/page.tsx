@@ -228,7 +228,7 @@ export default function BuyerDashboardPage() {
       <nav className="by-nav">
         <a className="by-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>{t.dashboardTag}</span></a>
         <div className="by-navlinks">
-          <button className="by-bell" onClick={toggleNotifs} aria-label="Notifications">
+          <button className="by-bell" onClick={toggleNotifs} aria-label={t.notifications}>
             {t.alerts}{notifUnread > 0 && <span className="by-belldot">{notifUnread}</span>}
           </button>
           <button className="by-link by-refresh" onClick={() => { setChecking(true); load(); }} aria-label="Refresh">{t.refresh}</button>
@@ -431,7 +431,7 @@ export default function BuyerDashboardPage() {
                               <div className="by-rvform">
                                 <div className="by-stars">
                                   {[1, 2, 3, 4, 5].map((n) => (
-                                    <button key={n} type="button" className={n <= rv.rating ? 'on' : ''} onClick={() => setRv({ ...rv, rating: n })} aria-label={`${n} star${n > 1 ? 's' : ''}`}>★</button>
+                                    <button key={n} type="button" className={n <= rv.rating ? 'on' : ''} onClick={() => setRv({ ...rv, rating: n })} aria-label={lang === 'es' ? `${n} estrella${n > 1 ? 's' : ''}` : `${n} star${n > 1 ? 's' : ''}`}>★</button>
                                   ))}
                                 </div>
                                 <input placeholder={t.titleOptional} value={rv.title} onChange={(e) => setRv({ ...rv, title: e.target.value })} />

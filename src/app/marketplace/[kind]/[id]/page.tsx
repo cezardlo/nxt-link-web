@@ -132,6 +132,7 @@ const T: Record<Lang, Record<string, string>> = {
     fPhone: 'Phone',
     sending: 'Sending…',
     safety: 'Free to send · no commitment until you accept a quote',
+    requestTypeAria: 'Request type',
     disclosure: 'Managed through NXT//LINK. NXT//LINK may receive a commission from the vendor. You compare offers and communicate through the platform; your contact info is never shown publicly.',
     terms: 'Terms',
     privacy: 'Privacy',
@@ -226,6 +227,7 @@ const T: Record<Lang, Record<string, string>> = {
     fPhone: 'Teléfono',
     sending: 'Enviando…',
     safety: 'Gratis enviar · sin compromiso hasta que aceptes una cotización',
+    requestTypeAria: 'Tipo de solicitud',
     disclosure: 'Gestionado a través de NXT//LINK. NXT//LINK puede recibir una comisión del proveedor. Comparas ofertas y te comunicas por la plataforma; tu información de contacto nunca se muestra públicamente.',
     terms: 'Términos',
     privacy: 'Privacidad',
@@ -527,7 +529,7 @@ export default function ListingDetailPage() {
               />
             </div>
             <h3>{a.heading}</h3>
-            <div className="dt-actions" role="tablist" aria-label="Request type">
+            <div className="dt-actions" role="tablist" aria-label={t.requestTypeAria}>
               {REQUEST_KEYS.map((key) => (
                 <button
                   key={key}

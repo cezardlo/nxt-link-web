@@ -293,7 +293,7 @@ export default function VendorLeadsPage() {
       <nav className="ld-nav">
         <a className="ld-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>{t.leadsTag}</span></a>
         <div className="ld-navr">
-          <button className="ld-bell" onClick={toggleNotifs} aria-label="Notifications">{t.alerts}{notifUnread > 0 && <span className="ld-belldot">{notifUnread}</span>}</button>
+          <button className="ld-bell" onClick={toggleNotifs} aria-label={t.notifications}>{t.alerts}{notifUnread > 0 && <span className="ld-belldot">{notifUnread}</span>}</button>
           <a className="ld-link" href="/vendor/portal">{t.profile}</a>
           <a className="ld-link" href="/vendor/listings">{t.yourListings}</a>
           <LanguageToggle lang={lang} onChange={setLang} variant="dark" />
