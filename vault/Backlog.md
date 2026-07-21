@@ -36,6 +36,18 @@ these three are under-planned — scope them after Wave 2:
   `supabase/migrations/20260720_vendor_invites.sql` must be applied to the
   live DB before use. Still on Cesar: Supabase Auth Site URL + custom SMTP
   (DEPLOY.md §B) or magic links rate-limit. SMS = Phase 2 (not built).
+- ~~**Conference-fast quick signup (fast-signup brief §3)**~~ — **SHIPPED
+  2026-07-20** (commit 9a68246): `/vendor-signup` rebuilt as the organic
+  60-second quick signup (3 fields + supply chips + click-wrap, magic link,
+  no password → PENDING profile → live portal); `/join/<token>` gets the same
+  3 fields; publish gate now ALSO requires vendor status approved (admin
+  review gates anything public); portal shows a pending-review "what you can
+  do meanwhile" banner; `/apply` pre-fills from the profile (never ask twice);
+  ONE shared ProfileStrengthMeter (30% pre-credited, 5 items, named unlocks,
+  disappears at 100%) on portal + `/vendor/start`; shared LanguageToggle
+  (`nxt_lang`); `/admin/invites` has per-invite QR + full-screen conference
+  "Scan to join" QR (in-repo generator `src/lib/qr.ts`, no new deps).
+  No new migrations. NOT deployed.
 - **Payments P1 — Stripe Connect escrow** (see [[Payments]]): vendor payout
   onboarding (Connect Express) + fixed-price flow: pay-into-escrow on quote
   accept, manual capture, ship → 5-day inspection → auto-release day 6,
