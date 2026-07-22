@@ -195,9 +195,12 @@ export default function MarketplacePage() {
   // Shareable URLs: read ?q= and ?tab= on load, keep them in sync after.
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
-    const q0 = sp.get('q'); const t0 = sp.get('tab');
+    const q0 = sp.get('q'); const t0 = sp.get('tab'); const d0 = sp.get('department');
     if (q0) setQ(q0);
     if (t0 === 'product' || t0 === 'service' || t0 === 'solution') setTab(t0);
+    // Category tiles (landing page + "Shop by department") link here with
+    // ?department=<functional_group> — pick it up so the tile isn't a dead link.
+    if (d0) setFDept(d0);
     // Autofocus search on desktop only (avoid popping the mobile keyboard).
     if (window.innerWidth > 860) searchRef.current?.focus();
   }, []);

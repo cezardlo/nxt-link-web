@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
-import { PackageSearch, Inbox } from 'lucide-react';
+import { PackageSearch, Inbox, Lightbulb } from 'lucide-react';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
 
 interface IntakeRequest {
@@ -69,7 +69,13 @@ const T: Record<Lang, Record<string, string>> = {
     reviewedVendor: '✓ You reviewed this vendor',
     titleOptional: 'Title (optional)', howDidItGo: 'How did it go? (optional)',
     submitReview: 'Submit review', saving: 'Saving…', cancel: 'Cancel', leaveReview: 'Leave a review',
-    noActivity: 'You have no activity yet. Start by', browsingMarketplace: 'browsing the marketplace', or: 'or', describingNeed: 'describing what you need',
+    firstRunTitle: 'What do you need today?',
+    firstRunCard1Title: 'I’m looking for a specific product or service',
+    firstRunCard1Hint: 'Search the marketplace — thousands of listings from verified Borderplex vendors.',
+    firstRunCard1Cta: 'Search the marketplace',
+    firstRunCard2Title: 'I need help figuring out what I need — let suppliers propose solutions',
+    firstRunCard2Hint: 'Describe your problem once — NXT//LINK matches vendors and they quote you.',
+    firstRunBrowseLink: 'Just browsing? Explore categories',
     docTitle: 'My dashboard — NXT//LINK',
     kindProduct: 'product', kindService: 'service',
   },
@@ -108,7 +114,13 @@ const T: Record<Lang, Record<string, string>> = {
     reviewedVendor: '✓ Reseñaste a este proveedor',
     titleOptional: 'Título (opcional)', howDidItGo: '¿Cómo te fue? (opcional)',
     submitReview: 'Enviar reseña', saving: 'Guardando…', cancel: 'Cancelar', leaveReview: 'Dejar una reseña',
-    noActivity: 'Aún no tienes actividad. Empieza', browsingMarketplace: 'explorando el marketplace', or: 'o', describingNeed: 'describiendo lo que necesitas',
+    firstRunTitle: '¿Qué necesitas hoy?',
+    firstRunCard1Title: 'Busco un producto o servicio específico',
+    firstRunCard1Hint: 'Explora el marketplace — miles de publicaciones de proveedores verificados del Borderplex.',
+    firstRunCard1Cta: 'Buscar en el marketplace',
+    firstRunCard2Title: 'Necesito ayuda para saber qué necesito — que los proveedores propongan soluciones',
+    firstRunCard2Hint: 'Describe tu problema una vez — NXT//LINK conecta proveedores y ellos te cotizan.',
+    firstRunBrowseLink: '¿Solo estás explorando? Explora las categorías',
     docTitle: 'Mi panel — NXT//LINK',
     kindProduct: 'producto', kindService: 'servicio',
   },
@@ -224,7 +236,7 @@ export default function BuyerDashboardPage() {
 
   return (
     <div className="by">
-      <style dangerouslySetInnerHTML={{ __html: CSS + EMPTY_ACTION_CSS + ATTENTION_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: CSS + EMPTY_ACTION_CSS + ATTENTION_CSS + FIRSTRUN_CSS }} />
       <nav className="by-nav">
         <a className="by-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>{t.dashboardTag}</span></a>
         <div className="by-navlinks">
@@ -288,27 +300,39 @@ export default function BuyerDashboardPage() {
                 </div>
               );
             })()}
-            {/* Saved listings — account-level, follow the buyer across devices */}
-            <section className="by-sec">
-              <div className="by-sechead"><h2>{t.savedListings} {savedItems.length > 0 && <small className="by-cnt">{savedItems.length}</small>}</h2><a className="by-link" href="/marketplace">{t.browseMore}</a></div>
-              {savedItems.length > 0 ? (
-                <div className="by-savedgrid">
-                  {savedItems.filter((s) => s.name).map((s) => (
-                    <a key={s.listing_id} className="by-saveditem" href={`/marketplace/${s.kind}/${s.listing_id}`}>
-                      <i className={s.kind}>{s.kind === 'service' ? t.kindService : t.kindProduct}</i>
-                      <span>{s.name}</span>
-                    </a>
-                  ))}
-                </div>
-              ) : savedCount > 0 ? (
-                <a className="by-saved" href="/marketplace">
-                  <b>{savedCount}</b> {t.savedOnDevice} <span>{t.viewInMarketplace}</span>
-                </a>
-              ) : (
-                <div className="by-empty sm">{t.nothingSaved} <a href="/marketplace">{t.browseTheMarketplace}</a> {t.tapSave}</div>
-              )}
-            </section>
+            {/* Saved listings — account-level, follow the buyer across devices.
+                Shown whenever there's real saved data, or once the buyer has
+                other activity; a brand-new buyer with nothing saved gets the
+                first-run prompt below instead of an empty saved-items box. */}
+            {(hasActivity || savedItems.length > 0 || savedCount > 0) && (
+              <section className="by-sec">
+                <div className="by-sechead"><h2>{t.savedListings} {savedItems.length > 0 && <small className="by-cnt">{savedItems.length}</small>}</h2><a className="by-link" href="/marketplace">{t.browseMore}</a></div>
+                {savedItems.length > 0 ? (
+                  <div className="by-savedgrid">
+                    {savedItems.filter((s) => s.name).map((s) => (
+                      <a key={s.listing_id} className="by-saveditem" href={`/marketplace/${s.kind}/${s.listing_id}`}>
+                        <i className={s.kind}>{s.kind === 'service' ? t.kindService : t.kindProduct}</i>
+                        <span>{s.name}</span>
+                      </a>
+                    ))}
+                  </div>
+                ) : savedCount > 0 ? (
+                  <a className="by-saved" href="/marketplace">
+                    <b>{savedCount}</b> {t.savedOnDevice} <span>{t.viewInMarketplace}</span>
+                  </a>
+                ) : (
+                  <div className="by-empty sm">{t.nothingSaved} <a href="/marketplace">{t.browseTheMarketplace}</a> {t.tapSave}</div>
+                )}
+              </section>
+            )}
 
+            {/* First-run buyer (no request/quote activity yet): one clear choice
+                instead of a wall of empty widgets. Once there's any activity,
+                the normal requests + quotes dashboard below takes over. */}
+            {!hasActivity && <FirstRunPrompt t={t} />}
+
+            {hasActivity && (
+              <>
             {/* NXT-assisted intake requests */}
             <section className="by-sec">
               <div className="by-sechead"><h2>{t.yourRequests} {requests.length > 0 && <small className="by-cnt">{requests.length}</small>}</h2><a className="by-link" href="/intake">{t.newRequest}</a></div>
@@ -452,11 +476,7 @@ export default function BuyerDashboardPage() {
                 </div>
               )}
             </section>
-
-            {!hasActivity && (
-              <p className="by-hint">
-                {t.noActivity} <a href="/marketplace">{t.browsingMarketplace}</a> {t.or} <a href="/intake">{t.describingNeed}</a>.
-              </p>
+              </>
             )}
           </>
         )}
@@ -464,6 +484,44 @@ export default function BuyerDashboardPage() {
     </div>
   );
 }
+
+function FirstRunPrompt({ t }: { t: Record<string, string> }) {
+  return (
+    <div className="by-firstrun">
+      <h2>{t.firstRunTitle}</h2>
+      <div className="by-frcards">
+        <a href="/marketplace" className="by-frcard">
+          <span className="by-fricon"><PackageSearch size={18} strokeWidth={1.75} /></span>
+          <b>{t.firstRunCard1Title}</b>
+          <p>{t.firstRunCard1Hint}</p>
+          <span className="by-frcta">{t.firstRunCard1Cta} →</span>
+        </a>
+        <a href="/intake" className="by-frcard">
+          <span className="by-fricon"><Lightbulb size={18} strokeWidth={1.75} /></span>
+          <b>{t.firstRunCard2Title}</b>
+          <p>{t.firstRunCard2Hint}</p>
+          <span className="by-frcta">{t.describeWhatYouNeed} →</span>
+        </a>
+      </div>
+      <a href="/marketplace" className="by-frbrowse">{t.firstRunBrowseLink}</a>
+    </div>
+  );
+}
+
+const FIRSTRUN_CSS = `
+.by-firstrun{margin:24px 0 8px;text-align:center;}
+.by-firstrun h2{font-size:21px;font-weight:800;letter-spacing:-.02em;margin:0 0 20px;}
+.by-frcards{display:grid;grid-template-columns:1fr 1fr;gap:14px;text-align:left;}
+@media(max-width:620px){.by-frcards{grid-template-columns:1fr;}}
+.by-frcard{display:flex;flex-direction:column;gap:7px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:20px;color:#F0F0F5;text-decoration:none;transition:border-color .15s,transform .15s;}
+.by-frcard:hover{border-color:rgba(124,92,252,.5);transform:translateY(-2px);}
+.by-fricon{width:36px;height:36px;border-radius:10px;background:rgba(124,92,252,.14);color:#C4B5FD;display:grid;place-items:center;margin-bottom:2px;}
+.by-frcard b{font-size:15px;font-weight:700;line-height:1.35;}
+.by-frcard p{color:#9090A8;font-size:12.5px;line-height:1.55;margin:0;flex:1;}
+.by-frcta{color:#A78BFA;font-size:12.5px;font-weight:700;}
+.by-frbrowse{display:inline-block;margin-top:20px;color:#8080A0;font-size:13px;text-decoration:underline;}
+.by-frbrowse:hover{color:#C0C0D0;}
+`;
 
 const ATTENTION_CSS = `
 .by-attn{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 6px;padding:12px 16px;border-radius:12px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);}
