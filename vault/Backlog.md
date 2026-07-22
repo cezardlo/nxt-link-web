@@ -58,6 +58,48 @@ Full evidence and non-findings: `workplace/research/performance-audit-2026-07-22
   `Content-Encoding` in deployed responses; do not add application-level gzip
   middleware without evidence.
 
+## Production-readiness checklist triage (2026-07-22)
+
+The founder's 17-area web-app checklist was audited against the repository.
+Canonical evidence and the full classification are in
+`workplace/research/production-readiness-checklist-2026-07-22.md`. Do not turn
+the generic checklist into 170 launch requirements; build the verified risks
+in this order:
+
+- **P0 cache isolation:** remove blanket public caching from authenticated APIs
+  (also tracked in the performance section above).
+- **P0 CI truth:** `.github/workflows/ci.yml` watches pushes to `main`, but this
+  repository's deployment branch is `master`; make CI protect the branch that
+  can deploy, while keeping pull-request verification.
+- **P0 product identity:** update `src/app/manifest.ts`; it still advertises the
+  removed Technology Intelligence/IKER/signals product.
+- **P0 security baseline:** add HSTS and a tested Content Security Policy. Start
+  CSP in report-only mode because the current UI contains inline styles and
+  injected page CSS; do not break production with an untested strict policy.
+- **P0 observability:** add centralized error reporting + uptime alerts and a
+  privacy-safe production performance view. Console logs and `/api/health` are
+  not enough to know customers are failing.
+- **P1 uploads:** keep size/MIME allowlists, add magic-byte/content inspection,
+  safe filenames/storage disposition, and malware scanning before attachments
+  become a core Project/Deal Room feature.
+- **P1 automated journeys:** add Playwright end-to-end tests for buyer onboarding
+  → project/RFQ → message → quote → accept, vendor listing/edit/respond, and the
+  operator approval/moderation path; add axe accessibility checks to those flows.
+- **P1 SEO/discovery:** add `robots.ts`, `sitemap.ts`, canonical URLs, dynamic
+  listing/vendor metadata, and Product/Organization/Breadcrumb JSON-LD only for
+  public verified content. Root metadata alone is insufficient.
+- **P1 accessibility consistency:** audit all primary flows for 44px targets,
+  focus/keyboard behavior, `aria-live` feedback, associated error text, alt text,
+  contrast, and no color-only status. The global skip link is already good.
+- **P1 privacy/legal operations:** attorney review remains required; define
+  account data export/deletion, retention, cookie/privacy choices, and vendor
+  document handling before handling live contracts and payments at scale.
+- **Later, evidence-gated:** MFA/WebAuthn, service worker/offline mode, push
+  notifications, Redis/queues, API versioning/keys, public status page, A/B and
+  referral platforms, Terraform, canary deployments, and multi-region data
+  systems. Add when usage, integrations, risk, or a service-level promise needs
+  them—not because they appeared on a generic checklist.
+
 ## Sticky-platform gaps (from Cesar's positioning, 2026-07-20)
 The positioning ([[Project]]) promises contracts + alerts + documents +
 communication + relationship tracking. Contracts and alerts are planned;
