@@ -5,6 +5,101 @@
 > reconciled in `workplace/plans/MASTER-PLAN.md` (read it first; it links the
 > 7 department plans and carries Cesar's 14-item decision list).
 
+## MVP product contract (Cesar, 2026-07-22)
+
+Canonical definition: [[Project]] → **Product operating model**. Build and QA
+against one end-to-end Project workspace, not isolated pages. The required
+continuity is: listing action (buy/RFQ/question/contact/demo/pilot) → persistent
+buyer/vendor conversation → documents/NDA/quote revisions → purchase → tracked
+delivery or implementation → commission ledger → history/reorder.
+
+Highest-value connection work:
+- Make Project the shared container for messages, questions, NDAs, documents,
+  demos/pilots, quotes, order, delivery/implementation, and activity history.
+- Let one company switch buyer/vendor modes; preserve one company identity.
+- Make onboarding fast and progressive: minimal account first, visual industry/
+  category personalization second, vendor completeness over time.
+- Give buyers durable saved items/vendors/conversations and relationship history.
+- Give vendors one inbox for listing questions and active project conversations,
+  with editable storefront/listings and clear next actions.
+- Route every completed direct purchase or converted deal into the one ledger;
+  never charge merely for asking, messaging, demoing, or piloting.
+
+## Verified performance findings (2026-07-22)
+
+Full evidence and non-findings: `workplace/research/performance-audit-2026-07-22.md`.
+
+- **P0 — remove/replace blanket public API caching:** `vercel.json` applies
+  `public, s-maxage=60` to `/api/(.*)`, including authenticated buyer/vendor/
+  admin routes. Authenticated responses must be private/no-store; public catalog
+  caching must be allowlisted route by route.
+- **P1 — batch RFQ fan-out writes:** bundled cart submission and assisted RFQ
+  dispatch perform per-vendor writes/duplicate checks/notifications sequentially
+  (up to 8 matched vendors). Replace N+1 work with one duplicate read + one bulk
+  insert, then bounded-parallel best-effort notifications.
+- **P1 — remove dashboard request waterfalls:** buyer loads dashboard → alerts →
+  saved items sequentially; vendor loads leads → alerts → open requests
+  sequentially. Fetch independent resources concurrently or return one composed
+  dashboard payload.
+- **P1 — add latency evidence:** only the LLM router records provider latency.
+  Add request IDs + `Server-Timing`/structured durations for the slow business
+  flows before naming a dependency bottleneck; watch p50/p95/p99 in production.
+- **P1 — targeted optimistic UI:** cart, buyer quote decision, and vendor lead
+  status already update immediately. Add rollback-safe optimistic messages and
+  project items; stop mutation → full reload patterns. Do not optimistically
+  claim money, legal acceptance, or destructive actions succeeded.
+- **P2 — rendering/cache audit:** 39/41 pages are client components and 82 API
+  routes force dynamic behavior. The issue is mostly hydration + client fetch
+  delay, not the server rebuilding every page's HTML. Move stable public shells/
+  catalog data toward server rendering + explicit revalidation while keeping
+  personalized workspaces dynamic.
+- **No action — manual JSON compression:** Next.js compression is enabled by
+  default and the deployment platform handles transfer compression. Verify
+  `Content-Encoding` in deployed responses; do not add application-level gzip
+  middleware without evidence.
+
+## Production-readiness checklist triage (2026-07-22)
+
+The founder's 17-area web-app checklist was audited against the repository.
+Canonical evidence and the full classification are in
+`workplace/research/production-readiness-checklist-2026-07-22.md`. Do not turn
+the generic checklist into 170 launch requirements; build the verified risks
+in this order:
+
+- **P0 cache isolation:** remove blanket public caching from authenticated APIs
+  (also tracked in the performance section above).
+- **P0 CI truth:** `.github/workflows/ci.yml` watches pushes to `main`, but this
+  repository's deployment branch is `master`; make CI protect the branch that
+  can deploy, while keeping pull-request verification.
+- **P0 product identity:** update `src/app/manifest.ts`; it still advertises the
+  removed Technology Intelligence/IKER/signals product.
+- **P0 security baseline:** add HSTS and a tested Content Security Policy. Start
+  CSP in report-only mode because the current UI contains inline styles and
+  injected page CSS; do not break production with an untested strict policy.
+- **P0 observability:** add centralized error reporting + uptime alerts and a
+  privacy-safe production performance view. Console logs and `/api/health` are
+  not enough to know customers are failing.
+- **P1 uploads:** keep size/MIME allowlists, add magic-byte/content inspection,
+  safe filenames/storage disposition, and malware scanning before attachments
+  become a core Project/Deal Room feature.
+- **P1 automated journeys:** add Playwright end-to-end tests for buyer onboarding
+  → project/RFQ → message → quote → accept, vendor listing/edit/respond, and the
+  operator approval/moderation path; add axe accessibility checks to those flows.
+- **P1 SEO/discovery:** add `robots.ts`, `sitemap.ts`, canonical URLs, dynamic
+  listing/vendor metadata, and Product/Organization/Breadcrumb JSON-LD only for
+  public verified content. Root metadata alone is insufficient.
+- **P1 accessibility consistency:** audit all primary flows for 44px targets,
+  focus/keyboard behavior, `aria-live` feedback, associated error text, alt text,
+  contrast, and no color-only status. The global skip link is already good.
+- **P1 privacy/legal operations:** attorney review remains required; define
+  account data export/deletion, retention, cookie/privacy choices, and vendor
+  document handling before handling live contracts and payments at scale.
+- **Later, evidence-gated:** MFA/WebAuthn, service worker/offline mode, push
+  notifications, Redis/queues, API versioning/keys, public status page, A/B and
+  referral platforms, Terraform, canary deployments, and multi-region data
+  systems. Add when usage, integrations, risk, or a service-level promise needs
+  them—not because they appeared on a generic checklist.
+
 ## Sticky-platform gaps (from Cesar's positioning, 2026-07-20)
 The positioning ([[Project]]) promises contracts + alerts + documents +
 communication + relationship tracking. Contracts and alerts are planned;

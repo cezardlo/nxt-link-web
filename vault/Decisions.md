@@ -2,6 +2,22 @@
 
 Newest at top. One line each: what + why.
 
+- **The Project is the product system of record** — buyer/vendor messages,
+  questions, NDAs, documents, demos, pilots, quotes, purchase, delivery or
+  implementation, and relationship history stay together instead of becoming
+  separate feature silos.
+- **NXT//LINK is an end-to-end purchasing workspace, not only discovery/RFQ** —
+  north star: "Find it · Evaluate it · Purchase it · Track everything in one
+  place."
+- **One account can buy, sell, or do both** — progressive onboarding captures
+  role and industry quickly; companies switch buyer/vendor modes without
+  duplicate identities.
+- **Listing actions are one CTA taxonomy over one deal model** — Buy now,
+  Request quote, Ask a question, Contact sales, Demo, and Pilot are different
+  starting contexts that converge into a persistent project and transaction.
+- **Commission follows completed business, not conversation** — free discovery
+  and evaluation actions create the path; direct purchases and converted deals
+  enter the single commission ledger.
 - **Palette RESOLVED → violet spec system** (`#6C5CE0` primary, light content +
   dark sidebar), per the user's Design System & App Spec v1.0. The earlier
   blue-on-light option is dropped. See [[Design-System]].

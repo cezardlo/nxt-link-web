@@ -18,6 +18,14 @@ code/vault.
 
 ## 1. The company in one picture
 
+**Product contract (Cesar, clarified 2026-07-22):** NXT//LINK is an end-to-end
+industrial purchasing workspace, not only a directory or RFQ tool. A **Project**
+is the system of record for discovery, saved vendors/offerings, questions,
+messages, NDAs, documents, demos, pilots, quote revisions, decision, purchase,
+delivery/implementation, and relationship history. See `vault/Project.md` for
+the canonical operating model and onboarding/revenue contracts. Every department
+builds into that shared lifecycle; it must not create a second parallel workflow.
+
 One pipeline, every department owning a piece:
 
 ```

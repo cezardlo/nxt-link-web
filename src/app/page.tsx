@@ -6,25 +6,23 @@
 // VISUAL RESKIN (2026-07-21, this pass): reskinned from the app's old dark
 // "command-center" theme to Design System v1.0 (vault/Design-System.md) —
 // light content + violet #6C5CE0 accent, applying the `--spec-*` tokens
-// wired in globals.css. The header stays DARK on purpose: it's the bridge
-// into the rest of the (still-dark) app chrome — see the CSS header note
-// below. Structure: dark sticky header (logo + known-item search + sign-in/
-// join/post-a-request) → a slim always-on category nav bar → a rich dark
+// wired in globals.css. The public header is light so the anonymous journey
+// uses one coherent shell; the hero remains the deliberate dark accent.
+// Structure: light sticky header (logo + known-item search + vendor/sign-in/
+// join actions) → a slim always-on category nav bar → a rich dark
 // hero carrying a big "describe your need" prompt card (the RFQ path,
 // Fiverr-Pro-style) with quick-start chips + an illustrative vendor proof
 // card → numbered how-it-works → elevated category tiles → a quiet trust
-// bar → THEN the existing discovery sections (featured listings, shop-by-
-// department, buying tools, vendor early-access band, FAQs, footer), all
+// bar → THEN the existing discovery sections (featured listings, buying
+// tools, FAQs, footer), all
 // restyled to match. Footer stays dark too, bookending the light content
 // area (a second bridge back toward the app).
 //
-// Content/links/routes are UNCHANGED from the ae54412 functional rebuild.
-// The only new user-facing strings are for the new prompt card + its
-// suggestion chips + the illustrative proof card (Cesar-approved direction
-// update, 2026-07-21) — all bilingual, no new claims/stats/escrow language;
-// the prompt-card placeholder reuses the existing /intake placeholder
-// wording verbatim. Featured products & departments are REAL data from the
-// marketplace API.
+// Slice 1 (2026-07-22) applies the approved flow blueprint: one light public
+// header, a permanent vendor door, vendor pitch immediately after the hero,
+// and one six-category browse system. All changed copy is bilingual and
+// avoids fee-credit, escrow, or funds-holding promises. Featured products are
+// real marketplace data.
 //
 // Trust-bar wording deviates from the original brief on purpose (Cesar-approved,
 // workplace/plans/DECISIONS-2026-07-21.md): no escrow, no "secure payments" —
@@ -38,6 +36,7 @@ import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle'
 import {
   BadgeCheck, ShieldCheck, Send, ClipboardList, Sparkles, Handshake, Forklift,
   HardHat, Warehouse, Bot, Wrench, Truck, MessageSquareText, Building2,
+  Check, Menu, X,
 } from 'lucide-react';
 
 // One consistent lucide-react icon language throughout this page: same
@@ -64,8 +63,6 @@ interface Card {
   vendor_city: string | null; vendor_verified?: boolean;
   pricing: { range?: string } | null; pilot: { available?: boolean } | null;
 }
-interface Dept { fg: string; label_en: string; label_es: string; is_service: boolean }
-
 // The 6 curated category tiles (Cesar's spec) mapped to REAL functional-group
 // values from the marketplace taxonomy (src/app/api/marketplace/categories) —
 // same fg codes used by /marketplace's department filter and SupplyChips, so
@@ -88,6 +85,7 @@ const T: Record<Lang, Record<string, string>> = {
     searchBtn: 'Search',
     signIn: 'Sign in',
     join: 'Join',
+    becomeVendor: 'Become a Vendor',
     postRequest: 'Post a Request',
     eyebrow: 'Borderplex Industrial Marketplace',
     heroTitle: 'Find industrial suppliers. Get competitive quotes. Close deals safely.',
@@ -107,12 +105,12 @@ const T: Record<Lang, Record<string, string>> = {
     step2Title: 'Get matched quotes', step2Desc: 'Verified Borderplex vendors respond with price, lead time, and warranty.',
     step3Title: 'Compare and close safely', step3Desc: 'Compare side by side and close the deal through NXT//LINK.',
     catHeading: 'Browse by category',
+    browseAllCategories: 'Browse all categories →',
     trustVerified: 'Verified Suppliers',
     trustProtected: 'Protected Introductions (12 months)',
     trustFree: 'Free to send · no commitment',
     featuredHeading: 'Featured on NXT//LINK', seeAll: 'See all →', pilotAvailable: 'Pilot available',
     createFreeAccount: 'Create a free account',
-    deptHeading: 'Shop by department',
     toolsHeading: 'Everything the buying process needs',
     tool1T: 'Request quotes in one place', tool1D: 'Send one request, reach the vendors you choose. No chasing emails.',
     tool2T: 'Compare vendors side by side', tool2D: 'Price, lead time, installation, warranty, and support — lined up to decide fast.',
@@ -120,15 +118,19 @@ const T: Record<Lang, Record<string, string>> = {
     tool4T: 'Track every project', tool4D: 'From quote to install to warranty — one workspace with the next step always clear.',
     tool5T: 'Protected & transparent', tool5D: 'Deals run through NXT//LINK. Your introduction is protected and pricing is clear.',
     tool6T: 'Built for the Borderplex', tool6D: 'Local El Paso & Juárez vendors, cross-border ready, English and Spanish.',
-    vendorHeading: 'Are you a supplier?',
-    vendorBody: 'We’re onboarding the first Borderplex vendors now — personally. Apply for early access and we’ll set up your storefront with you, free. Your first two deals are commission-free.',
+    vendorHeading: 'Showcase your company to Borderplex buyers',
+    vendorBody: 'Create your storefront, publish products and services, and manage buyer requests in one place. Joining and quoting are free; NXT//LINK earns only after completed business.',
+    vendorBenefit1: 'Free to join',
+    vendorBenefit2: '60-second signup, no long form',
+    vendorBenefit3: 'Protected introductions for 12 months',
+    vendorBenefit4: 'Bilingual storefront in English and Spanish',
     vendorApply: 'Apply for early access',
     eaTitle: 'Apply for early access',
     eaSub: 'Tell us about your company. We onboard vendors one-on-one — no long forms, no cost to join.',
     eaCompany: 'Company name', eaContact: 'Your name', eaEmail: 'Work email', eaPhone: 'Phone (optional)',
     eaCity: 'City (El Paso, Juárez…)', eaNote: 'What do you sell or service? (optional)',
     eaSubmit: 'Request early access', eaSending: 'Sending…',
-    eaFootnote: 'Free to join · first two deals commission-free · then 5% when you get paid.',
+    eaFootnote: 'Free to join and quote · a success fee applies only after completed business.',
     eaDoneTitle: 'You’re on the list.',
     eaDoneBody: 'Thanks — a member of the NXT//LINK team will reach out personally to set up your storefront. Keep an eye on your inbox.',
     eaDoneBtn: 'Done',
@@ -137,7 +139,7 @@ const T: Record<Lang, Record<string, string>> = {
     faq1q: 'What is NXT//LINK?',
     faq1a: 'NXT//LINK is the industrial marketplace for the El Paso–Juárez Borderplex. Warehouses, 3PLs, distribution centers, and manufacturers use it to find, compare, and request quotes for the equipment, products, technology, and services they need — and to manage the whole project in one place.',
     faq2q: 'Is it free to use?',
-    faq2a: 'Yes. Creating an account, browsing, comparing, and requesting quotes is free for buyers. Vendors join free too — NXT//LINK only earns a success fee after a deal closes, and your first deals are free.',
+    faq2a: 'Yes. Creating an account, browsing, comparing, and requesting quotes is free for buyers. Vendors join and quote for free too — NXT//LINK only earns a success fee after completed business.',
     faq3q: 'How do quotes work?',
     faq3a: 'Describe what you need (or search for it), pick the vendors you want, and send one request. Vendors respond with structured quotes — price, lead time, warranty, support — that you compare side by side. All communication runs through NXT//LINK.',
     faq4q: 'What areas do you serve?',
@@ -157,6 +159,7 @@ const T: Record<Lang, Record<string, string>> = {
     searchBtn: 'Buscar',
     signIn: 'Iniciar sesión',
     join: 'Únete',
+    becomeVendor: 'Ser proveedor',
     postRequest: 'Publicar una solicitud',
     eyebrow: 'Mercado industrial del Borderplex',
     heroTitle: 'Encuentra proveedores industriales. Obtén cotizaciones competitivas. Cierra tratos de forma segura.',
@@ -176,12 +179,12 @@ const T: Record<Lang, Record<string, string>> = {
     step2Title: 'Recibe cotizaciones a tu medida', step2Desc: 'Proveedores verificados del Borderplex responden con precio, tiempo de entrega y garantía.',
     step3Title: 'Compara y cierra de forma segura', step3Desc: 'Compara lado a lado y cierra el trato a través de NXT//LINK.',
     catHeading: 'Explorar por categoría',
+    browseAllCategories: 'Ver todas las categorías →',
     trustVerified: 'Proveedores verificados',
     trustProtected: 'Introducciones protegidas (12 meses)',
     trustFree: 'Gratis enviar · sin compromiso',
     featuredHeading: 'Destacado en NXT//LINK', seeAll: 'Ver todo →', pilotAvailable: 'Piloto disponible',
     createFreeAccount: 'Crea una cuenta gratis',
-    deptHeading: 'Explorar por departamento',
     toolsHeading: 'Todo lo que necesita el proceso de compra',
     tool1T: 'Solicita cotizaciones en un solo lugar', tool1D: 'Envía una solicitud y llega a los proveedores que elijas. Sin perseguir correos.',
     tool2T: 'Compara proveedores lado a lado', tool2D: 'Precio, tiempo de entrega, instalación, garantía y soporte — listos para decidir rápido.',
@@ -189,15 +192,19 @@ const T: Record<Lang, Record<string, string>> = {
     tool4T: 'Da seguimiento a cada proyecto', tool4D: 'De la cotización a la instalación y la garantía — un solo espacio con el siguiente paso siempre claro.',
     tool5T: 'Protegido y transparente', tool5D: 'Los tratos se manejan a través de NXT//LINK. Tu presentación está protegida y el precio es claro.',
     tool6T: 'Hecho para el Borderplex', tool6D: 'Proveedores locales de El Paso y Juárez, listos para cruzar la frontera, en inglés y español.',
-    vendorHeading: '¿Eres proveedor?',
-    vendorBody: 'Estamos incorporando a los primeros proveedores del Borderplex ahora — de forma personal. Solicita acceso anticipado y armamos tu escaparate contigo, gratis. Tus primeros dos tratos no tienen comisión.',
+    vendorHeading: 'Muestra tu empresa a compradores del Borderplex',
+    vendorBody: 'Crea tu escaparate, publica productos y servicios y administra solicitudes de compradores en un solo lugar. Unirte y cotizar es gratis; NXT//LINK solo gana cuando se completa el negocio.',
+    vendorBenefit1: 'Gratis para unirte',
+    vendorBenefit2: 'Registro en 60 segundos, sin formulario largo',
+    vendorBenefit3: 'Introducciones protegidas por 12 meses',
+    vendorBenefit4: 'Escaparate bilingüe en inglés y español',
     vendorApply: 'Solicitar acceso anticipado',
     eaTitle: 'Solicitar acceso anticipado',
     eaSub: 'Cuéntanos sobre tu empresa. Incorporamos proveedores uno a uno — sin formularios largos, sin costo por unirte.',
     eaCompany: 'Nombre de la empresa', eaContact: 'Tu nombre', eaEmail: 'Correo de trabajo', eaPhone: 'Teléfono (opcional)',
     eaCity: 'Ciudad (El Paso, Juárez…)', eaNote: '¿Qué vendes o qué servicio ofreces? (opcional)',
     eaSubmit: 'Solicitar acceso anticipado', eaSending: 'Enviando…',
-    eaFootnote: 'Gratis unirte · tus primeros dos tratos sin comisión · luego 5% cuando te paguen.',
+    eaFootnote: 'Gratis para unirte y cotizar · la comisión aplica solo después de completar el negocio.',
     eaDoneTitle: 'Ya estás en la lista.',
     eaDoneBody: 'Gracias — alguien del equipo de NXT//LINK te contactará personalmente para armar tu escaparate. Mantente al pendiente de tu correo.',
     eaDoneBtn: 'Listo',
@@ -206,7 +213,7 @@ const T: Record<Lang, Record<string, string>> = {
     faq1q: '¿Qué es NXT//LINK?',
     faq1a: 'NXT//LINK es el marketplace industrial para el Borderplex El Paso–Juárez. Almacenes, 3PLs, centros de distribución y manufactureras lo usan para encontrar, comparar y solicitar cotizaciones del equipo, productos, tecnología y servicios que necesitan — y para manejar todo el proyecto en un solo lugar.',
     faq2q: '¿Es gratis usarlo?',
-    faq2a: 'Sí. Crear una cuenta, explorar, comparar y solicitar cotizaciones es gratis para compradores. Los proveedores también se unen gratis — NXT//LINK solo gana una comisión de éxito cuando se cierra un trato, y tus primeros tratos son gratis.',
+    faq2a: 'Sí. Crear una cuenta, explorar, comparar y solicitar cotizaciones es gratis para compradores. Los proveedores también se unen y cotizan gratis — NXT//LINK solo gana una comisión de éxito después de completar el negocio.',
     faq3q: '¿Cómo funcionan las cotizaciones?',
     faq3a: 'Describe lo que necesitas (o búscalo), elige los proveedores que quieras y envía una sola solicitud. Los proveedores responden con cotizaciones estructuradas — precio, tiempo de entrega, garantía, soporte — que comparas lado a lado. Toda la comunicación pasa por NXT//LINK.',
     faq4q: '¿Qué zonas cubren?',
@@ -225,9 +232,10 @@ export default function Home() {
   const [lang, setLang] = useLang(); // stored `nxt_lang` — shared across marketplace pages
   const t = T[lang];
   const [featured, setFeatured] = useState<Card[]>([]);
-  const [depts, setDepts] = useState<Dept[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   function goSearch(e: FormEvent) {
     e.preventDefault();
@@ -263,16 +271,15 @@ export default function Home() {
   useEffect(() => { document.title = t.docTitle; }, [t.docTitle]);
 
   useEffect(() => {
+    if (searchOpen) searchRef.current?.focus();
+  }, [searchOpen]);
+
+  useEffect(() => {
     (async () => {
       try {
-        const [l, c] = await Promise.all([
-          fetch('/api/marketplace/listings?kind=product'),
-          fetch('/api/marketplace/categories'),
-        ]);
+        const l = await fetch('/api/marketplace/listings?kind=product');
         const lj = await l.json();
         setFeatured((lj.listings || []).slice(0, 8));
-        const cj = await c.json();
-        setDepts((cj.departments || []).map((d: Dept) => ({ fg: d.fg, label_en: d.label_en, label_es: d.label_es, is_service: d.is_service })));
       } catch { /* landing still works without live data */ }
       finally { setLoading(false); }
     })();
@@ -282,15 +289,12 @@ export default function Home() {
     <div className={`hp ${ibmPlexSans.variable}`}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
-      {/* Header: dark ink — deliberately kept dark as the bridge into the
-          rest of the app's dark chrome (sidebar etc., see Design-System.md).
-          Logo left, mega-search center (kept here for known-item / part-
-          number search — the hero below owns the "describe your need" RFQ
-          path), Post a Request / Sign in / Join right. */}
+      {/* One light public header. The hero owns the request/RFQ action; this
+          utility bar keeps known-item search and both marketplace doors clear. */}
       <header className="hp-header">
         <div className="hp-headmain">
-          <a className="hp-brand" href="/"><b>NXT<i>//</i>LINK</b></a>
-          <form className="hp-headsearch" onSubmit={goSearch} role="search">
+          <a className="hp-brand" href="/" aria-label="NXT LINK home"><b>NXT<i>{'//'}</i>LINK</b></a>
+          <form className={`hp-headsearch ${searchOpen ? 'open' : ''}`} onSubmit={goSearch} role="search">
             <SearchIcon />
             <input
               ref={searchRef}
@@ -302,13 +306,39 @@ export default function Home() {
             <button type="submit">{t.searchBtn}</button>
           </form>
           <div className="hp-headactions">
-            <LanguageToggle lang={lang} onChange={setLang} variant="dark" />
+            <LanguageToggle lang={lang} onChange={setLang} variant="light" />
+            <a className="hp-vendorbtn" href="/vendor-signup">{t.becomeVendor}</a>
             <a className="hp-signin" href="/login">{t.signIn}</a>
             <a className="hp-joinbtn" href="/signup">{t.join}</a>
-            <a className="hp-rfqinline" href="/intake">{t.postRequest}</a>
           </div>
+          <button
+            type="button"
+            className="hp-searchtoggle"
+            aria-label={t.searchAria}
+            aria-expanded={searchOpen}
+            onClick={() => { setSearchOpen((open) => !open); setMenuOpen(false); }}
+          >
+            <SearchIcon />
+          </button>
+          <button
+            type="button"
+            className="hp-menubtn"
+            aria-label={menuOpen ? t.close : 'Menu'}
+            aria-expanded={menuOpen}
+            aria-controls="hp-mobile-menu"
+            onClick={() => { setMenuOpen((open) => !open); setSearchOpen(false); }}
+          >
+            {menuOpen ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}
+          </button>
         </div>
-        <a className="hp-rfqblock" href="/intake">{t.postRequest}</a>
+        {menuOpen && (
+          <div id="hp-mobile-menu" className="hp-mobilemenu">
+            <LanguageToggle lang={lang} onChange={setLang} variant="light" />
+            <a className="hp-vendorbtn" href="/vendor-signup">{t.becomeVendor}</a>
+            <a className="hp-signin" href="/login">{t.signIn}</a>
+            <a className="hp-joinbtn" href="/signup">{t.join}</a>
+          </div>
+        )}
       </header>
 
       {/* Slim always-on category nav bar — same real taxonomy as the tile
@@ -370,6 +400,23 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Vendor entry is intentionally visible before the buyer education
+          sections so suppliers never have to search for their side. */}
+      <section className="hp-vendorband" aria-labelledby="vendor-pitch-title">
+        <div className="hp-vbin">
+          <div className="hp-vbcopy">
+            <h2 id="vendor-pitch-title">{t.vendorHeading}</h2>
+            <p>{t.vendorBody}</p>
+            <div className="hp-vbbenefits">
+              {[t.vendorBenefit1, t.vendorBenefit2, t.vendorBenefit3, t.vendorBenefit4].map((benefit) => (
+                <span key={benefit}><Check size={16} aria-hidden="true" />{benefit}</span>
+              ))}
+            </div>
+          </div>
+          <button className="hp-btn" onClick={() => { setEaOpen(true); setEaDone(false); eaStarted.current = Date.now(); }}>{t.vendorApply}</button>
+        </div>
+      </section>
+
       {/* How it works */}
       <section className="hp-how">
         <h2 className="hp-howheading">{t.howHeading}</h2>
@@ -393,7 +440,7 @@ export default function Home() {
 
       {/* Category tiles — 3x2 grid (swipeable row on mobile), real taxonomy values */}
       <section className="hp-sec">
-        <div className="hp-sechead"><h2>{t.catHeading}</h2></div>
+        <div className="hp-sechead"><h2>{t.catHeading}</h2><a href="/marketplace">{t.browseAllCategories}</a></div>
         <div className="hp-cattiles">
           {CATEGORY_TILES.map(({ fg, en, es, Icon }) => (
             <Link key={fg} href={`/marketplace?department=${fg}`} className="hp-cattile">
@@ -438,18 +485,6 @@ export default function Home() {
         </section>
       )}
 
-      {/* Shop by department (full live taxonomy) */}
-      {depts.length > 0 && (
-        <section className="hp-sec">
-          <div className="hp-sechead"><h2>{t.deptHeading}</h2></div>
-          <div className="hp-depts">
-            {depts.map((d) => (
-              <a key={d.fg} className={`hp-dept ${d.is_service ? 'svc' : ''}`} href={`/marketplace?department=${d.fg}`}>{lang === 'es' ? d.label_es : d.label_en}</a>
-            ))}
-          </div>
-        </section>
-      )}
-
       {/* Buying tools */}
       <section className="hp-sec">
         <div className="hp-sechead"><h2>{t.toolsHeading}</h2></div>
@@ -460,17 +495,6 @@ export default function Home() {
           ] as Array<[string, string]>).map(([title, d]) => (
             <div key={title} className="hp-tool"><div className="hp-tooldot" /><b>{title}</b><p>{d}</p></div>
           ))}
-        </div>
-      </section>
-
-      {/* For vendors band — early access (concierge onboarding) */}
-      <section className="hp-vendorband">
-        <div className="hp-vbin">
-          <div>
-            <h2>{t.vendorHeading}</h2>
-            <p>{t.vendorBody}</p>
-          </div>
-          <button className="hp-btn" onClick={() => { setEaOpen(true); setEaDone(false); eaStarted.current = Date.now(); }}>{t.vendorApply}</button>
         </div>
       </section>
 
@@ -537,7 +561,7 @@ export default function Home() {
       <footer className="hp-foot">
         <div className="hp-footcols">
           <div>
-            <b>NXT<i style={{ color: '#A99DF2', fontStyle: 'normal' }}>//</i>LINK</b>
+            <b>NXT<i style={{ color: '#A99DF2', fontStyle: 'normal' }}>{'//'}</i>LINK</b>
             <p className="hp-foottag">{t.footerTagline}</p>
           </div>
           <div>
@@ -579,45 +603,59 @@ function SearchIcon() {
 // `--spec-*` CSS variables already wired in globals.css: light content
 // (warm white / white cards, violet #6C5CE0 primary, IBM Plex Sans body +
 // Space Grotesk headings + IBM Plex Mono for data/eyebrows), with the
-// header, the vendor-recruit band, and the footer kept as deliberate dark
-// "ink" accents that bridge into the rest of the (still dark-chrome) app.
+// hero, vendor-recruit band, and footer kept as deliberate dark "ink"
+// accents. The public header stays light for continuity and legibility.
 const CSS = `
 .hp{background:var(--spec-warm-white);color:var(--spec-ink);font-family:var(--font-ibm-plex-sans-landing),'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;}
 .hp *{box-sizing:border-box;}
 .hp a{text-decoration:none;color:inherit;}
 .hp h1,.hp h2,.hp h3{font-family:var(--font-space-grotesk),'Space Grotesk',system-ui,sans-serif;}
 .hp-sronly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+.hp a:focus-visible,.hp button:focus-visible,.hp input:focus-visible,.hp textarea:focus-visible{outline:3px solid rgba(108,92,224,.38);outline-offset:3px;}
 
-/* Header — dark ink, the deliberate bridge into the rest of the app's dark chrome */
-.hp-header{position:sticky;top:0;z-index:40;background:rgba(20,19,32,.94);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.08);padding:12px 20px;}
+/* Header — light public shell for the anonymous buyer/vendor journey */
+.hp-header{position:sticky;top:0;z-index:40;background:rgba(255,254,251,.96);backdrop-filter:blur(20px);border-bottom:1px solid var(--spec-border);padding:12px 20px;box-shadow:0 6px 24px rgba(20,19,32,.05);}
 .hp-headmain{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;max-width:1280px;margin:0 auto;}
-.hp-brand{grid-column:1;color:#F8F7FB;}
-.hp-brand b{font-family:var(--font-space-grotesk);font-size:18px;font-weight:700;letter-spacing:-.02em;color:#F8F7FB;}
-.hp-brand i{color:var(--spec-lilac);font-style:normal;}
-.hp-headsearch{grid-column:2;justify-self:center;display:flex;align-items:center;gap:8px;width:100%;max-width:560px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:var(--spec-radius-md);padding:0 6px 0 14px;color:#B7B4C6;}
-.hp-headsearch:focus-within{border-color:var(--spec-lilac);box-shadow:0 0 0 3px rgba(169,157,242,.25);}
+.hp-brand{grid-column:1;color:var(--spec-ink);display:inline-flex;align-items:center;min-height:44px;}
+.hp-brand b{font-family:var(--font-space-grotesk);font-size:18px;font-weight:700;letter-spacing:-.02em;color:var(--spec-ink);}
+.hp-brand i{color:var(--spec-violet);font-style:normal;}
+.hp-headsearch{grid-column:2;justify-self:center;display:flex;align-items:center;gap:8px;width:100%;max-width:560px;background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-md);padding:0 6px 0 14px;color:var(--spec-text-2nd);}
+.hp-headsearch:focus-within{border-color:var(--spec-violet);box-shadow:0 0 0 3px rgba(108,92,224,.15);}
 .hp-headsearch svg{flex-shrink:0;}
-.hp-headsearch input{flex:1;min-width:0;background:none;border:none;outline:none;color:#F8F7FB;font-family:inherit;font-size:14.5px;padding:10px 0;}
-.hp-headsearch input::placeholder{color:#8B889C;}
+.hp-headsearch input{flex:1;min-width:0;background:none;border:none;outline:none;color:var(--spec-ink);font-family:inherit;font-size:14.5px;padding:10px 0;}
+.hp-headsearch input:focus-visible{outline:none;}
+.hp-headsearch input::placeholder{color:var(--spec-text-2nd);}
 .hp-headsearch button{flex-shrink:0;background:var(--spec-violet);color:#fff;font-family:inherit;font-weight:700;font-size:13.5px;border:none;border-radius:var(--spec-radius-btn);padding:9px 16px;cursor:pointer;margin:4px 0;transition:background .15s;}
 .hp-headsearch button:hover{background:var(--spec-violet-deep);}
 .hp-headactions{grid-column:3;justify-self:end;display:flex;align-items:center;gap:12px;flex-shrink:0;}
-.hp-signin{color:#B7B4C6;font-size:13.5px;font-weight:600;white-space:nowrap;}
-.hp-signin:hover{color:#F8F7FB;}
-.hp-joinbtn{color:#F8F7FB;font-size:13.5px;font-weight:700;padding:8px 14px;border-radius:var(--spec-radius-btn);border:1px solid rgba(255,255,255,.18);white-space:nowrap;}
-.hp-joinbtn:hover{border-color:rgba(255,255,255,.36);}
-.hp-rfqinline{background:var(--spec-violet);color:#fff !important;font-size:13.5px;font-weight:700;padding:9px 16px;border-radius:var(--spec-radius-btn);white-space:nowrap;transition:background .15s;}
-.hp-rfqinline:hover{background:var(--spec-violet-deep);}
-.hp-rfqblock{display:none;}
-@media(max-width:760px){
-  .hp-headmain{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"brand actions" "search search";row-gap:10px;}
+.hp-signin{color:var(--spec-text-2nd);font-size:13.5px;font-weight:600;white-space:nowrap;padding:10px 2px;}
+.hp-signin:hover{color:var(--spec-ink);}
+.hp-joinbtn{color:var(--spec-ink);font-size:13.5px;font-weight:700;padding:9px 14px;border-radius:var(--spec-radius-btn);border:1px solid var(--spec-border);white-space:nowrap;background:#fff;}
+.hp-joinbtn:hover{border-color:var(--spec-violet);color:var(--spec-violet-deep);}
+.hp-vendorbtn{background:var(--spec-violet);color:#fff !important;font-size:13.5px;font-weight:700;padding:10px 15px;border-radius:var(--spec-radius-btn);white-space:nowrap;transition:background .15s;}
+.hp-vendorbtn:hover{background:var(--spec-violet-deep);}
+.hp-searchtoggle{display:none;width:44px;height:44px;align-items:center;justify-content:center;color:var(--spec-ink);background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-btn);cursor:pointer;}
+.hp-menubtn{display:none;width:44px;height:44px;align-items:center;justify-content:center;color:var(--spec-ink);background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-btn);cursor:pointer;}
+.hp-mobilemenu{display:none;}
+@media(max-width:980px){
+  .hp-headmain{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"brand menu" "search search";row-gap:10px;}
   .hp-brand{grid-area:brand;grid-column:auto;min-width:0;}
-  .hp-headactions{grid-area:actions;grid-column:auto;min-width:0;}
+  .hp-headactions{display:none;}
   .hp-headsearch{grid-area:search;grid-column:auto;max-width:none;min-width:0;}
-  .hp-rfqinline{display:none;}
-  .hp-rfqblock{display:flex;justify-content:center;align-items:center;margin-top:10px;width:100%;background:var(--spec-violet);color:#fff;font-weight:700;font-size:15px;padding:13px;border-radius:var(--spec-radius-md);}
+  .hp-menubtn{grid-area:menu;display:flex;}
+  .hp-mobilemenu{max-width:1280px;margin:10px auto 0;padding:12px;display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:10px;background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-md);box-shadow:0 18px 36px rgba(20,19,32,.1);}
 }
-@media(max-width:480px){.hp-signin{display:none;}}
+@media(max-width:620px){
+  .hp-header{padding:10px 14px;}
+  .hp-headmain{grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"brand searchToggle menu";}
+  .hp-headsearch{display:none;}
+  .hp-headsearch.open{display:flex;grid-column:1/-1;grid-row:2;}
+  .hp-searchtoggle{grid-area:searchToggle;display:flex;}
+  .hp-mobilemenu{grid-template-columns:1fr 1fr;}
+  .hp-mobilemenu .nxlt{grid-column:1/-1;width:max-content;}
+  .hp-mobilemenu .hp-vendorbtn{grid-column:1/-1;text-align:center;padding:12px;}
+  .hp-mobilemenu .hp-signin,.hp-mobilemenu .hp-joinbtn{text-align:center;}
+}
 
 /* Slim always-on category nav bar — sits directly under the header */
 .hp-catbar{background:#fff;border-bottom:1px solid var(--spec-border);}
@@ -644,12 +682,12 @@ const CSS = `
 .hp-promptcard{display:flex;align-items:center;gap:12px;background:#fff;border-radius:var(--spec-radius-lg);padding:8px 8px 8px 20px;box-shadow:0 24px 48px -20px rgba(0,0,0,.5);max-width:620px;}
 .hp-prompticon{color:var(--spec-violet);flex-shrink:0;}
 .hp-promptph{flex:1;min-width:0;color:var(--spec-text-2nd);font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.hp-promptbtn{flex-shrink:0;background:var(--spec-violet);color:#fff;font-weight:700;font-size:13.5px;padding:14px 20px;border-radius:var(--spec-radius-btn);white-space:nowrap;transition:background .15s;}
+.hp-promptbtn{flex-shrink:0;background:var(--spec-violet);color:#fff !important;font-weight:700;font-size:13.5px;padding:14px 20px;border-radius:var(--spec-radius-btn);white-space:nowrap;transition:background .15s;}
 .hp-promptbtn:hover{background:var(--spec-violet-deep);}
 
 .hp-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;max-width:620px;}
-.hp-chip{padding:8px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:999px;font-size:12.5px;font-weight:600;color:#DEDCEA;transition:background .15s,border-color .15s;}
-.hp-chip:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.34);}
+.hp-chip{padding:8px 14px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);border-radius:999px;font-size:12.5px;font-weight:600;color:#fff !important;transition:background .15s,border-color .15s;}
+.hp-chip:hover{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.52);}
 
 .hp-herochecks{display:flex;flex-wrap:wrap;gap:18px;margin-top:20px;}
 .hp-herochecks span{display:flex;align-items:center;gap:7px;color:#B7B4C6;font-size:12.5px;font-weight:600;}
@@ -730,14 +768,10 @@ const CSS = `
 .hp-prodname{font-size:14px;font-weight:700;line-height:1.3;color:var(--spec-ink);}
 .hp-price{font-family:var(--font-ibm-plex-mono);font-size:15px;font-weight:600;color:var(--spec-violet-deep);font-variant-numeric:tabular-nums;}
 .hp-vend{font-size:11.5px;color:var(--spec-text-2nd);margin-top:auto;}
-.hp-bigcta{display:block;width:max-content;margin:28px auto 0;background:var(--spec-violet);color:#fff;font-weight:700;font-size:14.5px;padding:14px 30px;border-radius:var(--spec-radius-btn);transition:background .15s;}
+.hp-bigcta{display:block;width:max-content;margin:28px auto 0;background:var(--spec-violet);color:#fff !important;font-weight:700;font-size:14.5px;padding:14px 30px;border-radius:var(--spec-radius-btn);transition:background .15s;}
 .hp-bigcta:hover{background:var(--spec-violet-deep);}
 
-/* Shop by department + buying tools */
-.hp-depts{display:flex;flex-wrap:wrap;gap:10px;}
-.hp-dept{background:#fff;border:1px solid var(--spec-border);border-radius:11px;padding:14px 16px;font-size:13.5px;font-weight:600;color:var(--spec-slate);transition:border-color .15s,background .15s,color .15s;}
-.hp-dept:hover{border-color:var(--spec-violet);background:#F3F1FB;color:var(--spec-violet-deep);}
-.hp-dept.svc:hover{border-color:var(--spec-success);background:#EDF7F1;color:var(--spec-success);}
+/* Buying tools */
 .hp-tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;}
 .hp-tool{background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-lg);padding:24px;}
 .hp-tooldot{width:36px;height:36px;border-radius:var(--spec-radius-md);background:linear-gradient(135deg,var(--spec-violet),var(--spec-lilac));margin-bottom:14px;}
@@ -745,8 +779,8 @@ const CSS = `
 .hp-tool p{color:var(--spec-text-2nd);font-size:13.5px;line-height:1.6;margin:8px 0 0;}
 
 /* Vendor early-access band — dark accent card inside the light page */
-.hp-vendorband{max-width:1160px;margin:60px auto 0;padding:0 22px;}
-.hp-vbin{background:var(--spec-ink);border-radius:var(--spec-radius-lg);padding:36px;display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap;position:relative;overflow:hidden;}
+.hp-vendorband{max-width:1160px;margin:32px auto 0;padding:0 22px;}
+.hp-vbin{background:var(--spec-ink);border-radius:var(--spec-radius-lg);padding:34px 36px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:32px;position:relative;overflow:hidden;}
 .hp-vbin::before{content:'';position:absolute;inset:0;background:
   repeating-linear-gradient(118deg,transparent 0 26px,rgba(169,157,242,.08) 26px 29px),
   linear-gradient(rgba(169,157,242,.06) 1px,transparent 1px),
@@ -754,8 +788,18 @@ const CSS = `
   background-size:auto,64px 64px,64px 64px;
   mask-image:linear-gradient(180deg,rgba(0,0,0,.8),rgba(0,0,0,.3));}
 .hp-vbin>*{position:relative;}
+.hp-vbcopy{min-width:0;}
 .hp-vbin h2{font-family:var(--font-space-grotesk);color:#F8F7FB;font-size:23px;font-weight:700;letter-spacing:-.02em;}
-.hp-vbin p{color:#C9C6D6;font-size:14.5px;line-height:1.6;margin:10px 0 0;max-width:52ch;}
+.hp-vbin p{color:#D9D6E5;font-size:14.5px;line-height:1.6;margin:10px 0 0;max-width:68ch;}
+.hp-vbbenefits{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 18px;margin-top:18px;}
+.hp-vbbenefits span{display:flex;align-items:center;gap:8px;color:#F8F7FB;font-size:12.5px;font-weight:600;}
+.hp-vbbenefits svg{color:#78D7A6;flex-shrink:0;}
+.hp-vbin>.hp-btn{white-space:nowrap;min-height:46px;}
+@media(max-width:760px){
+  .hp-vbin{grid-template-columns:1fr;padding:28px 24px;gap:24px;}
+  .hp-vbin>.hp-btn{width:100%;}
+}
+@media(max-width:520px){.hp-vbbenefits{grid-template-columns:1fr;}}
 
 /* FAQ */
 .hp-faqs{display:flex;flex-direction:column;gap:12px;max-width:820px;}
@@ -799,6 +843,6 @@ const CSS = `
 @media(max-width:760px){
   .hp{padding-bottom:78px;}
   .hp-mobilecta{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:45;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:rgba(255,255,255,.96);backdrop-filter:blur(16px);border-top:1px solid var(--spec-border);}
-  .hp-mobilectabtn{display:block;width:100%;text-align:center;background:var(--spec-violet);color:#fff;font-weight:700;font-size:15px;padding:13px;border-radius:var(--spec-radius-md);}
+  .hp-mobilectabtn{display:block;width:100%;text-align:center;background:var(--spec-violet);color:#fff !important;font-weight:700;font-size:15px;padding:13px;border-radius:var(--spec-radius-md);}
 }
 `;
