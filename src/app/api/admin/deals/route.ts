@@ -11,13 +11,39 @@ import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { isAdminRequest } from '@/lib/assistant/auth';
 import { calculateFee, DEFAULT_FEE_POLICY, FREE_DEAL_CREDIT, PROTECTION_MONTHS } from '@/lib/fees/engine';
 import { effectiveModeration, MODERATION_LABEL } from '@/lib/vendor/moderation';
+import { LEDGER_DEAL_COLUMNS, isLedgerUnavailable, mapLedgerRowToDeal, type LedgerDealRow, type LedgerSource } from '@/lib/admin/commission-ledger';
 
+// GET reads from the unified `commission_ledger` view (Payments S0 Phase B) so
+// this page and /api/admin/commissions share one source of truth. The view
+// doesn't exist on live until Cesar applies the Phase A migration, so a
+// missing-relation (or any) error falls back to the exact pre-ledger read —
+// `select('*') from manual_deals` — verbatim. `ledger_source` tells the caller
+// which path served the response; `discrepancy` is additive (false in
+// fallback, since there's nothing to compare without the view).
 export async function GET(req: Request) {
   if (!(await isAdminRequest(req))) return NextResponse.json({ ok: false, message: 'Admin only' }, { status: 401 });
-  if (!isSupabaseConfigured()) return NextResponse.json({ ok: true, deals: [], policy: DEFAULT_FEE_POLICY });
+  if (!isSupabaseConfigured()) return NextResponse.json({ ok: true, deals: [], policy: DEFAULT_FEE_POLICY, ledger_source: 'fallback' as LedgerSource });
   const db = getSupabaseClient({ admin: true });
-  const { data } = await db.from('manual_deals').select('*').order('created_at', { ascending: false }).limit(200);
-  return NextResponse.json({ ok: true, deals: data || [], policy: { version: DEFAULT_FEE_POLICY.version, brackets: DEFAULT_FEE_POLICY.brackets, cap: DEFAULT_FEE_POLICY.maximumFee, free_credit: FREE_DEAL_CREDIT, protection_months: PROTECTION_MONTHS } });
+
+  const { data: viewRows, error: viewError } = await db
+    .from('commission_ledger')
+    .select(LEDGER_DEAL_COLUMNS)
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  let deals: Record<string, unknown>[];
+  let ledgerSource: LedgerSource;
+  if (isLedgerUnavailable(viewError)) {
+    console.warn('[admin/deals] commission_ledger view unavailable, falling back to manual_deals:', viewError?.message);
+    const { data } = await db.from('manual_deals').select('*').order('created_at', { ascending: false }).limit(200);
+    deals = (data || []).map((d) => ({ ...d, discrepancy: false }));
+    ledgerSource = 'fallback';
+  } else {
+    deals = (viewRows as unknown as LedgerDealRow[] || []).map(mapLedgerRowToDeal);
+    ledgerSource = 'view';
+  }
+
+  return NextResponse.json({ ok: true, deals, policy: { version: DEFAULT_FEE_POLICY.version, brackets: DEFAULT_FEE_POLICY.brackets, cap: DEFAULT_FEE_POLICY.maximumFee, free_credit: FREE_DEAL_CREDIT, protection_months: PROTECTION_MONTHS }, ledger_source: ledgerSource });
 }
 
 export async function POST(req: Request) {
