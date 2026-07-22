@@ -88,6 +88,29 @@ these three are under-planned — scope them after Wave 2:
   (no schema change). `sendMail` (`src/lib/mail.ts`) now logs to
   `console.error` (domain-only, no PII) when both Resend and Zoho fail to
   send, instead of vanishing silently. No migrations, no new deps.
+- ~~**One deal ledger — Payments S0 merge (Wave 1 task #7, Phases A–D)**~~ —
+  **SHIPPED 2026-07-21** (commits `30b3aec` A, `ec31af6` B, `55a3873` C,
+  `54caf28` D; plan `workplace/plans/payments-s0-ledger-merge-plan.md`):
+  `manual_deals` is now the single settlement ledger. A = additive migration
+  `20260721_one_deal_ledger.sql` (baseline snapshot, `commission_id` link +
+  backfill, superset status check, `commission_ledger` view w/ `discrepancy`
+  flag, RLS). B = both admin money pages read the view (verbatim fallback +
+  `ledger_source` until the migration is applied live). C = writes stop
+  duplicating: quote-accept stamps `commission_id`, admin deal POST dedupes on
+  `source_quote_id`, mark-paid mirrors `{status, paid_at}` (only) onto the
+  linked deal, guarded against disputed/credited/cancelled. D = admin-gated
+  `GET /api/admin/reconcile` (discrepancies + orphans; zero = healthy) +
+  amber ⚠ badges on flagged rows in `/admin/deals` + `/admin/commissions`.
+  G5 money review of C (Opus): **PASS**, fee engine untouched by construction.
+  Everything inert-but-safe until the migration is applied (house law:
+  DB first, deploy second — see `workplace/plans/DEPLOY-CHECKLIST-WAVE1.md`).
+  NOT deployed.
+- **Wire admin deal UI to the quote link** (G5 of `55a3873`, Finding 3): the
+  admin deals page never sends `source_quote_id` — assist accepts and threads
+  it and the POST dedupes on it, but nothing in the UI passes it yet, so the
+  admin-side dedupe is an inert (safe) dead path; buyer-accept's own dedupe
+  still prevents double deals. Wire assist → confirm POST round-trip + surface
+  the `deduped: true` response ("already recorded") in the UI.
 - **Payments P1 — Stripe Connect escrow** (see [[Payments]]): vendor payout
   onboarding (Connect Express) + fixed-price flow: pay-into-escrow on quote
   accept, manual capture, ship → 5-day inspection → auto-release day 6,
@@ -173,6 +196,23 @@ Still open, in rough priority order:
   IDs. Content identical; bundle path already indistinguishable. Fixing means
   padding latency or extra queries on hot public paths — poor trade at this
   stage. Revisit if suspension status ever becomes commercially sensitive.
+- **Settlement toggle is a lossy one-way mapping** (G5 of `55a3873`, Finding 1,
+  2026-07-21): admin mark_unpaid reverts the linked deal to `won` — an
+  intermediate `invoiced`/`payment_confirmed`/`overdue` state is not restored —
+  and mark_paid overwrites any earlier `paid_at` with "now". Accepted as
+  documented behavior: `won` is the canonical closed-but-unpaid state and the
+  toggle is an explicit admin action. Revisit only if per-state settlement
+  history matters later (would need read-then-restore).
+- **`deal_settled:false` is ambiguous** (G5 of `55a3873`, Finding 2): the
+  commissions mark-paid response can't distinguish "no linked deal" from
+  "mirror write failed" (error is logged server-side only, so the commissions
+  settlement never 500s). Accepted: drift is surfaced by the `discrepancy`
+  flag + `/api/admin/reconcile` (Phase D, shipped same day), which is exactly
+  the net that catches it.
+- **Malformed `source_quote_id` in admin deal POST → 500 not 400** (G5 of
+  `55a3873`, Finding 4): a non-UUID value hits Postgres 22P02. Matches the
+  existing behavior of every other uuid field on the route; admin-only input;
+  tighten only in a general input-hardening pass.
 
 ## Standing reminders
 - User applies the combined patch + pushes to deploy; help with `git am` errors.
