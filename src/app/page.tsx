@@ -8,17 +8,28 @@
 // LIGHT — a utility bar with NO primary CTA (logo, known-item search,
 // language, "Become a Vendor", Sign in, Join). "Post a Request" no longer
 // lives in the header; it's the hero prompt card's own button plus the
-// mobile sticky bar. Structure top to bottom: light sticky header → a slim
-// always-on category nav bar → a rich dark hero (deliberate accent moment)
-// carrying the "describe your need" prompt card + a grouped secondary
-// "Search Products & Services" action + quick-start chips + an illustrative
-// vendor proof card → the vendor pitch band (moved here, directly after the
-// hero — the single highest-evidence structural change) → numbered
-// how-it-works → elevated category tiles (with a "Browse all categories"
-// link into /marketplace's department filter, replacing the old duplicate
-// 14-item "Shop by department" list) → a quiet trust bar → featured
+// mobile sticky bar. Structure top to bottom: light sticky header → a rich
+// dark hero (deliberate accent moment) carrying the "describe your need"
+// prompt card + a grouped secondary "Search Products & Services" action +
+// quick-start chips + an illustrative vendor proof card → the vendor pitch
+// band (moved here, directly after the hero — the single highest-evidence
+// structural change) → a 3-step visual TIMELINE ("how it works") →
+// elevated category tiles (with a "Browse all categories" link into
+// /marketplace's department filter) → a quiet trust bar → featured
 // listings → buying tools → FAQs → footer. Footer stays dark, bookending
 // the light content area.
+//
+// CESAR REVISION (2026-07-22, verbal feedback, this pass): (1) removed the
+// slim always-on category chip bar that used to sit under the header —
+// categories are still fully discoverable via the tile grid + "Browse all
+// categories" link further down, this was just a redundant second entry
+// point Cesar didn't like the look of. (2) "How it works" rebuilt as a
+// connected timeline (was 3 disconnected cards) using Cesar's own framing:
+// find technology → request information → get connected — no promises
+// about matching, speed, or safety. (3) Hero headline toned down from a
+// 3-promise sentence ("suppliers / competitive quotes / close deals
+// safely") to a plain 3-step description mirroring the timeline, with zero
+// outcome claims.
 //
 // Content/links/routes are otherwise UNCHANGED from the ae54412 functional
 // rebuild. Featured products are REAL data from the marketplace API.
@@ -36,7 +47,7 @@ import { IBM_Plex_Sans } from 'next/font/google';
 import { useLang, type Lang } from '@/components/LanguageToggle';
 import PublicHeader, { type PublicHeaderHandle } from '@/components/PublicHeader';
 import {
-  BadgeCheck, ShieldCheck, Send, ClipboardList, Sparkles, Handshake, Forklift,
+  BadgeCheck, ShieldCheck, Send, Search, ClipboardList, Handshake, Forklift,
   HardHat, Warehouse, Bot, Wrench, Truck, MessageSquareText, Building2,
 } from 'lucide-react';
 
@@ -69,7 +80,6 @@ interface Card {
 // values from the marketplace taxonomy (src/app/api/marketplace/categories) —
 // same fg codes used by /marketplace's department filter and SupplyChips, so
 // every tile actually filters real listings instead of being a dead link.
-// Also reused by the slim category nav bar under the header.
 const CATEGORY_TILES: Array<{ fg: string; en: string; es: string; Icon: typeof Forklift }> = [
   { fg: 'material_handling', en: 'Material Handling', es: 'Manejo de materiales', Icon: Forklift },
   { fg: 'safety_security', en: 'Safety & PPE', es: 'Seguridad y EPP', Icon: HardHat },
@@ -90,7 +100,7 @@ const T: Record<Lang, Record<string, string>> = {
     becomeVendor: 'Become a Vendor',
     postRequest: 'Post a Request',
     eyebrow: 'Borderplex Industrial Marketplace',
-    heroTitle: 'Find industrial suppliers. Get competitive quotes. Close deals safely.',
+    heroTitle: 'Find industrial technology. Request information. Get connected.',
     heroCta1: 'Search Products & Services',
     heroCta2: 'Post a Request / RFQ',
     promptPh: 'I need maintenance for 6 forklifts in El Paso next week.',
@@ -103,9 +113,10 @@ const T: Record<Lang, Record<string, string>> = {
     proofBadge: 'Verified Vendor',
     proofResponds: 'Responds fast',
     howHeading: 'How it works',
-    step1Title: 'Describe your need', step1Desc: 'Search the catalog or post one request describing what you need.',
-    step2Title: 'Get matched quotes', step2Desc: 'Verified Borderplex vendors respond with price, lead time, and warranty.',
-    step3Title: 'Compare and close safely', step3Desc: 'Compare side by side and close the deal through NXT//LINK.',
+    stepLabel: 'Step',
+    step1Title: 'Find technology', step1Desc: 'Search or browse real listings from Borderplex vendors.',
+    step2Title: 'Request information', step2Desc: 'Send a request — free, no commitment.',
+    step3Title: 'Get connected', step3Desc: 'NXT//LINK introduces you to the right supplier.',
     catHeading: 'Browse by category',
     trustVerified: 'Verified Suppliers',
     trustProtected: 'Protected Introductions (12 months)',
@@ -160,7 +171,7 @@ const T: Record<Lang, Record<string, string>> = {
     becomeVendor: 'Conviértete en proveedor',
     postRequest: 'Publicar una solicitud',
     eyebrow: 'Mercado industrial del Borderplex',
-    heroTitle: 'Encuentra proveedores industriales. Obtén cotizaciones competitivas. Cierra tratos de forma segura.',
+    heroTitle: 'Encuentra tecnología industrial. Solicita información. Conéctate.',
     heroCta1: 'Buscar productos y servicios',
     heroCta2: 'Publicar una solicitud (RFQ)',
     promptPh: 'Necesito mantenimiento para 6 montacargas en El Paso la próxima semana.',
@@ -173,9 +184,10 @@ const T: Record<Lang, Record<string, string>> = {
     proofBadge: 'Proveedor verificado',
     proofResponds: 'Responde rápido',
     howHeading: 'Cómo funciona',
-    step1Title: 'Describe lo que necesitas', step1Desc: 'Busca en el catálogo o publica una solicitud describiendo lo que necesitas.',
-    step2Title: 'Recibe cotizaciones a tu medida', step2Desc: 'Proveedores verificados del Borderplex responden con precio, tiempo de entrega y garantía.',
-    step3Title: 'Compara y cierra de forma segura', step3Desc: 'Compara lado a lado y cierra el trato a través de NXT//LINK.',
+    stepLabel: 'Paso',
+    step1Title: 'Encuentra tecnología', step1Desc: 'Busca o explora publicaciones reales de proveedores del Borderplex.',
+    step2Title: 'Solicita información', step2Desc: 'Envía una solicitud — gratis, sin compromiso.',
+    step3Title: 'Conéctate', step3Desc: 'NXT//LINK te presenta con el proveedor indicado.',
     catHeading: 'Explorar por categoría',
     trustVerified: 'Proveedores verificados',
     trustProtected: 'Introducciones protegidas (12 meses)',
@@ -280,20 +292,6 @@ export default function Home() {
           the exact same header instead of forking a second copy. */}
       <PublicHeader ref={headerRef} lang={lang} onLangChange={setLang} />
 
-      {/* Slim always-on category nav bar — same real taxonomy as the tile
-          grid further down; this strip is the "always there" wayfinding
-          row (Fiverr's category-bar pattern), the tile grid stays as the
-          bigger visual browse entry point. */}
-      <nav className="hp-catbar" aria-label={t.catHeading}>
-        <div className="hp-catbarin">
-          {CATEGORY_TILES.map(({ fg, en, es }) => (
-            <Link key={fg} href={`/marketplace?department=${fg}`} className="hp-catbarlink">
-              {lang === 'es' ? es : en}
-            </Link>
-          ))}
-        </div>
-      </nav>
-
       {/* Hero — rich dark band (violet-on-ink). The big "describe your need"
           prompt card is the RFQ path's centerpiece (Fiverr Pro pattern);
           quick-start chips and the trust checkmarks sit under it. The
@@ -356,25 +354,33 @@ export default function Home() {
         </div>
       </section>
 
-      {/* How it works */}
+      {/* How it works — a connected 3-step TIMELINE (Cesar's 2026-07-22
+          revision: replaces the old 3-card grid, which read as unrelated
+          feature blurbs). One continuous line runs behind the step markers
+          top-to-bottom on every viewport width — a single vertical rail
+          scales cleanly from mobile to desktop with no horizontal overflow
+          risk, so it's the layout used at all sizes rather than switching
+          to a horizontal rail on wider screens. */}
       <section className="hp-how">
         <h2 className="hp-howheading">{t.howHeading}</h2>
-        <div className="hp-howgrid">
+        <ol className="hp-timeline">
           {([
-            ['1', ClipboardList, t.step1Title, t.step1Desc],
-            ['2', Sparkles, t.step2Title, t.step2Desc],
+            ['1', Search, t.step1Title, t.step1Desc],
+            ['2', ClipboardList, t.step2Title, t.step2Desc],
             ['3', Handshake, t.step3Title, t.step3Desc],
-          ] as Array<[string, typeof ClipboardList, string, string]>).map(([n, Icon, title, desc]) => (
-            <div className="hp-step" key={n}>
-              <div className="hp-steptop">
-                <Icon className="hp-stepicon" size={ICON_STEP} aria-hidden="true" />
-                <span className="hp-stepn">{n}</span>
+          ] as Array<[string, typeof Search, string, string]>).map(([n, Icon, title, desc]) => (
+            <li className="hp-tlstep" key={n}>
+              <div className="hp-tlmarker" aria-hidden="true">
+                <span className="hp-tlcircle"><Icon size={ICON_STEP - 12} /></span>
               </div>
-              <b>{title}</b>
-              <p>{desc}</p>
-            </div>
+              <div className="hp-tlcontent">
+                <span className="hp-tlnum">{t.stepLabel} {n}</span>
+                <b>{title}</b>
+                <p>{desc}</p>
+              </div>
+            </li>
           ))}
-        </div>
+        </ol>
       </section>
 
       {/* Category tiles — 3x2 grid (swipeable row on mobile), real taxonomy values */}
@@ -555,13 +561,6 @@ const CSS = `
    (src/components/PublicHeader.tsx, self-styled under the .ph- prefix) —
    removed from here in Slice 2 so it isn't a second, divergent copy. */
 
-/* Slim always-on category nav bar — sits directly under the header */
-.hp-catbar{background:#fff;border-bottom:1px solid var(--spec-border);}
-.hp-catbarin{max-width:1160px;margin:0 auto;padding:0 22px;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;}
-.hp-catbarin::-webkit-scrollbar{display:none;}
-.hp-catbarlink{flex-shrink:0;padding:13px 14px;font-size:13.5px;font-weight:600;color:var(--spec-text-2nd);white-space:nowrap;border-bottom:2px solid transparent;}
-.hp-catbarlink:hover{color:var(--spec-violet);border-bottom-color:var(--spec-violet);}
-
 /* Hero — rich dark band, two-column: prompt card + chips + checks left, illustrative proof card right */
 .hp-hero{position:relative;overflow:hidden;background:var(--spec-ink);}
 .hp-herobg{position:absolute;inset:0;background:
@@ -620,17 +619,31 @@ const CSS = `
   .hp-promptbtn{order:2;width:100%;text-align:center;}
 }
 
-/* How it works */
+/* How it works — vertical connected timeline (Cesar's 2026-07-22 revision,
+   replaces the old 3-card grid). One straight rail (::before on the list)
+   runs behind the step markers from the center of the first circle to the
+   center of the last one; each circle sits on top of it (z-index) so the
+   line reads as continuous through every step. Deliberately the SAME
+   layout at every viewport width — a single vertical column with a fixed
+   56px marker column has no horizontal-overflow risk on mobile, so there's
+   no separate small-screen variant to keep in sync. */
 .hp-how{max-width:1160px;margin:0 auto;padding:56px 22px 8px;}
-.hp-howheading{font-size:clamp(20px,2.6vw,26px);font-weight:700;letter-spacing:-.02em;text-align:center;margin:0 0 28px;color:var(--spec-ink);}
-.hp-howgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
-@media(max-width:720px){.hp-howgrid{grid-template-columns:1fr;}}
-.hp-step{background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-lg);padding:28px;}
-.hp-steptop{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;}
-.hp-stepicon{color:var(--spec-violet);flex-shrink:0;}
-.hp-stepn{flex-shrink:0;color:var(--spec-violet-deep);font-family:var(--font-ibm-plex-mono);font-weight:600;font-size:13px;}
-.hp-step b{font-size:16px;font-weight:700;display:block;color:var(--spec-ink);}
-.hp-step p{color:var(--spec-text-2nd);font-size:13.5px;line-height:1.6;margin:6px 0 0;}
+.hp-howheading{font-size:clamp(20px,2.6vw,26px);font-weight:700;letter-spacing:-.02em;text-align:center;margin:0 0 40px;color:var(--spec-ink);}
+.hp-timeline{position:relative;list-style:none;margin:0 auto;padding:0;max-width:640px;}
+.hp-timeline::before{content:'';position:absolute;left:27px;top:28px;bottom:28px;width:2px;background:var(--spec-border);}
+.hp-tlstep{position:relative;display:flex;gap:20px;padding-bottom:40px;}
+.hp-tlstep:last-child{padding-bottom:0;}
+.hp-tlmarker{position:relative;z-index:1;flex-shrink:0;}
+.hp-tlcircle{width:56px;height:56px;border-radius:50%;background:#fff;border:2px solid var(--spec-violet);color:var(--spec-violet);display:grid;place-items:center;box-shadow:0 6px 16px -8px rgba(108,92,224,.35);}
+.hp-tlcontent{padding-top:10px;min-width:0;}
+.hp-tlnum{display:block;font-family:var(--font-ibm-plex-mono);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--spec-violet-deep);margin:0 0 4px;}
+.hp-tlcontent b{font-size:17px;font-weight:700;display:block;color:var(--spec-ink);}
+.hp-tlcontent p{color:var(--spec-text-2nd);font-size:14px;line-height:1.6;margin:6px 0 0;max-width:52ch;}
+@media(max-width:480px){
+  .hp-tlcircle{width:48px;height:48px;}
+  .hp-timeline::before{left:23px;}
+  .hp-tlstep{gap:16px;padding-bottom:32px;}
+}
 
 /* Category tiles */
 .hp-sec{max-width:1160px;margin:0 auto;padding:56px 22px 0;}
