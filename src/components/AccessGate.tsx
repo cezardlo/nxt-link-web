@@ -9,7 +9,7 @@ type AccessGateProps = {
   title?: string;
 };
 
-export function AccessGate({ children, title = 'Private NXT Link workspace' }: AccessGateProps) {
+export function AccessGate({ children, title = 'NXT//LINK Operator Console' }: AccessGateProps) {
   const [ready, setReady] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
   const [code, setCode] = useState('');
@@ -48,7 +48,7 @@ export function AccessGate({ children, title = 'Private NXT Link workspace' }: A
           <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-[#7f86a8]">Access required</p>
           <h1 className="mt-3 text-3xl font-semibold text-[#11155f]">{title}</h1>
           <p className="mt-4 text-sm leading-7 text-[#5c6486]">
-            Markets and Signals are for internal research, vendor hunting, and strategy work. Enter the access code to continue.
+            Internal tools for reviewing vendors, applications, and deals. Enter the access code to continue.
           </p>
           <form onSubmit={submit} className="mt-7 space-y-3">
             <label className="block text-sm font-semibold text-[#2f365f]" htmlFor="access-code">

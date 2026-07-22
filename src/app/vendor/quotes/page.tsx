@@ -8,6 +8,7 @@
 // builder — proposals now persist and survive logout.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import VendorNav from '@/components/VendorNav';
 
 interface Lead {
   id: string; public_ref: string; kind: string; listing_name: string | null;
@@ -124,14 +125,7 @@ export default function VendorProposalsPage() {
   return (
     <div className="vp">
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
-      <nav className="vp-nav">
-        <a className="vp-brand" href="/vendor/portal"><b>NXT<i>//</i>LINK</b><span>Seller Central</span></a>
-        <div className="vp-navr">
-          <a className="vp-pill" href="/vendor/leads">Leads</a>
-          <a className="vp-pill" href="/vendor/deals">My deals</a>
-          <a className="vp-pill" href="/vendor/listings">Listings</a>
-        </div>
-      </nav>
+      <VendorNav active="quotes" />
 
       <div className="vp-wrap">
         <h1>Quotes &amp; proposals</h1>

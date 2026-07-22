@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import { scoreListing } from '@/lib/marketplace/completeness';
+import VendorNav from '@/components/VendorNav';
 
 type Kind = 'product' | 'service';
 interface Listing {
@@ -213,6 +214,7 @@ export default function VendorListingsPage() {
     load();
   }
   async function archive(kind: Kind, id: string) {
+    if (!confirm('Archive this listing? It will come down from the marketplace immediately.')) return;
     await fetch(`/api/vendor/listings?kind=${kind}&id=${id}`, { method: 'DELETE' });
     load();
   }
@@ -482,16 +484,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="sc">
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
-      <nav className="sc-nav">
-        <a className="sc-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>Seller Central</span></a>
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-          <a className="sc-link" href="/vendor/start">Get set up</a>
-          <a className="sc-link" href="/vendor/portal">Profile</a>
-          <a className="sc-link" href="/vendor/leads">Leads</a>
-          <a className="sc-link" href="/marketplace">View marketplace</a>
-          <a className="sc-link" href="/account">Account</a>
-        </div>
-      </nav>
+      <VendorNav active="listings" />
       <main className="sc-wrap">{children}</main>
     </div>
   );

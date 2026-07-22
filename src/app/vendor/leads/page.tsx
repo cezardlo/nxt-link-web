@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
+import VendorNav from '@/components/VendorNav';
 import { Megaphone } from 'lucide-react';
 import { MatchReasons, MATCH_REASONS_CSS } from '@/components/marketplace/MatchReasons';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
@@ -290,15 +291,15 @@ export default function VendorLeadsPage() {
   return (
     <div className="ld">
       <style dangerouslySetInnerHTML={{ __html: CSS + MATCH_REASONS_CSS + EMPTY_ACTION_CSS + '.ld-opencard .mrx-chips{margin-bottom:8px;}' }} />
-      <nav className="ld-nav">
-        <a className="ld-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>{t.leadsTag}</span></a>
-        <div className="ld-navr">
-          <button className="ld-bell" onClick={toggleNotifs} aria-label={t.notifications}>{t.alerts}{notifUnread > 0 && <span className="ld-belldot">{notifUnread}</span>}</button>
-          <a className="ld-link" href="/vendor/portal">{t.profile}</a>
-          <a className="ld-link" href="/vendor/listings">{t.yourListings}</a>
-          <LanguageToggle lang={lang} onChange={setLang} variant="dark" />
-        </div>
-      </nav>
+      <VendorNav
+        active="leads"
+        extra={
+          <>
+            <button className="ld-bell" onClick={toggleNotifs} aria-label={t.notifications}>{t.alerts}{notifUnread > 0 && <span className="ld-belldot">{notifUnread}</span>}</button>
+            <LanguageToggle lang={lang} onChange={setLang} variant="dark" />
+          </>
+        }
+      />
       <main className="ld-wrap">
         {notifOpen && (
           <div className="ld-notifs">

@@ -166,6 +166,7 @@ export default function BuyerDashboardPage() {
   const [notifs, setNotifs] = useState<Array<{ id: string; title: string; read_at: string | null; created_at: string }>>([]);
   const [notifUnread, setNotifUnread] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [decidingId, setDecidingId] = useState<string | null>(null);
   async function toggleNotifs() {
     const next = !notifOpen;
     setNotifOpen(next);
@@ -200,8 +201,14 @@ export default function BuyerDashboardPage() {
   useEffect(() => { document.title = t.docTitle; }, [t.docTitle]);
 
   async function decide(id: string, decision: 'accepted' | 'declined') {
+    if (decidingId) return;
+    setDecidingId(id);
     setData((d) => ({ ...d, quotes: (d.quotes || []).map((q) => (q.id === id ? { ...q, buyer_decision: decision, status: decision === 'accepted' ? 'won' : 'lost' } : q)) }));
-    await fetch('/api/buyer/quote-decision', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quote_request_id: id, decision }) });
+    try {
+      await fetch('/api/buyer/quote-decision', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quote_request_id: id, decision }) });
+    } finally {
+      setDecidingId(null);
+    }
   }
   async function openChat(id: string) {
     setChatFor(id); setChatMsgs([]); setChatInput('');
@@ -442,8 +449,8 @@ export default function BuyerDashboardPage() {
                           ) : (
                             <>
                               <div className="by-qactions">
-                                <button className="by-accept" onClick={() => decide(q.id, 'accepted')}>{t.accept} {money(q.quote_amount)}</button>
-                                <button className="by-decline" onClick={() => decide(q.id, 'declined')}>{t.decline}</button>
+                                <button className="by-accept" disabled={decidingId === q.id} onClick={() => decide(q.id, 'accepted')}>{decidingId === q.id ? t.saving : `${t.accept} ${money(q.quote_amount)}`}</button>
+                                <button className="by-decline" disabled={decidingId === q.id} onClick={() => decide(q.id, 'declined')}>{t.decline}</button>
                               </div>
                               <p className="by-guardnote">{t.guardAccept}</p>
                             </>
@@ -598,6 +605,7 @@ const CSS = `
 .by-qvalid{margin-top:8px;font-size:12.5px;color:#8080A0;}
 .by-qactions{display:flex;gap:9px;margin-top:12px;}
 .by-accept{font-family:inherit;font-size:13.5px;font-weight:700;background:#34D399;border:none;color:#05271b;border-radius:9px;padding:9px 16px;cursor:pointer;}
+.by-accept:disabled,.by-decline:disabled{opacity:.6;cursor:not-allowed;}
 .by-decline{font-family:inherit;font-size:13px;background:none;border:1px solid rgba(255,255,255,.16);color:#C0C0D0;border-radius:9px;padding:9px 14px;cursor:pointer;}
 .by-decided{margin-top:10px;font-size:13px;font-weight:700;text-transform:capitalize;}
 .by-decided.accepted{color:#34D399;}
@@ -635,5 +643,5 @@ const CSS = `
 .by-rvactions{display:flex;gap:9px;}
 .by-hint{margin-top:34px;color:#8080A0;font-size:14px;text-align:center;line-height:1.7;}
 .by-hint a{color:#A78BFA;}
-@media(max-width:520px){.by-navlinks{gap:12px;}}
+@media(max-width:640px){.by-nav{flex-wrap:wrap;row-gap:10px;}.by-navlinks{flex-wrap:wrap;row-gap:10px;gap:12px;}}
 `;

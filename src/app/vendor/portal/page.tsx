@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
-import { clearLocalCart } from '@/components/cart/useCart';
 import ChatWidget from '@/components/ChatWidget';
 import CategoryPicker from '@/components/CategoryPicker';
 import LanguageToggle, { useLang } from '@/components/LanguageToggle';
 import ProfileStrengthMeter, { computeProfileStrength } from '@/components/ProfileStrengthMeter';
+import VendorNav from '@/components/VendorNav';
 
 const AREAS = ['El Paso', 'Juárez', 'New Mexico', 'West Texas', 'Cross-border', 'National'];
 const INDUSTRIES = [
@@ -33,6 +33,7 @@ const TR: Record<string, { en: string; es: string }> = {
   nav_store: { en: 'My storefront', es: 'Mi tienda' },
   nav_account: { en: 'Account', es: 'Cuenta' },
   signout: { en: 'Sign out', es: 'Cerrar sesión' },
+  confirm_remove_media: { en: 'Remove this? This can’t be undone.', es: '¿Quitar esto? No se puede deshacer.' },
   title_welcome: { en: 'Welcome{name} — let’s build your profile', es: 'Bienvenido{name} — construyamos tu perfil' },
   title_done: { en: 'Your company profile', es: 'Tu perfil de empresa' },
   sub: { en: 'This is what buyers see and what NXT//LINK matches you to. Fill it in once; keep it current.', es: 'Esto es lo que ven los compradores y con lo que NXT//LINK te conecta. Complétalo una vez y mantenlo al día.' },
@@ -287,6 +288,7 @@ export default function VendorPortalPage() {
     else setMsg(data.message || 'Could not add video');
   }
   async function removeVideo(id: string) {
+    if (!confirm(t('confirm_remove_media'))) return;
     await fetch(`/api/vendor/videos?id=${id}`, { method: 'DELETE' });
     setVideos((v) => v.filter((x) => x.id !== id));
   }
@@ -300,6 +302,7 @@ export default function VendorPortalPage() {
     setLogoBusy(false);
   }
   async function removeLogo() {
+    if (!confirm(t('confirm_remove_media'))) return;
     setLogoUrl(null);
     await fetch('/api/vendor/logo', { method: 'DELETE' });
   }
@@ -312,6 +315,7 @@ export default function VendorPortalPage() {
     setBannerBusy(false);
   }
   async function removeBanner() {
+    if (!confirm(t('confirm_remove_media'))) return;
     setBannerUrl(null);
     await fetch('/api/vendor/banner', { method: 'DELETE' });
   }
@@ -357,6 +361,7 @@ export default function VendorPortalPage() {
     setPhotoBusy(false);
   }
   async function removePhoto(id: string) {
+    if (!confirm(t('confirm_remove_media'))) return;
     setPhotos((p) => p.filter((x) => x.id !== id));
     await fetch(`/api/vendor/gallery?id=${id}`, { method: 'DELETE' });
   }
@@ -378,6 +383,7 @@ export default function VendorPortalPage() {
     else setMsg(data.message || 'Upload failed');
   }
   async function removeBrochure(id: string) {
+    if (!confirm(t('confirm_remove_media'))) return;
     await fetch(`/api/vendor/brochures?id=${id}`, { method: 'DELETE' });
     setBrochures((b) => b.filter((x) => x.id !== id));
   }
@@ -410,13 +416,6 @@ export default function VendorPortalPage() {
     setMsg('Draft applied — review the fields above, then press "Save profile" to confirm.');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-  async function signOut() {
-    const sb = createBrowserSupabaseClient();
-    await sb.auth.signOut();
-    clearLocalCart();
-    window.location.href = '/vendor-login';
-  }
-
   if (checking) return <div className="vp"><style dangerouslySetInnerHTML={{ __html: CSS }} /><div className="vp-loading">Loading…</div></div>;
 
   if (!signedIn) {
@@ -439,10 +438,7 @@ export default function VendorPortalPage() {
     const banned = vendor.moderation_status === 'banned';
     return (
       <div className="vp"><style dangerouslySetInnerHTML={{ __html: CSS }} />
-        <nav className="vp-nav">
-          <a className="vp-brand" href="/"><span className="vp-mk">N</span><b>NXT<i>{'//'}</i>LINK</b></a>
-          <div className="vp-navr"><button className="vp-signout" onClick={signOut}>Sign out</button></div>
-        </nav>
+        <VendorNav active="portal" />
         <div className="vp-gate">
           <h1>Your account is currently under review</h1>
           <p>
@@ -482,19 +478,15 @@ export default function VendorPortalPage() {
   return (
     <div className="vp">
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
-      <nav className="vp-nav">
-        <a className="vp-brand" href="/"><span className="vp-mk">N</span><b>NXT<i>{'//'}</i>LINK</b></a>
-        <div className="vp-navr">
-          <a className="vp-navlink" href="/vendor/listings">{t('nav_listings')}</a>
-          <a className="vp-navlink" href="/vendor/leads">{t('nav_leads')}</a>
-          <a className="vp-navlink" href="/vendor/deals">{t('nav_deals')}</a>
-          <a className="vp-navlink" href={`/marketplace/vendor/${vendor.id}`}>{t('nav_store')}</a>
-          <a className="vp-navlink" href="/account">{t('nav_account')}</a>
-          <LanguageToggle lang={lang} onChange={switchLang} variant="dark" />
-          <span className={'vp-badge ' + vendor.status}>{vendor.status}</span>
-          <button className="vp-signout" onClick={signOut}>{t('signout')}</button>
-        </div>
-      </nav>
+      <VendorNav
+        active="portal"
+        extra={
+          <>
+            <LanguageToggle lang={lang} onChange={switchLang} variant="dark" />
+            <span className={'vp-badge ' + vendor.status}>{vendor.status}</span>
+          </>
+        }
+      />
 
       <main className="vp-wrap">
         <div className="vp-titlerow">

@@ -6,6 +6,7 @@
 // operators drive the deals; the vendor just tracks where things stand.
 
 import { useEffect, useState } from 'react';
+import VendorNav from '@/components/VendorNav';
 
 interface Deal {
   id: string; opportunity_ref: string | null; buyer_company: string | null; description: string | null;
@@ -46,10 +47,7 @@ export default function VendorDealsPage() {
   return (
     <div className="vd">
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
-      <nav className="vd-nav">
-        <a className="vd-brand" href="/vendor/portal"><b>NXT<i>//</i>LINK</b><span>Seller Central</span></a>
-        <div className="vd-navr"><a className="vd-pill" href="/vendor/leads">Leads</a><a className="vd-pill" href="/vendor/quotes">Quotes</a><a className="vd-pill" href="/vendor/listings">Listings</a></div>
-      </nav>
+      <VendorNav active="deals" />
 
       <div className="vd-wrap">
         <h1>My deals &amp; commission</h1>
