@@ -3,7 +3,8 @@ name: CI
 on:
   push:
     branches:
-      - main
+      - master
+      - claude/v2-merged-baseline
   pull_request:
 
 jobs:

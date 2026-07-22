@@ -243,3 +243,43 @@ Still open, in rough priority order:
 See tasks list / [[Decisions]]. Marketplace search bar + RFQ CTA + How-it-works
 strip, autocomplete, vendor moderation, NXT AI concierge + commission co-pilot,
 compare fill bars, view-as-buyer — all shipped.
+
+---
+
+## Codex audit findings (imported 2026-07-22, from codex/cofounder-baseline)
+
+Two full reports preserved in `workplace/research/`:
+`performance-audit-2026-07-22.md` and `production-readiness-checklist-2026-07-22.md`.
+Codex independently confirmed the blanket-`/api` public-cache bug (already FIXED
+in commits c9937cf + 338caa1). Remaining items to schedule:
+
+**Fixed alongside this import:** CI push trigger was `main` (never ran on the
+real branch) → now `master` + `claude/v2-merged-baseline`; PWA manifest still
+named the dead "Technology Intelligence / IKER / signals" product → now the
+marketplace with violet/warm-white branding.
+
+**Perf backlog (P1):**
+- N+1 writes in RFQ fan-out: `api/marketplace/request::handleBundle` and
+  `lib/requests/dispatch.ts` await one insert per vendor — batch into one
+  insert + a DB uniqueness/upsert for idempotency; send emails after persist
+  with bounded concurrency (never in the transaction path).
+- Dashboard fetch waterfalls (buyer/vendor) — parallelize independent reads;
+  `projects/[id]` reloads the whole payload after a mutation (update only the
+  changed collection).
+- No per-stage latency instrumentation (request-id + Server-Timing on
+  non-sensitive diagnostics) → can't name the real bottleneck yet.
+- Heavy client rendering: 39/41 pages are `'use client'` — move interactive
+  bits to small client islands; consider ISR for public catalog pages.
+- Optimistic UI inconsistent (ties into the money-button error/rollback work).
+
+**Production-readiness backlog (P0/P1):**
+- Security headers: add HSTS + CSP (report-only first) — still open from the
+  original audit too.
+- No E2E tests (Playwright) for buyer signup→RFQ→message and money flows.
+- No centralized error reporting + external uptime monitoring.
+- SEO: no `sitemap.ts`/`robots.ts`, no dynamic per-listing/vendor metadata
+  (public pages only; keep authed workspaces noindex).
+- Legal/ops: data export/deletion + retention (post-attorney).
+
+Landing rewrite from that branch NOT imported (conflicts with the approved live
+landing; superseded by the Alibaba-direction redesign, 2026-07-22).

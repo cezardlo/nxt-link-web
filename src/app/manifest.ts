@@ -2,13 +2,13 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'NXT//LINK — Technology Intelligence',
+    name: 'NXT//LINK — Industrial Marketplace',
     short_name: 'NXT//LINK',
-    description: 'Technology intelligence platform. Live vendor map, IKER scores, industry signals, and acquisition intelligence.',
+    description: 'The Borderplex industrial supply chain marketplace — discover suppliers, request quotes, and manage deals through NXT//LINK.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#000000',
-    theme_color: '#000000',
+    background_color: '#F8F7FB',
+    theme_color: '#6C5CE0',
     icons: [
       {
         src: '/icon-192.png',
