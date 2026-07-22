@@ -11,6 +11,7 @@ import VendorNav from '@/components/VendorNav';
 import { Megaphone } from 'lucide-react';
 import { MatchReasons, MATCH_REASONS_CSS } from '@/components/marketplace/MatchReasons';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
+import { calculateFee } from '@/lib/fees/engine';
 
 interface Commission {
   commission_amount: number; effective_rate: number; status: string; protected_until: string | null;
@@ -35,17 +36,12 @@ interface Lead {
 }
 const STATUSES = ['new', 'viewed', 'responded', 'won', 'lost'];
 const money = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
-// Live estimate mirroring the server fee engine (15% / 12.5% / 10% marginal).
+// Live estimate — calls the SAME sacred fee engine the server uses
+// (calculateFee: 5% on the first $50k, 3% above, $20k cap), so the vendor
+// preview can never drift from the commission NXT//LINK actually bills.
 function estimateCommission(amount: number): number {
   if (!(amount > 0)) return 0;
-  const brackets: Array<[number, number]> = [[10000, 0.15], [50000, 0.125], [Infinity, 0.1]];
-  let lower = 0, fee = 0;
-  for (const [upTo, rate] of brackets) {
-    if (amount <= lower) break;
-    fee += (Math.min(amount, upTo) - lower) * rate;
-    lower = upTo;
-  }
-  return Math.round(fee * 100) / 100;
+  return calculateFee(amount).fee;
 }
 
 const T: Record<Lang, Record<string, string>> = {

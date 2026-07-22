@@ -7,7 +7,8 @@
 // ⚠️ COPY GATES (MASTER-PLAN §3 — binding):
 //   - NEVER promise escrow or say "NXT//LINK holds your money" — Variant B
 //     copy only, until Payments P1 is live.
-//   - The $1,250 first-deal credit is NOT mentioned (pending attorney sign-off).
+//   - The first-deal fee credit (up to $250 standard / $1,250 founding) is NOT
+//     mentioned here (pending attorney sign-off).
 //   - Fee facts we MAY state: 5% on the first $50k, 3% above, capped at
 //     $20,000, charged only when a deal closes. Quoting is free.
 //   - Every email carries the unsubscribe link (hard stop rule).

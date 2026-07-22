@@ -2,10 +2,12 @@
 
 // /admin/deals — concierge deal tracker + commission calculator (operator-only,
 // under the admin AccessGate). Record a deal → see the commission the fee engine
-// computes (5% first $50k, 3% above, $20k cap; optional $1,250 free credit) →
-// move it through payment → invoice. This is the manual money loop for the MVP.
+// computes (5% first $50k, 3% above, $20k cap; optional founding-vendor credit
+// up to $1,250, operator-applied) → move it through payment → invoice. This is
+// the manual money loop for the MVP.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { FIRST_DEAL_CREDIT_FOUNDING } from '@/lib/fees/engine';
 
 interface Deal {
   id: string; vendor_name: string; buyer_company: string | null; buyer_name: string | null;
@@ -58,7 +60,7 @@ export default function AdminDealsPage() {
 
   const net = Number(f.net_amount) || 0;
   const pv = useMemo(() => previewFee(net), [net]);
-  const credit = f.is_free_credit ? Math.min(1250, pv.fee) : 0;
+  const credit = f.is_free_credit ? Math.min(FIRST_DEAL_CREDIT_FOUNDING, pv.fee) : 0;
   const commission = Math.max(0, pv.fee - credit);
 
   async function create() {
@@ -154,7 +156,7 @@ export default function AdminDealsPage() {
                 <div key={i} className="ad-cline"><span>{money(l.amt)} at {(l.rate * 100).toFixed(0)}%</span><b>{money(l.fee)}</b></div>
               ))}
               {pv.cap && <div className="ad-cline cap"><span>$20,000 cap applied</span><b>—</b></div>}
-              <label className="ad-credit"><input type="checkbox" checked={f.is_free_credit} onChange={(e) => setF({ ...f, is_free_credit: e.target.checked })} /> Apply free-deal credit (−{money(credit)})</label>
+              <label className="ad-credit"><input type="checkbox" checked={f.is_free_credit} onChange={(e) => setF({ ...f, is_free_credit: e.target.checked })} /> Apply founding-vendor credit (−{money(credit)})</label>
               <div className="ad-cline total"><span>NXT//LINK commission</span><b>{money(commission)}</b></div>
               <div className="ad-eff">Effective rate {(net > 0 ? (commission / net) * 100 : 0).toFixed(2)}% · protected 12 months</div>
             </div>

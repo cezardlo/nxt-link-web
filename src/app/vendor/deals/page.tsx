@@ -1,9 +1,10 @@
 'use client';
 
 // /vendor/deals — the vendor's read-only view of their deals & commission.
-// Shows free-deal credits remaining, each deal's status through the pipeline,
-// the NXT//LINK commission, and the protected-until date. Concierge phase:
-// operators drive the deals; the vendor just tracks where things stand.
+// Shows the vendor's first-deal fee-credit standing, each deal's status through
+// the pipeline, the NXT//LINK commission, and the protected-until date.
+// Concierge phase: operators drive the deals; the vendor just tracks where
+// things stand.
 
 import { useEffect, useState } from 'react';
 import VendorNav from '@/components/VendorNav';
@@ -20,11 +21,13 @@ const STATUS_LABEL: Record<string, string> = {
   invoiced: 'Commission invoiced', paid: 'Paid', overdue: 'Overdue', disputed: 'Disputed', credited: 'Credited', cancelled: 'Cancelled',
 };
 
+interface Credit { tier: 'standard' | 'founding'; cap: number; available: boolean; expiresAt: string | null; }
+
 export default function VendorDealsPage() {
   const [loading, setLoading] = useState(true);
   const [signedIn, setSignedIn] = useState(true);
   const [deals, setDeals] = useState<Deal[]>([]);
-  const [credits, setCredits] = useState({ remaining: 2, reserved: 0, used: 0 });
+  const [credit, setCredit] = useState<Credit>({ tier: 'standard', cap: 250, available: false, expiresAt: null });
 
   useEffect(() => {
     (async () => {
@@ -32,7 +35,7 @@ export default function VendorDealsPage() {
         const r = await fetch('/api/vendor/deals');
         if (r.status === 401) { setSignedIn(false); setLoading(false); return; }
         const j = await r.json();
-        if (j.ok) { setDeals(j.deals); setCredits(j.credits); }
+        if (j.ok) { setDeals(j.deals); if (j.credit) setCredit(j.credit); }
       } catch { /* */ }
       setLoading(false);
     })();
@@ -57,15 +60,23 @@ export default function VendorDealsPage() {
           <div className="vd-empty">Sign in to see your deals — <a href="/vendor-login">vendor sign in</a></div>
         ) : (
           <>
-            {/* Free-deal credits banner */}
+            {/* First-deal fee-credit banner */}
             <div className="vd-credits">
               <div className="vd-creditmain">
-                <b>{credits.remaining} of 2 free-deal credits left</b>
-                <span>Your first two eligible deals get up to $1,250 commission credit each. After that: 5% on the first $50k, 3% above, capped at $20k — paid only when you get paid.</span>
+                {credit.available ? (
+                  <>
+                    <b>First-deal credit: up to {money(credit.cap)} off your first commission</b>
+                    <span>New vendors get a one-time credit toward the NXT//LINK fee on their first closed deal (within 90 days of joining, one per company). On that deal and every deal after: 5% on the first $50k, 3% above, capped at $20,000 — charged only on deals that close through NXT//LINK, and only after you’ve been paid.</span>
+                  </>
+                ) : (
+                  <>
+                    <b>NXT//LINK commission</b>
+                    <span>5% on the first $50k, 3% above, capped at $20,000 — charged only on deals that close through NXT//LINK, and only after you’ve been paid.</span>
+                  </>
+                )}
               </div>
               <div className="vd-creditdots">
-                <span className={credits.remaining >= 1 ? 'on' : ''} />
-                <span className={credits.remaining >= 2 ? 'on' : ''} />
+                <span className={credit.available ? 'on' : ''} />
               </div>
             </div>
 

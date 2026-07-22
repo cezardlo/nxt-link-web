@@ -156,6 +156,15 @@ test('explanations are bilingual and cite policy version + math', () => {
   assert.ok(es.includes('Comisión'));
 });
 
+test('vendor leads live estimate mirrors calculateFee (single source of truth)', () => {
+  // /vendor/leads estimateCommission() now returns calculateFee(amount).fee
+  // verbatim — these are the exact numbers a vendor sees for common quote
+  // sizes, and they must equal the engine (never the retired 15/12.5/10 math).
+  assert.equal(calculateFee(25_000).fee, 1_250); // 5% of 25k
+  assert.equal(calculateFee(100_000).fee, 4_000); // 2,500 + 1,500
+  assert.equal(calculateFee(1_000_000).fee, 20_000); // $20k cap
+});
+
 test('resolveFirstDealCredit: standard tier caps at $250', () => {
   const signupAt = new Date('2026-01-01T00:00:00Z');
   const now = new Date('2026-01-05T00:00:00Z');
