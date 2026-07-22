@@ -3,13 +3,20 @@
 // "One signup system. Invited and organic are two LANES of the same flow;
 // the lanes differ only in the review gate."):
 //
-//   lane 'invite'         — /join/<token> via /auth/callback. Born APPROVED —
-//                           intentional (MASTER-PLAN decision #5, "the invite
-//                           IS the review": only operators behind the admin
-//                           access code can create invites).
+//   lane 'invite'         — /join/<token> via /auth/callback. Born PENDING —
+//                           Cesar's F1 decision (2026-07-22) supersedes the
+//                           earlier "invite IS the review" rule: the invite
+//                           token is still the credential (any Google account
+//                           or magic-link email works with a valid /join
+//                           link, no email-match required, single-use
+//                           consumption unchanged) but it no longer mints an
+//                           approved profile. Frictionless signup, then admin
+//                           business verification gates publish/dispatch/
+//                           public visibility — same as organic.
 //   lane 'admin_approval' — /admin/vendor-applications Approve. The human
 //                           review decision — may flip an existing profile to
-//                           approved or mint one approved.
+//                           approved or mint one approved. THIS is the one
+//                           lane that actually activates a vendor now.
 //   lane 'organic'        — /api/vendors/signup (self-served registration).
 //                           Born PENDING; must pass admin review. NEVER weaken.
 //   lane 'portal'         — first authenticated touch of /vendor/portal APIs.
@@ -27,7 +34,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 export type VendorProfileLane = 'invite' | 'admin_approval' | 'organic' | 'portal';
 
 const DEFAULT_SELECT = 'id, status, auth_id, email';
-const APPROVED_LANES: VendorProfileLane[] = ['invite', 'admin_approval'];
+// Only admin_approval mints/flips to 'approved' (F1 decision, 2026-07-22 —
+// invite used to be in this list; it no longer is). Every other lane is born
+// PENDING and stays pending until a human approves the business.
+const APPROVED_LANES: VendorProfileLane[] = ['admin_approval'];
 
 export interface EnsureVendorProfileInput {
   lane: VendorProfileLane;

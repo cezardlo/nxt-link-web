@@ -64,14 +64,18 @@ export async function GET(req: Request) {
   for (const v of vendors || []) vmap.set(v.id as string, { company_name: v.company_name as string, city: (v.city as string) || null, verified: v.status === 'approved', verification_level: (v.verification_level as string) || null });
 
   // Suspended/banned vendors' listings are hidden from the public marketplace
-  // (moderation gate — mirrors api/marketplace/vendor/[id] + requests/dispatch).
-  // Pure read-side check, no write: a lapsed suspension already reads as
-  // active via isRestricted(), and this is a list context, not a single
-  // record view, so we don't want the write-on-read behavior of
-  // autoReactivateIfExpired firing once per page load.
+  // (moderation gate — mirrors api/marketplace/vendor/[id] + requests/dispatch),
+  // and so are not-yet-approved (pending) vendors' — an invited vendor is no
+  // longer born approved (F1 decision, 2026-07-22). In practice a pending
+  // vendor can never have a 'published' listing (the publish gate blocks it),
+  // so the status check here is defense-in-depth on top of that invariant,
+  // made explicit rather than left implicit. Pure read-side check, no write:
+  // a lapsed suspension already reads as active via isRestricted(), and this
+  // is a list context, not a single record view, so we don't want the
+  // write-on-read behavior of autoReactivateIfExpired firing once per page load.
   const restrictedVendorIds = new Set(
     (vendors || [])
-      .filter((v) => isRestricted({ moderation_status: (v.moderation_status as string) || null, suspended_until: (v.suspended_until as string) || null }))
+      .filter((v) => v.status !== 'approved' || isRestricted({ moderation_status: (v.moderation_status as string) || null, suspended_until: (v.suspended_until as string) || null }))
       .map((v) => v.id as string),
   );
   if (restrictedVendorIds.size) rows = rows.filter((r) => !restrictedVendorIds.has(r.vendor_id));

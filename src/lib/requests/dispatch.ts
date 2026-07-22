@@ -57,8 +57,9 @@ export async function dispatchRequestToVendors(
       .limit(500);
 
     // INVARIANT (verified against src/lib/vendor/profile.ts + moderation.ts):
-    // `status` is the one-way review/approval gate — 'approved' lanes (invite,
-    // admin_approval) set it once and it never reverts. `moderation_status` is
+    // `status` is the one-way review/approval gate — only the admin_approval
+    // lane sets it to 'approved' (F1 decision, 2026-07-22: invite no longer
+    // does), and it never reverts once set. `moderation_status` is
     // a SEPARATE active/suspended/banned axis an admin can flip at any time
     // AFTER approval ("a vendor can be approved AND suspended" — moderation.ts
     // header). Filtering on `status` alone (the old bug) let RFQ fan-out keep

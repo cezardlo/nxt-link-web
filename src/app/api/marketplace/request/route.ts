@@ -56,11 +56,17 @@ export async function POST(req: Request) {
   const { data: listing } = await db.from(tableFor(kind)).select('id, name, vendor_id').eq('id', listingId).eq('status', 'published').maybeSingle();
   if (!listing) return NextResponse.json({ ok: false, code: 'listing_not_found', message: 'Listing not found' }, { status: 404 });
 
-  // A restricted (suspended/banned) vendor's listing is rejected exactly like
-  // an unpublished/unknown one — same code, no separate "suspended" signal
-  // leaks to the buyer. Pure read-side check, no write here.
-  const { data: modVendor } = await db.from('vendor_profiles').select('moderation_status, suspended_until').eq('id', listing.vendor_id).maybeSingle();
-  if (modVendor && isRestricted({ moderation_status: (modVendor.moderation_status as string) || null, suspended_until: (modVendor.suspended_until as string) || null })) {
+  // A restricted (suspended/banned) or not-yet-approved (pending) vendor's
+  // listing is rejected exactly like an unpublished/unknown one — same code,
+  // no separate signal leaks to the buyer. In practice a pending vendor can
+  // never have a published listing (the publish gate in
+  // api/vendor/listings/route.ts blocks it), so `status !== 'approved'` here
+  // is defense-in-depth, not the primary gate — but we check it explicitly
+  // rather than relying on that invariant alone (F1 decision, 2026-07-22:
+  // invited vendors are born pending, not approved). Pure read-side check, no
+  // write here.
+  const { data: modVendor } = await db.from('vendor_profiles').select('status, moderation_status, suspended_until').eq('id', listing.vendor_id).maybeSingle();
+  if (!modVendor || modVendor.status !== 'approved' || isRestricted({ moderation_status: (modVendor.moderation_status as string) || null, suspended_until: (modVendor.suspended_until as string) || null })) {
     return NextResponse.json({ ok: false, code: 'listing_not_found', message: 'Listing not found' }, { status: 404 });
   }
 
@@ -145,20 +151,24 @@ async function handleBundle(rawItems: unknown[], c: BundleContact) {
   // extra round trip.
   const candidateVendorIds = Array.from(new Set(Array.from(found.values()).map((f) => f.vendor_id)));
   const { data: vRows } = candidateVendorIds.length
-    ? await db.from('vendor_profiles').select('id, email, company_name, moderation_status, suspended_until').in('id', candidateVendorIds)
+    ? await db.from('vendor_profiles').select('id, email, company_name, status, moderation_status, suspended_until').in('id', candidateVendorIds)
     : { data: [] };
   const vendorInfo = new Map<string, { email: string | null; company_name: string | null }>();
   const restrictedVendorIds = new Set<string>();
   for (const v of vRows || []) {
     vendorInfo.set(v.id as string, { email: (v.email as string) || null, company_name: (v.company_name as string) || null });
-    if (isRestricted({ moderation_status: (v.moderation_status as string) || null, suspended_until: (v.suspended_until as string) || null })) {
+    // Same explicit approved-status + moderation gate as the single-request
+    // path above (defense-in-depth on top of the publish-gate invariant —
+    // F1 decision, 2026-07-22: invited vendors are born pending).
+    if (v.status !== 'approved' || isRestricted({ moderation_status: (v.moderation_status as string) || null, suspended_until: (v.suspended_until as string) || null })) {
       restrictedVendorIds.add(v.id as string);
     }
   }
 
-  // Group by the listing's REAL vendor (server truth). A restricted vendor's
-  // listings are skipped exactly like an unpublished/unknown one — reuses the
-  // same skipped[] mechanism, no separate "suspended" signal leaks out.
+  // Group by the listing's REAL vendor (server truth). A restricted or
+  // not-yet-approved vendor's listings are skipped exactly like an
+  // unpublished/unknown one — reuses the same skipped[] mechanism, no
+  // separate signal leaks out.
   const byVendor = new Map<string, Array<{ listing_id: string; kind: string; name: string; qty: number; note?: string }>>();
   const skipped: string[] = [];
   for (const w of wanted) {

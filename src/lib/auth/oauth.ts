@@ -78,7 +78,8 @@ export function isOAuthEnabled(provider: OAuthProvider): boolean {
  *              /vendor-login signup tab): ensureVendorProfile lane 'organic'
  *              — born PENDING, same review gate as the magic-link quick lane.
  *  'invite'  — /join/[token]: matched by invite token first (falls back to
- *              email), born APPROVED — same as the magic-link invite lane.
+ *              email), born PENDING (F1 decision, 2026-07-22) — same as the
+ *              magic-link invite lane; admin approval activates it.
  *  'buyer'   — a buyer-role signup screen: no profile to create, but the
  *              click-wrap acceptance is still recorded fail-closed. */
 export type OAuthLane = 'organic' | 'invite' | 'buyer';

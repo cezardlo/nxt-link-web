@@ -138,7 +138,8 @@ export async function POST(req: Request, { params }: Ctx) {
 
   // Same magic-link flow as /login (signInWithOtp), with shouldCreateUser so
   // the account is created when they click the emailed link. The /auth/callback
-  // route then links the invite and creates their pre-approved vendor profile.
+  // route then links the invite and creates their vendor profile — born
+  // PENDING (F1 decision, 2026-07-22); admin approval activates it.
   const anon = getSupabaseClient();
   const redirect = `${SITE}/auth/callback?next=${encodeURIComponent('/vendor/portal?welcome=1')}`;
   const { error } = await anon.auth.signInWithOtp({

@@ -19,10 +19,14 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     .eq('id', id).maybeSingle();
   if (!vendor) return NextResponse.json({ ok: false, message: 'Vendor not found' }, { status: 404 });
 
-  // Suspended or banned vendors are hidden from buyers (an expired suspension
-  // auto-returns to active first). Return 404 rather than reveal the account.
+  // Suspended/banned vendors are hidden from buyers (an expired suspension
+  // auto-returns to active first), and so are not-yet-approved (pending)
+  // vendors — an invited vendor is no longer born approved (F1 decision,
+  // 2026-07-22): the invite link gets them a frictionless account, not a
+  // public storefront. Both cases return the SAME 404 body/status as an
+  // unknown id — no "pending" vs "suspended" vs "doesn't exist" oracle.
   const modStatus = await autoReactivateIfExpired(db, id, vendor);
-  if (modStatus !== 'active') {
+  if (modStatus !== 'active' || vendor.status !== 'approved') {
     return NextResponse.json({ ok: false, message: 'This vendor is not currently available.' }, { status: 404 });
   }
 

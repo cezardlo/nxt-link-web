@@ -4,7 +4,9 @@
 // the personal link from their invite email, sees their company pre-filled,
 // and one tap emails them a magic sign-in link (no password, no forms).
 // Clicking the emailed link creates the account; /auth/callback then creates
-// their PRE-APPROVED vendor profile and drops them in /vendor/portal.
+// their vendor profile — born PENDING (F1 decision, 2026-07-22: the invite
+// link is the credential, not the review) — and drops them in /vendor/portal,
+// which shows the existing "under review" experience until an admin approves.
 //
 // First spec-native screen (Design System v1.0 light: warm-white bg, white
 // card, violet CTA — experience-design plan §3.1). Mobile-first, EN/ES toggle

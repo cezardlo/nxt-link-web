@@ -108,13 +108,16 @@ export async function GET(req: Request) {
           // account_created. Best-effort — a linking hiccup must never break
           // sign-in.
           //
-          // ⚠️ ADMIN-REVIEW SKIP — INTENTIONAL (MASTER-PLAN decision #5,
-          // approved: "the invite IS the review"). The profile below is born
-          // status 'approved' + moderation_status 'active', bypassing the
-          // /admin/vendor-applications queue, because only operators behind
-          // the admin access code can create invites — the human vetting
-          // already happened at invite time. Cold inbound (/apply) still goes
-          // through admin review; this path is invite-only.
+          // F1 DECISION (2026-07-22, supersedes MASTER-PLAN decision #5):
+          // "Anyone with the valid invite link may create an account.
+          // Business verification is required before marketplace access is
+          // fully activated." The invite token is still the sole credential
+          // (no email-match requirement, single-use consumption unchanged
+          // below) — but the profile ensureVendorProfile mints here is born
+          // status 'pending', same as organic. It cannot publish listings,
+          // receive dispatched leads, or show a verified badge until an
+          // admin approves it via /admin/vendor-applications. Cold inbound
+          // (/apply) goes through the same queue; this path is invite-sourced.
           if (role !== 'admin' && role !== 'super_admin' && data.user.email) {
             try {
               const inviteCols = 'id, company_name, contact_name, email, phone, locale, vendor_id, status';
@@ -181,8 +184,8 @@ export async function GET(req: Request) {
                   // ONE shared creator for every lane (src/lib/vendor/profile.ts).
                   // Reuses this account's existing profile (idempotent) or an
                   // unowned same-email row, otherwise creates fresh from the
-                  // invite. lane 'invite' = born approved (the review skip —
-                  // see note above).
+                  // invite. lane 'invite' = born PENDING (F1 decision — see
+                  // note above); admin approval is what activates it.
                   const inviteCats = metaCategories(data.user.user_metadata?.supply_categories);
                   const ensured = await ensureVendorProfile(db, {
                     lane: 'invite',
