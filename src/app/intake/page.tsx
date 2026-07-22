@@ -2,7 +2,17 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ASSISTANT, type Locale } from '@/lib/assistant/branding';
+import { IBM_Plex_Sans } from 'next/font/google';
+import { ASSISTANT } from '@/lib/assistant/branding';
+import { useLang } from '@/components/LanguageToggle';
+import PublicHeader from '@/components/PublicHeader';
+
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-ibm-plex-sans-intake',
+  display: 'swap',
+});
 
 // ---- Types for API responses ----
 interface Question {
@@ -65,18 +75,30 @@ interface ChatMessage {
 type Phase = 'intro' | 'asking' | 'summary' | 'submitted';
 
 // ---- Style tokens ----
-const PAGE_BG = '#0A0A0F';
-const CARD_BG = '#111118';
-const INPUT_BG = '#0A0A0F';
-const BORDER = '#2A2A35';
-const TEXT = '#F3F4F6';
-const TEXT_2 = '#D1D5DB';
-const TEXT_3 = '#9CA3AF';
-const MUTED = '#6B7280';
-const ACCENT = '#7C5CFC';
-const GREEN = '#10B981';
-const AMBER = '#F59E0B';
-const RED = '#EF4444';
+// Design System v1.0 (vault/Design-System.md) via the `--spec-*` CSS vars
+// already wired in globals.css — flipped from the old dark #0A0A0F/system-ui
+// theme to the light spec (Flow Blueprint 2026-07-22, Slice 2). Two levels
+// of dark-surface secondary text (TEXT_2/TEXT_3 at ~2.5-3.2:1, an audited
+// contrast failure) collapse into ONE AA-compliant secondary color on light
+// surfaces — differentiated by size/weight instead of a third, dimmer gray.
+const PAGE_BG = 'var(--spec-warm-white)';
+const CARD_BG = '#ffffff';
+const INPUT_BG = 'var(--spec-warm-white)';
+const BORDER = 'var(--spec-border)';
+const TEXT = 'var(--spec-ink)';
+const TEXT_2 = 'var(--spec-text-2nd)';
+const TEXT_3 = 'var(--spec-text-2nd)';
+const MUTED = 'var(--spec-text-2nd)';
+const ACCENT = 'var(--spec-violet)';
+// Disabled primary buttons: a neutral fill (WCAG doesn't require contrast on
+// disabled controls, but a dim violet-on-white reads as low-contrast text,
+// not "disabled" — a neutral surface reads unambiguously as inactive).
+const DISABLED_BG = 'var(--spec-border)';
+const DISABLED_TEXT = 'var(--spec-text-2nd)';
+const GREEN = 'var(--spec-success)';
+const RED = 'var(--spec-error)';
+const FONT_BODY = 'var(--font-ibm-plex-sans-intake),"IBM Plex Sans",system-ui,-apple-system,sans-serif';
+const FONT_HEAD = 'var(--font-space-grotesk),"Space Grotesk",system-ui,sans-serif';
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -88,7 +110,7 @@ const inputStyle: React.CSSProperties = {
   fontSize: 15,
   outline: 'none',
   boxSizing: 'border-box',
-  fontFamily: 'system-ui, sans-serif',
+  fontFamily: FONT_BODY,
 };
 
 // A buyer arriving from a vendor storefront that has no listings yet
@@ -100,7 +122,10 @@ const inputStyle: React.CSSProperties = {
 function IntakeInner() {
   const sp = useSearchParams();
   const vendorHint = sp.get('vendor') || '';
-  const [locale, setLocale] = useState<Locale>('en');
+  // Shared `nxt_lang` preference (same mechanism as the header on every other
+  // anonymous-buyer page) — a buyer who switched to ES on the homepage lands
+  // here already in ES, instead of this page's language resetting to EN.
+  const [locale, setLocale] = useLang();
   const [initialText, setInitialText] = useState('');
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
@@ -274,74 +299,19 @@ function IntakeInner() {
     'Los borradores son asistidos por AI. Un humano de NXT//LINK revisa cada solicitud. Los nombres de proveedores nunca se muestran aquí.'
   );
 
-  function Logo() {
-    return (
-      <a
-        href="/"
-        style={{
-          fontSize: 18,
-          fontWeight: 800,
-          letterSpacing: -1,
-          textDecoration: 'none',
-          color: TEXT,
-        }}
-      >
-        NXT<span style={{ color: ACCENT }}>//</span>LINK
-      </a>
-    );
-  }
-
   return (
-    <div style={{ minHeight: '100vh', background: PAGE_BG, color: TEXT, fontFamily: 'system-ui, sans-serif' }}>
-      {/* Nav */}
-      <div
-        style={{
-          padding: '16px 24px',
-          borderBottom: '1px solid #1A1A24',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <Logo />
-        {/* Language toggle */}
-        <div style={{ display: 'flex', gap: 4, alignItems: 'center', fontSize: 13 }}>
-          <button
-            onClick={() => setLocale('en')}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: locale === 'en' ? ACCENT : MUTED,
-              fontWeight: locale === 'en' ? 700 : 500,
-              cursor: 'pointer',
-              fontSize: 13,
-              padding: '2px 6px',
-            }}
-          >
-            EN
-          </button>
-          <span style={{ color: MUTED }}>|</span>
-          <button
-            onClick={() => setLocale('es')}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: locale === 'es' ? ACCENT : MUTED,
-              fontWeight: locale === 'es' ? 700 : 500,
-              cursor: 'pointer',
-              fontSize: 13,
-              padding: '2px 6px',
-            }}
-          >
-            ES
-          </button>
-        </div>
-      </div>
+    <div className={ibmPlexSans.variable} style={{ minHeight: '100vh', background: PAGE_BG, color: TEXT, fontFamily: FONT_BODY }}>
+      {/* ONE shared public header (Flow Blueprint 2026-07-22 §4, Slice 2) —
+          replaces this page's old header-less/custom EN|ES-only nav. Bound
+          to this page's own `locale` state (now the shared useLang/nxt_lang
+          mechanism) so the header's toggle and the assistant's language stay
+          the same single source of truth. */}
+      <PublicHeader lang={locale} onLangChange={setLocale} />
 
       <div style={{ maxWidth: 640, margin: '0 auto', padding: '40px 20px 60px' }}>
         {/* Header */}
         <div style={{ marginBottom: 28 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 6, lineHeight: 1.2 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 6, lineHeight: 1.2, fontFamily: FONT_HEAD, color: TEXT }}>
             {isEs ? ASSISTANT.name_es : ASSISTANT.name}
           </h1>
           <p style={{ color: TEXT_3, fontSize: 15 }}>
@@ -352,9 +322,9 @@ function IntakeInner() {
               style={{
                 marginTop: 14,
                 fontSize: 13,
-                color: '#C4B5FD',
-                background: 'rgba(124,92,252,.08)',
-                border: '1px solid rgba(124,92,252,.25)',
+                color: 'var(--spec-violet-deep)',
+                background: 'rgba(108,92,224,.08)',
+                border: '1px solid rgba(108,92,224,.25)',
                 borderRadius: 10,
                 padding: '9px 12px',
                 lineHeight: 1.5,
@@ -384,7 +354,7 @@ function IntakeInner() {
                 width: 64,
                 height: 64,
                 borderRadius: '50%',
-                background: '#10B98122',
+                background: '#EDF7F1',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -395,7 +365,7 @@ function IntakeInner() {
             >
               ✓
             </div>
-            <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12 }}>
+            <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12, fontFamily: FONT_HEAD }}>
               {tr('Request received', 'Solicitud recibida')}
             </h2>
             <p style={{ color: TEXT_2, fontSize: 16, marginBottom: 8 }}>
@@ -452,7 +422,7 @@ function IntakeInner() {
                   style={{
                     alignSelf: 'flex-start',
                     maxWidth: '90%',
-                    background: '#1A1A24',
+                    background: 'var(--spec-surface)',
                     color: TEXT,
                     padding: '12px 14px',
                     borderRadius: 14,
@@ -473,7 +443,7 @@ function IntakeInner() {
                   style={{
                     alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
                     maxWidth: '90%',
-                    background: m.role === 'user' ? ACCENT : '#1A1A24',
+                    background: m.role === 'user' ? ACCENT : 'var(--spec-surface)',
                     color: m.role === 'user' ? '#fff' : TEXT,
                     padding: '12px 14px',
                     borderRadius: 14,
@@ -533,8 +503,8 @@ function IntakeInner() {
                 disabled={loading || !input.trim()}
                 style={{
                   padding: '12px 20px',
-                  background: loading || !input.trim() ? '#4A3D8F' : ACCENT,
-                  color: '#fff',
+                  background: loading || !input.trim() ? DISABLED_BG : ACCENT,
+                  color: loading || !input.trim() ? DISABLED_TEXT : '#fff',
                   border: 'none',
                   borderRadius: 12,
                   fontSize: 15,
@@ -559,19 +529,22 @@ function IntakeInner() {
               padding: 28,
             }}
           >
-            <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 18 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 18, fontFamily: FONT_HEAD }}>
               {tr('Request Summary', 'Resumen de Solicitud')}
             </h2>
 
             <SummaryFields summary={summary} isEs={isEs} />
 
-            {/* Missing info */}
+            {/* Missing info — ink-colored text for AA contrast; amber is a
+                decorative tint/border only (raw amber text on a light surface
+                measured ~3:1, below the AA floor — one of the audited
+                contrast failures this reskin fixes). */}
             {summary.missing_info && summary.missing_info.length > 0 && (
-              <div style={{ marginTop: 18 }}>
-                <div style={{ color: AMBER, fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+              <div style={{ marginTop: 18, background: 'rgba(198,138,40,.08)', border: '1px solid rgba(198,138,40,.3)', borderRadius: 10, padding: '12px 14px' }}>
+                <div style={{ color: TEXT, fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
                   {tr('Missing information', 'Información faltante')}
                 </div>
-                <ul style={{ margin: 0, paddingLeft: 18, color: AMBER, fontSize: 14, lineHeight: 1.6 }}>
+                <ul style={{ margin: 0, paddingLeft: 18, color: TEXT, fontSize: 14, lineHeight: 1.6 }}>
                   {summary.missing_info.map((item, i) => (
                     <li key={i}>{item}</li>
                   ))}
@@ -591,9 +564,9 @@ function IntakeInner() {
                       key={i}
                       style={{
                         padding: '4px 12px',
-                        background: '#7C5CFC22',
+                        background: 'rgba(108,92,224,.12)',
                         color: ACCENT,
-                        border: `1px solid ${ACCENT}55`,
+                        border: '1px solid rgba(108,92,224,.35)',
                         borderRadius: 999,
                         fontSize: 13,
                         fontWeight: 600,
@@ -679,8 +652,8 @@ function IntakeInner() {
                 style={{
                   flex: '1 1 160px',
                   padding: '14px',
-                  background: loading ? '#4A3D8F' : ACCENT,
-                  color: '#fff',
+                  background: loading ? DISABLED_BG : ACCENT,
+                  color: loading ? DISABLED_TEXT : '#fff',
                   border: 'none',
                   borderRadius: 12,
                   fontSize: 15,
@@ -780,7 +753,7 @@ function SummaryFields({ summary, isEs }: { summary: RequestSummary; isEs: boole
 
   if (rows.length === 0) {
     return (
-      <p style={{ color: '#6B7280', fontSize: 14 }}>
+      <p style={{ color: MUTED, fontSize: 14 }}>
         {tr('No details captured yet.', 'Aún no hay detalles capturados.')}
       </p>
     );
@@ -790,8 +763,8 @@ function SummaryFields({ summary, isEs }: { summary: RequestSummary; isEs: boole
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {rows.map((row, i) => (
         <div key={i} style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 12, alignItems: 'start' }}>
-          <div style={{ color: '#9CA3AF', fontSize: 13, fontWeight: 600 }}>{row.label}</div>
-          <div style={{ color: '#F3F4F6', fontSize: 14, lineHeight: 1.5 }}>{row.value}</div>
+          <div style={{ color: TEXT_3, fontSize: 13, fontWeight: 600 }}>{row.label}</div>
+          <div style={{ color: TEXT, fontSize: 14, lineHeight: 1.5 }}>{row.value}</div>
         </div>
       ))}
     </div>

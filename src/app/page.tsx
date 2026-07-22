@@ -30,10 +30,11 @@
 // it conflicts with the binding $250-first-deal-credit decision — no
 // replacement promise, per the blueprint's §1.10/§6 instruction.
 
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { IBM_Plex_Sans } from 'next/font/google';
-import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
+import { useLang, type Lang } from '@/components/LanguageToggle';
+import PublicHeader, { type PublicHeaderHandle } from '@/components/PublicHeader';
 import {
   BadgeCheck, ShieldCheck, Send, ClipboardList, Sparkles, Handshake, Forklift,
   HardHat, Warehouse, Bot, Wrench, Truck, MessageSquareText, Building2,
@@ -226,18 +227,12 @@ export default function Home() {
   const t = T[lang];
   const [featured, setFeatured] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState('');
-  const searchRef = useRef<HTMLInputElement>(null);
-  function goSearch(e: FormEvent) {
-    e.preventDefault();
-    const q = query.trim();
-    window.location.href = q ? `/marketplace?q=${encodeURIComponent(q)}` : '/marketplace';
-  }
-  // Hero CTA 1 ("Search Products & Services") focuses the header's mega-search
-  // instead of navigating away — the search bar is already on screen.
+  const headerRef = useRef<PublicHeaderHandle>(null);
+  // Hero CTA 1 ("Search Products & Services") focuses the shared header's
+  // search box instead of navigating away — the search bar is already on
+  // screen (now delegated to PublicHeader's own imperative handle).
   function focusSearch() {
-    searchRef.current?.focus();
-    searchRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    headerRef.current?.focusSearch();
   }
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [eaOpen, setEaOpen] = useState(false);
@@ -280,33 +275,10 @@ export default function Home() {
           NO primary CTA. "Post a Request" no longer lives here (it's the
           hero prompt card's own button + the mobile sticky bar); "Become a
           Vendor" is now a permanent, equal-weight item next to Sign in.
-          Logo left, mega-search center (known-item / part-number search —
-          the hero owns the "describe your need" RFQ path), language /
-          Become a Vendor / Sign in / Join right. Every control here is a
-          ≥44px hit target with no adjacent overlap (fixes the header
-          click-zone defect). */}
-      <header className="hp-header">
-        <div className="hp-headmain">
-          <a className="hp-brand" href="/"><b>NXT<i>//</i>LINK</b></a>
-          <form className="hp-headsearch" onSubmit={goSearch} role="search">
-            <SearchIcon />
-            <input
-              ref={searchRef}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t.searchPh}
-              aria-label={t.searchAria}
-            />
-            <button type="submit">{t.searchBtn}</button>
-          </form>
-          <div className="hp-headactions">
-            <LanguageToggle lang={lang} onChange={setLang} variant="light" />
-            <Link className="hp-vendorlink" href="/vendor-signup">{t.becomeVendor}</Link>
-            <a className="hp-signin" href="/login">{t.signIn}</a>
-            <a className="hp-joinbtn" href="/signup">{t.join}</a>
-          </div>
-        </div>
-      </header>
+          Slice 2 (2026-07-22): extracted into the ONE shared PublicHeader so
+          /marketplace, /intake, and the listing/vendor detail pages carry
+          the exact same header instead of forking a second copy. */}
+      <PublicHeader ref={headerRef} lang={lang} onLangChange={setLang} />
 
       {/* Slim always-on category nav bar — same real taxonomy as the tile
           grid further down; this strip is the "always there" wayfinding
@@ -562,10 +534,6 @@ export default function Home() {
   );
 }
 
-function SearchIcon() {
-  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>;
-}
-
 // Design System & App Spec v1.0 (vault/Design-System.md) applied via the
 // `--spec-*` CSS variables already wired in globals.css: light content
 // (warm white / white cards, violet #6C5CE0 primary, IBM Plex Sans body +
@@ -583,42 +551,9 @@ const CSS = `
 .hp h1,.hp h2,.hp h3{font-family:var(--font-space-grotesk),'Space Grotesk',system-ui,sans-serif;}
 .hp-sronly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 
-/* Header — LIGHT, a utility bar with no primary CTA (Flow Blueprint §3/§4) */
-.hp-header{position:sticky;top:0;z-index:40;background:var(--spec-warm-white);backdrop-filter:blur(20px);border-bottom:1px solid var(--spec-border);padding:12px 20px;}
-.hp-headmain{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;max-width:1280px;margin:0 auto;}
-.hp-brand{grid-column:1;color:var(--spec-ink);}
-.hp-brand b{font-family:var(--font-space-grotesk);font-size:18px;font-weight:700;letter-spacing:-.02em;color:var(--spec-ink);}
-.hp-brand i{color:var(--spec-violet);font-style:normal;}
-.hp-headsearch{grid-column:2;justify-self:center;display:flex;align-items:center;gap:8px;width:100%;max-width:560px;background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-md);padding:0 6px 0 14px;color:var(--spec-text-2nd);}
-.hp-headsearch:focus-within{border-color:var(--spec-violet);box-shadow:0 0 0 3px rgba(108,92,224,.15);}
-.hp-headsearch svg{flex-shrink:0;color:var(--spec-text-2nd);}
-.hp-headsearch input{flex:1;min-width:0;background:none;border:none;outline:none;color:var(--spec-ink);font-family:inherit;font-size:14.5px;padding:12px 0;}
-.hp-headsearch input::placeholder{color:var(--spec-text-2nd);}
-.hp-headsearch button{flex-shrink:0;min-height:44px;background:var(--spec-violet);color:#fff;font-family:inherit;font-weight:700;font-size:13.5px;border:none;border-radius:var(--spec-radius-btn);padding:9px 16px;cursor:pointer;margin:4px 0;transition:background .15s;}
-.hp-headsearch button:hover{background:var(--spec-violet-deep);}
-/* Every header control below is a ≥44px hit target with its own visual
-   bounds and an explicit gap from its neighbors — fixes the confirmed
-   click-zone-overlap defect (a click near EN/ES landing on the old
-   Post-a-Request button, now removed from the header entirely). */
-.hp-headactions{grid-column:3;justify-self:end;display:flex;align-items:center;gap:10px;flex-wrap:wrap;row-gap:8px;justify-content:flex-end;flex-shrink:0;}
-.hp-signin{display:flex;align-items:center;min-height:44px;padding:0 6px;color:var(--spec-text-2nd);font-size:13.5px;font-weight:600;white-space:nowrap;}
-.hp-signin:hover{color:var(--spec-ink);}
-.hp-joinbtn{display:flex;align-items:center;justify-content:center;min-height:44px;color:var(--spec-ink);font-size:13.5px;font-weight:700;padding:0 16px;border-radius:var(--spec-radius-btn);border:1.5px solid rgba(20,19,32,.18);white-space:nowrap;transition:border-color .15s,background .15s;}
-.hp-joinbtn:hover{border-color:rgba(20,19,32,.34);background:rgba(20,19,32,.04);}
-.hp-vendorlink{display:flex;align-items:center;justify-content:center;min-height:44px;background:var(--spec-violet);color:#fff !important;font-size:13.5px;font-weight:700;padding:0 16px;border-radius:var(--spec-radius-btn);white-space:nowrap;transition:background .15s;}
-.hp-vendorlink:hover{background:var(--spec-violet-deep);}
-@media(max-width:760px){
-  /* Brand keeps its natural (never-squeezed) width; the actions cluster —
-     now 3 items instead of 1 since "Become a Vendor" joined — is the
-     flexible/shrinkable column and wraps onto extra lines instead of
-     stealing the logo's space (regression check: at 360-414px the logo
-     was measuring 0-width before this fix). */
-  .hp-headmain{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"brand actions" "search search";row-gap:10px;}
-  .hp-brand{grid-area:brand;}
-  .hp-headactions{grid-area:actions;min-width:0;}
-  .hp-headsearch{grid-area:search;max-width:none;min-width:0;}
-}
-@media(max-width:480px){.hp-signin{display:none;}}
+/* Header is now the shared PublicHeader component
+   (src/components/PublicHeader.tsx, self-styled under the .ph- prefix) —
+   removed from here in Slice 2 so it isn't a second, divergent copy. */
 
 /* Slim always-on category nav bar — sits directly under the header */
 .hp-catbar{background:#fff;border-bottom:1px solid var(--spec-border);}
