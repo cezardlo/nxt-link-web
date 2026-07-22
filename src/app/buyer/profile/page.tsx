@@ -148,7 +148,7 @@ const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 .bp{min-height:100vh;background:#0A0A0F;color:#F0F0F5;font-family:'Outfit',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
 .bp *{box-sizing:border-box;}
-.bp-nav{display:flex;justify-content:space-between;align-items:center;padding:14px 26px;border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;background:rgba(10,10,15,.9);backdrop-filter:blur(20px);z-index:20;}
+.bp-nav{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;row-gap:8px;padding:14px 26px;border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;background:rgba(10,10,15,.9);backdrop-filter:blur(20px);z-index:20;}
 .bp-brand{display:flex;align-items:baseline;gap:10px;color:#F0F0F5;text-decoration:none;}
 .bp-brand b{font-size:17px;}.bp-brand i{color:#A78BFA;font-style:normal;}
 .bp-brand span{color:#8080A0;font-size:13px;}

@@ -468,7 +468,7 @@ const CSS = `
 .pd *{box-sizing:border-box;}
 .pd-load{max-width:600px;margin:80px auto;text-align:center;color:#8080A0;padding:0 20px;}
 .pd-load a{color:#A78BFA;}
-.pd-nav{display:flex;justify-content:space-between;align-items:center;padding:14px 26px;border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;background:rgba(10,10,15,.9);backdrop-filter:blur(20px);z-index:30;}
+.pd-nav{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;row-gap:8px;padding:14px 26px;border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;background:rgba(10,10,15,.9);backdrop-filter:blur(20px);z-index:30;}
 .pd-brand{display:flex;align-items:baseline;gap:10px;color:#F0F0F5;text-decoration:none;}
 .pd-brand b{font-size:17px;}.pd-brand i{color:#A78BFA;font-style:normal;}.pd-brand span{color:#8080A0;font-size:13px;}
 .pd-pill{font-size:13px;font-weight:500;color:#C0C0D0;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:99px;padding:8px 14px;text-decoration:none;}

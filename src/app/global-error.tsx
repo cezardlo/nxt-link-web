@@ -52,7 +52,7 @@ export default function GlobalError({
                 TRY AGAIN
               </button>
               <a
-                href="/map"
+                href="/"
                 style={{
                   fontFamily: "'IBM Plex Mono', monospace",
                   fontSize: '9px',
@@ -63,7 +63,7 @@ export default function GlobalError({
                   alignItems: 'center',
                 }}
               >
-                ← BACK TO MAP
+                ← BACK TO HOME
               </a>
             </div>
           </div>

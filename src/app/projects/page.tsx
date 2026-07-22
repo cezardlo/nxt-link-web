@@ -228,7 +228,7 @@ export default function ProjectsPage() {
 const CSS = `
 .pw{min-height:100vh;background:#0A0A0F;color:#F0F0F5;font-family:'Outfit',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;}
 .pw *{box-sizing:border-box;}
-.pw-nav{display:flex;justify-content:space-between;align-items:center;padding:14px 26px;border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;background:rgba(10,10,15,.9);backdrop-filter:blur(20px);z-index:30;}
+.pw-nav{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;row-gap:8px;padding:14px 26px;border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;background:rgba(10,10,15,.9);backdrop-filter:blur(20px);z-index:30;}
 .pw-brand{display:flex;align-items:baseline;gap:10px;color:#F0F0F5;text-decoration:none;}
 .pw-brand b{font-size:17px;}.pw-brand i{color:#A78BFA;font-style:normal;}
 .pw-brand span{color:#8080A0;font-size:13px;}
