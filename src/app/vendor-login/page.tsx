@@ -1,7 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+// Continue with Google (flag NEXT_PUBLIC_AUTH_GOOGLE): shown in BOTH modes.
+// 'signin' mode has no click-wrap checkbox on this page (an existing
+// account signing back in — same no-gate rule as /login's Google button).
+// 'signup' mode gates the button behind the same checkbox the password
+// signup uses (moved above it), threads oauth_lane=organic — the same
+// PENDING vendor lane /vendor-signup uses — and /auth/callback records the
+// acceptance fail-closed. See src/lib/auth/google.ts.
+
+import { useEffect, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
+import GoogleAuthButton, { GOOGLE_AUTH_ENABLED } from '@/components/GoogleAuthButton';
+import { GOOGLE_TERMS_ERROR_MSG, bilingualCopy } from '@/lib/auth/google';
 
 export default function VendorLoginPage() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
@@ -11,6 +21,17 @@ export default function VendorLoginPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
+
+  // /auth/callback bounces back here with ?err=google_terms when the
+  // fail-closed terms recording on the Google path couldn't be written —
+  // surface the same bilingual error the email path shows on that failure.
+  useEffect(() => {
+    try {
+      if (new URLSearchParams(window.location.search).get('err') === 'google_terms') {
+        setError(bilingualCopy(GOOGLE_TERMS_ERROR_MSG));
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   async function submit() {
     if (mode === 'signup' && !agree) {
@@ -42,6 +63,21 @@ export default function VendorLoginPage() {
     } finally { setBusy(false); }
   }
 
+  // Shared click-wrap checkbox (signup mode only) — rendered ABOVE the
+  // Google button when the flag is on, or in its original spot inside the
+  // form when the flag is off (unchanged today).
+  const agreeCheckbox = (
+    <label className="vl-agree">
+      <input type="checkbox" checked={agree} onChange={(e) => { setAgree(e.target.checked); if (e.target.checked) setError(''); }} />
+      <span>
+        I agree to the <a href="/terms" target="_blank" rel="noopener">Terms of Service</a> and{' '}
+        <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.{' '}
+        <i>Acepto los <a href="/terms" target="_blank" rel="noopener">Términos de Servicio</a> y el{' '}
+        <a href="/privacy" target="_blank" rel="noopener">Aviso de Privacidad</a>.</i>
+      </span>
+    </label>
+  );
+
   return (
     <div className="vl">
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
@@ -60,19 +96,27 @@ export default function VendorLoginPage() {
           ) : (
             <>
               {error && <div className="vl-err">{error}</div>}
+
+              {GOOGLE_AUTH_ENABLED && (
+                <div className="vl-oauth">
+                  {mode === 'signup' && agreeCheckbox}
+                  <GoogleAuthButton
+                    lang="en"
+                    next="/vendor/portal"
+                    from="/vendor-login"
+                    lane={mode === 'signup' ? 'organic' : undefined}
+                    disabled={mode === 'signup' && !agree}
+                    onError={setError}
+                    className="vl-google"
+                    bilingualErrors
+                  />
+                  <div className="vl-or"><span>or continue with email · o continuar con correo</span></div>
+                </div>
+              )}
+
               <label className="vl-field"><span>Email</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
               <label className="vl-field"><span>Password</span><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} /></label>
-              {mode === 'signup' && (
-                <label className="vl-agree">
-                  <input type="checkbox" checked={agree} onChange={(e) => { setAgree(e.target.checked); if (e.target.checked) setError(''); }} />
-                  <span>
-                    I agree to the <a href="/terms" target="_blank" rel="noopener">Terms of Service</a> and{' '}
-                    <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.{' '}
-                    <i>Acepto los <a href="/terms" target="_blank" rel="noopener">Términos de Servicio</a> y el{' '}
-                    <a href="/privacy" target="_blank" rel="noopener">Aviso de Privacidad</a>.</i>
-                  </span>
-                </label>
-              )}
+              {mode === 'signup' && !GOOGLE_AUTH_ENABLED && agreeCheckbox}
               <button className="vl-btn" disabled={busy} onClick={submit}>{busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}</button>
             </>
           )}
@@ -118,6 +162,12 @@ const CSS = `
 .vl-agree span{color:var(--muted);font-size:12.5px;line-height:1.55;}
 .vl-agree span a{color:var(--p2);}
 .vl-agree span i{color:var(--muted2);font-style:normal;}
+.vl-oauth{margin-bottom:18px;}
+.vl-oauth .vl-agree{margin-bottom:14px;}
+.vl-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;font-family:var(--sans);font-size:15px;font-weight:600;padding:13px;border-radius:12px;border:1px solid var(--line);background:#fff;color:#1a1a1a;cursor:pointer;}
+.vl-google:hover{background:#F3F3F5;}.vl-google:disabled{opacity:.6;}
+.vl-or{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--muted2);font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;}
+.vl-or::before,.vl-or::after{content:'';flex:1;height:1px;background:var(--line);}
 .vl-sent{background:var(--pbg);border:1px solid rgba(124,92,252,.25);color:var(--p2);padding:14px 16px;border-radius:12px;font-size:14px;line-height:1.5;}
 .vl-switch{text-align:center;margin-top:22px;font-size:13.5px;color:var(--muted);}
 .vl-switch button{background:none;border:none;color:var(--p2);font:600 13.5px var(--sans);cursor:pointer;}

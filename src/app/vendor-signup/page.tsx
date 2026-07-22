@@ -12,11 +12,22 @@
 // Spec-native light screen (Design System v1.0: warm-white bg, white card,
 // violet CTA) — visual twin of /join/[token]. Bilingual EN/ES via the shared
 // LanguageToggle. No escrow promises, no credit copy.
+//
+// Continue with Google (flag NEXT_PUBLIC_AUTH_GOOGLE): Fiverr pattern — the
+// button sits above the form with an "or" divider, gated behind the SAME
+// click-wrap checkbox the email path uses (moved to the top when the flag
+// is on; unchanged, inside the form, when it's off — zero visual diff).
+// /auth/callback records the acceptance fail-closed at the first
+// authenticated touch (OAuth only reveals the email after the redirect
+// back) and runs ensureVendorProfile lane 'organic' — the exact same
+// PENDING lane the magic-link quick signup uses. See src/lib/auth/google.ts.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import LanguageToggle, { useLang } from '@/components/LanguageToggle';
 import SupplyChips from '@/components/SupplyChips';
 import ChatWidget from '@/components/ChatWidget';
+import GoogleAuthButton, { GOOGLE_AUTH_ENABLED } from '@/components/GoogleAuthButton';
+import { GOOGLE_TERMS_ERROR_MSG } from '@/lib/auth/google';
 
 const T = {
   en: {
@@ -48,6 +59,7 @@ const T = {
     sentTitle: 'Check your email',
     sent: (email: string) => `We sent a secure sign-in link to ${email}. Tap it and you’re in — no password needed. It expires in a few minutes.`,
     haveAccount: 'Already have an account? Sign in →',
+    orEmail: 'or continue with email',
   },
   es: {
     tagline: 'Marketplace industrial El Paso–Juárez',
@@ -78,6 +90,7 @@ const T = {
     sentTitle: 'Revise su correo',
     sent: (email: string) => `Le enviamos un enlace seguro de inicio de sesión a ${email}. Tóquelo y ya está adentro — sin contraseña. Expira en unos minutos.`,
     haveAccount: '¿Ya tiene cuenta? Inicie sesión →',
+    orEmail: 'o continuar con correo',
   },
 } as const;
 
@@ -94,6 +107,19 @@ export default function VendorQuickSignupPage() {
   const [sentTo, setSentTo] = useState('');
   const [err, setErr] = useState('');
   const t = T[lang];
+
+  // /auth/callback bounces back here with ?err=google_terms when the
+  // fail-closed terms recording on the Google path couldn't be written
+  // (e.g. the legal_acceptances migration isn't applied yet) — surface the
+  // same bilingual error the email path shows on that failure.
+  useEffect(() => {
+    try {
+      if (new URLSearchParams(window.location.search).get('err') === 'google_terms') {
+        setErr(lang === 'es' ? GOOGLE_TERMS_ERROR_MSG.es : GOOGLE_TERMS_ERROR_MSG.en);
+      }
+    } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleCat = (v: string) =>
     setCats((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]));
@@ -127,6 +153,20 @@ export default function VendorQuickSignupPage() {
     setBusy(false);
   }
 
+  // Shared click-wrap checkbox — rendered ABOVE the Google button when the
+  // flag is on (must be ticked before the button is enabled), or in its
+  // original spot inside the form when the flag is off (unchanged today).
+  const agreeCheckbox = (
+    <label className="qs-agree">
+      <input type="checkbox" checked={agree} onChange={(e) => { setAgree(e.target.checked); if (e.target.checked) setErr(''); }} />
+      <span>
+        {t.agreePre} <a href="/terms" target="_blank" rel="noopener">{t.agreeTos}</a> {t.agreeAnd}{' '}
+        <a href="/privacy" target="_blank" rel="noopener">{t.agreePrivacy}</a>.
+      </span>
+    </label>
+  );
+  const supplyValues = [...cats, ...(otherCat.trim() ? [otherCat.trim()] : [])];
+
   return (
     <div className="qs">
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
@@ -152,6 +192,24 @@ export default function VendorQuickSignupPage() {
                 <li key={head}><b>{head}</b> {rest}</li>
               ))}
             </ul>
+
+            {GOOGLE_AUTH_ENABLED && (
+              <div className="qs-oauth">
+                {agreeCheckbox}
+                <GoogleAuthButton
+                  lang={lang}
+                  next="/vendor/portal?welcome=1"
+                  from="/vendor-signup"
+                  lane="organic"
+                  disabled={!agree}
+                  companyName={company}
+                  categories={supplyValues}
+                  onError={setErr}
+                  className="qs-google"
+                />
+                <div className="qs-or"><span>{t.orEmail}</span></div>
+              </div>
+            )}
 
             <form onSubmit={submit} noValidate>
               <label className="qs-field">
@@ -182,13 +240,7 @@ export default function VendorQuickSignupPage() {
                 />
               </div>
 
-              <label className="qs-agree">
-                <input type="checkbox" checked={agree} onChange={(e) => { setAgree(e.target.checked); if (e.target.checked) setErr(''); }} />
-                <span>
-                  {t.agreePre} <a href="/terms" target="_blank" rel="noopener">{t.agreeTos}</a> {t.agreeAnd}{' '}
-                  <a href="/privacy" target="_blank" rel="noopener">{t.agreePrivacy}</a>.
-                </span>
-              </label>
+              {!GOOGLE_AUTH_ENABLED && agreeCheckbox}
 
               {err && <div className="qs-err" role="alert">{err}</div>}
               <button type="submit" className="qs-cta" disabled={busy}>
@@ -235,6 +287,13 @@ const CSS = `
 .qs-agree input:focus-visible{outline:2px solid #6C5CE0;outline-offset:2px;}
 .qs-agree span{font-size:13px;color:#615F72;line-height:1.5;}
 .qs-agree span a{color:#6C5CE0;}
+.qs-oauth{margin-top:18px;}
+.qs-oauth .qs-agree{margin-top:0;margin-bottom:14px;}
+.qs-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;font-family:inherit;font-size:15px;font-weight:600;padding:13px;min-height:50px;border-radius:12px;border:1px solid #E2DFEC;background:#fff;color:#141320;cursor:pointer;}
+.qs-google:hover{background:#F8F7FB;border-color:#C7C2DE;}
+.qs-google:disabled{opacity:.5;cursor:not-allowed;}
+.qs-or{display:flex;align-items:center;gap:10px;margin:18px 0 4px;color:#8A87A0;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;}
+.qs-or::before,.qs-or::after{content:'';flex:1;height:1px;background:#E2DFEC;}
 .qs-cta{display:block;width:100%;text-align:center;font-family:inherit;font-size:15.5px;font-weight:700;padding:14px;min-height:52px;border-radius:12px;border:none;background:#6C5CE0;color:#fff;cursor:pointer;margin-top:16px;}
 .qs-cta:hover{background:#4A3DB0;}
 .qs-cta:focus-visible{outline:2px solid #4A3DB0;outline-offset:2px;}

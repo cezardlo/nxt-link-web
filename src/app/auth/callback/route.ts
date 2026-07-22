@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server-auth';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { ensureVendorProfile } from '@/lib/vendor/profile';
+import { recordLegalAcceptance } from '@/lib/legal/acceptance';
 
 function metaCategories(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
@@ -23,6 +24,20 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const code = url.searchParams.get('code');
   const next = url.searchParams.get('next');
+
+  // Google OAuth click-wrap threading (Continue-with-Google, gated by
+  // NEXT_PUBLIC_AUTH_GOOGLE): signInWithOAuth has no `data` option like
+  // signInWithOtp, so the button threads its lane/locale/invite-token/
+  // bounce-back path as query params on redirectTo — Supabase echoes the
+  // whole URL back verbatim (+`&code=`). Absent for every existing flow
+  // (magic link, password) — zero effect on them. See src/lib/auth/google.ts.
+  const oauthLane = url.searchParams.get('oauth_lane'); // 'organic' | 'invite' | 'buyer'
+  const oauthFrom = url.searchParams.get('oauth_from');
+  const oauthInvite = url.searchParams.get('oauth_invite');
+  const oauthLocale: 'en' | 'es' = url.searchParams.get('oauth_locale') === 'es' ? 'es' : 'en';
+  const oauthCompany = url.searchParams.get('oauth_company');
+  const oauthCategories = (url.searchParams.get('oauth_categories') || '')
+    .split('|').map((s) => s.trim()).filter(Boolean).slice(0, 10);
 
   let dest = '/login?confirmed=1';
   try {
@@ -78,14 +93,46 @@ export async function GET(req: Request) {
           // through admin review; this path is invite-only.
           if (role !== 'admin' && role !== 'super_admin' && data.user.email) {
             try {
-              const esc = data.user.email.replace(/[\\%_]/g, (c) => `\\${c}`);
-              const { data: inv } = await db.from('vendor_invites')
-                .select('id, company_name, contact_name, email, phone, locale, vendor_id, status')
-                .ilike('email', esc)
-                .in('status', ['invited', 'reminded', 'clicked'])
-                .order('created_at', { ascending: false })
-                .limit(1).maybeSingle();
+              const inviteCols = 'id, company_name, contact_name, email, phone, locale, vendor_id, status';
+              let inv: Record<string, unknown> | null = null;
+              // A Google click on /join/<token> can return a different email
+              // than the invite's (a personal Gmail vs. the invited work
+              // address) — match by the token itself first, the same
+              // credential /join already trusts, before falling back to the
+              // email match every other lane (including magic-link) uses.
+              if (oauthLane === 'invite' && oauthInvite) {
+                const { data: byToken } = await db.from('vendor_invites')
+                  .select(inviteCols).eq('token', oauthInvite)
+                  .in('status', ['invited', 'reminded', 'clicked']).maybeSingle();
+                inv = (byToken as Record<string, unknown> | null) || null;
+              }
+              if (!inv) {
+                const esc = data.user.email.replace(/[\\%_]/g, (c) => `\\${c}`);
+                const { data: byEmail } = await db.from('vendor_invites')
+                  .select(inviteCols)
+                  .ilike('email', esc)
+                  .in('status', ['invited', 'reminded', 'clicked'])
+                  .order('created_at', { ascending: false })
+                  .limit(1).maybeSingle();
+                inv = (byEmail as Record<string, unknown> | null) || null;
+              }
               if (inv) {
+                // Google path click-wrap gate — fail closed (process doc
+                // §4): record the acceptance BEFORE approving anything. On
+                // failure, bounce back to /join instead of silently
+                // finishing an unrecorded signup; the invite's status is
+                // untouched so retrying (once the recording works) still works.
+                if (oauthLane === 'invite') {
+                  const rec = await recordLegalAcceptance(db, {
+                    authId: data.user.id, email: data.user.email, context: 'invite_join',
+                    languageShown: oauthLocale, relatedObjectType: 'vendor_invite',
+                    relatedObjectId: inv.id as string, req,
+                  });
+                  if (!rec.ok) {
+                    const back = oauthFrom || (oauthInvite ? `/join/${oauthInvite}` : '/vendor-signup');
+                    return NextResponse.redirect(new URL(`${back}?err=google_terms`, url.origin));
+                  }
+                }
                 let vendorId = (inv.vendor_id as string | null) || null;
                 if (!vendorId) {
                   // ONE shared creator for every lane (src/lib/vendor/profile.ts).
@@ -99,10 +146,10 @@ export async function GET(req: Request) {
                     authId: data.user.id,
                     email: data.user.email,
                     profile: {
-                      company_name: inv.company_name || 'New company',
-                      contact_name: inv.contact_name || null,
+                      company_name: (inv.company_name as string | null) || 'New company',
+                      contact_name: (inv.contact_name as string | null) || null,
                       email: data.user.email.toLowerCase(),
-                      phone: inv.phone || null,
+                      phone: (inv.phone as string | null) || null,
                       locale: inv.locale === 'es' ? 'es' : 'en',
                       source: 'invite',
                       // "What do you supply?" chips tapped on /join — carried
@@ -117,10 +164,63 @@ export async function GET(req: Request) {
                   vendor_id: vendorId,
                   account_created_at: new Date().toISOString(),
                   status: 'account_created',
-                }).eq('id', inv.id);
+                }).eq('id', inv.id as string);
                 isVendor = true;
               }
             } catch { /* best-effort: never block sign-in on invite linking */ }
+          }
+
+          // Google organic vendor lane (Continue with Google on
+          // /vendor-signup, /signup's vendor step, or /vendor-login's
+          // signup tab). signInWithOAuth can't carry the
+          // signup_lane:'quick' metadata the magic-link path uses (no
+          // `data` option), so the button threads oauth_lane=organic on
+          // redirectTo instead. Same rule as every other organic door:
+          // ensureVendorProfile lane 'organic' — born PENDING, admin review
+          // still gates anything public. `!isVendor` makes this fire only
+          // on the first touch — a returning vendor already has a profile
+          // linked to this auth id, so it's skipped (and never re-recorded)
+          // on every later sign-in.
+          if (oauthLane === 'organic' && !isVendor && data.user.email) {
+            const rec = await recordLegalAcceptance(db, {
+              authId: data.user.id, email: data.user.email, context: 'vendor_signup',
+              languageShown: oauthLocale, relatedObjectType: 'oauth_google', req,
+            });
+            if (!rec.ok) {
+              return NextResponse.redirect(new URL(`${oauthFrom || '/vendor-signup'}?err=google_terms`, url.origin));
+            }
+            try {
+              const meta = data.user.user_metadata || {};
+              const fullName = String(meta.full_name || meta.name || '').trim().slice(0, 120) || null;
+              const ensured = await ensureVendorProfile(db, {
+                lane: 'organic', // born PENDING — review decides what goes public
+                authId: data.user.id,
+                email: data.user.email,
+                profile: {
+                  company_name: (oauthCompany || '').trim().slice(0, 120) || 'New company',
+                  contact_name: fullName,
+                  email: data.user.email.toLowerCase(),
+                  locale: oauthLocale,
+                  source: 'quick_signup_google',
+                  ...(oauthCategories.length ? { categories: oauthCategories } : {}),
+                },
+              });
+              if (ensured.ok) isVendor = true;
+            } catch { /* best-effort: the portal's get-or-create still catches them */ }
+          }
+
+          // Google buyer lane (Continue with Google on /signup's buyer
+          // step): no profile to create, but the click-wrap gate still
+          // applies fail-closed — record the acceptance or bounce back
+          // instead of finishing sign-in silently.
+          if (oauthLane === 'buyer' && data.user.email) {
+            const rec = await recordLegalAcceptance(db, {
+              authId: data.user.id, email: data.user.email, context: 'signup',
+              languageShown: oauthLocale, relatedObjectType: 'oauth_google', req,
+            });
+            if (!rec.ok) {
+              return NextResponse.redirect(new URL(`${oauthFrom || '/signup'}?err=google_terms`, url.origin));
+            }
           }
 
           // ORGANIC lane routing (two lanes, ONE system).

@@ -105,6 +105,27 @@ these three are under-planned — scope them after Wave 2:
   Everything inert-but-safe until the migration is applied (house law:
   DB first, deploy second — see `workplace/plans/DEPLOY-CHECKLIST-WAVE1.md`).
   NOT deployed.
+- ~~**"Continue with Google" sign-in (flag `NEXT_PUBLIC_AUTH_GOOGLE`)**~~ —
+  **SHIPPED 2026-07-21**: Fiverr-style Google button (shared
+  `src/components/GoogleAuthButton.tsx` + `src/lib/auth/google.ts`) on
+  `/vendor-signup`, `/join/[token]`, `/login`, `/signup`, `/vendor-login`
+  (`/sign-in` excluded — dead scaffold, not wired to any real auth). Renders
+  ONLY when `NEXT_PUBLIC_AUTH_GOOGLE==='1'` — absent by default, zero visual
+  diff until Cesar configures the provider. On signup screens the click-wrap
+  checkbox gates the button (moved above it) exactly like the email path;
+  `signInWithOAuth` can't carry `signup_lane` metadata the way
+  `signInWithOtp` does, so the button threads lane/locale/invite-token on
+  `redirectTo` instead, and `/auth/callback` records the ToS/Privacy
+  acceptance fail-closed at first authenticated touch (bounces back with
+  `?err=google_terms` if the write fails, same as the email path failing
+  closed when the legal_acceptances migration isn't applied). Vendor lane
+  integrity preserved: organic Google clicks run `ensureVendorProfile` lane
+  `'organic'` (born PENDING, same as the magic-link quick lane); `/join`
+  Google clicks match the invite by TOKEN first (falls back to email, since
+  a Google account's email can differ from the invited address), born
+  APPROVED. No migrations, no new deps. NOT deployed — Cesar still needs to
+  enable the Google provider in Supabase Auth + create a Google Cloud OAuth
+  client before flipping the flag on.
 - **Wire admin deal UI to the quote link** (G5 of `55a3873`, Finding 3): the
   admin deals page never sends `source_quote_id` — assist accepts and threads
   it and the POST dedupes on it, but nothing in the UI passes it yet, so the

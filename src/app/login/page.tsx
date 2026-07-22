@@ -3,10 +3,21 @@
 // Sign in for every role (replaces the old intel command-center login).
 // After login, routes by platform role: admin/operator -> /admin,
 // vendor -> /vendor/listings, buyer -> /buyer.
+//
+// Continue with Google (flag NEXT_PUBLIC_AUTH_GOOGLE): this button already
+// existed un-gated, which meant a dead click whenever the provider isn't
+// enabled in Supabase — now routed through the shared GoogleAuthButton so it
+// only renders behind the flag, like every other screen. This is a pure
+// sign-IN convenience (no click-wrap checkbox here — same as the password
+// form below it): an existing account signs back in; a brand-new Google
+// account is auto-provisioned as a buyer by Supabase itself, same as it was
+// before this change, hence the "by continuing" disclaimer under the button.
 
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
+import GoogleAuthButton, { GOOGLE_AUTH_ENABLED } from '@/components/GoogleAuthButton';
+import { bilingualCopy, GOOGLE_CONTINUE_AGREES_MSG } from '@/lib/auth/google';
 
 function LoginInner() {
   const sp = useSearchParams();
@@ -19,25 +30,9 @@ function LoginInner() {
   const [needsVerify, setNeedsVerify] = useState(false);
   const [demoBusy, setDemoBusy] = useState<'vendor' | 'buyer' | null>(null);
   const [showPw, setShowPw] = useState(false);
-  const [oauthBusy, setOauthBusy] = useState(false);
   const [magicBusy, setMagicBusy] = useState(false);
   const [magicSent, setMagicSent] = useState(false);
   const [usePassword, setUsePassword] = useState(false);
-
-  // One-click Google (requires the Google provider enabled in Supabase).
-  async function google() {
-    setOauthBusy(true); setErr('');
-    try {
-      const next = sp.get('next');
-      const sb = createBrowserSupabaseClient();
-      const { error } = await sb.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: `${window.location.origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : ''}` },
-      });
-      if (error) { setErr('Google sign-in isn’t enabled yet. Use email below.'); setOauthBusy(false); }
-      // On success the browser redirects to Google; nothing else runs here.
-    } catch { setErr('Google sign-in unavailable. Use email below.'); setOauthBusy(false); }
-  }
 
   // Passwordless magic link — no password to create or remember.
   async function magicLink() {
@@ -123,10 +118,15 @@ function LoginInner() {
         ) : (
           <>
             {/* Fast, passwordless options first */}
-            <button type="button" className="li-google" onClick={google} disabled={oauthBusy}>
-              <svg width="17" height="17" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5h-1.9V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.3 6.1 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.3 6.1 29.4 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.3 0 10.1-2 13.7-5.3l-6.3-5.2C29.3 35 26.8 36 24 36c-5.2 0-9.6-3.3-11.2-7.9l-6.5 5C9.6 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.5l6.3 5.2C41.1 36.5 44 30.8 44 24c0-1.3-.1-2.3-.4-3.5z"/></svg>
-              {oauthBusy ? 'Connecting…' : 'Continue with Google'}
-            </button>
+            <GoogleAuthButton
+              lang="en"
+              next={sp.get('next') || undefined}
+              from="/login"
+              onError={setErr}
+              className="li-google"
+              bilingualErrors
+            />
+            {GOOGLE_AUTH_ENABLED && <p className="li-googlenote">{bilingualCopy(GOOGLE_CONTINUE_AGREES_MSG)}</p>}
             <button type="button" className="li-magic" onClick={magicLink} disabled={magicBusy}>
               ✉️ {magicBusy ? 'Sending link…' : 'Email me a sign-in link'}
             </button>
@@ -183,6 +183,7 @@ const CSS = `
 .li-btn:hover{background:#6344DF;}.li-btn:disabled{opacity:.6;}
 .li-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;font-family:inherit;font-size:14.5px;font-weight:600;padding:12px;border-radius:11px;border:1px solid rgba(255,255,255,.16);background:#fff;color:#1a1a1a;cursor:pointer;margin-bottom:10px;}
 .li-google:hover{background:#F3F3F5;}.li-google:disabled{opacity:.7;}
+.li-googlenote{color:#63607A;font-size:11.5px;line-height:1.5;text-align:center;margin:-4px 0 12px;}
 .li-magic{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;font-family:inherit;font-size:14.5px;font-weight:600;padding:12px;border-radius:11px;border:1px solid rgba(124,92,252,.4);background:rgba(124,92,252,.1);color:#C4B5FD;cursor:pointer;margin-bottom:10px;}
 .li-magic:hover{background:rgba(124,92,252,.18);}.li-magic:disabled{opacity:.7;}
 .li-usepw{background:none;border:none;color:#8080A0;font:inherit;font-size:12.5px;cursor:pointer;text-align:center;margin-top:8px;text-decoration:underline;}

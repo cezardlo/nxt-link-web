@@ -15,10 +15,20 @@
 // lane): company name pre-filled from the invite (editable), email (already
 // known for emailed invites), and the "what do you supply?" chips. Answers
 // flow into the vendor profile via the invite API — never asked twice.
+//
+// Continue with Google (flag NEXT_PUBLIC_AUTH_GOOGLE): same Fiverr pattern
+// as /vendor-signup — button + "or" divider above the form, gated behind
+// the same click-wrap checkbox (moved to the top when the flag is on).
+// Threads this invite's token on redirectTo so /auth/callback can match it
+// even if the Google account's email differs from the invite's email; the
+// callback records the acceptance fail-closed before approving anything —
+// see src/lib/auth/google.ts and src/app/auth/callback/route.ts.
 
 import { useCallback, useEffect, useState } from 'react';
 import LanguageToggle, { readStoredLang } from '@/components/LanguageToggle';
 import SupplyChips from '@/components/SupplyChips';
+import GoogleAuthButton, { GOOGLE_AUTH_ENABLED } from '@/components/GoogleAuthButton';
+import { GOOGLE_TERMS_ERROR_MSG } from '@/lib/auth/google';
 
 interface InviteView {
   contact_name: string | null;
@@ -65,6 +75,7 @@ const T = {
     notYou: (company: string) => `Not ${company}? Start fresh →`,
     loading: 'Loading your invite…',
     errGeneric: 'Something went wrong. Try again.',
+    orEmail: 'or continue with email',
   },
   es: {
     tagline: 'Marketplace industrial El Paso–Juárez',
@@ -99,6 +110,7 @@ const T = {
     notYou: (company: string) => `¿No es ${company}? Empezar de cero →`,
     loading: 'Cargando su invitación…',
     errGeneric: 'Algo salió mal. Intente de nuevo.',
+    orEmail: 'o continuar con correo',
   },
 } as const;
 
@@ -142,6 +154,18 @@ export default function JoinPage({ params }: { params: { token: string } }) {
     return () => { alive = false; };
   }, [token]);
 
+  // /auth/callback bounces back here with ?err=google_terms when the
+  // fail-closed terms recording on the Google path couldn't be written —
+  // surface the same bilingual error the email path shows on that failure.
+  useEffect(() => {
+    try {
+      if (new URLSearchParams(window.location.search).get('err') === 'google_terms') {
+        setErr(lang === 'es' ? GOOGLE_TERMS_ERROR_MSG.es : GOOGLE_TERMS_ERROR_MSG.en);
+      }
+    } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const t = T[lang];
 
   const send = useCallback(async () => {
@@ -172,6 +196,20 @@ export default function JoinPage({ params }: { params: { token: string } }) {
   // Headline personalization follows the invite's original company name;
   // the editable `company` state is what gets submitted.
   const inviteCompany = (invite?.company_name || '').trim();
+
+  // Shared click-wrap checkbox — rendered ABOVE the Google button when the
+  // flag is on (must be ticked before the button is enabled), or in its
+  // original spot inside the form when the flag is off (unchanged today).
+  const agreeCheckbox = (
+    <label className="jn-agree">
+      <input type="checkbox" checked={agree} onChange={(e) => { setAgree(e.target.checked); if (e.target.checked) setErr(''); }} />
+      <span>
+        {t.agreePre} <a href="/terms" target="_blank" rel="noopener">{t.agreeTos}</a> {t.agreeAnd}{' '}
+        <a href="/privacy" target="_blank" rel="noopener">{t.agreePrivacy}</a>.
+      </span>
+    </label>
+  );
+  const supplyValues = [...cats, ...(otherCat.trim() ? [otherCat.trim()] : [])];
 
   return (
     <div className="jn">
@@ -207,6 +245,25 @@ export default function JoinPage({ params }: { params: { token: string } }) {
               ))}
             </ul>
 
+            {GOOGLE_AUTH_ENABLED && (
+              <div className="jn-oauth">
+                {agreeCheckbox}
+                <GoogleAuthButton
+                  lang={lang}
+                  next="/vendor/portal?welcome=1"
+                  from={`/join/${token}`}
+                  lane="invite"
+                  inviteToken={token}
+                  disabled={!agree}
+                  companyName={company}
+                  categories={supplyValues}
+                  onError={setErr}
+                  className="jn-google"
+                />
+                <div className="jn-or"><span>{t.orEmail}</span></div>
+              </div>
+            )}
+
             <label className="jn-field">
               <span>{t.companyLabel}</span>
               <input type="text" value={company} maxLength={120} onChange={(e) => setCompany(e.target.value)} autoComplete="organization" />
@@ -231,13 +288,7 @@ export default function JoinPage({ params }: { params: { token: string } }) {
               />
             </div>
 
-            <label className="jn-agree">
-              <input type="checkbox" checked={agree} onChange={(e) => { setAgree(e.target.checked); if (e.target.checked) setErr(''); }} />
-              <span>
-                {t.agreePre} <a href="/terms" target="_blank" rel="noopener">{t.agreeTos}</a> {t.agreeAnd}{' '}
-                <a href="/privacy" target="_blank" rel="noopener">{t.agreePrivacy}</a>.
-              </span>
-            </label>
+            {!GOOGLE_AUTH_ENABLED && agreeCheckbox}
 
             {err && <div className="jn-err">{err}</div>}
             <button type="button" className="jn-cta" onClick={send} disabled={busy}>
@@ -283,6 +334,13 @@ const CSS = `
 .jn-agree input:focus-visible{outline:2px solid #6C5CE0;outline-offset:2px;}
 .jn-agree span{font-size:13px;color:#615F72;line-height:1.5;}
 .jn-agree span a{color:#6C5CE0;}
+.jn-oauth{margin-top:18px;}
+.jn-oauth .jn-agree{margin-top:0;margin-bottom:14px;}
+.jn-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;font-family:inherit;font-size:15px;font-weight:600;padding:13px;min-height:50px;border-radius:12px;border:1px solid #E2DFEC;background:#fff;color:#141320;cursor:pointer;}
+.jn-google:hover{background:#F8F7FB;border-color:#C7C2DE;}
+.jn-google:disabled{opacity:.5;cursor:not-allowed;}
+.jn-or{display:flex;align-items:center;gap:10px;margin:18px 0 4px;color:#8A87A0;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;}
+.jn-or::before,.jn-or::after{content:'';flex:1;height:1px;background:#E2DFEC;}
 .jn-cta{display:block;width:100%;text-align:center;font-family:inherit;font-size:15.5px;font-weight:700;padding:14px;min-height:52px;border-radius:12px;border:none;background:#6C5CE0;color:#fff;cursor:pointer;margin-top:16px;text-decoration:none;}
 .jn-cta:hover{background:#4A3DB0;}
 .jn-cta:disabled{opacity:.65;cursor:wait;}

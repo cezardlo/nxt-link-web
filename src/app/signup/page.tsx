@@ -10,8 +10,19 @@
 // stays limited until the email is verified.
 // Vendors from this ORGANIC lane are routed into /apply — the admin-reviewed
 // application flow (invited vendors join via /join/<token> instead).
+//
+// Continue with Google (flag NEXT_PUBLIC_AUTH_GOOGLE): Fiverr pattern on the
+// details step — button + "or" divider above the form, gated behind the
+// same click-wrap checkbox (moved to the top when the flag is on). Vendor
+// role threads oauth_lane=organic (the exact same PENDING lane
+// /vendor-signup uses — Google is inherently the "quick" one-click path, so
+// any vendor Google click gets that lane regardless of which screen it
+// started from); buyer role threads oauth_lane=buyer (no profile to create,
+// click-wrap still recorded fail-closed). See src/lib/auth/google.ts.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import GoogleAuthButton, { GOOGLE_AUTH_ENABLED } from '@/components/GoogleAuthButton';
+import { GOOGLE_TERMS_ERROR_MSG, bilingualCopy } from '@/lib/auth/google';
 
 type Role = 'client' | 'vendor';
 type Step = 'type' | 'details';
@@ -39,6 +50,17 @@ export default function SignupPage() {
   const [err, setErr] = useState('');
   const [sent, setSent] = useState(false);
   const [showPw, setShowPw] = useState(false);
+
+  // /auth/callback bounces back here with ?err=google_terms when the
+  // fail-closed terms recording on the Google path couldn't be written —
+  // surface the same bilingual error the email path shows on that failure.
+  useEffect(() => {
+    try {
+      if (new URLSearchParams(window.location.search).get('err') === 'google_terms') {
+        setErr(bilingualCopy(GOOGLE_TERMS_ERROR_MSG));
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   const canContinue = role === 'client' || (role === 'vendor' && !!vendorType);
 
@@ -79,6 +101,19 @@ export default function SignupPage() {
   }
 
   const roleLabel = role === 'vendor' ? (vendorType ? `Vendor · ${vendorType}` : 'Vendor / Supplier') : 'Buyer';
+
+  // Shared click-wrap checkbox — rendered ABOVE the Google button when the
+  // flag is on (must be ticked before the button is enabled), or in its
+  // original spot inside the form when the flag is off (unchanged today).
+  const agreeCheckbox = (
+    <label className="su-agree">
+      <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} required />
+      <span>
+        I agree to the <a href="/terms" target="_blank" rel="noopener">Terms of Service</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.
+        {' '}<i>Acepto los <a href="/terms" target="_blank" rel="noopener">Términos de Servicio</a> y el <a href="/privacy" target="_blank" rel="noopener">Aviso de Privacidad</a>.</i>
+      </span>
+    </label>
+  );
 
   return (
     <div className="su">
@@ -141,19 +176,30 @@ export default function SignupPage() {
           <h1>Create your account</h1>
           <p className="su-sub">Account type: <b>{roleLabel}</b></p>
 
+          {GOOGLE_AUTH_ENABLED && role && (
+            <div className="su-oauth">
+              {agreeCheckbox}
+              <GoogleAuthButton
+                lang="en"
+                next={role === 'vendor' ? '/vendor/portal?welcome=1' : '/buyer'}
+                from="/signup"
+                lane={role === 'vendor' ? 'organic' : 'buyer'}
+                disabled={!agree}
+                onError={setErr}
+                className="su-google"
+                bilingualErrors
+              />
+              <div className="su-or"><span>or continue with email · o continuar con correo</span></div>
+            </div>
+          )}
+
           <form onSubmit={submit}>
             <input type="email" placeholder="Work email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" autoFocus />
             <div className="su-pwrow">
               <input type={showPw ? 'text' : 'password'} placeholder="Password (8+ characters)" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" />
               <button type="button" className="su-pwtoggle" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? 'Hide password' : 'Show password'}>{showPw ? 'Hide' : 'Show'}</button>
             </div>
-            <label className="su-agree">
-              <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} required />
-              <span>
-                I agree to the <a href="/terms" target="_blank" rel="noopener">Terms of Service</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.
-                {' '}<i>Acepto los <a href="/terms" target="_blank" rel="noopener">Términos de Servicio</a> y el <a href="/privacy" target="_blank" rel="noopener">Aviso de Privacidad</a>.</i>
-              </span>
-            </label>
+            {!GOOGLE_AUTH_ENABLED && agreeCheckbox}
             {err && <div className="su-err">{err}</div>}
             <button className="su-btn" type="submit" disabled={busy}>{busy ? 'Creating…' : 'Create account'}</button>
           </form>
@@ -204,6 +250,12 @@ const CSS = `
 .su-agree span{color:#9A97AF;font-size:12px;line-height:1.55;}
 .su-agree span a{color:#C4B5FD;}
 .su-agree span i{color:#63607A;font-style:normal;}
+.su-oauth{margin:16px 0 4px;}
+.su-oauth .su-agree{margin-bottom:14px;}
+.su-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;font-family:inherit;font-size:14.5px;font-weight:600;padding:12px;border-radius:11px;border:1px solid rgba(255,255,255,.16);background:#fff;color:#1a1a1a;cursor:pointer;}
+.su-google:hover{background:#F3F3F5;}.su-google:disabled{opacity:.6;}
+.su-or{display:flex;align-items:center;gap:10px;margin:16px 0;color:#63607A;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;}
+.su-or::before,.su-or::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.1);}
 .su-hint{color:#63607A;font-size:12.5px;line-height:1.6;margin:16px 0 0;}
 .su-hint a{color:#9A97AF;}
 .su-link{display:block;margin-top:12px;color:#A78BFA;font-size:13.5px;text-decoration:none;}
