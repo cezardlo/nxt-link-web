@@ -34,6 +34,17 @@ export function isRestricted(row: ModerationFields, now = Date.now()): boolean {
 }
 
 /**
+ * Cesar's F1 rule (2026-07-22): a vendor may receive or work a qualified lead
+ * — whether dispatched to them or picked up by responding to an open request
+ * — only once the business is both approved (not pending review) AND not
+ * restricted (not suspended/banned). One gate, reused everywhere a vendor is
+ * about to be handed or hand themselves a lead.
+ */
+export function canReceiveLeads(row: ModerationFields & { status?: string | null }, now = Date.now()): boolean {
+  return row.status === 'approved' && !isRestricted(row, now);
+}
+
+/**
  * If a timed suspension has expired, flip the row back to active (best-effort)
  * and log it. Returns the effective status either way. Safe to call on read.
  */

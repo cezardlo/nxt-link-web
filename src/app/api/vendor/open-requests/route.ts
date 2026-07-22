@@ -1,14 +1,24 @@
 // GET  /api/vendor/open-requests — open buyer needs (posted via /intake) that
 //      vendors can respond to. Anti-leak: NO buyer contact info is exposed —
 //      only the need itself. Relevant-to-you requests are flagged first.
+//      Left UNGATED by approval status on purpose: browsing alone creates no
+//      lead and reveals no buyer contact info (same anti-leak discipline as
+//      the public marketplace), so it doesn't trip Cesar's "no receiving/
+//      working leads before approval" rule (F1 decision, 2026-07-22) — a
+//      pending vendor can look around while under review, same as they can
+//      draft listings, just can't act.
 // POST /api/vendor/open-requests {id} — respond: creates a lead (opportunity)
-//      in MY leads inbox wired to the existing quote/commission pipeline.
+//      in MY leads inbox wired to the existing quote/commission pipeline, and
+//      emails the buyer. THIS is the lead-receiving action, so it's gated:
+//      only an approved, non-restricted vendor may respond (see the check
+//      below).
 
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getVendorSession, getOrCreateVendorProfile } from '@/lib/vendor/auth';
 import { notifyBuyer } from '@/lib/notify';
+import { canReceiveLeads } from '@/lib/vendor/moderation';
 
 const OPEN_STATUSES = ['request_received', 'new'];
 
@@ -68,6 +78,20 @@ export async function POST(req: Request) {
   if (!vendor) return NextResponse.json({ ok: false, message: 'Profile not found' }, { status: 404 });
 
   const db = getSupabaseClient({ admin: true });
+
+  // Fail-closed: responding here creates a lead + emails the buyer, so it's a
+  // "receiving a qualified lead" action same as an RFQ dispatch — Cesar's
+  // rule, no working leads before business verification (F1 decision,
+  // 2026-07-22; an invited-but-not-yet-approved vendor is exactly the case
+  // this closes). Reuses the SAME 404 as "no profile" above — a pending or
+  // restricted vendor gets no signal beyond what a signed-out caller would
+  // see, no new status oracle.
+  const { data: modRow } = await db.from('vendor_profiles')
+    .select('status, moderation_status, suspended_until').eq('id', vendor.id).maybeSingle();
+  if (!modRow || !canReceiveLeads({ status: (modRow.status as string) || null, moderation_status: (modRow.moderation_status as string) || null, suspended_until: (modRow.suspended_until as string) || null })) {
+    return NextResponse.json({ ok: false, message: 'Profile not found' }, { status: 404 });
+  }
+
   const { data: r } = await db.from('client_requests')
     .select('id, public_ref, category, problem, location, urgency, contact_name, contact_email')
     .eq('id', id).in('status', OPEN_STATUSES).maybeSingle();

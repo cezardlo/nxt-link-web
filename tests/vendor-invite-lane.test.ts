@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import { ensureVendorProfile } from '@/lib/vendor/profile';
 import { dispatchRequestToVendors } from '@/lib/requests/dispatch';
+import { canReceiveLeads } from '@/lib/vendor/moderation';
 import { makeFakeDb } from './helpers/fake-supabase';
 
 // F1 decision (2026-07-22): "Anyone with the valid invite link may create an
@@ -105,4 +106,49 @@ test('RFQ dispatch: a pending vendor is excluded even when it outranks the appro
   const leads = db._store.quote_requests || [];
   assert.equal(leads.length, 1);
   assert.equal(leads[0].vendor_id, 'vendor-approved');
+});
+
+// Follow-up (same F1 decision): POST /api/vendor/open-requests lets a vendor
+// respond to (and thereby create a lead + notify the buyer on) an open
+// request. That's a "receive/work a lead" action same as dispatch, so it
+// must be gated the same way: canReceiveLeads() (src/lib/vendor/moderation.ts)
+// is the exact check the route runs after fetching the vendor's own
+// status/moderation row — these tests exercise it against a fake db query
+// shaped exactly like the route's, so a query/column-name drift would fail
+// them the same way it would break the route.
+
+test('open-requests response gate: a pending vendor cannot respond', async () => {
+  const db = makeFakeDb({
+    vendor_profiles: [
+      { id: 'vendor-pending', status: 'pending', moderation_status: 'active', suspended_until: null },
+    ],
+  });
+  const { data: modRow } = await db.from('vendor_profiles')
+    .select('status, moderation_status, suspended_until').eq('id', 'vendor-pending').maybeSingle();
+  assert.ok(modRow);
+  assert.equal(canReceiveLeads({ status: modRow!.status as string, moderation_status: modRow!.moderation_status as string, suspended_until: modRow!.suspended_until as string | null }), false);
+});
+
+test('open-requests response gate: an approved, active vendor can respond', async () => {
+  const db = makeFakeDb({
+    vendor_profiles: [
+      { id: 'vendor-approved', status: 'approved', moderation_status: 'active', suspended_until: null },
+    ],
+  });
+  const { data: modRow } = await db.from('vendor_profiles')
+    .select('status, moderation_status, suspended_until').eq('id', 'vendor-approved').maybeSingle();
+  assert.ok(modRow);
+  assert.equal(canReceiveLeads({ status: modRow!.status as string, moderation_status: modRow!.moderation_status as string, suspended_until: modRow!.suspended_until as string | null }), true);
+});
+
+test('open-requests response gate: an approved but suspended vendor still cannot respond', async () => {
+  const db = makeFakeDb({
+    vendor_profiles: [
+      { id: 'vendor-suspended', status: 'approved', moderation_status: 'suspended', suspended_until: null },
+    ],
+  });
+  const { data: modRow } = await db.from('vendor_profiles')
+    .select('status, moderation_status, suspended_until').eq('id', 'vendor-suspended').maybeSingle();
+  assert.ok(modRow);
+  assert.equal(canReceiveLeads({ status: modRow!.status as string, moderation_status: modRow!.moderation_status as string, suspended_until: modRow!.suspended_until as string | null }), false);
 });
