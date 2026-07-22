@@ -474,7 +474,6 @@ const CSS = `
   .su-layout{grid-template-columns:1fr;}
   .su-trust{padding:10px 6px 0;}
   .su-trust>p{margin-bottom:12px;}
-  .su-trustline{display:none;}
   .su-card{padding:24px 20px;border-radius:18px;}
   .su-card h1{font-size:26px;}
 }

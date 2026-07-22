@@ -31,6 +31,17 @@
 // NO fee/credit numbers or escrow/holds-funds language anywhere on this page
 // (hard constraint) — the FAQ's "success fee" line intentionally carries no
 // number; the actual commission math lives on /terms only.
+//
+// 2026-07-22 dead-end/empty-state fixes (Cesar + two audits): the
+// "Featured suppliers" card above was REMOVED (Cesar's explicit request) —
+// the browse grid is now 3 cards, not 4. Category tiles only render when
+// they actually have published listings (computed live from this page's own
+// listings fetch). Buying-tools cards got real icons. Explore/Featured tiles
+// prefer listings with a real photo and fall back to a per-kind/category
+// icon instead of a duplicated generic one or a bare wordmark. The literal
+// 'Vendor' placeholder (API fallback when a vendor can't be resolved) is
+// never shown. The Featured section now has a real empty state and its
+// "Create a free account" CTA no longer disappears if the fetch is empty.
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
@@ -41,6 +52,7 @@ import {
   ArrowRight, BadgeCheck, ShieldCheck, Send, Search, ChevronRight, Check,
   MessageSquareText, PackageSearch, Forklift, HardHat, Warehouse, Bot, Wrench,
   Truck, Handshake, ClipboardList, MapPin, Zap, Clock, FileCheck,
+  Columns3, FlaskConical, Route,
 } from 'lucide-react';
 
 const ICON_INLINE = 20;
@@ -58,6 +70,7 @@ const ibmPlexSans = IBM_Plex_Sans({
 
 interface Card {
   id: string; kind: 'product' | 'service'; name: string; category: string;
+  functional_group?: string | null;
   overview: string | null; image_url: string | null;
   vendor_id: string; vendor_name: string; vendor_city: string | null; vendor_verified?: boolean;
   pricing: { range?: string } | null; pilot: { available?: boolean } | null;
@@ -75,6 +88,25 @@ const CATEGORY_TILES: Array<{ fg: string; en: string; es: string; Icon: typeof F
   { fg: 'svc_maintenance', en: 'Maintenance & Repair', es: 'Mantenimiento y reparación', Icon: Wrench },
   { fg: 'svc_transportation', en: 'Supply Chain Services', es: 'Servicios de cadena de suministro', Icon: Truck },
 ];
+
+// Per-card icon: match a curated category tile's icon when the listing's
+// functional_group lines up with one (same taxonomy as CATEGORY_TILES above),
+// otherwise fall back to a per-kind icon (product vs service) — never the
+// same generic icon for every photo-less card.
+function iconForCard(c: Pick<Card, 'kind' | 'functional_group'>): typeof Forklift {
+  const tile = CATEGORY_TILES.find((ct) => ct.fg === c.functional_group);
+  if (tile) return tile.Icon;
+  return c.kind === 'service' ? Wrench : PackageSearch;
+}
+
+// Bias a list toward entries that have a real photo — used by both the
+// "Explore listings" sample tiles and the "Featured on NXT//LINK" grid so
+// photo-less listings don't crowd out ones with real images.
+function pickWithImageBias(list: Card[], n: number): Card[] {
+  const withImg = list.filter((c) => c.image_url);
+  const withoutImg = list.filter((c) => !c.image_url);
+  return [...withImg, ...withoutImg].slice(0, n);
+}
 
 const T: Record<Lang, Record<string, string>> = {
   en: {
@@ -98,12 +130,10 @@ const T: Record<Lang, Record<string, string>> = {
     trustProtected: 'Protected Introductions (12 months)',
     trustFree: 'Free to send · no commitment',
     browseHeading: 'Start sourcing',
-    browseSub: 'Four ways in — pick the one that fits what you need right now.',
+    browseSub: 'Three ways in — pick the one that fits what you need right now.',
     catCardTitle: 'Browse by category',
     catCardAction: 'Browse all categories',
-    vendorsCardTitle: 'Featured suppliers',
-    vendorsCardAction: 'See all vendors',
-    vendorsEmpty: 'New vendors are onboarding now — check back soon.',
+    catEmpty: 'New categories are being added — check the full marketplace.',
     exploreCardTitle: 'Explore listings',
     exploreCardAction: 'See the full marketplace',
     exploreEmpty: 'New listings are on the way — post a request and we will find it for you.',
@@ -121,6 +151,7 @@ const T: Record<Lang, Record<string, string>> = {
     techKicker: 'Technology', techTitle: 'Evaluate a solution',
     techBody: 'Automation, robotics, scanning, software, demos, and pilots.', techAction: 'Explore technology',
     featuredHeading: 'Featured on NXT//LINK', seeAll: 'See all →', pilotAvailable: 'Pilot available',
+    featuredEmpty: 'New listings are on the way — check back soon or post a request and we will find it for you.',
     createFreeAccount: 'Create a free account',
     toolsHeading: 'Everything the buying process needs',
     tool1T: 'Request quotes in one place', tool1D: 'Send one request, reach the vendors you choose. No chasing emails.',
@@ -180,12 +211,10 @@ const T: Record<Lang, Record<string, string>> = {
     trustProtected: 'Introducciones protegidas (12 meses)',
     trustFree: 'Gratis enviar · sin compromiso',
     browseHeading: 'Empieza a buscar',
-    browseSub: 'Cuatro formas de empezar — elige la que se ajuste a lo que necesitas ahora.',
+    browseSub: 'Tres formas de empezar — elige la que se ajuste a lo que necesitas ahora.',
     catCardTitle: 'Explorar por categoría',
     catCardAction: 'Ver todas las categorías',
-    vendorsCardTitle: 'Proveedores destacados',
-    vendorsCardAction: 'Ver todos los proveedores',
-    vendorsEmpty: 'Nuevos proveedores se están incorporando — vuelve pronto.',
+    catEmpty: 'Se están agregando nuevas categorías — revisa el marketplace completo.',
     exploreCardTitle: 'Explorar publicaciones',
     exploreCardAction: 'Ver todo el marketplace',
     exploreEmpty: 'Nuevas publicaciones están en camino — publica una solicitud y la buscamos por ti.',
@@ -203,6 +232,7 @@ const T: Record<Lang, Record<string, string>> = {
     techKicker: 'Tecnología', techTitle: 'Evalúa una solución',
     techBody: 'Automatización, robótica, escaneo, software, demos y pilotos.', techAction: 'Explorar tecnología',
     featuredHeading: 'Destacado en NXT//LINK', seeAll: 'Ver todo →', pilotAvailable: 'Piloto disponible',
+    featuredEmpty: 'Nuevas publicaciones están en camino — vuelve pronto o publica una solicitud y la buscamos por ti.',
     createFreeAccount: 'Crea una cuenta gratis',
     toolsHeading: 'Todo lo que necesita el proceso de compra',
     tool1T: 'Solicita cotizaciones en un solo lugar', tool1D: 'Envía una solicitud y llega a los proveedores que elijas. Sin perseguir correos.',
@@ -265,26 +295,32 @@ export default function Home() {
       try {
         const l = await fetch('/api/marketplace/listings?kind=all');
         const lj = await l.json();
-        setFeatured((lj.listings || []).slice(0, 8));
+        // Keep the FULL response (not just the first few) — the category
+        // tile counts below and the image-biased picks need to see
+        // everything that came back, not a pre-sliced subset.
+        setFeatured(lj.listings || []);
       } catch { /* landing still works without live data */ }
       finally { setLoading(false); }
     })();
   }, []);
 
-  // Featured suppliers (Alibaba "Top-ranking manufacturers" card): dedupe
-  // real vendors straight out of the same listings response — no second API
-  // call, no invented roster.
-  const vendors: Array<{ id: string; name: string; city: string | null; verified: boolean }> = [];
-  {
-    const seen = new Set<string>();
-    for (const c of featured) {
-      if (!c.vendor_id || seen.has(c.vendor_id)) continue;
-      seen.add(c.vendor_id);
-      vendors.push({ id: c.vendor_id, name: c.vendor_name, city: c.vendor_city, verified: Boolean(c.vendor_verified) });
-      if (vendors.length >= 4) break;
-    }
+  // Category tiles: only show ones that actually have published listings
+  // right now (dead-end fix) — counted straight from this same fetch, so as
+  // real inventory grows/shrinks a tile appears/disappears automatically.
+  // While the fetch is still in flight we don't yet know real counts, so we
+  // show the full curated list rather than flashing an empty card.
+  const categoryCounts = new Map<string, number>();
+  for (const c of featured) {
+    if (!c.functional_group) continue;
+    categoryCounts.set(c.functional_group, (categoryCounts.get(c.functional_group) || 0) + 1);
   }
-  const sample = featured.slice(0, 3);
+  const visibleCategoryTiles = loading ? CATEGORY_TILES : CATEGORY_TILES.filter((tile) => (categoryCounts.get(tile.fg) || 0) > 0);
+
+  // "Explore listings" sample tiles: prefer listings with a real photo so
+  // the row doesn't read as 3 identical placeholder icons.
+  const sample = pickWithImageBias(featured, 3);
+  // "Featured on NXT//LINK" grid: same image bias, more slots.
+  const featuredDisplay = pickWithImageBias(featured, 8);
 
   const sourceModes = [
     { kicker: t.productKicker, title: t.productTitle, body: t.productBody, action: t.productAction, href: '/marketplace?tab=product', Icon: PackageSearch },
@@ -358,10 +394,11 @@ export default function Home() {
 
       {/* Browse zone — Alibaba Manufacturers-page organization (Cesar,
           2026-07-22 follow-up), tailored to NXT//LINK's real data: a
-          category-browse card (icon rows), a featured-suppliers card
-          (deduped real vendors), an explore-listings card (real photos), and
-          a prominent RFQ card. Every link routes to a real, working page —
-          no invented stats anywhere on this page. */}
+          category-browse card (icon rows, live categories only), an
+          explore-listings card (real photos), and a prominent RFQ card.
+          (The former "Featured suppliers" card was removed per Cesar's
+          request — see vault/Backlog.md.) Every link routes to a real,
+          working page — no invented stats anywhere on this page. */}
       <section className="hp-sec" aria-labelledby="hp-browse-title">
         <div className="hp-sechead">
           <div>
@@ -372,48 +409,35 @@ export default function Home() {
         <div className="hp-browsegrid">
           <div className="hp-bcard">
             <h3>{t.catCardTitle}</h3>
-            <div className="hp-catlist">
-              {CATEGORY_TILES.map(({ fg, en, es, Icon }) => (
-                <Link key={fg} href={`/marketplace?department=${fg}`} className="hp-catrow">
-                  <span className="hp-catrowicon"><Icon size={17} aria-hidden="true" /></span>
-                  <span className="hp-catrowlabel">{lang === 'es' ? es : en}</span>
-                  <ChevronRight size={15} className="hp-catrowchev" aria-hidden="true" />
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          <div className="hp-bcard">
-            <h3>{t.vendorsCardTitle}</h3>
-            {vendors.length > 0 ? (
-              <div className="hp-vendlist">
-                {vendors.map((v) => (
-                  <Link key={v.id} href={`/marketplace/vendor/${v.id}`} className="hp-vendrow">
-                    <span className="hp-vendavatar" aria-hidden="true">{v.name.trim().charAt(0).toUpperCase() || 'V'}</span>
-                    <span className="hp-vendmeta">
-                      <b>{v.name}</b>
-                      {v.city && <small>{v.city}</small>}
-                    </span>
-                    {v.verified && <BadgeCheck size={16} className="hp-vendbadge" aria-label={t.trustVerified} />}
+            {visibleCategoryTiles.length > 0 ? (
+              <div className="hp-catlist">
+                {visibleCategoryTiles.map(({ fg, en, es, Icon }) => (
+                  <Link key={fg} href={`/marketplace?department=${fg}`} className="hp-catrow">
+                    <span className="hp-catrowicon"><Icon size={17} aria-hidden="true" /></span>
+                    <span className="hp-catrowlabel">{lang === 'es' ? es : en}</span>
+                    <ChevronRight size={15} className="hp-catrowchev" aria-hidden="true" />
                   </Link>
                 ))}
               </div>
-            ) : <p className="hp-bcardempty">{t.vendorsEmpty}</p>}
-            <Link className="hp-bcardlink" href="/marketplace">{t.vendorsCardAction}<ChevronRight size={15} aria-hidden="true" /></Link>
+            ) : <p className="hp-bcardempty">{t.catEmpty}</p>}
+            <Link className="hp-bcardlink" href="/marketplace">{t.catCardAction}<ChevronRight size={15} aria-hidden="true" /></Link>
           </div>
 
           <div className="hp-bcard">
             <h3>{t.exploreCardTitle}</h3>
             {sample.length > 0 ? (
               <div className="hp-samplegrid">
-                {sample.map((c) => (
-                  <Link key={c.id} href={`/marketplace/${c.kind}/${c.id}`} className="hp-sampletile">
-                    {c.image_url
-                      ? <img src={c.image_url} alt={c.name} loading="lazy" />
-                      : <span className="hp-sampleicon"><PackageSearch size={24} aria-hidden="true" /></span>}
-                    <small>{c.name}</small>
-                  </Link>
-                ))}
+                {sample.map((c) => {
+                  const Icon = iconForCard(c);
+                  return (
+                    <Link key={c.id} href={`/marketplace/${c.kind}/${c.id}`} className="hp-sampletile">
+                      {c.image_url
+                        ? <img src={c.image_url} alt={c.name} loading="lazy" />
+                        : <span className="hp-sampleicon"><Icon size={24} aria-hidden="true" /></span>}
+                      <small>{c.name}</small>
+                    </Link>
+                  );
+                })}
               </div>
             ) : <p className="hp-bcardempty">{t.exploreEmpty}</p>}
             <Link className="hp-bcardlink" href="/marketplace">{t.exploreCardAction}<ChevronRight size={15} aria-hidden="true" /></Link>
@@ -457,42 +481,58 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured live listings */}
-      {loading && (
-        <section className="hp-sec">
-          <div className="hp-sechead"><h2>{t.featuredHeading}</h2></div>
+      {/* Featured live listings — always has a body (skeleton / grid / empty
+          message) AND always keeps the "Create a free account" CTA, so a
+          slow or empty fetch never makes the whole section (and the CTA)
+          vanish silently. */}
+      <section className="hp-sec">
+        <div className="hp-sechead">
+          <h2>{t.featuredHeading}</h2>
+          {!loading && featured.length > 0 && <a href="/marketplace">{t.seeAll}</a>}
+        </div>
+        {loading && (
           <div className="hp-prods">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="hp-prod hp-prodskel" />)}</div>
-        </section>
-      )}
-      {!loading && featured.length > 0 && (
-        <section className="hp-sec">
-          <div className="hp-sechead"><h2>{t.featuredHeading}</h2><a href="/marketplace">{t.seeAll}</a></div>
+        )}
+        {!loading && featured.length > 0 && (
           <div className="hp-prods">
-            {featured.map((c) => (
-              <a key={c.id} className="hp-prod" href={`/marketplace/${c.kind}/${c.id}`}>
-                <div className="hp-prodimg">{c.image_url ? <img src={c.image_url} alt={c.name} loading="lazy" /> : <div className="hp-noimg">NXT//LINK</div>}</div>
-                <div className="hp-prodbody">
-                  {c.pilot?.available && <span className="hp-badge">{t.pilotAvailable}</span>}
-                  <div className="hp-prodname">{c.name}</div>
-                  {c.pricing?.range && <div className="hp-price">{c.pricing.range}</div>}
-                  <div className="hp-vend">{c.vendor_name}{c.vendor_city ? ` · ${c.vendor_city}` : ''}</div>
-                </div>
-              </a>
-            ))}
+            {featuredDisplay.map((c) => {
+              const Icon = iconForCard(c);
+              const showVendor = c.vendor_name && c.vendor_name !== 'Vendor';
+              return (
+                <a key={c.id} className="hp-prod" href={`/marketplace/${c.kind}/${c.id}`}>
+                  <div className="hp-prodimg">
+                    {c.image_url
+                      ? <img src={c.image_url} alt={c.name} loading="lazy" />
+                      : <div className="hp-noimg"><Icon size={28} aria-hidden="true" /></div>}
+                  </div>
+                  <div className="hp-prodbody">
+                    {c.pilot?.available && <span className="hp-badge">{t.pilotAvailable}</span>}
+                    <div className="hp-prodname">{c.name}</div>
+                    {c.pricing?.range && <div className="hp-price">{c.pricing.range}</div>}
+                    {showVendor && <div className="hp-vend">{c.vendor_name}{c.vendor_city ? ` · ${c.vendor_city}` : ''}</div>}
+                  </div>
+                </a>
+              );
+            })}
           </div>
-          <a className="hp-bigcta" href="/signup">{t.createFreeAccount}</a>
-        </section>
-      )}
+        )}
+        {!loading && featured.length === 0 && <p className="hp-browsesub">{t.featuredEmpty}</p>}
+        <a className="hp-bigcta" href="/signup">{t.createFreeAccount}</a>
+      </section>
 
-      {/* Buying tools */}
+      {/* Buying tools — each card gets a real icon (was a flat colored
+          square with no icon, reading as an empty/broken card). */}
       <section className="hp-sec">
         <div className="hp-sechead"><h2>{t.toolsHeading}</h2></div>
         <div className="hp-tools">
           {([
-            [t.tool1T, t.tool1D], [t.tool2T, t.tool2D], [t.tool3T, t.tool3D],
-            [t.tool4T, t.tool4D], [t.tool5T, t.tool5D], [t.tool6T, t.tool6D],
-          ] as Array<[string, string]>).map(([title, d]) => (
-            <div key={title} className="hp-tool"><div className="hp-tooldot" /><b>{title}</b><p>{d}</p></div>
+            [t.tool1T, t.tool1D, Send], [t.tool2T, t.tool2D, Columns3], [t.tool3T, t.tool3D, FlaskConical],
+            [t.tool4T, t.tool4D, Route], [t.tool5T, t.tool5D, ShieldCheck], [t.tool6T, t.tool6D, MapPin],
+          ] as Array<[string, string, typeof Forklift]>).map(([title, d, Icon]) => (
+            <div key={title} className="hp-tool">
+              <div className="hp-tooldot"><Icon size={ICON_INLINE} aria-hidden="true" /></div>
+              <b>{title}</b><p>{d}</p>
+            </div>
           ))}
         </div>
       </section>
@@ -673,8 +713,11 @@ const CSS = `
 .hp-sechead a:hover{color:var(--spec-violet-deep);}
 .hp-browsesub{margin:6px 0 0;color:var(--spec-text-2nd);font-size:13.5px;line-height:1.55;max-width:52ch;}
 
-/* Browse-zone card grid (Alibaba layout, Cesar 2026-07-22) */
-.hp-browsegrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;align-items:stretch;}
+/* Browse-zone card grid (Alibaba layout, Cesar 2026-07-22). 3 cards
+   (category / explore / RFQ) since the "Featured suppliers" card was
+   removed — same 3-col-desktop/1-col-mobile pattern as .hp-sourcegrid below
+   so the grid reads as intentional, not a gap where a 4th card used to be. */
+.hp-browsegrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch;}
 .hp-bcard{display:flex;flex-direction:column;min-height:280px;padding:20px;background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-lg);transition:border-color .15s,transform .15s,box-shadow .15s;}
 .hp-bcard:hover{border-color:var(--spec-violet);transform:translateY(-2px);box-shadow:0 16px 32px -22px rgba(20,19,32,.25);}
 .hp-bcard h3{margin:0 0 14px;font-size:15px;font-weight:700;color:var(--spec-ink);}
@@ -689,15 +732,6 @@ const CSS = `
 .hp-catrowlabel{flex:1;min-width:0;font-size:12.5px;font-weight:600;line-height:1.3;}
 .hp-catrowchev{flex-shrink:0;color:var(--spec-text-2nd);}
 
-.hp-vendlist{display:flex;flex-direction:column;gap:4px;flex:1;}
-.hp-vendrow{display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:var(--spec-radius-sm);color:var(--spec-ink);}
-.hp-vendrow:hover{background:var(--spec-surface);}
-.hp-vendavatar{flex-shrink:0;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:var(--spec-ink);color:var(--spec-lilac);font-size:13px;font-weight:700;}
-.hp-vendmeta{flex:1;min-width:0;display:flex;flex-direction:column;}
-.hp-vendmeta b{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.hp-vendmeta small{color:var(--spec-text-2nd);font-size:11px;}
-.hp-vendbadge{flex-shrink:0;color:var(--spec-violet);}
-
 .hp-samplegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;flex:1;align-content:start;}
 .hp-sampletile{display:flex;flex-direction:column;gap:6px;color:var(--spec-ink);}
 .hp-sampletile img,.hp-sampleicon{width:100%;height:64px;border-radius:var(--spec-radius-sm);object-fit:cover;background:var(--spec-surface);}
@@ -710,8 +744,7 @@ const CSS = `
 .hp-bcardbtn{margin-top:16px;display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:var(--spec-radius-btn);background:var(--spec-violet);color:#fff;font-weight:700;font-size:13.5px;transition:background .15s;}
 .hp-bcardbtn:hover{background:var(--spec-violet-deep);}
 
-@media(max-width:980px){.hp-browsegrid{grid-template-columns:repeat(2,minmax(0,1fr));}}
-@media(max-width:560px){.hp-browsegrid{grid-template-columns:1fr;}}
+@media(max-width:760px){.hp-browsegrid{grid-template-columns:1fr;}}
 
 /* Quick-filter chip row */
 .hp-chiprow{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin-top:20px;padding-top:20px;border-top:1px solid var(--spec-border);}
@@ -741,7 +774,7 @@ const CSS = `
 .hp-prodimg{height:172px;background:var(--spec-surface);overflow:hidden;}
 .hp-prodimg img{width:100%;height:100%;object-fit:cover;transition:transform .3s ease;}
 .hp-prod:hover .hp-prodimg img{transform:scale(1.05);}
-.hp-noimg{height:100%;display:grid;place-items:center;color:#B7B2C9;font-size:12px;letter-spacing:.2em;font-weight:700;}
+.hp-noimg{height:100%;display:grid;place-items:center;color:var(--spec-violet);background:var(--spec-surface);}
 .hp-prodbody{padding:14px 15px 16px;display:flex;flex-direction:column;gap:5px;flex:1;}
 .hp-badge{align-self:flex-start;display:flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;color:var(--spec-text-2nd);background:none;border:1px solid var(--spec-border);padding:3px 8px;border-radius:999px;}
 .hp-prodname{font-size:14px;font-weight:700;line-height:1.3;color:var(--spec-ink);}
@@ -753,7 +786,7 @@ const CSS = `
 /* Buying tools */
 .hp-tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;}
 .hp-tool{background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-lg);padding:24px;}
-.hp-tooldot{width:36px;height:36px;border-radius:var(--spec-radius-md);background:linear-gradient(135deg,var(--spec-violet),var(--spec-lilac));margin-bottom:14px;}
+.hp-tooldot{width:40px;height:40px;display:grid;place-items:center;border-radius:var(--spec-radius-md);background:linear-gradient(135deg,var(--spec-violet),var(--spec-lilac));color:#fff;margin-bottom:14px;}
 .hp-tool b{font-size:15.5px;font-weight:700;color:var(--spec-ink);}
 .hp-tool p{color:var(--spec-text-2nd);font-size:13.5px;line-height:1.6;margin:8px 0 0;}
 
