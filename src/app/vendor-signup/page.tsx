@@ -13,21 +13,23 @@
 // violet CTA) — visual twin of /join/[token]. Bilingual EN/ES via the shared
 // LanguageToggle. No escrow promises, no credit copy.
 //
-// Continue with Google (flag NEXT_PUBLIC_AUTH_GOOGLE): Fiverr pattern — the
-// button sits above the form with an "or" divider, gated behind the SAME
-// click-wrap checkbox the email path uses (moved to the top when the flag
-// is on; unchanged, inside the form, when it's off — zero visual diff).
-// /auth/callback records the acceptance fail-closed at the first
-// authenticated touch (OAuth only reveals the email after the redirect
-// back) and runs ensureVendorProfile lane 'organic' — the exact same
-// PENDING lane the magic-link quick signup uses. See src/lib/auth/google.ts.
+// Continue with Google / LinkedIn / Microsoft (flags NEXT_PUBLIC_AUTH_GOOGLE,
+// _LINKEDIN, _AZURE): Fiverr pattern — the buttons sit stacked above the
+// form with an "or" divider, gated behind the SAME click-wrap checkbox the
+// email path uses (moved to the top when any flag is on; unchanged, inside
+// the form, when none are — zero visual diff). /auth/callback records the
+// acceptance fail-closed at the first authenticated touch (OAuth only
+// reveals the email after the redirect back) and runs ensureVendorProfile
+// lane 'organic' — the exact same PENDING lane the magic-link quick signup
+// uses. Identical for every provider. See src/lib/auth/oauth.ts.
 
 import { useEffect, useState } from 'react';
 import LanguageToggle, { useLang } from '@/components/LanguageToggle';
 import SupplyChips from '@/components/SupplyChips';
 import ChatWidget from '@/components/ChatWidget';
-import GoogleAuthButton, { GOOGLE_AUTH_ENABLED } from '@/components/GoogleAuthButton';
-import { GOOGLE_TERMS_ERROR_MSG } from '@/lib/auth/google';
+import GoogleAuthButton from '@/components/GoogleAuthButton';
+import OAuthButton from '@/components/OAuthButton';
+import { GOOGLE_TERMS_ERROR_MSG, ANY_OAUTH_ENABLED } from '@/lib/auth/oauth';
 
 const T = {
   en: {
@@ -193,10 +195,34 @@ export default function VendorQuickSignupPage() {
               ))}
             </ul>
 
-            {GOOGLE_AUTH_ENABLED && (
+            {ANY_OAUTH_ENABLED && (
               <div className="qs-oauth">
                 {agreeCheckbox}
                 <GoogleAuthButton
+                  lang={lang}
+                  next="/vendor/portal?welcome=1"
+                  from="/vendor-signup"
+                  lane="organic"
+                  disabled={!agree}
+                  companyName={company}
+                  categories={supplyValues}
+                  onError={setErr}
+                  className="qs-google"
+                />
+                <OAuthButton
+                  provider="linkedin_oidc"
+                  lang={lang}
+                  next="/vendor/portal?welcome=1"
+                  from="/vendor-signup"
+                  lane="organic"
+                  disabled={!agree}
+                  companyName={company}
+                  categories={supplyValues}
+                  onError={setErr}
+                  className="qs-google"
+                />
+                <OAuthButton
+                  provider="azure"
                   lang={lang}
                   next="/vendor/portal?welcome=1"
                   from="/vendor-signup"
@@ -240,7 +266,7 @@ export default function VendorQuickSignupPage() {
                 />
               </div>
 
-              {!GOOGLE_AUTH_ENABLED && agreeCheckbox}
+              {!ANY_OAUTH_ENABLED && agreeCheckbox}
 
               {err && <div className="qs-err" role="alert">{err}</div>}
               <button type="submit" className="qs-cta" disabled={busy}>
@@ -292,6 +318,7 @@ const CSS = `
 .qs-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;font-family:inherit;font-size:15px;font-weight:600;padding:13px;min-height:50px;border-radius:12px;border:1px solid #E2DFEC;background:#fff;color:#141320;cursor:pointer;}
 .qs-google:hover{background:#F8F7FB;border-color:#C7C2DE;}
 .qs-google:disabled{opacity:.5;cursor:not-allowed;}
+.qs-google + .qs-google{margin-top:10px;}
 .qs-or{display:flex;align-items:center;gap:10px;margin:18px 0 4px;color:#8A87A0;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;}
 .qs-or::before,.qs-or::after{content:'';flex:1;height:1px;background:#E2DFEC;}
 .qs-cta{display:block;width:100%;text-align:center;font-family:inherit;font-size:15.5px;font-weight:700;padding:14px;min-height:52px;border-radius:12px;border:none;background:#6C5CE0;color:#fff;cursor:pointer;margin-top:16px;}

@@ -4,20 +4,22 @@
 // After login, routes by platform role: admin/operator -> /admin,
 // vendor -> /vendor/listings, buyer -> /buyer.
 //
-// Continue with Google (flag NEXT_PUBLIC_AUTH_GOOGLE): this button already
-// existed un-gated, which meant a dead click whenever the provider isn't
-// enabled in Supabase — now routed through the shared GoogleAuthButton so it
-// only renders behind the flag, like every other screen. This is a pure
-// sign-IN convenience (no click-wrap checkbox here — same as the password
-// form below it): an existing account signs back in; a brand-new Google
-// account is auto-provisioned as a buyer by Supabase itself, same as it was
-// before this change, hence the "by continuing" disclaimer under the button.
+// Continue with Google / LinkedIn / Microsoft (flags NEXT_PUBLIC_AUTH_GOOGLE,
+// _LINKEDIN, _AZURE): these buttons already existed un-gated (Google only),
+// which meant a dead click whenever the provider isn't enabled in Supabase —
+// now routed through the shared OAuthButton so each only renders behind its
+// own flag, like every other screen. This is a pure sign-IN convenience (no
+// click-wrap checkbox here — same as the password form below it): an
+// existing account signs back in; a brand-new account is auto-provisioned as
+// a buyer by Supabase itself, same as it was before this change, hence the
+// "by continuing" disclaimer under the button stack.
 
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
-import GoogleAuthButton, { GOOGLE_AUTH_ENABLED } from '@/components/GoogleAuthButton';
-import { bilingualCopy, GOOGLE_CONTINUE_AGREES_MSG } from '@/lib/auth/google';
+import GoogleAuthButton from '@/components/GoogleAuthButton';
+import OAuthButton from '@/components/OAuthButton';
+import { bilingualCopy, OAUTH_CONTINUE_AGREES_MSG, ANY_OAUTH_ENABLED } from '@/lib/auth/oauth';
 
 function LoginInner() {
   const sp = useSearchParams();
@@ -126,7 +128,25 @@ function LoginInner() {
               className="li-google"
               bilingualErrors
             />
-            {GOOGLE_AUTH_ENABLED && <p className="li-googlenote">{bilingualCopy(GOOGLE_CONTINUE_AGREES_MSG)}</p>}
+            <OAuthButton
+              provider="linkedin_oidc"
+              lang="en"
+              next={sp.get('next') || undefined}
+              from="/login"
+              onError={setErr}
+              className="li-google"
+              bilingualErrors
+            />
+            <OAuthButton
+              provider="azure"
+              lang="en"
+              next={sp.get('next') || undefined}
+              from="/login"
+              onError={setErr}
+              className="li-google"
+              bilingualErrors
+            />
+            {ANY_OAUTH_ENABLED && <p className="li-googlenote">{bilingualCopy(OAUTH_CONTINUE_AGREES_MSG)}</p>}
             <button type="button" className="li-magic" onClick={magicLink} disabled={magicBusy}>
               ✉️ {magicBusy ? 'Sending link…' : 'Email me a sign-in link'}
             </button>

@@ -1,17 +1,19 @@
 'use client';
 
-// Continue with Google (flag NEXT_PUBLIC_AUTH_GOOGLE): shown in BOTH modes.
-// 'signin' mode has no click-wrap checkbox on this page (an existing
-// account signing back in — same no-gate rule as /login's Google button).
-// 'signup' mode gates the button behind the same checkbox the password
-// signup uses (moved above it), threads oauth_lane=organic — the same
-// PENDING vendor lane /vendor-signup uses — and /auth/callback records the
-// acceptance fail-closed. See src/lib/auth/google.ts.
+// Continue with Google / LinkedIn / Microsoft (flags NEXT_PUBLIC_AUTH_GOOGLE,
+// _LINKEDIN, _AZURE): shown in BOTH modes. 'signin' mode has no click-wrap
+// checkbox on this page (an existing account signing back in — same
+// no-gate rule as /login's buttons). 'signup' mode gates the buttons
+// behind the same checkbox the password signup uses (moved above it),
+// threads oauth_lane=organic — the same PENDING vendor lane
+// /vendor-signup uses — and /auth/callback records the acceptance
+// fail-closed. See src/lib/auth/oauth.ts.
 
 import { useEffect, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
-import GoogleAuthButton, { GOOGLE_AUTH_ENABLED } from '@/components/GoogleAuthButton';
-import { GOOGLE_TERMS_ERROR_MSG, bilingualCopy } from '@/lib/auth/google';
+import GoogleAuthButton from '@/components/GoogleAuthButton';
+import OAuthButton from '@/components/OAuthButton';
+import { GOOGLE_TERMS_ERROR_MSG, bilingualCopy, ANY_OAUTH_ENABLED } from '@/lib/auth/oauth';
 
 export default function VendorLoginPage() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
@@ -97,10 +99,32 @@ export default function VendorLoginPage() {
             <>
               {error && <div className="vl-err">{error}</div>}
 
-              {GOOGLE_AUTH_ENABLED && (
+              {ANY_OAUTH_ENABLED && (
                 <div className="vl-oauth">
                   {mode === 'signup' && agreeCheckbox}
                   <GoogleAuthButton
+                    lang="en"
+                    next="/vendor/portal"
+                    from="/vendor-login"
+                    lane={mode === 'signup' ? 'organic' : undefined}
+                    disabled={mode === 'signup' && !agree}
+                    onError={setError}
+                    className="vl-google"
+                    bilingualErrors
+                  />
+                  <OAuthButton
+                    provider="linkedin_oidc"
+                    lang="en"
+                    next="/vendor/portal"
+                    from="/vendor-login"
+                    lane={mode === 'signup' ? 'organic' : undefined}
+                    disabled={mode === 'signup' && !agree}
+                    onError={setError}
+                    className="vl-google"
+                    bilingualErrors
+                  />
+                  <OAuthButton
+                    provider="azure"
                     lang="en"
                     next="/vendor/portal"
                     from="/vendor-login"
@@ -116,7 +140,7 @@ export default function VendorLoginPage() {
 
               <label className="vl-field"><span>Email</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
               <label className="vl-field"><span>Password</span><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} /></label>
-              {mode === 'signup' && !GOOGLE_AUTH_ENABLED && agreeCheckbox}
+              {mode === 'signup' && !ANY_OAUTH_ENABLED && agreeCheckbox}
               <button className="vl-btn" disabled={busy} onClick={submit}>{busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}</button>
             </>
           )}
@@ -166,6 +190,7 @@ const CSS = `
 .vl-oauth .vl-agree{margin-bottom:14px;}
 .vl-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;font-family:var(--sans);font-size:15px;font-weight:600;padding:13px;border-radius:12px;border:1px solid var(--line);background:#fff;color:#1a1a1a;cursor:pointer;}
 .vl-google:hover{background:#F3F3F5;}.vl-google:disabled{opacity:.6;}
+.vl-google + .vl-google{margin-top:10px;}
 .vl-or{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--muted2);font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;}
 .vl-or::before,.vl-or::after{content:'';flex:1;height:1px;background:var(--line);}
 .vl-sent{background:var(--pbg);border:1px solid rgba(124,92,252,.25);color:var(--p2);padding:14px 16px;border-radius:12px;font-size:14px;line-height:1.5;}

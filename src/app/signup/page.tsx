@@ -11,18 +11,20 @@
 // Vendors from this ORGANIC lane are routed into /apply — the admin-reviewed
 // application flow (invited vendors join via /join/<token> instead).
 //
-// Continue with Google (flag NEXT_PUBLIC_AUTH_GOOGLE): Fiverr pattern on the
-// details step — button + "or" divider above the form, gated behind the
-// same click-wrap checkbox (moved to the top when the flag is on). Vendor
-// role threads oauth_lane=organic (the exact same PENDING lane
-// /vendor-signup uses — Google is inherently the "quick" one-click path, so
-// any vendor Google click gets that lane regardless of which screen it
-// started from); buyer role threads oauth_lane=buyer (no profile to create,
-// click-wrap still recorded fail-closed). See src/lib/auth/google.ts.
+// Continue with Google / LinkedIn / Microsoft (flags NEXT_PUBLIC_AUTH_GOOGLE,
+// _LINKEDIN, _AZURE): Fiverr pattern on the details step — buttons stacked +
+// "or" divider above the form, gated behind the same click-wrap checkbox
+// (moved to the top when any flag is on). Vendor role threads
+// oauth_lane=organic (the exact same PENDING lane /vendor-signup uses — an
+// OAuth click is inherently the "quick" one-click path, so any vendor OAuth
+// click gets that lane regardless of which screen it started from, or which
+// provider); buyer role threads oauth_lane=buyer (no profile to create,
+// click-wrap still recorded fail-closed). See src/lib/auth/oauth.ts.
 
 import { useEffect, useState } from 'react';
-import GoogleAuthButton, { GOOGLE_AUTH_ENABLED } from '@/components/GoogleAuthButton';
-import { GOOGLE_TERMS_ERROR_MSG, bilingualCopy } from '@/lib/auth/google';
+import GoogleAuthButton from '@/components/GoogleAuthButton';
+import OAuthButton from '@/components/OAuthButton';
+import { GOOGLE_TERMS_ERROR_MSG, bilingualCopy, ANY_OAUTH_ENABLED } from '@/lib/auth/oauth';
 
 type Role = 'client' | 'vendor';
 type Step = 'type' | 'details';
@@ -176,10 +178,32 @@ export default function SignupPage() {
           <h1>Create your account</h1>
           <p className="su-sub">Account type: <b>{roleLabel}</b></p>
 
-          {GOOGLE_AUTH_ENABLED && role && (
+          {ANY_OAUTH_ENABLED && role && (
             <div className="su-oauth">
               {agreeCheckbox}
               <GoogleAuthButton
+                lang="en"
+                next={role === 'vendor' ? '/vendor/portal?welcome=1' : '/buyer'}
+                from="/signup"
+                lane={role === 'vendor' ? 'organic' : 'buyer'}
+                disabled={!agree}
+                onError={setErr}
+                className="su-google"
+                bilingualErrors
+              />
+              <OAuthButton
+                provider="linkedin_oidc"
+                lang="en"
+                next={role === 'vendor' ? '/vendor/portal?welcome=1' : '/buyer'}
+                from="/signup"
+                lane={role === 'vendor' ? 'organic' : 'buyer'}
+                disabled={!agree}
+                onError={setErr}
+                className="su-google"
+                bilingualErrors
+              />
+              <OAuthButton
+                provider="azure"
                 lang="en"
                 next={role === 'vendor' ? '/vendor/portal?welcome=1' : '/buyer'}
                 from="/signup"
@@ -199,7 +223,7 @@ export default function SignupPage() {
               <input type={showPw ? 'text' : 'password'} placeholder="Password (8+ characters)" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" />
               <button type="button" className="su-pwtoggle" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? 'Hide password' : 'Show password'}>{showPw ? 'Hide' : 'Show'}</button>
             </div>
-            {!GOOGLE_AUTH_ENABLED && agreeCheckbox}
+            {!ANY_OAUTH_ENABLED && agreeCheckbox}
             {err && <div className="su-err">{err}</div>}
             <button className="su-btn" type="submit" disabled={busy}>{busy ? 'Creating…' : 'Create account'}</button>
           </form>
@@ -254,6 +278,7 @@ const CSS = `
 .su-oauth .su-agree{margin-bottom:14px;}
 .su-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;font-family:inherit;font-size:14.5px;font-weight:600;padding:12px;border-radius:11px;border:1px solid rgba(255,255,255,.16);background:#fff;color:#1a1a1a;cursor:pointer;}
 .su-google:hover{background:#F3F3F5;}.su-google:disabled{opacity:.6;}
+.su-google + .su-google{margin-top:10px;}
 .su-or{display:flex;align-items:center;gap:10px;margin:16px 0;color:#63607A;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;}
 .su-or::before,.su-or::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.1);}
 .su-hint{color:#63607A;font-size:12.5px;line-height:1.6;margin:16px 0 0;}

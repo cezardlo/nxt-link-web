@@ -8,7 +8,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server-auth';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { ensureVendorProfile } from '@/lib/vendor/profile';
 import { recordLegalAcceptance } from '@/lib/legal/acceptance';
-import { safeRelativePath } from '@/lib/auth/google';
+import { safeRelativePath } from '@/lib/auth/oauth';
 
 function metaCategories(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
@@ -40,12 +40,15 @@ export async function GET(req: Request) {
   const code = url.searchParams.get('code');
   const next = url.searchParams.get('next');
 
-  // Google OAuth click-wrap threading (Continue-with-Google, gated by
-  // NEXT_PUBLIC_AUTH_GOOGLE): signInWithOAuth has no `data` option like
-  // signInWithOtp, so the button threads its lane/locale/invite-token/
-  // bounce-back path as query params on redirectTo — Supabase echoes the
-  // whole URL back verbatim (+`&code=`). Absent for every existing flow
-  // (magic link, password) — zero effect on them. See src/lib/auth/google.ts.
+  // OAuth click-wrap threading (Continue with Google / LinkedIn / Microsoft,
+  // each gated by its own NEXT_PUBLIC_AUTH_* flag): signInWithOAuth has no
+  // `data` option like signInWithOtp, so the button threads its
+  // lane/locale/invite-token/bounce-back path as query params on
+  // redirectTo — Supabase echoes the whole URL back verbatim (+`&code=`).
+  // This handling is IDENTICAL for all three providers: everything below
+  // keys off these oauth_* params, never off which provider the code came
+  // from. Absent for every existing flow (magic link, password) — zero
+  // effect on them. See src/lib/auth/oauth.ts.
   const oauthLane = url.searchParams.get('oauth_lane'); // 'organic' | 'invite' | 'buyer'
   const oauthFrom = url.searchParams.get('oauth_from');
   const oauthInvite = url.searchParams.get('oauth_invite');
@@ -63,6 +66,12 @@ export async function GET(req: Request) {
         let role = String(data.user.user_metadata?.role || 'client');
         let isVendor = false;
         let organicDest: string | null = null;
+        // Supabase's own record of which provider this identity signed up
+        // with — used only to label the legal-acceptance audit row
+        // accurately (was hardcoded 'oauth_google' before LinkedIn/Azure
+        // existed). Never used for any auth/authorization decision, only
+        // for the related_object_type string on terms_acceptances.
+        const oauthProviderTag = `oauth_${String(data.user.app_metadata?.provider || 'unknown')}`;
         if (isSupabaseConfigured()) {
           const db = getSupabaseClient({ admin: true });
           const { data: pu } = await db.from('platform_users').select('role').eq('auth_id', data.user.id).maybeSingle();
@@ -110,8 +119,9 @@ export async function GET(req: Request) {
             try {
               const inviteCols = 'id, company_name, contact_name, email, phone, locale, vendor_id, status';
               let inv: Record<string, unknown> | null = null;
-              // A Google click on /join/<token> can return a different email
-              // than the invite's (a personal Gmail vs. the invited work
+              // An OAuth click on /join/<token> (Google, LinkedIn, or
+              // Microsoft) can return a different email than the invite's
+              // (a personal address vs. the invited work
               // address) — match by the token itself first, the same
               // credential /join already trusts, before falling back to the
               // email match every other lane (including magic-link) uses.
@@ -132,7 +142,7 @@ export async function GET(req: Request) {
                 inv = (byEmail as Record<string, unknown> | null) || null;
               }
               if (inv) {
-                // Google path click-wrap gate — fail closed (process doc
+                // OAuth path click-wrap gate — fail closed (process doc
                 // §4): record the acceptance BEFORE approving anything. On
                 // failure, bounce back to /join instead of silently
                 // finishing an unrecorded signup; the invite's status is
@@ -141,18 +151,19 @@ export async function GET(req: Request) {
                 // Finding 4 (Opus G5 review of 76f4686): this block is
                 // reached whenever an invite matches — by token (oauth_lane
                 // 'invite') OR by email fallback, which an 'organic' (or
-                // even 'buyer') Google click can also hit if that Google
-                // account's email happens to match an open invite. Gating
-                // the recording on oauthLane === 'invite' alone left THAT
-                // arrival unrecorded: it still mints an APPROVED profile
-                // below, and the organic recording block further down never
-                // runs for it either (guarded by `!isVendor`, which this
-                // block just set true). Fire the recording for ANY Google
-                // OAuth lane reaching this point, not just 'invite'. Plain
-                // magic-link arrivals thread no oauth_lane at all (null) —
-                // those already recorded this exact acceptance in
-                // /api/invites POST before the sign-in email was even sent,
-                // so they must stay excluded or they'd be double-recorded.
+                // even 'buyer') OAuth click (any of Google/LinkedIn/
+                // Microsoft) can also hit if that OAuth account's email
+                // happens to match an open invite. Gating the recording on
+                // oauthLane === 'invite' alone left THAT arrival unrecorded:
+                // it still mints an APPROVED profile below, and the organic
+                // recording block further down never runs for it either
+                // (guarded by `!isVendor`, which this block just set true).
+                // Fire the recording for ANY OAuth lane reaching this point
+                // (from any provider), not just 'invite'. Plain magic-link
+                // arrivals thread no oauth_lane at all (null) — those
+                // already recorded this exact acceptance in /api/invites
+                // POST before the sign-in email was even sent, so they must
+                // stay excluded or they'd be double-recorded.
                 if (oauthLane) {
                   const rec = await recordLegalAcceptance(db, {
                     authId: data.user.id, email: data.user.email, context: 'invite_join',
@@ -202,21 +213,21 @@ export async function GET(req: Request) {
             } catch { /* best-effort: never block sign-in on invite linking */ }
           }
 
-          // Google organic vendor lane (Continue with Google on
-          // /vendor-signup, /signup's vendor step, or /vendor-login's
-          // signup tab). signInWithOAuth can't carry the
+          // OAuth organic vendor lane (Continue with Google/LinkedIn/
+          // Microsoft on /vendor-signup, /signup's vendor step, or
+          // /vendor-login's signup tab). signInWithOAuth can't carry the
           // signup_lane:'quick' metadata the magic-link path uses (no
           // `data` option), so the button threads oauth_lane=organic on
-          // redirectTo instead. Same rule as every other organic door:
-          // ensureVendorProfile lane 'organic' — born PENDING, admin review
-          // still gates anything public. `!isVendor` makes this fire only
-          // on the first touch — a returning vendor already has a profile
-          // linked to this auth id, so it's skipped (and never re-recorded)
-          // on every later sign-in.
+          // redirectTo instead — identical for every provider. Same rule as
+          // every other organic door: ensureVendorProfile lane 'organic' —
+          // born PENDING, admin review still gates anything public.
+          // `!isVendor` makes this fire only on the first touch — a
+          // returning vendor already has a profile linked to this auth id,
+          // so it's skipped (and never re-recorded) on every later sign-in.
           if (oauthLane === 'organic' && !isVendor && data.user.email) {
             const rec = await recordLegalAcceptance(db, {
               authId: data.user.id, email: data.user.email, context: 'vendor_signup',
-              languageShown: oauthLocale, relatedObjectType: 'oauth_google', req,
+              languageShown: oauthLocale, relatedObjectType: oauthProviderTag, req,
             });
             if (!rec.ok) {
               await signOutFailedTermsSession(sb);
@@ -234,7 +245,7 @@ export async function GET(req: Request) {
                   contact_name: fullName,
                   email: data.user.email.toLowerCase(),
                   locale: oauthLocale,
-                  source: 'quick_signup_google',
+                  source: `quick_signup_${String(data.user.app_metadata?.provider || 'oauth')}`,
                   ...(oauthCategories.length ? { categories: oauthCategories } : {}),
                 },
               });
@@ -242,14 +253,14 @@ export async function GET(req: Request) {
             } catch { /* best-effort: the portal's get-or-create still catches them */ }
           }
 
-          // Google buyer lane (Continue with Google on /signup's buyer
-          // step): no profile to create, but the click-wrap gate still
-          // applies fail-closed — record the acceptance or bounce back
-          // instead of finishing sign-in silently.
+          // OAuth buyer lane (Continue with Google/LinkedIn/Microsoft on
+          // /signup's buyer step): no profile to create, but the click-wrap
+          // gate still applies fail-closed — record the acceptance or
+          // bounce back instead of finishing sign-in silently.
           if (oauthLane === 'buyer' && data.user.email) {
             const rec = await recordLegalAcceptance(db, {
               authId: data.user.id, email: data.user.email, context: 'signup',
-              languageShown: oauthLocale, relatedObjectType: 'oauth_google', req,
+              languageShown: oauthLocale, relatedObjectType: oauthProviderTag, req,
             });
             if (!rec.ok) {
               await signOutFailedTermsSession(sb);
