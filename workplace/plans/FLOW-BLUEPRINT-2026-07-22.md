@@ -391,6 +391,12 @@ contrast, header click-zone overlap, and the floating-element stacking rule
 (§4). Single file (`src/app/page.tsx` + scoped CSS) — lowest risk, highest
 payoff, ships first.
 
+**Implementation status (Codex, 2026-07-22):** Built on
+`codex/cofounder-baseline`, pending peer review and Cesar's release decision.
+Desktop/mobile EN/ES flows were checked locally; the changed page passes lint
+and repository typecheck. The repository-wide lint gate remains red on
+pre-existing files outside this slice.
+
 **Slice 2 — Public buyer journey theme parity** *(builds on Slice 1)*
 Apply Design System v1.0 to `/marketplace`, `/intake`,
 `/marketplace/[kind]/[id]`, `/marketplace/vendor/[id]` — replacing confirmed
