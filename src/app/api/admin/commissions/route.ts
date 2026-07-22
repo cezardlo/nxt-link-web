@@ -5,9 +5,18 @@
 
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { isAdminRequest } from '@/lib/assistant/auth';
-import { isLedgerUnavailable, type LedgerSource } from '@/lib/admin/commission-ledger';
+import {
+  buildDealSettlementPatch,
+  isLedgerUnavailable,
+  isMissingColumnError,
+  isProtectedDealStatus,
+  type DealSettlementPatch,
+  type LedgerSource,
+  type SettlementAction,
+} from '@/lib/admin/commission-ledger';
 
 // GET's row set is quote-stage `commissions` (includes 'quoted'/'lost' rows
 // that never become a deal) — a different grain than the unified
@@ -75,6 +84,59 @@ export async function GET(req: Request) {
   return NextResponse.json({ ok: true, rows: enriched, totals, ledger_source: ledgerSource });
 }
 
+// Find the manual_deals row this commission is linked to — commission_id
+// back-link first, falling back to the same source_quote_id join the
+// accept-path dedupe already relies on — and apply `patch` to it, so
+// manual_deals stays the single settlement ledger (Payments S0 Phase C, see
+// workplace/plans/payments-s0-ledger-merge-plan.md §7). Guards against
+// clobbering an exception status (disputed/credited/cancelled) that only an
+// explicit admin/deals action should change. Never throws: the caller
+// already succeeded in settling `commissions`, which must not be undone by
+// a problem mirroring onto manual_deals — recording the settlement always
+// wins over linking it.
+async function settleLinkedManualDeal(
+  db: SupabaseClient,
+  params: { commissionId: string; quoteRequestId: string | null; patch: DealSettlementPatch },
+): Promise<{ updated: boolean; error: string | null }> {
+  const { commissionId, quoteRequestId, patch } = params;
+  try {
+    let dealData: { id: string; status: string } | null = null;
+    let lookupError: { message: string } | null = null;
+
+    const byCommission = await db.from('manual_deals').select('id, status').eq('commission_id', commissionId).maybeSingle();
+    if (byCommission.error && isMissingColumnError(byCommission.error)) {
+      console.warn('[admin/commissions] manual_deals.commission_id not available yet, looking up by source_quote_id instead:', byCommission.error.message);
+      if (quoteRequestId) {
+        const bySource = await db.from('manual_deals').select('id, status').eq('source_quote_id', quoteRequestId).maybeSingle();
+        dealData = bySource.data as { id: string; status: string } | null;
+        lookupError = bySource.error;
+      }
+    } else if (byCommission.error) {
+      lookupError = byCommission.error;
+    } else if (byCommission.data) {
+      dealData = byCommission.data as { id: string; status: string };
+    } else if (quoteRequestId) {
+      // Column exists but no row is linked via commission_id yet (predates
+      // the backfill, or the backfill hasn't run) — same fallback key.
+      const bySource = await db.from('manual_deals').select('id, status').eq('source_quote_id', quoteRequestId).maybeSingle();
+      dealData = bySource.data as { id: string; status: string } | null;
+      lookupError = bySource.error;
+    }
+
+    if (lookupError) return { updated: false, error: lookupError.message };
+    if (!dealData) return { updated: false, error: null }; // no linked deal — normal for pipeline-only commissions
+    if (isProtectedDealStatus(dealData.status)) {
+      console.warn(`[admin/commissions] not overwriting manual_deals ${dealData.id} — status is protected (${dealData.status})`);
+      return { updated: false, error: null };
+    }
+    const { error: updateError } = await db.from('manual_deals').update(patch).eq('id', dealData.id);
+    if (updateError) return { updated: false, error: updateError.message };
+    return { updated: true, error: null };
+  } catch (e) {
+    return { updated: false, error: e instanceof Error ? e.message : 'unknown error settling linked deal' };
+  }
+}
+
 export async function PATCH(req: Request) {
   if (!(await isAdminRequest(req))) return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
   if (!isSupabaseConfigured()) return NextResponse.json({ ok: false, message: 'Not configured' }, { status: 503 });
@@ -84,10 +146,25 @@ export async function PATCH(req: Request) {
   if (!id) return NextResponse.json({ ok: false, message: 'id is required' }, { status: 400 });
 
   const db = getSupabaseClient({ admin: true });
-  const patch = body.action === 'mark_unpaid'
-    ? { paid_at: null, status: 'won', updated_at: new Date().toISOString() }
-    : { paid_at: new Date().toISOString(), status: 'paid', updated_at: new Date().toISOString() };
-  const { error } = await db.from('commissions').update(patch).eq('id', id);
+  const action: SettlementAction = body.action === 'mark_unpaid' ? 'mark_unpaid' : 'mark_paid';
+  const nowIso = new Date().toISOString();
+  const patch = action === 'mark_unpaid'
+    ? { paid_at: null, status: 'won', updated_at: nowIso }
+    : { paid_at: nowIso, status: 'paid', updated_at: nowIso };
+  const { data: commissionRow, error } = await db.from('commissions').update(patch).eq('id', id).select('quote_request_id').maybeSingle();
   if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true });
+
+  // Payments S0 Phase C: mirror this settlement onto the linked manual_deals
+  // row so it isn't tracked twice. Additive only — never fails the request;
+  // the commissions-side settlement above already succeeded and that
+  // existing, load-bearing behavior must not regress.
+  const dealPatch = buildDealSettlementPatch(action, nowIso);
+  const dealSync = await settleLinkedManualDeal(db, {
+    commissionId: id,
+    quoteRequestId: (commissionRow?.quote_request_id as string) || null,
+    patch: dealPatch,
+  });
+  if (dealSync.error) console.warn('[admin/commissions] could not mirror settlement onto manual_deals:', dealSync.error);
+
+  return NextResponse.json({ ok: true, deal_settled: dealSync.updated });
 }

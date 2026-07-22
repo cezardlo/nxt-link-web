@@ -100,3 +100,78 @@ export function mapLedgerRowToDeal(row: LedgerDealRow): Record<string, unknown> 
     discrepancy: row.discrepancy,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Payments S0 Phase C — "stop duplicating on write" (see
+// workplace/plans/payments-s0-ledger-merge-plan.md §7). Every write path that
+// touches manual_deals.commission_id (buyer/quote-decision's draft insert,
+// admin/deals POST, admin/commissions PATCH's settlement mirror) needs the
+// same fail-safe shape: if the column isn't live yet (deploy-order slip),
+// retry once without it and never let the write itself fail. These helpers
+// stay pure/DB-free like the read-side ones above — each route performs its
+// own Supabase calls and uses these only to decide WHAT to write/retry, so
+// the decisions are unit-testable without hitting Supabase.
+// ---------------------------------------------------------------------------
+
+/**
+ * True for a Postgres "undefined column" error (SQLSTATE 42703) or
+ * PostgREST's own "column not found in schema cache" code (PGRST204) — the
+ * exact failure shape when `manual_deals.commission_id` doesn't exist yet on
+ * the live database. House law is migrations-before-code (see the Phase A
+ * migration file), but this is what makes a commission_id write fail SAFE if
+ * that order ever slips: recording the deal/settlement always wins over
+ * linking it. Deliberately narrow — unlike `isLedgerUnavailable`'s broad
+ * any-error read fallback above, a real write failure (bad FK, a check
+ * constraint, RLS) must still surface as itself, never be silently retried
+ * away as if it were a missing-column problem.
+ */
+export function isMissingColumnError(
+  error: { code?: string | null; message?: string | null } | null | undefined,
+): boolean {
+  if (!error) return false;
+  if (error.code === '42703' || error.code === 'PGRST204') return true;
+  const msg = (error.message || '').toLowerCase();
+  return msg.includes('column') && (msg.includes('does not exist') || msg.includes('could not find') || msg.includes('schema cache'));
+}
+
+/**
+ * Drop `commission_id` from a row/patch object — the exact retry payload
+ * used after `isMissingColumnError` fires. Pure so the retry shape is
+ * unit-testable without Supabase.
+ */
+export function omitCommissionId<T extends Record<string, unknown>>(row: T): Omit<T, 'commission_id'> {
+  const { commission_id: _drop, ...rest } = row;
+  return rest as Omit<T, 'commission_id'>;
+}
+
+/**
+ * Deal statuses a blunt admin/commissions settlement toggle must never
+ * overwrite — these only change through an explicit admin/deals action
+ * (dispute resolution, credit, cancellation). Mirrors the status-transition
+ * guard pattern already used elsewhere (no re-quote after accept, no flip
+ * after billed).
+ */
+export function isProtectedDealStatus(status: string | null | undefined): boolean {
+  return status === 'disputed' || status === 'credited' || status === 'cancelled';
+}
+
+export type SettlementAction = 'mark_paid' | 'mark_unpaid';
+
+export interface DealSettlementPatch {
+  status: 'paid' | 'won';
+  paid_at: string | null;
+}
+
+/**
+ * The manual_deals-side patch that mirrors a commissions mark_paid/
+ * mark_unpaid action, so manual_deals stays the single settlement ledger
+ * (Payments S0 Phase C). Pure — `nowIso` is injected so mark_paid's
+ * timestamp is testable without faking the clock. Deliberately narrow: it
+ * only ever returns `status`/`paid_at` — commission_amount, effective_rate,
+ * fee_policy_version and protected_until are money/audit fields this patch
+ * must never touch (plan §5), and this shape makes that true by
+ * construction rather than by caller discipline.
+ */
+export function buildDealSettlementPatch(action: SettlementAction, nowIso: string): DealSettlementPatch {
+  return action === 'mark_unpaid' ? { status: 'won', paid_at: null } : { status: 'paid', paid_at: nowIso };
+}

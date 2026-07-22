@@ -9,6 +9,7 @@ import { getBuyerSession } from '@/lib/buyer/auth';
 import { notifyVendor } from '@/lib/notify';
 import { sendMail } from '@/lib/mail';
 import { calculateFee, PROTECTION_MONTHS } from '@/lib/fees/engine';
+import { isMissingColumnError, omitCommissionId } from '@/lib/admin/commission-ledger';
 
 function likeLiteral(v: string): string { return v.replace(/[\\%_]/g, (c) => `\\${c}`); }
 
@@ -38,10 +39,13 @@ export async function POST(req: Request) {
     status: decision === 'accepted' ? 'won' : 'lost',
     updated_at: now,
   }).eq('id', id);
-  await db.from('commissions').update({
+  // Capture the linked commissions row's id so an accepted quote's draft
+  // deal can be stamped with commission_id below (Payments S0 Phase C —
+  // one deal ledger, see workplace/plans/payments-s0-ledger-merge-plan.md §7).
+  const { data: commissionRow } = await db.from('commissions').update({
     status: decision === 'accepted' ? 'accepted' : 'lost',
     updated_at: now,
-  }).eq('quote_request_id', id);
+  }).eq('quote_request_id', id).select('id').maybeSingle();
 
   // Tell the vendor the buyer's decision.
   await notifyVendor(db, opp.vendor_id as string, id, 'decision', `Buyer ${decision} your quote (${opp.public_ref})`);
@@ -56,7 +60,7 @@ export async function POST(req: Request) {
       const fee = calculateFee(net);
       const protectedUntil = new Date();
       protectedUntil.setMonth(protectedUntil.getMonth() + PROTECTION_MONTHS);
-      await db.from('manual_deals').insert({
+      const dealRow: Record<string, unknown> = {
         source_quote_id: id,
         vendor_id: opp.vendor_id,
         vendor_name: (v?.company_name as string) || 'Vendor',
@@ -71,7 +75,20 @@ export async function POST(req: Request) {
         status: 'won',
         opportunity_ref: (opp.opportunity_ref as string) || null,
         protected_until: protectedUntil.toISOString().slice(0, 10),
-      }).select('id').maybeSingle();
+      };
+      const linkedCommissionId = commissionRow?.id as string | undefined;
+      if (linkedCommissionId) dealRow.commission_id = linkedCommissionId;
+
+      const { error: dealInsertError } = await db.from('manual_deals').insert(dealRow).select('id').maybeSingle();
+      // Deploy-order safety: manual_deals.commission_id may not exist yet on
+      // the live database. Recording the deal always wins over linking it —
+      // retry the identical insert without the link column rather than lose
+      // the deal (this insert was already best-effort/fire-and-forget before
+      // Phase C; it still never blocks the buyer's accept response).
+      if (dealInsertError && linkedCommissionId && isMissingColumnError(dealInsertError)) {
+        console.warn('[buyer/quote-decision] manual_deals.commission_id not available yet, inserting without it:', dealInsertError.message);
+        await db.from('manual_deals').insert(omitCommissionId(dealRow)).select('id').maybeSingle();
+      }
     }
   }
   if (v?.email) {

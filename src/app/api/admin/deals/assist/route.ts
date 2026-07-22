@@ -44,10 +44,15 @@ function fallbackParse(msg: string): Parsed {
 
 export async function POST(req: Request) {
   if (!(await isAdminRequest(req))) return NextResponse.json({ ok: false, message: 'Admin only' }, { status: 401 });
-  let body: { message?: string };
+  let body: { message?: string; source_quote_id?: string };
   try { body = await req.json(); } catch { return NextResponse.json({ ok: false, message: 'Invalid JSON' }, { status: 400 }); }
   const message = String(body.message || '').trim().slice(0, 500);
   if (!message) return NextResponse.json({ ok: false, message: 'Say something like: Log Acme Forklifts deal $100k for buyer XYZ' }, { status: 400 });
+  // Optional: carried straight through to the returned draft so a caller
+  // converting a specific accepted quote (Payments S0 Phase C) can round-trip
+  // it into the confirm step (POST /api/admin/deals), which dedupes on it.
+  // This route never writes to manual_deals itself — nothing to dedupe here.
+  const sourceQuoteId = typeof body.source_quote_id === 'string' && body.source_quote_id.trim() ? body.source_quote_id.trim().slice(0, 100) : null;
 
   const draft = await aiDraft<Parsed>({
     systemPrompt: 'You parse an admin\'s plain-English deal command for an industrial marketplace. Return JSON {"intent":"log_deal"|"summary"|"unknown","vendor_name":string,"buyer_company":string,"net_amount":number|null}. net_amount is the numeric USD net value (expand 100k=100000, 1.2m=1200000). "summary"/"today"/"recap" with no amount → intent "summary". Extract vendor and buyer names verbatim; leave blank if absent.',
@@ -84,7 +89,7 @@ export async function POST(req: Request) {
     const reply = `Ready to log: ${p.vendor_name || 'vendor'}${p.buyer_company ? ` → ${p.buyer_company}` : ''} at ${money(p.net_amount)}. Commission ${money(fee.fee)} (${(fee.effectiveRate * 100).toFixed(2)}%)${fee.appliedMaximum ? ', $20k cap applied' : ''}. I've filled the form — review and press “Record deal” to confirm. Free-deal credit (−${money(FREE_DEAL_CREDIT)}) is optional.`;
     return NextResponse.json({
       ok: true, action: 'prefill_deal', reply,
-      draft: { vendor_name: p.vendor_name, buyer_company: p.buyer_company, net_amount: p.net_amount },
+      draft: { vendor_name: p.vendor_name, buyer_company: p.buyer_company, net_amount: p.net_amount, source_quote_id: sourceQuoteId },
       commission: fee.fee, effective_rate: fee.effectiveRate, applied_cap: fee.appliedMaximum,
     });
   }

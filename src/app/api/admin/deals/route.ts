@@ -11,7 +11,7 @@ import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { isAdminRequest } from '@/lib/assistant/auth';
 import { calculateFee, DEFAULT_FEE_POLICY, FREE_DEAL_CREDIT, PROTECTION_MONTHS } from '@/lib/fees/engine';
 import { effectiveModeration, MODERATION_LABEL } from '@/lib/vendor/moderation';
-import { LEDGER_DEAL_COLUMNS, isLedgerUnavailable, mapLedgerRowToDeal, type LedgerDealRow, type LedgerSource } from '@/lib/admin/commission-ledger';
+import { LEDGER_DEAL_COLUMNS, isLedgerUnavailable, isMissingColumnError, mapLedgerRowToDeal, omitCommissionId, type LedgerDealRow, type LedgerSource } from '@/lib/admin/commission-ledger';
 
 // GET reads from the unified `commission_ledger` view (Payments S0 Phase B) so
 // this page and /api/admin/commissions share one source of truth. The view
@@ -68,7 +68,14 @@ export async function POST(req: Request) {
   const protectedUntil = new Date();
   protectedUntil.setMonth(protectedUntil.getMonth() + PROTECTION_MONTHS);
 
-  const row = {
+  // Optional: when this POST is confirming a draft that traces back to a
+  // specific accepted quote (Payments S0 Phase C — see
+  // workplace/plans/payments-s0-ledger-merge-plan.md §7), carry that link
+  // through so it dedupes against /api/buyer/quote-decision's auto-created
+  // draft rather than doubling it.
+  const sourceQuoteId = s('source_quote_id', 100);
+
+  const row: Record<string, unknown> = {
     opportunity_ref: s('opportunity_ref', 40),
     vendor_id: s('vendor_id', 60),
     vendor_name: vendorName,
@@ -87,6 +94,7 @@ export async function POST(req: Request) {
     status: 'reserved',
     protected_until: protectedUntil.toISOString().slice(0, 10),
     notes: s('notes', 1000),
+    source_quote_id: sourceQuoteId,
   };
 
   const db = getSupabaseClient({ admin: true });
@@ -94,7 +102,7 @@ export async function POST(req: Request) {
   // A suspended or banned vendor can't have new deals logged against them.
   if (row.vendor_id) {
     const { data: mod } = await db.from('vendor_profiles')
-      .select('moderation_status, suspended_until').eq('id', row.vendor_id).maybeSingle();
+      .select('moderation_status, suspended_until').eq('id', row.vendor_id as string).maybeSingle();
     if (mod) {
       const eff = effectiveModeration(mod);
       if (eff !== 'active') {
@@ -104,8 +112,49 @@ export async function POST(req: Request) {
     }
   }
 
+  // Dedupe on source_quote_id: an accepted quote already has (or is about to
+  // get) exactly one manual_deals row via /api/buyer/quote-decision. Never
+  // create a second deal for the same quote — hand back the existing one.
+  if (sourceQuoteId) {
+    const { data: existingDeal } = await db.from('manual_deals').select('*').eq('source_quote_id', sourceQuoteId).maybeSingle();
+    if (existingDeal) return NextResponse.json({ ok: true, deal: existingDeal, breakdown: fee.lines, deduped: true });
+  }
+
+  // Stamp the link to the quote-stage commissions row when we have one, so
+  // this write path keeps commission_id current the same way the accept
+  // path does. Optional and best-effort by design (an operator-typed deal
+  // with no quote never has one).
+  let linkedCommissionId: string | null = null;
+  if (sourceQuoteId) {
+    const { data: commissionRow } = await db.from('commissions').select('id').eq('quote_request_id', sourceQuoteId).maybeSingle();
+    linkedCommissionId = (commissionRow?.id as string) || null;
+    if (linkedCommissionId) row.commission_id = linkedCommissionId;
+  }
+
   const { data, error } = await db.from('manual_deals').insert(row).select('*').single();
-  if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+
+  // Deploy-order safety: manual_deals.commission_id may not exist yet on the
+  // live database. Recording the deal always wins over linking it — retry
+  // the identical insert without the link column rather than fail the write.
+  if (error && linkedCommissionId && isMissingColumnError(error)) {
+    console.warn('[admin/deals] manual_deals.commission_id not available yet, inserting without it:', error.message);
+    const retry = await db.from('manual_deals').insert(omitCommissionId(row)).select('*').single();
+    if (retry.error) return NextResponse.json({ ok: false, message: retry.error.message }, { status: 500 });
+    return NextResponse.json({ ok: true, deal: retry.data, breakdown: fee.lines });
+  }
+
+  if (error) {
+    // Unique-violation race: another request inserted the same
+    // source_quote_id between our dedupe check above and this insert.
+    // Treat it the same as the pre-check dedupe — hand back the row that
+    // won the race instead of a 500.
+    if (sourceQuoteId && (error as { code?: string }).code === '23505') {
+      const { data: raced } = await db.from('manual_deals').select('*').eq('source_quote_id', sourceQuoteId).maybeSingle();
+      if (raced) return NextResponse.json({ ok: true, deal: raced, breakdown: fee.lines, deduped: true });
+    }
+    return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+  }
+
   return NextResponse.json({ ok: true, deal: data, breakdown: fee.lines });
 }
 
