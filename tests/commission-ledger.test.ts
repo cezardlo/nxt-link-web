@@ -3,6 +3,9 @@ import test from 'node:test';
 
 import {
   buildDealSettlementPatch,
+  findDeallessCommissions,
+  findUnlinkedDeals,
+  isLedgerHealthy,
   isMissingColumnError,
   isProtectedDealStatus,
   omitCommissionId,
@@ -77,4 +80,60 @@ test('buildDealSettlementPatch never includes a money/audit field', () => {
       assert.ok(!(forbidden in patch), `settlement patch must never touch ${forbidden}`);
     }
   }
+});
+
+// Payments S0 Phase D — reconcile (GET /api/admin/reconcile). These are the
+// pure orphan-classification + health helpers extracted so the reconcile
+// route's logic is testable without a live database (same rationale as the
+// Phase C tests above).
+
+test('findUnlinkedDeals flags a deal with a source quote but no commission link', () => {
+  const deals = [
+    { id: 'd1', source_quote_id: 'q1', commission_id: null },
+    { id: 'd2', source_quote_id: 'q2', commission_id: 'c2' },
+    { id: 'd3', source_quote_id: null, commission_id: null },
+  ];
+  const result = findUnlinkedDeals(deals);
+  assert.deepEqual(result.map((d) => d.id), ['d1']);
+});
+
+test('findUnlinkedDeals returns an empty array when every quoted deal is linked', () => {
+  const deals = [
+    { id: 'd1', source_quote_id: 'q1', commission_id: 'c1' },
+    { id: 'd2', source_quote_id: null, commission_id: null },
+  ];
+  assert.deepEqual(findUnlinkedDeals(deals), []);
+});
+
+test('findDeallessCommissions flags an accepted commission linked by neither key', () => {
+  const accepted = [
+    { id: 'c1', quote_request_id: 'q1' },
+    { id: 'c2', quote_request_id: 'q2' },
+    { id: 'c3', quote_request_id: null },
+  ];
+  // c1 is linked via commission_id, c2 is linked only via source_quote_id
+  // (predates the backfill / column), c3 has no deal at all.
+  const dealLinks = [
+    { commission_id: 'c1', source_quote_id: null },
+    { commission_id: null, source_quote_id: 'q2' },
+  ];
+  const result = findDeallessCommissions(accepted, dealLinks);
+  assert.deepEqual(result.map((c) => c.id), ['c3']);
+});
+
+test('findDeallessCommissions returns an empty array when every accepted commission has a deal', () => {
+  const accepted = [{ id: 'c1', quote_request_id: 'q1' }];
+  const dealLinks = [{ commission_id: 'c1', source_quote_id: null }];
+  assert.deepEqual(findDeallessCommissions(accepted, dealLinks), []);
+});
+
+test('findDeallessCommissions treats no accepted commissions as no findings', () => {
+  assert.deepEqual(findDeallessCommissions([], []), []);
+});
+
+test('isLedgerHealthy is true only when every count is zero', () => {
+  assert.equal(isLedgerHealthy({ discrepancies: 0, unlinked_deals: 0, dealless_commissions: 0 }), true);
+  assert.equal(isLedgerHealthy({ discrepancies: 1, unlinked_deals: 0, dealless_commissions: 0 }), false);
+  assert.equal(isLedgerHealthy({ discrepancies: 0, unlinked_deals: 1, dealless_commissions: 0 }), false);
+  assert.equal(isLedgerHealthy({ discrepancies: 0, unlinked_deals: 0, dealless_commissions: 1 }), false);
 });

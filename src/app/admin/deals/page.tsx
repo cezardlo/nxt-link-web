@@ -13,6 +13,7 @@ interface Deal {
   effective_rate: number | null; applied_cap: boolean; is_free_credit: boolean;
   credit_applied: number | null; status: string; invoice_ref: string | null;
   protected_until: string | null; opportunity_ref: string | null; created_at: string;
+  discrepancy?: boolean;
 }
 const money = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 const fmtDate = (s: string) => { try { return new Date(s).toLocaleDateString(); } catch { return ''; } };
@@ -38,6 +39,7 @@ const STATUS_LABEL: Record<string, string> = {
 export default function AdminDealsPage() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [ledgerSource, setLedgerSource] = useState<'view' | 'fallback' | null>(null);
   const [f, setF] = useState({ vendor_name: '', buyer_company: '', buyer_name: '', description: '', net_amount: '', is_free_credit: false, opportunity_ref: '' });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -46,7 +48,10 @@ export default function AdminDealsPage() {
   const [aiBusy, setAiBusy] = useState(false);
 
   const load = useCallback(async () => {
-    try { const r = await fetch('/api/admin/deals'); const j = await r.json(); if (j.ok) setDeals(j.deals); } catch { /* */ }
+    try {
+      const r = await fetch('/api/admin/deals'); const j = await r.json();
+      if (j.ok) { setDeals(j.deals); setLedgerSource(j.ledger_source || null); }
+    } catch { /* */ }
     setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -106,6 +111,9 @@ export default function AdminDealsPage() {
       <div className="ad-wrap">
         <h1>Deals &amp; commissions</h1>
         <p className="ad-sub">Concierge tracker — record a deal, the engine computes the commission (5% first $50k · 3% above · $20k cap), then move it to paid and invoice.</p>
+        {ledgerSource === 'fallback' && (
+          <div className="ad-notice">Unified ledger view not active yet — showing direct table reads.</div>
+        )}
 
         <div className="ad-stats">
           <div className="ad-stat"><b>{totals.count}</b><span>Deals</span></div>
@@ -171,7 +179,10 @@ export default function AdminDealsPage() {
                         <td><b>{d.vendor_name}</b>{d.buyer_company && <div className="ad-sm">→ {d.buyer_company}</div>}{d.opportunity_ref && <div className="ad-sm mono">{d.opportunity_ref}</div>}</td>
                         <td className="mono">{money(d.net_amount)}</td>
                         <td className="mono"><b>{money(Number(d.commission_amount) || 0)}</b>{d.applied_cap && <div className="ad-sm">cap</div>}{d.is_free_credit && <div className="ad-sm">credit</div>}</td>
-                        <td><span className={`ad-badge s-${d.status}`}>{STATUS_LABEL[d.status] || d.status}</span></td>
+                        <td>
+                          <span className={`ad-badge s-${d.status}`}>{STATUS_LABEL[d.status] || d.status}</span>
+                          {d.discrepancy && <span className="ad-warn" title="Deal and commission records disagree — check /api/admin/reconcile">⚠</span>}
+                        </td>
                         <td>{d.status === 'invoiced' || d.status === 'paid' ? (
                           <input className="ad-inv" defaultValue={d.invoice_ref || ''} placeholder="INV-###" onBlur={(e) => { if (e.target.value !== (d.invoice_ref || '')) setStatus(d.id, d.status, e.target.value); }} />
                         ) : <span className="ad-sm">—</span>}</td>
@@ -195,6 +206,8 @@ const CSS = `
 .ad-wrap{max-width:1000px;margin:0 auto;padding:34px 20px 90px;}
 .ad-wrap h1{font-size:26px;font-weight:800;letter-spacing:-.02em;margin:0;}
 .ad-sub{color:#8080A0;font-size:14px;margin:8px 0 0;max-width:70ch;line-height:1.6;}
+.ad-notice{font-size:12.5px;color:#8080A0;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px 12px;margin-top:12px;}
+.ad-warn{display:inline-block;margin-left:6px;font-size:12px;color:#FBBF24;cursor:help;}
 .ad-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0;}
 .ad-stat{background:#14141F;border:1px solid rgba(255,255,255,.08);border-radius:13px;padding:16px;}
 .ad-stat b{font-size:22px;font-weight:800;display:block;font-variant-numeric:tabular-nums;}

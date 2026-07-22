@@ -175,3 +175,81 @@ export interface DealSettlementPatch {
 export function buildDealSettlementPatch(action: SettlementAction, nowIso: string): DealSettlementPatch {
   return action === 'mark_unpaid' ? { status: 'won', paid_at: null } : { status: 'paid', paid_at: nowIso };
 }
+
+// ---------------------------------------------------------------------------
+// Payments S0 Phase D — reconcile (see
+// workplace/plans/payments-s0-ledger-merge-plan.md §7d). Pure classification
+// helpers behind GET /api/admin/reconcile, kept DB-free like everything above
+// so the orphan/health logic is unit-testable without a live database. The
+// route performs its own Supabase reads and passes plain row arrays in.
+// ---------------------------------------------------------------------------
+
+/** A manual_deals row shape narrow enough for the "unlinked deal" check. */
+export interface UnlinkedDealCandidate {
+  source_quote_id: string | null;
+  commission_id: string | null;
+}
+
+/**
+ * manual_deals rows that trace back to a quote (source_quote_id set) but
+ * never got linked to their commissions row (commission_id null) — one of
+ * the two orphan shapes GET /api/admin/reconcile reports. Pure re-assertion
+ * of the same filter the route also applies server-side
+ * (`.not('source_quote_id','is',null).is('commission_id', null)`) so the
+ * "orphan" definition lives in one tested place even if a caller's DB filter
+ * ever drifts.
+ */
+export function findUnlinkedDeals<D extends UnlinkedDealCandidate>(deals: D[]): D[] {
+  return deals.filter((d) => d.source_quote_id != null && d.commission_id == null);
+}
+
+/** A commissions row shape narrow enough for the "dealless commission" check. */
+export interface AcceptedCommissionCandidate {
+  id: string;
+  quote_request_id: string | null;
+}
+
+/** Either link a manual_deals row can carry back to its commissions row. */
+export interface DealLinkCandidate {
+  commission_id: string | null;
+  source_quote_id: string | null;
+}
+
+/**
+ * Commissions rows marked 'accepted' (buyer said yes) that have NO linked
+ * manual_deals row at all — the quote was accepted but never became a
+ * tracked deal, the other orphan shape GET /api/admin/reconcile reports. A
+ * commission counts as linked if any manual_deals row references it via
+ * commission_id (the new link) OR via source_quote_id = quote_request_id
+ * (the join key the accept path has used since before this link existed, and
+ * the same fallback order `settleLinkedManualDeal` above uses) — so "linked"
+ * here means exactly what it means at write time.
+ */
+export function findDeallessCommissions<C extends AcceptedCommissionCandidate>(
+  acceptedCommissions: C[],
+  dealLinks: DealLinkCandidate[],
+): C[] {
+  const linkedCommissionIds = new Set<string>();
+  const linkedQuoteRequestIds = new Set<string>();
+  for (const link of dealLinks) {
+    if (link.commission_id) linkedCommissionIds.add(link.commission_id);
+    if (link.source_quote_id) linkedQuoteRequestIds.add(link.source_quote_id);
+  }
+  return acceptedCommissions.filter((c) => {
+    if (linkedCommissionIds.has(c.id)) return false;
+    if (c.quote_request_id && linkedQuoteRequestIds.has(c.quote_request_id)) return false;
+    return true;
+  });
+}
+
+/** Reconcile finding counts — the exact numbers GET /api/admin/reconcile reports. */
+export interface ReconcileCounts {
+  discrepancies: number;
+  unlinked_deals: number;
+  dealless_commissions: number;
+}
+
+/** Zero findings across every check = healthy. */
+export function isLedgerHealthy(counts: ReconcileCounts): boolean {
+  return counts.discrepancies === 0 && counts.unlinked_deals === 0 && counts.dealless_commissions === 0;
+}

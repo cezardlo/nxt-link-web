@@ -10,6 +10,7 @@ interface Row {
   quote_amount: number | null; final_amount: number | null; commission_amount: number;
   effective_rate: number | null; status: string; invoice_number: string | null;
   due_date: string | null; paid_at: string | null; protected_until: string | null; created_at: string;
+  discrepancy?: boolean;
 }
 interface Totals { pipeline: number; billed_due: number; paid: number }
 
@@ -22,12 +23,13 @@ export default function AdminCommissionsPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [totals, setTotals] = useState<Totals>({ pipeline: 0, billed_due: 0, paid: 0 });
   const [filter, setFilter] = useState<'all' | 'due' | 'paid' | 'pipeline'>('all');
+  const [ledgerSource, setLedgerSource] = useState<'view' | 'fallback' | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch('/api/admin/commissions');
     if (res.status === 401) { setAuthorized(false); setChecking(false); return; }
     const data = await res.json();
-    if (data.ok) { setRows(data.rows || []); setTotals(data.totals || { pipeline: 0, billed_due: 0, paid: 0 }); setAuthorized(true); }
+    if (data.ok) { setRows(data.rows || []); setTotals(data.totals || { pipeline: 0, billed_due: 0, paid: 0 }); setLedgerSource(data.ledger_source || null); setAuthorized(true); }
     setChecking(false);
   }, []);
   useEffect(() => { document.title = 'Commissions — NXT//LINK'; load(); }, [load]);
@@ -59,6 +61,9 @@ export default function AdminCommissionsPage() {
             <>
               <h1>Money ledger</h1>
               <p className="cm-sub">Every deal&apos;s commission: what&apos;s in the pipeline, what&apos;s billed and due to NXT{'//'}LINK, and what&apos;s been paid.</p>
+              {ledgerSource === 'fallback' && (
+                <div className="cm-notice">Unified ledger view not active yet — showing direct table reads.</div>
+              )}
 
               <div className="cm-tiles">
                 <button className={'cm-tile' + (filter === 'pipeline' ? ' on' : '')} onClick={() => setFilter(filter === 'pipeline' ? 'all' : 'pipeline')}>
@@ -84,7 +89,10 @@ export default function AdminCommissionsPage() {
                           <td>{r.buyer_company}</td>
                           <td>{money(r.final_amount ?? r.quote_amount)}</td>
                           <td className="cm-fee">{money(r.commission_amount)}{r.effective_rate ? <small> ({(r.effective_rate * 100).toFixed(1)}%)</small> : null}</td>
-                          <td><span className={'cm-status ' + (r.paid_at ? 'paid' : r.status)}>{r.paid_at ? 'paid' : r.status}</span></td>
+                          <td>
+                            <span className={'cm-status ' + (r.paid_at ? 'paid' : r.status)}>{r.paid_at ? 'paid' : r.status}</span>
+                            {r.discrepancy && <span className="cm-warn" title="Deal and commission records disagree — check /api/admin/reconcile">⚠</span>}
+                          </td>
                           <td>{r.invoice_number || '—'}</td>
                           <td>{day(r.due_date)}</td>
                           <td>
@@ -116,6 +124,8 @@ const CSS = `
 .cm-wrap{max-width:1080px;margin:0 auto;padding:36px 20px 100px;}
 .cm-wrap h1{font-size:28px;font-weight:800;letter-spacing:-.02em;}
 .cm-sub{color:#8080A0;font-size:14px;margin:6px 0 22px;line-height:1.5;}
+.cm-notice{font-size:12.5px;color:#8080A0;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px 12px;margin:0 0 22px;}
+.cm-warn{display:inline-block;margin-left:6px;font-size:12px;color:#FBBF24;cursor:help;}
 .cm-empty{text-align:center;color:#8080A0;padding:60px 0;}
 .cm-empty a{color:#A78BFA;}
 .cm-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:26px;}
