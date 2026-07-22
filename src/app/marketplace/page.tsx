@@ -214,6 +214,16 @@ export default function MarketplacePage() {
     // Category tiles (landing page + "Shop by department") link here with
     // ?department=<functional_group> — pick it up so the tile isn't a dead link.
     if (d0) setFDept(d0);
+    // The homepage's Alibaba-style attribute chips (2026-07-22) link here with
+    // one of these =1 so the facet is already ticked on arrival instead of
+    // dumping the visitor on an unfiltered page — additive only, seeds the
+    // SAME facet state the checkboxes below already set; absent params leave
+    // behavior byte-identical to today.
+    if (sp.get('verified') === '1') setFVerified(true);
+    if (sp.get('local') === '1') setFLocal(true);
+    if (sp.get('fast') === '1') setFFast(true);
+    if (sp.get('emergency') === '1') setFEmergency(true);
+    if (sp.get('cases') === '1') setFCases(true);
     // Autofocus search on desktop only (avoid popping the mobile keyboard).
     if (window.innerWidth > 860) searchRef.current?.focus();
   }, []);

@@ -7,24 +7,33 @@
 // implementation instead of forking a second copy per page (the landing page
 // header built in Slice 1, commit 9e224b8, is now sourced from here).
 //
-// Contents: logo · known-item search (flex-fill, submits to
-// /marketplace?q=) · EN/ES language toggle (shared LanguageToggle + the
-// caller's own language state — pages differ in *where* they persist that
-// state, so it's a controlled prop here, not a second useLang() instance) ·
-// "Become a Vendor" (violet fill) · Sign in · Join · a cart icon that only
-// appears once the quote-cart has items (existing `useCart` hook — the same
-// live count already used on /marketplace and the listing detail page, now
-// carried into every anonymous-buyer screen instead of just two of them).
+// Contents: logo · primary nav (Marketplace / How it works / For vendors) ·
+// known-item search (flex-fill, submits to /marketplace?q=) · EN/ES language
+// toggle (shared LanguageToggle + the caller's own language state — pages
+// differ in *where* they persist that state, so it's a controlled prop here,
+// not a second useLang() instance) · "Saved for Quote" (always-visible label
+// + live count, existing `useCart` hook — same store /cart and the listing
+// cards already use, so the header count is never a second source of truth)
+// · "Become a Vendor" (violet fill) · Sign in · Join free.
+//
+// 2026-07-22 restyle (Cesar: "match Codex's look" — the localhost:3014
+// preview, src/components/landing/LandingExperience.tsx in the reference
+// build): added the nav row + made the quote entry a labeled pill instead of
+// an icon that only appeared once the cart had items, so it reads the same
+// as the reviewed design. Every function the header already had (search,
+// EN/ES, vendor entry, sign in, join, mobile hamburger, cart count) is kept —
+// this only adds to it.
 //
 // Mobile (<=760px, matching the landing page's existing breakpoint): the
-// search box collapses to an icon that expands on tap; language / Become a
-// Vendor / Sign in / Join move into a hamburger menu. Every control keeps a
-// >=44px hit target (Flow Blueprint's header click-zone fix).
+// search box collapses to an icon that expands on tap; nav / language /
+// Saved for Quote / Become a Vendor / Sign in / Join move into a hamburger
+// menu. Every control keeps a >=44px hit target (Flow Blueprint's header
+// click-zone fix).
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { IBM_Plex_Sans } from 'next/font/google';
-import { ShoppingCart, Menu, X } from 'lucide-react';
+import { ListPlus, Menu, X } from 'lucide-react';
 import LanguageToggle, { type Lang } from './LanguageToggle';
 import { useCart } from './cart/useCart';
 
@@ -41,26 +50,32 @@ const ibmPlexSans = IBM_Plex_Sans({
 // than asking five different page-level T tables to carry duplicate copy.
 const T: Record<Lang, Record<string, string>> = {
   en: {
+    marketplace: 'Marketplace',
+    howItWorks: 'How it works',
+    forVendors: 'For vendors',
     searchPh: 'Search equipment, services, or part numbers…',
     searchAria: 'Search the marketplace',
     searchBtn: 'Search',
     openSearchAria: 'Open search',
     signIn: 'Sign in',
-    join: 'Join',
+    join: 'Join free',
     becomeVendor: 'Become a Vendor',
-    cartAria: 'Cart',
+    savedForQuote: 'Saved for Quote',
     menuAria: 'Menu',
     closeMenuAria: 'Close menu',
   },
   es: {
+    marketplace: 'Marketplace',
+    howItWorks: 'Cómo funciona',
+    forVendors: 'Para proveedores',
     searchPh: 'Busca equipo, servicios o números de parte…',
     searchAria: 'Buscar en el marketplace',
     searchBtn: 'Buscar',
     openSearchAria: 'Abrir búsqueda',
     signIn: 'Iniciar sesión',
-    join: 'Únete',
+    join: 'Únete gratis',
     becomeVendor: 'Conviértete en proveedor',
-    cartAria: 'Carrito',
+    savedForQuote: 'Guardado para cotizar',
     menuAria: 'Menú',
     closeMenuAria: 'Cerrar menú',
   },
@@ -114,6 +129,12 @@ const PublicHeader = forwardRef<PublicHeaderHandle, { lang: Lang; onLangChange: 
       <div className="ph-main">
         <a className="ph-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b></a>
 
+        <nav className="ph-nav" aria-label="Primary">
+          <Link href="/marketplace">{t.marketplace}</Link>
+          <a href="/#how-it-works">{t.howItWorks}</a>
+          <a href="/#for-vendors">{t.forVendors}</a>
+        </nav>
+
         <form className={`ph-search${searchOpen ? ' open' : ''}`} onSubmit={goSearch} role="search">
           <SearchIcon />
           <input
@@ -139,17 +160,15 @@ const PublicHeader = forwardRef<PublicHeaderHandle, { lang: Lang; onLangChange: 
         <div className="ph-actions">
           <div className="ph-desktoprow">
             <LanguageToggle lang={lang} onChange={onLangChange} variant="light" />
+            <Link className="ph-quote" href="/cart" aria-label={`${t.savedForQuote} (${count})`}>
+              <ListPlus size={17} aria-hidden="true" />
+              <span>{t.savedForQuote}</span>
+              <span className={'ph-quoten' + (count > 0 ? ' has' : '')} aria-hidden="true">{count}</span>
+            </Link>
             <Link className="ph-vendorlink" href="/vendor-signup">{t.becomeVendor}</Link>
             <a className="ph-signin" href="/login">{t.signIn}</a>
             <a className="ph-joinbtn" href="/signup">{t.join}</a>
           </div>
-
-          {count > 0 && (
-            <Link className="ph-cart" href="/cart" aria-label={`${t.cartAria} (${count})`}>
-              <ShoppingCart size={20} aria-hidden="true" />
-              <span className="ph-cartn" aria-hidden="true">{count}</span>
-            </Link>
-          )}
 
           <button
             type="button"
@@ -165,6 +184,16 @@ const PublicHeader = forwardRef<PublicHeaderHandle, { lang: Lang; onLangChange: 
 
       {menuOpen && (
         <div className="ph-mobilemenu">
+          <nav className="ph-mobilenav" aria-label="Primary">
+            <Link href="/marketplace" onClick={() => setMenuOpen(false)}>{t.marketplace}</Link>
+            <a href="/#how-it-works" onClick={() => setMenuOpen(false)}>{t.howItWorks}</a>
+            <a href="/#for-vendors" onClick={() => setMenuOpen(false)}>{t.forVendors}</a>
+          </nav>
+          <Link className="ph-quote" href="/cart" aria-label={`${t.savedForQuote} (${count})`} onClick={() => setMenuOpen(false)}>
+            <ListPlus size={17} aria-hidden="true" />
+            <span>{t.savedForQuote}</span>
+            <span className={'ph-quoten' + (count > 0 ? ' has' : '')} aria-hidden="true">{count}</span>
+          </Link>
           <LanguageToggle lang={lang} onChange={onLangChange} variant="light" />
           <Link className="ph-vendorlink" href="/vendor-signup" onClick={() => setMenuOpen(false)}>{t.becomeVendor}</Link>
           <a className="ph-signin" href="/login">{t.signIn}</a>
@@ -196,6 +225,10 @@ const CSS = `
 .ph-brand b{font-family:var(--font-space-grotesk),'Space Grotesk',system-ui,sans-serif;font-size:18px;font-weight:700;letter-spacing:-.02em;color:var(--spec-ink);}
 .ph-brand i{color:var(--spec-violet);font-style:normal;}
 
+.ph-nav{display:flex;align-items:center;gap:18px;flex-shrink:0;}
+.ph-nav a{display:flex;align-items:center;min-height:44px;color:var(--spec-text-2nd);font-size:13.5px;font-weight:600;white-space:nowrap;}
+.ph-nav a:hover{color:var(--spec-violet-deep);}
+
 .ph-search{order:2;flex:1 1 240px;min-width:0;display:flex;align-items:center;gap:8px;max-width:560px;background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-md);padding:0 6px 0 14px;color:var(--spec-text-2nd);}
 .ph-search:focus-within{border-color:var(--spec-violet);box-shadow:0 0 0 3px rgba(108,92,224,.15);}
 .ph-search svg{flex-shrink:0;color:var(--spec-text-2nd);}
@@ -218,24 +251,35 @@ const CSS = `
 .ph-vendorlink{display:flex;align-items:center;justify-content:center;min-height:44px;background:var(--spec-violet);color:#fff !important;font-size:13.5px;font-weight:700;padding:0 16px;border-radius:var(--spec-radius-btn);white-space:nowrap;transition:background .15s;}
 .ph-vendorlink:hover{background:var(--spec-violet-deep);}
 
-.ph-cart{position:relative;display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;color:var(--spec-ink);border-radius:var(--spec-radius-btn);flex-shrink:0;}
-.ph-cart:hover{background:rgba(20,19,32,.05);}
-.ph-cartn{position:absolute;top:2px;right:2px;min-width:16px;height:16px;padding:0 4px;border-radius:99px;background:var(--spec-violet);color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center;}
+.ph-quote{position:relative;display:flex;align-items:center;gap:7px;min-height:44px;padding:0 12px;color:var(--spec-ink);font-size:13px;font-weight:700;border:1px solid var(--spec-border);border-radius:var(--spec-radius-btn);white-space:nowrap;background:#fff;flex-shrink:0;}
+.ph-quote:hover{border-color:var(--spec-violet);color:var(--spec-violet-deep);}
+.ph-quote svg{flex-shrink:0;color:var(--spec-violet);}
+.ph-quoten{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--spec-surface);color:var(--spec-text-2nd);font-size:10.5px;font-weight:700;}
+.ph-quoten.has{background:var(--spec-violet);color:#fff;}
 
 .ph-hamburger{display:none;flex-shrink:0;align-items:center;justify-content:center;min-width:44px;min-height:44px;background:none;border:1px solid var(--spec-border);border-radius:var(--spec-radius-btn);color:var(--spec-ink);cursor:pointer;}
 .ph-hamburger:hover{border-color:var(--spec-violet);color:var(--spec-violet);}
 
 .ph-mobilemenu{position:absolute;top:100%;left:0;right:0;background:#fff;border-bottom:1px solid var(--spec-border);box-shadow:0 16px 32px -18px rgba(20,19,32,.25);padding:14px 20px 18px;display:flex;flex-direction:column;gap:10px;z-index:40;}
+.ph-mobilenav{display:flex;flex-direction:column;border-bottom:1px solid var(--spec-border);padding-bottom:6px;margin-bottom:4px;}
+.ph-mobilenav a{display:flex;align-items:center;min-height:44px;color:var(--spec-ink);font-size:14.5px;font-weight:650;}
 .ph-mobilemenu .ph-signin{border-bottom:1px solid var(--spec-border);justify-content:flex-start;padding:12px 4px;}
-.ph-mobilemenu .ph-joinbtn,.ph-mobilemenu .ph-vendorlink{width:100%;}
+.ph-mobilemenu .ph-joinbtn,.ph-mobilemenu .ph-vendorlink,.ph-mobilemenu .ph-quote{width:100%;justify-content:center;}
 
 .ph button:focus-visible,.ph a:focus-visible{outline:2px solid var(--spec-violet);outline-offset:2px;}
+
+@media(max-width:1080px){
+  /* Nav links fold into the hamburger before search/actions do — they're
+     the lowest-priority row (search and the account actions stay reachable
+     without a tap all the way down to 760px). */
+  .ph-nav{display:none;}
+  .ph-hamburger{display:inline-flex;}
+}
 
 @media(max-width:760px){
   .ph-search{display:none;flex-basis:100%;order:4;max-width:none;}
   .ph-search.open{display:flex;}
   .ph-searchtoggle{display:inline-flex;}
   .ph-desktoprow{display:none;}
-  .ph-hamburger{display:inline-flex;}
 }
 `;
