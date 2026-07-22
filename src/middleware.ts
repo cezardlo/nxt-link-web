@@ -144,6 +144,16 @@ export function middleware(req: NextRequest) {
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
+  // Authenticated API responses must NEVER be stored by a shared cache (CDN/proxy):
+  // the edge cache key is URL-only and ignores the auth cookie, so a cached private
+  // response could be handed to a different (or unauthenticated) user. This is
+  // explicit, override-proof defense-in-depth on top of removing the blanket public
+  // /api cache header (security review 2026-07-22). Public marketplace/* GETs are
+  // deliberately excluded so they may still be cached later if wanted.
+  if (/^\/api\/(auth|vendor|vendors|buyer|projects|apply|admin)(\/|$)/.test(pathname)) {
+    response.headers.set('Cache-Control', 'private, no-store');
+  }
+
   // Clean up old rate limit entries periodically
   if (rateMap.size > 10000) {
     const now = Date.now();
