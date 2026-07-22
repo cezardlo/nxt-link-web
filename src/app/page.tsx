@@ -1,14 +1,30 @@
 'use client';
 
 // NXT//LINK homepage — task-oriented action engine (Cesar's spec, distilled
-// from Amazon Business / Fiverr / Alibaba / Thomasnet / Upwork): a sticky
-// header with logo + centered mega-search + Post-a-Request/Sign-in/Join,
-// a hero with two equally-prominent CTAs (search vs. RFQ), a how-it-works
-// strip, curated category tiles, and a trust bar — THEN the existing
-// discovery sections (featured listings, shop-by-department, buying tools,
-// vendor early-access band, FAQs, footer). Fully EN/ES via the shared
-// LanguageToggle/useLang pattern (see /buyer, /cart). Featured products &
-// departments are REAL data from the marketplace API.
+// from Amazon Business / Fiverr Pro / Alibaba / Thomasnet / Upwork).
+//
+// VISUAL RESKIN (2026-07-21, this pass): reskinned from the app's old dark
+// "command-center" theme to Design System v1.0 (vault/Design-System.md) —
+// light content + violet #6C5CE0 accent, applying the `--spec-*` tokens
+// wired in globals.css. The header stays DARK on purpose: it's the bridge
+// into the rest of the (still-dark) app chrome — see the CSS header note
+// below. Structure: dark sticky header (logo + known-item search + sign-in/
+// join/post-a-request) → a slim always-on category nav bar → a rich dark
+// hero carrying a big "describe your need" prompt card (the RFQ path,
+// Fiverr-Pro-style) with quick-start chips + an illustrative vendor proof
+// card → numbered how-it-works → elevated category tiles → a quiet trust
+// bar → THEN the existing discovery sections (featured listings, shop-by-
+// department, buying tools, vendor early-access band, FAQs, footer), all
+// restyled to match. Footer stays dark too, bookending the light content
+// area (a second bridge back toward the app).
+//
+// Content/links/routes are UNCHANGED from the ae54412 functional rebuild.
+// The only new user-facing strings are for the new prompt card + its
+// suggestion chips + the illustrative proof card (Cesar-approved direction
+// update, 2026-07-21) — all bilingual, no new claims/stats/escrow language;
+// the prompt-card placeholder reuses the existing /intake placeholder
+// wording verbatim. Featured products & departments are REAL data from the
+// marketplace API.
 //
 // Trust-bar wording deviates from the original brief on purpose (Cesar-approved,
 // workplace/plans/DECISIONS-2026-07-21.md): no escrow, no "secure payments" —
@@ -17,8 +33,30 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
+import { IBM_Plex_Sans } from 'next/font/google';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
-import { BadgeCheck, ShieldCheck, Send, ClipboardList, Sparkles, Handshake, Boxes, HardHat, Warehouse, Bot, Wrench, Truck } from 'lucide-react';
+import {
+  BadgeCheck, ShieldCheck, Send, ClipboardList, Sparkles, Handshake, Forklift,
+  HardHat, Warehouse, Bot, Wrench, Truck, MessageSquareText, Building2,
+} from 'lucide-react';
+
+// One consistent lucide-react icon language throughout this page: same
+// stroke weight (lucide's default 2px), a fixed 3-tier size scale — 20px
+// inline (next to text: trust bullets, meta rows), 28px category tiles,
+// 40px how-it-works — and never mixed with filled icon styles.
+const ICON_INLINE = 20;
+const ICON_TILE = 28;
+const ICON_STEP = 40;
+
+// Body text font per Design System v1.0 (headings use Space Grotesk, already
+// loaded app-wide in layout.tsx as --font-space-grotesk). Loaded here,
+// scoped to this page only, so the rest of the app is untouched.
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-ibm-plex-sans-landing',
+  display: 'swap',
+});
 
 interface Card {
   id: string; kind: 'product' | 'service'; name: string; category: string;
@@ -32,8 +70,9 @@ interface Dept { fg: string; label_en: string; label_es: string; is_service: boo
 // values from the marketplace taxonomy (src/app/api/marketplace/categories) —
 // same fg codes used by /marketplace's department filter and SupplyChips, so
 // every tile actually filters real listings instead of being a dead link.
-const CATEGORY_TILES: Array<{ fg: string; en: string; es: string; Icon: typeof Boxes }> = [
-  { fg: 'material_handling', en: 'Material Handling', es: 'Manejo de materiales', Icon: Boxes },
+// Also reused by the slim category nav bar under the header.
+const CATEGORY_TILES: Array<{ fg: string; en: string; es: string; Icon: typeof Forklift }> = [
+  { fg: 'material_handling', en: 'Material Handling', es: 'Manejo de materiales', Icon: Forklift },
   { fg: 'safety_security', en: 'Safety & PPE', es: 'Seguridad y EPP', Icon: HardHat },
   { fg: 'warehouse_tech', en: 'Warehouse Technology', es: 'Tecnología para almacenes', Icon: Warehouse },
   { fg: 'automation_robotics', en: 'Automation & Robotics', es: 'Automatización y robótica', Icon: Bot },
@@ -54,6 +93,15 @@ const T: Record<Lang, Record<string, string>> = {
     heroTitle: 'Find industrial suppliers. Get competitive quotes. Close deals safely.',
     heroCta1: 'Search Products & Services',
     heroCta2: 'Post a Request / RFQ',
+    promptPh: 'I need maintenance for 6 forklifts in El Paso next week.',
+    promptAria: 'Describe what you need — post a request',
+    promptChip1: 'Forklift repair',
+    promptChip2: 'Warehouse racking',
+    promptChip3: 'Barcode & scanning',
+    promptChip4: 'Conveyor installation',
+    promptChip5: 'PPE & safety supplies',
+    proofBadge: 'Verified Vendor',
+    proofResponds: 'Responds fast',
     howHeading: 'How it works',
     step1Title: 'Describe your need', step1Desc: 'Search the catalog or post one request describing what you need.',
     step2Title: 'Get matched quotes', step2Desc: 'Verified Borderplex vendors respond with price, lead time, and warranty.',
@@ -114,6 +162,15 @@ const T: Record<Lang, Record<string, string>> = {
     heroTitle: 'Encuentra proveedores industriales. Obtén cotizaciones competitivas. Cierra tratos de forma segura.',
     heroCta1: 'Buscar productos y servicios',
     heroCta2: 'Publicar una solicitud (RFQ)',
+    promptPh: 'Necesito mantenimiento para 6 montacargas en El Paso la próxima semana.',
+    promptAria: 'Describe lo que necesitas — publica una solicitud',
+    promptChip1: 'Reparación de montacargas',
+    promptChip2: 'Racks de almacén',
+    promptChip3: 'Códigos de barras y escaneo',
+    promptChip4: 'Instalación de transportadores',
+    promptChip5: 'Equipo de seguridad y EPP',
+    proofBadge: 'Proveedor verificado',
+    proofResponds: 'Responde rápido',
     howHeading: 'Cómo funciona',
     step1Title: 'Describe lo que necesitas', step1Desc: 'Busca en el catálogo o publica una solicitud describiendo lo que necesitas.',
     step2Title: 'Recibe cotizaciones a tu medida', step2Desc: 'Proveedores verificados del Borderplex responden con precio, tiempo de entrega y garantía.',
@@ -222,10 +279,14 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="hp">
+    <div className={`hp ${ibmPlexSans.variable}`}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
-      {/* Header: logo left, centered mega-search, Post a Request / Sign in / Join right */}
+      {/* Header: dark ink — deliberately kept dark as the bridge into the
+          rest of the app's dark chrome (sidebar etc., see Design-System.md).
+          Logo left, mega-search center (kept here for known-item / part-
+          number search — the hero below owns the "describe your need" RFQ
+          path), Post a Request / Sign in / Join right. */}
       <header className="hp-header">
         <div className="hp-headmain">
           <a className="hp-brand" href="/"><b>NXT<i>//</i>LINK</b></a>
@@ -250,14 +311,61 @@ export default function Home() {
         <a className="hp-rfqblock" href="/intake">{t.postRequest}</a>
       </header>
 
-      {/* Hero — value prop + two equally-prominent CTAs (search vs. RFQ) */}
+      {/* Slim always-on category nav bar — same real taxonomy as the tile
+          grid further down; this strip is the "always there" wayfinding
+          row (Fiverr's category-bar pattern), the tile grid stays as the
+          bigger visual browse entry point. */}
+      <nav className="hp-catbar" aria-label={t.catHeading}>
+        <div className="hp-catbarin">
+          {CATEGORY_TILES.map(({ fg, en, es }) => (
+            <Link key={fg} href={`/marketplace?department=${fg}`} className="hp-catbarlink">
+              {lang === 'es' ? es : en}
+            </Link>
+          ))}
+        </div>
+      </nav>
+
+      {/* Hero — rich dark band (violet-on-ink). The big "describe your need"
+          prompt card is the RFQ path's centerpiece (Fiverr Pro pattern);
+          quick-start chips and the trust checkmarks sit under it. The
+          illustrative vendor proof card is generic on purpose — no
+          fabricated vendor name or stats, just badge + qualitative label. */}
       <section className="hp-hero">
+        <div className="hp-herobg" aria-hidden="true" />
         <div className="hp-heroin">
-          <span className="hp-eyebrow">{t.eyebrow}</span>
-          <h1>{t.heroTitle}</h1>
-          <div className="hp-herocta">
-            <button type="button" className="hp-btn" onClick={focusSearch}>{t.heroCta1}</button>
-            <Link className="hp-btn alt" href="/intake">{t.heroCta2}</Link>
+          <div className="hp-herocol">
+            <span className="hp-eyebrow">{t.eyebrow}</span>
+            <h1>{t.heroTitle}</h1>
+
+            <div className="hp-promptcard">
+              <MessageSquareText className="hp-prompticon" size={ICON_INLINE} aria-hidden="true" />
+              <span className="hp-promptph">{t.promptPh}</span>
+              <Link className="hp-promptbtn" href="/intake" aria-label={t.promptAria}>{t.heroCta2}</Link>
+            </div>
+
+            <div className="hp-chips">
+              {[t.promptChip1, t.promptChip2, t.promptChip3, t.promptChip4, t.promptChip5].map((c) => (
+                <Link key={c} href="/intake" className="hp-chip">{c}</Link>
+              ))}
+            </div>
+
+            <div className="hp-herochecks">
+              <span><BadgeCheck size={ICON_INLINE} aria-hidden="true" /> {t.trustVerified}</span>
+              <span><ShieldCheck size={ICON_INLINE} aria-hidden="true" /> {t.trustProtected}</span>
+              <span><Send size={ICON_INLINE} aria-hidden="true" /> {t.trustFree}</span>
+            </div>
+
+            <div className="hp-herocta">
+              <button type="button" className="hp-btn outline" onClick={focusSearch}>{t.heroCta1}</button>
+            </div>
+          </div>
+
+          <div className="hp-proofcard" aria-hidden="true">
+            <div className="hp-proofavatar"><Building2 size={ICON_TILE} aria-hidden="true" /></div>
+            <div className="hp-proofmeta">
+              <div className="hp-proofbadge"><BadgeCheck size={ICON_INLINE} aria-hidden="true" /> {t.proofBadge}</div>
+              <div className="hp-proofline">{t.proofResponds}</div>
+            </div>
           </div>
         </div>
       </section>
@@ -272,11 +380,12 @@ export default function Home() {
             ['3', Handshake, t.step3Title, t.step3Desc],
           ] as Array<[string, typeof ClipboardList, string, string]>).map(([n, Icon, title, desc]) => (
             <div className="hp-step" key={n}>
-              <span className="hp-stepn">{n}</span>
-              <div>
-                <b><Icon className="hp-stepicon" size={16} aria-hidden="true" /> {title}</b>
-                <p>{desc}</p>
+              <div className="hp-steptop">
+                <Icon className="hp-stepicon" size={ICON_STEP} aria-hidden="true" />
+                <span className="hp-stepn">{n}</span>
               </div>
+              <b>{title}</b>
+              <p>{desc}</p>
             </div>
           ))}
         </div>
@@ -288,7 +397,7 @@ export default function Home() {
         <div className="hp-cattiles">
           {CATEGORY_TILES.map(({ fg, en, es, Icon }) => (
             <Link key={fg} href={`/marketplace?department=${fg}`} className="hp-cattile">
-              <span className="hp-cattileicon"><Icon size={20} aria-hidden="true" /></span>
+              <span className="hp-cattileicon"><Icon size={ICON_TILE} aria-hidden="true" /></span>
               <b>{lang === 'es' ? es : en}</b>
             </Link>
           ))}
@@ -297,9 +406,9 @@ export default function Home() {
 
       {/* Trust bar — no escrow / no funds-holding language (see file header note) */}
       <div className="hp-trustbar">
-        <span className="hp-trustitem"><BadgeCheck size={16} aria-hidden="true" /> {t.trustVerified}</span>
-        <span className="hp-trustitem"><ShieldCheck size={16} aria-hidden="true" /> {t.trustProtected}</span>
-        <span className="hp-trustitem"><Send size={16} aria-hidden="true" /> {t.trustFree}</span>
+        <span className="hp-trustitem"><BadgeCheck size={ICON_INLINE} aria-hidden="true" /> {t.trustVerified}</span>
+        <span className="hp-trustitem"><ShieldCheck size={ICON_INLINE} aria-hidden="true" /> {t.trustProtected}</span>
+        <span className="hp-trustitem"><Send size={ICON_INLINE} aria-hidden="true" /> {t.trustFree}</span>
       </div>
 
       {/* Featured live listings */}
@@ -423,11 +532,12 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
+      {/* Footer — dark ink, bookending the light content area (second bridge
+          back toward the app's dark chrome) */}
       <footer className="hp-foot">
         <div className="hp-footcols">
           <div>
-            <b>NXT<i style={{ color: '#A78BFA', fontStyle: 'normal' }}>//</i>LINK</b>
+            <b>NXT<i style={{ color: '#A99DF2', fontStyle: 'normal' }}>//</i>LINK</b>
             <p className="hp-foottag">{t.footerTagline}</p>
           </div>
           <div>
@@ -465,150 +575,230 @@ function SearchIcon() {
   return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>;
 }
 
+// Design System & App Spec v1.0 (vault/Design-System.md) applied via the
+// `--spec-*` CSS variables already wired in globals.css: light content
+// (warm white / white cards, violet #6C5CE0 primary, IBM Plex Sans body +
+// Space Grotesk headings + IBM Plex Mono for data/eyebrows), with the
+// header, the vendor-recruit band, and the footer kept as deliberate dark
+// "ink" accents that bridge into the rest of the (still dark-chrome) app.
 const CSS = `
-.hp{background:#0A0A0F;color:#F0F0F5;font-family:'Outfit',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;}
+.hp{background:var(--spec-warm-white);color:var(--spec-ink);font-family:var(--font-ibm-plex-sans-landing),'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;}
 .hp *{box-sizing:border-box;}
-.hp a{text-decoration:none;}
+.hp a{text-decoration:none;color:inherit;}
+.hp h1,.hp h2,.hp h3{font-family:var(--font-space-grotesk),'Space Grotesk',system-ui,sans-serif;}
 .hp-sronly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 
-/* Header */
-.hp-header{position:sticky;top:0;z-index:40;background:rgba(10,10,15,.9);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.08);padding:12px 20px;}
+/* Header — dark ink, the deliberate bridge into the rest of the app's dark chrome */
+.hp-header{position:sticky;top:0;z-index:40;background:rgba(20,19,32,.94);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.08);padding:12px 20px;}
 .hp-headmain{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;max-width:1280px;margin:0 auto;}
-.hp-brand{grid-column:1;color:#F0F0F5;}
-.hp-brand b{font-size:18px;font-weight:800;letter-spacing:-.02em;color:#F0F0F5;}.hp-brand i{color:#A78BFA;font-style:normal;}
-.hp-headsearch{grid-column:2;justify-self:center;display:flex;align-items:center;gap:8px;width:100%;max-width:560px;background:#14141F;border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:0 6px 0 14px;color:#8080A0;}
-.hp-headsearch:focus-within{border-color:#7C5CFC;box-shadow:0 0 0 3px rgba(124,92,252,.2);}
+.hp-brand{grid-column:1;color:#F8F7FB;}
+.hp-brand b{font-family:var(--font-space-grotesk);font-size:18px;font-weight:700;letter-spacing:-.02em;color:#F8F7FB;}
+.hp-brand i{color:var(--spec-lilac);font-style:normal;}
+.hp-headsearch{grid-column:2;justify-self:center;display:flex;align-items:center;gap:8px;width:100%;max-width:560px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:var(--spec-radius-md);padding:0 6px 0 14px;color:#B7B4C6;}
+.hp-headsearch:focus-within{border-color:var(--spec-lilac);box-shadow:0 0 0 3px rgba(169,157,242,.25);}
 .hp-headsearch svg{flex-shrink:0;}
-.hp-headsearch input{flex:1;min-width:0;background:none;border:none;outline:none;color:#F0F0F5;font-family:inherit;font-size:14.5px;padding:10px 0;}
-.hp-headsearch input::placeholder{color:#6A6A85;}
-.hp-headsearch button{flex-shrink:0;background:#7C5CFC;color:#fff;font-family:inherit;font-weight:700;font-size:13.5px;border:none;border-radius:9px;padding:9px 16px;cursor:pointer;margin:4px 0;}
-.hp-headsearch button:hover{background:#6344DF;}
+.hp-headsearch input{flex:1;min-width:0;background:none;border:none;outline:none;color:#F8F7FB;font-family:inherit;font-size:14.5px;padding:10px 0;}
+.hp-headsearch input::placeholder{color:#8B889C;}
+.hp-headsearch button{flex-shrink:0;background:var(--spec-violet);color:#fff;font-family:inherit;font-weight:700;font-size:13.5px;border:none;border-radius:var(--spec-radius-btn);padding:9px 16px;cursor:pointer;margin:4px 0;transition:background .15s;}
+.hp-headsearch button:hover{background:var(--spec-violet-deep);}
 .hp-headactions{grid-column:3;justify-self:end;display:flex;align-items:center;gap:12px;flex-shrink:0;}
-.hp-signin{color:#9A97AF;font-size:13.5px;font-weight:600;white-space:nowrap;}
-.hp-signin:hover{color:#F0F0F5;}
-.hp-joinbtn{color:#F0F0F5;font-size:13.5px;font-weight:700;padding:8px 14px;border-radius:9px;border:1px solid rgba(255,255,255,.16);white-space:nowrap;}
-.hp-joinbtn:hover{border-color:rgba(255,255,255,.32);}
-.hp-rfqinline{background:#7C5CFC;color:#fff !important;font-size:13.5px;font-weight:700;padding:9px 16px;border-radius:9px;white-space:nowrap;}
-.hp-rfqinline:hover{background:#6344DF;}
+.hp-signin{color:#B7B4C6;font-size:13.5px;font-weight:600;white-space:nowrap;}
+.hp-signin:hover{color:#F8F7FB;}
+.hp-joinbtn{color:#F8F7FB;font-size:13.5px;font-weight:700;padding:8px 14px;border-radius:var(--spec-radius-btn);border:1px solid rgba(255,255,255,.18);white-space:nowrap;}
+.hp-joinbtn:hover{border-color:rgba(255,255,255,.36);}
+.hp-rfqinline{background:var(--spec-violet);color:#fff !important;font-size:13.5px;font-weight:700;padding:9px 16px;border-radius:var(--spec-radius-btn);white-space:nowrap;transition:background .15s;}
+.hp-rfqinline:hover{background:var(--spec-violet-deep);}
 .hp-rfqblock{display:none;}
 @media(max-width:760px){
-  .hp-headmain{grid-template-columns:1fr auto;grid-template-areas:"brand actions" "search search";row-gap:10px;}
-  .hp-brand{grid-area:brand;grid-column:auto;}
-  .hp-headactions{grid-area:actions;grid-column:auto;}
-  .hp-headsearch{grid-area:search;grid-column:auto;max-width:none;}
+  .hp-headmain{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"brand actions" "search search";row-gap:10px;}
+  .hp-brand{grid-area:brand;grid-column:auto;min-width:0;}
+  .hp-headactions{grid-area:actions;grid-column:auto;min-width:0;}
+  .hp-headsearch{grid-area:search;grid-column:auto;max-width:none;min-width:0;}
   .hp-rfqinline{display:none;}
-  .hp-rfqblock{display:flex;justify-content:center;align-items:center;margin-top:10px;width:100%;background:#7C5CFC;color:#fff;font-weight:700;font-size:15px;padding:13px;border-radius:11px;}
+  .hp-rfqblock{display:flex;justify-content:center;align-items:center;margin-top:10px;width:100%;background:var(--spec-violet);color:#fff;font-weight:700;font-size:15px;padding:13px;border-radius:var(--spec-radius-md);}
 }
 @media(max-width:480px){.hp-signin{display:none;}}
 
-/* Hero */
-.hp-hero{position:relative;overflow:hidden;border-bottom:1px solid rgba(255,255,255,.06);
-  background:radial-gradient(900px 500px at 78% -10%,rgba(124,92,252,.18),transparent 60%),radial-gradient(600px 400px at 5% 110%,rgba(52,211,153,.08),transparent 55%);}
-.hp-heroin{max-width:820px;margin:0 auto;padding:56px 22px 48px;text-align:center;}
-.hp-eyebrow{font-size:12.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#C4B5FD;}
-.hp-hero h1{font-size:clamp(26px,5vw,44px);font-weight:800;letter-spacing:-.03em;line-height:1.12;margin:16px auto 0;max-width:26ch;text-wrap:balance;}
-.hp-herocta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px;}
-.hp-btn{font-family:inherit;background:#7C5CFC;color:#fff;font-weight:700;font-size:15px;padding:14px 26px;border-radius:12px;border:none;cursor:pointer;box-shadow:0 14px 34px -14px rgba(124,92,252,.7);}
-.hp-btn:hover{background:#6344DF;}
-.hp-btn.alt{background:#1B7A55;box-shadow:0 14px 34px -14px rgba(52,211,153,.5);}
-.hp-btn.alt:hover{background:#178F62;}
+/* Slim always-on category nav bar — sits directly under the header */
+.hp-catbar{background:#fff;border-bottom:1px solid var(--spec-border);}
+.hp-catbarin{max-width:1160px;margin:0 auto;padding:0 22px;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;}
+.hp-catbarin::-webkit-scrollbar{display:none;}
+.hp-catbarlink{flex-shrink:0;padding:13px 14px;font-size:13.5px;font-weight:600;color:var(--spec-text-2nd);white-space:nowrap;border-bottom:2px solid transparent;}
+.hp-catbarlink:hover{color:var(--spec-violet);border-bottom-color:var(--spec-violet);}
+
+/* Hero — rich dark band, two-column: prompt card + chips + checks left, illustrative proof card right */
+.hp-hero{position:relative;overflow:hidden;background:var(--spec-ink);}
+.hp-herobg{position:absolute;inset:0;background:
+  repeating-linear-gradient(118deg,transparent 0 26px,rgba(169,157,242,.07) 26px 29px),
+  linear-gradient(rgba(169,157,242,.05) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(169,157,242,.05) 1px,transparent 1px),
+  radial-gradient(760px 440px at 88% -12%,rgba(108,92,224,.38),transparent 60%);
+  background-size:auto,64px 64px,64px 64px,auto;
+  mask-image:linear-gradient(180deg,rgba(0,0,0,.9),rgba(0,0,0,.5));
+  pointer-events:none;}
+.hp-heroin{position:relative;max-width:1200px;margin:0 auto;padding:56px 22px 60px;display:grid;grid-template-columns:1.35fr 1fr;gap:40px;align-items:center;}
+.hp-herocol{min-width:0;}
+.hp-eyebrow{font-family:var(--font-ibm-plex-mono);font-size:12px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--spec-lilac);}
+.hp-hero h1{color:#F8F7FB;font-size:clamp(30px,4.6vw,52px);font-weight:700;letter-spacing:-.03em;line-height:1.08;margin:16px 0 28px;max-width:20ch;text-wrap:balance;}
+
+.hp-promptcard{display:flex;align-items:center;gap:12px;background:#fff;border-radius:var(--spec-radius-lg);padding:8px 8px 8px 20px;box-shadow:0 24px 48px -20px rgba(0,0,0,.5);max-width:620px;}
+.hp-prompticon{color:var(--spec-violet);flex-shrink:0;}
+.hp-promptph{flex:1;min-width:0;color:var(--spec-text-2nd);font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.hp-promptbtn{flex-shrink:0;background:var(--spec-violet);color:#fff;font-weight:700;font-size:13.5px;padding:14px 20px;border-radius:var(--spec-radius-btn);white-space:nowrap;transition:background .15s;}
+.hp-promptbtn:hover{background:var(--spec-violet-deep);}
+
+.hp-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;max-width:620px;}
+.hp-chip{padding:8px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:999px;font-size:12.5px;font-weight:600;color:#DEDCEA;transition:background .15s,border-color .15s;}
+.hp-chip:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.34);}
+
+.hp-herochecks{display:flex;flex-wrap:wrap;gap:18px;margin-top:20px;}
+.hp-herochecks span{display:flex;align-items:center;gap:7px;color:#B7B4C6;font-size:12.5px;font-weight:600;}
+.hp-herochecks svg{color:var(--spec-success);flex-shrink:0;}
+
+.hp-herocta{display:flex;gap:12px;margin-top:26px;}
+.hp-btn{font-family:inherit;background:var(--spec-violet);color:#fff;font-weight:700;font-size:15px;padding:14px 26px;border-radius:var(--spec-radius-btn);border:none;cursor:pointer;transition:background .15s;}
+.hp-btn:hover{background:var(--spec-violet-deep);}
+.hp-btn.outline{background:transparent;color:#F8F7FB;border:1.5px solid rgba(255,255,255,.34);}
+.hp-btn.outline:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.5);}
+
+.hp-proofcard{justify-self:end;background:#fff;border-radius:var(--spec-radius-lg);padding:22px;width:220px;box-shadow:0 30px 60px -22px rgba(0,0,0,.55);transform:rotate(-1.4deg);}
+.hp-proofavatar{width:48px;height:48px;border-radius:var(--spec-radius-md);background:var(--spec-ink);color:var(--spec-lilac);display:grid;place-items:center;margin-bottom:14px;}
+.hp-proofbadge{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--spec-violet-deep);background:#F3F1FB;padding:7px 11px;border-radius:8px;width:max-content;}
+.hp-proofbadge svg{color:var(--spec-violet);}
+.hp-proofline{margin-top:10px;font-size:12.5px;color:var(--spec-text-2nd);font-weight:600;}
+
+@media(max-width:900px){
+  .hp-heroin{grid-template-columns:1fr;padding:40px 20px 44px;}
+  .hp-proofcard{justify-self:start;transform:none;width:max-content;max-width:100%;margin-top:8px;display:flex;align-items:center;gap:14px;padding:16px 18px;}
+  .hp-proofavatar{margin-bottom:0;flex-shrink:0;}
+}
+@media(max-width:520px){
+  .hp-promptcard{flex-wrap:wrap;padding:16px;}
+  .hp-promptph{width:100%;order:1;white-space:normal;}
+  .hp-prompticon{order:0;}
+  .hp-promptbtn{order:2;width:100%;text-align:center;}
+}
 
 /* How it works */
-.hp-how{max-width:1000px;margin:0 auto;padding:46px 22px 8px;}
-.hp-howheading{font-size:clamp(19px,2.6vw,24px);font-weight:800;letter-spacing:-.02em;text-align:center;margin:0 0 22px;}
-.hp-howgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+.hp-how{max-width:1160px;margin:0 auto;padding:56px 22px 8px;}
+.hp-howheading{font-size:clamp(20px,2.6vw,26px);font-weight:700;letter-spacing:-.02em;text-align:center;margin:0 0 28px;color:var(--spec-ink);}
+.hp-howgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
 @media(max-width:720px){.hp-howgrid{grid-template-columns:1fr;}}
-.hp-step{display:flex;gap:14px;align-items:flex-start;background:#12121B;border:1px solid rgba(255,255,255,.08);border-radius:15px;padding:20px;}
-.hp-stepn{flex-shrink:0;width:30px;height:30px;border-radius:50%;background:rgba(124,92,252,.16);color:#C4B5FD;font-weight:800;display:grid;place-items:center;font-size:14px;}
-.hp-step b{font-size:15.5px;font-weight:800;display:flex;align-items:center;gap:7px;}
-.hp-stepicon{color:#A78BFA;flex-shrink:0;}
-.hp-step p{color:#8080A0;font-size:13px;line-height:1.55;margin:5px 0 0;}
+.hp-step{background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-lg);padding:28px;}
+.hp-steptop{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;}
+.hp-stepicon{color:var(--spec-violet);flex-shrink:0;}
+.hp-stepn{flex-shrink:0;color:var(--spec-violet-deep);font-family:var(--font-ibm-plex-mono);font-weight:600;font-size:13px;}
+.hp-step b{font-size:16px;font-weight:700;display:block;color:var(--spec-ink);}
+.hp-step p{color:var(--spec-text-2nd);font-size:13.5px;line-height:1.6;margin:6px 0 0;}
 
 /* Category tiles */
-.hp-cattiles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
-.hp-cattile{display:flex;align-items:center;gap:12px;background:#14141F;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px 16px;color:#F0F0F5;transition:border-color .15s,transform .15s;}
-.hp-cattile:hover{border-color:rgba(124,92,252,.5);transform:translateY(-2px);}
-.hp-cattile b{font-size:14px;font-weight:700;line-height:1.3;}
-.hp-cattileicon{flex-shrink:0;width:38px;height:38px;border-radius:10px;background:rgba(124,92,252,.14);color:#C4B5FD;display:grid;place-items:center;}
+.hp-sec{max-width:1160px;margin:0 auto;padding:56px 22px 0;}
+.hp-sechead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:22px;}
+.hp-sechead h2{font-size:clamp(20px,2.6vw,27px);font-weight:700;letter-spacing:-.02em;color:var(--spec-ink);}
+.hp-sechead a{color:var(--spec-violet);font-size:13.5px;font-weight:600;}
+.hp-sechead a:hover{color:var(--spec-violet-deep);}
+.hp-cattiles{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.hp-cattile{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-lg);padding:20px 18px;color:var(--spec-ink);transition:border-color .15s,transform .15s,box-shadow .15s;}
+.hp-cattile:hover{border-color:var(--spec-violet);transform:translateY(-3px);box-shadow:0 16px 32px -18px rgba(20,19,32,.25);}
+.hp-cattile b{font-size:14.5px;font-weight:700;line-height:1.3;}
+.hp-cattileicon{flex-shrink:0;width:52px;height:52px;border-radius:var(--spec-radius-md);background:var(--spec-surface);color:var(--spec-violet);display:grid;place-items:center;}
 @media(max-width:720px){
   .hp-cattiles{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:74%;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px;-webkit-overflow-scrolling:touch;}
   .hp-cattile{scroll-snap-align:start;}
 }
 
-/* Trust bar */
-.hp-trustbar{display:flex;justify-content:center;gap:26px;flex-wrap:wrap;max-width:1000px;margin:38px auto 0;padding:0 22px;}
-.hp-trustitem{display:flex;align-items:center;gap:8px;color:#B8B6CC;font-size:13px;font-weight:600;}
-.hp-trustitem svg{color:#34D399;flex-shrink:0;}
+/* Trust bar — quiet confidence */
+.hp-trustbar{display:flex;justify-content:center;gap:30px;flex-wrap:wrap;max-width:1000px;margin:44px auto 0;padding:0 22px;}
+.hp-trustitem{display:flex;align-items:center;gap:8px;color:var(--spec-text-2nd);font-size:13px;font-weight:600;}
+.hp-trustitem svg{color:var(--spec-success);flex-shrink:0;}
 
-.hp-sec{max-width:1160px;margin:0 auto;padding:52px 22px 0;}
-.hp-sechead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:20px;}
-.hp-sechead h2{font-size:clamp(19px,2.6vw,26px);font-weight:800;letter-spacing:-.02em;}
-.hp-sechead a{color:#A78BFA;font-size:13.5px;font-weight:600;}
-.hp-prods{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px;}
-.hp-prod{background:#14141F;border:1px solid rgba(255,255,255,.08);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .15s,transform .15s;color:#F0F0F5;}
-.hp-prodskel{height:236px;background:linear-gradient(100deg,#14141F 30%,#1c1c2b 50%,#14141F 70%);background-size:200% 100%;animation:hpshimmer 1.3s ease-in-out infinite;}
+/* Featured listings */
+.hp-prods{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px;}
+.hp-prod{background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-lg);overflow:hidden;display:flex;flex-direction:column;transition:border-color .15s,transform .15s,box-shadow .15s;color:var(--spec-ink);}
+.hp-prodskel{height:236px;background:linear-gradient(100deg,#EFEDF5 30%,#E4E1EF 50%,#EFEDF5 70%);background-size:200% 100%;animation:hpshimmer 1.3s ease-in-out infinite;}
 @keyframes hpshimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
 @media (prefers-reduced-motion:reduce){.hp-prodskel{animation:none;}}
-.hp-prod:hover{border-color:rgba(124,92,252,.5);transform:translateY(-3px);}
-.hp-prodimg{height:150px;background:#0E0E16;}
-.hp-prodimg img{width:100%;height:100%;object-fit:cover;}
-.hp-noimg{height:100%;display:grid;place-items:center;color:#42425A;font-size:12px;letter-spacing:.2em;font-weight:700;}
-.hp-prodbody{padding:13px 14px 15px;display:flex;flex-direction:column;gap:6px;flex:1;}
-.hp-badge{align-self:flex-start;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#34D399;background:rgba(52,211,153,.12);padding:3px 8px;border-radius:99px;}
-.hp-prodname{font-size:14px;font-weight:700;line-height:1.3;}
-.hp-price{font-size:15px;font-weight:800;color:#C4B5FD;font-variant-numeric:tabular-nums;}
-.hp-vend{font-size:11.5px;color:#8080A0;margin-top:auto;}
-.hp-bigcta{display:block;width:max-content;margin:26px auto 0;background:#7C5CFC;color:#fff;font-weight:700;font-size:14.5px;padding:13px 30px;border-radius:12px;}
-.hp-bigcta:hover{background:#6344DF;}
+.hp-prod:hover{border-color:var(--spec-violet);transform:translateY(-3px);box-shadow:0 18px 34px -20px rgba(20,19,32,.28);}
+.hp-prodimg{height:172px;background:var(--spec-surface);overflow:hidden;}
+.hp-prodimg img{width:100%;height:100%;object-fit:cover;transition:transform .3s ease;}
+.hp-prod:hover .hp-prodimg img{transform:scale(1.05);}
+.hp-noimg{height:100%;display:grid;place-items:center;color:#B7B2C9;font-size:12px;letter-spacing:.2em;font-weight:700;}
+.hp-prodbody{padding:14px 15px 16px;display:flex;flex-direction:column;gap:5px;flex:1;}
+/* One accent element per card max (price, violet) — the pilot badge stays a
+   quiet, muted meta chip so it never competes with the price for attention. */
+.hp-badge{align-self:flex-start;display:flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;color:var(--spec-text-2nd);background:none;border:1px solid var(--spec-border);padding:3px 8px;border-radius:999px;}
+.hp-prodname{font-size:14px;font-weight:700;line-height:1.3;color:var(--spec-ink);}
+.hp-price{font-family:var(--font-ibm-plex-mono);font-size:15px;font-weight:600;color:var(--spec-violet-deep);font-variant-numeric:tabular-nums;}
+.hp-vend{font-size:11.5px;color:var(--spec-text-2nd);margin-top:auto;}
+.hp-bigcta{display:block;width:max-content;margin:28px auto 0;background:var(--spec-violet);color:#fff;font-weight:700;font-size:14.5px;padding:14px 30px;border-radius:var(--spec-radius-btn);transition:background .15s;}
+.hp-bigcta:hover{background:var(--spec-violet-deep);}
+
+/* Shop by department + buying tools */
 .hp-depts{display:flex;flex-wrap:wrap;gap:10px;}
-.hp-dept{background:#14141F;border:1px solid rgba(255,255,255,.1);border-radius:11px;padding:14px 16px;font-size:13.5px;font-weight:600;color:#D5D4E0;transition:border-color .15s,background .15s;}
-.hp-dept:hover{border-color:rgba(124,92,252,.5);background:rgba(124,92,252,.08);color:#C4B5FD;}
-.hp-dept.svc:hover{border-color:rgba(52,211,153,.5);background:rgba(52,211,153,.08);color:#34D399;}
-.hp-tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
-.hp-tool{background:#12121B;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:20px;}
-.hp-tooldot{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#7C5CFC,#34D399);margin-bottom:13px;}
-.hp-tool b{font-size:15.5px;font-weight:800;}
-.hp-tool p{color:#9A97AF;font-size:13.5px;line-height:1.6;margin:7px 0 0;}
-.hp-vendorband{max-width:1160px;margin:56px auto 0;padding:0 22px;}
-.hp-vbin{background:linear-gradient(120deg,rgba(124,92,252,.16),rgba(52,211,153,.08));border:1px solid rgba(124,92,252,.3);border-radius:18px;padding:30px 32px;display:flex;justify-content:space-between;align-items:center;gap:22px;flex-wrap:wrap;}
-.hp-vbin h2{font-size:22px;font-weight:800;letter-spacing:-.02em;}
-.hp-vbin p{color:#B8B6CC;font-size:14.5px;line-height:1.55;margin:8px 0 0;max-width:52ch;}
-.hp-faqs{display:flex;flex-direction:column;gap:10px;max-width:820px;}
-.hp-faq{background:#12121B;border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden;}
-.hp-faq.open{border-color:rgba(124,92,252,.35);}
-.hp-faqq{width:100%;display:flex;justify-content:space-between;align-items:center;gap:14px;font-family:inherit;font-size:15px;font-weight:700;color:#F0F0F5;background:none;border:none;padding:17px 18px;cursor:pointer;text-align:left;}
-.hp-faqq:focus-visible{outline:2px solid #7C5CFC;outline-offset:-2px;}
-.hp-faqi{color:#A78BFA;font-size:20px;font-weight:400;flex-shrink:0;}
-.hp-faqa{padding:0 18px 17px;color:#B8B6CC;font-size:14px;line-height:1.65;}
-.hp-foot{margin-top:64px;border-top:1px solid rgba(255,255,255,.08);background:#0C0C13;padding-bottom:0;}
-.hp-footcols{max-width:1160px;margin:0 auto;padding:44px 22px 30px;display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:28px;}
+.hp-dept{background:#fff;border:1px solid var(--spec-border);border-radius:11px;padding:14px 16px;font-size:13.5px;font-weight:600;color:var(--spec-slate);transition:border-color .15s,background .15s,color .15s;}
+.hp-dept:hover{border-color:var(--spec-violet);background:#F3F1FB;color:var(--spec-violet-deep);}
+.hp-dept.svc:hover{border-color:var(--spec-success);background:#EDF7F1;color:var(--spec-success);}
+.hp-tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;}
+.hp-tool{background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-lg);padding:24px;}
+.hp-tooldot{width:36px;height:36px;border-radius:var(--spec-radius-md);background:linear-gradient(135deg,var(--spec-violet),var(--spec-lilac));margin-bottom:14px;}
+.hp-tool b{font-size:15.5px;font-weight:700;color:var(--spec-ink);}
+.hp-tool p{color:var(--spec-text-2nd);font-size:13.5px;line-height:1.6;margin:8px 0 0;}
+
+/* Vendor early-access band — dark accent card inside the light page */
+.hp-vendorband{max-width:1160px;margin:60px auto 0;padding:0 22px;}
+.hp-vbin{background:var(--spec-ink);border-radius:var(--spec-radius-lg);padding:36px;display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap;position:relative;overflow:hidden;}
+.hp-vbin::before{content:'';position:absolute;inset:0;background:
+  repeating-linear-gradient(118deg,transparent 0 26px,rgba(169,157,242,.08) 26px 29px),
+  linear-gradient(rgba(169,157,242,.06) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(169,157,242,.06) 1px,transparent 1px);
+  background-size:auto,64px 64px,64px 64px;
+  mask-image:linear-gradient(180deg,rgba(0,0,0,.8),rgba(0,0,0,.3));}
+.hp-vbin>*{position:relative;}
+.hp-vbin h2{font-family:var(--font-space-grotesk);color:#F8F7FB;font-size:23px;font-weight:700;letter-spacing:-.02em;}
+.hp-vbin p{color:#C9C6D6;font-size:14.5px;line-height:1.6;margin:10px 0 0;max-width:52ch;}
+
+/* FAQ */
+.hp-faqs{display:flex;flex-direction:column;gap:12px;max-width:820px;}
+.hp-faq{background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-md);overflow:hidden;}
+.hp-faq.open{border-color:var(--spec-violet);}
+.hp-faqq{width:100%;display:flex;justify-content:space-between;align-items:center;gap:14px;font-family:inherit;font-size:15px;font-weight:700;color:var(--spec-ink);background:none;border:none;padding:18px 20px;cursor:pointer;text-align:left;}
+.hp-faqq:focus-visible{outline:2px solid var(--spec-violet);outline-offset:-2px;}
+.hp-faqi{color:var(--spec-violet);font-size:20px;font-weight:400;flex-shrink:0;}
+.hp-faqa{padding:0 20px 18px;color:var(--spec-text-2nd);font-size:14px;line-height:1.65;}
+
+/* Footer — dark ink, bookends the light content area */
+.hp-foot{margin-top:64px;border-top:1px solid rgba(255,255,255,.08);background:var(--spec-ink);padding-bottom:0;}
+.hp-footcols{max-width:1160px;margin:0 auto;padding:48px 22px 32px;display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:28px;}
 @media(max-width:720px){.hp-footcols{grid-template-columns:1fr 1fr;}}
-.hp-footcols>div>b{font-size:17px;font-weight:800;}
-.hp-foottag{color:#8080A0;font-size:13px;line-height:1.6;margin:10px 0 0;max-width:34ch;}
-.hp-footcols h4{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8080A0;margin:0 0 12px;}
-.hp-footcols a{display:block;color:#B8B6CC;font-size:13.5px;margin-bottom:9px;}
-.hp-footcols a:hover{color:#C4B5FD;}
-.hp-footbottom{border-top:1px solid rgba(255,255,255,.06);padding:18px 22px;text-align:center;color:#5A5A70;font-size:12.5px;}
-.hp-modal{position:fixed;inset:0;background:rgba(0,0,0,.62);display:grid;place-items:center;z-index:60;padding:20px;}
-.hp-modalin{position:relative;background:#12121B;border:1px solid rgba(255,255,255,.12);border-radius:18px;max-width:460px;width:100%;padding:26px;}
-.hp-modalx{position:absolute;top:14px;right:16px;background:none;border:none;color:#8080A0;font-size:24px;line-height:1;cursor:pointer;}
-.hp-modalin h3{font-size:20px;font-weight:800;letter-spacing:-.02em;margin:0;}
-.hp-easub{color:#9A97AF;font-size:13.5px;line-height:1.5;margin:8px 0 16px;}
+.hp-footcols>div>b{font-family:var(--font-space-grotesk);font-size:17px;font-weight:700;color:#F8F7FB;}
+.hp-foottag{color:#9B98AC;font-size:13px;line-height:1.6;margin:10px 0 0;max-width:34ch;}
+.hp-footcols h4{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8B889C;margin:0 0 12px;}
+.hp-footcols a{display:block;color:#C9C6D6;font-size:13.5px;margin-bottom:9px;}
+.hp-footcols a:hover{color:var(--spec-lilac);}
+.hp-footbottom{border-top:1px solid rgba(255,255,255,.06);padding:18px 22px;text-align:center;color:#75718A;font-size:12.5px;}
+
+/* Early-access modal */
+.hp-modal{position:fixed;inset:0;background:rgba(20,19,32,.55);display:grid;place-items:center;z-index:60;padding:20px;}
+.hp-modalin{position:relative;background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-lg);max-width:460px;width:100%;padding:28px;box-shadow:0 30px 60px -20px rgba(20,19,32,.4);}
+.hp-modalx{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--spec-text-2nd);font-size:24px;line-height:1;cursor:pointer;}
+.hp-modalin h3{font-family:var(--font-space-grotesk);font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0;color:var(--spec-ink);}
+.hp-easub{color:var(--spec-text-2nd);font-size:13.5px;line-height:1.5;margin:8px 0 16px;}
 .hp-earow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
 @media(max-width:440px){.hp-earow{grid-template-columns:1fr;}}
-.hp-modalin input,.hp-modalin textarea{width:100%;font-family:inherit;font-size:14px;padding:11px 13px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:#0A0A0F;color:#F0F0F5;outline:none;margin-bottom:10px;resize:vertical;}
-.hp-modalin input:focus,.hp-modalin textarea:focus{border-color:#7C5CFC;}
-.hp-eanote{font-size:11.5px;color:#63607A;text-align:center;margin:12px 0 0;line-height:1.5;}
+.hp-modalin input,.hp-modalin textarea{width:100%;font-family:inherit;font-size:14px;padding:12px 13px;border-radius:var(--spec-radius-md);border:1px solid var(--spec-border);background:var(--spec-warm-white);color:var(--spec-ink);outline:none;margin-bottom:10px;resize:vertical;}
+.hp-modalin input::placeholder,.hp-modalin textarea::placeholder{color:#9E9BAF;}
+.hp-modalin input:focus,.hp-modalin textarea:focus{border-color:var(--spec-violet);box-shadow:0 0 0 3px rgba(108,92,224,.15);}
+.hp-eanote{font-size:11.5px;color:#8B889C;text-align:center;margin:12px 0 0;line-height:1.5;}
 .hp-eadone{text-align:center;padding:8px 0;}
-.hp-eabig{width:52px;height:52px;border-radius:50%;background:rgba(52,211,153,.16);color:#34D399;display:grid;place-items:center;font-size:26px;margin:0 auto 14px;}
+.hp-eabig{width:52px;height:52px;border-radius:50%;background:#EDF7F1;color:var(--spec-success);display:grid;place-items:center;font-size:26px;margin:0 auto 14px;}
 .hp-eadone h3{font-size:20px;}
-.hp-eadone p{color:#9A97AF;font-size:14px;line-height:1.6;margin:10px 0 18px;}
+.hp-eadone p{color:var(--spec-text-2nd);font-size:14px;line-height:1.6;margin:10px 0 18px;}
 
 /* Mobile sticky primary CTA */
 .hp-mobilecta{display:none;}
 @media(max-width:760px){
   .hp{padding-bottom:78px;}
-  .hp-mobilecta{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:45;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:rgba(10,10,15,.94);backdrop-filter:blur(16px);border-top:1px solid rgba(255,255,255,.08);}
-  .hp-mobilectabtn{display:block;width:100%;text-align:center;background:#7C5CFC;color:#fff;font-weight:700;font-size:15px;padding:13px;border-radius:11px;}
+  .hp-mobilecta{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:45;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:rgba(255,255,255,.96);backdrop-filter:blur(16px);border-top:1px solid var(--spec-border);}
+  .hp-mobilectabtn{display:block;width:100%;text-align:center;background:var(--spec-violet);color:#fff;font-weight:700;font-size:15px;padding:13px;border-radius:var(--spec-radius-md);}
 }
 `;
