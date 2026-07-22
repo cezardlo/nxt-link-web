@@ -5,6 +5,59 @@
 > reconciled in `workplace/plans/MASTER-PLAN.md` (read it first; it links the
 > 7 department plans and carries Cesar's 14-item decision list).
 
+## MVP product contract (Cesar, 2026-07-22)
+
+Canonical definition: [[Project]] → **Product operating model**. Build and QA
+against one end-to-end Project workspace, not isolated pages. The required
+continuity is: listing action (buy/RFQ/question/contact/demo/pilot) → persistent
+buyer/vendor conversation → documents/NDA/quote revisions → purchase → tracked
+delivery or implementation → commission ledger → history/reorder.
+
+Highest-value connection work:
+- Make Project the shared container for messages, questions, NDAs, documents,
+  demos/pilots, quotes, order, delivery/implementation, and activity history.
+- Let one company switch buyer/vendor modes; preserve one company identity.
+- Make onboarding fast and progressive: minimal account first, visual industry/
+  category personalization second, vendor completeness over time.
+- Give buyers durable saved items/vendors/conversations and relationship history.
+- Give vendors one inbox for listing questions and active project conversations,
+  with editable storefront/listings and clear next actions.
+- Route every completed direct purchase or converted deal into the one ledger;
+  never charge merely for asking, messaging, demoing, or piloting.
+
+## Verified performance findings (2026-07-22)
+
+Full evidence and non-findings: `workplace/research/performance-audit-2026-07-22.md`.
+
+- **P0 — remove/replace blanket public API caching:** `vercel.json` applies
+  `public, s-maxage=60` to `/api/(.*)`, including authenticated buyer/vendor/
+  admin routes. Authenticated responses must be private/no-store; public catalog
+  caching must be allowlisted route by route.
+- **P1 — batch RFQ fan-out writes:** bundled cart submission and assisted RFQ
+  dispatch perform per-vendor writes/duplicate checks/notifications sequentially
+  (up to 8 matched vendors). Replace N+1 work with one duplicate read + one bulk
+  insert, then bounded-parallel best-effort notifications.
+- **P1 — remove dashboard request waterfalls:** buyer loads dashboard → alerts →
+  saved items sequentially; vendor loads leads → alerts → open requests
+  sequentially. Fetch independent resources concurrently or return one composed
+  dashboard payload.
+- **P1 — add latency evidence:** only the LLM router records provider latency.
+  Add request IDs + `Server-Timing`/structured durations for the slow business
+  flows before naming a dependency bottleneck; watch p50/p95/p99 in production.
+- **P1 — targeted optimistic UI:** cart, buyer quote decision, and vendor lead
+  status already update immediately. Add rollback-safe optimistic messages and
+  project items; stop mutation → full reload patterns. Do not optimistically
+  claim money, legal acceptance, or destructive actions succeeded.
+- **P2 — rendering/cache audit:** 39/41 pages are client components and 82 API
+  routes force dynamic behavior. The issue is mostly hydration + client fetch
+  delay, not the server rebuilding every page's HTML. Move stable public shells/
+  catalog data toward server rendering + explicit revalidation while keeping
+  personalized workspaces dynamic.
+- **No action — manual JSON compression:** Next.js compression is enabled by
+  default and the deployment platform handles transfer compression. Verify
+  `Content-Encoding` in deployed responses; do not add application-level gzip
+  middleware without evidence.
+
 ## Sticky-platform gaps (from Cesar's positioning, 2026-07-20)
 The positioning ([[Project]]) promises contracts + alerts + documents +
 communication + relationship tracking. Contracts and alerts are planned;
