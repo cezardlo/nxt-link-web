@@ -100,3 +100,28 @@ export const GOOGLE_CONTINUE_AGREES_MSG = {
 export function bilingualCopy(msg: { en: string; es: string }, first: 'en' | 'es' = 'en'): string {
   return first === 'es' ? `${msg.es} / ${msg.en}` : `${msg.en} / ${msg.es}`;
 }
+
+// ---------------------------------------------------------------------------
+// Open-redirect guard (Opus G5 review of commit 76f4686, Finding 2). Both
+// oauth_from (this file's own param) and next (the pre-existing magic-link
+// param, same shape) ride back through Supabase's redirectTo echo and land
+// in /auth/callback's query string — pure user input by the time the
+// callback reads it. A raw `new URL(value, origin)` treats a
+// protocol-relative value like `//evil.com` as cross-origin (browsers
+// resolve the missing scheme against the current one), and a backslash
+// variant like `/\evil.com` normalizes the same way in most browsers. Accept
+// ONLY a same-origin relative path — a single leading slash, not two, and no
+// backslashes anywhere — otherwise return the caller's own safe fallback
+// instead of the raw value.
+/**
+ * Validate a redirect target pulled from a query param before it is ever
+ * concatenated into `new URL(value, origin)`. Callers pass the lane's own
+ * safe default as `fallback` (e.g. '/vendor-signup', '/join/<token>',
+ * '/signup') — every rejection path lands there instead of the raw input.
+ */
+export function safeRelativePath(value: string | null | undefined, fallback: string): string {
+  if (!value) return fallback;
+  if (value.includes('\\')) return fallback; // browsers can treat \ as / — same-shaped attack as //
+  if (!/^\/[^/]/.test(value)) return fallback; // single leading slash only, not protocol-relative
+  return value;
+}

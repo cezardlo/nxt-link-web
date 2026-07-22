@@ -204,8 +204,8 @@ export default function JoinPage({ params }: { params: { token: string } }) {
     <label className="jn-agree">
       <input type="checkbox" checked={agree} onChange={(e) => { setAgree(e.target.checked); if (e.target.checked) setErr(''); }} />
       <span>
-        {t.agreePre} <a href="/terms" target="_blank" rel="noopener">{t.agreeTos}</a> {t.agreeAnd}{' '}
-        <a href="/privacy" target="_blank" rel="noopener">{t.agreePrivacy}</a>.
+        {t.agreePre} <a href="/terms" target="_blank" rel="noopener noreferrer">{t.agreeTos}</a> {t.agreeAnd}{' '}
+        <a href="/privacy" target="_blank" rel="noopener noreferrer">{t.agreePrivacy}</a>.
       </span>
     </label>
   );

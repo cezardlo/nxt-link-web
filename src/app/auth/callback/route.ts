@@ -8,6 +8,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server-auth';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { ensureVendorProfile } from '@/lib/vendor/profile';
 import { recordLegalAcceptance } from '@/lib/legal/acceptance';
+import { safeRelativePath } from '@/lib/auth/google';
 
 function metaCategories(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
@@ -18,6 +19,20 @@ function metaCategories(v: unknown): string[] {
     if (out.length >= 10) break;
   }
   return out;
+}
+
+// Finding 3 (Opus G5 review of 76f4686): exchangeCodeForSession has already
+// set the auth cookies by the time any ?err=google_terms branch runs below,
+// so a failed click-wrap recording would otherwise leave the user silently
+// signed in. Clear the session on the same server client before every such
+// bounce — createServerSupabaseClient's cookie adapter is wired to
+// onAuthStateChange, so SIGNED_OUT here removes the cookies the same way a
+// real sign-out would. Best-effort: a signOut hiccup must never crash the
+// redirect, but it runs BEFORE the redirect is returned, not instead of it.
+async function signOutFailedTermsSession(sb: Awaited<ReturnType<typeof createServerSupabaseClient>>) {
+  try {
+    await sb.auth.signOut();
+  } catch { /* best-effort — see comment above */ }
 }
 
 export async function GET(req: Request) {
@@ -122,14 +137,31 @@ export async function GET(req: Request) {
                 // failure, bounce back to /join instead of silently
                 // finishing an unrecorded signup; the invite's status is
                 // untouched so retrying (once the recording works) still works.
-                if (oauthLane === 'invite') {
+                //
+                // Finding 4 (Opus G5 review of 76f4686): this block is
+                // reached whenever an invite matches — by token (oauth_lane
+                // 'invite') OR by email fallback, which an 'organic' (or
+                // even 'buyer') Google click can also hit if that Google
+                // account's email happens to match an open invite. Gating
+                // the recording on oauthLane === 'invite' alone left THAT
+                // arrival unrecorded: it still mints an APPROVED profile
+                // below, and the organic recording block further down never
+                // runs for it either (guarded by `!isVendor`, which this
+                // block just set true). Fire the recording for ANY Google
+                // OAuth lane reaching this point, not just 'invite'. Plain
+                // magic-link arrivals thread no oauth_lane at all (null) —
+                // those already recorded this exact acceptance in
+                // /api/invites POST before the sign-in email was even sent,
+                // so they must stay excluded or they'd be double-recorded.
+                if (oauthLane) {
                   const rec = await recordLegalAcceptance(db, {
                     authId: data.user.id, email: data.user.email, context: 'invite_join',
                     languageShown: oauthLocale, relatedObjectType: 'vendor_invite',
                     relatedObjectId: inv.id as string, req,
                   });
                   if (!rec.ok) {
-                    const back = oauthFrom || (oauthInvite ? `/join/${oauthInvite}` : '/vendor-signup');
+                    const back = safeRelativePath(oauthFrom, oauthInvite ? `/join/${oauthInvite}` : '/vendor-signup');
+                    await signOutFailedTermsSession(sb);
                     return NextResponse.redirect(new URL(`${back}?err=google_terms`, url.origin));
                   }
                 }
@@ -187,7 +219,8 @@ export async function GET(req: Request) {
               languageShown: oauthLocale, relatedObjectType: 'oauth_google', req,
             });
             if (!rec.ok) {
-              return NextResponse.redirect(new URL(`${oauthFrom || '/vendor-signup'}?err=google_terms`, url.origin));
+              await signOutFailedTermsSession(sb);
+              return NextResponse.redirect(new URL(`${safeRelativePath(oauthFrom, '/vendor-signup')}?err=google_terms`, url.origin));
             }
             try {
               const meta = data.user.user_metadata || {};
@@ -219,7 +252,8 @@ export async function GET(req: Request) {
               languageShown: oauthLocale, relatedObjectType: 'oauth_google', req,
             });
             if (!rec.ok) {
-              return NextResponse.redirect(new URL(`${oauthFrom || '/signup'}?err=google_terms`, url.origin));
+              await signOutFailedTermsSession(sb);
+              return NextResponse.redirect(new URL(`${safeRelativePath(oauthFrom, '/signup')}?err=google_terms`, url.origin));
             }
           }
 
@@ -276,9 +310,14 @@ export async function GET(req: Request) {
             }
           }
         }
-        dest = next || organicDest || (role === 'admin' || role === 'super_admin' ? '/admin'
+        // Finding 2 (same-shaped pre-existing sink): `next` is raw user input
+        // (the magic-link path has threaded it unsanitized since before the
+        // Google work landed) — validate it the same way as oauth_from
+        // before it reaches `new URL(dest, url.origin)` below.
+        const routedDefault = organicDest || (role === 'admin' || role === 'super_admin' ? '/admin'
           : role === 'vendor' || isVendor ? '/vendor/portal?welcome=1'
           : '/buyer');
+        dest = safeRelativePath(next, routedDefault);
       }
     }
   } catch { /* fall through to login */ }
