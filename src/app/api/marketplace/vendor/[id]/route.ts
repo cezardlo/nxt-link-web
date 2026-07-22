@@ -23,11 +23,11 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   // auto-returns to active first), and so are not-yet-approved (pending)
   // vendors — an invited vendor is no longer born approved (F1 decision,
   // 2026-07-22): the invite link gets them a frictionless account, not a
-  // public storefront. Both cases return the SAME 404 body/status as an
-  // unknown id — no "pending" vs "suspended" vs "doesn't exist" oracle.
+  // public storefront. Hidden vendors return the SAME body as an unknown id
+  // — no "pending" vs "suspended" vs "doesn't exist" oracle.
   const modStatus = await autoReactivateIfExpired(db, id, vendor);
   if (modStatus !== 'active' || vendor.status !== 'approved') {
-    return NextResponse.json({ ok: false, message: 'This vendor is not currently available.' }, { status: 404 });
+    return NextResponse.json({ ok: false, message: 'Vendor not found' }, { status: 404 });
   }
 
   const [{ data: products }, { data: services }, { data: cases }, { data: videos }, { data: reviews }, { data: certRows }, { data: galleryRows }, { data: team }, { count: dealsClosed }] = await Promise.all([

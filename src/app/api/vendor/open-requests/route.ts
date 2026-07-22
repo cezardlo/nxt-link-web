@@ -30,8 +30,10 @@ export async function GET() {
   if (!vendor) return NextResponse.json({ ok: false, message: 'Profile not found' }, { status: 404 });
 
   const db = getSupabaseClient({ admin: true });
+  // Never select contact_email here — the browse response must stay
+  // contact-free (POST re-queries it separately when a response is created).
   const { data: reqs } = await db.from('client_requests')
-    .select('id, public_ref, category, problem, location, urgency, budget_range, created_at, contact_email')
+    .select('id, public_ref, category, problem, location, urgency, budget_range, created_at')
     .in('status', OPEN_STATUSES)
     .order('created_at', { ascending: false })
     .limit(50);

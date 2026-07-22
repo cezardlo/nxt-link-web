@@ -29,9 +29,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   // read-side check (isRestricted), same as the marketplace browse route —
   // no write-on-read here.
   const { data: vendor } = await db.from('vendor_profiles')
-    .select('id, company_name, city, website, description, moderation_status, suspended_until')
+    .select('id, company_name, city, website, description, status, moderation_status, suspended_until')
     .eq('id', row.vendor_id).maybeSingle();
-  if (vendor && isRestricted({ moderation_status: (vendor.moderation_status as string) || null, suspended_until: (vendor.suspended_until as string) || null })) {
+  if (vendor && ((vendor.status as string) !== 'approved' || isRestricted({ moderation_status: (vendor.moderation_status as string) || null, suspended_until: (vendor.suspended_until as string) || null }))) {
     return NextResponse.json({ ok: false, message: 'Listing not found' }, { status: 404 });
   }
 
