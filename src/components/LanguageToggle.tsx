@@ -53,7 +53,7 @@ export default function LanguageToggle({
 
 const CSS = `
 .nxlt{display:inline-flex;border-radius:10px;overflow:hidden;flex-shrink:0;}
-.nxlt button{font-family:inherit;font-size:12.5px;font-weight:700;letter-spacing:.04em;padding:8px 14px;min-height:36px;border:none;background:none;cursor:pointer;}
+.nxlt button{font-family:inherit;font-size:12.5px;font-weight:700;letter-spacing:.04em;padding:8px 14px;min-height:44px;border:none;background:none;cursor:pointer;}
 .nxlt button:focus-visible{outline:2px solid #6C5CE0;outline-offset:-2px;}
 .nxlt-light{border:1px solid #E2DFEC;background:#fff;}
 .nxlt-light button{color:#615F72;}

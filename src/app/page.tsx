@@ -3,33 +3,32 @@
 // NXT//LINK homepage — task-oriented action engine (Cesar's spec, distilled
 // from Amazon Business / Fiverr Pro / Alibaba / Thomasnet / Upwork).
 //
-// VISUAL RESKIN (2026-07-21, this pass): reskinned from the app's old dark
-// "command-center" theme to Design System v1.0 (vault/Design-System.md) —
-// light content + violet #6C5CE0 accent, applying the `--spec-*` tokens
-// wired in globals.css. The header stays DARK on purpose: it's the bridge
-// into the rest of the (still-dark) app chrome — see the CSS header note
-// below. Structure: dark sticky header (logo + known-item search + sign-in/
-// join/post-a-request) → a slim always-on category nav bar → a rich dark
-// hero carrying a big "describe your need" prompt card (the RFQ path,
-// Fiverr-Pro-style) with quick-start chips + an illustrative vendor proof
-// card → numbered how-it-works → elevated category tiles → a quiet trust
-// bar → THEN the existing discovery sections (featured listings, shop-by-
-// department, buying tools, vendor early-access band, FAQs, footer), all
-// restyled to match. Footer stays dark too, bookending the light content
-// area (a second bridge back toward the app).
+// FLOW BLUEPRINT (2026-07-22, this pass — workplace/plans/FLOW-BLUEPRINT-
+// 2026-07-22.md, Slice 1, Cesar-approved): the header flips from dark to
+// LIGHT — a utility bar with NO primary CTA (logo, known-item search,
+// language, "Become a Vendor", Sign in, Join). "Post a Request" no longer
+// lives in the header; it's the hero prompt card's own button plus the
+// mobile sticky bar. Structure top to bottom: light sticky header → a slim
+// always-on category nav bar → a rich dark hero (deliberate accent moment)
+// carrying the "describe your need" prompt card + a grouped secondary
+// "Search Products & Services" action + quick-start chips + an illustrative
+// vendor proof card → the vendor pitch band (moved here, directly after the
+// hero — the single highest-evidence structural change) → numbered
+// how-it-works → elevated category tiles (with a "Browse all categories"
+// link into /marketplace's department filter, replacing the old duplicate
+// 14-item "Shop by department" list) → a quiet trust bar → featured
+// listings → buying tools → FAQs → footer. Footer stays dark, bookending
+// the light content area.
 //
-// Content/links/routes are UNCHANGED from the ae54412 functional rebuild.
-// The only new user-facing strings are for the new prompt card + its
-// suggestion chips + the illustrative proof card (Cesar-approved direction
-// update, 2026-07-21) — all bilingual, no new claims/stats/escrow language;
-// the prompt-card placeholder reuses the existing /intake placeholder
-// wording verbatim. Featured products & departments are REAL data from the
-// marketplace API.
+// Content/links/routes are otherwise UNCHANGED from the ae54412 functional
+// rebuild. Featured products are REAL data from the marketplace API.
 //
 // Trust-bar wording deviates from the original brief on purpose (Cesar-approved,
 // workplace/plans/DECISIONS-2026-07-21.md): no escrow, no "secure payments" —
-// NXT//LINK never implies it holds funds. See the ship report for the exact
-// copy substitutions.
+// NXT//LINK never implies it holds funds. The vendor pitch band's "first two
+// deals commission-free" line was removed for the same reason (2026-07-22):
+// it conflicts with the binding $250-first-deal-credit decision — no
+// replacement promise, per the blueprint's §1.10/§6 instruction.
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
@@ -64,7 +63,6 @@ interface Card {
   vendor_city: string | null; vendor_verified?: boolean;
   pricing: { range?: string } | null; pilot: { available?: boolean } | null;
 }
-interface Dept { fg: string; label_en: string; label_es: string; is_service: boolean }
 
 // The 6 curated category tiles (Cesar's spec) mapped to REAL functional-group
 // values from the marketplace taxonomy (src/app/api/marketplace/categories) —
@@ -88,6 +86,7 @@ const T: Record<Lang, Record<string, string>> = {
     searchBtn: 'Search',
     signIn: 'Sign in',
     join: 'Join',
+    becomeVendor: 'Become a Vendor',
     postRequest: 'Post a Request',
     eyebrow: 'Borderplex Industrial Marketplace',
     heroTitle: 'Find industrial suppliers. Get competitive quotes. Close deals safely.',
@@ -112,7 +111,7 @@ const T: Record<Lang, Record<string, string>> = {
     trustFree: 'Free to send · no commitment',
     featuredHeading: 'Featured on NXT//LINK', seeAll: 'See all →', pilotAvailable: 'Pilot available',
     createFreeAccount: 'Create a free account',
-    deptHeading: 'Shop by department',
+    browseAllCategories: 'Browse all categories →',
     toolsHeading: 'Everything the buying process needs',
     tool1T: 'Request quotes in one place', tool1D: 'Send one request, reach the vendors you choose. No chasing emails.',
     tool2T: 'Compare vendors side by side', tool2D: 'Price, lead time, installation, warranty, and support — lined up to decide fast.',
@@ -121,14 +120,14 @@ const T: Record<Lang, Record<string, string>> = {
     tool5T: 'Protected & transparent', tool5D: 'Deals run through NXT//LINK. Your introduction is protected and pricing is clear.',
     tool6T: 'Built for the Borderplex', tool6D: 'Local El Paso & Juárez vendors, cross-border ready, English and Spanish.',
     vendorHeading: 'Are you a supplier?',
-    vendorBody: 'We’re onboarding the first Borderplex vendors now — personally. Apply for early access and we’ll set up your storefront with you, free. Your first two deals are commission-free.',
+    vendorBody: 'We’re onboarding the first Borderplex vendors now — personally. Apply for early access and we’ll set up your storefront with you, free.',
     vendorApply: 'Apply for early access',
     eaTitle: 'Apply for early access',
     eaSub: 'Tell us about your company. We onboard vendors one-on-one — no long forms, no cost to join.',
     eaCompany: 'Company name', eaContact: 'Your name', eaEmail: 'Work email', eaPhone: 'Phone (optional)',
     eaCity: 'City (El Paso, Juárez…)', eaNote: 'What do you sell or service? (optional)',
     eaSubmit: 'Request early access', eaSending: 'Sending…',
-    eaFootnote: 'Free to join · first two deals commission-free · then 5% when you get paid.',
+    eaFootnote: 'Free to join · then 5% when you get paid.',
     eaDoneTitle: 'You’re on the list.',
     eaDoneBody: 'Thanks — a member of the NXT//LINK team will reach out personally to set up your storefront. Keep an eye on your inbox.',
     eaDoneBtn: 'Done',
@@ -157,6 +156,7 @@ const T: Record<Lang, Record<string, string>> = {
     searchBtn: 'Buscar',
     signIn: 'Iniciar sesión',
     join: 'Únete',
+    becomeVendor: 'Conviértete en proveedor',
     postRequest: 'Publicar una solicitud',
     eyebrow: 'Mercado industrial del Borderplex',
     heroTitle: 'Encuentra proveedores industriales. Obtén cotizaciones competitivas. Cierra tratos de forma segura.',
@@ -181,7 +181,7 @@ const T: Record<Lang, Record<string, string>> = {
     trustFree: 'Gratis enviar · sin compromiso',
     featuredHeading: 'Destacado en NXT//LINK', seeAll: 'Ver todo →', pilotAvailable: 'Piloto disponible',
     createFreeAccount: 'Crea una cuenta gratis',
-    deptHeading: 'Explorar por departamento',
+    browseAllCategories: 'Ver todas las categorías →',
     toolsHeading: 'Todo lo que necesita el proceso de compra',
     tool1T: 'Solicita cotizaciones en un solo lugar', tool1D: 'Envía una solicitud y llega a los proveedores que elijas. Sin perseguir correos.',
     tool2T: 'Compara proveedores lado a lado', tool2D: 'Precio, tiempo de entrega, instalación, garantía y soporte — listos para decidir rápido.',
@@ -190,14 +190,14 @@ const T: Record<Lang, Record<string, string>> = {
     tool5T: 'Protegido y transparente', tool5D: 'Los tratos se manejan a través de NXT//LINK. Tu presentación está protegida y el precio es claro.',
     tool6T: 'Hecho para el Borderplex', tool6D: 'Proveedores locales de El Paso y Juárez, listos para cruzar la frontera, en inglés y español.',
     vendorHeading: '¿Eres proveedor?',
-    vendorBody: 'Estamos incorporando a los primeros proveedores del Borderplex ahora — de forma personal. Solicita acceso anticipado y armamos tu escaparate contigo, gratis. Tus primeros dos tratos no tienen comisión.',
+    vendorBody: 'Estamos incorporando a los primeros proveedores del Borderplex ahora — de forma personal. Solicita acceso anticipado y armamos tu escaparate contigo, gratis.',
     vendorApply: 'Solicitar acceso anticipado',
     eaTitle: 'Solicitar acceso anticipado',
     eaSub: 'Cuéntanos sobre tu empresa. Incorporamos proveedores uno a uno — sin formularios largos, sin costo por unirte.',
     eaCompany: 'Nombre de la empresa', eaContact: 'Tu nombre', eaEmail: 'Correo de trabajo', eaPhone: 'Teléfono (opcional)',
     eaCity: 'Ciudad (El Paso, Juárez…)', eaNote: '¿Qué vendes o qué servicio ofreces? (opcional)',
     eaSubmit: 'Solicitar acceso anticipado', eaSending: 'Enviando…',
-    eaFootnote: 'Gratis unirte · tus primeros dos tratos sin comisión · luego 5% cuando te paguen.',
+    eaFootnote: 'Gratis unirte · luego 5% cuando te paguen.',
     eaDoneTitle: 'Ya estás en la lista.',
     eaDoneBody: 'Gracias — alguien del equipo de NXT//LINK te contactará personalmente para armar tu escaparate. Mantente al pendiente de tu correo.',
     eaDoneBtn: 'Listo',
@@ -225,7 +225,6 @@ export default function Home() {
   const [lang, setLang] = useLang(); // stored `nxt_lang` — shared across marketplace pages
   const t = T[lang];
   const [featured, setFeatured] = useState<Card[]>([]);
-  const [depts, setDepts] = useState<Dept[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
@@ -265,14 +264,9 @@ export default function Home() {
   useEffect(() => {
     (async () => {
       try {
-        const [l, c] = await Promise.all([
-          fetch('/api/marketplace/listings?kind=product'),
-          fetch('/api/marketplace/categories'),
-        ]);
+        const l = await fetch('/api/marketplace/listings?kind=product');
         const lj = await l.json();
         setFeatured((lj.listings || []).slice(0, 8));
-        const cj = await c.json();
-        setDepts((cj.departments || []).map((d: Dept) => ({ fg: d.fg, label_en: d.label_en, label_es: d.label_es, is_service: d.is_service })));
       } catch { /* landing still works without live data */ }
       finally { setLoading(false); }
     })();
@@ -282,11 +276,15 @@ export default function Home() {
     <div className={`hp ${ibmPlexSans.variable}`}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
-      {/* Header: dark ink — deliberately kept dark as the bridge into the
-          rest of the app's dark chrome (sidebar etc., see Design-System.md).
-          Logo left, mega-search center (kept here for known-item / part-
-          number search — the hero below owns the "describe your need" RFQ
-          path), Post a Request / Sign in / Join right. */}
+      {/* Header: LIGHT (Flow Blueprint 2026-07-22 §3/§4) — a utility bar with
+          NO primary CTA. "Post a Request" no longer lives here (it's the
+          hero prompt card's own button + the mobile sticky bar); "Become a
+          Vendor" is now a permanent, equal-weight item next to Sign in.
+          Logo left, mega-search center (known-item / part-number search —
+          the hero owns the "describe your need" RFQ path), language /
+          Become a Vendor / Sign in / Join right. Every control here is a
+          ≥44px hit target with no adjacent overlap (fixes the header
+          click-zone defect). */}
       <header className="hp-header">
         <div className="hp-headmain">
           <a className="hp-brand" href="/"><b>NXT<i>//</i>LINK</b></a>
@@ -302,13 +300,12 @@ export default function Home() {
             <button type="submit">{t.searchBtn}</button>
           </form>
           <div className="hp-headactions">
-            <LanguageToggle lang={lang} onChange={setLang} variant="dark" />
+            <LanguageToggle lang={lang} onChange={setLang} variant="light" />
+            <Link className="hp-vendorlink" href="/vendor-signup">{t.becomeVendor}</Link>
             <a className="hp-signin" href="/login">{t.signIn}</a>
             <a className="hp-joinbtn" href="/signup">{t.join}</a>
-            <a className="hp-rfqinline" href="/intake">{t.postRequest}</a>
           </div>
         </div>
-        <a className="hp-rfqblock" href="/intake">{t.postRequest}</a>
       </header>
 
       {/* Slim always-on category nav bar — same real taxonomy as the tile
@@ -343,6 +340,13 @@ export default function Home() {
               <Link className="hp-promptbtn" href="/intake" aria-label={t.promptAria}>{t.heroCta2}</Link>
             </div>
 
+            {/* Secondary action grouped directly under the primary prompt
+                card — ONE hero action cluster (Flow Blueprint §2), not a
+                button stranded below the trust line. */}
+            <div className="hp-herocta">
+              <button type="button" className="hp-btn outline" onClick={focusSearch}>{t.heroCta1}</button>
+            </div>
+
             <div className="hp-chips">
               {[t.promptChip1, t.promptChip2, t.promptChip3, t.promptChip4, t.promptChip5].map((c) => (
                 <Link key={c} href="/intake" className="hp-chip">{c}</Link>
@@ -354,10 +358,6 @@ export default function Home() {
               <span><ShieldCheck size={ICON_INLINE} aria-hidden="true" /> {t.trustProtected}</span>
               <span><Send size={ICON_INLINE} aria-hidden="true" /> {t.trustFree}</span>
             </div>
-
-            <div className="hp-herocta">
-              <button type="button" className="hp-btn outline" onClick={focusSearch}>{t.heroCta1}</button>
-            </div>
           </div>
 
           <div className="hp-proofcard" aria-hidden="true">
@@ -367,6 +367,20 @@ export default function Home() {
               <div className="hp-proofline">{t.proofResponds}</div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* For vendors band — early access (concierge onboarding). Moved to
+          directly after the hero (Flow Blueprint §2/§3): the single
+          highest-evidence structural change so a vendor never has to scroll
+          past the whole buyer experience first. */}
+      <section className="hp-vendorband">
+        <div className="hp-vbin">
+          <div>
+            <h2>{t.vendorHeading}</h2>
+            <p>{t.vendorBody}</p>
+          </div>
+          <button className="hp-btn" onClick={() => { setEaOpen(true); setEaDone(false); eaStarted.current = Date.now(); }}>{t.vendorApply}</button>
         </div>
       </section>
 
@@ -393,7 +407,7 @@ export default function Home() {
 
       {/* Category tiles — 3x2 grid (swipeable row on mobile), real taxonomy values */}
       <section className="hp-sec">
-        <div className="hp-sechead"><h2>{t.catHeading}</h2></div>
+        <div className="hp-sechead"><h2>{t.catHeading}</h2><Link href="/marketplace">{t.browseAllCategories}</Link></div>
         <div className="hp-cattiles">
           {CATEGORY_TILES.map(({ fg, en, es, Icon }) => (
             <Link key={fg} href={`/marketplace?department=${fg}`} className="hp-cattile">
@@ -438,18 +452,6 @@ export default function Home() {
         </section>
       )}
 
-      {/* Shop by department (full live taxonomy) */}
-      {depts.length > 0 && (
-        <section className="hp-sec">
-          <div className="hp-sechead"><h2>{t.deptHeading}</h2></div>
-          <div className="hp-depts">
-            {depts.map((d) => (
-              <a key={d.fg} className={`hp-dept ${d.is_service ? 'svc' : ''}`} href={`/marketplace?department=${d.fg}`}>{lang === 'es' ? d.label_es : d.label_en}</a>
-            ))}
-          </div>
-        </section>
-      )}
-
       {/* Buying tools */}
       <section className="hp-sec">
         <div className="hp-sechead"><h2>{t.toolsHeading}</h2></div>
@@ -460,17 +462,6 @@ export default function Home() {
           ] as Array<[string, string]>).map(([title, d]) => (
             <div key={title} className="hp-tool"><div className="hp-tooldot" /><b>{title}</b><p>{d}</p></div>
           ))}
-        </div>
-      </section>
-
-      {/* For vendors band — early access (concierge onboarding) */}
-      <section className="hp-vendorband">
-        <div className="hp-vbin">
-          <div>
-            <h2>{t.vendorHeading}</h2>
-            <p>{t.vendorBody}</p>
-          </div>
-          <button className="hp-btn" onClick={() => { setEaOpen(true); setEaDone(false); eaStarted.current = Date.now(); }}>{t.vendorApply}</button>
         </div>
       </section>
 
@@ -578,9 +569,13 @@ function SearchIcon() {
 // Design System & App Spec v1.0 (vault/Design-System.md) applied via the
 // `--spec-*` CSS variables already wired in globals.css: light content
 // (warm white / white cards, violet #6C5CE0 primary, IBM Plex Sans body +
-// Space Grotesk headings + IBM Plex Mono for data/eyebrows), with the
-// header, the vendor-recruit band, and the footer kept as deliberate dark
-// "ink" accents that bridge into the rest of the (still dark-chrome) app.
+// Space Grotesk headings + IBM Plex Mono for data/eyebrows). The header is
+// now LIGHT too (Flow Blueprint 2026-07-22 §3/§4 — flips the old "dark
+// bridge into the app's dark chrome" theory: the spec's real signed-in top
+// bar is never dark, only its 248px sidebar is, so a light public header is
+// the more accurate preview and it directly fixes the Sign-in/Join
+// near-invisible-contrast defect). The vendor-recruit band and footer stay
+// deliberate dark "ink" accent moments.
 const CSS = `
 .hp{background:var(--spec-warm-white);color:var(--spec-ink);font-family:var(--font-ibm-plex-sans-landing),'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;}
 .hp *{box-sizing:border-box;}
@@ -588,34 +583,40 @@ const CSS = `
 .hp h1,.hp h2,.hp h3{font-family:var(--font-space-grotesk),'Space Grotesk',system-ui,sans-serif;}
 .hp-sronly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 
-/* Header — dark ink, the deliberate bridge into the rest of the app's dark chrome */
-.hp-header{position:sticky;top:0;z-index:40;background:rgba(20,19,32,.94);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.08);padding:12px 20px;}
+/* Header — LIGHT, a utility bar with no primary CTA (Flow Blueprint §3/§4) */
+.hp-header{position:sticky;top:0;z-index:40;background:var(--spec-warm-white);backdrop-filter:blur(20px);border-bottom:1px solid var(--spec-border);padding:12px 20px;}
 .hp-headmain{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;max-width:1280px;margin:0 auto;}
-.hp-brand{grid-column:1;color:#F8F7FB;}
-.hp-brand b{font-family:var(--font-space-grotesk);font-size:18px;font-weight:700;letter-spacing:-.02em;color:#F8F7FB;}
-.hp-brand i{color:var(--spec-lilac);font-style:normal;}
-.hp-headsearch{grid-column:2;justify-self:center;display:flex;align-items:center;gap:8px;width:100%;max-width:560px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:var(--spec-radius-md);padding:0 6px 0 14px;color:#B7B4C6;}
-.hp-headsearch:focus-within{border-color:var(--spec-lilac);box-shadow:0 0 0 3px rgba(169,157,242,.25);}
-.hp-headsearch svg{flex-shrink:0;}
-.hp-headsearch input{flex:1;min-width:0;background:none;border:none;outline:none;color:#F8F7FB;font-family:inherit;font-size:14.5px;padding:10px 0;}
-.hp-headsearch input::placeholder{color:#8B889C;}
-.hp-headsearch button{flex-shrink:0;background:var(--spec-violet);color:#fff;font-family:inherit;font-weight:700;font-size:13.5px;border:none;border-radius:var(--spec-radius-btn);padding:9px 16px;cursor:pointer;margin:4px 0;transition:background .15s;}
+.hp-brand{grid-column:1;color:var(--spec-ink);}
+.hp-brand b{font-family:var(--font-space-grotesk);font-size:18px;font-weight:700;letter-spacing:-.02em;color:var(--spec-ink);}
+.hp-brand i{color:var(--spec-violet);font-style:normal;}
+.hp-headsearch{grid-column:2;justify-self:center;display:flex;align-items:center;gap:8px;width:100%;max-width:560px;background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-md);padding:0 6px 0 14px;color:var(--spec-text-2nd);}
+.hp-headsearch:focus-within{border-color:var(--spec-violet);box-shadow:0 0 0 3px rgba(108,92,224,.15);}
+.hp-headsearch svg{flex-shrink:0;color:var(--spec-text-2nd);}
+.hp-headsearch input{flex:1;min-width:0;background:none;border:none;outline:none;color:var(--spec-ink);font-family:inherit;font-size:14.5px;padding:12px 0;}
+.hp-headsearch input::placeholder{color:var(--spec-text-2nd);}
+.hp-headsearch button{flex-shrink:0;min-height:44px;background:var(--spec-violet);color:#fff;font-family:inherit;font-weight:700;font-size:13.5px;border:none;border-radius:var(--spec-radius-btn);padding:9px 16px;cursor:pointer;margin:4px 0;transition:background .15s;}
 .hp-headsearch button:hover{background:var(--spec-violet-deep);}
-.hp-headactions{grid-column:3;justify-self:end;display:flex;align-items:center;gap:12px;flex-shrink:0;}
-.hp-signin{color:#B7B4C6;font-size:13.5px;font-weight:600;white-space:nowrap;}
-.hp-signin:hover{color:#F8F7FB;}
-.hp-joinbtn{color:#F8F7FB;font-size:13.5px;font-weight:700;padding:8px 14px;border-radius:var(--spec-radius-btn);border:1px solid rgba(255,255,255,.18);white-space:nowrap;}
-.hp-joinbtn:hover{border-color:rgba(255,255,255,.36);}
-.hp-rfqinline{background:var(--spec-violet);color:#fff !important;font-size:13.5px;font-weight:700;padding:9px 16px;border-radius:var(--spec-radius-btn);white-space:nowrap;transition:background .15s;}
-.hp-rfqinline:hover{background:var(--spec-violet-deep);}
-.hp-rfqblock{display:none;}
+/* Every header control below is a ≥44px hit target with its own visual
+   bounds and an explicit gap from its neighbors — fixes the confirmed
+   click-zone-overlap defect (a click near EN/ES landing on the old
+   Post-a-Request button, now removed from the header entirely). */
+.hp-headactions{grid-column:3;justify-self:end;display:flex;align-items:center;gap:10px;flex-wrap:wrap;row-gap:8px;justify-content:flex-end;flex-shrink:0;}
+.hp-signin{display:flex;align-items:center;min-height:44px;padding:0 6px;color:var(--spec-text-2nd);font-size:13.5px;font-weight:600;white-space:nowrap;}
+.hp-signin:hover{color:var(--spec-ink);}
+.hp-joinbtn{display:flex;align-items:center;justify-content:center;min-height:44px;color:var(--spec-ink);font-size:13.5px;font-weight:700;padding:0 16px;border-radius:var(--spec-radius-btn);border:1.5px solid rgba(20,19,32,.18);white-space:nowrap;transition:border-color .15s,background .15s;}
+.hp-joinbtn:hover{border-color:rgba(20,19,32,.34);background:rgba(20,19,32,.04);}
+.hp-vendorlink{display:flex;align-items:center;justify-content:center;min-height:44px;background:var(--spec-violet);color:#fff !important;font-size:13.5px;font-weight:700;padding:0 16px;border-radius:var(--spec-radius-btn);white-space:nowrap;transition:background .15s;}
+.hp-vendorlink:hover{background:var(--spec-violet-deep);}
 @media(max-width:760px){
-  .hp-headmain{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"brand actions" "search search";row-gap:10px;}
-  .hp-brand{grid-area:brand;grid-column:auto;min-width:0;}
-  .hp-headactions{grid-area:actions;grid-column:auto;min-width:0;}
-  .hp-headsearch{grid-area:search;grid-column:auto;max-width:none;min-width:0;}
-  .hp-rfqinline{display:none;}
-  .hp-rfqblock{display:flex;justify-content:center;align-items:center;margin-top:10px;width:100%;background:var(--spec-violet);color:#fff;font-weight:700;font-size:15px;padding:13px;border-radius:var(--spec-radius-md);}
+  /* Brand keeps its natural (never-squeezed) width; the actions cluster —
+     now 3 items instead of 1 since "Become a Vendor" joined — is the
+     flexible/shrinkable column and wraps onto extra lines instead of
+     stealing the logo's space (regression check: at 360-414px the logo
+     was measuring 0-width before this fix). */
+  .hp-headmain{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"brand actions" "search search";row-gap:10px;}
+  .hp-brand{grid-area:brand;}
+  .hp-headactions{grid-area:actions;min-width:0;}
+  .hp-headsearch{grid-area:search;max-width:none;min-width:0;}
 }
 @media(max-width:480px){.hp-signin{display:none;}}
 
@@ -647,15 +648,20 @@ const CSS = `
 .hp-promptbtn{flex-shrink:0;background:var(--spec-violet);color:#fff;font-weight:700;font-size:13.5px;padding:14px 20px;border-radius:var(--spec-radius-btn);white-space:nowrap;transition:background .15s;}
 .hp-promptbtn:hover{background:var(--spec-violet-deep);}
 
-.hp-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;max-width:620px;}
-.hp-chip{padding:8px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:999px;font-size:12.5px;font-weight:600;color:#DEDCEA;transition:background .15s,border-color .15s;}
-.hp-chip:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.34);}
+.hp-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;max-width:620px;}
+/* Chips: text-vs-pill contrast (#DEDCEA on this fill) measures ~9.7:1 —
+   well past the 4.5:1 floor — but the pill's own boundary against the dark
+   hero was too faint to read as a distinct, tappable shape ("grey-on-grey").
+   Raised background/border opacity so the chip itself is legible as a
+   control, while staying visibly quieter than the solid-violet primary CTA. */
+.hp-chip{padding:8px 14px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);border-radius:999px;font-size:12.5px;font-weight:600;color:#DEDCEA;transition:background .15s,border-color .15s;}
+.hp-chip:hover{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.42);}
 
 .hp-herochecks{display:flex;flex-wrap:wrap;gap:18px;margin-top:20px;}
 .hp-herochecks span{display:flex;align-items:center;gap:7px;color:#B7B4C6;font-size:12.5px;font-weight:600;}
 .hp-herochecks svg{color:var(--spec-success);flex-shrink:0;}
 
-.hp-herocta{display:flex;gap:12px;margin-top:26px;}
+.hp-herocta{display:flex;gap:12px;margin-top:14px;}
 .hp-btn{font-family:inherit;background:var(--spec-violet);color:#fff;font-weight:700;font-size:15px;padding:14px 26px;border-radius:var(--spec-radius-btn);border:none;cursor:pointer;transition:background .15s;}
 .hp-btn:hover{background:var(--spec-violet-deep);}
 .hp-btn.outline{background:transparent;color:#F8F7FB;border:1.5px solid rgba(255,255,255,.34);}
@@ -733,11 +739,7 @@ const CSS = `
 .hp-bigcta{display:block;width:max-content;margin:28px auto 0;background:var(--spec-violet);color:#fff;font-weight:700;font-size:14.5px;padding:14px 30px;border-radius:var(--spec-radius-btn);transition:background .15s;}
 .hp-bigcta:hover{background:var(--spec-violet-deep);}
 
-/* Shop by department + buying tools */
-.hp-depts{display:flex;flex-wrap:wrap;gap:10px;}
-.hp-dept{background:#fff;border:1px solid var(--spec-border);border-radius:11px;padding:14px 16px;font-size:13.5px;font-weight:600;color:var(--spec-slate);transition:border-color .15s,background .15s,color .15s;}
-.hp-dept:hover{border-color:var(--spec-violet);background:#F3F1FB;color:var(--spec-violet-deep);}
-.hp-dept.svc:hover{border-color:var(--spec-success);background:#EDF7F1;color:var(--spec-success);}
+/* Buying tools */
 .hp-tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;}
 .hp-tool{background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-lg);padding:24px;}
 .hp-tooldot{width:36px;height:36px;border-radius:var(--spec-radius-md);background:linear-gradient(135deg,var(--spec-violet),var(--spec-lilac));margin-bottom:14px;}
@@ -794,7 +796,17 @@ const CSS = `
 .hp-eadone h3{font-size:20px;}
 .hp-eadone p{color:var(--spec-text-2nd);font-size:14px;line-height:1.6;margin:10px 0 18px;}
 
-/* Mobile sticky primary CTA */
+/* Mobile sticky primary CTA. Stacking order for ALL fixed/floating
+   elements on this page (Flow Blueprint §4 — "floating elements get a
+   defined, non-overlapping stack order, not ad hoc positioning per page"):
+   modal 60 > mobile sticky CTA 45 > (reserved 46-59 for a future chat/
+   concierge FAB). No FAB is wired into this page today (confirmed: not
+   rendered by page.tsx or layout.tsx) — the confirmed-defect note about a
+   FAB colliding with the hero proof card near 1024-1568px could not be
+   reproduced here for that reason. If one is added later, anchor it
+   bottom:28px/right:28px like the existing ChatWidget component, at a
+   z-index in the reserved band, so it never sits under the sticky CTA nor
+   over the modal. */
 .hp-mobilecta{display:none;}
 @media(max-width:760px){
   .hp{padding-bottom:78px;}
