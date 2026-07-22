@@ -21,6 +21,13 @@ import GoogleAuthButton from '@/components/GoogleAuthButton';
 import OAuthButton from '@/components/OAuthButton';
 import { bilingualCopy, OAUTH_CONTINUE_AGREES_MSG, ANY_OAUTH_ENABLED } from '@/lib/auth/oauth';
 
+// Mirror the server guard in /api/demo/login: the demo buttons mint a shared-
+// password account, so they must not show where the route itself 404s. Enabled
+// only outside production, or when NEXT_PUBLIC_ALLOW_DEMO_LOGIN==='true'. In
+// production (the default) they're hidden — no dead-end "Not found" click.
+const DEMO_LOGIN_ENABLED =
+  process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_ALLOW_DEMO_LOGIN === 'true';
+
 function LoginInner() {
   const sp = useSearchParams();
   const confirmed = sp.get('confirmed') === '1';
@@ -171,13 +178,13 @@ function LoginInner() {
           <button className="li-btn" type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
           <a className="li-forgot" href="/forgot-password">Forgot password?</a>
         </form>}
-        <div className="li-demo">
+        {DEMO_LOGIN_ENABLED && <div className="li-demo">
           <div className="li-demolabel">Just exploring? Try the demo — no account needed</div>
           <div className="li-demorow">
             <button type="button" className="li-demobtn" disabled={!!demoBusy} onClick={() => demoLogin('buyer')}>{demoBusy === 'buyer' ? 'Entering…' : 'Demo as Buyer'}</button>
             <button type="button" className="li-demobtn" disabled={!!demoBusy} onClick={() => demoLogin('vendor')}>{demoBusy === 'vendor' ? 'Entering…' : 'Demo as Vendor'}</button>
           </div>
-        </div>
+        </div>}
         <a className="li-link" href="/signup">New here? Create an account</a>
       </div>
     </div>
