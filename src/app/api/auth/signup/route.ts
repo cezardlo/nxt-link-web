@@ -33,6 +33,7 @@ interface SignupBody {
   password?: string;
   role?: string;
   vendor_type?: string;
+  use_case?: string;           // /signup "Something else" free text (optional)
   terms_accepted?: boolean;
   locale?: string;
   mode?: string;               // 'magic' → passwordless vendor quick signup
@@ -62,6 +63,7 @@ export async function POST(req: Request) {
   const magic = body.mode === 'magic';
   const role = magic ? 'vendor' : body.role === 'vendor' ? 'vendor' : 'client';
   const vendorType = String(body.vendor_type || '').trim().slice(0, 60) || null;
+  const useCase = String(body.use_case || '').trim().slice(0, 200) || null;
   const locale: 'en' | 'es' = body.locale === 'es' ? 'es' : 'en';
   const companyName = String(body.company_name || '').trim().slice(0, 120);
   const supplyCategories = cleanCategories(body.supply_categories);
@@ -127,7 +129,7 @@ export async function POST(req: Request) {
     email,
     password,
     options: {
-      data: { role, vendor_type: role === 'vendor' ? vendorType : null },
+      data: { role, vendor_type: role === 'vendor' ? vendorType : null, use_case: useCase },
       emailRedirectTo: `${origin}/auth/callback`,
     },
   });

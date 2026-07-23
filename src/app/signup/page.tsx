@@ -47,16 +47,26 @@
 // click gets that lane regardless of which screen it started from, or which
 // provider); buyer role threads oauth_lane=buyer (no profile to create,
 // click-wrap still recorded fail-closed). See src/lib/auth/oauth.ts.
+//
+// 2026-07-23 4th role choice, "Something else": for visitors who don't fit
+// buyer/vendor/both. Functionally treated as a buyer — sellerMode stays
+// false, apiRole 'client', post-signup redirect /buyer, "check your email"
+// screen uses the buyer copy. Adds ONE optional free-text field (state
+// `useCase`, shown on the details step) that rides into POST /api/auth/signup
+// as `use_case` and is stored in the new account's Supabase user metadata
+// (password-signup path only — not threaded into the magic-link vendor
+// path). Never sent to the API as a role value — apiRole is still only
+// 'client' | 'vendor'.
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Check, RefreshCw, ShoppingCart, Store } from 'lucide-react';
+import { ArrowLeft, Check, HelpCircle, RefreshCw, ShoppingCart, Store } from 'lucide-react';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
 import OAuthButton from '@/components/OAuthButton';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
 import { GOOGLE_TERMS_ERROR_MSG, bilingualCopy, ANY_OAUTH_ENABLED } from '@/lib/auth/oauth';
 
-type Mode = 'buyer' | 'vendor' | 'both';
+type Mode = 'buyer' | 'vendor' | 'both' | 'other';
 type Step = 'role' | 'details';
 
 // Vendor/supplier business types (maturity + kind) captured at signup and
@@ -85,6 +95,9 @@ const T: Record<Lang, Record<string, string>> = {
     vendorDesc: 'Publish products and services, answer buyers, and manage quotes.',
     both: 'Buyer and vendor',
     bothDesc: 'Use one account for sourcing and for your company’s vendor storefront.',
+    other: 'Something else',
+    otherDesc: 'Tell us what you’re here for and we’ll point you the right way.',
+    otherUsePlaceholder: 'What are you looking to do on NXT//LINK?',
     continue: 'Continue',
     detailsTitle: 'Create your account',
     detailsSub: 'This takes about a minute. You can finish your profile after you enter.',
@@ -123,6 +136,9 @@ const T: Record<Lang, Record<string, string>> = {
     vendorDesc: 'Publica productos y servicios, responde a compradores y gestiona cotizaciones.',
     both: 'Comprador y proveedor',
     bothDesc: 'Usa una cuenta para abastecerte y para el escaparate de proveedor de tu empresa.',
+    other: 'Algo más',
+    otherDesc: 'Cuéntanos para qué estás aquí y te orientamos hacia lo correcto.',
+    otherUsePlaceholder: '¿Qué buscas hacer en NXT//LINK?',
     continue: 'Continuar',
     detailsTitle: 'Crea tu cuenta',
     detailsSub: 'Toma cerca de un minuto. Puedes completar tu perfil después de entrar.',
@@ -151,10 +167,11 @@ const T: Record<Lang, Record<string, string>> = {
   },
 };
 
-const ROLE_OPTIONS: Array<{ mode: Mode; icon: typeof ShoppingCart; titleKey: 'buyer' | 'vendor' | 'both'; descKey: 'buyerDesc' | 'vendorDesc' | 'bothDesc' }> = [
+const ROLE_OPTIONS: Array<{ mode: Mode; icon: typeof ShoppingCart; titleKey: 'buyer' | 'vendor' | 'both' | 'other'; descKey: 'buyerDesc' | 'vendorDesc' | 'bothDesc' | 'otherDesc' }> = [
   { mode: 'buyer', icon: ShoppingCart, titleKey: 'buyer', descKey: 'buyerDesc' },
   { mode: 'vendor', icon: Store, titleKey: 'vendor', descKey: 'vendorDesc' },
   { mode: 'both', icon: RefreshCw, titleKey: 'both', descKey: 'bothDesc' },
+  { mode: 'other', icon: HelpCircle, titleKey: 'other', descKey: 'otherDesc' },
 ];
 
 export default function SignupPage() {
@@ -169,6 +186,11 @@ export default function SignupPage() {
   // rides into the SAME persisted vendor_type field as "Other: <their words>"
   // (the API already stores + caps vendor_type at 60 chars) — no dropped data.
   const [vendorTypeOther, setVendorTypeOther] = useState('');
+  // Free-text for the 4th role choice, "Something else" — lets a visitor who
+  // isn't a clean buyer/vendor/both fit say in their own words why they're
+  // here. Treated like a buyer functionally (sellerMode stays false, apiRole
+  // 'client'); the text just rides along as optional metadata (use_case).
+  const [useCase, setUseCase] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [agree, setAgree] = useState(false);
@@ -219,6 +241,7 @@ export default function SignupPage() {
           password,
           role: apiRole,
           vendor_type: sellerMode ? resolvedVendorType || null : null,
+          use_case: mode === 'other' ? (useCase.trim() || null) : null,
           locale: lang,
           terms_accepted: agree,
         }),
@@ -289,7 +312,7 @@ export default function SignupPage() {
                     key={option}
                     className={'su-role' + (mode === option ? ' on' : '')}
                     aria-pressed={mode === option}
-                    onClick={() => { setMode(option); if (option === 'buyer') { setVendorType(''); setVendorTypeOther(''); } }}
+                    onClick={() => { setMode(option); if (option === 'buyer' || option === 'other') { setVendorType(''); setVendorTypeOther(''); } if (option !== 'other') setUseCase(''); }}
                   >
                     <span className="su-roleicon"><Icon aria-hidden="true" /></span>
                     <span className="su-roletext">
@@ -337,6 +360,21 @@ export default function SignupPage() {
                       autoFocus
                     />
                   )}
+                </fieldset>
+              )}
+
+              {mode === 'other' && (
+                <fieldset className="su-vtype">
+                  <legend>{t.otherUsePlaceholder}</legend>
+                  <input
+                    className="su-otherinput"
+                    type="text"
+                    value={useCase}
+                    onChange={(e) => setUseCase(e.target.value)}
+                    placeholder={t.otherUsePlaceholder}
+                    aria-label={t.otherUsePlaceholder}
+                    maxLength={200}
+                  />
                 </fieldset>
               )}
 
