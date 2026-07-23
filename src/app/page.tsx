@@ -324,6 +324,43 @@ export default function Home() {
     { kicker: t.techKicker, title: t.techTitle, body: t.techBody, action: t.techAction, href: '/marketplace?department=warehouse_tech', Icon: Bot },
   ];
 
+  // Restrained scroll-reveal (2026-07-23 polish pass, Top-10 #10): a subtle
+  // fade + 8px rise the first time each below-the-fold section enters view.
+  // No scroll-jacking, no parallax — one IntersectionObserver, unobserve
+  // after firing once. Fully disabled under prefers-reduced-motion: the
+  // `.hp-reveal-armed` class (which is what makes `.hp-reveal` start
+  // invisible) is only ever added here, in JS, so with reduced motion (or
+  // with JS disabled entirely) every `.hp-reveal` section just stays at its
+  // default opacity:1 — nothing to fade in, nothing hidden. Sections already
+  // in the viewport at mount get `.hp-revealed` immediately (no animation)
+  // so above-the-fold content never flashes hidden-then-visible.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const root = document.querySelector('.hp');
+    if (!root) return;
+    const items = Array.from(root.querySelectorAll<HTMLElement>('.hp-reveal'));
+    if (items.length === 0) return;
+    root.classList.add('hp-reveal-armed');
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('hp-revealed');
+          io.unobserve(entry.target);
+        }
+      }
+    }, { threshold: 0.12, rootMargin: '0px 0px -10% 0px' });
+    for (const el of items) {
+      const rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight * 0.9) {
+        el.classList.add('hp-revealed'); // already on screen at load — no motion
+      } else {
+        io.observe(el);
+      }
+    }
+    return () => io.disconnect();
+  }, []);
+
   return (
     <div className={`hp ${ibmPlexSans.variable}`}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
@@ -397,7 +434,7 @@ export default function Home() {
           CATEGORY_TILES data, visibleCategoryTiles empty-hiding, and
           /marketplace?department= routing as before, just laid out as tiles
           instead of a vertical list inside a card. No invented stats. */}
-      <section className="hp-sec" aria-labelledby="hp-cat-title">
+      <section className="hp-sec hp-reveal" aria-labelledby="hp-cat-title">
         <div className="hp-sechead">
           <div>
             <h2 id="hp-cat-title">{t.catCardTitle}</h2>
@@ -437,7 +474,7 @@ export default function Home() {
           own centered, single-card band — deliberately NOT a 2-col dark
           band like the hero request card or the vendor band below, so it
           complements rather than duplicates them. */}
-      <section className="hp-sec hp-rfqsec" aria-labelledby="hp-rfq-title">
+      <section className="hp-sec hp-rfqsec hp-reveal" aria-labelledby="hp-rfq-title">
         <div className="hp-rfqcard">
           <span className="hp-rfqicon"><Send size={22} aria-hidden="true" /></span>
           <h2 id="hp-rfq-title">{t.rfqCardTitle}</h2>
@@ -448,7 +485,7 @@ export default function Home() {
 
       {/* "What are you looking for?" — the 3 path cards from Codex's build,
           kept as elevated cards per Design System v1.0. */}
-      <section className="hp-sec" aria-labelledby="hp-start-title">
+      <section className="hp-sec hp-reveal" aria-labelledby="hp-start-title">
         <div className="hp-sechead"><div><h2 id="hp-start-title">{t.startTitle}</h2><p className="hp-browsesub">{t.startBody}</p></div></div>
         <div className="hp-sourcegrid">
           {sourceModes.map(({ kicker, title, body, action, href, Icon }) => (
@@ -468,13 +505,13 @@ export default function Home() {
           (Cesar, 2026-07-22: not enough live inventory yet for that grid to
           look intentional). Kept as its own clean, centered block so account
           creation stays one obvious click from the homepage. */}
-      <section className="hp-sec hp-ctasec">
+      <section className="hp-sec hp-ctasec hp-reveal">
         <a className="hp-bigcta" href="/signup">{t.createFreeAccount}</a>
       </section>
 
       {/* Buying tools — each card gets a real icon (was a flat colored
           square with no icon, reading as an empty/broken card). */}
-      <section className="hp-sec">
+      <section className="hp-sec hp-reveal">
         <div className="hp-sechead"><h2>{t.toolsHeading}</h2></div>
         <div className="hp-tools">
           {([
@@ -493,7 +530,7 @@ export default function Home() {
           lane, oauth_lane=organic / born PENDING, see PublicHeader's "Become
           a Vendor" for the same door). One vendor entry system, not a second
           early-access flow living only on the homepage. */}
-      <section className="hp-vendorband" id="for-vendors" aria-labelledby="hp-vendor-title">
+      <section className="hp-vendorband hp-reveal" id="for-vendors" aria-labelledby="hp-vendor-title">
         <div className="hp-vbin">
           <div className="hp-vbcopy">
             <span className="hp-vendoreyebrow">{t.vendorEyebrow}</span>
@@ -512,7 +549,7 @@ export default function Home() {
       {/* How it works — connected timeline (Cesar's 2026-07-22 revision: find
           technology → request information → get connected — no promises
           about matching, speed, or safety). Unchanged from the prior pass. */}
-      <section className="hp-how" id="how-it-works">
+      <section className="hp-how hp-reveal" id="how-it-works">
         <h2 className="hp-howheading">{t.howHeading}</h2>
         <ol className="hp-timeline">
           {([
@@ -536,7 +573,7 @@ export default function Home() {
 
       {/* FAQs — no fee/credit numbers on this page (hard constraint); the
           real commission math lives on /terms only. */}
-      <section className="hp-sec">
+      <section className="hp-sec hp-reveal">
         <div className="hp-sechead"><h2>{t.faqHeading}</h2></div>
         <div className="hp-faqs">
           {([
@@ -616,7 +653,7 @@ const CSS = `
   pointer-events:none;}
 .hp-heroin{position:relative;max-width:1200px;margin:0 auto;padding:56px 22px 60px;display:grid;grid-template-columns:1.2fr .8fr;gap:48px;align-items:center;}
 .hp-herocol{min-width:0;}
-.hp-eyebrow{display:block;font-family:var(--font-ibm-plex-mono);font-size:12px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--spec-lilac);}
+.hp-eyebrow{display:block;font-family:var(--font-ibm-plex-mono);font-size:12px;font-weight:600;letter-spacing:var(--spec-tracking-eyebrow);text-transform:uppercase;color:var(--spec-lilac);}
 .hp-hero h1{color:#F8F7FB;font-size:clamp(30px,4.6vw,52px);font-weight:700;letter-spacing:-.03em;line-height:1.04;margin:14px 0 14px;max-width:18ch;text-wrap:balance;}
 .hp-herobody{max-width:56ch;margin:0;color:rgba(255,255,255,.78);font-size:15.5px;line-height:1.65;}
 
@@ -625,22 +662,22 @@ const CSS = `
 .hp-searchform>svg{color:var(--spec-violet);}
 .hp-searchform input{width:100%;min-width:0;height:44px;padding:0;border:0;outline:0;color:var(--spec-ink);background:transparent;font-family:inherit;font-size:14.5px;}
 .hp-searchform input::placeholder{color:var(--spec-text-2nd);}
-.hp-searchform button{min-height:46px;padding:0 18px;display:inline-flex;align-items:center;gap:7px;border:0;border-radius:var(--spec-radius-btn);color:#fff;background:var(--spec-violet);font-family:inherit;font-weight:700;font-size:13.5px;cursor:pointer;transition:background .15s;}
+.hp-searchform button{min-height:46px;padding:0 18px;display:inline-flex;align-items:center;gap:7px;border:0;border-radius:var(--spec-radius-btn);color:#fff;background:var(--spec-violet);font-family:inherit;font-weight:700;font-size:13.5px;cursor:pointer;transition:background var(--spec-duration-fast) var(--spec-ease);}
 .hp-searchform button:hover{background:var(--spec-violet-deep);}
 
 .hp-quicksearches{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:14px;max-width:640px;}
 .hp-quicksearches>span{color:rgba(255,255,255,.6);font-size:11.5px;font-weight:600;}
-.hp-quicksearches a{padding:7px 12px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);border-radius:999px;font-size:12px;font-weight:600;color:#fff;transition:background .15s,border-color .15s;}
+.hp-quicksearches a{padding:7px 12px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);border-radius:999px;font-size:12px;font-weight:600;color:#fff;transition:background var(--spec-duration-fast) var(--spec-ease),border-color var(--spec-duration-fast) var(--spec-ease);}
 .hp-quicksearches a:hover{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.5);}
 
 .hp-requestcard{padding:28px;border:1px solid rgba(255,255,255,.75);border-radius:var(--spec-radius-lg);color:var(--spec-ink);background:rgba(255,255,255,.97);box-shadow:0 30px 70px -30px rgba(0,0,0,.7);}
-.hp-requesteyebrow{display:block;font-family:var(--font-ibm-plex-mono);font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--spec-violet-deep);}
-.hp-requestcard h2{margin:10px 0 10px;font-size:24px;line-height:1.12;letter-spacing:-.02em;text-wrap:balance;}
+.hp-requesteyebrow{display:block;font-family:var(--font-ibm-plex-mono);font-size:11px;font-weight:600;letter-spacing:var(--spec-tracking-eyebrow);text-transform:uppercase;color:var(--spec-violet-deep);}
+.hp-requestcard h2{margin:10px 0 10px;font-size:var(--spec-text-h3);line-height:1.12;letter-spacing:var(--spec-tracking-heading);text-wrap:balance;}
 .hp-requestcard>p{margin:0;color:var(--spec-text-2nd);font-size:13.5px;line-height:1.6;}
 .hp-requestcard ul{margin:18px 0;padding:0;list-style:none;display:grid;gap:9px;}
 .hp-requestcard li{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:650;}
 .hp-requestcard li svg{width:19px;height:19px;padding:3px;border-radius:50%;color:var(--spec-success);background:var(--spec-surface);flex-shrink:0;}
-.hp-requestbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:46px;padding:0 18px;border-radius:var(--spec-radius-btn);color:#fff;background:var(--spec-violet);font-weight:700;font-size:14px;transition:background .15s;}
+.hp-requestbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:46px;padding:0 18px;border-radius:var(--spec-radius-btn);color:#fff;background:var(--spec-violet);font-weight:700;font-size:14px;transition:background var(--spec-duration-fast) var(--spec-ease);}
 .hp-requestbtn:hover{background:var(--spec-violet-deep);}
 .hp-requestcard small{display:block;margin-top:10px;color:var(--spec-text-2nd);font-size:11px;text-align:center;}
 
@@ -657,8 +694,21 @@ const CSS = `
 .hp-trustitem{display:flex;align-items:center;gap:8px;color:var(--spec-text-2nd);font-size:13px;font-weight:600;}
 .hp-trustitem svg{color:var(--spec-success);flex-shrink:0;}
 
-/* Section shell */
-.hp-sec{max-width:1160px;margin:0 auto;padding:56px 22px 0;}
+/* Section shell — symmetric top+bottom rhythm (96px desktop / 56px mobile
+   via --spec-space-section, globals.css) replacing the old top-only,
+   per-section padding values (56/64/36px) that made the rhythm depend on
+   which section happened to follow. */
+.hp-sec{max-width:1160px;margin:0 auto;padding:var(--spec-space-section) 22px;}
+
+/* Restrained scroll-reveal (Top-10 #10) — .hp-reveal-armed is only ever
+   added by JS (see the useEffect above), and only when
+   prefers-reduced-motion is NOT set, so with reduced motion or with JS
+   disabled every .hp-reveal section simply stays at its default opacity:1 —
+   nothing hidden, nothing to animate. */
+.hp-reveal{opacity:1;transform:none;}
+.hp-reveal-armed .hp-reveal{opacity:0;transform:translateY(8px);transition:opacity var(--spec-duration-reveal) var(--spec-ease),transform var(--spec-duration-reveal) var(--spec-ease);}
+.hp-reveal-armed .hp-reveal.hp-revealed{opacity:1;transform:translateY(0);}
+
 .hp-sechead{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:22px;flex-wrap:wrap;}
 .hp-sechead h2{font-size:clamp(20px,2.6vw,27px);font-weight:700;letter-spacing:-.02em;color:var(--spec-ink);margin:0;}
 .hp-sechead a{color:var(--spec-violet);font-size:13.5px;font-weight:600;flex-shrink:0;}
@@ -670,12 +720,12 @@ const CSS = `
    .hp-browsegrid, Cesar 2026-07-23). 3 cols desktop, 2 cols tablet, 1-2 cols
    (auto-fit) on small phones. Each tile: icon + bold label + chevron. */
 .hp-catgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;}
-.hp-cattile{display:flex;align-items:center;gap:14px;padding:20px;background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-lg);color:var(--spec-ink);transition:transform .15s,border-color .15s,box-shadow .15s;}
+.hp-cattile{display:flex;align-items:center;gap:14px;padding:20px;background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-lg);color:var(--spec-ink);transition:transform var(--spec-duration-fast) var(--spec-ease),border-color var(--spec-duration-fast) var(--spec-ease),box-shadow var(--spec-duration-fast) var(--spec-ease);}
 .hp-cattile:hover{transform:translateY(-2px);border-color:var(--spec-violet);box-shadow:0 16px 32px -22px rgba(20,19,32,.25);}
-.hp-cattileicon{flex-shrink:0;width:48px;height:48px;display:grid;place-items:center;border-radius:var(--spec-radius-md);background:var(--spec-surface);color:var(--spec-violet);transition:background .15s,color .15s;}
+.hp-cattileicon{flex-shrink:0;width:48px;height:48px;display:grid;place-items:center;border-radius:var(--spec-radius-md);background:var(--spec-surface);color:var(--spec-violet);transition:background var(--spec-duration-fast) var(--spec-ease),color var(--spec-duration-fast) var(--spec-ease);}
 .hp-cattile:hover .hp-cattileicon{background:var(--spec-violet);color:#fff;}
 .hp-cattilelabel{flex:1;min-width:0;font-size:14.5px;font-weight:700;line-height:1.3;}
-.hp-cattilechev{flex-shrink:0;color:var(--spec-text-2nd);transition:color .15s;}
+.hp-cattilechev{flex-shrink:0;color:var(--spec-text-2nd);transition:color var(--spec-duration-fast) var(--spec-ease);}
 .hp-cattile:hover .hp-cattilechev{color:var(--spec-violet);}
 .hp-catempty{margin:0;padding:32px;text-align:center;color:var(--spec-text-2nd);font-size:13.5px;line-height:1.55;background:#fff;border:1px dashed var(--spec-border);border-radius:var(--spec-radius-lg);}
 
@@ -683,49 +733,51 @@ const CSS = `
 @media(max-width:560px){.hp-catgrid{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));}}
 
 /* Standalone RFQ CTA — one centered card, not a 2-col band, so it reads as
-   its own moment rather than a duplicate of the hero request card. */
-.hp-rfqsec{padding-top:36px;}
+   its own moment rather than a duplicate of the hero request card. Section
+   padding now comes from the shared .hp-sec symmetric rhythm (no more
+   one-off 36px top override). */
 .hp-rfqcard{max-width:640px;margin:0 auto;padding:36px 32px;text-align:center;background:var(--spec-ink);border-radius:var(--spec-radius-lg);color:#fff;}
 .hp-rfqicon{display:inline-grid;place-items:center;width:48px;height:48px;border-radius:50%;background:rgba(169,157,242,.16);color:var(--spec-lilac);margin-bottom:16px;}
-.hp-rfqcard h2{margin:0 0 10px;font-size:22px;font-weight:700;letter-spacing:-.02em;color:#F8F7FB;}
+.hp-rfqcard h2{margin:0 0 10px;font-size:var(--spec-text-h3);font-weight:700;letter-spacing:var(--spec-tracking-heading);color:#F8F7FB;}
 .hp-rfqcard p{margin:0 auto 22px;max-width:52ch;color:rgba(255,255,255,.76);font-size:14px;line-height:1.6;}
-.hp-rfqbtn{display:inline-flex;align-items:center;gap:8px;min-height:46px;padding:0 26px;border-radius:var(--spec-radius-btn);background:var(--spec-violet);color:#fff;font-weight:700;font-size:14px;transition:background .15s;}
+.hp-rfqbtn{display:inline-flex;align-items:center;gap:8px;min-height:46px;padding:0 26px;border-radius:var(--spec-radius-btn);background:var(--spec-violet);color:#fff;font-weight:700;font-size:14px;transition:background var(--spec-duration-fast) var(--spec-ease);}
 .hp-rfqbtn:hover{background:var(--spec-violet-deep);}
 
 /* Quick-filter chip row */
 .hp-chiprow{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin-top:20px;padding-top:20px;border-top:1px solid var(--spec-border);}
-.hp-chiplabel{color:var(--spec-text-2nd);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-right:2px;}
-.hp-fchip{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border:1px solid var(--spec-border);border-radius:999px;color:var(--spec-ink);font-size:12px;font-weight:650;background:#fff;transition:border-color .15s,color .15s,background .15s;}
+.hp-chiplabel{color:var(--spec-text-2nd);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:var(--spec-tracking-eyebrow);margin-right:2px;}
+.hp-fchip{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border:1px solid var(--spec-border);border-radius:999px;color:var(--spec-ink);font-size:12px;font-weight:650;background:#fff;transition:border-color var(--spec-duration-fast) var(--spec-ease),color var(--spec-duration-fast) var(--spec-ease),background var(--spec-duration-fast) var(--spec-ease);}
 .hp-fchip svg{color:var(--spec-violet);flex-shrink:0;}
 .hp-fchip:hover{border-color:var(--spec-violet);color:var(--spec-violet-deep);background:var(--spec-surface);}
 
 /* "What are you looking for" path cards */
 .hp-sourcegrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;}
-.hp-sourcecard{position:relative;min-height:260px;padding:20px;display:flex;flex-direction:column;border:1px solid var(--spec-border);border-radius:var(--spec-radius-lg);background:#fff;color:var(--spec-ink);transition:transform .15s,border-color .15s,box-shadow .15s;}
+.hp-sourcecard{position:relative;min-height:260px;padding:20px;display:flex;flex-direction:column;border:1px solid var(--spec-border);border-radius:var(--spec-radius-lg);background:#fff;color:var(--spec-ink);transition:transform var(--spec-duration-fast) var(--spec-ease),border-color var(--spec-duration-fast) var(--spec-ease),box-shadow var(--spec-duration-fast) var(--spec-ease);}
 .hp-sourcecard:hover{transform:translateY(-3px);border-color:var(--spec-violet);box-shadow:0 20px 40px -26px rgba(20,19,32,.3);}
 .hp-sourceicon{width:48px;height:48px;display:grid;place-items:center;border-radius:var(--spec-radius-md);background:linear-gradient(135deg,var(--spec-ink),var(--spec-violet));color:#fff;margin-bottom:14px;}
-.hp-sourcekicker{font-family:var(--font-ibm-plex-mono);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--spec-violet-deep);}
-.hp-sourcecard h3{margin:8px 0 6px;font-size:19px;letter-spacing:-.02em;}
+.hp-sourcekicker{font-family:var(--font-ibm-plex-mono);font-size:11px;font-weight:600;letter-spacing:var(--spec-tracking-eyebrow);text-transform:uppercase;color:var(--spec-violet-deep);}
+.hp-sourcecard h3{margin:8px 0 6px;font-size:var(--spec-text-h4);letter-spacing:var(--spec-tracking-heading);}
 .hp-sourcecard p{margin:0;color:var(--spec-text-2nd);font-size:13px;line-height:1.55;}
 .hp-sourceaction{margin-top:auto;padding-top:16px;display:flex;align-items:center;gap:4px;color:var(--spec-violet-deep);font-size:13px;font-weight:700;}
 @media(max-width:760px){.hp-sourcegrid{grid-template-columns:1fr;}}
 
 /* Standalone "Create a free account" CTA (replaces the removed "Featured on
    NXT//LINK" listings section — this is the CTA that used to live at its
-   bottom, kept as its own centered block). */
-.hp-ctasec{padding-bottom:56px;text-align:center;}
-.hp-bigcta{display:inline-block;background:var(--spec-violet);color:#fff;font-weight:700;font-size:14.5px;padding:14px 30px;border-radius:var(--spec-radius-btn);transition:background .15s;}
+   bottom, kept as its own centered block). Bottom padding now comes from the
+   shared .hp-sec symmetric rhythm (no more one-off 56px override). */
+.hp-ctasec{text-align:center;}
+.hp-bigcta{display:inline-block;background:var(--spec-violet);color:#fff;font-weight:700;font-size:14.5px;padding:14px 30px;border-radius:var(--spec-radius-btn);transition:background var(--spec-duration-fast) var(--spec-ease);}
 .hp-bigcta:hover{background:var(--spec-violet-deep);}
 
 /* Buying tools */
 .hp-tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;}
 .hp-tool{background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-lg);padding:24px;}
 .hp-tooldot{width:40px;height:40px;display:grid;place-items:center;border-radius:var(--spec-radius-md);background:linear-gradient(135deg,var(--spec-violet),var(--spec-lilac));color:#fff;margin-bottom:14px;}
-.hp-tool b{font-size:15.5px;font-weight:700;color:var(--spec-ink);}
+.hp-tool b{font-size:var(--spec-text-h4);letter-spacing:var(--spec-tracking-heading);font-weight:700;color:var(--spec-ink);}
 .hp-tool p{color:var(--spec-text-2nd);font-size:13.5px;line-height:1.6;margin:8px 0 0;}
 
 /* Vendor band */
-.hp-vendorband{max-width:1160px;margin:56px auto 0;padding:0 22px;}
+.hp-vendorband{max-width:1160px;margin:var(--spec-space-section) auto;padding:0 22px;}
 .hp-vbin{background:var(--spec-ink);border-radius:var(--spec-radius-lg);padding:36px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:30px;position:relative;overflow:hidden;}
 .hp-vbin::before{content:'';position:absolute;inset:0;background:
   repeating-linear-gradient(118deg,transparent 0 26px,rgba(169,157,242,.08) 26px 29px),
@@ -735,14 +787,14 @@ const CSS = `
   mask-image:linear-gradient(180deg,rgba(0,0,0,.8),rgba(0,0,0,.3));}
 .hp-vbin>*{position:relative;}
 .hp-vbcopy{min-width:0;}
-.hp-vendoreyebrow{display:block;font-family:var(--font-ibm-plex-mono);font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--spec-lilac);}
+.hp-vendoreyebrow{display:block;font-family:var(--font-ibm-plex-mono);font-size:11px;font-weight:600;letter-spacing:var(--spec-tracking-eyebrow);text-transform:uppercase;color:var(--spec-lilac);}
 .hp-vbin h2{font-family:var(--font-space-grotesk);color:#F8F7FB;font-size:23px;font-weight:700;letter-spacing:-.02em;margin:8px 0 0;}
 .hp-vbin>.hp-vbcopy>p{color:#C9C6D6;font-size:14px;line-height:1.6;margin:10px 0 0;max-width:60ch;}
 .hp-vbbenefits{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 18px;margin-top:16px;}
 .hp-vbbenefits span{display:flex;align-items:center;gap:8px;color:#F8F7FB;font-size:12.5px;font-weight:600;}
 .hp-vbbenefits svg{color:#78D7A6;flex-shrink:0;}
 .hp-vbin>.hp-btn{white-space:nowrap;min-height:46px;display:inline-flex;align-items:center;gap:8px;}
-.hp-btn{font-family:inherit;background:var(--spec-violet);color:#fff;font-weight:700;font-size:14.5px;padding:0 22px;border-radius:var(--spec-radius-btn);border:none;cursor:pointer;transition:background .15s;}
+.hp-btn{font-family:inherit;background:var(--spec-violet);color:#fff;font-weight:700;font-size:14.5px;padding:0 22px;border-radius:var(--spec-radius-btn);border:none;cursor:pointer;transition:background var(--spec-duration-fast) var(--spec-ease);}
 .hp-btn:hover{background:var(--spec-violet-deep);}
 @media(max-width:760px){
   .hp-vbin{grid-template-columns:1fr;padding:28px 24px;gap:22px;}
@@ -750,8 +802,9 @@ const CSS = `
   .hp-vbbenefits{grid-template-columns:1fr;}
 }
 
-/* How it works — vertical connected timeline */
-.hp-how{max-width:1160px;margin:0 auto;padding:64px 22px 8px;}
+/* How it works — vertical connected timeline. Section padding now comes
+   from the shared symmetric rhythm (was 64px top / 8px bottom top-only). */
+.hp-how{max-width:1160px;margin:0 auto;padding:var(--spec-space-section) 22px;}
 .hp-howheading{font-size:clamp(20px,2.6vw,26px);font-weight:700;letter-spacing:-.02em;text-align:center;margin:0 0 40px;color:var(--spec-ink);}
 .hp-timeline{position:relative;list-style:none;margin:0 auto;padding:0;max-width:640px;}
 .hp-timeline::before{content:'';position:absolute;left:27px;top:28px;bottom:28px;width:2px;background:var(--spec-border);}
@@ -760,8 +813,8 @@ const CSS = `
 .hp-tlmarker{position:relative;z-index:1;flex-shrink:0;}
 .hp-tlcircle{width:56px;height:56px;border-radius:50%;background:#fff;border:2px solid var(--spec-violet);color:var(--spec-violet);display:grid;place-items:center;box-shadow:0 6px 16px -8px rgba(108,92,224,.35);}
 .hp-tlcontent{padding-top:10px;min-width:0;}
-.hp-tlnum{display:block;font-family:var(--font-ibm-plex-mono);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--spec-violet-deep);margin:0 0 4px;}
-.hp-tlcontent b{font-size:17px;font-weight:700;display:block;color:var(--spec-ink);}
+.hp-tlnum{display:block;font-family:var(--font-ibm-plex-mono);font-size:12px;font-weight:600;letter-spacing:var(--spec-tracking-eyebrow);text-transform:uppercase;color:var(--spec-violet-deep);margin:0 0 4px;}
+.hp-tlcontent b{font-size:var(--spec-text-body-lg);font-weight:700;display:block;color:var(--spec-ink);}
 .hp-tlcontent p{color:var(--spec-text-2nd);font-size:14px;line-height:1.6;margin:6px 0 0;max-width:52ch;}
 @media(max-width:480px){
   .hp-tlcircle{width:48px;height:48px;}
@@ -773,18 +826,19 @@ const CSS = `
 .hp-faqs{display:flex;flex-direction:column;gap:12px;max-width:820px;}
 .hp-faq{background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-md);overflow:hidden;}
 .hp-faq.open{border-color:var(--spec-violet);}
-.hp-faqq{width:100%;display:flex;justify-content:space-between;align-items:center;gap:14px;font-family:inherit;font-size:15px;font-weight:700;color:var(--spec-ink);background:none;border:none;padding:18px 20px;cursor:pointer;text-align:left;}
+.hp-faqq{width:100%;display:flex;justify-content:space-between;align-items:center;gap:14px;font-family:inherit;font-size:var(--spec-text-h4);font-weight:700;color:var(--spec-ink);background:none;border:none;padding:18px 20px;cursor:pointer;text-align:left;}
 .hp-faqq:focus-visible{outline:2px solid var(--spec-violet);outline-offset:-2px;}
 .hp-faqi{color:var(--spec-violet);font-size:20px;font-weight:400;flex-shrink:0;}
 .hp-faqa{padding:0 20px 18px;color:var(--spec-text-2nd);font-size:14px;line-height:1.65;}
 
-/* Footer */
-.hp-foot{margin-top:64px;border-top:1px solid rgba(255,255,255,.08);background:var(--spec-ink);padding-bottom:0;}
+/* Footer — bookend, so only margin-top participates in the section rhythm
+   (nothing follows it that needs a symmetric gap). */
+.hp-foot{margin-top:var(--spec-space-section);border-top:1px solid rgba(255,255,255,.08);background:var(--spec-ink);padding-bottom:0;}
 .hp-footcols{max-width:1160px;margin:0 auto;padding:48px 22px 32px;display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:28px;}
 @media(max-width:720px){.hp-footcols{grid-template-columns:1fr 1fr;}}
 .hp-footcols>div>b{font-family:var(--font-space-grotesk);font-size:17px;font-weight:700;color:#F8F7FB;}
 .hp-foottag{color:#9B98AC;font-size:13px;line-height:1.6;margin:10px 0 0;max-width:34ch;}
-.hp-footcols h4{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8B889C;margin:0 0 12px;}
+.hp-footcols h4{font-size:12px;font-weight:700;letter-spacing:var(--spec-tracking-eyebrow);text-transform:uppercase;color:#8B889C;margin:0 0 12px;}
 .hp-footcols a{display:block;color:#C9C6D6;font-size:13.5px;margin-bottom:9px;}
 .hp-footcols a:hover{color:var(--spec-lilac);}
 .hp-footbottom{border-top:1px solid rgba(255,255,255,.06);padding:18px 22px;text-align:center;color:#75718A;font-size:12.5px;}

@@ -311,7 +311,7 @@ function IntakeInner() {
       <div style={{ maxWidth: 640, margin: '0 auto', padding: '40px 20px 60px' }}>
         {/* Header */}
         <div style={{ marginBottom: 28 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 6, lineHeight: 1.2, fontFamily: FONT_HEAD, color: TEXT }}>
+          <h1 style={{ fontSize: 'var(--spec-text-h2)', fontWeight: 800, letterSpacing: 'var(--spec-tracking-heading)', marginBottom: 6, lineHeight: 1.2, fontFamily: FONT_HEAD, color: TEXT }}>
             {isEs ? ASSISTANT.name_es : ASSISTANT.name}
           </h1>
           <p style={{ color: TEXT_3, fontSize: 15 }}>
@@ -365,7 +365,7 @@ function IntakeInner() {
             >
               ✓
             </div>
-            <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12, fontFamily: FONT_HEAD }}>
+            <h2 style={{ fontSize: 'var(--spec-text-h3)', fontWeight: 800, letterSpacing: 'var(--spec-tracking-heading)', marginBottom: 12, fontFamily: FONT_HEAD }}>
               {tr('Request received', 'Solicitud recibida')}
             </h2>
             <p style={{ color: TEXT_2, fontSize: 16, marginBottom: 8 }}>
@@ -381,7 +381,7 @@ function IntakeInner() {
                 [tr('Then', 'Luego'), tr('You compare and decide. Posting is free — no commitment until you accept a quote.', 'Comparas y decides. Publicar es gratis — sin compromiso hasta que aceptes una cotización.')],
               ].map(([step, text], i) => (
                 <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <span style={{ flex: 'none', minWidth: 64, fontSize: 11, fontWeight: 800, letterSpacing: '.07em', textTransform: 'uppercase', color: ACCENT, paddingTop: 2 }}>{step}</span>
+                  <span style={{ flex: 'none', minWidth: 64, fontSize: 'var(--spec-text-caption)', fontWeight: 800, letterSpacing: 'var(--spec-tracking-eyebrow)', textTransform: 'uppercase', color: ACCENT, paddingTop: 2 }}>{step}</span>
                   <span style={{ color: TEXT_3, fontSize: 14, lineHeight: 1.55 }}>{text}</span>
                 </div>
               ))}
@@ -529,7 +529,7 @@ function IntakeInner() {
               padding: 28,
             }}
           >
-            <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 18, fontFamily: FONT_HEAD }}>
+            <h2 style={{ fontSize: 'var(--spec-text-h3)', fontWeight: 800, letterSpacing: 'var(--spec-tracking-heading)', marginBottom: 18, fontFamily: FONT_HEAD }}>
               {tr('Request Summary', 'Resumen de Solicitud')}
             </h2>
 

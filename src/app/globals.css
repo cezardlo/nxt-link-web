@@ -27,6 +27,43 @@
   --spec-sidebar-w:    248px;
   --spec-topbar-h:     66px;
   --spec-content-max:  1200px;
+
+  /* Type scale (vault/Design-System.md §Type, extended 2026-07-23 to close
+     the missing middle rungs between H2/30 and Caption/12 — see
+     workplace/research/premium-benchmark-2026-07-23.md §2.4). Display/H1/H2
+     stay as documented; H3/H4 are new. Use on public pages (homepage,
+     /signup, /intake, /marketplace, /login) instead of ad hoc font sizes. */
+  --spec-text-display: 56px;
+  --spec-text-h1:      40px;
+  --spec-text-h2:      30px;
+  --spec-text-h3:      24px; /* card/module headings */
+  --spec-text-h4:      19px; /* sub-card headings, e.g. FAQ questions, tool/card titles */
+  --spec-text-body-lg: 17px;
+  --spec-text-body:    16px;
+  --spec-text-body-sm: 14px;
+  --spec-text-caption: 12px;
+
+  /* Letter-spacing — one value for every uppercase eyebrow/kicker/label,
+     one for headings H1-H3 (Display/hero keeps its own -.03em treatment). */
+  --spec-tracking-eyebrow: 0.12em;
+  --spec-tracking-heading: -0.02em;
+
+  /* Motion — one easing curve + one duration token for hover/interactive
+     transitions on public pages, so hover feedback feels the same everywhere
+     (homepage, /marketplace, /login, /signup). Entrance/reveal motion (see
+     --spec-duration-reveal) intentionally runs slower than hover feedback. */
+  --spec-ease:             cubic-bezier(.2,.8,.2,1);
+  --spec-duration-fast:    150ms;
+  --spec-duration-reveal:  220ms;
+
+  /* Section rhythm — symmetric macro spacing for homepage sections (replaces
+     inconsistent top-only per-section padding). Switches to the mobile value
+     under 760px, below. */
+  --spec-space-section: 96px;
+}
+
+@media (max-width: 760px) {
+  :root { --spec-space-section: 56px; }
 }
 
 /* --- NXT LINK Design System v4 --- */
