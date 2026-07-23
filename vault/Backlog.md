@@ -243,6 +243,18 @@ Still open, in rough priority order:
 See tasks list / [[Decisions]]. Marketplace search bar + RFQ CTA + How-it-works
 strip, autocomplete, vendor moderation, NXT AI concierge + commission co-pilot,
 compare fill bars, view-as-buyer — all shipped.
+- **Self-service account deletion (buyers + vendors) — BUILT 2026-07-23, local
+  commit, NOT deployed, PENDING adversarial security review.** `/account` gets
+  a bilingual "Danger zone" (type DELETE/ELIMINAR + password for password
+  accounts, second click for OAuth). `POST /api/account/delete` (auth via
+  getSessionUser, no client id ever; admins blocked). Policy: personal rows
+  DELETED; financial/legal/audit RETAINED with identity anonymized;
+  `vendor_profiles` ANONYMIZED not deleted (its id is the ON DELETE CASCADE
+  anchor for commissions/purchases/moderation — deleting it would destroy the
+  fee ledger). Auth user deleted LAST. Fee engine untouched. Pure rules in
+  `src/lib/account/deletion-rules.ts`, orchestration in
+  `src/lib/account/deletion.ts`. No migration. Gates: typecheck 0, tests
+  109/109 (12 new), build clean.
 - **Signup 4th role choice "Something else" (2026-07-23)** — `/signup` Step 1
   now has a 4th tile alongside Buy for my company / Join as a vendor / Buyer
   and vendor. Treated as a buyer (no new lane): `sellerMode` stays false,

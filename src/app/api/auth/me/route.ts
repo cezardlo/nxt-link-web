@@ -17,6 +17,11 @@ export async function GET() {
     if (!auth?.user) return NextResponse.json({ ok: true, signed_in: false });
 
     const emailVerified = Boolean(auth.user.email_confirmed_at);
+    // Whether this account has a password identity (vs OAuth-only) — the
+    // account page uses it to decide whether to ask for the password on delete.
+    const identities = (auth.user.identities || []) as Array<{ provider?: string }>;
+    const providers = (auth.user.app_metadata?.providers as string[] | undefined) || [];
+    const hasPassword = identities.some((i) => i.provider === 'email') || providers.includes('email');
     let role = 'client';
 
     if (isSupabaseConfigured()) {
@@ -43,7 +48,7 @@ export async function GET() {
     // the client; empty/unset = nobody; does NOT bypass the /admin AccessGate.
     if (isAdminEmail(auth.user.email, process.env.ADMIN_EMAILS)) role = 'admin';
 
-    return NextResponse.json({ ok: true, signed_in: true, role, email: auth.user.email, email_verified: emailVerified });
+    return NextResponse.json({ ok: true, signed_in: true, role, email: auth.user.email, email_verified: emailVerified, has_password: hasPassword });
   } catch {
     return NextResponse.json({ ok: true, signed_in: false });
   }

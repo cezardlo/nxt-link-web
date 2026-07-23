@@ -67,6 +67,7 @@ import Link from 'next/link';
 import { IBM_Plex_Sans } from 'next/font/google';
 import { useLang, type Lang } from '@/components/LanguageToggle';
 import PublicHeader from '@/components/PublicHeader';
+import AccountDeletedNotice from '@/components/account/AccountDeletedNotice';
 import {
   ArrowRight, BadgeCheck, ShieldCheck, Send, Search, ChevronRight, Check,
   MessageSquareText, PackageSearch, Forklift, HardHat, Warehouse, Bot, Wrench,
@@ -328,6 +329,8 @@ export default function Home() {
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
       <PublicHeader lang={lang} onLangChange={setLang} />
+
+      <AccountDeletedNotice lang={lang} />
 
       {/* Hero — rich dark band. Big search bar + quick searches on the left,
           the "describe your need" RFQ card on the right — the two-column

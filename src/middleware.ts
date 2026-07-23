@@ -165,7 +165,7 @@ export function middleware(req: NextRequest) {
   // explicit, override-proof defense-in-depth on top of removing the blanket public
   // /api cache header (security review 2026-07-22). Public marketplace/* GETs are
   // deliberately excluded so they may still be cached later if wanted.
-  if (/^\/api\/(auth|vendor|vendors|buyer|projects|apply|admin)(\/|$)/.test(pathname)) {
+  if (/^\/api\/(auth|vendor|vendors|buyer|projects|apply|admin|account)(\/|$)/.test(pathname)) {
     response.headers.set('Cache-Control', 'private, no-store');
   }
 
