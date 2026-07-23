@@ -18,6 +18,22 @@ export function isSupabaseConfigured(): boolean {
   return Boolean(supabaseUrl && (supabaseAnonKey || supabaseServiceRoleKey));
 }
 
+// This is the DATA client (server-side reads/writes via admin/anon key — no
+// user session). It is what every API route uses to query Postgres/storage,
+// including the public marketplace read routes. supabase-js issues its
+// requests through the global `fetch`, and Next.js patches global fetch to
+// memoize/cache GET responses in its Data Cache keyed by URL — so without
+// this override, a listings query result could get cached by Next and keep
+// being served after the underlying row changed (the stale "(DEMO)" bug).
+// Forcing `cache: 'no-store'` on every request this client makes means Next
+// never stores or reuses a Supabase response, so every call — reads AND
+// writes — always hits Postgres fresh. Do NOT apply this to the auth clients
+// (browser-auth.ts / server-auth.ts / browser.ts) — those use @supabase/ssr
+// with cookie-based sessions and are unrelated to this caching path.
+function noStoreFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  return fetch(input, { ...init, cache: 'no-store' });
+}
+
 export function getSupabaseClient(options?: { admin?: boolean }): SupabaseClient {
   // When admin is requested but the service role key is missing in the
   // environment, fall back to the anon key so read-only routes still
@@ -34,6 +50,9 @@ export function getSupabaseClient(options?: { admin?: boolean }): SupabaseClient
     auth: {
       persistSession: false,
       autoRefreshToken: false,
+    },
+    global: {
+      fetch: noStoreFetch,
     },
   });
 }

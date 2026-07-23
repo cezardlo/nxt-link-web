@@ -3,6 +3,8 @@
 // case studies + related listings (same vendor, then same category).
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { colsFor, tableFor } from '@/lib/marketplace/types';
