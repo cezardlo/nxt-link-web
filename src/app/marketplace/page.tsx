@@ -385,7 +385,14 @@ export default function MarketplacePage() {
           fetch('/api/marketplace/categories'),
         ]);
         const data = await lRes.json();
-        setCards(data.listings || []);
+        // One malformed listing (jsonb {} where a list belongs) must degrade to
+        // empty, not white-screen the whole marketplace — coerce at ingestion.
+        const asList = (v: unknown): string[] => (Array.isArray(v) ? v : []);
+        setCards((data.listings || []).map((c: Card) => ({
+          ...c,
+          best_for: asList(c.best_for), industries: asList(c.industries),
+          availability: asList(c.availability), service_areas: asList(c.service_areas),
+        })));
         try {
           const cat = await cRes.json();
           setDepartments((cat.departments || []).map((d: { fg: string; label_en: string; is_service: boolean }) => ({ fg: d.fg, label_en: d.label_en, is_service: d.is_service })));

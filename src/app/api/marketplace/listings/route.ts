@@ -122,8 +122,15 @@ export async function GET(req: Request) {
     }
     const v = vmap.get(r.vendor_id);
     const rt = ratings.get(r.vendor_id);
+    // The list-typed jsonb columns hold {} instead of [] on some rows (2026-07-16
+    // load); one such row must degrade to an empty list here, not crash every
+    // consumer that iterates it (the marketplace page white-screened on this).
+    const asList = (val: unknown): unknown[] => (Array.isArray(val) ? val : []);
     return {
       ...r, image_paths: undefined, image_url,
+      best_for: asList(r.best_for), industries: asList(r.industries),
+      ...('availability' in r ? { availability: asList(r.availability) } : {}),
+      ...('service_areas' in r ? { service_areas: asList(r.service_areas) } : {}),
       vendor_name: v?.company_name || 'Vendor', vendor_city: v?.city || null,
       vendor_verified: Boolean(v?.verified),
       vendor_verification_level: v?.verification_level || null,
