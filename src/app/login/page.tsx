@@ -17,6 +17,7 @@
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
+import { safeRelativePath } from '@/lib/auth/oauth';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
 import OAuthButton from '@/components/OAuthButton';
 import { bilingualCopy, OAUTH_CONTINUE_AGREES_MSG, ANY_OAUTH_ENABLED } from '@/lib/auth/oauth';
@@ -93,11 +94,12 @@ function LoginInner() {
       }
       const me = await fetch('/api/auth/me').then((r) => r.json()).catch(() => null);
       const role = me?.role || 'client';
-      const next = sp.get('next');
-      window.location.href = (next && next.startsWith('/') && !next.startsWith('//')) ? next
-        : role === 'admin' || role === 'super_admin' ? '/admin'
-        : role === 'vendor' ? '/vendor/leads'
-        : '/buyer';
+      // safeRelativePath (not an inline startsWith check): '/\evil.com' passes
+      // a '//' test but the browser resolves it protocol-relative — open redirect.
+      window.location.href = safeRelativePath(sp.get('next'),
+        role === 'admin' || role === 'super_admin' ? '/admin'
+          : role === 'vendor' ? '/vendor/leads'
+          : '/buyer');
     } catch {
       setErr('Could not sign in. Try again.');
       setBusy(false);

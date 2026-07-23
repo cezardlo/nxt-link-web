@@ -5,10 +5,16 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { tableFor } from '@/lib/marketplace/types';
+import { getSessionUser } from '@/lib/auth/require-user';
 
 const REASONS = ['wrong_info', 'misleading', 'spam', 'not_available', 'other'];
 
 export async function POST(req: Request) {
+  // Login wall: the last marketplace endpoint left anonymous. Unauthenticated
+  // callers could probe listing IDs (404 vs ok = existence oracle) and spam
+  // listing_reports; gate it like every other marketplace route.
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ ok: false, code: 'auth_required', message: 'Sign in to report a listing' }, { status: 401 });
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return NextResponse.json({ ok: false, message: 'Invalid JSON' }, { status: 400 }); }
 
