@@ -832,7 +832,9 @@ function ListingCard({ c, saved, inCompare, onSave, onCompare }: { c: Card; save
   return (
     <div className="mk-card">
       <Link href={`/marketplace/${c.kind}/${c.id}`} className="mk-card-img">
-        {c.image_url ? <img src={c.image_url} alt={c.name} loading="lazy" /> : <div className="mk-noimg">{c.kind === 'product' ? 'Product' : 'Service'}</div>}
+        {/* No repeat of "Product"/"Service" here — the kind badge right below
+            already says it (fix for cards without a photo showing it twice). */}
+        {c.image_url ? <img src={c.image_url} alt={c.name} loading="lazy" /> : <div className="mk-noimg">NXT//LINK</div>}
       </Link>
       <div className="mk-card-body">
         <div className="mk-kindrow">

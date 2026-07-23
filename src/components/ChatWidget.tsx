@@ -1,6 +1,14 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { IBM_Plex_Sans } from 'next/font/google';
+
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-ibm-plex-sans-scout',
+  display: 'swap',
+});
 
 interface Msg { role: 'user' | 'assistant'; content: string }
 
@@ -8,7 +16,7 @@ const SCOUT_ICON = (
   <svg viewBox="0 0 24 24" fill="none"><circle cx="8" cy="14" r="4" stroke="currentColor" strokeWidth="1.8" /><circle cx="16" cy="14" r="4" stroke="currentColor" strokeWidth="1.8" /><path d="M12 14V10M8 10h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
 );
 
-// NXT//LINK Scout — premium brand chat (Outfit + purple), wired to /api/chat.
+// NXT//LINK Scout — premium brand chat (IBM Plex Sans + violet), wired to /api/chat.
 export default function ChatWidget({ mode = 'public', locale = 'en' }: { mode?: 'public' | 'vendor'; locale?: 'en' | 'es' }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -44,7 +52,7 @@ export default function ChatWidget({ mode = 'public', locale = 'en' }: { mode?: 
   }
 
   return (
-    <div className="scout">
+    <div className={`scout ${ibmPlexSans.variable}`}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div className={'sc-box' + (open ? ' open' : '')}>
         <div className="sc-head">
@@ -76,12 +84,12 @@ export default function ChatWidget({ mode = 'public', locale = 'en' }: { mode?: 
 }
 
 const CSS = `
-.scout{--bg:#0A0A0F;--bg2:#111118;--surf2:rgba(255,255,255,.07);--ink:#F0F0F5;--ink2:#C0C0D0;--muted:#8080A0;--muted2:#505068;--line:rgba(255,255,255,.08);--p:#7C5CFC;--p2:#A78BFA;--pd:#6344DF;--pbg:rgba(124,92,252,.12);--green:#34D399;
-  font-family:'Outfit',system-ui,sans-serif;}
+.scout{--bg:#F8F7FB;--bg2:#fff;--surf2:#EFEDF5;--ink:#141320;--ink2:#3B3A4A;--muted:#615F72;--muted2:#8A87A0;--line:#E2DFEC;--p:#6C5CE0;--p2:#4A3DB0;--pd:#4A3DB0;--pbg:rgba(108,92,224,.1);--green:#2F9E6A;
+  font-family:var(--font-ibm-plex-sans-scout),'IBM Plex Sans',system-ui,sans-serif;}
 .sc-fab{position:fixed;bottom:28px;right:28px;z-index:150;width:60px;height:60px;border-radius:50%;background:var(--p);border:none;cursor:pointer;box-shadow:0 4px 24px rgba(124,92,252,.45);display:flex;align-items:center;justify-content:center;transition:.3s;}
 .sc-fab:hover{transform:scale(1.08);box-shadow:0 6px 32px rgba(124,92,252,.55);}
 .sc-fab svg{width:26px;height:26px;}
-.sc-box{position:fixed;bottom:100px;right:28px;z-index:150;width:370px;max-width:calc(100vw - 56px);height:480px;max-height:calc(100vh - 140px);background:var(--bg2);border:1px solid var(--line);border-radius:18px;display:flex;flex-direction:column;overflow:hidden;opacity:0;transform:translateY(12px) scale(.97);pointer-events:none;transition:opacity .2s,transform .2s;box-shadow:0 12px 48px rgba(0,0,0,.5);}
+.sc-box{position:fixed;bottom:100px;right:28px;z-index:150;width:370px;max-width:calc(100vw - 56px);height:480px;max-height:calc(100vh - 140px);background:var(--bg2);border:1px solid var(--line);border-radius:18px;display:flex;flex-direction:column;overflow:hidden;opacity:0;transform:translateY(12px) scale(.97);pointer-events:none;transition:opacity .2s,transform .2s;box-shadow:0 12px 40px rgba(20,19,32,.18);}
 .sc-box.open{opacity:1;transform:none;pointer-events:auto;}
 .sc-head{padding:15px 18px;background:linear-gradient(135deg,var(--p),var(--pd));display:flex;align-items:center;gap:12px;}
 .sc-av-wrap{position:relative;}
@@ -105,10 +113,10 @@ const CSS = `
 .sc-typing span:nth-child(2){animation-delay:.2s;}.sc-typing span:nth-child(3){animation-delay:.4s;}
 @keyframes scTyp{0%,100%{opacity:.3;transform:translateY(0);}50%{opacity:1;transform:translateY(-4px);}}
 .sc-starters{display:flex;flex-direction:column;gap:7px;margin-top:4px;align-items:flex-start;}
-.sc-starters button{background:var(--pbg);border:1px solid rgba(124,92,252,.25);color:var(--p3,#C4B5FD);font-family:'Outfit';font-size:13px;padding:8px 13px;border-radius:99px;cursor:pointer;transition:.15s;}
-.sc-starters button:hover{background:rgba(124,92,252,.2);}
+.sc-starters button{background:var(--pbg);border:1px solid rgba(108,92,224,.25);color:var(--p2);font-family:inherit;font-size:13px;padding:8px 13px;border-radius:99px;cursor:pointer;transition:.15s;}
+.sc-starters button:hover{background:rgba(108,92,224,.18);}
 .sc-input{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:10px;background:var(--bg2);}
-.sc-input input{flex:1;font-family:'Outfit';font-size:14px;padding:10px 14px;background:var(--bg);border:1px solid var(--line);border-radius:99px;color:var(--ink);outline:none;}
+.sc-input input{flex:1;font-family:inherit;font-size:14px;padding:10px 14px;background:var(--bg);border:1px solid var(--line);border-radius:99px;color:var(--ink);outline:none;}
 .sc-input input:focus{border-color:var(--p);}
 .sc-input button{width:38px;height:38px;border-radius:50%;background:var(--p);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s;flex-shrink:0;}
 .sc-input button:hover{background:var(--pd);}.sc-input button:disabled{opacity:.5;}
