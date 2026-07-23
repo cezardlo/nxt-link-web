@@ -627,6 +627,9 @@ function Item({ k, v }: { k: string; v: string }) {
 const CSS = `
 .dt{min-height:100vh;background:var(--spec-warm-white);color:var(--spec-ink);font-family:var(--font-ibm-plex-sans-detail),'IBM Plex Sans',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;}
 .dt *{box-sizing:border-box;}
+/* On-brand focus ring (the app-wide default in globals.css is the old v4
+   blue accent, which drifts off Design System v1.0 on this light page). */
+.dt a:focus-visible,.dt button:focus-visible,.dt input:focus-visible,.dt textarea:focus-visible,.dt select:focus-visible{outline:2px solid var(--spec-violet);outline-offset:2px;}
 .dt h1,.dt h3,.dt h4{font-family:var(--font-space-grotesk),'Space Grotesk',system-ui,sans-serif;}
 .dt-empty{min-height:60vh;display:grid;place-items:center;color:var(--spec-text-2nd);}
 .dt-empty a{color:var(--spec-violet-deep);}

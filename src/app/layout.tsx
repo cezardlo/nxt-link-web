@@ -28,7 +28,13 @@ export const viewport = {
 
 const siteDescription = 'NXT Link is the industrial supply chain marketplace: technology, hardware, equipment, and services for warehouses, manufacturers, and logistics. Discover, compare, request quotes, pilot before buying — deals run through NXT Link.';
 
+// Same site-URL fallback used elsewhere (src/lib/invites/emails.ts, etc.).
+// metadataBase lets the opengraph-image.tsx file convention (and any
+// relative OG/twitter URLs) resolve to an absolute URL in shared links.
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://nxt-link-web.vercel.app').replace(/\/$/, '');
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: 'NXT Link — The Industrial Supply Chain Marketplace',
   description: siteDescription,
   robots: { index: true, follow: true },

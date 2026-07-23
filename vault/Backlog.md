@@ -251,6 +251,43 @@ compare fill bars, view-as-buyer — all shipped.
   `POST /api/auth/signup` and is stored in the new account's Supabase user
   metadata (password-signup path only). No schema change, no migration,
   click-wrap/magic-link/lane logic untouched. Committed locally, NOT deployed.
+- **Marketplace login wall + role-based admin login + vendor-nav fix
+  (2026-07-23, commit `0961b7b`, local, NOT pushed)** — full sign-in wall on
+  the marketplace (owner decision): `middleware.ts` gates `/marketplace` + all
+  subpaths → `/login?next=<path+query>`; read APIs (listings, listings/[id],
+  vendor/[id], suggest) return 401 for anonymous via a real server-side
+  `getUser()` check (new `src/lib/auth/require-user.ts`);
+  `/api/marketplace/categories` stays PUBLIC (homepage tiles);
+  `POST /api/marketplace/request` now auth-required (keeps honeypot/timing,
+  attributes to the signed-in email + `answers.requested_by`). Role-based
+  admin: new `src/lib/auth/admin-allowlist.ts` (`ADMIN_EMAILS` env allowlist,
+  case-insensitive, empty=nobody, server-only) consulted in `auth/callback` +
+  `api/auth/me` as a 2nd path to `admin` alongside `platform_users.role`;
+  `ADMIN_ACCESS_CODE` AccessGate kept. VendorNav gets a Marketplace/Mercado
+  link. Fee engine, `guard.ts` masking, RLS, legal lanes untouched. Gates:
+  typecheck 0, tests 97/97, build clean. **PROD FLIP for owner admin: add
+  Vercel env `ADMIN_EMAILS=delaocesar65@gmail.com` (Production), redeploy.**
+- **Premium-polish Phase 1 — first-session surfaces to Design System v1.0
+  (2026-07-23)** — per `workplace/design/premium-polish-audit.md`. Visual/CSS
+  only, no behavior changes: `error.tsx` and `not-found.tsx` rebuilt light
+  (warm-white/violet, bilingual "EN / ES" one-string copy — no toggle on
+  these screens, matches the existing no-toggle idiom); `loading.tsx`
+  skeleton recolored to spec tokens (was `bg-black`/`zinc-900`); `/login` and
+  `/vendor-login` CSS rewritten to the light palette matching `/signup` and
+  `/vendor-signup` pixel-for-pixel (same class names, same handlers/OAuth
+  flag branches — only the `CSS` template literal + an IBM Plex Sans
+  `next/font` import changed); `/marketplace/[kind]/[id]` gets a scoped
+  violet `:focus-visible` override (was inheriting the old v4 blue accent
+  from `globals.css`); `layout.tsx` gets `metadataBase` +
+  `src/app/opengraph-image.tsx` (next/og `ImageResponse`, 1200×630, edge
+  runtime — the Node runtime throws "Invalid URL" prerendering on Windows);
+  `icon.svg` redrawn on-brand (was black/cyan v4 leftover) as the violet "//"
+  device mark per the brand kit. `manifest.ts` colors were already correct.
+  Gates: typecheck 0, tests 97/97, build clean. **Known-skipped:** the raster
+  `public/icon-192.png`/`icon-512.png` PWA icons are still the old black/cyan
+  art — regenerating binary PNGs needs an image tool, not available this
+  pass. `/sign-in` (redirects to `/login` already) and the buyer/vendor
+  dashboards are Phase 2/3, untouched.
 
 ---
 
