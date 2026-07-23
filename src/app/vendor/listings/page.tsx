@@ -4,11 +4,20 @@
 // structured fields, AI fill from a document or pasted text, image upload,
 // and draft→publish control. Everything is scoped to the signed-in vendor.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import { scoreListing } from '@/lib/marketplace/completeness';
+import { pilotEntriesOf, customFieldsOf, type PilotEntry, type CustomField } from '@/lib/marketplace/types';
+import ChipTagInput from '@/components/marketplace/ChipTagInput';
 import VendorNav from '@/components/VendorNav';
+
+// Vendor-flexibility caps (2026-07-23) — soft client-side guards that mirror
+// the hard caps enforced server-side in normalizeListingInput/cleanBlock
+// (src/lib/marketplace/types.ts). The API is the real authority; these just
+// keep the UI from letting a vendor build something the server will trim.
+const PILOT_MAX = 8;
+const CUSTOM_MAX = 20;
 
 // Design System v1.0 reskin (Premium Polish Phase 2, 2026-07-23): visual/CSS
 // only — every handler and state above is unchanged.
@@ -31,25 +40,30 @@ interface Listing {
 }
 
 // Editor form state: everything as strings/booleans, converted on save.
+// Category/industries/best_for/use_cases are chip lists now (was comma
+// strings) — category still collapses to ONE string on save (persisted shape
+// unchanged: category=string, industries/best_for/use_cases=string[]).
+// pilots/impl_custom/ws_custom/pr_custom back the new repeatable/extensible
+// sections (see toBody/fromListing for the JSONB shape + back-compat read).
 interface Form {
-  name: string; category: string; overview: string; best_for: string; industries: string;
-  use_cases: string; specs: string; buy: boolean; rent: boolean; lease: boolean; lead_time: string;
+  name: string; category: string; overview: string; best_for: string[]; industries: string[];
+  use_cases: string[]; specs: string; buy: boolean; rent: boolean; lease: boolean; lead_time: string;
   service_areas: string; response_time: string; process: string; certifications: string;
   pricing_model: string; emergency_available: boolean;
-  pilot_available: boolean; pilot_duration: string; pilot_cost: string; pilot_scope: string;
-  impl_requirements: string; impl_timeline: string; impl_training: string;
-  ws_warranty: string; ws_channels: string; ws_sla: string;
-  pr_model: string; pr_range: string; pr_notes: string;
+  pilot_available: boolean; pilots: PilotEntry[];
+  impl_requirements: string; impl_timeline: string; impl_training: string; impl_custom: CustomField[];
+  ws_warranty: string; ws_channels: string; ws_sla: string; ws_custom: CustomField[];
+  pr_model: string; pr_range: string; pr_notes: string; pr_custom: CustomField[];
 }
 const EMPTY: Form = {
-  name: '', category: '', overview: '', best_for: '', industries: '',
-  use_cases: '', specs: '', buy: false, rent: false, lease: false, lead_time: '',
+  name: '', category: '', overview: '', best_for: [], industries: [],
+  use_cases: [], specs: '', buy: false, rent: false, lease: false, lead_time: '',
   service_areas: '', response_time: '', process: '', certifications: '',
   pricing_model: '', emergency_available: false,
-  pilot_available: false, pilot_duration: '', pilot_cost: '', pilot_scope: '',
-  impl_requirements: '', impl_timeline: '', impl_training: '',
-  ws_warranty: '', ws_channels: '', ws_sla: '',
-  pr_model: '', pr_range: '', pr_notes: '',
+  pilot_available: false, pilots: [],
+  impl_requirements: '', impl_timeline: '', impl_training: '', impl_custom: [],
+  ws_warranty: '', ws_channels: '', ws_sla: '', ws_custom: [],
+  pr_model: '', pr_range: '', pr_notes: '', pr_custom: [],
 };
 
 const csv = (s: string) => s.split(/[,\n]/).map((x) => x.trim()).filter(Boolean);
@@ -64,16 +78,47 @@ function toBody(kind: Kind, f: Form): Record<string, unknown> {
     const i = ln.indexOf(':');
     if (i > 0) specsObj[ln.slice(0, i).trim()] = ln.slice(i + 1).trim();
   }
+  // Repeatable pilots: entry 0 always mirrors onto the legacy top-level
+  // duration/cost/scope fields (so anything reading the OLD single-object
+  // shape still sees a value); `entries` is only added when there are 2+, so
+  // a single-pilot save round-trips as the exact same shape as before this
+  // feature — nothing new is written to the 23 existing listings' shape
+  // unless a vendor actually adds a second pilot.
+  const pilots = f.pilots
+    .map((p) => ({ duration: p.duration.trim(), cost: p.cost.trim(), scope: p.scope.trim() }))
+    .filter((p) => p.duration || p.cost || p.scope)
+    .slice(0, PILOT_MAX);
+  const cleanCustom = (list: CustomField[]): CustomField[] => list
+    .map((c) => ({ label: c.label.trim(), value: c.value.trim() }))
+    .filter((c) => c.label && c.value)
+    .slice(0, CUSTOM_MAX);
+  const implCustom = cleanCustom(f.impl_custom);
+  const wsCustom = cleanCustom(f.ws_custom);
+  const prCustom = cleanCustom(f.pr_custom);
+
   const base: Record<string, unknown> = {
     name: f.name, category: f.category, overview: f.overview,
-    best_for: csv(f.best_for), industries: csv(f.industries),
-    pilot: { available: f.pilot_available, duration: f.pilot_duration, cost: f.pilot_cost, scope: f.pilot_scope },
-    implementation: { requirements: csv(f.impl_requirements), typical_timeline: f.impl_timeline, training: f.impl_training },
-    warranty_support: { warranty: f.ws_warranty, support_channels: csv(f.ws_channels), sla: f.ws_sla },
-    pricing: { model: f.pr_model, range: f.pr_range, buy: f.buy, rent: f.rent, lease: f.lease, notes: f.pr_notes },
+    best_for: f.best_for, industries: f.industries,
+    pilot: {
+      available: f.pilot_available,
+      duration: pilots[0]?.duration || '', cost: pilots[0]?.cost || '', scope: pilots[0]?.scope || '',
+      ...(pilots.length > 1 ? { entries: pilots } : {}),
+    },
+    implementation: {
+      requirements: csv(f.impl_requirements), typical_timeline: f.impl_timeline, training: f.impl_training,
+      ...(implCustom.length ? { custom: implCustom } : {}),
+    },
+    warranty_support: {
+      warranty: f.ws_warranty, support_channels: csv(f.ws_channels), sla: f.ws_sla,
+      ...(wsCustom.length ? { custom: wsCustom } : {}),
+    },
+    pricing: {
+      model: f.pr_model, range: f.pr_range, buy: f.buy, rent: f.rent, lease: f.lease, notes: f.pr_notes,
+      ...(prCustom.length ? { custom: prCustom } : {}),
+    },
   };
   if (kind === 'product') {
-    return { ...base, use_cases: csv(f.use_cases), specs: specsObj, availability: ['buy', 'rent', 'lease'].filter((o) => f[o as 'buy']), lead_time: f.lead_time };
+    return { ...base, use_cases: f.use_cases, specs: specsObj, availability: ['buy', 'rent', 'lease'].filter((o) => f[o as 'buy']), lead_time: f.lead_time };
   }
   return { ...base, service_areas: csv(f.service_areas), response_time: f.response_time, process: lines(f.process), certifications: csv(f.certifications), pricing_model: f.pricing_model, emergency_available: f.emergency_available };
 }
@@ -82,18 +127,24 @@ function fromListing(l: Listing): Form {
   return {
     ...EMPTY,
     name: l.name || '', category: l.category || '', overview: l.overview || '',
-    best_for: join(l.best_for), industries: join(l.industries),
-    use_cases: join(l.use_cases),
+    best_for: l.best_for || [], industries: l.industries || [],
+    use_cases: l.use_cases || [],
     specs: l.specs ? Object.entries(l.specs).map(([k, v]) => `${k}: ${v}`).join('\n') : '',
     buy: !!l.availability?.includes('buy'), rent: !!l.availability?.includes('rent'), lease: !!l.availability?.includes('lease'),
     lead_time: l.lead_time || '',
     service_areas: join(l.service_areas), response_time: l.response_time || '',
     process: joinL(l.process), certifications: join(l.certifications),
     pricing_model: l.pricing_model || '', emergency_available: !!l.emergency_available,
-    pilot_available: Boolean(l.pilot?.available), pilot_duration: gs(l.pilot, 'duration'), pilot_cost: gs(l.pilot, 'cost'), pilot_scope: gs(l.pilot, 'scope'),
+    // Back-compat: pilotEntriesOf/customFieldsOf read BOTH the old
+    // single-object shape (the 23 existing listings) and the new
+    // entries/custom arrays — the form never needs to know which one it got.
+    pilot_available: Boolean(l.pilot?.available), pilots: pilotEntriesOf(l.pilot).slice(0, PILOT_MAX),
     impl_requirements: join(l.implementation?.requirements), impl_timeline: gs(l.implementation, 'typical_timeline'), impl_training: gs(l.implementation, 'training'),
+    impl_custom: customFieldsOf(l.implementation),
     ws_warranty: gs(l.warranty_support, 'warranty'), ws_channels: join(l.warranty_support?.support_channels), ws_sla: gs(l.warranty_support, 'sla'),
+    ws_custom: customFieldsOf(l.warranty_support),
     pr_model: gs(l.pricing, 'model'), pr_range: gs(l.pricing, 'range'), pr_notes: gs(l.pricing, 'notes'),
+    pr_custom: customFieldsOf(l.pricing),
   };
 }
 
@@ -144,6 +195,37 @@ export default function VendorListingsPage() {
     sb.auth.getSession().then(({ data }) => { if (data.session) load(); else setChecking(false); });
   }, [load]);
 
+  // Suggested chips for Category / Industries come from REAL data: the
+  // canonical taxonomy (same source as the public marketplace's category
+  // filters) plus whatever this vendor has already typed on their own other
+  // listings — never a hardcoded list, and typing a custom value is always
+  // allowed on top of these.
+  const [taxonomy, setTaxonomy] = useState<{ categories: string[]; industries: string[] } | null>(null);
+  useEffect(() => {
+    fetch('/api/marketplace/categories').then((r) => r.json()).then((d) => {
+      if (!d?.ok) return;
+      const categories: string[] = (d.departments || []).flatMap((dep: { items?: Array<{ label_en?: string }> }) => (dep.items || []).map((it) => it.label_en || '')).filter(Boolean);
+      setTaxonomy({ categories, industries: d.industries || [] });
+    }).catch(() => {});
+  }, []);
+
+  const suggestedCategories = useMemo(() => {
+    const mine = [...products, ...services].map((l) => l.category).filter(Boolean) as string[];
+    return Array.from(new Set([...(taxonomy?.categories || []), ...mine])).sort((a, b) => a.localeCompare(b));
+  }, [taxonomy, products, services]);
+  const suggestedIndustries = useMemo(() => {
+    const mine = [...products, ...services].flatMap((l) => l.industries || []);
+    return Array.from(new Set([...(taxonomy?.industries || []), ...mine])).sort((a, b) => a.localeCompare(b));
+  }, [taxonomy, products, services]);
+  const suggestedBestFor = useMemo(() => {
+    const mine = [...products, ...services].flatMap((l) => l.best_for || []);
+    return Array.from(new Set(mine)).sort((a, b) => a.localeCompare(b));
+  }, [products, services]);
+  const suggestedUseCases = useMemo(() => {
+    const mine = [...products, ...services].flatMap((l) => l.use_cases || []);
+    return Array.from(new Set(mine)).sort((a, b) => a.localeCompare(b));
+  }, [products, services]);
+
   function openNew(kind: Kind) { setEditing({ kind, id: null }); setF(EMPTY); setDocId(null); setAiSummary(''); setPasteText(''); setMsg(''); }
   function openEdit(kind: Kind, l: Listing) { setEditing({ kind, id: l.id }); setF(fromListing(l)); setDocId(null); setAiSummary(''); setPasteText(''); setMsg(''); }
 
@@ -155,10 +237,41 @@ export default function VendorListingsPage() {
       (Object.keys(m) as Array<keyof Form>).forEach((k) => {
         const v = m[k];
         if (typeof v === 'boolean') { if (v) (next[k] as boolean) = true; }
+        else if (Array.isArray(v)) {
+          // Chip lists (best_for/industries/use_cases) and the pilots/custom
+          // field arrays: only fill in from the AI draft when the vendor
+          // hasn't already put something there.
+          const prevV = prev[k];
+          if (v.length > 0 && Array.isArray(prevV) && prevV.length === 0) (next[k] as unknown[]) = v;
+        }
         else if (v && !prev[k]) (next[k] as string) = v;
       });
       return next;
     });
+  }
+
+  // Repeatable pilot / demo entries.
+  function addPilot() {
+    setF((prev) => (prev.pilots.length >= PILOT_MAX ? prev : { ...prev, pilots: [...prev.pilots, { duration: '', cost: '', scope: '' }] }));
+  }
+  function updatePilot(i: number, key: keyof PilotEntry, v: string) {
+    setF((prev) => ({ ...prev, pilots: prev.pilots.map((p, j) => (j === i ? { ...p, [key]: v } : p)) }));
+  }
+  function removePilot(i: number) {
+    setF((prev) => ({ ...prev, pilots: prev.pilots.filter((_, j) => j !== i) }));
+  }
+
+  // Vendor-defined {label, value} rows on implementation / warranty_support /
+  // pricing — one shared set of handlers for all three "custom" arrays.
+  type CustomKey = 'impl_custom' | 'ws_custom' | 'pr_custom';
+  function addCustom(key: CustomKey) {
+    setF((prev) => (prev[key].length >= CUSTOM_MAX ? prev : { ...prev, [key]: [...prev[key], { label: '', value: '' }] }));
+  }
+  function updateCustom(key: CustomKey, i: number, field: keyof CustomField, v: string) {
+    setF((prev) => ({ ...prev, [key]: prev[key].map((c, j) => (j === i ? { ...c, [field]: v } : c)) }));
+  }
+  function removeCustom(key: CustomKey, i: number) {
+    setF((prev) => ({ ...prev, [key]: prev[key].filter((_, j) => j !== i) }));
   }
 
   async function aiFill(file?: File) {
@@ -266,6 +379,28 @@ export default function VendorListingsPage() {
   const C = (k: keyof Form, label: string) => (
     <label className="sc-cb"><input type="checkbox" checked={f[k] as boolean} onChange={(e) => setF({ ...f, [k]: e.target.checked })} /> {label}</label>
   );
+  // Chip/tag field: suggested chips from real data + type-your-own, never
+  // restricted to the suggestion list. `max=1` makes it act as a single-value
+  // picker (used for category, which persists as one string).
+  const Chip = (label: string, value: string[], onChange: (v: string[]) => void, opts: { suggestions?: string[]; max?: number; placeholder?: string } = {}) => (
+    <label className="sc-field"><span>{label}</span>
+      <ChipTagInput value={value} onChange={onChange} suggestions={opts.suggestions} max={opts.max} placeholder={opts.placeholder} />
+    </label>
+  );
+  // Shared "+ Add field" UI for the implementation / warranty_support /
+  // pricing custom {label, value} rows.
+  const CustomFields = (key: CustomKey) => (
+    <div className="sc-custom">
+      {f[key].map((c, i) => (
+        <div className="sc-customrow" key={i}>
+          <input placeholder="Field name / Nombre del campo" maxLength={60} value={c.label} onChange={(e) => updateCustom(key, i, 'label', e.target.value)} aria-label="Field name / Nombre del campo" />
+          <input placeholder="Value / Valor" maxLength={300} value={c.value} onChange={(e) => updateCustom(key, i, 'value', e.target.value)} aria-label="Value / Valor" />
+          <button type="button" className="sc-link" onClick={() => removeCustom(key, i)}>Remove / Quitar</button>
+        </div>
+      ))}
+      <button type="button" className="sc-btn sm ghost" disabled={f[key].length >= CUSTOM_MAX} onClick={() => addCustom(key)}>+ Add field / + Agregar campo</button>
+    </div>
+  );
 
   return (
     <Shell>
@@ -360,18 +495,27 @@ export default function VendorListingsPage() {
 
           <div className="sc-grid">
             {T('name', `${editing.kind === 'product' ? 'Product' : 'Service'} name *`)}
-            {T('category', 'Category', editing.kind === 'product' ? 'e.g. Forklifts, WMS, Robotics' : 'e.g. Electrical service, Pest control')}
+            {Chip('Category / Categoría', f.category ? [f.category] : [], (next) => setF({ ...f, category: next[next.length - 1] || '' }), {
+              suggestions: suggestedCategories, max: 1,
+              placeholder: 'Type your own or pick a suggestion below / Escribe la tuya o elige una sugerencia',
+            })}
           </div>
           {T('overview', 'Description', 'What it is, what problem it solves, why it is different.', 4)}
           <div className="sc-grid">
-            {T('best_for', 'Best for (comma-separated)', 'e.g. High-volume DCs, Cold storage')}
-            {T('industries', 'Industries served (comma-separated)', 'e.g. Warehousing & 3PL, Manufacturing')}
+            {Chip('Best for / Ideal para', f.best_for, (next) => setF({ ...f, best_for: next }), {
+              suggestions: suggestedBestFor, max: 10, placeholder: 'Type one and press Enter / Escribe uno y presiona Enter',
+            })}
+            {Chip('Industries served / Industrias atendidas', f.industries, (next) => setF({ ...f, industries: next }), {
+              suggestions: suggestedIndustries, max: 15, placeholder: 'Type one and press Enter / Escribe una y presiona Enter',
+            })}
           </div>
 
           {editing.kind === 'product' ? (
             <>
               <div className="sc-grid">
-                {T('use_cases', 'Use cases (comma-separated)')}
+                {Chip('Use cases / Casos de uso', f.use_cases, (next) => setF({ ...f, use_cases: next }), {
+                  suggestions: suggestedUseCases, max: 12, placeholder: 'Type one and press Enter / Escribe uno y presiona Enter',
+                })}
                 {T('lead_time', 'Lead time', 'e.g. 2-4 weeks')}
               </div>
               {T('specs', 'Specifications (one per line, "Name: value")', 'Capacity: 5,000 lb\nPower: Electric 48V', 4)}
@@ -394,16 +538,29 @@ export default function VendorListingsPage() {
 
           <details className="sc-block"><summary>Pilot / demo</summary>
             <div className="sc-cbrow">{C('pilot_available', 'Pilot or demo available')}</div>
-            <div className="sc-grid3">{T('pilot_duration', 'Duration', 'e.g. 30 days')}{T('pilot_cost', 'Cost', 'e.g. Free, $2,500')}{T('pilot_scope', 'Scope', 'What the pilot covers')}</div>
+            {f.pilots.map((p, i) => (
+              <div className="sc-pilot-entry" key={i}>
+                <div className="sc-grid3">
+                  <label className="sc-field"><span>Duration</span><input placeholder="e.g. 30 days" value={p.duration} onChange={(e) => updatePilot(i, 'duration', e.target.value)} /></label>
+                  <label className="sc-field"><span>Cost</span><input placeholder="e.g. Free, $2,500" value={p.cost} onChange={(e) => updatePilot(i, 'cost', e.target.value)} /></label>
+                  <label className="sc-field"><span>Scope</span><input placeholder="What the pilot covers" value={p.scope} onChange={(e) => updatePilot(i, 'scope', e.target.value)} /></label>
+                </div>
+                <button type="button" className="sc-link" onClick={() => removePilot(i)}>Remove / Quitar</button>
+              </div>
+            ))}
+            <button type="button" className="sc-btn sm ghost" disabled={f.pilots.length >= PILOT_MAX} onClick={addPilot}>+ Add another pilot or demo / + Agregar otro piloto o demo</button>
           </details>
           <details className="sc-block"><summary>Implementation</summary>
             <div className="sc-grid3">{T('impl_requirements', 'Requirements (comma-separated)', 'WiFi coverage, Dock access')}{T('impl_timeline', 'Typical timeline', 'e.g. 2 weeks')}{T('impl_training', 'Training included', 'e.g. 2-day on-site training')}</div>
+            {CustomFields('impl_custom')}
           </details>
           <details className="sc-block"><summary>Warranty &amp; support</summary>
             <div className="sc-grid3">{T('ws_warranty', 'Warranty', 'e.g. 2 years parts & labor')}{T('ws_channels', 'Support channels (comma-separated)', 'Phone, On-site, Email')}{T('ws_sla', 'SLA', 'e.g. 4-hour response')}</div>
+            {CustomFields('ws_custom')}
           </details>
           <details className="sc-block"><summary>Pricing</summary>
             <div className="sc-grid3">{T('pr_model', 'Model', 'e.g. Per unit, Subscription')}{T('pr_range', 'Range shown to buyers', 'e.g. $15k-$40k — or leave empty for "Request quote"')}{T('pr_notes', 'Notes', 'Financing, volume discounts…')}</div>
+            {CustomFields('pr_custom')}
           </details>
 
           {editing.id && (
@@ -461,9 +618,22 @@ export default function VendorListingsPage() {
                   <Prev label="Certifications" v={(reviewFor.listing.certifications || []).join(', ')} />
                 </>
               )}
-              <Prev label="Pilot / demo" v={reviewFor.listing.pilot?.available ? 'Available' : ''} />
+              <Prev label="Pilot / demo" v={(() => {
+                const entries = pilotEntriesOf(reviewFor.listing.pilot);
+                if (!entries.length) return '';
+                if (entries.length === 1) return [entries[0].duration, entries[0].cost, entries[0].scope].filter(Boolean).join(' · ') || 'Available';
+                return `${entries.length} pilots / demos listed`;
+              })()} />
               <Prev label="Warranty" v={String(reviewFor.listing.warranty_support?.warranty || '')} />
               <Prev label="Pricing" v={String(reviewFor.listing.pricing?.range || reviewFor.listing.pricing?.model || reviewFor.listing.pricing_model || 'Request quote')} />
+              {/* Vendor-added custom fields — same generic {label, value} rows
+                  buyers will see on the listing page, so review shows exactly
+                  what will publish. */}
+              {[
+                ...customFieldsOf(reviewFor.listing.implementation),
+                ...customFieldsOf(reviewFor.listing.warranty_support),
+                ...customFieldsOf(reviewFor.listing.pricing),
+              ].map((c, i) => <Prev key={`custom-${i}`} label={c.label} v={c.value} />)}
               <Prev label="Photos" v={`${(reviewFor.listing.image_paths || []).length}`} />
               <Prev label="Documents" v={extras ? (extras.documents.length ? extras.documents.map((doc) => doc.title || doc.file_name).join(' · ') : '') : 'checking…'} />
               <Prev label="Case studies" v={extras ? (extras.case_studies.length ? extras.case_studies.map((c) => c.title).join(' · ') : '') : 'checking…'} />
@@ -573,6 +743,12 @@ const CSS = `
 .sc-cb{display:flex;align-items:center;gap:7px;font-size:13.5px;color:var(--spec-ink,#141320);cursor:pointer;}
 .sc-block{border:1px solid var(--spec-border,#E2DFEC);border-radius:12px;padding:14px 16px;margin-bottom:12px;background:var(--spec-surface,#EFEDF5);}
 .sc-block summary{cursor:pointer;font-size:13.5px;font-weight:600;color:var(--spec-ink,#141320);}
+.sc-pilot-entry{border:1px dashed var(--spec-border,#E2DFEC);border-radius:10px;padding:12px 12px 6px;margin-top:12px;background:#fff;}
+.sc-custom{margin-top:12px;}
+.sc-customrow{display:grid;grid-template-columns:1fr 1.6fr auto;gap:10px;align-items:center;margin-bottom:8px;}
+.sc-customrow input{font-family:inherit;font-size:13.5px;padding:10px 12px;border-radius:9px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-ink,#141320);outline:none;width:100%;box-sizing:border-box;}
+.sc-customrow input:focus{border-color:var(--spec-violet,#6C5CE0);box-shadow:0 0 0 3px rgba(108,92,224,.12);}
+@media(max-width:560px){.sc-customrow{grid-template-columns:1fr;}}
 .sc-photos{display:flex;align-items:center;gap:12px;margin:16px 0;}
 .sc-actions{display:flex;gap:12px;margin-top:20px;}
 .sc-warn{background:#FBF3E7;border:1px solid #EFD9AE;color:#8A5D14;padding:11px 15px;border-radius:12px;font-size:13.5px;margin-bottom:16px;line-height:1.5;}

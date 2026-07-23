@@ -3,10 +3,20 @@
 
 export type ListingKind = 'product' | 'service';
 
-export interface PilotBlock { available: boolean; duration: string; cost: string; scope: string; success_criteria: string[] }
-export interface ImplementationBlock { requirements: string[]; typical_timeline: string; training: string; integrations: string[] }
-export interface WarrantySupportBlock { warranty: string; support_channels: string[]; sla: string; maintenance: string }
-export interface PricingBlock { model: string; range: string; buy: boolean; rent: boolean; lease: boolean; notes: string }
+// A vendor-defined {label, value} row — the "+ Add field" escape hatch on
+// implementation / warranty_support / pricing so vendors aren't boxed into
+// the three named presets. Renders generically (label: value) everywhere
+// these blocks are shown. Absent on every listing saved before this feature.
+export interface CustomField { label: string; value: string }
+// One pilot/demo entry. Pre-existing listings (and any 1-pilot listing, old
+// or new) carry these fields at the TOP of `pilot` directly (no `entries`
+// array) — see pilotEntriesOf() for the back-compat read.
+export interface PilotEntry { duration: string; cost: string; scope: string }
+
+export interface PilotBlock { available: boolean; duration: string; cost: string; scope: string; success_criteria: string[]; entries?: PilotEntry[] }
+export interface ImplementationBlock { requirements: string[]; typical_timeline: string; training: string; integrations: string[]; custom?: CustomField[] }
+export interface WarrantySupportBlock { warranty: string; support_channels: string[]; sla: string; maintenance: string; custom?: CustomField[] }
+export interface PricingBlock { model: string; range: string; buy: boolean; rent: boolean; lease: boolean; notes: string; custom?: CustomField[] }
 export interface FitBlock { company_sizes: string[]; prerequisites: string[]; not_a_fit_for: string[] }
 export interface RiskBlock { common_risks: string[]; mitigations: string[] }
 export interface RoiBlock { drivers: string[]; typical_payback: string; example: string }
@@ -79,8 +89,54 @@ function cleanStr(v: unknown, max = 400): string {
   return typeof v === 'string' ? v.trim().slice(0, max) : '';
 }
 
+// Abuse/bloat caps for the vendor-flexibility fields (2026-07-23). Enforced
+// here — the only path client input reaches the DB — so a bypassed/forged
+// client request still can't push unbounded or oversized content into a
+// column that renders to buyers.
+const CUSTOM_FIELD_MAX = 20;
+const CUSTOM_LABEL_MAX = 60;
+const CUSTOM_VALUE_MAX = 300;
+const PILOT_ENTRY_MAX = 8;
+
+/** Vendor-defined {label, value} rows (implementation/warranty_support/pricing
+ * "+ Add field"). Drops anything not a plain object, or with an empty label
+ * or value after trimming; caps count and per-field length. */
+function cleanPairs(v: unknown): CustomField[] {
+  if (!Array.isArray(v)) return [];
+  const out: CustomField[] = [];
+  for (const raw of v) {
+    if (!raw || typeof raw !== 'object') continue;
+    const o = raw as Record<string, unknown>;
+    const label = cleanStr(o.label, CUSTOM_LABEL_MAX);
+    const value = cleanStr(o.value, CUSTOM_VALUE_MAX);
+    if (!label || !value) continue;
+    out.push({ label, value });
+    if (out.length >= CUSTOM_FIELD_MAX) break;
+  }
+  return out;
+}
+
+/** Repeatable pilot/demo entries (`pilot.entries`). Drops anything not a
+ * plain object; keeps an entry if ANY of duration/cost/scope is non-empty
+ * (a vendor filling in only one field is still useful); caps count. */
+function cleanPilotEntries(v: unknown): PilotEntry[] {
+  if (!Array.isArray(v)) return [];
+  const out: PilotEntry[] = [];
+  for (const raw of v) {
+    if (!raw || typeof raw !== 'object') continue;
+    const o = raw as Record<string, unknown>;
+    const duration = cleanStr(o.duration, 120);
+    const cost = cleanStr(o.cost, 120);
+    const scope = cleanStr(o.scope, 300);
+    if (!duration && !cost && !scope) continue;
+    out.push({ duration, cost, scope });
+    if (out.length >= PILOT_ENTRY_MAX) break;
+  }
+  return out;
+}
+
 /** Keep only known keys of a jsonb block; drop everything else. */
-export function cleanBlock(v: unknown, shape: Record<string, 'str' | 'bool' | 'arr' | 'obj'>): Record<string, unknown> | null {
+export function cleanBlock(v: unknown, shape: Record<string, 'str' | 'bool' | 'arr' | 'obj' | 'pairs' | 'pilots'>): Record<string, unknown> | null {
   if (!v || typeof v !== 'object') return null;
   const src = v as Record<string, unknown>;
   const out: Record<string, unknown> = {};
@@ -89,6 +145,8 @@ export function cleanBlock(v: unknown, shape: Record<string, 'str' | 'bool' | 'a
     if (t === 'str') out[k] = cleanStr(src[k], 600);
     else if (t === 'bool') out[k] = Boolean(src[k]);
     else if (t === 'arr') out[k] = cleanArray(src[k], 15, 200);
+    else if (t === 'pairs') out[k] = cleanPairs(src[k]);
+    else if (t === 'pilots') out[k] = cleanPilotEntries(src[k]);
     else if (t === 'obj' && src[k] && typeof src[k] === 'object') {
       const o: Record<string, string> = {};
       for (const [sk, sv] of Object.entries(src[k] as Record<string, unknown>).slice(0, 40)) {
@@ -102,14 +160,45 @@ export function cleanBlock(v: unknown, shape: Record<string, 'str' | 'bool' | 'a
 }
 
 export const BLOCK_SHAPES = {
-  pilot: { available: 'bool', duration: 'str', cost: 'str', scope: 'str', success_criteria: 'arr' },
-  implementation: { requirements: 'arr', typical_timeline: 'str', training: 'str', integrations: 'arr' },
-  warranty_support: { warranty: 'str', support_channels: 'arr', sla: 'str', maintenance: 'str' },
-  pricing: { model: 'str', range: 'str', buy: 'bool', rent: 'bool', lease: 'bool', notes: 'str' },
+  pilot: { available: 'bool', duration: 'str', cost: 'str', scope: 'str', success_criteria: 'arr', entries: 'pilots' },
+  implementation: { requirements: 'arr', typical_timeline: 'str', training: 'str', integrations: 'arr', custom: 'pairs' },
+  warranty_support: { warranty: 'str', support_channels: 'arr', sla: 'str', maintenance: 'str', custom: 'pairs' },
+  pricing: { model: 'str', range: 'str', buy: 'bool', rent: 'bool', lease: 'bool', notes: 'str', custom: 'pairs' },
   fit: { company_sizes: 'arr', prerequisites: 'arr', not_a_fit_for: 'arr' },
   risk: { common_risks: 'arr', mitigations: 'arr' },
   roi: { drivers: 'arr', typical_payback: 'str', example: 'str' },
-} as const satisfies Record<string, Record<string, 'str' | 'bool' | 'arr' | 'obj'>>;
+} as const satisfies Record<string, Record<string, 'str' | 'bool' | 'arr' | 'obj' | 'pairs' | 'pilots'>>;
+
+function strOf(v: unknown): string { return typeof v === 'string' ? v : ''; }
+
+/** Back-compat reader for `pilot`: every listing saved before this feature
+ * (and any listing with just one pilot/demo) stores duration/cost/scope
+ * directly on the block, no `entries` array. Listings with 2+ pilots carry
+ * `entries` (the canonical list, entry 0 mirrored onto the legacy top-level
+ * fields too). Reading always returns a flat list — callers never need to
+ * know which shape they got. */
+export function pilotEntriesOf(pilot: unknown): PilotEntry[] {
+  const p = pilot && typeof pilot === 'object' ? (pilot as Record<string, unknown>) : {};
+  const raw = Array.isArray(p.entries) ? (p.entries as unknown[]) : [];
+  const mapped = raw
+    .filter((e): e is Record<string, unknown> => Boolean(e) && typeof e === 'object')
+    .map((e) => ({ duration: strOf(e.duration), cost: strOf(e.cost), scope: strOf(e.scope) }));
+  if (mapped.length) return mapped;
+  const duration = strOf(p.duration); const cost = strOf(p.cost); const scope = strOf(p.scope);
+  return duration || cost || scope ? [{ duration, cost, scope }] : [];
+}
+
+/** Back-compat reader for the vendor-defined {label, value} rows on
+ * implementation/warranty_support/pricing. Absent on every listing saved
+ * before this feature — returns []. */
+export function customFieldsOf(block: unknown): CustomField[] {
+  const b = block && typeof block === 'object' ? (block as Record<string, unknown>) : {};
+  const raw = Array.isArray(b.custom) ? (b.custom as unknown[]) : [];
+  return raw
+    .filter((c): c is Record<string, unknown> => Boolean(c) && typeof c === 'object')
+    .map((c) => ({ label: strOf(c.label), value: strOf(c.value) }))
+    .filter((c) => c.label && c.value);
+}
 
 /** Normalize client-supplied listing fields into a safe row patch. */
 export function normalizeListingInput(kind: ListingKind, body: Record<string, unknown>): Record<string, unknown> {

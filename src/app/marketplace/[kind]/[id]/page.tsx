@@ -12,6 +12,7 @@ import { IBM_Plex_Sans } from 'next/font/google';
 import AddToCartButton from '@/components/cart/AddToCartButton';
 import { useLang, type Lang } from '@/components/LanguageToggle';
 import PublicHeader from '@/components/PublicHeader';
+import { pilotEntriesOf, customFieldsOf } from '@/lib/marketplace/types';
 
 const ibmPlexSans = IBM_Plex_Sans({
   subsets: ['latin'],
@@ -106,6 +107,7 @@ const T: Record<Lang, Record<string, string>> = {
     rowCompanySizes: 'Company sizes',
     rowRoiDrivers: 'ROI drivers',
     itemPilot: 'Pilot',
+    itemPilotN: 'Pilot {n}',
     itemAvailable: 'Available',
     itemDuration: 'Duration',
     itemCost: 'Cost',
@@ -201,6 +203,7 @@ const T: Record<Lang, Record<string, string>> = {
     rowCompanySizes: 'Tamaños de empresa',
     rowRoiDrivers: 'Factores de ROI',
     itemPilot: 'Piloto',
+    itemPilotN: 'Piloto {n}',
     itemAvailable: 'Disponible',
     itemDuration: 'Duración',
     itemCost: 'Costo',
@@ -448,18 +451,45 @@ export default function ListingDetailPage() {
             {tab === 'process' && (
               <ol className="dt-process">{arr(L.process).map((p, i) => <li key={i}>{p}</li>)}</ol>
             )}
-            {tab === 'pilot' && (
-              <dl className="dt-kv">
-                {Boolean(pilot.available) && <Item k={t.itemPilot} v={t.itemAvailable} />}
-                <Item k={t.itemDuration} v={s(pilot.duration)} /><Item k={t.itemCost} v={s(pilot.cost)} /><Item k={t.itemScope} v={s(pilot.scope)} />
-                {arr(pilot.success_criteria).length > 0 && <Item k={t.itemSuccessCriteria} v={arr(pilot.success_criteria).join(' · ')} />}
-              </dl>
-            )}
+            {tab === 'pilot' && (() => {
+              // Back-compat + repeatable: pilotEntriesOf() reads BOTH the old
+              // single-object shape (every listing published before this
+              // feature) and the new `entries` array (2+ pilots) — this
+              // render path never needs to know which one it got.
+              const entries = pilotEntriesOf(pilot);
+              if (entries.length <= 1) {
+                const e = entries[0] || { duration: '', cost: '', scope: '' };
+                return (
+                  <dl className="dt-kv">
+                    {Boolean(pilot.available) && <Item k={t.itemPilot} v={t.itemAvailable} />}
+                    <Item k={t.itemDuration} v={e.duration} /><Item k={t.itemCost} v={e.cost} /><Item k={t.itemScope} v={e.scope} />
+                    {arr(pilot.success_criteria).length > 0 && <Item k={t.itemSuccessCriteria} v={arr(pilot.success_criteria).join(' · ')} />}
+                  </dl>
+                );
+              }
+              return (
+                <div className="dt-pilotlist">
+                  {Boolean(pilot.available) && <p className="dt-hint">{t.itemPilot}: {t.itemAvailable}</p>}
+                  {entries.map((e, i) => (
+                    <div className="dt-pilotitem" key={i}>
+                      <h4>{t.itemPilotN.replace('{n}', String(i + 1))}</h4>
+                      <dl className="dt-kv">
+                        <Item k={t.itemDuration} v={e.duration} /><Item k={t.itemCost} v={e.cost} /><Item k={t.itemScope} v={e.scope} />
+                      </dl>
+                    </div>
+                  ))}
+                  {arr(pilot.success_criteria).length > 0 && (
+                    <dl className="dt-kv"><Item k={t.itemSuccessCriteria} v={arr(pilot.success_criteria).join(' · ')} /></dl>
+                  )}
+                </div>
+              );
+            })()}
             {tab === 'implementation' && (
               <dl className="dt-kv">
                 {arr(impl.requirements).length > 0 && <Item k={t.itemRequirements} v={arr(impl.requirements).join(' · ')} />}
                 <Item k={t.itemTypicalTimeline} v={s(impl.typical_timeline)} /><Item k={t.itemTraining} v={s(impl.training)} />
                 {arr(impl.integrations).length > 0 && <Item k={t.itemIntegrations} v={arr(impl.integrations).join(' · ')} />}
+                {customFieldsOf(impl).map((c, i) => <Item key={`c${i}`} k={c.label} v={c.value} />)}
               </dl>
             )}
             {tab === 'pricing' && (
@@ -467,6 +497,7 @@ export default function ListingDetailPage() {
                 <Item k={t.itemModel} v={s(pricing.model) || s(L.pricing_model)} /><Item k={t.itemRange} v={s(pricing.range)} />
                 {(pricing.buy || pricing.rent || pricing.lease) ? <Item k={t.itemOptions} v={['buy', 'rent', 'lease'].filter((o) => pricing[o]).join(' · ')} /> : null}
                 <Item k={t.itemNotes} v={s(pricing.notes)} />
+                {customFieldsOf(pricing).map((c, i) => <Item key={`c${i}`} k={c.label} v={c.value} />)}
                 {!s(pricing.range) && <p className="dt-hint">{t.pricingHint}</p>}
               </dl>
             )}
@@ -475,6 +506,7 @@ export default function ListingDetailPage() {
                 <Item k={t.itemWarranty} v={s(ws.warranty)} />
                 {arr(ws.support_channels).length > 0 && <Item k={t.itemSupport} v={arr(ws.support_channels).join(' · ')} />}
                 <Item k={t.itemSla} v={s(ws.sla)} /><Item k={t.itemMaintenance} v={s(ws.maintenance)} />
+                {customFieldsOf(ws).map((c, i) => <Item key={`c${i}`} k={c.label} v={c.value} />)}
               </dl>
             )}
             {tab === 'documents' && (
@@ -689,6 +721,9 @@ const CSS = `
 .dt-item{display:flex;gap:14px;padding:9px 0;border-bottom:1px solid var(--spec-border);}
 .dt-item dt{color:var(--spec-text-2nd);font-size:13px;min-width:130px;}
 .dt-item dd{margin:0;font-size:14px;color:var(--spec-ink);line-height:1.5;}
+.dt-pilotitem{margin-bottom:16px;}
+.dt-pilotitem h4{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--spec-violet-deep,#4A3DB0);margin:0 0 4px;}
+.dt-pilotitem .dt-kv{margin-bottom:0;}
 .dt-hint{color:var(--spec-text-2nd);font-size:13px;line-height:1.5;margin-top:12px;}
 .dt-docs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;}
 .dt-docs a{color:var(--spec-violet-deep);font-size:14.5px;}
