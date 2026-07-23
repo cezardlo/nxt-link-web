@@ -243,6 +243,14 @@ Still open, in rough priority order:
 See tasks list / [[Decisions]]. Marketplace search bar + RFQ CTA + How-it-works
 strip, autocomplete, vendor moderation, NXT AI concierge + commission co-pilot,
 compare fill bars, view-as-buyer — all shipped.
+- **Signup 4th role choice "Something else" (2026-07-23)** — `/signup` Step 1
+  now has a 4th tile alongside Buy for my company / Join as a vendor / Buyer
+  and vendor. Treated as a buyer (no new lane): `sellerMode` stays false,
+  redirect `/buyer`, buyer confirmation copy. Optional free-text field on
+  the details step (`use_case`, capped 200 chars) posts to
+  `POST /api/auth/signup` and is stored in the new account's Supabase user
+  metadata (password-signup path only). No schema change, no migration,
+  click-wrap/magic-link/lane logic untouched. Committed locally, NOT deployed.
 
 ---
 
