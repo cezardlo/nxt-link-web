@@ -56,11 +56,35 @@
 // category" was cramped as one card sharing a 2-col grid with the RFQ card —
 // promoted to its own full-width section (icon grid: 3 cols desktop / 2
 // tablet / 1-2 auto-fit on small phones), Amazon Business / Grainger style.
-// The old `.hp-browsegrid` 2-card wrapper is gone; the RFQ "one request,
-// multiple quotes" card is now its own standalone centered CTA band right
-// after, so it doesn't read as an orphaned lonely card. Same
-// CATEGORY_TILES data, visibleCategoryTiles empty-hiding, icons, and
-// /marketplace?department= routing as before — only the layout changed.
+// The old `.hp-browsegrid` 2-card wrapper is gone. Same CATEGORY_TILES data,
+// visibleCategoryTiles empty-hiding, icons, and /marketplace?department=
+// routing as before — only the layout changed.
+//
+// 2026-07-23 homepage restructure (per workplace/research/premium-benchmark-
+// 2026-07-23.md items #1, #2, #6, #7, Cesar-approved):
+//  #1 "How it works" moved from ~9th of 11 sections to right after the trust
+//     bar (position 4) — a marketplace with a non-obvious quoting model
+//     (search -> request -> human-reviewed introduction) needs to explain
+//     that model before offering browse options, not after five of them.
+//     Content/copy of the 3-step timeline is unchanged, position only.
+//  #2 Consolidated from 6 parallel browse/CTA mechanisms to 3 clear paths:
+//     (1) hero search + "Browse by category" grid + quick-filter chips,
+//     (2) "post a sourcing request" — the hero's request card is now the
+//     ONLY instance (the standalone "One request, multiple quotes" section,
+//     which duplicated the same /intake destination, was removed), (3) the
+//     "What are you looking for?" products/services/technology path cards.
+//     Every destination the removed section pointed to (/intake) stays
+//     reachable via the hero card, the footer, and the mobile sticky CTA.
+//     The standalone "Create a free account" CTA was explicitly kept as its
+//     own step, not folded in.
+//  #6 A short bilingual "Verified Vendors" explainer (`t.verifiedExplain`)
+//     was added under the trust bar — DRAFT COPY, marked for Cesar/marketing
+//     approval, sourced from the actual admin-approval gate (see the note
+//     at `verifiedExplain` below), not an invented claim.
+//  #7 A real, live-computed count (`liveCountCopy`) was added next to it —
+//     built from the SAME listings fetch this page already makes, shown
+//     only when that fetch actually returned data (never a hardcoded or
+//     invented number, never a bare "0").
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
@@ -109,6 +133,20 @@ const CATEGORY_TILES: Array<{ fg: string; en: string; es: string; Icon: typeof F
   { fg: 'svc_transportation', en: 'Supply Chain Services', es: 'Servicios de cadena de suministro', Icon: Truck },
 ];
 
+// DRAFT COPY — pending Cesar/marketing approval (2026-07-23 homepage
+// restructure, item #7). One honest, live-computed sentence built from the
+// SAME listings fetch that already powers the category tiles (never a
+// hardcoded/invented number). Only rendered when countsKnown && listings > 0
+// — see the call site — so it never shows a fake or misleading zero.
+// Interpolated numbers use inline pluralization, same convention as
+// `{n} listing{n === 1 ? '' : 's'}` in src/app/marketplace/page.tsx.
+function liveCountCopy(lang: Lang, listings: number, categories: number): string {
+  if (lang === 'es') {
+    return `${listings} ${listings === 1 ? 'publicación' : 'publicaciones'} activa${listings === 1 ? '' : 's'} en ${categories} categor${categories === 1 ? 'ía' : 'ías'}, ahora mismo.`;
+  }
+  return `${listings} active listing${listings === 1 ? '' : 's'} across ${categories} categor${categories === 1 ? 'y' : 'ies'}, right now.`;
+}
+
 const T: Record<Lang, Record<string, string>> = {
   en: {
     docTitle: 'NXT//LINK — Borderplex Industrial Marketplace',
@@ -130,13 +168,19 @@ const T: Record<Lang, Record<string, string>> = {
     trustVerified: 'Verified Vendors',
     trustProtected: 'Protected Introductions (12 months)',
     trustFree: 'Free to send · no commitment',
+    // DRAFT COPY — pending Cesar/marketing approval (2026-07-23 homepage
+    // restructure, item #6). Sourced from what verification actually is:
+    // vendor_profiles.status only reaches 'approved' via the admin_approval
+    // lane (src/lib/vendor/profile.ts, tests/vendor-invite-lane.test.ts) —
+    // a human team member reviews and approves every vendor; nothing is
+    // self-certified or automatic. Do not strengthen this wording (no
+    // "background-checked", "insured", "certified") unless that becomes true.
+    verifiedExplain: 'Verified Vendors are reviewed and approved by the NXT//LINK team before they go live.',
     browseHeading: 'Start sourcing',
     browseSub: 'Three ways in — pick the one that fits what you need right now.',
     catCardTitle: 'Browse by category',
     catCardAction: 'Browse all categories',
     catEmpty: 'New categories are being added — check the full marketplace.',
-    rfqCardTitle: 'One request, multiple quotes',
-    rfqCardBody: 'Describe what you need once. The vendors you choose respond with quotes, demos, or pilots — no chasing emails.',
     filtersLabel: 'Quick filters',
     chipVerified: 'Verified vendor', chipLocal: 'Local support', chipFast: 'Fast response', chipEmergency: '24/7 emergency', chipCases: 'Has case studies',
     startEyebrow: 'Start sourcing',
@@ -206,13 +250,14 @@ const T: Record<Lang, Record<string, string>> = {
     trustVerified: 'Proveedores verificados',
     trustProtected: 'Introducciones protegidas (12 meses)',
     trustFree: 'Gratis enviar · sin compromiso',
+    // DRAFT — ver la nota en inglés arriba; misma fuente de verdad (revisión
+    // humana vía el lane admin_approval), pendiente de aprobación de Cesar/mercadeo.
+    verifiedExplain: 'Los proveedores verificados son revisados y aprobados por el equipo de NXT//LINK antes de publicarse.',
     browseHeading: 'Empieza a buscar',
     browseSub: 'Tres formas de empezar — elige la que se ajuste a lo que necesitas ahora.',
     catCardTitle: 'Explorar por categoría',
     catCardAction: 'Ver todas las categorías',
     catEmpty: 'Se están agregando nuevas categorías — revisa el marketplace completo.',
-    rfqCardTitle: 'Una solicitud, varias cotizaciones',
-    rfqCardBody: 'Describe lo que necesitas una vez. Los proveedores que elijas responden con cotizaciones, demos o pilotos — sin perseguir correos.',
     filtersLabel: 'Filtros rápidos',
     chipVerified: 'Proveedor verificado', chipLocal: 'Soporte local', chipFast: 'Respuesta rápida', chipEmergency: 'Emergencia 24/7', chipCases: 'Con casos de éxito',
     startEyebrow: 'Empieza a buscar',
@@ -317,6 +362,15 @@ export default function Home() {
     categoryCounts.set(c.functional_group, (categoryCounts.get(c.functional_group) || 0) + 1);
   }
   const visibleCategoryTiles = (loading || !countsKnown) ? CATEGORY_TILES : CATEGORY_TILES.filter((tile) => (categoryCounts.get(tile.fg) || 0) > 0);
+
+  // Real, honest live count (2026-07-23 restructure, item #7) — both numbers
+  // come straight from the listings fetch above (no separate API call, no
+  // invented figures). Only meaningful once countsKnown is true (a real 200,
+  // not the anonymous-visitor 401); zero listings renders nothing rather
+  // than a hollow "0 listings" line.
+  const totalListings = featured.length;
+  const categoriesCount = categoryCounts.size;
+  const showLiveCount = countsKnown && totalListings > 0 && categoriesCount > 0;
 
   const sourceModes = [
     { kicker: t.productKicker, title: t.productTitle, body: t.productBody, action: t.productAction, href: '/marketplace?tab=product', Icon: PackageSearch },
@@ -427,6 +481,43 @@ export default function Home() {
         <span className="hp-trustitem"><Send size={ICON_INLINE} aria-hidden="true" /> {t.trustFree}</span>
       </div>
 
+      {/* Verified-badge explainer (item #6) + real live count (item #7) —
+          both DRAFT copy pending Cesar/marketing approval. One quiet line
+          under the trust bar rather than a new component, so it's a plain
+          bilingual-string swap when copy is approved. The count clause only
+          renders once real data is known (see showLiveCount above). */}
+      <p className="hp-trustsub">
+        {t.verifiedExplain}
+        {showLiveCount && <> · {liveCountCopy(lang, totalListings, categoriesCount)}</>}
+      </p>
+
+      {/* How it works — moved up from its old spot near the bottom (2026-07-23
+          restructure, item #1): a marketplace with an unfamiliar quoting
+          model (search → request → human-reviewed introduction) needs to
+          explain that model before offering six different ways to browse.
+          Content/copy unchanged — position only. */}
+      <section className="hp-how hp-reveal" id="how-it-works">
+        <h2 className="hp-howheading">{t.howHeading}</h2>
+        <ol className="hp-timeline">
+          {([
+            ['1', MessageSquareText, t.step1Title, t.step1Desc],
+            ['2', ClipboardList, t.step2Title, t.step2Desc],
+            ['3', Handshake, t.step3Title, t.step3Desc],
+          ] as Array<[string, typeof MessageSquareText, string, string]>).map(([n, Icon, title, desc]) => (
+            <li className="hp-tlstep" key={n}>
+              <div className="hp-tlmarker" aria-hidden="true">
+                <span className="hp-tlcircle"><Icon size={ICON_STEP - 12} /></span>
+              </div>
+              <div className="hp-tlcontent">
+                <span className="hp-tlnum">{t.stepLabel} {n}</span>
+                <b>{title}</b>
+                <p>{desc}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
+
       {/* Browse by category — promoted to its OWN full-width section
           (Cesar, 2026-07-23: was cramped as one card in a 2-col grid next to
           the RFQ card; now reads like Amazon Business / Grainger's
@@ -465,21 +556,6 @@ export default function Home() {
           <Link href="/marketplace?local=1" className="hp-fchip"><MapPin size={14} aria-hidden="true" />{t.chipLocal}</Link>
           <Link href="/marketplace?fast=1" className="hp-fchip"><Zap size={14} aria-hidden="true" />{t.chipFast}</Link>
           <Link href="/marketplace?emergency=1" className="hp-fchip"><Clock size={14} aria-hidden="true" />{t.chipEmergency}</Link>
-        </div>
-      </section>
-
-      {/* Standalone RFQ CTA — the "one request, multiple quotes" card no
-          longer shares a 2-col grid with category browse (that left it
-          looking orphaned once category was promoted above). It's now its
-          own centered, single-card band — deliberately NOT a 2-col dark
-          band like the hero request card or the vendor band below, so it
-          complements rather than duplicates them. */}
-      <section className="hp-sec hp-rfqsec hp-reveal" aria-labelledby="hp-rfq-title">
-        <div className="hp-rfqcard">
-          <span className="hp-rfqicon"><Send size={22} aria-hidden="true" /></span>
-          <h2 id="hp-rfq-title">{t.rfqCardTitle}</h2>
-          <p>{t.rfqCardBody}</p>
-          <Link className="hp-rfqbtn" href="/intake">{t.postRequest}<ArrowRight size={16} aria-hidden="true" /></Link>
         </div>
       </section>
 
@@ -544,31 +620,6 @@ export default function Home() {
           </div>
           <Link className="hp-btn" href="/vendor-signup">{t.vendorApply}<ArrowRight size={16} aria-hidden="true" /></Link>
         </div>
-      </section>
-
-      {/* How it works — connected timeline (Cesar's 2026-07-22 revision: find
-          technology → request information → get connected — no promises
-          about matching, speed, or safety). Unchanged from the prior pass. */}
-      <section className="hp-how hp-reveal" id="how-it-works">
-        <h2 className="hp-howheading">{t.howHeading}</h2>
-        <ol className="hp-timeline">
-          {([
-            ['1', MessageSquareText, t.step1Title, t.step1Desc],
-            ['2', ClipboardList, t.step2Title, t.step2Desc],
-            ['3', Handshake, t.step3Title, t.step3Desc],
-          ] as Array<[string, typeof MessageSquareText, string, string]>).map(([n, Icon, title, desc]) => (
-            <li className="hp-tlstep" key={n}>
-              <div className="hp-tlmarker" aria-hidden="true">
-                <span className="hp-tlcircle"><Icon size={ICON_STEP - 12} /></span>
-              </div>
-              <div className="hp-tlcontent">
-                <span className="hp-tlnum">{t.stepLabel} {n}</span>
-                <b>{title}</b>
-                <p>{desc}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
       </section>
 
       {/* FAQs — no fee/credit numbers on this page (hard constraint); the
@@ -693,6 +744,9 @@ const CSS = `
 .hp-trustbar{display:flex;justify-content:center;gap:30px;flex-wrap:wrap;max-width:1000px;margin:36px auto 0;padding:0 22px;}
 .hp-trustitem{display:flex;align-items:center;gap:8px;color:var(--spec-text-2nd);font-size:13px;font-weight:600;}
 .hp-trustitem svg{color:var(--spec-success);flex-shrink:0;}
+/* Verified explainer + live count subline (items #6/#7) — one quiet line,
+   not a new badge/tooltip component, so approved copy is a plain swap. */
+.hp-trustsub{max-width:720px;margin:10px auto 0;padding:0 22px;text-align:center;color:var(--spec-text-2nd);font-size:12.5px;line-height:1.6;}
 
 /* Section shell — symmetric top+bottom rhythm (96px desktop / 56px mobile
    via --spec-space-section, globals.css) replacing the old top-only,
@@ -731,17 +785,6 @@ const CSS = `
 
 @media(max-width:900px){.hp-catgrid{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media(max-width:560px){.hp-catgrid{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));}}
-
-/* Standalone RFQ CTA — one centered card, not a 2-col band, so it reads as
-   its own moment rather than a duplicate of the hero request card. Section
-   padding now comes from the shared .hp-sec symmetric rhythm (no more
-   one-off 36px top override). */
-.hp-rfqcard{max-width:640px;margin:0 auto;padding:36px 32px;text-align:center;background:var(--spec-ink);border-radius:var(--spec-radius-lg);color:#fff;}
-.hp-rfqicon{display:inline-grid;place-items:center;width:48px;height:48px;border-radius:50%;background:rgba(169,157,242,.16);color:var(--spec-lilac);margin-bottom:16px;}
-.hp-rfqcard h2{margin:0 0 10px;font-size:var(--spec-text-h3);font-weight:700;letter-spacing:var(--spec-tracking-heading);color:#F8F7FB;}
-.hp-rfqcard p{margin:0 auto 22px;max-width:52ch;color:rgba(255,255,255,.76);font-size:14px;line-height:1.6;}
-.hp-rfqbtn{display:inline-flex;align-items:center;gap:8px;min-height:46px;padding:0 26px;border-radius:var(--spec-radius-btn);background:var(--spec-violet);color:#fff;font-weight:700;font-size:14px;transition:background var(--spec-duration-fast) var(--spec-ease);}
-.hp-rfqbtn:hover{background:var(--spec-violet-deep);}
 
 /* Quick-filter chip row */
 .hp-chiprow{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin-top:20px;padding-top:20px;border-top:1px solid var(--spec-border);}
