@@ -70,7 +70,7 @@ import PublicHeader from '@/components/PublicHeader';
 import {
   ArrowRight, BadgeCheck, ShieldCheck, Send, Search, ChevronRight, Check,
   MessageSquareText, PackageSearch, Forklift, HardHat, Warehouse, Bot, Wrench,
-  Truck, Handshake, ClipboardList, MapPin, Zap, Clock, FileCheck,
+  Truck, Handshake, ClipboardList, MapPin, Zap, Clock,
   Columns3, FlaskConical, Route,
 } from 'lucide-react';
 
@@ -414,7 +414,6 @@ export default function Home() {
           <Link href="/marketplace?local=1" className="hp-fchip"><MapPin size={14} aria-hidden="true" />{t.chipLocal}</Link>
           <Link href="/marketplace?fast=1" className="hp-fchip"><Zap size={14} aria-hidden="true" />{t.chipFast}</Link>
           <Link href="/marketplace?emergency=1" className="hp-fchip"><Clock size={14} aria-hidden="true" />{t.chipEmergency}</Link>
-          <Link href="/marketplace?cases=1" className="hp-fchip"><FileCheck size={14} aria-hidden="true" />{t.chipCases}</Link>
         </div>
       </section>
 
