@@ -181,8 +181,8 @@ function VendorDrawer({ vendor, code, zoho, onClose, onStatus, onModerate }: {
   const [emailBody, setEmailBody] = useState(`Hi ${vendor.contact_name || vendor.company_name},\n\nWe have a protected opportunity that may fit your service area. Are you available to quote?\n\n— NXT//LINK`);
 
   useEffect(() => {
-    fetch(`/api/vendors/brochures?vendor_id=${vendor.id}`).then((r) => r.json()).then((d) => setBrochures(d.brochures || [])).catch(() => {});
-  }, [vendor.id]);
+    fetch(`/api/vendors/brochures?vendor_id=${vendor.id}`, { headers: { 'x-access-code': code } }).then((r) => r.json()).then((d) => setBrochures(d.brochures || [])).catch(() => {});
+  }, [vendor.id, code]);
 
   async function sendEmail() {
     setMsg('Sending…');

@@ -3,16 +3,31 @@
 // GET  /api/vendors/brochures?vendor_id=...  — list a vendor's brochures
 // Stores the file in the 'vendor-brochures' Storage bucket and a row in
 // vendor_brochures. Degrades gracefully when Supabase/Storage is unavailable.
+//
+// AUTH: both handlers are gated to (a) an admin, or (b) the signed-in vendor who
+// OWNS that vendor_id — see authorizeVendorResource. vendor_ids are exposed in
+// public storefront URLs, so this endpoint must NEVER serve/accept them for an
+// anonymous caller (private brochures + signed download URLs, unauthenticated
+// writes/file-planting). Consumed by /admin/vendors + /admin/directory (admin)
+// and, for parity with the portal, the owning vendor.
 
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { authorizeVendorResource } from '@/lib/vendor/authz';
 
 const BUCKET = 'vendor-brochures';
 const MAX_BYTES = 15 * 1024 * 1024; // 15 MB
 const ALLOWED = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp',
   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+
+/** Uniform fail-closed refusal for both handlers. */
+function refuse(decision: 'unauthenticated' | 'forbidden') {
+  return decision === 'unauthenticated'
+    ? NextResponse.json({ ok: false, message: 'Sign in required' }, { status: 401 })
+    : NextResponse.json({ ok: false, message: 'Forbidden' }, { status: 403 });
+}
 
 export async function POST(req: Request) {
   let form: FormData;
@@ -25,6 +40,12 @@ export async function POST(req: Request) {
   const title = String(form.get('title') || '').trim();
   const file = form.get('file');
   if (!vendorId) return NextResponse.json({ ok: false, message: 'vendor_id is required' }, { status: 400 });
+
+  // Authorize BEFORE touching Storage/DB or reading the file bytes: only an
+  // admin or the owning signed-in vendor may write to this vendor_id.
+  const authz = await authorizeVendorResource(req, vendorId);
+  if (authz.decision !== 'allow') return refuse(authz.decision);
+
   if (!(file instanceof File)) return NextResponse.json({ ok: false, message: 'file is required' }, { status: 400 });
   if (file.size > MAX_BYTES) return NextResponse.json({ ok: false, message: 'File exceeds 15 MB' }, { status: 400 });
   if (file.type && !ALLOWED.includes(file.type))
@@ -75,6 +96,12 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   const vendorId = new URL(req.url).searchParams.get('vendor_id');
   if (!vendorId) return NextResponse.json({ ok: false, message: 'vendor_id is required' }, { status: 400 });
+
+  // Authorize BEFORE any read: only an admin or the owning signed-in vendor may
+  // list this vendor's private brochures + mint signed download URLs.
+  const authz = await authorizeVendorResource(req, vendorId);
+  if (authz.decision !== 'allow') return refuse(authz.decision);
+
   if (!isSupabaseConfigured()) return NextResponse.json({ ok: true, stored: false, brochures: [] });
   try {
     const db = getSupabaseClient({ admin: true });
