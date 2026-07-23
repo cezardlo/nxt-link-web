@@ -165,8 +165,10 @@ export default function MarketplacePage() {
 
   // selected facet filters (data-driven)
   const [fCategory, setFCategory] = useState('');
-  const [fIndustry, setFIndustry] = useState('');
-  const [fArea, setFArea] = useState('');
+  // Industry / Service area are multi-select (Amazon-style checkbox facets,
+  // 2026-07-23): a listing matches if its array intersects ANY selected value.
+  const [fIndustry, setFIndustry] = useState<string[]>([]);
+  const [fArea, setFArea] = useState<string[]>([]);
   const [fPricing, setFPricing] = useState('');
   const [fPilot, setFPilot] = useState(false);
   const [fWarranty, setFWarranty] = useState(false);
@@ -175,6 +177,8 @@ export default function MarketplacePage() {
   const [fCases, setFCases] = useState(false);
   const [fLocal, setFLocal] = useState(false);
   const [fFast, setFFast] = useState(false);
+  const toggleIndustry = (v: string) => setFIndustry((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]));
+  const toggleArea = (v: string) => setFArea((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]));
 
   const [saved, toggleSaved, addAllSaved] = useLocalSet('nxt_saved');
   const [compare, toggleCompare] = useLocalSet('nxt_compare');
@@ -205,15 +209,38 @@ export default function MarketplacePage() {
   const [savedOnly, setSavedOnly] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Shareable URLs: read ?q= and ?tab= on load, keep them in sync after.
+  // Shareable URLs (2026-07-23): every active facet lives in the query string,
+  // not just ?q=/?tab=. Read + restore on load, then keep the URL in sync
+  // after — same replaceState pattern as before, just more params. Values
+  // read from the URL drive only client-side array/equality filtering (no
+  // DB/.or() surface here), but we still cap length/count so a hand-edited
+  // URL can't inject an unbounded string into React state.
+  const capStr = (s: string, max = 80) => s.slice(0, max);
+  const parseListParam = (sp: URLSearchParams, key: string, max = 15): string[] => {
+    const raw = sp.get(key);
+    if (!raw) return [];
+    const seen = new Set<string>();
+    for (const part of raw.split(',')) {
+      const v = capStr(part.trim(), 80);
+      if (v) seen.add(v);
+      if (seen.size >= max) break;
+    }
+    return Array.from(seen);
+  };
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
     const q0 = sp.get('q'); const t0 = sp.get('tab'); const d0 = sp.get('department');
-    if (q0) setQ(q0);
+    if (q0) setQ(capStr(q0, 200));
     if (t0 === 'product' || t0 === 'service' || t0 === 'solution') setTab(t0);
     // Category tiles (landing page + "Shop by department") link here with
     // ?department=<functional_group> — pick it up so the tile isn't a dead link.
-    if (d0) setFDept(d0);
+    if (d0) setFDept(capStr(d0));
+    const cat0 = sp.get('category'); if (cat0) setFCategory(capStr(cat0));
+    const price0 = sp.get('pricing'); if (price0) setFPricing(capStr(price0));
+    const ind0 = parseListParam(sp, 'industry'); if (ind0.length) setFIndustry(ind0);
+    const area0 = parseListParam(sp, 'area'); if (area0.length) setFArea(area0);
+    const sort0 = sp.get('sort');
+    if (sort0 && SORTS.some(([v]) => v === sort0)) setSort(sort0 as Sort);
     // The homepage's Alibaba-style attribute chips (2026-07-22) link here with
     // one of these =1 so the facet is already ticked on arrival instead of
     // dumping the visitor on an unfiltered page — additive only, seeds the
@@ -224,17 +251,33 @@ export default function MarketplacePage() {
     if (sp.get('fast') === '1') setFFast(true);
     if (sp.get('emergency') === '1') setFEmergency(true);
     if (sp.get('cases') === '1') setFCases(true);
+    if (sp.get('pilot') === '1') setFPilot(true);
+    if (sp.get('warranty') === '1') setFWarranty(true);
     // Autofocus search on desktop only (avoid popping the mobile keyboard).
     if (window.innerWidth > 860) searchRef.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     const sp = new URLSearchParams();
     if (q.trim()) sp.set('q', q.trim());
     if (tab !== 'all') sp.set('tab', tab);
+    if (fDept) sp.set('department', fDept);
+    if (fCategory) sp.set('category', fCategory);
+    if (fIndustry.length) sp.set('industry', fIndustry.join(','));
+    if (fArea.length) sp.set('area', fArea.join(','));
+    if (fPricing) sp.set('pricing', fPricing);
+    if (fPilot) sp.set('pilot', '1');
+    if (fWarranty) sp.set('warranty', '1');
+    if (fEmergency) sp.set('emergency', '1');
+    if (fVerified) sp.set('verified', '1');
+    if (fCases) sp.set('cases', '1');
+    if (fLocal) sp.set('local', '1');
+    if (fFast) sp.set('fast', '1');
+    if (sort !== 'best') sp.set('sort', sort);
     const qs = sp.toString();
     window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
     document.title = q.trim() ? `${q.trim()} — NXT//LINK Marketplace` : 'Marketplace — NXT//LINK';
-  }, [q, tab]);
+  }, [q, tab, fDept, fCategory, fIndustry, fArea, fPricing, fPilot, fWarranty, fEmergency, fVerified, fCases, fLocal, fFast, sort]);
   // Search autocomplete — debounced suggestions tagged product / service / category.
   useEffect(() => {
     const term = q.trim();
@@ -278,7 +321,7 @@ export default function MarketplacePage() {
   }, []);
 
   const resetFilters = () => {
-    setFDept(''); setFCategory(''); setFIndustry(''); setFArea(''); setFPricing('');
+    setFDept(''); setFCategory(''); setFIndustry([]); setFArea([]); setFPricing('');
     setFPilot(false); setFWarranty(false); setFEmergency(false); setFVerified(false); setFCases(false);
     setFLocal(false); setFFast(false);
   };
@@ -289,29 +332,57 @@ export default function MarketplacePage() {
     return cards; // 'all' and 'solution' consider everything
   }, [cards, tab]);
 
-  // Build facet option lists from REAL data only.
+  // Build facet option lists AND counts from REAL data only (Amazon-style
+  // "Category (5)"). Counts are tallied over tabCards — the same
+  // tab-filtered universe the option lists themselves come from — not
+  // net of the OTHER active facet selections; that keeps the count math
+  // simple/obviously-correct for this MVP (see workplace/research/
+  // structured-search-blueprint-2026-07-22.md for the fuller cross-facet
+  // count model, deferred to Phase 2 along with price-range/rating/spec
+  // facets, none of which exist in the schema yet).
   const facets = useMemo(() => {
-    const cat = new Set<string>(); const ind = new Set<string>(); const area = new Set<string>(); const price = new Set<string>();
-    let anyPilot = false, anyWarranty = false, anyEmergency = false, anyVerified = false, anyCases = false, anyLocal = false, anyFast = false;
+    const cat = new Map<string, number>(); const ind = new Map<string, number>();
+    const area = new Map<string, number>(); const price = new Map<string, number>();
+    const bump = (m: Map<string, number>, k: string) => m.set(k, (m.get(k) || 0) + 1);
+    let pilotN = 0, warrantyN = 0, emergencyN = 0, verifiedN = 0, casesN = 0, localN = 0, fastN = 0;
     for (const c of tabCards) {
-      if (c.category) cat.add(c.category);
-      c.industries?.forEach((i) => i && ind.add(i));
-      c.service_areas?.forEach((a) => a && area.add(a));
-      const pm = c.pricing?.model || c.pricing_model; if (pm) price.add(pm);
-      if (c.pilot?.available) anyPilot = true;
-      if (c.warranty_support?.warranty) anyWarranty = true;
-      if (c.emergency_available) anyEmergency = true;
-      if (c.vendor_verified) anyVerified = true;
-      if (c.has_case_studies) anyCases = true;
-      if (isLocal(c)) anyLocal = true;
-      if (isFast(c)) anyFast = true;
+      if (c.category) bump(cat, c.category);
+      c.industries?.forEach((i) => i && bump(ind, i));
+      c.service_areas?.forEach((a) => a && bump(area, a));
+      const pm = c.pricing?.model || c.pricing_model; if (pm) bump(price, pm);
+      if (c.pilot?.available) pilotN++;
+      if (c.warranty_support?.warranty) warrantyN++;
+      if (c.emergency_available) emergencyN++;
+      if (c.vendor_verified) verifiedN++;
+      if (c.has_case_studies) casesN++;
+      if (isLocal(c)) localN++;
+      if (isFast(c)) fastN++;
     }
-    const sortArr = (s: Set<string>) => Array.from(s).sort((a, b) => a.localeCompare(b));
+    const sortMap = (m: Map<string, number>): Array<[string, number]> =>
+      Array.from(m.entries()).sort((a, b) => a[0].localeCompare(b[0]));
     return {
-      categories: sortArr(cat), industries: sortArr(ind), areas: sortArr(area), pricing: sortArr(price),
-      anyPilot, anyWarranty, anyEmergency, anyVerified, anyCases, anyLocal, anyFast,
+      categories: sortMap(cat), industries: sortMap(ind), areas: sortMap(area), pricing: sortMap(price),
+      pilotN, warrantyN, emergencyN, verifiedN, casesN, localN, fastN,
     };
   }, [tabCards]);
+
+  // Once real listing data is in, drop any URL-restored facet value that
+  // doesn't match a real option — a garbage/typo'd query string just quietly
+  // stops filtering instead of leaving a dead "ghost" chip on screen.
+  useEffect(() => {
+    if (!cards.length) return;
+    setFCategory((v) => (v && !facets.categories.some(([o]) => o === v) ? '' : v));
+    setFPricing((v) => (v && !facets.pricing.some(([o]) => o === v) ? '' : v));
+    setFIndustry((prev) => {
+      const next = prev.filter((v) => facets.industries.some(([o]) => o === v));
+      return next.length === prev.length ? prev : next;
+    });
+    setFArea((prev) => {
+      const next = prev.filter((v) => facets.areas.some(([o]) => o === v));
+      return next.length === prev.length ? prev : next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cards, facets]);
 
   const tokens = useMemo(() => q.toLowerCase().split(/\s+/).filter(Boolean), [q]);
 
@@ -319,8 +390,8 @@ export default function MarketplacePage() {
     let list = tabCards.filter((c) => {
       if (fDept && c.functional_group !== fDept) return false;
       if (fCategory && c.category !== fCategory) return false;
-      if (fIndustry && !(c.industries || []).includes(fIndustry)) return false;
-      if (fArea && !(c.service_areas || []).includes(fArea)) return false;
+      if (fIndustry.length && !(c.industries || []).some((i) => fIndustry.includes(i))) return false;
+      if (fArea.length && !(c.service_areas || []).some((a) => fArea.includes(a))) return false;
       if (fPricing && (c.pricing?.model || c.pricing_model) !== fPricing) return false;
       if (fPilot && !c.pilot?.available) return false;
       if (fWarranty && !c.warranty_support?.warranty) return false;
@@ -356,7 +427,7 @@ export default function MarketplacePage() {
   const liveDepartments = useMemo(() => departments.filter((d) => deptCounts.has(d.fg)), [departments, deptCounts]);
 
   const compareCards = useMemo(() => cards.filter((c) => compare.has(c.id)).slice(0, 5), [cards, compare]);
-  const activeFilterCount = [fDept, fCategory, fIndustry, fArea, fPricing].filter(Boolean).length +
+  const activeFilterCount = [fDept, fCategory, fPricing].filter(Boolean).length + fIndustry.length + fArea.length +
     [fPilot, fWarranty, fEmergency, fVerified, fCases, fLocal, fFast].filter(Boolean).length;
   const marketplaceEmpty = !loading && cards.length === 0;
 
@@ -380,7 +451,7 @@ export default function MarketplacePage() {
   }, [cards]);
 
   // Suggested related searches for empty states (from real category data).
-  const suggestions = facets.categories.slice(0, 6);
+  const suggestions = facets.categories.slice(0, 6).map(([c]) => c);
 
   return (
     <div className={`mk ${ibmPlexSans.variable}`}>
@@ -540,20 +611,20 @@ export default function MarketplacePage() {
             </div>
 
             <FacetSelect label="Category" value={fCategory} onChange={setFCategory} options={facets.categories} />
-            <FacetSelect label="Industry" value={fIndustry} onChange={setFIndustry} options={facets.industries} />
-            {(tab !== 'product') && facets.areas.length > 0 && <FacetSelect label="Service area" value={fArea} onChange={setFArea} options={facets.areas} />}
+            <FacetCheckGroup label="Industry" values={fIndustry} onToggle={toggleIndustry} options={facets.industries} />
+            {(tab !== 'product') && facets.areas.length > 0 && <FacetCheckGroup label="Service area" values={fArea} onToggle={toggleArea} options={facets.areas} />}
             {facets.pricing.length > 0 && <FacetSelect label="Pricing model" value={fPricing} onChange={setFPricing} options={facets.pricing} />}
 
-            {(facets.anyPilot || facets.anyWarranty || facets.anyEmergency || facets.anyVerified || facets.anyCases || facets.anyLocal || facets.anyFast) && (
+            {(facets.pilotN > 0 || facets.warrantyN > 0 || facets.emergencyN > 0 || facets.verifiedN > 0 || facets.casesN > 0 || facets.localN > 0 || facets.fastN > 0) && (
               <div className="mk-facet">
                 <div className="mk-facetlabel">Show only</div>
-                {facets.anyPilot && <FacetCheck label="Pilot / demo available" checked={fPilot} onChange={setFPilot} />}
-                {facets.anyWarranty && <FacetCheck label="Warranty / support" checked={fWarranty} onChange={setFWarranty} />}
-                {facets.anyLocal && <FacetCheck label="Local support" checked={fLocal} onChange={setFLocal} />}
-                {facets.anyFast && <FacetCheck label="Fast response / lead time" checked={fFast} onChange={setFFast} />}
-                {facets.anyEmergency && <FacetCheck label="24/7 emergency" checked={fEmergency} onChange={setFEmergency} />}
-                {facets.anyVerified && <FacetCheck label="Verified vendor" checked={fVerified} onChange={setFVerified} />}
-                {facets.anyCases && <FacetCheck label="Has case studies" checked={fCases} onChange={setFCases} />}
+                {facets.pilotN > 0 && <FacetCheck label="Pilot / demo available" checked={fPilot} onChange={setFPilot} count={facets.pilotN} />}
+                {facets.warrantyN > 0 && <FacetCheck label="Warranty / support" checked={fWarranty} onChange={setFWarranty} count={facets.warrantyN} />}
+                {facets.localN > 0 && <FacetCheck label="Local support" checked={fLocal} onChange={setFLocal} count={facets.localN} />}
+                {facets.fastN > 0 && <FacetCheck label="Fast response / lead time" checked={fFast} onChange={setFFast} count={facets.fastN} />}
+                {facets.emergencyN > 0 && <FacetCheck label="24/7 emergency" checked={fEmergency} onChange={setFEmergency} count={facets.emergencyN} />}
+                {facets.verifiedN > 0 && <FacetCheck label="Verified vendor" checked={fVerified} onChange={setFVerified} count={facets.verifiedN} />}
+                {facets.casesN > 0 && <FacetCheck label="Has case studies" checked={fCases} onChange={setFCases} count={facets.casesN} />}
               </div>
             )}
             <p className="mk-railnote">Filters reflect what vendors actually listed. Options with no data are hidden.</p>
@@ -569,8 +640,8 @@ export default function MarketplacePage() {
             {activeFilterCount > 0 && (
               <div className="mk-activechips">
                 {fCategory && <button onClick={() => setFCategory('')}>{fCategory} ✕</button>}
-                {fIndustry && <button onClick={() => setFIndustry('')}>{fIndustry} ✕</button>}
-                {fArea && <button onClick={() => setFArea('')}>{fArea} ✕</button>}
+                {fIndustry.map((v) => <button key={`ind-${v}`} onClick={() => toggleIndustry(v)}>{v} ✕</button>)}
+                {fArea.map((v) => <button key={`area-${v}`} onClick={() => toggleArea(v)}>{v} ✕</button>)}
                 {fPricing && <button onClick={() => setFPricing('')}>{fPricing} ✕</button>}
                 {fPilot && <button onClick={() => setFPilot(false)}>Pilot ✕</button>}
                 {fWarranty && <button onClick={() => setFWarranty(false)}>Warranty ✕</button>}
@@ -677,23 +748,49 @@ function ListingCard({ c, saved, inCompare, onSave, onCompare }: { c: Card; save
   );
 }
 
-function FacetSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: string[] }) {
+// Amazon-style facet count: value + how many results have it, e.g. "Automation & Robotics (5)".
+type FacetOption = [value: string, count: number];
+
+function FacetSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: FacetOption[] }) {
   if (options.length === 0) return null;
   return (
     <div className="mk-facet">
       <label className="mk-facetlabel">{label}</label>
       <select value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">All</option>
-        {options.map((o) => <option key={o} value={o}>{o}</option>)}
+        {options.map(([o, n]) => <option key={o} value={o}>{o} ({n})</option>)}
       </select>
     </div>
   );
 }
-function FacetCheck({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+function FacetCheck({ label, checked, onChange, count }: { label: string; checked: boolean; onChange: (v: boolean) => void; count?: number }) {
   return (
     <label className="mk-facetcheck">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} /> {label}
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <span>{label}</span>
+      {typeof count === 'number' && <span className="mk-facetcount">({count})</span>}
     </label>
+  );
+}
+// Shared "checkbox facet with counts" group — used for the multi-select
+// Industry / Service area facets (OR logic: a listing matches if it has ANY
+// checked value). Reuses the same .mk-facetcheck styling as the single
+// "Show only" checkboxes above so it looks native, not bolted on.
+function FacetCheckGroup({ label, options, values, onToggle }: { label: string; options: FacetOption[]; values: string[]; onToggle: (v: string) => void }) {
+  if (options.length === 0) return null;
+  return (
+    <div className="mk-facet">
+      <div className="mk-facetlabel">{label}</div>
+      <div className="mk-facetgroup">
+        {options.map(([o, n]) => (
+          <label key={o} className="mk-facetcheck">
+            <input type="checkbox" checked={values.includes(o)} onChange={() => onToggle(o)} />
+            <span>{o}</span>
+            <span className="mk-facetcount">({n})</span>
+          </label>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -858,7 +955,10 @@ const CSS = `
 .mk-facet select{font-family:inherit;font-size:13.5px;padding:10px 11px;border-radius:10px;border:1px solid var(--spec-border);background:var(--spec-warm-white);color:var(--spec-ink);outline:none;}
 .mk-facet select:focus{border-color:var(--spec-violet);}
 .mk-facetcheck{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--spec-ink);cursor:pointer;padding:3px 0;}
-.mk-facetcheck input{accent-color:var(--spec-violet);width:15px;height:15px;}
+.mk-facetcheck input{accent-color:var(--spec-violet);width:15px;height:15px;flex-shrink:0;}
+.mk-facetcheck span:first-of-type{flex:1;}
+.mk-facetcount{color:var(--spec-text-2nd);font-size:12px;font-weight:400;flex-shrink:0;}
+.mk-facetgroup{display:flex;flex-direction:column;max-height:196px;overflow-y:auto;padding-right:2px;}
 .mk-railnote{font-size:11.5px;color:var(--spec-text-2nd);line-height:1.5;margin:2px 0 0;}
 .mk-results{min-width:0;}
 .mk-count{font-size:13.5px;color:var(--spec-text-2nd);margin:4px 2px 12px;}
