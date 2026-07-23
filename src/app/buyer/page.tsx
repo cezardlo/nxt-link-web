@@ -5,11 +5,12 @@
 // matched server-side to their verified email, plus saved listings (localStorage).
 // Fully EN/ES via the shared LanguageToggle/useLang pattern (see /cart).
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
-import { PackageSearch, Inbox, Lightbulb } from 'lucide-react';
+import { PackageSearch, Inbox, Lightbulb, MessageCircle } from 'lucide-react';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
+import { useChatPolling, resolvePendingMessage, dropPendingMessage, type ChatMessage } from '@/components/marketplace/useChatPolling';
 
 interface IntakeRequest {
   id: string; public_ref: string; category: string | null; problem: string | null;
@@ -55,9 +56,9 @@ const T: Record<Lang, Record<string, string>> = {
     serviceRequest: 'Service request', productRequest: 'Product request',
     statusSent: 'Sent', statusSeenByVendor: 'Seen by vendor', statusVendorResponding: 'Vendor responding', statusClosed: 'Closed',
     bundlePrefix: 'Bundle', bundleItem: 'item', bundleItems: 'items',
-    noMessagesVendor: 'No messages yet — ask the vendor anything.', messageVendorPh: 'Message the vendor…', send: 'Send',
+    noMessagesVendor: 'No messages yet — ask the vendor anything.', messageVendorPh: 'Message the vendor…', send: 'Send', sendingMsg: 'Sending…',
     guardChat: 'For your protection, contact details are hidden in chat until you accept a quote — keep the conversation on NXT//LINK.',
-    messageVendor: 'Message vendor',
+    messageVendor: 'Message vendor', newMessageHint: 'New message', live: 'Live',
     pkDemo: 'Demo', pkPilot: 'Pilot', pkSiteVisit: 'Site visit',
     psProposed: 'Proposed', psScheduled: 'Scheduled', psInProgress: 'In progress', psCompleted: 'Completed', psCancelled: 'Cancelled',
     poPassed: 'Passed', poFailed: 'Failed', poInconclusive: 'Inconclusive',
@@ -101,9 +102,9 @@ const T: Record<Lang, Record<string, string>> = {
     serviceRequest: 'Solicitud de servicio', productRequest: 'Solicitud de producto',
     statusSent: 'Enviada', statusSeenByVendor: 'Vista por el proveedor', statusVendorResponding: 'El proveedor está respondiendo', statusClosed: 'Cerrada',
     bundlePrefix: 'Paquete', bundleItem: 'artículo', bundleItems: 'artículos',
-    noMessagesVendor: 'Aún no hay mensajes — pregúntale algo al proveedor.', messageVendorPh: 'Mensaje para el proveedor…', send: 'Enviar',
+    noMessagesVendor: 'Aún no hay mensajes — pregúntale algo al proveedor.', messageVendorPh: 'Mensaje para el proveedor…', send: 'Enviar', sendingMsg: 'Enviando…',
     guardChat: 'Para tu protección, los datos de contacto se ocultan en el chat hasta que aceptes una cotización — mantén la conversación en NXT//LINK.',
-    messageVendor: 'Mensaje al proveedor',
+    messageVendor: 'Mensaje al proveedor', newMessageHint: 'Mensaje nuevo', live: 'En vivo',
     pkDemo: 'Demo', pkPilot: 'Piloto', pkSiteVisit: 'Visita al sitio',
     psProposed: 'Propuesto', psScheduled: 'Programado', psInProgress: 'En progreso', psCompleted: 'Completado', psCancelled: 'Cancelado',
     poPassed: 'Aprobado', poFailed: 'Fallido', poInconclusive: 'No concluyente',
@@ -159,17 +160,27 @@ export default function BuyerDashboardPage() {
   const [rv, setRv] = useState({ rating: 5, title: '', body: '' });
   const [rvBusy, setRvBusy] = useState(false);
   const [chatFor, setChatFor] = useState<string | null>(null);
-  const [chatMsgs, setChatMsgs] = useState<Array<{ id: string; sender: string; body: string; created_at: string }>>([]);
+  const [chatMsgs, setChatMsgs] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatBusy, setChatBusy] = useState(false);
   const chatListRef = useRef<HTMLDivElement>(null);
   useEffect(() => { chatListRef.current?.scrollTo({ top: chatListRef.current.scrollHeight }); }, [chatMsgs, chatFor]);
+  // Auto-refresh the open thread only — polls the existing GET /messages
+  // endpoint (no Supabase browser-realtime; that needs new RLS, out of scope).
+  useChatPolling(chatFor, '/api/buyer/messages', setChatMsgs);
   const [savedItems, setSavedItems] = useState<Array<{ listing_id: string; kind: string; name: string | null }>>([]);
-  const [notifs, setNotifs] = useState<Array<{ id: string; title: string; read_at: string | null; created_at: string }>>([]);
+  const [notifs, setNotifs] = useState<Array<{ id: string; title: string; read_at: string | null; created_at: string; type?: string; quote_request_id?: string | null }>>([]);
   const [notifUnread, setNotifUnread] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
   const [decidingId, setDecidingId] = useState<string | null>(null);
   const [decideError, setDecideError] = useState<{ id: string; message: string } | null>(null);
+  // Cheap unread-chat hint: reuses the notifications already fetched on load
+  // (no extra API call) — a quote request has an unread message if there's
+  // an unread 'message' notification pointing at it.
+  const unreadChatIds = useMemo(
+    () => new Set(notifs.filter((n) => !n.read_at && n.type === 'message' && n.quote_request_id).map((n) => n.quote_request_id as string)),
+    [notifs],
+  );
   async function toggleNotifs() {
     const next = !notifOpen;
     setNotifOpen(next);
@@ -232,6 +243,10 @@ export default function BuyerDashboardPage() {
   }
   async function openChat(id: string) {
     setChatFor(id); setChatMsgs([]); setChatInput('');
+    // Clear the local unread hint for this thread right away — the server
+    // side "all read" only happens via the bell (no per-thread mark-read
+    // endpoint), so this is a same-session visual clear, not persisted.
+    setNotifs((ns) => ns.map((n) => (n.quote_request_id === id && n.type === 'message' && !n.read_at ? { ...n, read_at: new Date().toISOString() } : n)));
     const res = await fetch(`/api/buyer/messages?quote_request_id=${id}`);
     const data = await res.json();
     if (data.ok) setChatMsgs(data.messages || []);
@@ -239,10 +254,25 @@ export default function BuyerDashboardPage() {
   async function sendChat(id: string) {
     const text = chatInput.trim();
     if (!text || chatBusy) return;
+    setChatInput('');
     setChatBusy(true);
-    const res = await fetch('/api/buyer/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quote_request_id: id, body: text }) });
-    const data = await res.json();
-    if (data.ok) { setChatMsgs((m) => [...m, data.message]); setChatInput(''); }
+    // Optimistic bubble — appears immediately; the poll's dedupe-by-id means
+    // it's never double-rendered once the server round-trip / next poll lands.
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    setChatMsgs((m) => [...m, { id: tempId, sender: 'buyer', body: text, created_at: new Date().toISOString(), pending: true }]);
+    try {
+      const res = await fetch('/api/buyer/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quote_request_id: id, body: text }) });
+      const data = await res.json();
+      if (data.ok) {
+        setChatMsgs((m) => resolvePendingMessage(m, tempId, data.message));
+      } else {
+        setChatMsgs((m) => dropPendingMessage(m, tempId));
+        setChatInput(text);
+      }
+    } catch {
+      setChatMsgs((m) => dropPendingMessage(m, tempId));
+      setChatInput(text);
+    }
     setChatBusy(false);
   }
 
@@ -426,24 +456,34 @@ export default function BuyerDashboardPage() {
                       <div className="by-chat">
                         {chatFor === q.id ? (
                           <div className="by-chatbox">
+                            <div className="by-chathead">
+                              <span>{t.messageVendor}</span>
+                              <span className="by-live" aria-hidden="true"><i />{t.live}</span>
+                            </div>
                             <div className="by-chatlist" ref={chatListRef}>
                               {chatMsgs.length === 0 && <div className="by-chatempty">{t.noMessagesVendor}</div>}
                               {chatMsgs.map((m) => (
-                                <div key={m.id} className={'by-bubble ' + (m.sender === 'buyer' ? 'me' : 'them')}>
+                                <div key={m.id} className={'by-bubble ' + (m.sender === 'buyer' ? 'me' : 'them') + (m.pending ? ' pending' : '')}>
                                   {m.body}
-                                  <small>{new Date(m.created_at).toLocaleString(dateLocale)}</small>
+                                  <small>{m.pending ? t.sendingMsg : new Date(m.created_at).toLocaleString(dateLocale)}</small>
                                 </div>
                               ))}
                             </div>
                             <div className="by-chatrow">
-                              <input value={chatInput} placeholder={t.messageVendorPh} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') sendChat(q.id); }} />
+                              <label className="sr-only" htmlFor={`by-chat-${q.id}`}>{t.messageVendorPh}</label>
+                              <input id={`by-chat-${q.id}`} value={chatInput} placeholder={t.messageVendorPh} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') sendChat(q.id); }} />
                               <button className="by-accept" disabled={chatBusy || !chatInput.trim()} onClick={() => sendChat(q.id)}>{t.send}</button>
                               <button className="by-decline" onClick={() => setChatFor(null)}>{t.close}</button>
                             </div>
                             {q.buyer_decision !== 'accepted' && <p className="by-guardnote">{t.guardChat}</p>}
                           </div>
                         ) : (
-                          <button className="by-chatopen" onClick={() => openChat(q.id)}>{t.messageVendor}</button>
+                          <button className="by-chatopen" onClick={() => openChat(q.id)}>
+                            <MessageCircle size={14} strokeWidth={2} aria-hidden="true" />
+                            {t.messageVendor}
+                            {unreadChatIds.has(q.id) && <span className="by-chatdot" aria-hidden="true" />}
+                            {unreadChatIds.has(q.id) && <span className="sr-only">{t.newMessageHint}</span>}
+                          </button>
                         )}
                       </div>
                       {(q.pilots || []).length > 0 && (
@@ -632,12 +672,18 @@ const CSS = `
 .by-decided.accepted{color:#34D399;}
 .by-decided.declined{color:#FCA5A5;}
 .by-chat{margin-top:11px;}
-.by-chatopen{font-family:inherit;font-size:12.5px;font-weight:600;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.35);color:#34D399;border-radius:9px;padding:8px 14px;cursor:pointer;}
+.by-chatopen{position:relative;display:inline-flex;align-items:center;gap:7px;font-family:inherit;font-size:12.5px;font-weight:600;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.35);color:#34D399;border-radius:9px;padding:8px 14px;cursor:pointer;}
+.by-chatdot{width:8px;height:8px;border-radius:99px;background:#EF4444;box-shadow:0 0 0 2px #111118;}
 .by-chatbox{background:#111118;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:12px;}
+.by-chathead{display:flex;justify-content:space-between;align-items:center;padding:0 2px 8px;font-size:12px;font-weight:700;color:#C0C0D0;}
+.by-live{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;letter-spacing:.04em;color:#5EEAD4;text-transform:uppercase;}
+.by-live i{width:6px;height:6px;border-radius:99px;background:#34D399;animation:by-livepulse 1.8s ease-in-out infinite;}
+@keyframes by-livepulse{0%,100%{opacity:1;}50%{opacity:.35;}}
 .by-chatlist{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto;padding:4px 2px 10px;}
 .by-chatempty{color:#8080A0;font-size:13px;text-align:center;padding:14px 0;}
 .by-bubble{max-width:82%;padding:9px 12px;border-radius:12px;font-size:13.5px;line-height:1.5;white-space:pre-wrap;display:flex;flex-direction:column;gap:3px;}
 .by-bubble small{font-size:10.5px;opacity:.6;}
+.by-bubble.pending{opacity:.65;}
 .by-bubble.me{align-self:flex-end;background:#7C5CFC;color:#fff;border-bottom-right-radius:4px;}
 .by-bubble.them{align-self:flex-start;background:rgba(255,255,255,.07);color:#E5E4F0;border-bottom-left-radius:4px;}
 .by-chatrow{display:flex;gap:8px;}

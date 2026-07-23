@@ -15,7 +15,7 @@ export async function GET() {
   if (!isSupabaseConfigured()) return NextResponse.json({ ok: true, notifications: [], unread: 0 });
   const db = getSupabaseClient({ admin: true });
   const { data } = await db.from('notifications')
-    .select('id, type, title, read_at, created_at')
+    .select('id, type, title, read_at, created_at, quote_request_id')
     .eq('recipient', 'buyer').ilike('buyer_email', likeLiteral(session.email))
     .order('created_at', { ascending: false }).limit(30);
   const rows = data || [];
