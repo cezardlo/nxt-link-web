@@ -34,14 +34,23 @@
 //
 // 2026-07-22 dead-end/empty-state fixes (Cesar + two audits): the
 // "Featured suppliers" card above was REMOVED (Cesar's explicit request) —
-// the browse grid is now 3 cards, not 4. Category tiles only render when
+// the browse grid was 3 cards, not 4. Category tiles only render when
 // they actually have published listings (computed live from this page's own
-// listings fetch). Buying-tools cards got real icons. Explore/Featured tiles
-// prefer listings with a real photo and fall back to a per-kind/category
-// icon instead of a duplicated generic one or a bare wordmark. The literal
-// 'Vendor' placeholder (API fallback when a vendor can't be resolved) is
-// never shown. The Featured section now has a real empty state and its
-// "Create a free account" CTA no longer disappears if the fetch is empty.
+// listings fetch). Buying-tools cards got real icons. The literal 'Vendor'
+// placeholder (API fallback when a vendor can't be resolved) is never shown.
+//
+// 2026-07-22 homepage cleanup (Cesar, same day, reviewing the live page):
+// the listing-thumbnail cards weren't rendering right and there isn't
+// enough real inventory yet to make either showcase look intentional, so
+// TWO MORE sections were removed: the "Explore listings" browse card (was
+// the middle of 3 cards in .hp-browsegrid — now 2 cards, category + RFQ)
+// and the entire "Featured on NXT//LINK" listings section. Its "Create a
+// free account" CTA was pulled out into its own standalone centered section
+// so account creation stays one obvious click from the homepage. The
+// `pickWithImageBias` / `iconForCard` helpers and the `sample` /
+// `featuredDisplay` picks they fed were removed with them — the `featured`
+// fetch, `loading`, and `categoryCounts` / `visibleCategoryTiles` stay,
+// since "Browse by category" still depends on them.
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
@@ -89,25 +98,6 @@ const CATEGORY_TILES: Array<{ fg: string; en: string; es: string; Icon: typeof F
   { fg: 'svc_transportation', en: 'Supply Chain Services', es: 'Servicios de cadena de suministro', Icon: Truck },
 ];
 
-// Per-card icon: match a curated category tile's icon when the listing's
-// functional_group lines up with one (same taxonomy as CATEGORY_TILES above),
-// otherwise fall back to a per-kind icon (product vs service) — never the
-// same generic icon for every photo-less card.
-function iconForCard(c: Pick<Card, 'kind' | 'functional_group'>): typeof Forklift {
-  const tile = CATEGORY_TILES.find((ct) => ct.fg === c.functional_group);
-  if (tile) return tile.Icon;
-  return c.kind === 'service' ? Wrench : PackageSearch;
-}
-
-// Bias a list toward entries that have a real photo — used by both the
-// "Explore listings" sample tiles and the "Featured on NXT//LINK" grid so
-// photo-less listings don't crowd out ones with real images.
-function pickWithImageBias(list: Card[], n: number): Card[] {
-  const withImg = list.filter((c) => c.image_url);
-  const withoutImg = list.filter((c) => !c.image_url);
-  return [...withImg, ...withoutImg].slice(0, n);
-}
-
 const T: Record<Lang, Record<string, string>> = {
   en: {
     docTitle: 'NXT//LINK — Borderplex Industrial Marketplace',
@@ -134,9 +124,6 @@ const T: Record<Lang, Record<string, string>> = {
     catCardTitle: 'Browse by category',
     catCardAction: 'Browse all categories',
     catEmpty: 'New categories are being added — check the full marketplace.',
-    exploreCardTitle: 'Explore listings',
-    exploreCardAction: 'See the full marketplace',
-    exploreEmpty: 'New listings are on the way — post a request and we will find it for you.',
     rfqCardTitle: 'One request, multiple quotes',
     rfqCardBody: 'Describe what you need once. The vendors you choose respond with quotes, demos, or pilots — no chasing emails.',
     filtersLabel: 'Quick filters',
@@ -150,8 +137,6 @@ const T: Record<Lang, Record<string, string>> = {
     serviceBody: 'Repair, installation, maintenance, logistics, and technical support.', serviceAction: 'Browse services',
     techKicker: 'Technology', techTitle: 'Evaluate a solution',
     techBody: 'Automation, robotics, scanning, software, demos, and pilots.', techAction: 'Explore technology',
-    featuredHeading: 'Featured on NXT//LINK', seeAll: 'See all →', pilotAvailable: 'Pilot available',
-    featuredEmpty: 'New listings are on the way — check back soon or post a request and we will find it for you.',
     createFreeAccount: 'Create a free account',
     toolsHeading: 'Everything the buying process needs',
     tool1T: 'Request quotes in one place', tool1D: 'Send one request, reach the vendors you choose. No chasing emails.',
@@ -215,9 +200,6 @@ const T: Record<Lang, Record<string, string>> = {
     catCardTitle: 'Explorar por categoría',
     catCardAction: 'Ver todas las categorías',
     catEmpty: 'Se están agregando nuevas categorías — revisa el marketplace completo.',
-    exploreCardTitle: 'Explorar publicaciones',
-    exploreCardAction: 'Ver todo el marketplace',
-    exploreEmpty: 'Nuevas publicaciones están en camino — publica una solicitud y la buscamos por ti.',
     rfqCardTitle: 'Una solicitud, varias cotizaciones',
     rfqCardBody: 'Describe lo que necesitas una vez. Los proveedores que elijas responden con cotizaciones, demos o pilotos — sin perseguir correos.',
     filtersLabel: 'Filtros rápidos',
@@ -231,8 +213,6 @@ const T: Record<Lang, Record<string, string>> = {
     serviceBody: 'Reparación, instalación, mantenimiento, logística y soporte técnico.', serviceAction: 'Explorar servicios',
     techKicker: 'Tecnología', techTitle: 'Evalúa una solución',
     techBody: 'Automatización, robótica, escaneo, software, demos y pilotos.', techAction: 'Explorar tecnología',
-    featuredHeading: 'Destacado en NXT//LINK', seeAll: 'Ver todo →', pilotAvailable: 'Piloto disponible',
-    featuredEmpty: 'Nuevas publicaciones están en camino — vuelve pronto o publica una solicitud y la buscamos por ti.',
     createFreeAccount: 'Crea una cuenta gratis',
     toolsHeading: 'Todo lo que necesita el proceso de compra',
     tool1T: 'Solicita cotizaciones en un solo lugar', tool1D: 'Envía una solicitud y llega a los proveedores que elijas. Sin perseguir correos.',
@@ -316,12 +296,6 @@ export default function Home() {
   }
   const visibleCategoryTiles = loading ? CATEGORY_TILES : CATEGORY_TILES.filter((tile) => (categoryCounts.get(tile.fg) || 0) > 0);
 
-  // "Explore listings" sample tiles: prefer listings with a real photo so
-  // the row doesn't read as 3 identical placeholder icons.
-  const sample = pickWithImageBias(featured, 3);
-  // "Featured on NXT//LINK" grid: same image bias, more slots.
-  const featuredDisplay = pickWithImageBias(featured, 8);
-
   const sourceModes = [
     { kicker: t.productKicker, title: t.productTitle, body: t.productBody, action: t.productAction, href: '/marketplace?tab=product', Icon: PackageSearch },
     { kicker: t.serviceKicker, title: t.serviceTitle, body: t.serviceBody, action: t.serviceAction, href: '/marketplace?tab=service', Icon: Wrench },
@@ -394,11 +368,12 @@ export default function Home() {
 
       {/* Browse zone — Alibaba Manufacturers-page organization (Cesar,
           2026-07-22 follow-up), tailored to NXT//LINK's real data: a
-          category-browse card (icon rows, live categories only), an
-          explore-listings card (real photos), and a prominent RFQ card.
-          (The former "Featured suppliers" card was removed per Cesar's
-          request — see vault/Backlog.md.) Every link routes to a real,
-          working page — no invented stats anywhere on this page. */}
+          category-browse card (icon rows, live categories only) and a
+          prominent RFQ card. (The former "Featured suppliers" card and the
+          "Explore listings" sample-tile card were both removed per Cesar's
+          request — not enough live inventory yet to look intentional; see
+          vault/Backlog.md.) Every link routes to a real, working page — no
+          invented stats anywhere on this page. */}
       <section className="hp-sec" aria-labelledby="hp-browse-title">
         <div className="hp-sechead">
           <div>
@@ -421,26 +396,6 @@ export default function Home() {
               </div>
             ) : <p className="hp-bcardempty">{t.catEmpty}</p>}
             <Link className="hp-bcardlink" href="/marketplace">{t.catCardAction}<ChevronRight size={15} aria-hidden="true" /></Link>
-          </div>
-
-          <div className="hp-bcard">
-            <h3>{t.exploreCardTitle}</h3>
-            {sample.length > 0 ? (
-              <div className="hp-samplegrid">
-                {sample.map((c) => {
-                  const Icon = iconForCard(c);
-                  return (
-                    <Link key={c.id} href={`/marketplace/${c.kind}/${c.id}`} className="hp-sampletile">
-                      {c.image_url
-                        ? <img src={c.image_url} alt={c.name} loading="lazy" />
-                        : <span className="hp-sampleicon"><Icon size={24} aria-hidden="true" /></span>}
-                      <small>{c.name}</small>
-                    </Link>
-                  );
-                })}
-              </div>
-            ) : <p className="hp-bcardempty">{t.exploreEmpty}</p>}
-            <Link className="hp-bcardlink" href="/marketplace">{t.exploreCardAction}<ChevronRight size={15} aria-hidden="true" /></Link>
           </div>
 
           <div className="hp-bcard hp-bcardaccent">
@@ -481,42 +436,12 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured live listings — always has a body (skeleton / grid / empty
-          message) AND always keeps the "Create a free account" CTA, so a
-          slow or empty fetch never makes the whole section (and the CTA)
-          vanish silently. */}
-      <section className="hp-sec">
-        <div className="hp-sechead">
-          <h2>{t.featuredHeading}</h2>
-          {!loading && featured.length > 0 && <a href="/marketplace">{t.seeAll}</a>}
-        </div>
-        {loading && (
-          <div className="hp-prods">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="hp-prod hp-prodskel" />)}</div>
-        )}
-        {!loading && featured.length > 0 && (
-          <div className="hp-prods">
-            {featuredDisplay.map((c) => {
-              const Icon = iconForCard(c);
-              const showVendor = c.vendor_name && c.vendor_name !== 'Vendor';
-              return (
-                <a key={c.id} className="hp-prod" href={`/marketplace/${c.kind}/${c.id}`}>
-                  <div className="hp-prodimg">
-                    {c.image_url
-                      ? <img src={c.image_url} alt={c.name} loading="lazy" />
-                      : <div className="hp-noimg"><Icon size={28} aria-hidden="true" /></div>}
-                  </div>
-                  <div className="hp-prodbody">
-                    {c.pilot?.available && <span className="hp-badge">{t.pilotAvailable}</span>}
-                    <div className="hp-prodname">{c.name}</div>
-                    {c.pricing?.range && <div className="hp-price">{c.pricing.range}</div>}
-                    {showVendor && <div className="hp-vend">{c.vendor_name}{c.vendor_city ? ` · ${c.vendor_city}` : ''}</div>}
-                  </div>
-                </a>
-              );
-            })}
-          </div>
-        )}
-        {!loading && featured.length === 0 && <p className="hp-browsesub">{t.featuredEmpty}</p>}
+      {/* Standalone "Create a free account" CTA. This used to live inside
+          the "Featured on NXT//LINK" listings section, which was removed
+          (Cesar, 2026-07-22: not enough live inventory yet for that grid to
+          look intentional). Kept as its own clean, centered block so account
+          creation stays one obvious click from the homepage. */}
+      <section className="hp-sec hp-ctasec">
         <a className="hp-bigcta" href="/signup">{t.createFreeAccount}</a>
       </section>
 
@@ -713,11 +638,11 @@ const CSS = `
 .hp-sechead a:hover{color:var(--spec-violet-deep);}
 .hp-browsesub{margin:6px 0 0;color:var(--spec-text-2nd);font-size:13.5px;line-height:1.55;max-width:52ch;}
 
-/* Browse-zone card grid (Alibaba layout, Cesar 2026-07-22). 3 cards
-   (category / explore / RFQ) since the "Featured suppliers" card was
-   removed — same 3-col-desktop/1-col-mobile pattern as .hp-sourcegrid below
-   so the grid reads as intentional, not a gap where a 4th card used to be. */
-.hp-browsegrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch;}
+/* Browse-zone card grid (Alibaba layout, Cesar 2026-07-22). Down to 2 cards
+   (category / RFQ) now that "Featured suppliers" and "Explore listings"
+   were both removed — 2-col-desktop/1-col-mobile so the grid reads as
+   intentional, not a gap where a 3rd card used to be. */
+.hp-browsegrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:stretch;}
 .hp-bcard{display:flex;flex-direction:column;min-height:280px;padding:20px;background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-lg);transition:border-color .15s,transform .15s,box-shadow .15s;}
 .hp-bcard:hover{border-color:var(--spec-violet);transform:translateY(-2px);box-shadow:0 16px 32px -22px rgba(20,19,32,.25);}
 .hp-bcard h3{margin:0 0 14px;font-size:15px;font-weight:700;color:var(--spec-ink);}
@@ -731,12 +656,6 @@ const CSS = `
 .hp-catrow:hover .hp-catrowicon{background:#fff;}
 .hp-catrowlabel{flex:1;min-width:0;font-size:12.5px;font-weight:600;line-height:1.3;}
 .hp-catrowchev{flex-shrink:0;color:var(--spec-text-2nd);}
-
-.hp-samplegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;flex:1;align-content:start;}
-.hp-sampletile{display:flex;flex-direction:column;gap:6px;color:var(--spec-ink);}
-.hp-sampletile img,.hp-sampleicon{width:100%;height:64px;border-radius:var(--spec-radius-sm);object-fit:cover;background:var(--spec-surface);}
-.hp-sampleicon{display:grid;place-items:center;color:var(--spec-violet);}
-.hp-sampletile small{font-size:10.5px;font-weight:600;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
 .hp-bcardaccent{background:var(--spec-ink);border-color:var(--spec-ink);color:#fff;}
 .hp-bcardaccent h3{color:#F8F7FB;}
@@ -764,23 +683,11 @@ const CSS = `
 .hp-sourceaction{margin-top:auto;padding-top:16px;display:flex;align-items:center;gap:4px;color:var(--spec-violet-deep);font-size:13px;font-weight:700;}
 @media(max-width:760px){.hp-sourcegrid{grid-template-columns:1fr;}}
 
-/* Featured listings */
-.hp-prods{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px;}
-.hp-prod{background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-lg);overflow:hidden;display:flex;flex-direction:column;transition:border-color .15s,transform .15s,box-shadow .15s;color:var(--spec-ink);}
-.hp-prodskel{height:236px;background:linear-gradient(100deg,#EFEDF5 30%,#E4E1EF 50%,#EFEDF5 70%);background-size:200% 100%;animation:hpshimmer 1.3s ease-in-out infinite;}
-@keyframes hpshimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
-@media (prefers-reduced-motion:reduce){.hp-prodskel{animation:none;}}
-.hp-prod:hover{border-color:var(--spec-violet);transform:translateY(-3px);box-shadow:0 18px 34px -20px rgba(20,19,32,.28);}
-.hp-prodimg{height:172px;background:var(--spec-surface);overflow:hidden;}
-.hp-prodimg img{width:100%;height:100%;object-fit:cover;transition:transform .3s ease;}
-.hp-prod:hover .hp-prodimg img{transform:scale(1.05);}
-.hp-noimg{height:100%;display:grid;place-items:center;color:var(--spec-violet);background:var(--spec-surface);}
-.hp-prodbody{padding:14px 15px 16px;display:flex;flex-direction:column;gap:5px;flex:1;}
-.hp-badge{align-self:flex-start;display:flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;color:var(--spec-text-2nd);background:none;border:1px solid var(--spec-border);padding:3px 8px;border-radius:999px;}
-.hp-prodname{font-size:14px;font-weight:700;line-height:1.3;color:var(--spec-ink);}
-.hp-price{font-family:var(--font-ibm-plex-mono);font-size:15px;font-weight:600;color:var(--spec-violet-deep);font-variant-numeric:tabular-nums;}
-.hp-vend{font-size:11.5px;color:var(--spec-text-2nd);margin-top:auto;}
-.hp-bigcta{display:block;width:max-content;margin:28px auto 0;background:var(--spec-violet);color:#fff;font-weight:700;font-size:14.5px;padding:14px 30px;border-radius:var(--spec-radius-btn);transition:background .15s;}
+/* Standalone "Create a free account" CTA (replaces the removed "Featured on
+   NXT//LINK" listings section — this is the CTA that used to live at its
+   bottom, kept as its own centered block). */
+.hp-ctasec{padding-bottom:56px;text-align:center;}
+.hp-bigcta{display:inline-block;background:var(--spec-violet);color:#fff;font-weight:700;font-size:14.5px;padding:14px 30px;border-radius:var(--spec-radius-btn);transition:background .15s;}
 .hp-bigcta:hover{background:var(--spec-violet-deep);}
 
 /* Buying tools */
