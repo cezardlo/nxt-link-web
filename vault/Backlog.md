@@ -241,6 +241,28 @@ Still open, in rough priority order:
 See tasks list / [[Decisions]]. Marketplace search bar + RFQ CTA + How-it-works
 strip, autocomplete, vendor moderation, NXT AI concierge + commission co-pilot,
 compare fill bars, view-as-buyer — all shipped.
+- **Flexible vendor listing form (no more fixed presets) — BUILT 2026-07-23,
+  local commit `348ecfd`, NOT deployed, PENDING security review (vendor-typed
+  content renders to buyers).** `/vendor/listings`: Category/Industries/Best
+  for/Use cases are now a chip/tag input — suggested chips sourced from the
+  real taxonomy (`/api/marketplace/categories`) + the vendor's own other
+  listings, but typing a custom value is always allowed (new
+  `src/components/marketplace/ChipTagInput.tsx`). Pilot/demo is repeatable
+  ("+ Add another pilot or demo"); Implementation/Warranty & support/Pricing
+  each get a "+ Add field" for vendor-defined {label, value} rows. Persisted
+  shape unchanged for category/industries/best_for/use_cases; `pilot` keeps
+  its old single-object shape for 0-1 pilots (entry 0 always mirrored onto
+  the legacy fields even at 2+), `entries`/`custom` arrays only appear past
+  that — read everywhere through shared `pilotEntriesOf()`/`customFieldsOf()`
+  (`src/lib/marketplace/types.ts`) so old- and new-shape listings render
+  identically. Caps enforced server-side in `normalizeListingInput`/
+  `cleanBlock`: ≤8 pilots, ≤20 custom fields/block, label ≤60 / value ≤300
+  chars, trimmed, empties dropped. Listing detail + the review-before-publish
+  modal render the repeats/custom fields generically as text (no HTML
+  rendering of vendor input); storefront verified compatible, no changes
+  needed. No migration (all JSONB columns, additive-only shape). 25 new unit
+  tests (sanitization + back-compat reads). Typecheck 0, tests 137/137, build
+  clean.
 - **Self-service account deletion (buyers + vendors) — BUILT 2026-07-23, local
   commit, NOT deployed, PENDING adversarial security review.** `/account` gets
   a bilingual "Danger zone" (type DELETE/ELIMINAR + password for password
