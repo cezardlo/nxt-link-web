@@ -51,6 +51,16 @@
 // `featuredDisplay` picks they fed were removed with them — the `featured`
 // fetch, `loading`, and `categoryCounts` / `visibleCategoryTiles` stay,
 // since "Browse by category" still depends on them.
+//
+// 2026-07-23 category-browse promotion (Cesar, founder-approved): "Browse by
+// category" was cramped as one card sharing a 2-col grid with the RFQ card —
+// promoted to its own full-width section (icon grid: 3 cols desktop / 2
+// tablet / 1-2 auto-fit on small phones), Amazon Business / Grainger style.
+// The old `.hp-browsegrid` 2-card wrapper is gone; the RFQ "one request,
+// multiple quotes" card is now its own standalone centered CTA band right
+// after, so it doesn't read as an orphaned lonely card. Same
+// CATEGORY_TILES data, visibleCategoryTiles empty-hiding, icons, and
+// /marketplace?department= routing as before — only the layout changed.
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
@@ -366,44 +376,33 @@ export default function Home() {
         <span className="hp-trustitem"><Send size={ICON_INLINE} aria-hidden="true" /> {t.trustFree}</span>
       </div>
 
-      {/* Browse zone — Alibaba Manufacturers-page organization (Cesar,
-          2026-07-22 follow-up), tailored to NXT//LINK's real data: a
-          category-browse card (icon rows, live categories only) and a
-          prominent RFQ card. (The former "Featured suppliers" card and the
-          "Explore listings" sample-tile card were both removed per Cesar's
-          request — not enough live inventory yet to look intentional; see
-          vault/Backlog.md.) Every link routes to a real, working page — no
-          invented stats anywhere on this page. */}
-      <section className="hp-sec" aria-labelledby="hp-browse-title">
+      {/* Browse by category — promoted to its OWN full-width section
+          (Cesar, 2026-07-23: was cramped as one card in a 2-col grid next to
+          the RFQ card; now reads like Amazon Business / Grainger's
+          category-browse band). Icon grid, live categories only — same
+          CATEGORY_TILES data, visibleCategoryTiles empty-hiding, and
+          /marketplace?department= routing as before, just laid out as tiles
+          instead of a vertical list inside a card. No invented stats. */}
+      <section className="hp-sec" aria-labelledby="hp-cat-title">
         <div className="hp-sechead">
           <div>
-            <h2 id="hp-browse-title">{t.browseHeading}</h2>
+            <h2 id="hp-cat-title">{t.catCardTitle}</h2>
             <p className="hp-browsesub">{t.browseSub}</p>
           </div>
+          <Link href="/marketplace" className="hp-sechead-action">{t.catCardAction}<ChevronRight size={15} aria-hidden="true" /></Link>
         </div>
-        <div className="hp-browsegrid">
-          <div className="hp-bcard">
-            <h3>{t.catCardTitle}</h3>
-            {visibleCategoryTiles.length > 0 ? (
-              <div className="hp-catlist">
-                {visibleCategoryTiles.map(({ fg, en, es, Icon }) => (
-                  <Link key={fg} href={`/marketplace?department=${fg}`} className="hp-catrow">
-                    <span className="hp-catrowicon"><Icon size={17} aria-hidden="true" /></span>
-                    <span className="hp-catrowlabel">{lang === 'es' ? es : en}</span>
-                    <ChevronRight size={15} className="hp-catrowchev" aria-hidden="true" />
-                  </Link>
-                ))}
-              </div>
-            ) : <p className="hp-bcardempty">{t.catEmpty}</p>}
-            <Link className="hp-bcardlink" href="/marketplace">{t.catCardAction}<ChevronRight size={15} aria-hidden="true" /></Link>
-          </div>
 
-          <div className="hp-bcard hp-bcardaccent">
-            <h3>{t.rfqCardTitle}</h3>
-            <p>{t.rfqCardBody}</p>
-            <Link className="hp-bcardbtn" href="/intake">{t.postRequest}<ArrowRight size={15} aria-hidden="true" /></Link>
+        {visibleCategoryTiles.length > 0 ? (
+          <div className="hp-catgrid">
+            {visibleCategoryTiles.map(({ fg, en, es, Icon }) => (
+              <Link key={fg} href={`/marketplace?department=${fg}`} className="hp-cattile">
+                <span className="hp-cattileicon"><Icon size={26} aria-hidden="true" /></span>
+                <span className="hp-cattilelabel">{lang === 'es' ? es : en}</span>
+                <ChevronRight size={16} className="hp-cattilechev" aria-hidden="true" />
+              </Link>
+            ))}
           </div>
-        </div>
+        ) : <p className="hp-catempty">{t.catEmpty}</p>}
 
         {/* Real-attribute quick filters (Alibaba's chip row) — every chip is
             a genuine /marketplace facet (src/app/marketplace/page.tsx), not a
@@ -416,6 +415,21 @@ export default function Home() {
           <Link href="/marketplace?fast=1" className="hp-fchip"><Zap size={14} aria-hidden="true" />{t.chipFast}</Link>
           <Link href="/marketplace?emergency=1" className="hp-fchip"><Clock size={14} aria-hidden="true" />{t.chipEmergency}</Link>
           <Link href="/marketplace?cases=1" className="hp-fchip"><FileCheck size={14} aria-hidden="true" />{t.chipCases}</Link>
+        </div>
+      </section>
+
+      {/* Standalone RFQ CTA — the "one request, multiple quotes" card no
+          longer shares a 2-col grid with category browse (that left it
+          looking orphaned once category was promoted above). It's now its
+          own centered, single-card band — deliberately NOT a 2-col dark
+          band like the hero request card or the vendor band below, so it
+          complements rather than duplicates them. */}
+      <section className="hp-sec hp-rfqsec" aria-labelledby="hp-rfq-title">
+        <div className="hp-rfqcard">
+          <span className="hp-rfqicon"><Send size={22} aria-hidden="true" /></span>
+          <h2 id="hp-rfq-title">{t.rfqCardTitle}</h2>
+          <p>{t.rfqCardBody}</p>
+          <Link className="hp-rfqbtn" href="/intake">{t.postRequest}<ArrowRight size={16} aria-hidden="true" /></Link>
         </div>
       </section>
 
@@ -637,33 +651,33 @@ const CSS = `
 .hp-sechead a{color:var(--spec-violet);font-size:13.5px;font-weight:600;flex-shrink:0;}
 .hp-sechead a:hover{color:var(--spec-violet-deep);}
 .hp-browsesub{margin:6px 0 0;color:var(--spec-text-2nd);font-size:13.5px;line-height:1.55;max-width:52ch;}
+.hp-sechead-action{display:inline-flex;align-items:center;gap:5px;}
 
-/* Browse-zone card grid (Alibaba layout, Cesar 2026-07-22). Down to 2 cards
-   (category / RFQ) now that "Featured suppliers" and "Explore listings"
-   were both removed — 2-col-desktop/1-col-mobile so the grid reads as
-   intentional, not a gap where a 3rd card used to be. */
-.hp-browsegrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:stretch;}
-.hp-bcard{display:flex;flex-direction:column;min-height:280px;padding:20px;background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-lg);transition:border-color .15s,transform .15s,box-shadow .15s;}
-.hp-bcard:hover{border-color:var(--spec-violet);transform:translateY(-2px);box-shadow:0 16px 32px -22px rgba(20,19,32,.25);}
-.hp-bcard h3{margin:0 0 14px;font-size:15px;font-weight:700;color:var(--spec-ink);}
-.hp-bcardempty{flex:1;margin:0;color:var(--spec-text-2nd);font-size:12.5px;line-height:1.55;}
-.hp-bcardlink{margin-top:auto;padding-top:14px;display:flex;align-items:center;gap:5px;color:var(--spec-violet-deep);font-size:12.5px;font-weight:700;}
+/* Browse by category — full-width icon grid (promoted out of the old 2-card
+   .hp-browsegrid, Cesar 2026-07-23). 3 cols desktop, 2 cols tablet, 1-2 cols
+   (auto-fit) on small phones. Each tile: icon + bold label + chevron. */
+.hp-catgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;}
+.hp-cattile{display:flex;align-items:center;gap:14px;padding:20px;background:#fff;border:1px solid var(--spec-border);border-radius:var(--spec-radius-lg);color:var(--spec-ink);transition:transform .15s,border-color .15s,box-shadow .15s;}
+.hp-cattile:hover{transform:translateY(-2px);border-color:var(--spec-violet);box-shadow:0 16px 32px -22px rgba(20,19,32,.25);}
+.hp-cattileicon{flex-shrink:0;width:48px;height:48px;display:grid;place-items:center;border-radius:var(--spec-radius-md);background:var(--spec-surface);color:var(--spec-violet);transition:background .15s,color .15s;}
+.hp-cattile:hover .hp-cattileicon{background:var(--spec-violet);color:#fff;}
+.hp-cattilelabel{flex:1;min-width:0;font-size:14.5px;font-weight:700;line-height:1.3;}
+.hp-cattilechev{flex-shrink:0;color:var(--spec-text-2nd);transition:color .15s;}
+.hp-cattile:hover .hp-cattilechev{color:var(--spec-violet);}
+.hp-catempty{margin:0;padding:32px;text-align:center;color:var(--spec-text-2nd);font-size:13.5px;line-height:1.55;background:#fff;border:1px dashed var(--spec-border);border-radius:var(--spec-radius-lg);}
 
-.hp-catlist{display:flex;flex-direction:column;gap:2px;flex:1;}
-.hp-catrow{display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:var(--spec-radius-sm);color:var(--spec-ink);}
-.hp-catrow:hover{background:var(--spec-surface);}
-.hp-catrowicon{flex-shrink:0;width:30px;height:30px;display:grid;place-items:center;border-radius:var(--spec-radius-sm);background:var(--spec-surface);color:var(--spec-violet);}
-.hp-catrow:hover .hp-catrowicon{background:#fff;}
-.hp-catrowlabel{flex:1;min-width:0;font-size:12.5px;font-weight:600;line-height:1.3;}
-.hp-catrowchev{flex-shrink:0;color:var(--spec-text-2nd);}
+@media(max-width:900px){.hp-catgrid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:560px){.hp-catgrid{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));}}
 
-.hp-bcardaccent{background:var(--spec-ink);border-color:var(--spec-ink);color:#fff;}
-.hp-bcardaccent h3{color:#F8F7FB;}
-.hp-bcardaccent p{flex:1;margin:0;color:rgba(255,255,255,.76);font-size:13px;line-height:1.6;}
-.hp-bcardbtn{margin-top:16px;display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:var(--spec-radius-btn);background:var(--spec-violet);color:#fff;font-weight:700;font-size:13.5px;transition:background .15s;}
-.hp-bcardbtn:hover{background:var(--spec-violet-deep);}
-
-@media(max-width:760px){.hp-browsegrid{grid-template-columns:1fr;}}
+/* Standalone RFQ CTA — one centered card, not a 2-col band, so it reads as
+   its own moment rather than a duplicate of the hero request card. */
+.hp-rfqsec{padding-top:36px;}
+.hp-rfqcard{max-width:640px;margin:0 auto;padding:36px 32px;text-align:center;background:var(--spec-ink);border-radius:var(--spec-radius-lg);color:#fff;}
+.hp-rfqicon{display:inline-grid;place-items:center;width:48px;height:48px;border-radius:50%;background:rgba(169,157,242,.16);color:var(--spec-lilac);margin-bottom:16px;}
+.hp-rfqcard h2{margin:0 0 10px;font-size:22px;font-weight:700;letter-spacing:-.02em;color:#F8F7FB;}
+.hp-rfqcard p{margin:0 auto 22px;max-width:52ch;color:rgba(255,255,255,.76);font-size:14px;line-height:1.6;}
+.hp-rfqbtn{display:inline-flex;align-items:center;gap:8px;min-height:46px;padding:0 26px;border-radius:var(--spec-radius-btn);background:var(--spec-violet);color:#fff;font-weight:700;font-size:14px;transition:background .15s;}
+.hp-rfqbtn:hover{background:var(--spec-violet-deep);}
 
 /* Quick-filter chip row */
 .hp-chiprow{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin-top:20px;padding-top:20px;border-top:1px solid var(--spec-border);}
