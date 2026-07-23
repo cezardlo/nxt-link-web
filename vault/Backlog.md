@@ -139,12 +139,10 @@ these three are under-planned — scope them after Wave 2:
   account + Connect enabled + keys in Vercel; terms/tax review.
 - **Payments P2** — milestone escrow (fund → work → approve → release, 14-day
   auto-approve), dispute freeze + operator resolution screen.
-- **Reskin to Design System v1.0** — the app is still the dark command-center
-  theme; the spec is light content + dark 248px sidebar in violet `#6C5CE0`.
-  Do it screen-by-screen against [[Design-System]] (Marketplace Home → Search →
-  Vendor Profile → Buyer/Vendor/Operator dashboards → Create-Project wizard →
-  Deal Room). Tokens are already wired (`spec` in tailwind, `--spec-*` in CSS);
-  now apply them. Verify each screen live (terminal Claude can, the sandbox can't).
+- **Reskin to Design System v1.0 — signed-in dashboards** — Phase 2 SHIPPED
+  2026-07-23 (buyer + full vendor suite; see "Done recently" below). Still
+  dark v4, deliberately: `/admin/*` (operator tool, out of scope). Phase 3
+  (Wave 5+): `/forgot-password`, `/reset-password`, `/apply/*`.
 - **Delete dead code** `src/lib/intelligence/*` — done on branch
   `claude/website-functionality-trd0mu` (55093bf); not yet folded into the
   live-ready featured package.
@@ -317,6 +315,34 @@ compare fill bars, view-as-buyer — all shipped.
   art — regenerating binary PNGs needs an image tool, not available this
   pass. `/sign-in` (redirects to `/login` already) and the buyer/vendor
   dashboards are Phase 2/3, untouched.
+- **Premium-polish Phase 2 — signed-in experience to Design System v1.0
+  (2026-07-23, commit `60228ec` on branch `phase2-signed-in-reskin`, local,
+  NOT pushed/merged)** — per `workplace/design/premium-polish-audit.md`.
+  Visual/CSS only, same technique as Phase 1's `/login`: same class names,
+  same handlers/state — only the `CSS` template literal + a scoped IBM Plex
+  Sans `next/font` import changed per page. Reskinned: `/buyer`,
+  `/buyer/profile`, `/vendor/portal`, `/vendor/listings`, `/vendor/leads`,
+  `/vendor/quotes`, `/vendor/deals`, `/vendor/start`, `/cart`, `/projects`,
+  `/projects/[id]`. Shared components that render on these pages also
+  reskinned: `VendorNav`, `EmptyAction`, `MatchReasons`, `StageTracker`,
+  `ProfileStrengthMeter`, `CategoryPicker`, `ChatWidget` ("Scout", embedded on
+  `/vendor/portal`). Buyer↔vendor chat (`useChatPolling`, optimistic send,
+  unread dot) on `/buyer` + `/vendor/leads` restyled light — polling hook and
+  message handlers untouched. Kept the soft-blue `#3B6EA5` best-value
+  fill-bar rule (see above). Also fixed a `/marketplace` listing-card bug: the
+  no-photo image placeholder repeated the kind ("PRODUCT PRODUCT") that the
+  badge row already showed — now shows the brand mark instead. Gates:
+  typecheck 0, tests 97/97, build clean. Browser-verified `/cart`,
+  `/projects`, `/vendor/deals` render light with no console errors; `/buyer`
+  and `/vendor/leads` are gated by `src/middleware.ts` server-side auth and
+  the verifying worktree had no Supabase credentials, so those two specific
+  routes could not be interactively verified (CSS applied identically).
+  **Setup note for whoever continues this branch:** the `.claude/worktrees/`
+  copy this shipped from had been checked out from a stale, unrelated ancient
+  branch (pre-marketplace "intel/brain" era) rather than `master` — had to
+  create a fresh branch from `master`'s tip before any of this was possible.
+  If a future worktree agent finds `src/app/buyer` missing, check
+  `git log --oneline -5` first.
 
 ---
 

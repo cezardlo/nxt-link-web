@@ -5,11 +5,11 @@
 // reasons[] either as a tinted sentence box or as compact chips.
 
 export const MATCH_REASONS_CSS = `
-.mrx{background:rgba(124,92,252,.08);border:1px solid rgba(124,92,252,.2);border-radius:10px;padding:9px 12px;}
-.mrx b{display:block;font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#A78BFA;margin-bottom:3px;}
-.mrx p{margin:0;font-size:12.5px;line-height:1.45;color:#C9C7D6;}
+.mrx{background:rgba(108,92,224,.06);border:1px solid rgba(108,92,224,.2);border-radius:10px;padding:9px 12px;}
+.mrx b{display:block;font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--spec-violet-deep,#4A3DB0);margin-bottom:3px;}
+.mrx p{margin:0;font-size:12.5px;line-height:1.45;color:var(--spec-text-2nd,#615F72);}
 .mrx-chips{display:flex;flex-wrap:wrap;gap:5px;}
-.mrx-chips span{font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;background:rgba(124,92,252,.12);color:#C4B5FD;border:1px solid rgba(124,92,252,.25);white-space:nowrap;}
+.mrx-chips span{font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;background:rgba(108,92,224,.1);color:var(--spec-violet-deep,#4A3DB0);border:1px solid rgba(108,92,224,.25);white-space:nowrap;}
 `;
 
 export function MatchReasons({

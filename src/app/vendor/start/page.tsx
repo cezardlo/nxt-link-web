@@ -7,8 +7,18 @@
 // vendor APIs and deep-links each task. Bilingual EN/ES.
 
 import { useEffect, useState } from 'react';
+import { IBM_Plex_Sans } from 'next/font/google';
 import LanguageToggle, { useLang } from '@/components/LanguageToggle';
 import ProfileStrengthMeter, { computeProfileStrength, StrengthInput } from '@/components/ProfileStrengthMeter';
+
+// Design System v1.0 reskin (Premium Polish Phase 2, 2026-07-23): visual/CSS
+// only — every handler and state above is unchanged.
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-ibm-plex-sans-vstart',
+  display: 'swap',
+});
 
 const T = {
   en: {
@@ -84,13 +94,13 @@ export default function VendorStartPage() {
   const pct = input ? computeProfileStrength(input).pct : 0;
 
   return (
-    <div className="vw">
+    <div className={`vw ${ibmPlexSans.variable}`}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <nav className="vw-nav">
         <a className="vw-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>{t.brand_sub}</span></a>
         <div className="vw-navr">
           <a className="vw-link" href="/vendor/listings">{t.skip}</a>
-          <LanguageToggle lang={lang} onChange={switchLang} variant="dark" />
+          <LanguageToggle lang={lang} onChange={switchLang} variant="light" />
         </div>
       </nav>
       <main className="vw-wrap">
@@ -130,25 +140,25 @@ export default function VendorStartPage() {
 }
 
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
-.vw{min-height:100vh;background:#0A0A0F;color:#F0F0F5;font-family:'Outfit',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+.vw{min-height:100vh;background:var(--spec-warm-white,#F8F7FB);color:var(--spec-ink,#141320);font-family:var(--font-ibm-plex-sans-vstart),'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
 .vw *{box-sizing:border-box;}
-.vw-nav{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 26px;border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;background:rgba(10,10,15,.9);backdrop-filter:blur(20px);z-index:20;}
-.vw-brand{display:flex;align-items:baseline;gap:10px;color:#F0F0F5;text-decoration:none;}
-.vw-brand b{font-size:17px;}.vw-brand i{color:#A78BFA;font-style:normal;}
-.vw-brand span{color:#8080A0;font-size:13px;}
+.vw a:focus-visible,.vw button:focus-visible{outline:2px solid var(--spec-violet,#6C5CE0);outline-offset:2px;}
+.vw-nav{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 26px;border-bottom:1px solid var(--spec-border,#E2DFEC);position:sticky;top:0;background:rgba(248,247,251,.92);backdrop-filter:blur(20px);z-index:20;}
+.vw-brand{display:flex;align-items:baseline;gap:10px;color:var(--spec-ink,#141320);text-decoration:none;}
+.vw-brand b{font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-size:17px;font-weight:700;}.vw-brand i{color:var(--spec-violet,#6C5CE0);font-style:normal;}
+.vw-brand span{color:var(--spec-text-2nd,#615F72);font-size:13px;}
 .vw-navr{display:flex;align-items:center;gap:14px;}
-.vw-link{color:#A78BFA;font-size:13.5px;font-weight:600;text-decoration:none;}
+.vw-link{color:var(--spec-violet-deep,#4A3DB0);font-size:13.5px;font-weight:600;text-decoration:none;}
 .vw-wrap{max-width:640px;margin:0 auto;padding:36px 20px 100px;}
-.vw-wrap h1{font-size:27px;font-weight:800;letter-spacing:-.02em;}
-.vw-sub{color:#8080A0;font-size:14.5px;margin:8px 0 20px;line-height:1.6;}
-.vw-empty{text-align:center;color:#8080A0;padding:70px 0;}
-.vw-empty a{color:#A78BFA;}
-.vw-terms{background:rgba(124,92,252,.08);border:1px solid rgba(124,92,252,.35);border-radius:14px;padding:16px 18px;margin-top:4px;}
+.vw-wrap h1{font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-size:27px;font-weight:700;letter-spacing:-.01em;}
+.vw-sub{color:var(--spec-text-2nd,#615F72);font-size:14.5px;margin:8px 0 20px;line-height:1.6;}
+.vw-empty{text-align:center;color:var(--spec-text-2nd,#615F72);padding:70px 0;}
+.vw-empty a{color:var(--spec-violet-deep,#4A3DB0);}
+.vw-terms{background:rgba(108,92,224,.06);border:1px solid rgba(108,92,224,.3);border-radius:14px;padding:16px 18px;margin-top:4px;}
 .vw-terms b{font-size:14.5px;}
-.vw-terms p{margin:6px 0 10px;font-size:13px;color:#8080A0;line-height:1.55;}
-.vw-terms a{font-size:13px;font-weight:700;color:#C4B5FD;text-decoration:none;}
-.vw-terms a:hover{color:#DDD4FE;}
-.vw-done{margin-top:22px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.3);color:#6EE7B7;border-radius:14px;padding:16px 18px;font-size:14px;line-height:1.6;}
-.vw-done a{color:#34D399;font-weight:700;}
+.vw-terms p{margin:6px 0 10px;font-size:13px;color:var(--spec-text-2nd,#615F72);line-height:1.55;}
+.vw-terms a{font-size:13px;font-weight:700;color:var(--spec-violet-deep,#4A3DB0);text-decoration:none;}
+.vw-terms a:hover{color:var(--spec-violet,#6C5CE0);}
+.vw-done{margin-top:22px;background:#E9F7F0;border:1px solid rgba(47,158,106,.3);color:#1F7A54;border-radius:14px;padding:16px 18px;font-size:14px;line-height:1.6;}
+.vw-done a{color:#1F7A54;font-weight:700;}
 `;
