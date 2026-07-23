@@ -66,6 +66,7 @@ const T: Record<Lang, Record<string, string>> = {
     youAccepted: 'You accepted this quote', youDeclined: 'You declined this quote',
     accept: 'Accept —', decline: 'Decline',
     guardAccept: 'Accepting doesn’t charge you anything — it connects you with the vendor to finalize the deal on your terms.',
+    decideError: 'Could not save your decision — please try again.',
     reviewedVendor: '✓ You reviewed this vendor',
     titleOptional: 'Title (optional)', howDidItGo: 'How did it go? (optional)',
     submitReview: 'Submit review', saving: 'Saving…', cancel: 'Cancel', leaveReview: 'Leave a review',
@@ -111,6 +112,7 @@ const T: Record<Lang, Record<string, string>> = {
     youAccepted: 'Aceptaste esta cotización', youDeclined: 'Rechazaste esta cotización',
     accept: 'Aceptar —', decline: 'Rechazar',
     guardAccept: 'Aceptar no te cobra nada — te conecta con el proveedor para cerrar el trato en tus términos.',
+    decideError: 'No se pudo guardar tu decisión — inténtalo de nuevo.',
     reviewedVendor: '✓ Reseñaste a este proveedor',
     titleOptional: 'Título (opcional)', howDidItGo: '¿Cómo te fue? (opcional)',
     submitReview: 'Enviar reseña', saving: 'Guardando…', cancel: 'Cancelar', leaveReview: 'Dejar una reseña',
@@ -167,6 +169,7 @@ export default function BuyerDashboardPage() {
   const [notifUnread, setNotifUnread] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
   const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [decideError, setDecideError] = useState<{ id: string; message: string } | null>(null);
   async function toggleNotifs() {
     const next = !notifOpen;
     setNotifOpen(next);
@@ -203,9 +206,26 @@ export default function BuyerDashboardPage() {
   async function decide(id: string, decision: 'accepted' | 'declined') {
     if (decidingId) return;
     setDecidingId(id);
-    setData((d) => ({ ...d, quotes: (d.quotes || []).map((q) => (q.id === id ? { ...q, buyer_decision: decision, status: decision === 'accepted' ? 'won' : 'lost' } : q)) }));
+    setDecideError(null);
+    // Optimistic paint for snappy feedback, but we only keep it if the server
+    // confirms — on any failure (bad response or thrown error) we revert to
+    // the prior quotes and surface a clear EN/ES error instead of a false
+    // "accepted"/"declined" state (audit findings #4/#7/#8).
+    let prevQuotes: QuoteRequest[] | undefined;
+    setData((d) => {
+      prevQuotes = d.quotes;
+      return { ...d, quotes: (d.quotes || []).map((q) => (q.id === id ? { ...q, buyer_decision: decision, status: decision === 'accepted' ? 'won' : 'lost' } : q)) };
+    });
     try {
-      await fetch('/api/buyer/quote-decision', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quote_request_id: id, decision }) });
+      const res = await fetch('/api/buyer/quote-decision', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quote_request_id: id, decision }) });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        setData((d) => ({ ...d, quotes: prevQuotes ?? d.quotes }));
+        setDecideError({ id, message: t.decideError });
+      }
+    } catch {
+      setData((d) => ({ ...d, quotes: prevQuotes ?? d.quotes }));
+      setDecideError({ id, message: t.decideError });
     } finally {
       setDecidingId(null);
     }
@@ -450,9 +470,10 @@ export default function BuyerDashboardPage() {
                             <>
                               <div className="by-qactions">
                                 <button className="by-accept" disabled={decidingId === q.id} onClick={() => decide(q.id, 'accepted')}>{decidingId === q.id ? t.saving : `${t.accept} ${money(q.quote_amount)}`}</button>
-                                <button className="by-decline" disabled={decidingId === q.id} onClick={() => decide(q.id, 'declined')}>{t.decline}</button>
+                                <button className="by-decline" disabled={decidingId === q.id} onClick={() => decide(q.id, 'declined')}>{decidingId === q.id ? t.saving : t.decline}</button>
                               </div>
                               <p className="by-guardnote">{t.guardAccept}</p>
+                              {decideError?.id === q.id && <p className="by-decideerr" role="alert">{decideError.message}</p>}
                             </>
                           )}
                           {q.buyer_decision === 'accepted' && (
@@ -623,6 +644,7 @@ const CSS = `
 .by-chatrow input{flex:1;font-family:inherit;font-size:14px;padding:10px 12px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background:#0A0A0F;color:#F0F0F5;outline:none;}
 .by-chatrow input:focus{border-color:#7C5CFC;}
 .by-guardnote{margin:9px 0 0;font-size:11.5px;color:#8080A0;line-height:1.5;}
+.by-decideerr{margin:8px 0 0;font-size:12.5px;color:#FCA5A5;line-height:1.5;}
 .by-pilots{margin-top:10px;display:flex;flex-direction:column;gap:7px;}
 .by-pilot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#111118;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:9px 12px;}
 .by-pilot small{color:#8080A0;font-size:12px;}

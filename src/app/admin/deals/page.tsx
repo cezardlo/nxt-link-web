@@ -45,6 +45,8 @@ export default function AdminDealsPage() {
   const [f, setF] = useState({ vendor_name: '', buyer_company: '', buyer_name: '', description: '', net_amount: '', is_free_credit: false, opportunity_ref: '' });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const [statusBusy, setStatusBusy] = useState<string | null>(null);
+  const [statusErr, setStatusErr] = useState<{ id: string; message: string } | null>(null);
   const [chat, setChat] = useState<Array<{ role: 'user' | 'ai'; text: string }>>([]);
   const [aiInput, setAiInput] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
@@ -76,8 +78,21 @@ export default function AdminDealsPage() {
     setBusy(false);
   }
   async function setStatus(id: string, status: string, invoice_ref?: string) {
-    await fetch('/api/admin/deals', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status, invoice_ref }) });
-    load();
+    if (statusBusy) return;
+    setStatusBusy(id); setStatusErr(null);
+    try {
+      const r = await fetch('/api/admin/deals', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status, invoice_ref }) });
+      const j = await r.json().catch(() => null);
+      if (!r.ok || !j?.ok) {
+        setStatusErr({ id, message: (j && j.message) || 'Could not update status — try again.' });
+        return;
+      }
+      load();
+    } catch {
+      setStatusErr({ id, message: 'Could not update status — try again.' });
+    } finally {
+      setStatusBusy(null);
+    }
   }
 
   // NXT AI co-pilot: parse plain English, then prefill the deal form (admin
@@ -186,9 +201,12 @@ export default function AdminDealsPage() {
                           {d.discrepancy && <span className="ad-warn" title="Deal and commission records disagree — check /api/admin/reconcile">⚠</span>}
                         </td>
                         <td>{d.status === 'invoiced' || d.status === 'paid' ? (
-                          <input className="ad-inv" defaultValue={d.invoice_ref || ''} placeholder="INV-###" onBlur={(e) => { if (e.target.value !== (d.invoice_ref || '')) setStatus(d.id, d.status, e.target.value); }} />
+                          <input className="ad-inv" defaultValue={d.invoice_ref || ''} placeholder="INV-###" disabled={statusBusy === d.id} onBlur={(e) => { if (e.target.value !== (d.invoice_ref || '')) setStatus(d.id, d.status, e.target.value); }} />
                         ) : <span className="ad-sm">—</span>}</td>
-                        <td>{next && <button className="ad-mini" onClick={() => setStatus(d.id, next)}>→ {STATUS_LABEL[next]}</button>}</td>
+                        <td>
+                          {next && <button className="ad-mini" disabled={statusBusy === d.id} onClick={() => setStatus(d.id, next)}>{statusBusy === d.id ? 'Saving…' : `→ ${STATUS_LABEL[next]}`}</button>}
+                          {statusErr?.id === d.id && <div className="ad-sm err">{statusErr.message}</div>}
+                        </td>
                       </tr>
                     );
                   })}
@@ -241,6 +259,7 @@ const CSS = `
 .ad-table .mono{font-variant-numeric:tabular-nums;}
 .ad-sm{font-size:11px;color:#8080A0;margin-top:2px;}
 .ad-sm.mono{font-variant-numeric:tabular-nums;color:#A78BFA;}
+.ad-sm.err{color:#FCA5A5;margin-top:6px;line-height:1.4;}
 .ad-badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,.06);color:#C0C0D0;white-space:nowrap;}
 .ad-badge.s-paid{background:rgba(52,211,153,.14);color:#34D399;}
 .ad-badge.s-invoiced,.ad-badge.s-payment_confirmed{background:rgba(124,92,252,.14);color:#C4B5FD;}
@@ -248,6 +267,8 @@ const CSS = `
 .ad-inv{font-family:inherit;font-size:12.5px;padding:7px 9px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:#0A0A0F;color:#F0F0F5;width:110px;outline:none;}
 .ad-mini{font-family:inherit;font-size:12px;font-weight:700;padding:7px 12px;border-radius:8px;border:none;background:rgba(124,92,252,.15);color:#C4B5FD;cursor:pointer;white-space:nowrap;}
 .ad-mini:hover{background:rgba(124,92,252,.28);}
+.ad-mini:disabled{opacity:.5;cursor:not-allowed;}
+.ad-inv:disabled{opacity:.6;cursor:not-allowed;}
 .ad-ai{background:linear-gradient(160deg,rgba(124,92,252,.1),rgba(52,211,153,.04)),#12121B;border-color:rgba(124,92,252,.28);}
 .ad-chat{display:flex;flex-direction:column;gap:9px;margin-bottom:12px;max-height:280px;overflow-y:auto;}
 .ad-chathint{font-size:13px;color:#8080A0;line-height:1.55;}

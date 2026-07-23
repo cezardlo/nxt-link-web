@@ -39,29 +39,50 @@ export default function AdminVendorsPage() {
   useEffect(() => { if (authed) load(); }, [authed, load]);
   useEffect(() => { fetch('/api/zoho/status').then((r) => r.json()).then(setZoho).catch(() => {}); }, []);
 
-  async function setVendorStatus(id: string, st: string) {
-    await fetch('/api/vendors/manage', {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-access-code': code },
-      body: JSON.stringify({ id, status: st }),
-    });
-    setVendors((vs) => vs.map((v) => (v.id === id ? { ...v, status: st } : v)));
-    if (open?.id === id) setOpen({ ...open, status: st });
+  // Approve/Pause/Reject. Response can come back 200 OK but still be a
+  // failure (the API degrades to `{ ok: true, stored: false, degraded: true }`
+  // when the write didn't actually persist) — check for that too, and never
+  // paint the new status locally unless the write is confirmed.
+  async function setVendorStatus(id: string, st: string): Promise<{ ok: boolean; message?: string }> {
+    try {
+      const res = await fetch('/api/vendors/manage', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-access-code': code },
+        body: JSON.stringify({ id, status: st }),
+      });
+      const d = await res.json().catch(() => null);
+      if (!res.ok || !d?.ok || d?.degraded) {
+        return { ok: false, message: (d && d.message) || 'Could not update status — try again.' };
+      }
+      setVendors((vs) => vs.map((v) => (v.id === id ? { ...v, status: st } : v)));
+      if (open?.id === id) setOpen({ ...open, status: st });
+      return { ok: true };
+    } catch {
+      return { ok: false, message: 'Could not update status — try again.' };
+    }
   }
 
   // Moderation: suspend (optionally timed), ban (permanent), or reactivate.
-  async function moderate(id: string, action: 'suspend' | 'ban' | 'reactivate', suspend_days: number | null, reason: string) {
-    const res = await fetch('/api/vendors/manage', {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-access-code': code },
-      body: JSON.stringify({ id, moderation_action: action, suspend_days, reason }),
-    });
-    const d = await res.json();
-    const patch = {
-      moderation_status: d.vendor?.moderation_status ?? (action === 'reactivate' ? 'active' : action === 'ban' ? 'banned' : 'suspended'),
-      suspended_until: d.vendor?.suspended_until ?? null,
-      moderation_reason: reason || null,
-    };
-    setVendors((vs) => vs.map((v) => (v.id === id ? { ...v, ...patch } : v)));
-    if (open?.id === id) setOpen({ ...open, ...patch });
+  async function moderate(id: string, action: 'suspend' | 'ban' | 'reactivate', suspend_days: number | null, reason: string): Promise<{ ok: boolean; message?: string }> {
+    try {
+      const res = await fetch('/api/vendors/manage', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-access-code': code },
+        body: JSON.stringify({ id, moderation_action: action, suspend_days, reason }),
+      });
+      const d = await res.json().catch(() => null);
+      if (!res.ok || !d?.ok || d?.degraded) {
+        return { ok: false, message: (d && d.message) || 'Could not update moderation status — try again.' };
+      }
+      const patch = {
+        moderation_status: d.vendor?.moderation_status ?? (action === 'reactivate' ? 'active' : action === 'ban' ? 'banned' : 'suspended'),
+        suspended_until: d.vendor?.suspended_until ?? null,
+        moderation_reason: reason || null,
+      };
+      setVendors((vs) => vs.map((v) => (v.id === id ? { ...v, ...patch } : v)));
+      if (open?.id === id) setOpen({ ...open, ...patch });
+      return { ok: true };
+    } catch {
+      return { ok: false, message: 'Could not update moderation status — try again.' };
+    }
   }
 
   const counts = STATUSES.reduce((a, s) => { a[s] = s === 'all' ? vendors.length : vendors.filter((v) => v.status === s).length; return a; }, {} as Record<string, number>);
@@ -134,15 +155,29 @@ export default function AdminVendorsPage() {
 
 function VendorDrawer({ vendor, code, zoho, onClose, onStatus, onModerate }: {
   vendor: Vendor; code: string; zoho: { mail_ready: boolean; meeting_ready: boolean } | null;
-  onClose: () => void; onStatus: (id: string, st: string) => void;
-  onModerate: (id: string, action: 'suspend' | 'ban' | 'reactivate', suspend_days: number | null, reason: string) => Promise<void>;
+  onClose: () => void; onStatus: (id: string, st: string) => Promise<{ ok: boolean; message?: string }>;
+  onModerate: (id: string, action: 'suspend' | 'ban' | 'reactivate', suspend_days: number | null, reason: string) => Promise<{ ok: boolean; message?: string }>;
 }) {
   const [brochures, setBrochures] = useState<Brochure[]>([]);
   const [msg, setMsg] = useState('');
   const [susDays, setSusDays] = useState('7');
   const [modReason, setModReason] = useState('');
-  const [modBusy, setModBusy] = useState(false);
+  // Tracks which specific action is in flight ('suspend'/'ban'/'reactivate' or
+  // 'approved'/'paused'/'rejected') so the button clicked can show "Saving…"
+  // while every button in its group is disabled against double-click.
+  const [modBusy, setModBusy] = useState<string | null>(null);
+  const [modErr, setModErr] = useState('');
+  const [stBusy, setStBusy] = useState<string | null>(null);
+  const [stErr, setStErr] = useState('');
   const mod = vendor.moderation_status || 'active';
+
+  async function decide(st: string) {
+    if (stBusy) return;
+    setStBusy(st); setStErr('');
+    const r = await onStatus(vendor.id, st);
+    if (!r.ok) setStErr(r.message || 'Could not update status — try again.');
+    setStBusy(null);
+  }
   const [emailBody, setEmailBody] = useState(`Hi ${vendor.contact_name || vendor.company_name},\n\nWe have a protected opportunity that may fit your service area. Are you available to quote?\n\n— NXT//LINK`);
 
   useEffect(() => {
@@ -198,10 +233,11 @@ function VendorDrawer({ vendor, code, zoho, onClose, onStatus, onModerate }: {
 
         <div className="av-lbl">Decision</div>
         <div className="av-row">
-          <button className="av-btn green" onClick={() => onStatus(vendor.id, 'approved')}>Approve</button>
-          <button className="av-btn ghost" onClick={() => onStatus(vendor.id, 'paused')}>Pause</button>
-          <button className="av-btn ghost" onClick={() => onStatus(vendor.id, 'rejected')}>Reject</button>
+          <button className="av-btn green" disabled={!!stBusy} onClick={() => decide('approved')}>{stBusy === 'approved' ? 'Saving…' : 'Approve'}</button>
+          <button className="av-btn ghost" disabled={!!stBusy} onClick={() => decide('paused')}>{stBusy === 'paused' ? 'Saving…' : 'Pause'}</button>
+          <button className="av-btn ghost" disabled={!!stBusy} onClick={() => decide('rejected')}>{stBusy === 'rejected' ? 'Saving…' : 'Reject'}</button>
         </div>
+        {stErr && <div className="av-msg err">{stErr}</div>}
 
         <div className="av-lbl">Moderation</div>
         <div className={'av-modstate ' + mod}>
@@ -226,18 +262,19 @@ function VendorDrawer({ vendor, code, zoho, onClose, onStatus, onModerate }: {
               <input placeholder="Reason (optional, shown to vendor)" value={modReason} onChange={(e) => setModReason(e.target.value)} />
             </div>
             <div className="av-row">
-              <button className="av-btn warn" disabled={modBusy} onClick={async () => { setModBusy(true); await onModerate(vendor.id, 'suspend', Number(susDays) || null, modReason); setModBusy(false); }}>Suspend</button>
-              <button className="av-btn danger" disabled={modBusy} onClick={async () => { if (!confirm(`Permanently ban ${vendor.company_name}? They can’t reapply with this email.`)) return; setModBusy(true); await onModerate(vendor.id, 'ban', null, modReason); setModBusy(false); }}>Ban permanently</button>
+              <button className="av-btn warn" disabled={!!modBusy} onClick={async () => { if (modBusy) return; setModBusy('suspend'); setModErr(''); const r = await onModerate(vendor.id, 'suspend', Number(susDays) || null, modReason); if (!r.ok) setModErr(r.message || 'Could not update — try again.'); setModBusy(null); }}>{modBusy === 'suspend' ? 'Saving…' : 'Suspend'}</button>
+              <button className="av-btn danger" disabled={!!modBusy} onClick={async () => { if (modBusy) return; if (!confirm(`Permanently ban ${vendor.company_name}? They can’t reapply with this email.`)) return; setModBusy('ban'); setModErr(''); const r = await onModerate(vendor.id, 'ban', null, modReason); if (!r.ok) setModErr(r.message || 'Could not update — try again.'); setModBusy(null); }}>{modBusy === 'ban' ? 'Saving…' : 'Ban permanently'}</button>
             </div>
           </>
         ) : (
           <div className="av-row">
-            <button className="av-btn green" disabled={modBusy} onClick={async () => { setModBusy(true); await onModerate(vendor.id, 'reactivate', null, ''); setModBusy(false); }}>Reactivate</button>
+            <button className="av-btn green" disabled={!!modBusy} onClick={async () => { if (modBusy) return; setModBusy('reactivate'); setModErr(''); const r = await onModerate(vendor.id, 'reactivate', null, ''); if (!r.ok) setModErr(r.message || 'Could not update — try again.'); setModBusy(null); }}>{modBusy === 'reactivate' ? 'Saving…' : 'Reactivate'}</button>
             {mod === 'suspended' && (
-              <button className="av-btn danger" disabled={modBusy} onClick={async () => { if (!confirm(`Permanently ban ${vendor.company_name}?`)) return; setModBusy(true); await onModerate(vendor.id, 'ban', null, modReason); setModBusy(false); }}>Ban permanently</button>
+              <button className="av-btn danger" disabled={!!modBusy} onClick={async () => { if (modBusy) return; if (!confirm(`Permanently ban ${vendor.company_name}?`)) return; setModBusy('ban'); setModErr(''); const r = await onModerate(vendor.id, 'ban', null, modReason); if (!r.ok) setModErr(r.message || 'Could not update — try again.'); setModBusy(null); }}>{modBusy === 'ban' ? 'Saving…' : 'Ban permanently'}</button>
             )}
           </div>
         )}
+        {modErr && <div className="av-msg err">{modErr}</div>}
 
         <div className="av-lbl">Outreach {zoho?.mail_ready ? '' : '(draft mode — connect Zoho to auto-send)'}</div>
         <textarea className="av-ta" rows={4} value={emailBody} onChange={(e) => setEmailBody(e.target.value)} />
@@ -337,5 +374,6 @@ const CSS = `
 .av-ta::placeholder{color:var(--muted);}
 .av-ta:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
 .av-msg{margin-top:10px;padding:10px 13px;background:var(--pbg);border:1px solid rgba(124,92,252,.25);border-radius:12px;color:var(--p3);font:500 13px/1.4 'Outfit';}
+.av-msg.err{background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.35);color:var(--red);}
 @media(max-width:680px){.av-th{display:none;}.av-tr{grid-template-columns:1fr;gap:4px;}.av-kv{grid-template-columns:1fr;}}
 `;
