@@ -114,12 +114,27 @@ export function middleware(req: NextRequest) {
   // Server-side auth gate: signed-in-only pages redirect to /login when no
   // Supabase session cookie is present. (APIs enforce ownership themselves;
   // this stops logged-out access to private surfaces at the edge.)
-  const AUTH_PAGES = ['/buyer', '/account', '/admin', '/vendor/leads', '/vendor/listings', '/vendor/portal', '/vendor/start', '/vendor/quotes'];
+  //
+  // '/marketplace' locks the whole browse surface behind sign-in (owner
+  // decision, 2026-07-23): the exact path plus every subpath — the browse
+  // grid (/marketplace), listing detail (/marketplace/[kind]/[id]), and vendor
+  // storefronts (/marketplace/vendor/[id]). The public homepage, /intake, and
+  // all signup lanes are NOT under /marketplace, so they stay open; the
+  // matching read APIs enforce the same wall server-side (a cookie here is
+  // only a cheap edge pre-check, not the real auth). '/api/marketplace/*' is
+  // NOT caught by this page gate — those paths start with '/api/', so the
+  // startsWith('/marketplace/') test never matches them.
+  const AUTH_PAGES = ['/buyer', '/account', '/admin', '/marketplace', '/vendor/leads', '/vendor/listings', '/vendor/portal', '/vendor/start', '/vendor/quotes'];
   if (AUTH_PAGES.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
     const hasSession = req.cookies.getAll().some((c) => c.name.startsWith('sb-') && c.name.includes('-auth-token'));
     if (!hasSession) {
       const login = new URL('/login', req.url);
-      login.searchParams.set('next', pathname);
+      // Preserve the FULL original destination (path + query, e.g.
+      // /marketplace?q=forklift&department=warehouse_tech) so sign-in returns
+      // the visitor exactly where they were headed. The /login page and
+      // /auth/callback both run this back through safeRelativePath before using
+      // it, so a query string here is safe.
+      login.searchParams.set('next', pathname + req.nextUrl.search);
       return NextResponse.redirect(login);
     }
   }

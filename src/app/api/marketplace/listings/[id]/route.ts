@@ -9,8 +9,12 @@ import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { colsFor, tableFor } from '@/lib/marketplace/types';
 import { isRestricted } from '@/lib/vendor/moderation';
+import { getSessionUser } from '@/lib/auth/require-user';
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
+  // Login wall (owner decision, 2026-07-23): marketplace detail is signed-in-only.
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ ok: false, code: 'auth_required', message: 'Sign in to view this listing' }, { status: 401 });
   if (!isSupabaseConfigured()) return NextResponse.json({ ok: false, message: 'Not configured' }, { status: 503 });
   const sp = new URL(req.url).searchParams;
   const kind = sp.get('kind') === 'service' ? 'service' as const : 'product' as const;

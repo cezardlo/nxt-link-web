@@ -9,6 +9,7 @@ export const fetchCache = 'force-no-store';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { isRestricted } from '@/lib/vendor/moderation';
+import { getSessionUser } from '@/lib/auth/require-user';
 
 const CARD_BASE = 'id, public_ref, vendor_id, name, category, functional_group, overview, best_for, industries, image_paths, pilot, pricing, warranty_support, status, published_at';
 const CARD_PRODUCT = `${CARD_BASE}, availability, lead_time`;
@@ -21,6 +22,10 @@ function escLike(s: string): string {
 type Row = Record<string, unknown> & { id: string; vendor_id: string; image_paths?: string[]; pilot?: { available?: boolean } | null };
 
 export async function GET(req: Request) {
+  // Login wall (owner decision, 2026-07-23): the marketplace is signed-in-only.
+  // Server-side session check — a real getUser() verification, not UI gating.
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ ok: false, code: 'auth_required', message: 'Sign in to browse the marketplace' }, { status: 401 });
   if (!isSupabaseConfigured()) return NextResponse.json({ ok: true, listings: [] });
   const sp = new URL(req.url).searchParams;
   const kind = sp.get('kind') === 'product' ? 'product' : sp.get('kind') === 'service' ? 'service' : 'all';

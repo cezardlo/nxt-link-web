@@ -267,6 +267,11 @@ export default function Home() {
   const [lang, setLang] = useLang(); // stored `nxt_lang` — shared across marketplace pages
   const t = T[lang];
   const [featured, setFeatured] = useState<Card[]>([]);
+  // Whether we actually received live listing data. The marketplace is now
+  // login-walled, so an anonymous homepage visitor's listings fetch returns 401
+  // — in that case counts are UNKNOWN and we must show the full curated
+  // category tiles rather than filtering them all away (see visibleCategoryTiles).
+  const [countsKnown, setCountsKnown] = useState(false);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
@@ -284,11 +289,17 @@ export default function Home() {
     (async () => {
       try {
         const l = await fetch('/api/marketplace/listings?kind=all');
-        const lj = await l.json();
-        // Keep the FULL response (not just the first few) — the category
-        // tile counts below and the image-biased picks need to see
-        // everything that came back, not a pre-sliced subset.
-        setFeatured(lj.listings || []);
+        // 401 = the login wall (anonymous visitor). The homepage itself stays
+        // public; we just leave counts unknown so the curated category tiles
+        // still render. Only a real 200 gives us live per-category counts.
+        if (l.ok) {
+          const lj = await l.json();
+          // Keep the FULL response (not just the first few) — the category
+          // tile counts below and the image-biased picks need to see
+          // everything that came back, not a pre-sliced subset.
+          setFeatured(lj.listings || []);
+          setCountsKnown(true);
+        }
       } catch { /* landing still works without live data */ }
       finally { setLoading(false); }
     })();
@@ -304,7 +315,7 @@ export default function Home() {
     if (!c.functional_group) continue;
     categoryCounts.set(c.functional_group, (categoryCounts.get(c.functional_group) || 0) + 1);
   }
-  const visibleCategoryTiles = loading ? CATEGORY_TILES : CATEGORY_TILES.filter((tile) => (categoryCounts.get(tile.fg) || 0) > 0);
+  const visibleCategoryTiles = (loading || !countsKnown) ? CATEGORY_TILES : CATEGORY_TILES.filter((tile) => (categoryCounts.get(tile.fg) || 0) > 0);
 
   const sourceModes = [
     { kicker: t.productKicker, title: t.productTitle, body: t.productBody, action: t.productAction, href: '/marketplace?tab=product', Icon: PackageSearch },

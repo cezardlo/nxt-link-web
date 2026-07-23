@@ -25,9 +25,10 @@
 
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import { clearLocalCart } from '@/components/cart/useCart';
+import { useLang } from '@/components/LanguageToggle';
 import type { ReactNode } from 'react';
 
-export type VendorNavKey = 'portal' | 'listings' | 'leads' | 'quotes' | 'deals';
+export type VendorNavKey = 'portal' | 'listings' | 'leads' | 'quotes' | 'deals' | 'marketplace';
 
 const LINKS: { key: VendorNavKey; href: string; label: string }[] = [
   { key: 'portal', href: '/vendor/portal', label: 'Portal' },
@@ -35,9 +36,16 @@ const LINKS: { key: VendorNavKey; href: string; label: string }[] = [
   { key: 'leads', href: '/vendor/leads', label: 'Leads' },
   { key: 'quotes', href: '/vendor/quotes', label: 'Quotes' },
   { key: 'deals', href: '/vendor/deals', label: 'Deals' },
+  // The public marketplace — added so a signed-in vendor can always reach it
+  // (fix for the nav trap where /marketplace was invisible from Seller Central,
+  // 2026-07-23). It is a jump-out to the browse surface, never an "active"
+  // state on any vendor page, so it carries no aria-current. Label is the one
+  // localized item in this otherwise English section-name nav (EN/ES rule).
+  { key: 'marketplace', href: '/marketplace', label: 'Marketplace' },
 ];
 
 export default function VendorNav({ active, extra }: { active: VendorNavKey; extra?: ReactNode }) {
+  const [lang] = useLang();
   async function signOut() {
     try {
       const sb = createBrowserSupabaseClient();
@@ -65,7 +73,7 @@ export default function VendorNav({ active, extra }: { active: VendorNavKey; ext
             href={l.href}
             aria-current={l.key === active ? 'page' : undefined}
           >
-            {l.label}
+            {l.key === 'marketplace' && lang === 'es' ? 'Mercado' : l.label}
           </a>
         ))}
       </div>

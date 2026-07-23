@@ -9,6 +9,7 @@ import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { ensureVendorProfile } from '@/lib/vendor/profile';
 import { recordLegalAcceptance } from '@/lib/legal/acceptance';
 import { safeRelativePath } from '@/lib/auth/oauth';
+import { isAdminEmail } from '@/lib/auth/admin-allowlist';
 
 function metaCategories(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
@@ -76,6 +77,16 @@ export async function GET(req: Request) {
           const db = getSupabaseClient({ admin: true });
           const { data: pu } = await db.from('platform_users').select('role').eq('auth_id', data.user.id).maybeSingle();
           if (pu?.role) role = pu.role as string;
+
+          // Server-side admin allowlist (ADMIN_EMAILS) — a data-free path to
+          // operator access for the owner's account, on top of any
+          // platform_users.role row. Applied HERE (before the role !== 'admin'
+          // guards below) so an allowlisted owner is never mistaken for a
+          // vendor and never has a vendor profile minted for them, and so
+          // routing sends them to /admin. Never trusted from the client;
+          // empty/unset ADMIN_EMAILS = nobody. Does NOT bypass the
+          // ADMIN_ACCESS_CODE AccessGate on /admin/* — that stays a 2nd layer.
+          if (isAdminEmail(data.user.email, process.env.ADMIN_EMAILS)) role = 'admin';
 
           // Link pre-account click-wrap acceptance rows (/signup, /apply,
           // /join) to this now-confirmed auth id. The DB guard only permits

@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server-auth';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { isAdminEmail } from '@/lib/auth/admin-allowlist';
 
 const SELF_SERVE_ROLES = ['client', 'vendor'];
 
@@ -35,6 +36,12 @@ export async function GET() {
         await db.from('platform_users').insert({ auth_id: auth.user.id, email: auth.user.email, role }).select('id').maybeSingle();
       }
     }
+
+    // Server-side admin allowlist (ADMIN_EMAILS) — the same override applied in
+    // /auth/callback, mirrored here so every surface that reads role via
+    // /api/auth/me (login redirect, admin UI checks) agrees. Never trusted from
+    // the client; empty/unset = nobody; does NOT bypass the /admin AccessGate.
+    if (isAdminEmail(auth.user.email, process.env.ADMIN_EMAILS)) role = 'admin';
 
     return NextResponse.json({ ok: true, signed_in: true, role, email: auth.user.email, email_verified: emailVerified });
   } catch {

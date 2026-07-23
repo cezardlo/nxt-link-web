@@ -9,8 +9,16 @@ import { tableFor } from '@/lib/marketplace/types';
 import { notifyVendor } from '@/lib/notify';
 import { sendMail } from '@/lib/mail';
 import { isRestricted } from '@/lib/vendor/moderation';
+import { getSessionUser } from '@/lib/auth/require-user';
 
 export async function POST(req: Request) {
+  // Login wall (owner decision, 2026-07-23): sending a quote/service request now
+  // requires a signed-in account — this closes the old anonymous, free-typed
+  // email hole. The honeypot + min-fill-time spam guards below still run for
+  // signed-in callers (defense-in-depth against scripted sessions).
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ ok: false, code: 'auth_required', message: 'Sign in to send a request' }, { status: 401 });
+
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return NextResponse.json({ ok: false, message: 'Invalid JSON' }, { status: 400 }); }
 
@@ -33,7 +41,12 @@ export async function POST(req: Request) {
   const listingId = String(body.listing_id || '');
   const company = String(body.company || '').trim().slice(0, 200);
   const contact = String(body.contact_name || '').trim().slice(0, 200);
-  const email = String(body.email || '').trim().slice(0, 200);
+  // Attribute the request to the authenticated account, not a free-typed email
+  // — the signed-in email is the source of truth (falls back to the typed value
+  // only in the unusual case of a session with no email). The quote_requests
+  // data shape is unchanged: the `email` column still carries the buyer's
+  // address, now trustworthy, and answers.requested_by records the auth id.
+  const email = ((user.email || String(body.email || '')).trim().toLowerCase()).slice(0, 200);
   const phone = String(body.phone || '').trim().slice(0, 60);
   const message = String(body.message || '').trim().slice(0, 3000);
 
@@ -43,7 +56,7 @@ export async function POST(req: Request) {
   // accept, one commission via calculateFee — nothing new). The item list lives
   // in answers.items (jsonb) — same no-schema-change pattern as request_type.
   if (Array.isArray(body.items) && body.items.length > 0) {
-    return handleBundle(body.items, { company, contact, email, phone, message });
+    return handleBundle(body.items, { company, contact, email, phone, message }, user.id);
   }
 
   if (!listingId) return NextResponse.json({ ok: false, code: 'listing_id_required', message: 'listing_id is required' }, { status: 400 });
@@ -76,7 +89,7 @@ export async function POST(req: Request) {
     service_id: kind === 'service' ? listingId : null,
     vendor_id: listing.vendor_id,
     company, contact_name: contact, email, phone, message,
-    answers: { request_type: requestType },
+    answers: { request_type: requestType, requested_by: user.id },
     status: 'new',
   }).select('public_ref').single();
   if (error) return NextResponse.json({ ok: false, code: 'create_failed', message: error.message }, { status: 500 });
@@ -108,7 +121,7 @@ const MAX_BUNDLE_ITEMS = 50;
 
 interface BundleContact { company: string; contact: string; email: string; phone: string; message: string }
 
-async function handleBundle(rawItems: unknown[], c: BundleContact) {
+async function handleBundle(rawItems: unknown[], c: BundleContact, requestedBy: string) {
   if (!c.company) return NextResponse.json({ ok: false, code: 'company_required', message: 'Company is required' }, { status: 400 });
   if (!c.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c.email)) return NextResponse.json({ ok: false, code: 'email_invalid', message: 'A valid email is required' }, { status: 400 });
 
@@ -190,7 +203,7 @@ async function handleBundle(rawItems: unknown[], c: BundleContact) {
       service_id: first.kind === 'service' ? first.listing_id : null,
       vendor_id: vendorId,
       company: c.company, contact_name: c.contact, email: c.email, phone: c.phone, message: c.message,
-      answers: { request_type: 'quote', bundle: true, items },
+      answers: { request_type: 'quote', bundle: true, items, requested_by: requestedBy },
       status: 'new',
     }).select('id, public_ref').single();
     if (error || !data) { failures.push(vendorInfo.get(vendorId)?.company_name || vendorId); continue; }

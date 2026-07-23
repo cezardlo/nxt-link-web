@@ -8,12 +8,17 @@ export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { getSessionUser } from '@/lib/auth/require-user';
 
 const esc = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
 
 interface Suggestion { label: string; type: 'product' | 'service' | 'category'; }
 
 export async function GET(req: Request) {
+  // Login wall (owner decision, 2026-07-23): marketplace search autocomplete is
+  // signed-in-only, same as the browse surface it feeds.
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ ok: false, code: 'auth_required', message: 'Sign in to search the marketplace' }, { status: 401 });
   const q = (new URL(req.url).searchParams.get('q') || '').trim();
   if (q.length < 2 || !isSupabaseConfigured()) return NextResponse.json({ ok: true, suggestions: [] });
 

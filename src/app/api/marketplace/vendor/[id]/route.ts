@@ -8,10 +8,14 @@ export const fetchCache = 'force-no-store';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { autoReactivateIfExpired } from '@/lib/vendor/moderation';
+import { getSessionUser } from '@/lib/auth/require-user';
 
 const CARD = 'id, name, category, overview, best_for, image_paths, pilot, pricing, warranty_support, implementation';
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
+  // Login wall (owner decision, 2026-07-23): vendor storefronts are signed-in-only.
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ ok: false, code: 'auth_required', message: 'Sign in to view this vendor' }, { status: 401 });
   if (!isSupabaseConfigured()) return NextResponse.json({ ok: false, message: 'Not configured' }, { status: 503 });
   const id = params.id;
   const db = getSupabaseClient({ admin: true });
