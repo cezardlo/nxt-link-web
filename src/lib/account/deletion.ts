@@ -24,8 +24,10 @@ import {
   buyerThreadAnonymization,
   deletedEmail,
   manualDealVendorAnonymization,
+  manualDealBuyerAnonymization,
   vendorInviteAnonymization,
   vendorProfileAnonymization,
+  VENDOR_PROFILE_DETACH,
   DELETED_DISPLAY,
 } from './deletion-rules';
 
@@ -144,6 +146,12 @@ export async function runAccountDeletion(db: SupabaseClient, input: DeletionInpu
 
   // 2b. Vendor content + media rows: unpublish + delete.
   for (const vid of vendorIds) {
+    // FIRST detach any abuse reports filed AGAINST this vendor's listings, so
+    // the listings' ON DELETE CASCADE (listing_reports.product_id/service_id →
+    // listings) cannot destroy the moderation trail. Both columns are nullable
+    // (no exactly-one-of check); vendor_id stays as the anchor to the
+    // anonymized vendor. Reports are RETAINED (anti abuse-evasion).
+    await must('detach listing_reports', db.from('listing_reports').update({ product_id: null, service_id: null }).eq('vendor_id', vid));
     await must('delete marketplace_products', db.from('marketplace_products').delete().eq('vendor_id', vid));
     await must('delete marketplace_services', db.from('marketplace_services').delete().eq('vendor_id', vid));
     await must('delete listing_documents', db.from('listing_documents').delete().eq('vendor_id', vid));
@@ -167,6 +175,16 @@ export async function runAccountDeletion(db: SupabaseClient, input: DeletionInpu
     await must('delete cart_items', db.from('cart_items').delete().eq('buyer_email', email));
     await must('delete saved_listings', db.from('saved_listings').delete().eq('buyer_email', email));
     await must('delete notifications (buyer)', db.from('notifications').delete().eq('buyer_email', email));
+    // FINANCIAL — scrub the buyer identity on any manual_deals linked to this
+    // buyer via their quote thread (source_quote_id). Capture the ids BEFORE
+    // the quote_requests rows are anonymized below. manual_deals has no buyer
+    // email column, so deals with no source_quote_id link cannot be matched to
+    // an account (admin-entered free-text; flagged as a manual-scrub follow-up).
+    const { data: qrs } = await db.from('quote_requests').select('id').eq('email', email);
+    const qrIds = (qrs || []).map((r) => r.id as string);
+    if (qrIds.length) {
+      await must('anonymize manual_deals (buyer)', db.from('manual_deals').update(manualDealBuyerAnonymization()).in('source_quote_id', qrIds));
+    }
     await must('anonymize quote_requests', db.from('quote_requests').update(buyerThreadAnonymization(uid)).eq('email', email));
     await must('anonymize reviews', db.from('reviews').update({ buyer_email: deletedEmail(uid) }).eq('buyer_email', email));
     await must('anonymize listing_reports', db.from('listing_reports').update({ reporter_email: deletedEmail(uid) }).eq('reporter_email', email));
@@ -183,11 +201,8 @@ export async function runAccountDeletion(db: SupabaseClient, input: DeletionInpu
     .eq('owner_auth_id', uid));
   await must('delete project_members (auth)', db.from('project_members').delete().eq('auth_id', uid));
 
-  // 2e. Vendor application by auth_id + the account identity row.
+  // 2e. Vendor application by auth_id.
   await must('delete vendor_applications (auth)', db.from('vendor_applications').delete().eq('auth_id', uid));
-  // platform_users is a pure identity/profile row; vendor_profiles was already
-  // detached (platform_user_id nulled) above, so this delete is unblocked.
-  await must('delete platform_users', db.from('platform_users').delete().eq('auth_id', uid));
 
   // --- 3. Best-effort storage cleanup (NEVER fatal) --------------------------
   for (const [bucket, paths] of Object.entries(storage)) {
@@ -202,7 +217,16 @@ export async function runAccountDeletion(db: SupabaseClient, input: DeletionInpu
     }
   }
 
-  // --- 4. DELETE THE AUTH USER LAST (fatal) ----------------------------------
+  // --- 4. Detach identity, remove the profile row, then DELETE THE AUTH USER LAST
+  // Only now — after every vendor + buyer cleanup step above has succeeded — do
+  // we null vendor_profiles.auth_id/platform_user_id. Until this point auth_id
+  // is the lookup key the retry path uses to re-derive the vendor set, so a
+  // mid-run failure re-finds the profile and finishes cleanup instead of
+  // silently skipping it. Detaching platform_user_id here also clears the FK
+  // that would otherwise block the platform_users delete (NO ACTION / RESTRICT).
+  await must('detach vendor_profiles', db.from('vendor_profiles').update(VENDOR_PROFILE_DETACH).eq('auth_id', uid));
+  await must('delete platform_users', db.from('platform_users').delete().eq('auth_id', uid));
+
   const { error: authErr } = await db.auth.admin.deleteUser(uid);
   if (authErr) throw new Error('account-delete step failed: auth.admin.deleteUser');
 

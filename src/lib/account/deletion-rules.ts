@@ -74,8 +74,14 @@ export function buyerThreadAnonymization(uid: string) {
   };
 }
 
-/** The scrub applied to the vendor's own vendor_profiles row (retained as the
- *  financial-anchor id, hidden from the marketplace, stripped of all PII). */
+/** The PII scrub applied to the vendor's own vendor_profiles row (retained as
+ *  the financial-anchor id, hidden from the marketplace, stripped of all PII).
+ *
+ *  NOTE: this intentionally does NOT null auth_id / platform_user_id. The
+ *  orchestrator derives which vendor rows to clean up via auth_id, so the row
+ *  must keep its auth_id until ALL vendor cleanup has completed — otherwise a
+ *  failed run's retry would re-derive an empty vendor set and silently skip the
+ *  remaining cleanup. Detachment happens last, via VENDOR_PROFILE_DETACH. */
 export function vendorProfileAnonymization(uid: string, nowIso: string) {
   return {
     company_name: DELETED_VENDOR_DISPLAY,
@@ -96,21 +102,30 @@ export function vendorProfileAnonymization(uid: string, nowIso: string) {
     signer_phone: null,
     creator_position: null,
     creator_department: null,
-    // Hide the storefront and detach from the (about-to-be-deleted) auth user.
+    // Hide the storefront.
     status: 'rejected',
     moderation_status: 'banned',
     moderation_reason: 'Account deleted by the user',
     moderated_at: nowIso,
     moderated_by: 'self-delete',
-    auth_id: null as string | null,
-    platform_user_id: null as string | null,
   };
 }
+
+/** The FINAL detach of the anonymized vendor_profiles row from the auth user.
+ *  Applied only after all vendor cleanup is done and immediately before the
+ *  auth user is deleted, so the auth_id lookup key survives every retry. */
+export const VENDOR_PROFILE_DETACH = { auth_id: null as string | null, platform_user_id: null as string | null };
 
 /** Vendor identity on a retained financial row (manual_deals). Amounts, dates,
  *  status, ids, and vendor_id are all left intact. */
 export function manualDealVendorAnonymization() {
   return { vendor_name: DELETED_FINANCIAL };
+}
+
+/** Buyer identity on a retained financial row (manual_deals), matched via the
+ *  buyer's quote thread (source_quote_id). Amounts/dates/status/ids intact. */
+export function manualDealBuyerAnonymization() {
+  return { buyer_name: DELETED_FINANCIAL, buyer_company: DELETED_FINANCIAL };
 }
 
 /** Vendor identity on the retained onboarding-funnel record (vendor_invites).
@@ -140,7 +155,7 @@ export const DISPOSITION: Record<string, { action: Disposition; by: string; note
   buyer_profiles: { action: 'deleted', by: 'buyer_email', note: 'buyer profile (no financial FK depends on it)' },
   quote_requests: { action: 'anonymized', by: 'email', note: 'buyer thread kept for the vendor; contact identity scrubbed; message/answers/amounts retained; commissions.quote_request_id stays valid' },
   reviews: { action: 'anonymized', by: 'buyer_email', note: 'vendor keeps the review; reviewer email scrubbed; rating/body kept' },
-  listing_reports: { action: 'anonymized', by: 'reporter_email', note: 'moderation trail retained; reporter email scrubbed' },
+  listing_reports: { action: 'anonymized', by: 'reporter_email / vendor_id', note: 'abuse-report moderation trail RETAINED. Buyer delete: reporter_email scrubbed. Vendor delete: product_id/service_id nulled BEFORE the listings are deleted (both nullable, no exactly-one check) so the ON DELETE CASCADE cannot destroy reports filed against the vendor; vendor_id stays as the anchor' },
   projects: { action: 'anonymized', by: 'owner_auth_id', note: 'shared workspace kept; owner company/logo/problem/outcome scrubbed' },
   project_members: { action: 'deleted', by: 'auth_id / invited_email', note: "the deleted user's own membership rows" },
 
@@ -149,8 +164,8 @@ export const DISPOSITION: Record<string, { action: Disposition; by: string; note
 
   // --- Vendor-side (matched by vendor_id / auth_id) ---
   vendor_profiles: { action: 'anonymized', by: 'auth_id', note: 'RETAINED as financial-anchor id (commissions/purchases/moderation cascade off it); all PII scrubbed; storefront banned' },
-  marketplace_products: { action: 'deleted', by: 'vendor_id', note: 'listings unpublished + deleted (cascades listing_documents/reports by product_id)' },
-  marketplace_services: { action: 'deleted', by: 'vendor_id', note: 'listings unpublished + deleted (cascades listing_documents/reports by service_id)' },
+  marketplace_products: { action: 'deleted', by: 'vendor_id', note: 'listings unpublished + deleted (cascades listing_documents by product_id; listing_reports are detached first, see listing_reports)' },
+  marketplace_services: { action: 'deleted', by: 'vendor_id', note: 'listings unpublished + deleted (cascades listing_documents by service_id; listing_reports are detached first, see listing_reports)' },
   listing_documents: { action: 'deleted', by: 'vendor_id', note: 'listing spec docs' },
   case_studies: { action: 'deleted', by: 'vendor_id', note: 'listing case studies' },
   vendor_case_studies: { action: 'deleted', by: 'vendor_id', note: 'storefront case studies' },
@@ -159,7 +174,7 @@ export const DISPOSITION: Record<string, { action: Disposition; by: string; note
   vendor_videos: { action: 'deleted', by: 'vendor_id', note: 'storefront videos' },
   vendor_brochures: { action: 'deleted', by: 'vendor_id', note: 'brochures' },
   vendor_team: { action: 'deleted', by: 'vendor_id', note: 'team member rows (personal)' },
-  manual_deals: { action: 'anonymized', by: 'vendor_id', note: 'FINANCIAL — amounts/dates/status/ids kept; vendor_name scrubbed' },
+  manual_deals: { action: 'anonymized', by: 'vendor_id / source_quote_id', note: 'FINANCIAL — amounts/dates/status/ids kept. Vendor delete: vendor_name scrubbed by vendor_id. Buyer delete: buyer_name/buyer_company scrubbed on deals linked to the buyer via source_quote_id (admin-entered deals with no source_quote_id link have no buyer key — noted as a manual-scrub follow-up)' },
   vendor_invites: { action: 'anonymized', by: 'vendor_id / auth_id / email', note: 'funnel record kept; PII scrubbed' },
   vendor_applications: { action: 'deleted', by: 'auth_id / email', note: "the user's own application submission (legal acceptance is separately retained in terms_acceptances)" },
 

@@ -7,7 +7,9 @@ import {
   deletedEmail,
   buyerThreadAnonymization,
   vendorProfileAnonymization,
+  VENDOR_PROFILE_DETACH,
   manualDealVendorAnonymization,
+  manualDealBuyerAnonymization,
   vendorInviteAnonymization,
   DISPOSITION,
   DELETED_DISPLAY,
@@ -78,7 +80,7 @@ test('buyerThreadAnonymization scrubs contact identity only', () => {
   assert.deepEqual(Object.keys(a).sort(), ['company', 'contact_name', 'email', 'phone']);
 });
 
-test('vendorProfileAnonymization hides the storefront, detaches auth, scrubs PII', () => {
+test('vendorProfileAnonymization hides the storefront + scrubs PII', () => {
   const a = vendorProfileAnonymization('uid-9', '2026-07-23T00:00:00.000Z');
   assert.equal(a.company_name, DELETED_VENDOR_DISPLAY);
   assert.equal(a.email, 'deleted-uid-9@deleted.invalid');
@@ -88,16 +90,29 @@ test('vendorProfileAnonymization hides the storefront, detaches auth, scrubs PII
   assert.equal(a.logo_path, null);
   assert.equal(a.banner_path, null);
   assert.equal(a.signer_email, null);
-  // Storefront hidden + row detached from the auth user.
+  // Storefront hidden.
   assert.equal(a.status, 'rejected');
   assert.equal(a.moderation_status, 'banned');
-  assert.equal(a.auth_id, null);
-  assert.equal(a.platform_user_id, null);
   assert.equal(a.moderated_at, '2026-07-23T00:00:00.000Z');
 });
 
-test('manual_deals + vendor_invites anonymization keep only a scrubbed identity', () => {
+test('vendorProfileAnonymization must NOT touch auth_id/platform_user_id (retry-key survives)', () => {
+  // The orchestrator re-derives the vendor set via auth_id, so the PII scrub
+  // must leave the lookup key in place; detachment happens separately, last.
+  const a = vendorProfileAnonymization('uid-9', '2026-07-23T00:00:00.000Z') as Record<string, unknown>;
+  assert.equal('auth_id' in a, false);
+  assert.equal('platform_user_id' in a, false);
+  // And the final detach nulls both.
+  assert.equal(VENDOR_PROFILE_DETACH.auth_id, null);
+  assert.equal(VENDOR_PROFILE_DETACH.platform_user_id, null);
+});
+
+test('manual_deals identity scrub covers BOTH the vendor and the buyer side', () => {
   assert.deepEqual(manualDealVendorAnonymization(), { vendor_name: DELETED_FINANCIAL });
+  assert.deepEqual(manualDealBuyerAnonymization(), { buyer_name: DELETED_FINANCIAL, buyer_company: DELETED_FINANCIAL });
+});
+
+test('vendor_invites anonymization keeps only a scrubbed identity', () => {
   const inv = vendorInviteAnonymization();
   assert.equal(inv.contact_name, DELETED_DISPLAY);
   assert.equal(inv.company_name, DELETED_VENDOR_DISPLAY);
@@ -122,4 +137,11 @@ test('DISPOSITION: personal rows are DELETED', () => {
   for (const table of ['cart_items', 'saved_listings', 'buyer_profiles', 'marketplace_products', 'marketplace_services', 'vendor_gallery']) {
     assert.equal(DISPOSITION[table].action, 'deleted', `${table} must be deleted`);
   }
+});
+
+test('DISPOSITION: abuse reports are PRESERVED, not deleted with the listings', () => {
+  // listing_reports survive a vendor deleting their listings (product_id/
+  // service_id detached before the cascade). The row is kept, identity scrubbed.
+  assert.notEqual(DISPOSITION.listing_reports.action, 'deleted');
+  assert.equal(DISPOSITION.listing_reports.action, 'anonymized');
 });

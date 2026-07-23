@@ -254,7 +254,24 @@ compare fill bars, view-as-buyer — all shipped.
   fee ledger). Auth user deleted LAST. Fee engine untouched. Pure rules in
   `src/lib/account/deletion-rules.ts`, orchestration in
   `src/lib/account/deletion.ts`. No migration. Gates: typecheck 0, tests
-  109/109 (12 new), build clean.
+  112/112, build clean. Security review returned FIX-FIRST → three fixes
+  applied on top (retry-key reorder so a failed run's retry still finishes
+  vendor cleanup; abuse-report preservation — listing_reports.product_id/
+  service_id nulled before the listing cascade so reports survive;
+  manual_deals.buyer_name/buyer_company scrub via source_quote_id + truthful
+  danger-zone copy). **Deferred from the security review (do NOT build until
+  scheduled):** (1) free-text blob scrubbing — buyer/vendor free-text inside
+  `quote_requests.answers`, `reviews.body`, and `messages.body` is retained
+  (matches the "don't null bodies" rule) and may contain self-identifying text;
+  (2) side-table scrubs for `chat_conversations`, `client_requests`,
+  `company_equipment`, `zoho_outbox`, `early_access_leads` (legacy/near-empty
+  tables not in the current delete path); (3) M-4 OAuth step-up factor on
+  delete (passwordless accounts confirm with typed phrase + second click only);
+  (4) M-6 explicit Origin/CSRF assertion on `POST /api/account/delete`
+  (currently relies on session cookie + JSON content-type + typed phrase +
+  password); (5) M-5 align the access-code admin path with the role/
+  ADMIN_EMAILS self-delete block; (6) M-7 add a `lower(email)`/citext index so
+  buyer-email matching can't miss legacy mixed-case rows.
 - **Signup 4th role choice "Something else" (2026-07-23)** — `/signup` Step 1
   now has a 4th tile alongside Buy for my company / Join as a vendor / Buyer
   and vendor. Treated as a buyer (no new lane): `sellerMode` stays false,
