@@ -49,6 +49,42 @@ const nextConfig = {
     serverComponentsExternalPackages: ['googleapis', 'googleapis-common', 'google-auth-library', 'qs', 'playwright-core', 'playwright'],
   },
   async headers() {
+    // Content-Security-Policy in REPORT-ONLY mode. This does NOT block anything —
+    // browsers only log violations to the console (and to a report-uri if one is
+    // added later). It lets us watch which real sources the app uses before we
+    // ever switch to an enforcing `Content-Security-Policy`. See the source
+    // inventory that each directive is based on:
+    //   default/base/object/frame-ancestors — hardening + mirror X-Frame-Options.
+    //   script-src  'unsafe-inline' — Next.js injects inline hydration scripts
+    //                (no nonce); va.vercel-scripts.com — @vercel/analytics loader.
+    //   style-src   'unsafe-inline' — styled-jsx + inline <style> blocks
+    //                (dangerouslySetInnerHTML) used app-wide; fonts.googleapis.com
+    //                — runtime @import of Google Fonts (Outfit/Instrument Serif).
+    //   img-src     data:/blob: (inline + next/image); https: — vendor-supplied
+    //                listing images come from arbitrary hosts + Supabase storage.
+    //   font-src    Supabase-adjacent: self (next/font self-hosted) + gstatic
+    //                (fonts loaded by the @import stylesheets) + data:.
+    //   connect-src Supabase REST/Auth/Storage + wss (realtime, defensive) +
+    //                va.vercel-scripts.com (analytics beacon fallback).
+    //   frame-src   OAuth providers (Google/LinkedIn/Azure) + Supabase auth +
+    //                YouTube/Vimeo vendor-video embeds (src/lib/vendor/video.ts).
+    //   form-action self + OAuth/Supabase (defensive for redirect flows).
+    //   worker-src  self + blob: (bundler/library web workers).
+    const cspReportOnly = [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'none'",
+      "script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      "connect-src 'self' https://yvykselwehxjwsqercjg.supabase.co wss://yvykselwehxjwsqercjg.supabase.co https://va.vercel-scripts.com",
+      "frame-src 'self' https://www.youtube.com https://player.vimeo.com https://accounts.google.com https://*.linkedin.com https://login.microsoftonline.com https://yvykselwehxjwsqercjg.supabase.co",
+      "form-action 'self' https://accounts.google.com https://*.linkedin.com https://login.microsoftonline.com https://yvykselwehxjwsqercjg.supabase.co",
+      "worker-src 'self' blob:",
+      "manifest-src 'self'",
+    ].join('; ');
     return [
       {
         source: '/:path*',
@@ -60,6 +96,19 @@ const nextConfig = {
             key: 'Permissions-Policy',
             value:
               'camera=(), microphone=(), geolocation=(), browsing-topics=(), interest-cohort=()',
+          },
+          // HSTS: force HTTPS for a year, incl. subdomains. Safe — Vercel serves
+          // HTTPS only. No `preload` flag (opting into the browser preload list
+          // is a separate, irreversible-ish step; not doing it here).
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains',
+          },
+          // REPORT-ONLY — logs violations, blocks nothing. Do not switch to a
+          // plain `Content-Security-Policy` until the console reports are clean.
+          {
+            key: 'Content-Security-Policy-Report-Only',
+            value: cspReportOnly,
           },
         ],
       },
