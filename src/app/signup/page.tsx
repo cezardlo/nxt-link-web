@@ -93,6 +93,7 @@ const T: Record<Lang, Record<string, string>> = {
     password: 'Password (8+ characters)',
     show: 'Show', hide: 'Hide',
     vendorType: 'What kind of business is it? (optional)',
+    otherPlaceholder: 'Tell us what kind of business it is',
     agreeStart: 'I agree to the', terms: 'Terms of Service', and: 'and', privacy: 'Privacy Policy',
     orEmail: 'or continue with email',
     create: 'Create account', creating: 'Creating…',
@@ -130,6 +131,7 @@ const T: Record<Lang, Record<string, string>> = {
     password: 'Contraseña (8+ caracteres)',
     show: 'Mostrar', hide: 'Ocultar',
     vendorType: '¿Qué tipo de empresa es? (opcional)',
+    otherPlaceholder: 'Dinos qué tipo de empresa es',
     agreeStart: 'Acepto los', terms: 'Términos de Servicio', and: 'y el', privacy: 'Aviso de Privacidad',
     orEmail: 'o continúa con correo',
     create: 'Crear cuenta', creating: 'Creando…',
@@ -162,6 +164,11 @@ export default function SignupPage() {
   // Buyer is the safest reversible default for a marketplace visitor.
   const [mode, setMode] = useState<Mode>('buyer');
   const [vendorType, setVendorType] = useState('');
+  // Free-text for the "Other" business type — lets a vendor say in their own
+  // words what they are when none of the preset chips fit (Cesar's ask). It
+  // rides into the SAME persisted vendor_type field as "Other: <their words>"
+  // (the API already stores + caps vendor_type at 60 chars) — no dropped data.
+  const [vendorTypeOther, setVendorTypeOther] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [agree, setAgree] = useState(false);
@@ -197,6 +204,12 @@ export default function SignupPage() {
       return;
     }
     setBusy(true); setErr('');
+    // When "Other" is chosen and they typed a description, persist their own
+    // words ("Other: <text>"); otherwise the plain chip value. Buyers send null.
+    const resolvedVendorType =
+      vendorType === 'Other' && vendorTypeOther.trim()
+        ? `Other: ${vendorTypeOther.trim()}`
+        : vendorType;
     try {
       const r = await fetch('/api/auth/signup', {
         method: 'POST',
@@ -205,7 +218,7 @@ export default function SignupPage() {
           email: email.trim(),
           password,
           role: apiRole,
-          vendor_type: sellerMode ? vendorType || null : null,
+          vendor_type: sellerMode ? resolvedVendorType || null : null,
           locale: lang,
           terms_accepted: agree,
         }),
@@ -276,7 +289,7 @@ export default function SignupPage() {
                     key={option}
                     className={'su-role' + (mode === option ? ' on' : '')}
                     aria-pressed={mode === option}
-                    onClick={() => { setMode(option); if (option === 'buyer') setVendorType(''); }}
+                    onClick={() => { setMode(option); if (option === 'buyer') { setVendorType(''); setVendorTypeOther(''); } }}
                   >
                     <span className="su-roleicon"><Icon aria-hidden="true" /></span>
                     <span className="su-roletext">
@@ -307,11 +320,23 @@ export default function SignupPage() {
                   <legend>{t.vendorType}</legend>
                   <div className="su-chips">
                     {VENDOR_TYPES.map(({ value, en, es }) => (
-                      <button type="button" key={value} aria-pressed={vendorType === value} className={'su-chip' + (vendorType === value ? ' on' : '')} onClick={() => setVendorType(vendorType === value ? '' : value)}>
+                      <button type="button" key={value} aria-pressed={vendorType === value} className={'su-chip' + (vendorType === value ? ' on' : '')} onClick={() => { const next = vendorType === value ? '' : value; setVendorType(next); if (next !== 'Other') setVendorTypeOther(''); }}>
                         {lang === 'es' ? es : en}
                       </button>
                     ))}
                   </div>
+                  {vendorType === 'Other' && (
+                    <input
+                      className="su-otherinput"
+                      type="text"
+                      value={vendorTypeOther}
+                      onChange={(e) => setVendorTypeOther(e.target.value)}
+                      placeholder={t.otherPlaceholder}
+                      aria-label={t.otherPlaceholder}
+                      maxLength={48}
+                      autoFocus
+                    />
+                  )}
                 </fieldset>
               )}
 
@@ -440,6 +465,9 @@ const CSS = `
 .su-chip{font:600 12px inherit;padding:8px 12px;border-radius:99px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.03);color:#A6A2B8;cursor:pointer;}
 .su-chip:hover{border-color:rgba(169,157,242,.6);color:#C9BFFF;}
 .su-chip.on{background:rgba(108,92,224,.16);border-color:var(--spec-violet);color:#C9BFFF;}
+.su-otherinput{width:100%;margin-top:10px;height:42px;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:rgba(0,0,0,.25);color:#fff;font:14px inherit;padding:0 13px;outline:none;}
+.su-otherinput::placeholder{color:#6E6A80;}
+.su-otherinput:focus{border-color:var(--spec-violet);box-shadow:0 0 0 3px rgba(108,92,224,.15);}
 .su-agree{display:flex;gap:10px;align-items:flex-start;cursor:pointer;margin:2px 0 0;}
 .su-agree input{width:16px;height:16px;flex:0 0 auto;margin-top:2px;accent-color:var(--spec-violet);cursor:pointer;}
 .su-agree input:focus-visible{outline:2px solid var(--spec-violet);outline-offset:2px;}
