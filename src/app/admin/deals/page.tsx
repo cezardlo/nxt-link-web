@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FIRST_DEAL_CREDIT_FOUNDING } from '@/lib/fees/engine';
+import { clearPrivateAccess } from '@/lib/privateAccess';
 
 interface Deal {
   id: string; vendor_name: string; buyer_company: string | null; buyer_name: string | null;
@@ -41,6 +42,10 @@ const STATUS_LABEL: Record<string, string> = {
 export default function AdminDealsPage() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
+  // An expired admin session (Supabase session OR the access-code gate cookie)
+  // must never render as "No deals yet." — that's a healthy-looking empty
+  // pipeline hiding the real problem (audit: this is the money ledger).
+  const [authError, setAuthError] = useState(false);
   const [ledgerSource, setLedgerSource] = useState<'view' | 'fallback' | null>(null);
   const [f, setF] = useState({ vendor_name: '', buyer_company: '', buyer_name: '', description: '', net_amount: '', is_free_credit: false, opportunity_ref: '' });
   const [busy, setBusy] = useState(false);
@@ -53,12 +58,24 @@ export default function AdminDealsPage() {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch('/api/admin/deals'); const j = await r.json();
-      if (j.ok) { setDeals(j.deals); setLedgerSource(j.ledger_source || null); }
+      const r = await fetch('/api/admin/deals');
+      if (r.status === 401) { setAuthError(true); setLoading(false); return; }
+      const j = await r.json();
+      if (j.ok) { setDeals(j.deals); setLedgerSource(j.ledger_source || null); setAuthError(false); }
     } catch { /* */ }
     setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  // Points back to the access-code gate: the localStorage flag is only a
+  // non-secret UI hint (see src/lib/privateAccess.ts) that tells AccessGate
+  // not to re-prompt — clearing it + reloading forces AccessGate to check
+  // again and show the "unlock workspace" screen, the same gate every other
+  // /admin/* page sits behind.
+  function unlockAgain() {
+    clearPrivateAccess();
+    window.location.reload();
+  }
 
   const net = Number(f.net_amount) || 0;
   const pv = useMemo(() => previewFee(net), [net]);
@@ -128,93 +145,107 @@ export default function AdminDealsPage() {
       <div className="ad-wrap">
         <h1>Deals &amp; commissions</h1>
         <p className="ad-sub">Concierge tracker — record a deal, the engine computes the commission (5% first $50k · 3% above · $20k cap), then move it to paid and invoice.</p>
-        {ledgerSource === 'fallback' && (
-          <div className="ad-notice">Unified ledger view not active yet — showing direct table reads.</div>
+
+        {loading ? (
+          <div className="ad-empty">Loading…</div>
+        ) : authError ? (
+          <div className="ad-card">
+            <div className="ad-empty">
+              Operator session expired — this isn&apos;t an empty pipeline, you were signed out.<br />
+              <button className="ad-mini" onClick={unlockAgain} style={{ marginTop: 12 }}>Unlock the workspace again</button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {ledgerSource === 'fallback' && (
+              <div className="ad-notice">Unified ledger view not active yet — showing direct table reads.</div>
+            )}
+
+            <div className="ad-stats">
+              <div className="ad-stat"><b>{totals.count}</b><span>Deals</span></div>
+              <div className="ad-stat"><b>{money(totals.expected)}</b><span>Commission expected</span></div>
+              <div className="ad-stat"><b>{money(totals.collected)}</b><span>Collected (paid)</span></div>
+            </div>
+
+            {/* NXT AI · Commission co-pilot */}
+            <div className="ad-card ad-ai">
+              <div className="ad-cardhd">✦ NXT AI · Commission co-pilot</div>
+              <div className="ad-chat">
+                {chat.length === 0 ? (
+                  <div className="ad-chathint">Type it like you’d say it — “Log Acme Forklifts deal $100k for buyer El Paso Distribution”, or “summary today”. I’ll fill the form below; you confirm.</div>
+                ) : chat.map((m, i) => <div key={i} className={'ad-bub ' + m.role}>{m.text}</div>)}
+                {aiBusy && <div className="ad-bub ai">Thinking…</div>}
+              </div>
+              <div className="ad-airow">
+                <input value={aiInput} onChange={(e) => setAiInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && askAI()} placeholder="Tell NXT AI what happened…" />
+                <button className="ad-btn" disabled={aiBusy} onClick={askAI}>Send</button>
+              </div>
+            </div>
+
+            {/* Calculator + create */}
+            <div className="ad-card">
+              <div className="ad-cardhd">Record a deal</div>
+              <div className="ad-grid">
+                <label>Vendor<input value={f.vendor_name} onChange={(e) => setF({ ...f, vendor_name: e.target.value })} placeholder="Borderplex Robotics Co." /></label>
+                <label>Buyer company<input value={f.buyer_company} onChange={(e) => setF({ ...f, buyer_company: e.target.value })} placeholder="El Paso Distribution LLC" /></label>
+                <label>Opportunity ref<input value={f.opportunity_ref} onChange={(e) => setF({ ...f, opportunity_ref: e.target.value })} placeholder="NXT-2026-0042" /></label>
+                <label>Net eligible amount ($)<input type="number" value={f.net_amount} onChange={(e) => setF({ ...f, net_amount: e.target.value })} placeholder="100000" /></label>
+              </div>
+              <label className="ad-desc">Description<input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="2 AMR pallet robots + install" /></label>
+
+              {/* Live commission breakdown */}
+              {net > 0 && (
+                <div className="ad-calc">
+                  {pv.lines.map((l, i) => (
+                    <div key={i} className="ad-cline"><span>{money(l.amt)} at {(l.rate * 100).toFixed(0)}%</span><b>{money(l.fee)}</b></div>
+                  ))}
+                  {pv.cap && <div className="ad-cline cap"><span>$20,000 cap applied</span><b>—</b></div>}
+                  <label className="ad-credit"><input type="checkbox" checked={f.is_free_credit} onChange={(e) => setF({ ...f, is_free_credit: e.target.checked })} /> Apply founding-vendor credit (−{money(credit)})</label>
+                  <div className="ad-cline total"><span>NXT//LINK commission</span><b>{money(commission)}</b></div>
+                  <div className="ad-eff">Effective rate {(net > 0 ? (commission / net) * 100 : 0).toFixed(2)}% · protected 12 months</div>
+                </div>
+              )}
+              <button className="ad-btn" disabled={busy} onClick={create}>Record deal</button>
+              {msg && <div className={`ad-msg ${msg.startsWith('✓') ? 'ok' : 'err'}`}>{msg}</div>}
+            </div>
+
+            {/* Deals list */}
+            <div className="ad-card">
+              <div className="ad-cardhd">All deals</div>
+              {deals.length === 0 ? <div className="ad-empty">No deals yet.</div> : (
+                <div className="ad-table-wrap">
+                  <table className="ad-table">
+                    <thead><tr><th>Vendor / Buyer</th><th>Net</th><th>Commission</th><th>Status</th><th>Invoice</th><th></th></tr></thead>
+                    <tbody>
+                      {deals.map((d) => {
+                        const idx = STATUS_FLOW.indexOf(d.status);
+                        const next = idx >= 0 && idx < STATUS_FLOW.length - 1 ? STATUS_FLOW[idx + 1] : null;
+                        return (
+                          <tr key={d.id}>
+                            <td><b>{d.vendor_name}</b>{d.buyer_company && <div className="ad-sm">→ {d.buyer_company}</div>}{d.opportunity_ref && <div className="ad-sm mono">{d.opportunity_ref}</div>}</td>
+                            <td className="mono">{money(d.net_amount)}</td>
+                            <td className="mono"><b>{money(Number(d.commission_amount) || 0)}</b>{d.applied_cap && <div className="ad-sm">cap</div>}{d.is_free_credit && <div className="ad-sm">credit</div>}</td>
+                            <td>
+                              <span className={`ad-badge s-${d.status}`}>{STATUS_LABEL[d.status] || d.status}</span>
+                              {d.discrepancy && <span className="ad-warn" title="Deal and commission records disagree — check /api/admin/reconcile">⚠</span>}
+                            </td>
+                            <td>{d.status === 'invoiced' || d.status === 'paid' ? (
+                              <input className="ad-inv" defaultValue={d.invoice_ref || ''} placeholder="INV-###" disabled={statusBusy === d.id} onBlur={(e) => { if (e.target.value !== (d.invoice_ref || '')) setStatus(d.id, d.status, e.target.value); }} />
+                            ) : <span className="ad-sm">—</span>}</td>
+                            <td>
+                              {next && <button className="ad-mini" disabled={statusBusy === d.id} onClick={() => setStatus(d.id, next)}>{statusBusy === d.id ? 'Saving…' : `→ ${STATUS_LABEL[next]}`}</button>}
+                              {statusErr?.id === d.id && <div className="ad-sm err">{statusErr.message}</div>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </>
         )}
-
-        <div className="ad-stats">
-          <div className="ad-stat"><b>{totals.count}</b><span>Deals</span></div>
-          <div className="ad-stat"><b>{money(totals.expected)}</b><span>Commission expected</span></div>
-          <div className="ad-stat"><b>{money(totals.collected)}</b><span>Collected (paid)</span></div>
-        </div>
-
-        {/* NXT AI · Commission co-pilot */}
-        <div className="ad-card ad-ai">
-          <div className="ad-cardhd">✦ NXT AI · Commission co-pilot</div>
-          <div className="ad-chat">
-            {chat.length === 0 ? (
-              <div className="ad-chathint">Type it like you’d say it — “Log Acme Forklifts deal $100k for buyer El Paso Distribution”, or “summary today”. I’ll fill the form below; you confirm.</div>
-            ) : chat.map((m, i) => <div key={i} className={'ad-bub ' + m.role}>{m.text}</div>)}
-            {aiBusy && <div className="ad-bub ai">Thinking…</div>}
-          </div>
-          <div className="ad-airow">
-            <input value={aiInput} onChange={(e) => setAiInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && askAI()} placeholder="Tell NXT AI what happened…" />
-            <button className="ad-btn" disabled={aiBusy} onClick={askAI}>Send</button>
-          </div>
-        </div>
-
-        {/* Calculator + create */}
-        <div className="ad-card">
-          <div className="ad-cardhd">Record a deal</div>
-          <div className="ad-grid">
-            <label>Vendor<input value={f.vendor_name} onChange={(e) => setF({ ...f, vendor_name: e.target.value })} placeholder="Borderplex Robotics Co." /></label>
-            <label>Buyer company<input value={f.buyer_company} onChange={(e) => setF({ ...f, buyer_company: e.target.value })} placeholder="El Paso Distribution LLC" /></label>
-            <label>Opportunity ref<input value={f.opportunity_ref} onChange={(e) => setF({ ...f, opportunity_ref: e.target.value })} placeholder="NXT-2026-0042" /></label>
-            <label>Net eligible amount ($)<input type="number" value={f.net_amount} onChange={(e) => setF({ ...f, net_amount: e.target.value })} placeholder="100000" /></label>
-          </div>
-          <label className="ad-desc">Description<input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="2 AMR pallet robots + install" /></label>
-
-          {/* Live commission breakdown */}
-          {net > 0 && (
-            <div className="ad-calc">
-              {pv.lines.map((l, i) => (
-                <div key={i} className="ad-cline"><span>{money(l.amt)} at {(l.rate * 100).toFixed(0)}%</span><b>{money(l.fee)}</b></div>
-              ))}
-              {pv.cap && <div className="ad-cline cap"><span>$20,000 cap applied</span><b>—</b></div>}
-              <label className="ad-credit"><input type="checkbox" checked={f.is_free_credit} onChange={(e) => setF({ ...f, is_free_credit: e.target.checked })} /> Apply founding-vendor credit (−{money(credit)})</label>
-              <div className="ad-cline total"><span>NXT//LINK commission</span><b>{money(commission)}</b></div>
-              <div className="ad-eff">Effective rate {(net > 0 ? (commission / net) * 100 : 0).toFixed(2)}% · protected 12 months</div>
-            </div>
-          )}
-          <button className="ad-btn" disabled={busy} onClick={create}>Record deal</button>
-          {msg && <div className={`ad-msg ${msg.startsWith('✓') ? 'ok' : 'err'}`}>{msg}</div>}
-        </div>
-
-        {/* Deals list */}
-        <div className="ad-card">
-          <div className="ad-cardhd">All deals</div>
-          {loading ? <div className="ad-empty">Loading…</div> : deals.length === 0 ? <div className="ad-empty">No deals yet.</div> : (
-            <div className="ad-table-wrap">
-              <table className="ad-table">
-                <thead><tr><th>Vendor / Buyer</th><th>Net</th><th>Commission</th><th>Status</th><th>Invoice</th><th></th></tr></thead>
-                <tbody>
-                  {deals.map((d) => {
-                    const idx = STATUS_FLOW.indexOf(d.status);
-                    const next = idx >= 0 && idx < STATUS_FLOW.length - 1 ? STATUS_FLOW[idx + 1] : null;
-                    return (
-                      <tr key={d.id}>
-                        <td><b>{d.vendor_name}</b>{d.buyer_company && <div className="ad-sm">→ {d.buyer_company}</div>}{d.opportunity_ref && <div className="ad-sm mono">{d.opportunity_ref}</div>}</td>
-                        <td className="mono">{money(d.net_amount)}</td>
-                        <td className="mono"><b>{money(Number(d.commission_amount) || 0)}</b>{d.applied_cap && <div className="ad-sm">cap</div>}{d.is_free_credit && <div className="ad-sm">credit</div>}</td>
-                        <td>
-                          <span className={`ad-badge s-${d.status}`}>{STATUS_LABEL[d.status] || d.status}</span>
-                          {d.discrepancy && <span className="ad-warn" title="Deal and commission records disagree — check /api/admin/reconcile">⚠</span>}
-                        </td>
-                        <td>{d.status === 'invoiced' || d.status === 'paid' ? (
-                          <input className="ad-inv" defaultValue={d.invoice_ref || ''} placeholder="INV-###" disabled={statusBusy === d.id} onBlur={(e) => { if (e.target.value !== (d.invoice_ref || '')) setStatus(d.id, d.status, e.target.value); }} />
-                        ) : <span className="ad-sm">—</span>}</td>
-                        <td>
-                          {next && <button className="ad-mini" disabled={statusBusy === d.id} onClick={() => setStatus(d.id, next)}>{statusBusy === d.id ? 'Saving…' : `→ ${STATUS_LABEL[next]}`}</button>}
-                          {statusErr?.id === d.id && <div className="ad-sm err">{statusErr.message}</div>}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

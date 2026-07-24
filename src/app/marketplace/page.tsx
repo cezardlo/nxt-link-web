@@ -248,6 +248,13 @@ export default function MarketplacePage() {
   const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
   const [drawer, setDrawer] = useState(false); // mobile filter drawer
+  // Session expired (or never signed in) vs a genuinely empty catalog — the
+  // listings API returns 401 + code:'auth_required' when the session cookie
+  // is gone (audit: marketplace grid Critical #1). Distinguished by response
+  // shape, never by array length, so a real empty catalog still shows the
+  // normal empty state below.
+  const [authError, setAuthError] = useState(false);
+  const [authNext, setAuthNext] = useState('/marketplace');
 
   // Departments (functional groups) for the "Browse by department" row.
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -401,15 +408,25 @@ export default function MarketplacePage() {
           fetch('/api/marketplace/listings'),
           fetch('/api/marketplace/categories'),
         ]);
-        const data = await lRes.json();
-        // One malformed listing (jsonb {} where a list belongs) must degrade to
-        // empty, not white-screen the whole marketplace — coerce at ingestion.
-        const asList = (v: unknown): string[] => (Array.isArray(v) ? v : []);
-        setCards((data.listings || []).map((c: Card) => ({
-          ...c,
-          best_for: asList(c.best_for), industries: asList(c.industries),
-          availability: asList(c.availability), service_areas: asList(c.service_areas),
-        })));
+        const data = await lRes.json().catch(() => null);
+        if (lRes.status === 401 && data?.code === 'auth_required') {
+          // Walled — session gone. Not "zero vendors": show a re-login state,
+          // never the empty-catalog message. Preserve path+query so sign-in
+          // returns the buyer to exactly this search/filter state.
+          setAuthError(true);
+          setAuthNext(window.location.pathname + window.location.search);
+          setCards([]);
+        } else {
+          setAuthError(false);
+          // One malformed listing (jsonb {} where a list belongs) must degrade to
+          // empty, not white-screen the whole marketplace — coerce at ingestion.
+          const asList = (v: unknown): string[] => (Array.isArray(v) ? v : []);
+          setCards(((data && data.listings) || []).map((c: Card) => ({
+            ...c,
+            best_for: asList(c.best_for), industries: asList(c.industries),
+            availability: asList(c.availability), service_areas: asList(c.service_areas),
+          })));
+        }
         try {
           const cat = await cRes.json();
           setDepartments((cat.departments || []).map((d: { fg: string; label_en: string; label_es: string; is_service: boolean }) => ({ fg: d.fg, label_en: d.label_en, label_es: d.label_es, is_service: d.is_service })));
@@ -548,7 +565,7 @@ export default function MarketplacePage() {
   const compareCards = useMemo(() => cards.filter((c) => compare.has(c.id)).slice(0, 5), [cards, compare]);
   const activeFilterCount = (fDept ? 1 : 0) + fCategory.length + fIndustry.length + fPrice.length + fAvail.length + fLocation.length +
     [fPilot, fEmergency, fVerified, fLocal, fFast].filter(Boolean).length;
-  const marketplaceEmpty = !loading && cards.length === 0;
+  const marketplaceEmpty = !loading && !authError && cards.length === 0;
 
   // "Storefront" home state: nothing searched or filtered yet → show discovery
   // sections (category tiles, vendors, post-a-need banner) above the listings.
@@ -588,7 +605,7 @@ export default function MarketplacePage() {
       </div>
 
       {/* Storefront hero (home state only) */}
-      {pristine && !loading && (
+      {pristine && !loading && !authError && (
         <div className="mk-hero">
           <h1>{lang === 'es' ? 'El marketplace de la cadena de suministro industrial' : 'The industrial supply chain marketplace'}</h1>
           <p>{lang === 'es'
@@ -812,6 +829,8 @@ export default function MarketplacePage() {
 
             {loading ? (
               <div className="mk-skeletons">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="mk-skel" />)}</div>
+            ) : authError ? (
+              <SessionExpired lang={lang} next={authNext} />
             ) : marketplaceEmpty ? (
               <EmptyMarketplace lang={lang} />
             ) : results.length === 0 ? (
@@ -966,6 +985,25 @@ function SolutionsPanel({ lang, onPick, starters }: { lang: Lang; onPick: (p: st
         {starters.map((s) => <button key={s} onClick={() => onPick(s)}>{s}</button>)}
       </div>
       <Link className="mk-asknxt" href="/intake">{es ? 'Describe tu proyecto → obtén una lista de NXT//LINK' : 'Describe your project → get an NXT//LINK shortlist'}</Link>
+    </div>
+  );
+}
+
+// Session expired mid-browse (or a stale/expired cookie survived the
+// middleware's cheap presence check) — the listings API's real server-side
+// getUser() check caught it. This is NOT "zero vendors": distinct copy, and
+// a Sign in link that carries the buyer straight back to where they were.
+function SessionExpired({ lang, next }: { lang: Lang; next: string }) {
+  const es = lang === 'es';
+  return (
+    <div className="mk-empty big">
+      <b>{es ? 'Tu sesión terminó' : 'Your session ended'}</b>
+      <p>{es
+        ? 'Por tu seguridad cerramos tu sesión tras un tiempo de inactividad. Inicia sesión de nuevo para seguir viendo el marketplace.'
+        : "For your security you were signed out after a period of inactivity. Sign in again to keep browsing the marketplace."}</p>
+      <div className="mk-emptyactions">
+        <Link className="mk-quote" href={`/login?next=${encodeURIComponent(next)}`}>{es ? 'Iniciar sesión' : 'Sign in'}</Link>
+      </div>
     </div>
   );
 }
