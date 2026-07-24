@@ -9,7 +9,7 @@ import { IBM_Plex_Sans } from 'next/font/google';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
 import VendorNav from '@/components/VendorNav';
-import { Megaphone, MessageCircle } from 'lucide-react';
+import { Megaphone, MessageCircle, Inbox, Eye, Reply, Trophy, XCircle, type LucideIcon } from 'lucide-react';
 import { MatchReasons, MATCH_REASONS_CSS } from '@/components/marketplace/MatchReasons';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
 import { calculateFee } from '@/lib/fees/engine';
@@ -150,6 +150,9 @@ export default function VendorLeadsPage() {
   const t = T[lang];
   const REQ_LABEL: Record<string, string> = { quote: t.reqQuote, contact_sales: t.reqSales, demo: t.reqDemo, pilot: t.reqPilot, question: t.reqQuestion };
   const STATUS_LABEL: Record<string, string> = { new: t.stNew, viewed: t.stViewed, responded: t.stResponded, won: t.stWon, lost: t.stLost };
+  // Color-coded by meaning (Design System v1.0 palette) + a small icon per
+  // status — visual only, the status VALUES themselves are untouched.
+  const STATUS_ICON: Record<string, LucideIcon> = { new: Inbox, viewed: Eye, responded: Reply, won: Trophy, lost: XCircle };
   const PILOT_KIND_LABEL: Record<string, string> = { demo: t.pkDemo, pilot: t.pkPilot, site_visit: t.pkSiteVisit };
   const PILOT_STATUS_LABEL: Record<string, string> = { proposed: t.psProposed, scheduled: t.psScheduled, in_progress: t.psInProgress, completed: t.psCompleted, cancelled: t.psCancelled };
   const PILOT_OUTCOME_LABEL: Record<string, string> = { passed: t.poPassed, failed: t.poFailed, inconclusive: t.poInconclusive };
@@ -613,9 +616,15 @@ export default function VendorLeadsPage() {
                   </div>
 
                   <div className="ld-actions">
-                    {STATUSES.filter((st) => st !== l.status).map((st) => (
-                      <button key={st} onClick={() => setStatus(l.id, st)}>{t.mark} {STATUS_LABEL[st] || st}</button>
-                    ))}
+                    {STATUSES.filter((st) => st !== l.status).map((st) => {
+                      const StatusIcon = STATUS_ICON[st];
+                      return (
+                        <button key={st} className={'ld-act ld-act-' + st} onClick={() => setStatus(l.id, st)}>
+                          {StatusIcon && <StatusIcon size={13} strokeWidth={2} aria-hidden="true" />}
+                          {t.mark} {STATUS_LABEL[st] || st}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
@@ -675,6 +684,8 @@ const CSS = `
 .ld-status{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:99px;background:var(--spec-surface,#EFEDF5);color:var(--spec-ink,#141320);}
 .ld-reqtype{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:99px;background:#E9F7F0;color:#1F7A54;}
 .ld-status.new{background:rgba(108,92,224,.1);color:var(--spec-violet-deep,#4A3DB0);}
+.ld-status.viewed{background:var(--spec-surface,#EFEDF5);color:var(--spec-slate,#3B3A4A);}
+.ld-status.responded{background:rgba(62,111,208,.1);color:#2F5AA8;}
 .ld-status.won{background:#E9F7F0;color:#1F7A54;}
 .ld-status.lost{background:#FBECEA;color:var(--spec-error,#CE4B43);}
 .ld-bundle{margin-top:12px;background:rgba(108,92,224,.05);border:1px solid rgba(108,92,224,.22);border-radius:12px;padding:12px 14px;}
@@ -770,6 +781,14 @@ const CSS = `
 .ld-chatrow input:focus{border-color:var(--spec-violet,#6C5CE0);box-shadow:0 0 0 3px rgba(108,92,224,.12);}
 .ld-qform select{font-family:inherit;font-size:14px;padding:10px 12px;border-radius:9px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-ink,#141320);outline:none;}
 .ld-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
-.ld-actions button{font-family:inherit;background:#fff;border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-ink,#141320);font-size:12px;border-radius:8px;padding:6px 11px;cursor:pointer;}
-.ld-actions button:hover{border-color:var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);}
+.ld-act{display:inline-flex;align-items:center;gap:6px;font-family:inherit;background:#fff;border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-ink,#141320);font-size:12px;font-weight:600;border-radius:8px;padding:7px 12px;min-height:30px;cursor:pointer;transition:filter .15s ease;}
+.ld-act:hover{filter:brightness(0.97);}
+/* Color-coded by meaning (Design System v1.0): neutral=viewed, violet=new,
+   blue=responded/in-progress, green=won, red=lost. Icon + label carry the
+   meaning too, so color is never the only cue (colorblind-safe). */
+.ld-act-new{background:rgba(108,92,224,.1);border-color:rgba(108,92,224,.35);color:var(--spec-violet-deep,#4A3DB0);}
+.ld-act-viewed{background:var(--spec-surface,#EFEDF5);border-color:var(--spec-border,#E2DFEC);color:var(--spec-slate,#3B3A4A);}
+.ld-act-responded{background:rgba(62,111,208,.1);border-color:rgba(62,111,208,.35);color:#2F5AA8;}
+.ld-act-won{background:#E9F7F0;border-color:rgba(47,158,106,.4);color:#1F7A54;}
+.ld-act-lost{background:#FBECEA;border-color:rgba(206,75,67,.35);color:var(--spec-error,#CE4B43);}
 `;
