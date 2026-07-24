@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { IBM_Plex_Sans } from 'next/font/google';
 import { levelAtLeast } from '@/components/marketplace/TrustBadges';
 import AddToCartButton from '@/components/cart/AddToCartButton';
-import { useLang } from '@/components/LanguageToggle';
+import { useLang, type Lang } from '@/components/LanguageToggle';
 import PublicHeader from '@/components/PublicHeader';
 
 // Design System v1.0 body font (Space Grotesk for headings is already
@@ -41,7 +41,7 @@ interface Card {
   functional_group?: string | null;
 }
 
-interface Department { fg: string; label_en: string; is_service: boolean }
+interface Department { fg: string; label_en: string; label_es: string; is_service: boolean }
 
 // Price ranges make buyers anchor on the TOP number ("$13–17" reads as "$17").
 // Show the floor with a "From" instead; the quote settles the real number.
@@ -63,6 +63,23 @@ const SORTS: Array<[Sort, string]> = [
   ['pilot', 'Pilot available first'],
   ['verified', 'Verified vendors first'],
 ];
+// Bilingual label lookups for this page's own fixed UI chrome (page copy
+// stays in inline `lang === 'es' ? … : …` / label-lookup form — the SAME
+// pattern this file already uses for PRICE_LABEL_EN/ES, AVAIL_LABEL_EN/ES,
+// and the filter-rail labels below — rather than introducing a second i18n
+// mechanism into one file).
+const SORT_LABEL_ES: Record<Sort, string> = {
+  best: 'Mejor coincidencia', recent: 'Agregado recientemente', lead: 'Respuesta más rápida',
+  pilot: 'Piloto disponible primero', verified: 'Proveedores verificados primero',
+};
+const TAB_LABEL_EN: Record<Tab, string> = { all: 'Everything', product: 'Products', service: 'Services', solution: 'Solutions' };
+const TAB_LABEL_ES: Record<Tab, string> = { all: 'Todo', product: 'Productos', service: 'Servicios', solution: 'Soluciones' };
+// Matches the exact ES wording already used for these same concepts on
+// /marketplace/[kind]/[id] (kindProduct/kindService/pilotAvailable/warranty/
+// leadTime/response/emergency) — kept lowercase like the EN source ("product"/
+// "service"); the badge/kind-pill CSS applies text-transform:uppercase.
+const KIND_LABEL_ES: Record<'product' | 'service', string> = { product: 'producto', service: 'servicio' };
+const SUGGEST_TYPE_LABEL_ES: Record<string, string> = { product: 'Producto', service: 'Servicio', category: 'Categoría' };
 
 // A few starting points for the Solutions tab (problem-first discovery). These
 // set the search box; results still come only from real vendor data.
@@ -395,7 +412,7 @@ export default function MarketplacePage() {
         })));
         try {
           const cat = await cRes.json();
-          setDepartments((cat.departments || []).map((d: { fg: string; label_en: string; is_service: boolean }) => ({ fg: d.fg, label_en: d.label_en, is_service: d.is_service })));
+          setDepartments((cat.departments || []).map((d: { fg: string; label_en: string; label_es: string; is_service: boolean }) => ({ fg: d.fg, label_en: d.label_en, label_es: d.label_es, is_service: d.is_service })));
         } catch { /* departments optional */ }
       } catch { setCards([]); }
       setLoading(false);
@@ -565,16 +582,18 @@ export default function MarketplacePage() {
           row directly underneath instead of being dropped. */}
       <PublicHeader lang={lang} onLangChange={setLang} />
       <div className="mk-subnav">
-        <button className={'mk-pill' + (savedOnly ? ' on' : '')} onClick={() => setSavedOnly((v) => !v)}>Saved ({saved.size})</button>
-        <Link className="mk-pill" href="/buyer">My dashboard</Link>
-        <Link className="mk-pill" href="/vendor-login">For vendors</Link>
+        <button className={'mk-pill' + (savedOnly ? ' on' : '')} onClick={() => setSavedOnly((v) => !v)}>{lang === 'es' ? 'Guardado' : 'Saved'} ({saved.size})</button>
+        <Link className="mk-pill" href="/buyer">{lang === 'es' ? 'Mi panel' : 'My dashboard'}</Link>
+        <Link className="mk-pill" href="/vendor-login">{lang === 'es' ? 'Para proveedores' : 'For vendors'}</Link>
       </div>
 
       {/* Storefront hero (home state only) */}
       {pristine && !loading && (
         <div className="mk-hero">
-          <h1>The industrial supply chain marketplace</h1>
-          <p>Technology, hardware, equipment, and services for warehouses, manufacturers, and logistics — discover, compare, request quotes, pilot, and close the deal through NXT{'//'}LINK.</p>
+          <h1>{lang === 'es' ? 'El marketplace de la cadena de suministro industrial' : 'The industrial supply chain marketplace'}</h1>
+          <p>{lang === 'es'
+            ? <>Tecnología, hardware, equipo y servicios para almacenes, fabricantes y logística — descubre, compara, solicita cotizaciones, prueba con un piloto y cierra el trato a través de NXT{'//'}LINK.</>
+            : <>Technology, hardware, equipment, and services for warehouses, manufacturers, and logistics — discover, compare, request quotes, pilot, and close the deal through NXT{'//'}LINK.</>}</p>
         </div>
       )}
 
@@ -585,7 +604,9 @@ export default function MarketplacePage() {
           <input
             ref={searchRef}
             className="mk-search"
-            placeholder="Search products, services, or a problem — e.g. “forklift maintenance El Paso”, “reduce downtime”"
+            placeholder={lang === 'es'
+              ? 'Busca productos, servicios o un problema — ej. “mantenimiento de montacargas El Paso”, “reducir tiempo de inactividad”'
+              : 'Search products, services, or a problem — e.g. “forklift maintenance El Paso”, “reduce downtime”'}
             value={q}
             onChange={(e) => { setQ(e.target.value); setShowSug(true); }}
             onFocus={() => setShowSug(true)}
@@ -596,7 +617,7 @@ export default function MarketplacePage() {
             aria-controls="mk-suggest"
             autoComplete="off"
           />
-          {q && <button className="mk-clearq" onClick={() => { setQ(''); setSuggests([]); }} aria-label="Clear search">×</button>}
+          {q && <button className="mk-clearq" onClick={() => { setQ(''); setSuggests([]); }} aria-label={lang === 'es' ? 'Borrar búsqueda' : 'Clear search'}>×</button>}
           {showSug && suggests.length > 0 && (
             <ul className="mk-suggest" id="mk-suggest" role="listbox">
               {suggests.map((s) => (
@@ -607,7 +628,7 @@ export default function MarketplacePage() {
                   >
                     <SearchIcon />
                     <span className="mk-sglabel">{s.label}</span>
-                    <span className={`mk-sgtag t-${s.type}`}>{s.type === 'product' ? 'Product' : s.type === 'service' ? 'Service' : 'Category'}</span>
+                    <span className={`mk-sgtag t-${s.type}`}>{lang === 'es' ? (SUGGEST_TYPE_LABEL_ES[s.type] || 'Categoría') : (s.type === 'product' ? 'Product' : s.type === 'service' ? 'Service' : 'Category')}</span>
                   </button>
                 </li>
               ))}
@@ -619,11 +640,11 @@ export default function MarketplacePage() {
       {/* Browse by department — the primary functional aisles (Grainger/Amazon style) */}
       {liveDepartments.length > 0 && (
         <div className="mk-deptbar">
-          <button className={`mk-dept ${!fDept ? 'on' : ''}`} onClick={() => setFDept('')}>All departments</button>
+          <button className={`mk-dept ${!fDept ? 'on' : ''}`} onClick={() => setFDept('')}>{lang === 'es' ? 'Todos los departamentos' : 'All departments'}</button>
           {liveDepartments.map((d) => (
             <button key={d.fg} className={`mk-dept ${fDept === d.fg ? 'on' : ''} ${d.is_service ? 'svc' : ''}`}
               onClick={() => setFDept(fDept === d.fg ? '' : d.fg)}>
-              {d.label_en}<span className="mk-deptn">{deptCounts.get(d.fg)}</span>
+              {(lang === 'es' ? d.label_es : d.label_en) || d.label_en}<span className="mk-deptn">{deptCounts.get(d.fg)}</span>
             </button>
           ))}
         </div>
@@ -634,13 +655,13 @@ export default function MarketplacePage() {
         <div className="mk-home">
           {homeCategories.length > 0 && (
             <section className="mk-homesec">
-              <h2>Browse by category</h2>
+              <h2>{lang === 'es' ? 'Explorar por categoría' : 'Browse by category'}</h2>
               <div className="mk-cattiles">
                 {homeCategories.map(([cat, n]) => (
                   <button key={cat} className="mk-cattile" onClick={() => setFCategory([cat])}>
                     <span className="mk-catinit">{cat.slice(0, 1).toUpperCase()}</span>
                     <b>{cat}</b>
-                    <small>{n} listing{n === 1 ? '' : 's'}</small>
+                    <small>{n} {lang === 'es' ? (n === 1 ? 'publicación' : 'publicaciones') : `listing${n === 1 ? '' : 's'}`}</small>
                   </button>
                 ))}
               </div>
@@ -649,15 +670,17 @@ export default function MarketplacePage() {
 
           <section className="mk-rfq">
             <div>
-              <b>Can&apos;t find what you need?</b>
-              <p>Describe your problem once — NXT{'//'}LINK matches vendors and they quote you through the platform.</p>
+              <b>{lang === 'es' ? '¿No encuentras lo que necesitas?' : "Can't find what you need?"}</b>
+              <p>{lang === 'es'
+                ? <>Describe tu problema una vez — NXT{'//'}LINK conecta proveedores y ellos te cotizan a través de la plataforma.</>
+                : <>Describe your problem once — NXT{'//'}LINK matches vendors and they quote you through the platform.</>}</p>
             </div>
-            <Link href="/intake" className="mk-rfqbtn">Post a request</Link>
+            <Link href="/intake" className="mk-rfqbtn">{lang === 'es' ? 'Publicar una solicitud' : 'Post a request'}</Link>
           </section>
 
           {homeVendors.length > 0 && (
             <section className="mk-homesec">
-              <h2>Featured vendors</h2>
+              <h2>{lang === 'es' ? 'Proveedores destacados' : 'Featured vendors'}</h2>
               <div className="mk-vstrip">
                 {homeVendors.map((v) => (
                   <Link key={v.id} href={`/marketplace/vendor/${v.id}`} className="mk-vtile">
@@ -665,7 +688,7 @@ export default function MarketplacePage() {
                     <div>
                       <b>{v.name}</b>
                       <small>
-                        {typeof v.rating === 'number' ? `★ ${v.rating.toFixed(1)} · ` : ''}{v.count} listing{v.count === 1 ? '' : 's'}
+                        {typeof v.rating === 'number' ? `★ ${v.rating.toFixed(1)} · ` : ''}{v.count} {lang === 'es' ? (v.count === 1 ? 'publicación' : 'publicaciones') : `listing${v.count === 1 ? '' : 's'}`}
                       </small>
                     </div>
                   </Link>
@@ -674,41 +697,41 @@ export default function MarketplacePage() {
             </section>
           )}
 
-          <h2 className="mk-allhead">All listings</h2>
+          <h2 className="mk-allhead">{lang === 'es' ? 'Todas las publicaciones' : 'All listings'}</h2>
         </div>
       )}
 
       {/* Tabs */}
       <div className="mk-tabsrow">
         <div className="mk-tabs">
-          {([['all', 'Everything'], ['product', 'Products'], ['service', 'Services'], ['solution', 'Solutions']] as Array<[Tab, string]>).map(([k, label]) => (
-            <button key={k} className={'mk-tab' + (tab === k ? ' on' : '')} onClick={() => { setTab(k); resetFilters(); }}>{label}</button>
+          {(['all', 'product', 'service', 'solution'] as Tab[]).map((k) => (
+            <button key={k} className={'mk-tab' + (tab === k ? ' on' : '')} onClick={() => { setTab(k); resetFilters(); }}>{(lang === 'es' ? TAB_LABEL_ES : TAB_LABEL_EN)[k]}</button>
           ))}
         </div>
         <div className="mk-tabsr">
           <button className="mk-filterbtn" onClick={() => setDrawer(true)}>
-            <FilterIcon /> Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}
+            <FilterIcon /> {lang === 'es' ? 'Filtros' : 'Filters'}{activeFilterCount ? ` (${activeFilterCount})` : ''}
           </button>
           <label className="mk-sort">
-            Sort
+            {lang === 'es' ? 'Ordenar' : 'Sort'}
             <select value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
-              {SORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              {SORTS.map(([v, l]) => <option key={v} value={v}>{lang === 'es' ? SORT_LABEL_ES[v] : l}</option>)}
             </select>
           </label>
         </div>
       </div>
 
       {tab === 'solution' ? (
-        <SolutionsPanel onPick={(p) => { setQ(p); setTab('all'); }} starters={PROBLEM_STARTERS} />
+        <SolutionsPanel lang={lang} onPick={(p) => { setQ(p); setTab('all'); }} starters={PROBLEM_STARTERS} />
       ) : (
         <div className="mk-layout">
           {/* Left filter rail (desktop) + drawer (mobile) */}
           <aside className={'mk-rail' + (drawer ? ' open' : '')}>
             <div className="mk-railhead">
-              <b>Filters</b>
+              <b>{lang === 'es' ? 'Filtros' : 'Filters'}</b>
               <div>
-                {activeFilterCount > 0 && <button className="mk-clear" onClick={resetFilters}>Clear all</button>}
-                <button className="mk-railclose" onClick={() => setDrawer(false)} aria-label="Close filters">Done</button>
+                {activeFilterCount > 0 && <button className="mk-clear" onClick={resetFilters}>{lang === 'es' ? 'Limpiar todo' : 'Clear all'}</button>}
+                <button className="mk-railclose" onClick={() => setDrawer(false)} aria-label={lang === 'es' ? 'Cerrar filtros' : 'Close filters'}>{lang === 'es' ? 'Listo' : 'Done'}</button>
               </div>
             </div>
 
@@ -766,8 +789,10 @@ export default function MarketplacePage() {
           {/* Results */}
           <main className="mk-results">
             <div className="mk-count">
-              {loading ? 'Loading…' : `${results.length} ${tab === 'product' ? (results.length === 1 ? 'product' : 'products') : tab === 'service' ? (results.length === 1 ? 'service' : 'services') : (results.length === 1 ? 'result' : 'results')}`}
-              {q && !loading ? <> for <b>“{q}”</b></> : null}
+              {loading ? (lang === 'es' ? 'Cargando…' : 'Loading…') : lang === 'es'
+                ? `${results.length} ${tab === 'product' ? (results.length === 1 ? 'producto' : 'productos') : tab === 'service' ? (results.length === 1 ? 'servicio' : 'servicios') : (results.length === 1 ? 'resultado' : 'resultados')}`
+                : `${results.length} ${tab === 'product' ? (results.length === 1 ? 'product' : 'products') : tab === 'service' ? (results.length === 1 ? 'service' : 'services') : (results.length === 1 ? 'result' : 'results')}`}
+              {q && !loading ? <> {lang === 'es' ? 'para' : 'for'} <b>“{q}”</b></> : null}
             </div>
             {activeFilterCount > 0 && (
               <div className="mk-activechips">
@@ -788,15 +813,16 @@ export default function MarketplacePage() {
             {loading ? (
               <div className="mk-skeletons">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="mk-skel" />)}</div>
             ) : marketplaceEmpty ? (
-              <EmptyMarketplace />
+              <EmptyMarketplace lang={lang} />
             ) : results.length === 0 ? (
-              <NoResults q={q} savedOnly={savedOnly} suggestions={suggestions} onPick={setQ} onReset={() => { resetFilters(); setSavedOnly(false); }} />
+              <NoResults lang={lang} q={q} savedOnly={savedOnly} suggestions={suggestions} onPick={setQ} onReset={() => { resetFilters(); setSavedOnly(false); }} />
             ) : (
               <div className="mk-grid">
                 {results.map((c) => (
                   <ListingCard
                     key={c.id}
                     c={c}
+                    lang={lang}
                     saved={saved.has(c.id)}
                     inCompare={compare.has(c.id)}
                     onSave={() => handleSaveToggle(c)}
@@ -813,22 +839,27 @@ export default function MarketplacePage() {
       {compareCards.length > 0 && (
         <div className="mk-cbar">
           <span className="mk-cnames" title={compareCards.map((c) => c.name).join(' · ')}>
-            <b>{compareCards.length}</b> to compare: {compareCards.map((c) => c.name).join(' · ').slice(0, 70)}{compareCards.map((c) => c.name).join(' · ').length > 70 ? '…' : ''}
+            <b>{compareCards.length}</b> {lang === 'es' ? 'para comparar' : 'to compare'}: {compareCards.map((c) => c.name).join(' · ').slice(0, 70)}{compareCards.map((c) => c.name).join(' · ').length > 70 ? '…' : ''}
           </span>
-          <button className="mk-mini on" onClick={() => setShowCompare(true)} disabled={compareCards.length < 2}>Compare now</button>
-          <button className="mk-mini" onClick={() => compareCards.forEach((c) => toggleCompare(c.id))}>Clear</button>
+          <button className="mk-mini on" onClick={() => setShowCompare(true)} disabled={compareCards.length < 2}>{lang === 'es' ? 'Comparar ahora' : 'Compare now'}</button>
+          <button className="mk-mini" onClick={() => compareCards.forEach((c) => toggleCompare(c.id))}>{lang === 'es' ? 'Limpiar' : 'Clear'}</button>
         </div>
       )}
 
       {showCompare && compareCards.length >= 2 && (
-        <CompareModal cards={compareCards} onClose={() => setShowCompare(false)} />
+        <CompareModal cards={compareCards} lang={lang} onClose={() => setShowCompare(false)} />
       )}
     </div>
   );
 }
 
 // ---- sub-components ----
-function ListingCard({ c, saved, inCompare, onSave, onCompare }: { c: Card; saved: boolean; inCompare: boolean; onSave: () => void; onCompare: () => void }) {
+// Badge copy matches the exact ES wording already used for these same
+// concepts on /marketplace/[kind]/[id] (kindProduct/kindService/warranty/
+// pilotAvailable/leadTime/response/emergency) so a listing reads consistently
+// across the grid and its detail page.
+function ListingCard({ c, lang, saved, inCompare, onSave, onCompare }: { c: Card; lang: Lang; saved: boolean; inCompare: boolean; onSave: () => void; onCompare: () => void }) {
+  const es = lang === 'es';
   return (
     <div className="mk-card">
       <Link href={`/marketplace/${c.kind}/${c.id}`} className="mk-card-img">
@@ -838,19 +869,19 @@ function ListingCard({ c, saved, inCompare, onSave, onCompare }: { c: Card; save
       </Link>
       <div className="mk-card-body">
         <div className="mk-kindrow">
-          <span className={'mk-kind ' + c.kind}>{c.kind}</span>
+          <span className={'mk-kind ' + c.kind}>{es ? KIND_LABEL_ES[c.kind] : c.kind}</span>
           {levelAtLeast(c.vendor_verification_level, 'identity_verified')
-            ? <span className="mk-badge trust" title="This vendor's owner identity was verified by NXT//LINK">Verified identity</span>
-            : c.vendor_verified && <span className="mk-badge trust" title="This vendor's business was reviewed and approved by NXT//LINK">Verified</span>}
-          {levelAtLeast(c.vendor_verification_level, 'insurance_reviewed') && <span className="mk-badge trust" title="Proof of insurance on file with NXT//LINK">Insured</span>}
-          {levelAtLeast(c.vendor_verification_level, 'certifications_reviewed') && <span className="mk-badge cert" title="Industry certifications reviewed by NXT//LINK">Certified</span>}
-          {c.pilot?.available && <span className="mk-badge" title="You can test this before buying (pilot/demo available)">Pilot</span>}
-          {c.warranty_support?.warranty && <span className="mk-badge" title="Warranty details provided by the vendor">Warranty</span>}
-          {c.has_case_studies && <span className="mk-badge" title="Real customer results documented">Case study</span>}
-          {c.has_documents && <span className="mk-badge" title="Spec sheets / brochures attached">Docs</span>}
-          {isLocal(c) && <span className="mk-badge" title="Serves El Paso / Juárez locally">Local support</span>}
-          {isFast(c) && <span className="mk-badge" title="Fast turnaround stated by the vendor">Fast {c.kind === 'service' ? 'response' : 'lead time'}</span>}
-          {c.emergency_available && <span className="mk-badge urgent" title="24/7 emergency service available">24/7</span>}
+            ? <span className="mk-badge trust" title={es ? 'La identidad del dueño de este proveedor fue verificada por NXT//LINK' : "This vendor's owner identity was verified by NXT//LINK"}>{es ? 'Identidad verificada' : 'Verified identity'}</span>
+            : c.vendor_verified && <span className="mk-badge trust" title={es ? 'El negocio de este proveedor fue revisado y aprobado por NXT//LINK' : "This vendor's business was reviewed and approved by NXT//LINK"}>{es ? 'Verificado' : 'Verified'}</span>}
+          {levelAtLeast(c.vendor_verification_level, 'insurance_reviewed') && <span className="mk-badge trust" title={es ? 'Comprobante de seguro registrado con NXT//LINK' : 'Proof of insurance on file with NXT//LINK'}>{es ? 'Asegurado' : 'Insured'}</span>}
+          {levelAtLeast(c.vendor_verification_level, 'certifications_reviewed') && <span className="mk-badge cert" title={es ? 'Certificaciones de la industria revisadas por NXT//LINK' : 'Industry certifications reviewed by NXT//LINK'}>{es ? 'Certificado' : 'Certified'}</span>}
+          {c.pilot?.available && <span className="mk-badge" title={es ? 'Puedes probarlo antes de comprar (piloto/demo disponible)' : 'You can test this before buying (pilot/demo available)'}>{es ? 'Piloto' : 'Pilot'}</span>}
+          {c.warranty_support?.warranty && <span className="mk-badge" title={es ? 'Detalles de garantía proporcionados por el proveedor' : 'Warranty details provided by the vendor'}>{es ? 'Garantía' : 'Warranty'}</span>}
+          {c.has_case_studies && <span className="mk-badge" title={es ? 'Resultados reales de clientes documentados' : 'Real customer results documented'}>{es ? 'Caso de éxito' : 'Case study'}</span>}
+          {c.has_documents && <span className="mk-badge" title={es ? 'Fichas técnicas / folletos adjuntos' : 'Spec sheets / brochures attached'}>{es ? 'Documentos' : 'Docs'}</span>}
+          {isLocal(c) && <span className="mk-badge" title={es ? 'Atiende localmente El Paso / Juárez' : 'Serves El Paso / Juárez locally'}>{es ? 'Soporte local' : 'Local support'}</span>}
+          {isFast(c) && <span className="mk-badge" title={es ? 'Tiempo de respuesta rápido según el proveedor' : 'Fast turnaround stated by the vendor'}>{es ? `${c.kind === 'service' ? 'Respuesta' : 'Entrega'} rápida` : `Fast ${c.kind === 'service' ? 'response' : 'lead time'}`}</span>}
+          {c.emergency_available && <span className="mk-badge urgent" title={es ? 'Servicio de emergencia 24/7 disponible' : '24/7 emergency service available'}>24/7</span>}
         </div>
         <Link href={`/marketplace/${c.kind}/${c.id}`} className="mk-name">{c.name}</Link>
         <div className="mk-vendor">
@@ -862,19 +893,19 @@ function ListingCard({ c, saved, inCompare, onSave, onCompare }: { c: Card; save
         </div>
         {c.best_for.length > 0 && <div className="mk-tags">{c.best_for.slice(0, 3).map((t) => <span key={t}>{t}</span>)}</div>}
         <div className="mk-meta">
-          {c.kind === 'product' && c.lead_time && <span>Lead time: {c.lead_time}</span>}
-          {c.kind === 'service' && c.response_time && <span>Response: {c.response_time}</span>}
+          {c.kind === 'product' && c.lead_time && <span>{es ? 'Tiempo de entrega' : 'Lead time'}: {c.lead_time}</span>}
+          {c.kind === 'service' && c.response_time && <span>{es ? 'Respuesta' : 'Response'}: {c.response_time}</span>}
           {(c.pricing?.range || c.pricing?.model || c.pricing_model) && <span>{c.pricing?.range ? fromPrice(c.pricing.range) : (c.pricing?.model || c.pricing_model)}</span>}
         </div>
         <div className="mk-actions">
-          <button className={'mk-mini' + (saved ? ' on' : '')} onClick={onSave}>{saved ? 'Saved' : 'Save'}</button>
-          <button className={'mk-mini' + (inCompare ? ' on' : '')} onClick={onCompare}>{inCompare ? 'In compare' : 'Compare'}</button>
+          <button className={'mk-mini' + (saved ? ' on' : '')} onClick={onSave}>{saved ? (es ? 'Guardado' : 'Saved') : (es ? 'Guardar' : 'Save')}</button>
+          <button className={'mk-mini' + (inCompare ? ' on' : '')} onClick={onCompare}>{inCompare ? (es ? 'En comparación' : 'In compare') : (es ? 'Comparar' : 'Compare')}</button>
           <AddToCartButton
             listing={{ id: c.id, kind: c.kind, name: c.name, vendor_id: c.vendor_id || null, vendor_name: c.vendor_name || null }}
             className="mk-mini"
             activeClassName="on"
           />
-          <Link className="mk-quote" href={`/marketplace/${c.kind}/${c.id}#quote`}>Request quote</Link>
+          <Link className="mk-quote" href={`/marketplace/${c.kind}/${c.id}#quote`}>{es ? 'Solicitar cotización' : 'Request quote'}</Link>
         </div>
       </div>
     </div>
@@ -918,52 +949,78 @@ function FacetCheckGroup({ label, options, values, onToggle, labelFor }: { label
   );
 }
 
-function SolutionsPanel({ onPick, starters }: { onPick: (p: string) => void; starters: string[] }) {
+function SolutionsPanel({ lang, onPick, starters }: { lang: Lang; onPick: (p: string) => void; starters: string[] }) {
+  const es = lang === 'es';
   return (
     <div className="mk-solutions">
-      <h2>Describe the outcome you need</h2>
-      <p>Solutions bundle the right products and services for a goal. Tell NXT//LINK the problem and we build a comparable shortlist — or start from a common goal below.</p>
+      <h2>{es ? 'Describe el resultado que necesitas' : 'Describe the outcome you need'}</h2>
+      <p>{es
+        ? <>Las soluciones combinan los productos y servicios adecuados para un objetivo. Dile a NXT{'//'}LINK el problema y armamos una lista comparable — o empieza con un objetivo común abajo.</>
+        : <>Solutions bundle the right products and services for a goal. Tell NXT{'//'}LINK the problem and we build a comparable shortlist — or start from a common goal below.</>}</p>
+      {/* Starter chips stay in English on purpose: clicking one sets this
+          exact text as the search query against English-only listing data
+          (relevance() matches name/category/best_for/industries verbatim) —
+          translating the label would also translate the query and silently
+          break the match. Visual/i18n only per task scope; not a copy gap. */}
       <div className="mk-starters">
         {starters.map((s) => <button key={s} onClick={() => onPick(s)}>{s}</button>)}
       </div>
-      <Link className="mk-asknxt" href="/intake">Describe your project → get an NXT//LINK shortlist</Link>
+      <Link className="mk-asknxt" href="/intake">{es ? 'Describe tu proyecto → obtén una lista de NXT//LINK' : 'Describe your project → get an NXT//LINK shortlist'}</Link>
     </div>
   );
 }
 
-function EmptyMarketplace() {
+function EmptyMarketplace({ lang }: { lang: Lang }) {
+  const es = lang === 'es';
   return (
     <div className="mk-empty big">
-      <b>No published listings yet</b>
-      <p>Vendors are still building their storefronts. Check back soon, or tell NXT//LINK what you need and we&apos;ll source it.</p>
+      <b>{es ? 'Aún no hay publicaciones' : 'No published listings yet'}</b>
+      <p>{es ? 'Los proveedores todavía están armando sus escaparates. Vuelve pronto, o dile a NXT//LINK qué necesitas y lo buscamos.' : "Vendors are still building their storefronts. Check back soon, or tell NXT//LINK what you need and we'll source it."}</p>
       <div className="mk-emptyactions">
-        <Link className="mk-quote" href="/intake">Ask NXT//LINK to find it</Link>
-        <Link className="mk-mini" href="/vendor-login">Are you a vendor? List here</Link>
+        <Link className="mk-quote" href="/intake">{es ? 'Pide a NXT//LINK que lo encuentre' : 'Ask NXT//LINK to find it'}</Link>
+        <Link className="mk-mini" href="/vendor-login">{es ? '¿Eres proveedor? Publica aquí' : 'Are you a vendor? List here'}</Link>
       </div>
     </div>
   );
 }
 
-function NoResults({ q, savedOnly, suggestions, onPick, onReset }: { q: string; savedOnly: boolean; suggestions: string[]; onPick: (v: string) => void; onReset: () => void }) {
+function NoResults({ lang, q, savedOnly, suggestions, onPick, onReset }: { lang: Lang; q: string; savedOnly: boolean; suggestions: string[]; onPick: (v: string) => void; onReset: () => void }) {
+  const es = lang === 'es';
   return (
     <div className="mk-empty big">
-      <b>No matches{q ? ` for “${q}”` : ''}</b>
-      <p>{savedOnly ? 'Nothing saved matches these filters.' : 'Try fewer filters, or explore these:'}</p>
+      <b>{es ? 'Sin coincidencias' : 'No matches'}{q ? ` ${es ? 'para' : 'for'} “${q}”` : ''}</b>
+      <p>{savedOnly ? (es ? 'Nada guardado coincide con estos filtros.' : 'Nothing saved matches these filters.') : (es ? 'Prueba con menos filtros, o explora estos:' : 'Try fewer filters, or explore these:')}</p>
       {suggestions.length > 0 && (
         <div className="mk-starters">
           {suggestions.map((s) => <button key={s} onClick={() => { onReset(); onPick(s); }}>{s}</button>)}
         </div>
       )}
       <div className="mk-emptyactions">
-        <button className="mk-mini" onClick={onReset}>Clear filters</button>
-        <Link className="mk-quote" href="/intake">Ask NXT//LINK to find it</Link>
+        <button className="mk-mini" onClick={onReset}>{es ? 'Limpiar filtros' : 'Clear filters'}</button>
+        <Link className="mk-quote" href="/intake">{es ? 'Pide a NXT//LINK que lo encuentre' : 'Ask NXT//LINK to find it'}</Link>
       </div>
     </div>
   );
 }
 
-function CompareModal({ cards, onClose }: { cards: Card[]; onClose: () => void }) {
-  const rows: Array<[string, (c: Card) => string]> = [
+function CompareModal({ cards, lang, onClose }: { cards: Card[]; lang: Lang; onClose: () => void }) {
+  const es = lang === 'es';
+  const yes = es ? 'Sí' : 'Yes';
+  const rows: Array<[string, (c: Card) => string]> = es ? [
+    ['Proveedor', (c) => c.vendor_name],
+    ['Tipo', (c) => KIND_LABEL_ES[c.kind]],
+    ['Categoría', (c) => c.category || '—'],
+    ['Ideal para', (c) => c.best_for.join(', ') || '—'],
+    ['Industrias', (c) => c.industries.join(', ') || '—'],
+    ['Piloto / demo', (c) => (c.pilot?.available ? 'Disponible' : '—')],
+    ['Entrega / respuesta', (c) => c.lead_time || c.response_time || '—'],
+    ['Precio', (c) => c.pricing?.range || c.pricing?.model || c.pricing_model || 'Solicitar cotización'],
+    ['Garantía', (c) => c.warranty_support?.warranty || '—'],
+    ['Área de servicio', (c) => (c.service_areas || []).join(', ') || '—'],
+    ['Casos de éxito', (c) => (c.has_case_studies ? yes : '—')],
+    ['Documentos', (c) => (c.has_documents ? yes : '—')],
+    ['Verificado', (c) => (c.vendor_verified ? yes : '—')],
+  ] : [
     ['Vendor', (c) => c.vendor_name],
     ['Type', (c) => c.kind],
     ['Category', (c) => c.category || '—'],
@@ -974,14 +1031,14 @@ function CompareModal({ cards, onClose }: { cards: Card[]; onClose: () => void }
     ['Pricing', (c) => c.pricing?.range || c.pricing?.model || c.pricing_model || 'Request quote'],
     ['Warranty', (c) => c.warranty_support?.warranty || '—'],
     ['Service area', (c) => (c.service_areas || []).join(', ') || '—'],
-    ['Case studies', (c) => (c.has_case_studies ? 'Yes' : '—')],
-    ['Documents', (c) => (c.has_documents ? 'Yes' : '—')],
-    ['Verified', (c) => (c.vendor_verified ? 'Yes' : '—')],
+    ['Case studies', (c) => (c.has_case_studies ? yes : '—')],
+    ['Documents', (c) => (c.has_documents ? yes : '—')],
+    ['Verified', (c) => (c.vendor_verified ? yes : '—')],
   ];
   return (
     <div className="mk-modal" onClick={onClose}>
       <div className="mk-modal-in" onClick={(e) => e.stopPropagation()}>
-        <div className="mk-modal-head"><b>Compare {cards.length} listings</b><button onClick={onClose}>Close</button></div>
+        <div className="mk-modal-head"><b>{es ? `Comparar ${cards.length} publicaciones` : `Compare ${cards.length} listings`}</b><button onClick={onClose}>{es ? 'Cerrar' : 'Close'}</button></div>
         <div className="mk-ctable-wrap">
           <table className="mk-ctable">
             <thead><tr><th></th>{cards.map((c) => <th key={c.id}><Link href={`/marketplace/${c.kind}/${c.id}`}>{c.name}</Link></th>)}</tr></thead>
@@ -989,7 +1046,7 @@ function CompareModal({ cards, onClose }: { cards: Card[]; onClose: () => void }
               {rows.map(([label, get]) => (
                 <tr key={label}><td>{label}</td>{cards.map((c) => <td key={c.id}>{get(c)}</td>)}</tr>
               ))}
-              <tr><td></td>{cards.map((c) => <td key={c.id}><Link className="mk-quote" href={`/marketplace/${c.kind}/${c.id}#quote`}>Request quote</Link></td>)}</tr>
+              <tr><td></td>{cards.map((c) => <td key={c.id}><Link className="mk-quote" href={`/marketplace/${c.kind}/${c.id}#quote`}>{es ? 'Solicitar cotización' : 'Request quote'}</Link></td>)}</tr>
             </tbody>
           </table>
         </div>

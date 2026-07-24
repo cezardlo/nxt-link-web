@@ -15,10 +15,17 @@ import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
 import OAuthButton from '@/components/OAuthButton';
 import { GOOGLE_TERMS_ERROR_MSG, bilingualCopy, ANY_OAUTH_ENABLED } from '@/lib/auth/oauth';
+import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
 
 // Design System v1.0 reskin (2026-07-23): light warm-white + violet, matching
 // /vendor-signup. Visual/CSS only — every handler, state, and OAuth flag
 // branch above is unchanged.
+// EN/ES (2026-07-23): added the toggle + a page-local T dictionary, matching
+// /signup's pattern exactly (same LanguageToggle/useLang, same `lang={lang}`
+// threading into GoogleAuthButton/OAuthButton so their own labels + bilingual
+// errors switch too — previously hardcoded `lang="en"`, and the inline
+// English-then-italic-Spanish strings are now a real toggle). Copy/labels
+// only, no auth handler changed.
 const ibmPlexSans = IBM_Plex_Sans({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
@@ -26,7 +33,44 @@ const ibmPlexSans = IBM_Plex_Sans({
   display: 'swap',
 });
 
+const T: Record<Lang, Record<string, string>> = {
+  en: {
+    forVendors: 'For vendors',
+    signInTitle: 'Sign in to your portal', signUpTitle: 'Create your vendor account',
+    signInSub: 'Manage your profile, brochures, and videos.',
+    signUpSub: 'Manage your NXT//LINK profile — the details you already registered can be linked automatically.',
+    sent: 'Check your email to confirm your account, then sign in.',
+    orEmail: 'or continue with email',
+    email: 'Email', password: 'Password',
+    pleaseWait: 'Please wait…', signIn: 'Sign in', createAccount: 'Create account',
+    newHere: 'New here?', createAnAccount: 'Create an account',
+    alreadyRegistered: 'Already registered?',
+    newVendor: 'New vendor? Quick signup — under a minute, no password. →',
+    agreeStart: 'I agree to the', terms: 'Terms of Service', and: 'and', privacy: 'Privacy Policy',
+    errAgree: 'Please accept the Terms of Service and Privacy Policy.',
+    errGeneric: 'Something went wrong',
+  },
+  es: {
+    forVendors: 'Para proveedores',
+    signInTitle: 'Inicia sesión en tu portal', signUpTitle: 'Crea tu cuenta de proveedor',
+    signInSub: 'Administra tu perfil, folletos y videos.',
+    signUpSub: 'Administra tu perfil de NXT//LINK — los datos que ya registraste se pueden vincular automáticamente.',
+    sent: 'Revisa tu correo para confirmar tu cuenta y luego inicia sesión.',
+    orEmail: 'o continúa con correo',
+    email: 'Correo', password: 'Contraseña',
+    pleaseWait: 'Un momento…', signIn: 'Iniciar sesión', createAccount: 'Crear cuenta',
+    newHere: '¿Nuevo aquí?', createAnAccount: 'Crea una cuenta',
+    alreadyRegistered: '¿Ya estás registrado?',
+    newVendor: '¿Nuevo proveedor? Registro rápido — menos de un minuto, sin contraseña. →',
+    agreeStart: 'Acepto los', terms: 'Términos de Servicio', and: 'y el', privacy: 'Aviso de Privacidad',
+    errAgree: 'Por favor acepta los Términos de Servicio y el Aviso de Privacidad.',
+    errGeneric: 'Algo salió mal',
+  },
+};
+
 export default function VendorLoginPage() {
+  const [lang, setLang] = useLang();
+  const t = T[lang];
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -41,14 +85,15 @@ export default function VendorLoginPage() {
   useEffect(() => {
     try {
       if (new URLSearchParams(window.location.search).get('err') === 'google_terms') {
-        setError(bilingualCopy(GOOGLE_TERMS_ERROR_MSG));
+        setError(bilingualCopy(GOOGLE_TERMS_ERROR_MSG, lang));
       }
     } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function submit() {
     if (mode === 'signup' && !agree) {
-      setError('Please accept the Terms of Service and Privacy Policy. / Por favor acepta los Términos de Servicio y el Aviso de Privacidad.');
+      setError(t.errAgree);
       return;
     }
     setError(''); setBusy(true);
@@ -63,7 +108,7 @@ export default function VendorLoginPage() {
           body: JSON.stringify({ email, password, role: 'vendor', terms_accepted: agree }),
         });
         const j = await r.json().catch(() => ({}));
-        if (!j.ok) throw new Error(j.message || 'Something went wrong');
+        if (!j.ok) throw new Error(j.message || t.errGeneric);
         if (j.session) { window.location.href = '/vendor/portal'; return; }
         setSent(true);
       } else {
@@ -72,7 +117,7 @@ export default function VendorLoginPage() {
         window.location.href = '/vendor/portal';
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong');
+      setError(e instanceof Error ? e.message : t.errGeneric);
     } finally { setBusy(false); }
   }
 
@@ -83,10 +128,8 @@ export default function VendorLoginPage() {
     <label className="vl-agree">
       <input type="checkbox" checked={agree} onChange={(e) => { setAgree(e.target.checked); if (e.target.checked) setError(''); }} />
       <span>
-        I agree to the <a href="/terms" target="_blank" rel="noopener">Terms of Service</a> and{' '}
-        <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.{' '}
-        <i>Acepto los <a href="/terms" target="_blank" rel="noopener">Términos de Servicio</a> y el{' '}
-        <a href="/privacy" target="_blank" rel="noopener">Aviso de Privacidad</a>.</i>
+        {t.agreeStart} <a href="/terms" target="_blank" rel="noopener">{t.terms}</a> {t.and}{' '}
+        <a href="/privacy" target="_blank" rel="noopener">{t.privacy}</a>.
       </span>
     </label>
   );
@@ -97,15 +140,16 @@ export default function VendorLoginPage() {
       <div className="vl-mesh"><span className="o1" /><span className="o2" /></div>
       <nav className="vl-nav">
         <a className="vl-brand" href="/"><span className="vl-mk">N</span><b>NXT<i>//</i>LINK</b></a>
+        <LanguageToggle lang={lang} onChange={setLang} variant="light" />
       </nav>
       <main className="vl-wrap">
         <div className="vl-card">
-          <span className="vl-eyebrow">For vendors</span>
-          <h1>{mode === 'signin' ? 'Sign in to your portal' : 'Create your vendor account'}</h1>
-          <p className="vl-sub">{mode === 'signin' ? 'Manage your profile, brochures, and videos.' : 'Manage your NXT//LINK profile — the details you already registered can be linked automatically.'}</p>
+          <span className="vl-eyebrow">{t.forVendors}</span>
+          <h1>{mode === 'signin' ? t.signInTitle : t.signUpTitle}</h1>
+          <p className="vl-sub">{mode === 'signin' ? t.signInSub : t.signUpSub}</p>
 
           {sent ? (
-            <div className="vl-sent">Check your email to confirm your account, then sign in.</div>
+            <div className="vl-sent">{t.sent}</div>
           ) : (
             <>
               {error && <div className="vl-err">{error}</div>}
@@ -114,7 +158,7 @@ export default function VendorLoginPage() {
                 <div className="vl-oauth">
                   {mode === 'signup' && agreeCheckbox}
                   <GoogleAuthButton
-                    lang="en"
+                    lang={lang}
                     next="/vendor/portal"
                     from="/vendor-login"
                     lane={mode === 'signup' ? 'organic' : undefined}
@@ -125,7 +169,7 @@ export default function VendorLoginPage() {
                   />
                   <OAuthButton
                     provider="linkedin_oidc"
-                    lang="en"
+                    lang={lang}
                     next="/vendor/portal"
                     from="/vendor-login"
                     lane={mode === 'signup' ? 'organic' : undefined}
@@ -136,7 +180,7 @@ export default function VendorLoginPage() {
                   />
                   <OAuthButton
                     provider="azure"
-                    lang="en"
+                    lang={lang}
                     next="/vendor/portal"
                     from="/vendor-login"
                     lane={mode === 'signup' ? 'organic' : undefined}
@@ -145,22 +189,22 @@ export default function VendorLoginPage() {
                     className="vl-google"
                     bilingualErrors
                   />
-                  <div className="vl-or"><span>or continue with email · o continuar con correo</span></div>
+                  <div className="vl-or"><span>{t.orEmail}</span></div>
                 </div>
               )}
 
-              <label className="vl-field"><span>Email</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-              <label className="vl-field"><span>Password</span><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} /></label>
+              <label className="vl-field"><span>{t.email}</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+              <label className="vl-field"><span>{t.password}</span><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} /></label>
               {mode === 'signup' && !ANY_OAUTH_ENABLED && agreeCheckbox}
-              <button className="vl-btn" disabled={busy} onClick={submit}>{busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}</button>
+              <button className="vl-btn" disabled={busy} onClick={submit}>{busy ? t.pleaseWait : mode === 'signin' ? t.signIn : t.createAccount}</button>
             </>
           )}
 
           <div className="vl-switch">
-            {mode === 'signin' ? <>New here? <button onClick={() => { setMode('signup'); setError(''); }}>Create an account</button></>
-              : <>Already registered? <button onClick={() => { setMode('signin'); setError(''); }}>Sign in</button></>}
+            {mode === 'signin' ? <>{t.newHere} <button onClick={() => { setMode('signup'); setError(''); }}>{t.createAnAccount}</button></>
+              : <>{t.alreadyRegistered} <button onClick={() => { setMode('signin'); setError(''); }}>{t.signIn}</button></>}
           </div>
-          <a className="vl-alt" href="/vendor-signup">New vendor? Quick signup — under a minute, no password. / ¿Nuevo proveedor? Registro rápido — menos de un minuto, sin contraseña. →</a>
+          <a className="vl-alt" href="/vendor-signup">{t.newVendor}</a>
         </div>
       </main>
     </div>
@@ -176,7 +220,7 @@ const CSS = `
 .vl-mesh span{position:absolute;border-radius:50%;filter:blur(120px);}
 .vl-mesh .o1{width:480px;height:480px;background:var(--p);top:-120px;right:-100px;opacity:.1;}
 .vl-mesh .o2{width:420px;height:420px;background:#A99DF2;bottom:-140px;left:-100px;opacity:.1;}
-.vl-nav{position:relative;z-index:2;padding:18px 32px;}
+.vl-nav{position:relative;z-index:2;padding:18px 32px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
 .vl-brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:var(--ink);}
 .vl-mk{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--p),var(--pd));display:grid;place-items:center;font-family:var(--serif);font-weight:700;font-size:17px;color:#fff;}
 .vl-brand b{font-family:var(--serif);font-size:19px;font-weight:700;letter-spacing:-.02em;}.vl-brand i{color:var(--p);font-style:normal;}
