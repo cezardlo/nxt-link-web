@@ -7,6 +7,7 @@ import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getVendorSession, getOrCreateVendorProfile } from '@/lib/vendor/auth';
 import { sendMail } from '@/lib/mail';
 import { maskContacts } from '@/lib/guard';
+import { resolveDisplayedProtectedUntil } from '@/lib/fees/engine';
 
 const STATUSES = ['new', 'viewed', 'responded', 'won', 'lost', 'spam'];
 
@@ -36,8 +37,26 @@ export async function GET() {
   const names = new Map<string, string>();
   for (const r of pRes.data || []) names.set(r.id as string, r.name as string);
   for (const r of sRes.data || []) names.set(r.id as string, r.name as string);
-  const commissions = new Map<string, unknown>();
+  const commissions = new Map<string, Record<string, unknown>>();
   for (const c of cRes.data || []) commissions.set(c.quote_request_id as string, c);
+
+  // The REAL protected-introduction window is 12 months (PROTECTION_MONTHS,
+  // src/lib/fees/engine.ts). `commissions.protected_until` only ever holds a
+  // 90-day pre-acceptance quote-protection date (set at quote-send time by
+  // /api/vendor/quote + /api/vendor/proposals); once the buyer accepts,
+  // /api/buyer/quote-decision computes the real 12-month date but writes it
+  // onto the linked manual_deals row, not back onto commissions. So for any
+  // accepted lead, prefer manual_deals.protected_until (same source
+  // /vendor/deals already reads) — display-only, nothing written here.
+  const acceptedIds = rows.filter((l) => l.buyer_decision === 'accepted').map((l) => l.id as string);
+  const dealProtectedUntil = new Map<string, string>();
+  if (acceptedIds.length) {
+    const { data: dealRows } = await db.from('manual_deals')
+      .select('source_quote_id, protected_until').in('source_quote_id', acceptedIds);
+    for (const d of dealRows || []) {
+      if (d.source_quote_id && d.protected_until) dealProtectedUntil.set(d.source_quote_id as string, d.protected_until as string);
+    }
+  }
 
   // Buyer profile cards — shared ONLY for accepted deals (anti-circumvention).
   const acceptedEmails = Array.from(new Set(rows.filter((l) => l.buyer_decision === 'accepted' && l.email).map((l) => (l.email as string).toLowerCase())));
@@ -70,6 +89,17 @@ export async function GET() {
       // too — buyers self-disclose emails/phones in it.
       const revealed = l.buyer_decision === 'accepted';
       const message = !revealed && typeof l.message === 'string' ? maskContacts(l.message).masked : l.message;
+      const rawCommission = commissions.get(l.id as string) || null;
+      const commission = rawCommission
+        ? {
+            ...rawCommission,
+            protected_until: resolveDisplayedProtectedUntil({
+              buyerDecision: l.buyer_decision as string | null,
+              commissionProtectedUntil: rawCommission.protected_until as string | null,
+              dealProtectedUntil: dealProtectedUntil.get(l.id as string) ?? null,
+            }),
+          }
+        : null;
       let answers = l.answers as Record<string, unknown> | null;
       const items = answers && (answers as { items?: unknown[] }).items;
       if (!revealed && Array.isArray(items)) {
@@ -90,7 +120,7 @@ export async function GET() {
         contact_hidden: !revealed,
         buyer_profile: revealed && l.email ? profiles.get((l.email as string).toLowerCase()) || null : null,
         listing_name: names.get((l.product_id || l.service_id) as string) || null,
-        commission: commissions.get(l.id) || null,
+        commission,
         pilots: pilotsByQr.get(l.id) || [],
       };
     }),
