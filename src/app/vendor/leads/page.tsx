@@ -55,6 +55,12 @@ function estimateCommission(amount: number): number {
   if (!(amount > 0)) return 0;
   return calculateFee(amount).fee;
 }
+// Soft-warn (never blocks) when the final purchase amount looks like a typo
+// against the quoted amount — audit-flagged UX gap, display-only.
+function amountLooksOffFromQuote(entered: number, quoted: number | null | undefined): boolean {
+  if (!(entered > 0) || quoted == null || !(quoted > 0)) return false;
+  return Math.abs(entered - quoted) / quoted > 0.5;
+}
 
 const T: Record<Lang, Record<string, string>> = {
   en: {
@@ -79,6 +85,7 @@ const T: Record<Lang, Record<string, string>> = {
     commissionOnAmount: 'NXT//LINK commission on this amount:', commissionBilled: '— billed to you with 30-day terms.',
     recordPurchase: 'Record purchase', recording: 'Recording…',
     recordPurchaseRequired: 'Record the purchase (required — closes the deal)',
+    purAmountWarn: 'This is very different from your quoted amount — double-check before submitting.',
     dealClosed: 'Deal closed:', commissionPaid: 'Commission paid', commissionDue: 'Commission due',
     invoice: 'Invoice', due: 'due',
     scope: 'Scope:', successEquals: 'Success =', results: 'Results:',
@@ -122,6 +129,7 @@ const T: Record<Lang, Record<string, string>> = {
     commissionOnAmount: 'Comisión NXT//LINK sobre este monto:', commissionBilled: '— facturado a ti con términos de 30 días.',
     recordPurchase: 'Registrar compra', recording: 'Registrando…',
     recordPurchaseRequired: 'Registrar la compra (obligatorio — cierra el trato)',
+    purAmountWarn: 'Esto es muy diferente de tu monto cotizado — verifica antes de enviar.',
     dealClosed: 'Trato cerrado:', commissionPaid: 'Comisión pagada', commissionDue: 'Comisión pendiente',
     invoice: 'Factura', due: 'vence',
     scope: 'Alcance:', successEquals: 'Éxito =', results: 'Resultados:',
@@ -509,6 +517,9 @@ export default function VendorLeadsPage() {
                             <label>{t.invoiceNum}<input value={purForm.invoice_ref} onChange={(e) => setPurForm({ ...purForm, invoice_ref: e.target.value })} placeholder={t.invoicePh} /></label>
                           </div>
                           <div className="ld-qcom">{t.commissionOnAmount} <b>{money(estimateCommission(Number(purForm.amount)))}</b> <small>{t.commissionBilled}</small></div>
+                          {amountLooksOffFromQuote(Number(purForm.amount), l.quote_amount) && (
+                            <div className="ld-amountwarn" role="alert">{t.purAmountWarn}</div>
+                          )}
                           <div className="ld-qactions">
                             <button className="ld-qsend" disabled={purBusy || !(Number(purForm.amount) > 0)} onClick={() => recordPurchase(l.id)}>{purBusy ? t.recording : t.recordPurchase}</button>
                             <button className="ld-qcancel" onClick={() => setPurFor(null)}>{t.cancel}</button>
@@ -588,7 +599,7 @@ export default function VendorLeadsPage() {
                           <span>{t.messages}</span>
                           <span className="ld-live" aria-hidden="true"><i />{t.live}</span>
                         </div>
-                        <div className="ld-chatlist" ref={chatListRef}>
+                        <div className="ld-chatlist" ref={chatListRef} aria-live="polite" aria-atomic="false" aria-relevant="additions">
                           {chatMsgs.length === 0 && <div className="ld-chatempty">{t.noMessages}</div>}
                           {chatMsgs.map((m) => (
                             <div key={m.id} className={'ld-bubble ' + (m.sender === 'vendor' ? 'me' : 'them') + (m.pending ? ' pending' : '')}>
@@ -720,6 +731,7 @@ const CSS = `
 .ld-qform input,.ld-qform textarea{font-family:inherit;font-size:14px;padding:10px 12px;border-radius:9px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-ink,#141320);outline:none;resize:vertical;}
 .ld-qform input:focus,.ld-qform textarea:focus{border-color:var(--spec-violet,#6C5CE0);box-shadow:0 0 0 3px rgba(108,92,224,.12);}
 .ld-qcom{font-size:13px;color:var(--spec-ink,#141320);background:rgba(108,92,224,.06);border:1px solid rgba(108,92,224,.22);border-radius:9px;padding:9px 12px;}
+.ld-amountwarn{font-size:12.5px;font-weight:600;color:var(--spec-warning,#C68A28);background:#FBF3E7;border:1px solid rgba(198,138,40,.3);border-radius:9px;padding:8px 12px;}
 .ld-qcom b{color:var(--spec-violet-deep,#4A3DB0);}
 .ld-qcom small{color:var(--spec-text-2nd,#615F72);}
 .ld-qactions{display:flex;gap:9px;}

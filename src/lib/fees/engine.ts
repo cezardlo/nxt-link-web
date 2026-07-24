@@ -62,6 +62,41 @@ export const FREE_DEAL_CREDIT = 1250;
 /** Protected-introduction window (months) from the NXT//LINK introduction. */
 export const PROTECTION_MONTHS = 12;
 
+export interface DisplayedProtectedUntilInput {
+  /** quote_requests.buyer_decision — only 'accepted' unlocks the real 12-month date. */
+  buyerDecision: string | null | undefined;
+  /**
+   * commissions.protected_until — a 90-day PRE-acceptance quote-protection
+   * date, set at quote-send time (a real, separate rule; correct to show
+   * as-is for any lead that hasn't been accepted yet).
+   */
+  commissionProtectedUntil: string | null | undefined;
+  /**
+   * The linked manual_deals.protected_until, computed at acceptance time as
+   * signupless `now + PROTECTION_MONTHS` months (see
+   * /api/buyer/quote-decision) — the real 12-month promise. Pass null/undefined
+   * if no deal row exists yet.
+   */
+  dealProtectedUntil: string | null | undefined;
+}
+
+/**
+ * Pure resolver for what a vendor should see as "protected until" on a lead.
+ * `commissions.protected_until` is a 90-DAY figure that only ever covers the
+ * pre-acceptance quote window — it is never rewritten once the buyer accepts.
+ * The real, marketed protection is 12 MONTHS (PROTECTION_MONTHS above),
+ * computed and stored on the linked manual_deals row at acceptance. Once a
+ * lead is accepted, prefer that 12-month date so a vendor is never shown a
+ * date that makes their protection look expired early. No I/O — the caller
+ * looks up both dates; this only decides which one to display.
+ */
+export function resolveDisplayedProtectedUntil(input: DisplayedProtectedUntilInput): string | null {
+  if (input.buyerDecision === 'accepted' && input.dealProtectedUntil) {
+    return input.dealProtectedUntil;
+  }
+  return input.commissionProtectedUntil ?? null;
+}
+
 /** Standard first-deal fee credit for a normal invited vendor. */
 export const FIRST_DEAL_CREDIT_STANDARD = 250;
 /** First-deal fee credit for a manually-approved founding vendor. */
