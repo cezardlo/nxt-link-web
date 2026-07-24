@@ -23,6 +23,14 @@ export function useLang(initial: Lang = 'en'): [Lang, (l: Lang) => void] {
     const stored = readStoredLang();
     if (stored) setLang(stored);
   }, []);
+  // Screen-reader fix: the visible copy switches with `lang`, but the
+  // document's own language attribute never followed it, so assistive tech
+  // kept reading Spanish text with English pronunciation. Every page that
+  // switches language goes through this ONE hook, so setting it here (rather
+  // than per-page) fixes every screen at once.
+  useEffect(() => {
+    try { document.documentElement.lang = lang; } catch { /* no DOM (SSR) */ }
+  }, [lang]);
   const switchLang = (l: Lang) => {
     setLang(l);
     try { localStorage.setItem('nxt_lang', l); } catch { /* private mode */ }

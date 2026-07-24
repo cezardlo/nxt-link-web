@@ -22,16 +22,61 @@ import { safeRelativePath } from '@/lib/auth/oauth';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
 import OAuthButton from '@/components/OAuthButton';
 import { bilingualCopy, OAUTH_CONTINUE_AGREES_MSG, ANY_OAUTH_ENABLED } from '@/lib/auth/oauth';
+import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
 
 // Design System v1.0 reskin (2026-07-23): light warm-white + violet, matching
 // /signup and /vendor-signup. Visual/CSS only — every handler, state, and
 // OAuth flag branch above is unchanged.
+// EN/ES (2026-07-23): added the toggle + a page-local T dictionary, matching
+// /signup's pattern exactly (same LanguageToggle/useLang, same `lang={lang}`
+// threading into GoogleAuthButton/OAuthButton so their own labels + bilingual
+// errors switch too — previously hardcoded `lang="en"`). Copy/labels only, no
+// auth handler or safeRelativePath ?next logic changed.
 const ibmPlexSans = IBM_Plex_Sans({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
   variable: '--font-ibm-plex-sans-login',
   display: 'swap',
 });
+
+const T: Record<Lang, Record<string, string>> = {
+  en: {
+    signIn: 'Sign in', emailConfirmed: 'Email confirmed — sign in below.',
+    checkEmail: '✓ Check your email — we sent a secure sign-in link to', clickToSignIn: 'Click it to sign in (no password needed). It expires in a few minutes.',
+    sendingLink: 'Sending link…', emailMeLink: 'Email me a sign-in link',
+    emailPh: 'Email', passwordPh: 'Password',
+    hidePwSignIn: 'Hide password sign-in', preferPassword: 'Prefer a password? Sign in that way',
+    show: 'Show', hide: 'Hide',
+    notVerified: 'Your email is not verified yet. Check your inbox for the confirmation link',
+    sentAgain: ' — sent again.', or: ' or ', resendIt: 'resend it',
+    signingIn: 'Signing in…', forgotPassword: 'Forgot password?',
+    justExploring: 'Just exploring? Try the demo — no account needed',
+    entering: 'Entering…', demoBuyer: 'Demo as Buyer', demoVendor: 'Demo as Vendor',
+    newHere: 'New here? Create an account',
+    errEnterEmail: 'Enter your email first.',
+    errWrongLogin: 'Wrong email or password. Check your password — or use "Forgot password?" below.',
+    errSignIn: 'Could not sign in. Try again.', errMagicLink: 'Could not send the link. Try again.',
+    errDemo: 'Demo sign-in failed. Try again.',
+  },
+  es: {
+    signIn: 'Iniciar sesión', emailConfirmed: 'Correo confirmado — inicia sesión abajo.',
+    checkEmail: '✓ Revisa tu correo — enviamos un enlace seguro de inicio de sesión a', clickToSignIn: 'Haz clic para iniciar sesión (sin contraseña). Expira en unos minutos.',
+    sendingLink: 'Enviando enlace…', emailMeLink: 'Enviarme un enlace de inicio de sesión',
+    emailPh: 'Correo', passwordPh: 'Contraseña',
+    hidePwSignIn: 'Ocultar inicio con contraseña', preferPassword: '¿Prefieres una contraseña? Inicia sesión así',
+    show: 'Mostrar', hide: 'Ocultar',
+    notVerified: 'Tu correo aún no está verificado. Revisa tu bandeja de entrada por el enlace de confirmación',
+    sentAgain: ' — enviado de nuevo.', or: ' o ', resendIt: 'reenviarlo',
+    signingIn: 'Iniciando sesión…', forgotPassword: '¿Olvidaste tu contraseña?',
+    justExploring: '¿Solo estás explorando? Prueba la demo — sin necesidad de cuenta',
+    entering: 'Entrando…', demoBuyer: 'Demo como comprador', demoVendor: 'Demo como proveedor',
+    newHere: '¿Nuevo aquí? Crea una cuenta',
+    errEnterEmail: 'Ingresa tu correo primero.',
+    errWrongLogin: 'Correo o contraseña incorrectos. Verifica tu contraseña — o usa "¿Olvidaste tu contraseña?" abajo.',
+    errSignIn: 'No se pudo iniciar sesión. Intenta de nuevo.', errMagicLink: 'No se pudo enviar el enlace. Intenta de nuevo.',
+    errDemo: 'Falló el inicio de sesión de demo. Intenta de nuevo.',
+  },
+};
 
 // Mirror the server guard in /api/demo/login: the demo buttons mint a shared-
 // password account, so they must not show where the route itself 404s. Enabled
@@ -42,6 +87,8 @@ const DEMO_LOGIN_ENABLED =
 
 function LoginInner() {
   const sp = useSearchParams();
+  const [lang, setLang] = useLang();
+  const t = T[lang];
   const confirmed = sp.get('confirmed') === '1';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -57,7 +104,7 @@ function LoginInner() {
 
   // Passwordless magic link — no password to create or remember.
   async function magicLink() {
-    if (!email.trim()) { setErr('Enter your email first.'); return; }
+    if (!email.trim()) { setErr(t.errEnterEmail); return; }
     setMagicBusy(true); setErr('');
     try {
       const next = sp.get('next');
@@ -68,7 +115,7 @@ function LoginInner() {
       });
       if (error) setErr(error.message);
       else setMagicSent(true);
-    } catch { setErr('Could not send the link. Try again.'); }
+    } catch { setErr(t.errMagicLink); }
     setMagicBusy(false);
   }
 
@@ -86,7 +133,7 @@ function LoginInner() {
       await fetch('/api/auth/me');
       window.location.href = role === 'vendor' ? '/vendor/leads' : '/buyer';
     } catch {
-      setErr('Demo sign-in failed. Try again.');
+      setErr(t.errDemo);
       setDemoBusy(null);
     }
   }
@@ -99,7 +146,7 @@ function LoginInner() {
       const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password });
       if (error) {
         if (/confirm/i.test(error.message)) setNeedsVerify(true);
-        else if (/invalid login credentials/i.test(error.message)) setErr('Wrong email or password. Check your password — or use "Forgot password?" below.');
+        else if (/invalid login credentials/i.test(error.message)) setErr(t.errWrongLogin);
         else setErr(error.message);
         setBusy(false); return;
       }
@@ -112,7 +159,7 @@ function LoginInner() {
           : role === 'vendor' ? '/vendor/leads'
           : '/buyer');
     } catch {
-      setErr('Could not sign in. Try again.');
+      setErr(t.errSignIn);
       setBusy(false);
     }
   }
@@ -128,20 +175,23 @@ function LoginInner() {
   return (
     <div className={`li ${ibmPlexSans.variable}`}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
-      <a className="li-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b></a>
+      <div className="li-top">
+        <a className="li-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b></a>
+        <LanguageToggle lang={lang} onChange={setLang} variant="light" />
+      </div>
       <div className="li-card">
-        <h1>Sign in</h1>
-        {confirmed && <div className="li-ok">Email confirmed — sign in below.</div>}
+        <h1>{t.signIn}</h1>
+        {confirmed && <div className="li-ok">{t.emailConfirmed}</div>}
 
         {magicSent ? (
           <div className="li-ok" style={{ marginBottom: 0 }}>
-            ✓ Check your email — we sent a secure sign-in link to <b>{email}</b>. Click it to sign in (no password needed). It expires in a few minutes.
+            {t.checkEmail} <b>{email}</b>. {t.clickToSignIn}
           </div>
         ) : (
           <>
             {/* Fast, passwordless options first */}
             <GoogleAuthButton
-              lang="en"
+              lang={lang}
               next={sp.get('next') || undefined}
               from="/login"
               onError={setErr}
@@ -150,7 +200,7 @@ function LoginInner() {
             />
             <OAuthButton
               provider="linkedin_oidc"
-              lang="en"
+              lang={lang}
               next={sp.get('next') || undefined}
               from="/login"
               onError={setErr}
@@ -159,46 +209,46 @@ function LoginInner() {
             />
             <OAuthButton
               provider="azure"
-              lang="en"
+              lang={lang}
               next={sp.get('next') || undefined}
               from="/login"
               onError={setErr}
               className="li-google"
               bilingualErrors
             />
-            {ANY_OAUTH_ENABLED && <p className="li-googlenote">{bilingualCopy(OAUTH_CONTINUE_AGREES_MSG)}</p>}
+            {ANY_OAUTH_ENABLED && <p className="li-googlenote">{bilingualCopy(OAUTH_CONTINUE_AGREES_MSG, lang)}</p>}
             <button type="button" className="li-magic" onClick={magicLink} disabled={magicBusy}>
-              ✉️ {magicBusy ? 'Sending link…' : 'Email me a sign-in link'}
+              ✉️ {magicBusy ? t.sendingLink : t.emailMeLink}
             </button>
-            <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" style={{ marginTop: 2 }} />
+            <input type="email" placeholder={t.emailPh} value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" style={{ marginTop: 2 }} />
             {err && !usePassword && <div className="li-err">{err}</div>}
-            <button type="button" className="li-usepw" onClick={() => setUsePassword((v) => !v)}>{usePassword ? 'Hide password sign-in' : 'Prefer a password? Sign in that way'}</button>
+            <button type="button" className="li-usepw" onClick={() => setUsePassword((v) => !v)}>{usePassword ? t.hidePwSignIn : t.preferPassword}</button>
           </>
         )}
 
         {usePassword && !magicSent && <form onSubmit={submit}>
           <div className="li-pwrow">
-            <input type={showPw ? 'text' : 'password'} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
-            <button type="button" className="li-pwtoggle" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? 'Hide password' : 'Show password'}>{showPw ? 'Hide' : 'Show'}</button>
+            <input type={showPw ? 'text' : 'password'} placeholder={t.passwordPh} value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+            <button type="button" className="li-pwtoggle" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? t.hide : t.show}>{showPw ? t.hide : t.show}</button>
           </div>
           {err && <div className="li-err">{err}</div>}
           {needsVerify && (
             <div className="li-warn">
-              Your email is not verified yet. Check your inbox for the confirmation link
-              {resent ? ' — sent again.' : <> or <button type="button" onClick={resend}>resend it</button>.</>}
+              {t.notVerified}
+              {resent ? t.sentAgain : <>{t.or}<button type="button" onClick={resend}>{t.resendIt}</button>.</>}
             </div>
           )}
-          <button className="li-btn" type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
-          <a className="li-forgot" href="/forgot-password">Forgot password?</a>
+          <button className="li-btn" type="submit" disabled={busy}>{busy ? t.signingIn : t.signIn}</button>
+          <a className="li-forgot" href="/forgot-password">{t.forgotPassword}</a>
         </form>}
         {DEMO_LOGIN_ENABLED && <div className="li-demo">
-          <div className="li-demolabel">Just exploring? Try the demo — no account needed</div>
+          <div className="li-demolabel">{t.justExploring}</div>
           <div className="li-demorow">
-            <button type="button" className="li-demobtn" disabled={!!demoBusy} onClick={() => demoLogin('buyer')}>{demoBusy === 'buyer' ? 'Entering…' : 'Demo as Buyer'}</button>
-            <button type="button" className="li-demobtn" disabled={!!demoBusy} onClick={() => demoLogin('vendor')}>{demoBusy === 'vendor' ? 'Entering…' : 'Demo as Vendor'}</button>
+            <button type="button" className="li-demobtn" disabled={!!demoBusy} onClick={() => demoLogin('buyer')}>{demoBusy === 'buyer' ? t.entering : t.demoBuyer}</button>
+            <button type="button" className="li-demobtn" disabled={!!demoBusy} onClick={() => demoLogin('vendor')}>{demoBusy === 'vendor' ? t.entering : t.demoVendor}</button>
           </div>
         </div>}
-        <a className="li-link" href="/signup">New here? Create an account</a>
+        <a className="li-link" href="/signup">{t.newHere}</a>
       </div>
     </div>
   );
@@ -212,7 +262,8 @@ const CSS = `
 .li{min-height:100vh;background:var(--spec-warm-white,#F8F7FB);color:var(--spec-ink,#141320);font-family:var(--font-ibm-plex-sans-login),'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;display:flex;flex-direction:column;align-items:center;padding:40px 20px;-webkit-font-smoothing:antialiased;}
 .li *{box-sizing:border-box;}
 .li a:focus-visible,.li button:focus-visible,.li input:focus-visible{outline:2px solid var(--spec-violet,#6C5CE0);outline-offset:2px;}
-.li-brand{color:var(--spec-ink,#141320);text-decoration:none;margin-bottom:26px;}
+.li-top{width:100%;max-width:400px;display:flex;align-items:center;justify-content:space-between;margin-bottom:26px;}
+.li-brand{color:var(--spec-ink,#141320);text-decoration:none;}
 .li-brand b{font-family:var(--font-space-grotesk),'Space Grotesk',system-ui,sans-serif;font-size:19px;font-weight:700;letter-spacing:-.01em;}
 .li-brand i{color:var(--spec-violet,#6C5CE0);font-style:normal;}
 .li-card{width:100%;max-width:400px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:16px;padding:30px;box-shadow:0 8px 30px rgba(74,61,176,.08);}
