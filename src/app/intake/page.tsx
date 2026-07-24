@@ -30,6 +30,11 @@ interface IntakeResponseMore {
   index: number;
   total: number;
   question: Question;
+  // Set when this step just re-opened classification because the latest
+  // answer contradicted the category the assistant had locked onto (e.g.
+  // "not a forklift") — the UI acknowledges the switch instead of silently
+  // changing the line of questioning.
+  corrected?: boolean;
 }
 
 interface RequestSummary {
@@ -189,7 +194,22 @@ function IntakeInner() {
         setCategory(data.category);
         setCurrentQuestion(data.question);
         const qText = isEs ? data.question.es : data.question.en;
-        setMessages((m) => [...m, { role: 'assistant', text: qText }]);
+        setMessages((m) => {
+          const next = [...m, { role: 'assistant' as const, text: qText }];
+          // Acknowledge a mid-conversation correction (e.g. the buyer said
+          // "not a forklift") instead of silently swapping the line of
+          // questioning — surfaces that we heard them.
+          if (data.corrected) {
+            next.splice(next.length - 1, 0, {
+              role: 'assistant',
+              text: tr(
+                "Got it — let's back up and ask more general questions.",
+                'Entendido — retrocedamos y hagamos preguntas más generales.'
+              ),
+            });
+          }
+          return next;
+        });
         setProgress(tr(
           `Question ${data.index + 1} of ${data.total}`,
           `Pregunta ${data.index + 1} de ${data.total}`
@@ -516,6 +536,31 @@ function IntakeInner() {
                 {tr('Send', 'Enviar')}
               </button>
             </div>
+
+            {/* Manual redirect affordance — always available during the
+                question flow, independent of the keyword self-correction
+                above, so a buyer isn't stuck if the assistant locked onto
+                the wrong thing and their wording didn't trip the automatic
+                correction. */}
+            {phase === 'asking' && (
+              <button
+                type="button"
+                onClick={handleEditAnswers}
+                disabled={loading}
+                style={{
+                  marginTop: 12,
+                  background: 'transparent',
+                  border: 'none',
+                  padding: 0,
+                  color: MUTED,
+                  fontSize: 13,
+                  textDecoration: 'underline',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {tr("That's not it — start over", 'Eso no es — empezar de nuevo')}
+              </button>
+            )}
           </div>
         )}
 
