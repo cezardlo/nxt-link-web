@@ -41,9 +41,13 @@ export async function GET() {
     .limit(100);
 
   // Marketplace quote/service requests (the self-service "request a quote" path).
+  // vendor_id is selected so we can attach each quote's PUBLIC vendor company
+  // name below — needed to tell competing quotes apart in the comparison view
+  // (FIX 1). This is not contact data: vendor email/phone are never selected or
+  // returned here, so masking (src/lib/guard.ts) is unaffected.
   const { data: quotes } = await db
     .from('quote_requests')
-    .select('id, public_ref, kind, product_id, service_id, company, message, status, created_at, quote_amount, quote_currency, quote_message, quote_timeline, quote_valid_until, quoted_at, buyer_decision, answers')
+    .select('id, public_ref, kind, product_id, service_id, vendor_id, company, message, status, created_at, quote_amount, quote_currency, quote_message, quote_timeline, quote_valid_until, quoted_at, buyer_decision, answers')
     .ilike('email', emailMatch)
     .order('created_at', { ascending: false })
     .limit(100);
@@ -59,6 +63,15 @@ export async function GET() {
   const names = new Map<string, string>();
   for (const r of pRes.data || []) names.set(r.id as string, r.name as string);
   for (const r of sRes.data || []) names.set(r.id as string, r.name as string);
+
+  // Resolve vendor company names (PUBLIC — same name shown on storefronts).
+  // Lets the buyer tell competing quotes apart in the comparison (FIX 1).
+  const vIds = Array.from(new Set(qRows.map((q) => q.vendor_id).filter(Boolean)));
+  const { data: vRows } = vIds.length
+    ? await db.from('vendor_profiles').select('id, company_name').in('id', vIds)
+    : { data: [] };
+  const vendorNames = new Map<string, string>();
+  for (const r of vRows || []) vendorNames.set(r.id as string, r.company_name as string);
 
   // Which engagements the buyer has already reviewed (degrades to none if the
   // reviews table isn't present yet).
@@ -80,6 +93,6 @@ export async function GET() {
     email_verified: true,
     email: session.email,
     requests: requests || [],
-    quotes: qRows.map((q) => ({ ...q, listing_name: names.get((q.product_id || q.service_id) as string) || null, reviewed: reviewed.has(q.id), pilots: pilotsByQr.get(q.id) || [] })),
+    quotes: qRows.map((q) => ({ ...q, listing_name: names.get((q.product_id || q.service_id) as string) || null, vendor_name: vendorNames.get(q.vendor_id as string) || null, reviewed: reviewed.has(q.id), pilots: pilotsByQr.get(q.id) || [] })),
   });
 }

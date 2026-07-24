@@ -10,6 +10,7 @@ import { useParams } from 'next/navigation';
 import { IBM_Plex_Sans } from 'next/font/google';
 import { StageTracker, STAGE_TRACKER_CSS } from '@/components/marketplace/StageTracker';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
+import { QuoteCompareTable, QUOTE_COMPARE_TABLE_CSS, type CompareTableRow } from '@/components/marketplace/QuoteCompareTable';
 
 // Design System v1.0 reskin (Premium Polish Phase 2, 2026-07-23): visual/CSS
 // only — every handler and state above is unchanged. The soft-blue best-value
@@ -55,17 +56,6 @@ const MILESTONE_LABEL: Record<string, string> = { purchase_order: 'Purchase orde
 const fmtDate = (s: string) => { try { return new Date(s).toLocaleDateString(); } catch { return ''; } };
 const fmtDT = (s: string) => { try { return new Date(s).toLocaleString(); } catch { return ''; } };
 const money = (n: number, c = 'USD') => n.toLocaleString('en-US', { style: 'currency', currency: c || 'USD', maximumFractionDigits: 0 });
-// Parse a free-text timeline ("2 weeks", "6 wks", "10 days", "3 months") into days,
-// so the compare table can draw a length-proportional bar. Returns null if unparseable.
-const parseDays = (s: string | null | undefined): number | null => {
-  if (!s) return null;
-  const m = s.match(/(\d+(?:\.\d+)?)\s*(days?|d|weeks?|wks?|w|months?|mos?|mo|m)\b/i);
-  if (!m) return null;
-  const n = parseFloat(m[1]); const u = m[2].toLowerCase();
-  if (u.startsWith('d')) return n;
-  if (u.startsWith('w')) return n * 7;
-  return n * 30; // month(s)
-};
 
 export default function ProjectWorkspacePage() {
   const params = useParams<{ id: string }>();
@@ -73,7 +63,6 @@ export default function ProjectWorkspacePage() {
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
   const [tab, setTab] = useState<'overview' | 'quotes' | 'vendors' | 'approvals' | 'delivery' | 'documents' | 'history'>('overview');
-  const [qSort, setQSort] = useState<'price_asc' | 'price_desc' | 'name'>('price_asc');
 
   const [project, setProject] = useState<Project | null>(null);
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -137,7 +126,7 @@ export default function ProjectWorkspacePage() {
 
   return (
     <div className={`pd ${ibmPlexSans.variable}`}>
-      <style dangerouslySetInnerHTML={{ __html: CSS + STAGE_TRACKER_CSS + EMPTY_ACTION_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: CSS + STAGE_TRACKER_CSS + EMPTY_ACTION_CSS + QUOTE_COMPARE_TABLE_CSS }} />
       <nav className="pd-nav">
         <a className="pd-brand" href="/projects"><b>NXT<i>//</i>LINK</b><span>Workspace</span></a>
         <a className="pd-pill" href="/projects">← All projects</a>
@@ -288,65 +277,21 @@ export default function ProjectWorkspacePage() {
               />
             ) : (
               <>
-              {quotes.filter((q) => q.quote_amount != null).length >= 2 && (() => {
-                const rows = [...quotes].sort((a, b) => {
-                  const pa = a.quote_amount ?? Number.POSITIVE_INFINITY;
-                  const pb = b.quote_amount ?? Number.POSITIVE_INFINITY;
-                  if (qSort === 'price_asc') return pa - pb;
-                  if (qSort === 'price_desc') return pb - pa;
-                  return (a.company || '').localeCompare(b.company || '');
-                });
-                const priced = rows.filter((q) => q.quote_amount != null);
-                const low = Math.min(...priced.map((q) => q.quote_amount as number));
-                const maxPrice = Math.max(...priced.map((q) => q.quote_amount as number));
-                const dayVals = rows.map((q) => parseDays(q.quote_timeline)).filter((n): n is number => n != null);
-                const maxDays = dayVals.length ? Math.max(...dayVals) : 0;
-                const minDays = dayVals.length ? Math.min(...dayVals) : 0;
-                return (
-                  <div className="pd-cmpwrap">
-                    <div className="pd-cmphead">
-                      <b>Compare quotes</b>
-                      <div className="pd-sort">
-                        <span>Sort</span>
-                        <button className={qSort === 'price_asc' ? 'on' : ''} onClick={() => setQSort('price_asc')}>Price ↑</button>
-                        <button className={qSort === 'price_desc' ? 'on' : ''} onClick={() => setQSort('price_desc')}>Price ↓</button>
-                        <button className={qSort === 'name' ? 'on' : ''} onClick={() => setQSort('name')}>A–Z</button>
-                      </div>
-                    </div>
-                    <div className="pd-cmpscroll">
-                      <table className="pd-cmp">
-                        <thead><tr><th>Vendor</th><th>Quote</th><th>Timeline</th><th>Valid until</th><th>Fee if won</th><th>Status</th></tr></thead>
-                        <tbody>
-                          {rows.map((q) => (
-                            <tr key={q.id} className={q.buyer_decision === 'accepted' ? 'accepted' : ''}>
-                              <td><b>{q.company || 'Vendor'}</b><span className="pd-cmpref">{q.opportunity_ref || q.public_ref}</span></td>
-                              <td className="pd-cmpamt">
-                                <div className="pd-cmpval">
-                                  {q.quote_amount != null ? money(q.quote_amount, q.quote_currency || 'USD') : <span className="pd-cmpwait">Awaiting</span>}
-                                  {q.quote_amount != null && q.quote_amount === low && <span className="pd-lowest">Lowest</span>}
-                                </div>
-                                {q.quote_amount != null && maxPrice > 0 && (
-                                  <div className="pd-bar"><i className={q.quote_amount === low ? 'best' : ''} style={{ width: `${Math.max(6, (q.quote_amount / maxPrice) * 100)}%` }} /></div>
-                                )}
-                              </td>
-                              <td>
-                                <div className="pd-cmpval">{q.quote_timeline || '—'}</div>
-                                {(() => { const d = parseDays(q.quote_timeline); return d != null && maxDays > 0 ? (
-                                  <div className="pd-bar"><i className={d === minDays ? 'best' : ''} style={{ width: `${Math.max(6, (d / maxDays) * 100)}%` }} /></div>
-                                ) : null; })()}
-                              </td>
-                              <td>{q.quote_valid_until ? fmtDate(q.quote_valid_until) : '—'}</td>
-                              <td className="pd-cmpfee">{q.commission?.commission_amount != null ? money(q.commission.commission_amount) : '—'}</td>
-                              <td><span className={`pd-qstat ${q.buyer_decision === 'accepted' ? 'accepted' : q.quote_amount ? 'quoted' : 'await'}`}>{q.buyer_decision === 'accepted' ? 'Accepted' : q.quote_amount ? 'Received' : 'Awaiting'}</span></td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    <p className="pd-cmpnote">Lowest price isn’t always the best value — weigh timeline, warranty, and fit. The NXT//LINK fee is shown so you see your all-in cost.</p>
-                  </div>
-                );
-              })()}
+              {quotes.filter((q) => q.quote_amount != null).length >= 2 && (
+                <QuoteCompareTable
+                  rows={quotes.map((q): CompareTableRow => ({
+                    id: q.id,
+                    vendor: q.company || 'Vendor',
+                    amount: q.quote_amount,
+                    currency: q.quote_currency,
+                    timeline: q.quote_timeline,
+                    validUntil: q.quote_valid_until,
+                    feeAmount: q.commission?.commission_amount ?? null,
+                    status: q.buyer_decision === 'accepted' ? 'accepted' : q.quote_amount != null ? 'received' : 'awaiting',
+                    ref: q.opportunity_ref || q.public_ref,
+                  }))}
+                />
+              )}
               <div className="pd-quotes">
                 {quotes.map((q) => (
                   <div key={q.id} className="pd-quote">
