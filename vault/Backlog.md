@@ -241,6 +241,28 @@ Still open, in rough priority order:
 See tasks list / [[Decisions]]. Marketplace search bar + RFQ CTA + How-it-works
 strip, autocomplete, vendor moderation, NXT AI concierge + commission co-pilot,
 compare fill bars, view-as-buyer — all shipped.
+- **Two flow-breaking gaps fixed (CEO flow assessment) — BUILT 2026-07-24 in
+  worktree `worktree-agent-ae960b911fbd30718`, NOT deployed, PENDING security +
+  money review.** FIX 1 (orphaned comparison): the real side-by-side quote table
+  lived only in the `/projects/[id]` Deal Room (inline `pd-cmp`), where the buyer
+  flow never sends quotes; the buyer's actual page `/buyer` had none. Lifted that
+  table into a shared `src/components/marketplace/QuoteCompareTable.tsx` (both the
+  Deal Room and `/buyer` now render it) and wired it onto `/buyer`: competing
+  quotes for the SAME open RFQ (grouped by `answers.source_request`) show side by
+  side (vendor, price + lowest tag + bar, lead time + bar, valid-until, status);
+  single-listing quotes degrade to the normal single-quote card. Dashboard API
+  now also returns each quote's PUBLIC `vendor_name` (company name only — no
+  email/phone; masking untouched) so competing quotes are distinguishable. FIX 2
+  (accept dead-end): after Accept, `/buyer` now shows a bilingual "Deal in
+  progress — what happens next" panel (agreed price/timeline, contact-now-unlocked
+  in chat, deal on record, Continue-in-chat button) instead of a one-line "You
+  accepted". NO payment/escrow added; accept API contract (draft deal + commission
+  + notify) unchanged; `calculateFee` untouched. Pure logic extracted to
+  `src/lib/buyer/compare.ts` (grouping / best-value pick / accepted-state
+  selector) with 12 new tests. Gates: typecheck 0, tests 162/162, build clean.
+  Note: the old dark-themed `src/components/marketplace/QuoteCompare.tsx` is
+  pre-existing dead code (never rendered/imported) — left in place, superseded by
+  `QuoteCompareTable`.
 - **Flexible vendor listing form (no more fixed presets) — BUILT 2026-07-23,
   local commit `348ecfd`, NOT deployed, PENDING security review (vendor-typed
   content renders to buyers).** `/vendor/listings`: Category/Industries/Best

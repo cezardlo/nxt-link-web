@@ -12,6 +12,8 @@ import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle'
 import { PackageSearch, Inbox, Lightbulb, MessageCircle } from 'lucide-react';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
 import { useChatPolling, resolvePendingMessage, dropPendingMessage, type ChatMessage } from '@/components/marketplace/useChatPolling';
+import { QuoteCompareTable, QUOTE_COMPARE_TABLE_CSS, type CompareLabels, type CompareTableRow } from '@/components/marketplace/QuoteCompareTable';
+import { groupQuotesForCompare, describeAcceptedDeal } from '@/lib/buyer/compare';
 
 // Design System v1.0 reskin (Premium Polish Phase 2, 2026-07-23): light
 // warm-white + violet, matching the marketplace/buyer-facing pages. Visual/CSS
@@ -30,12 +32,13 @@ interface IntakeRequest {
 }
 interface QuoteRequest {
   id: string; public_ref: string; kind: string; listing_name: string | null;
+  vendor_name?: string | null;
   product_id?: string | null; service_id?: string | null;
   company: string | null; message: string | null; status: string; created_at: string;
   quote_amount?: number | null; quote_currency?: string | null; quote_message?: string | null;
   quote_timeline?: string | null; quote_valid_until?: string | null; quoted_at?: string | null;
   buyer_decision?: string | null; reviewed?: boolean;
-  answers?: { request_type?: string; bundle?: boolean; items?: Array<{ listing_id: string; kind: string; name: string; qty: number; note?: string }> } | null;
+  answers?: { request_type?: string; bundle?: boolean; source_request?: string | null; items?: Array<{ listing_id: string; kind: string; name: string; qty: number; note?: string }> } | null;
   pilots?: Array<{ kind: string; status: string; scheduled_for: string | null; location: string | null; scope: string | null; outcome: string | null }>;
 }
 interface DashboardData {
@@ -79,6 +82,19 @@ const T: Record<Lang, Record<string, string>> = {
     youAccepted: 'You accepted this quote', youDeclined: 'You declined this quote',
     accept: 'Accept —', decline: 'Decline',
     guardAccept: 'Accepting doesn’t charge you anything — it connects you with the vendor to finalize the deal on your terms.',
+    // Side-by-side comparison (FIX 1)
+    cmpTitle: 'Compare quotes', cmpVendor: 'Vendor', cmpQuote: 'Quote', cmpTimeline: 'Timeline',
+    cmpValidUntil: 'Valid until', cmpStatus: 'Status', cmpLowest: 'Lowest', cmpAwaiting: 'Awaiting',
+    cmpReceived: 'Received', cmpAccepted: 'Accepted', cmpSort: 'Sort', cmpPriceAsc: 'Price ↑',
+    cmpPriceDesc: 'Price ↓', cmpAz: 'A–Z',
+    cmpNote: 'Lowest price isn’t always the best value — weigh timeline and fit. Contact details stay hidden until you accept.',
+    cmpFor: 'Comparing quotes for the same request',
+    // Post-accept "what happens next" (FIX 2)
+    dealInProgress: 'Deal in progress', connectedWith: 'You’re connected with',
+    nextContactUnlocked: 'Contact details are now unlocked in your chat — you can share your phone and email with the vendor.',
+    nextContinueChat: 'Continue the conversation with the vendor here on NXT//LINK.',
+    nextTracked: 'NXT//LINK is keeping this deal on record for you — no extra steps needed.',
+    continueInChat: 'Continue in chat',
     decideError: 'Could not save your decision — please try again.',
     reviewedVendor: '✓ You reviewed this vendor',
     titleOptional: 'Title (optional)', howDidItGo: 'How did it go? (optional)',
@@ -126,6 +142,19 @@ const T: Record<Lang, Record<string, string>> = {
     youAccepted: 'Aceptaste esta cotización', youDeclined: 'Rechazaste esta cotización',
     accept: 'Aceptar —', decline: 'Rechazar',
     guardAccept: 'Aceptar no te cobra nada — te conecta con el proveedor para cerrar el trato en tus términos.',
+    // Comparación lado a lado (FIX 1)
+    cmpTitle: 'Comparar cotizaciones', cmpVendor: 'Proveedor', cmpQuote: 'Cotización', cmpTimeline: 'Tiempo',
+    cmpValidUntil: 'Válido hasta', cmpStatus: 'Estado', cmpLowest: 'Más baja', cmpAwaiting: 'Pendiente',
+    cmpReceived: 'Recibida', cmpAccepted: 'Aceptada', cmpSort: 'Ordenar', cmpPriceAsc: 'Precio ↑',
+    cmpPriceDesc: 'Precio ↓', cmpAz: 'A–Z',
+    cmpNote: 'El precio más bajo no siempre es la mejor opción — considera el tiempo y la compatibilidad. Los datos de contacto quedan ocultos hasta que aceptas.',
+    cmpFor: 'Comparando cotizaciones de la misma solicitud',
+    // Qué sigue después de aceptar (FIX 2)
+    dealInProgress: 'Trato en progreso', connectedWith: 'Estás conectado con',
+    nextContactUnlocked: 'Los datos de contacto ya están desbloqueados en tu chat — puedes compartir tu teléfono y correo con el proveedor.',
+    nextContinueChat: 'Continúa la conversación con el proveedor aquí en NXT//LINK.',
+    nextTracked: 'NXT//LINK mantiene este trato registrado para ti — sin pasos adicionales.',
+    continueInChat: 'Continuar en el chat',
     decideError: 'No se pudo guardar tu decisión — inténtalo de nuevo.',
     reviewedVendor: '✓ Reseñaste a este proveedor',
     titleOptional: 'Título (opcional)', howDidItGo: '¿Cómo te fue? (opcional)',
@@ -200,6 +229,16 @@ export default function BuyerDashboardPage() {
   const unreadChatIds = useMemo(
     () => new Set(notifs.filter((n) => !n.read_at && n.type === 'message' && n.quote_request_id).map((n) => n.quote_request_id as string)),
     [notifs],
+  );
+  // FIX 1 — cluster quotes into "same need" groups so competing quotes for one
+  // open RFQ show side by side. Self-service (single-listing) quotes are
+  // singletons and degrade to the normal single-quote card view. Grouping key
+  // is answers.source_request (set by src/lib/requests/dispatch.ts).
+  const compareGroups = useMemo(
+    () => groupQuotesForCompare(
+      (data.quotes || []).map((q) => ({ ...q, sourceRequest: q.answers?.source_request ?? null })),
+    ).filter((g) => g.comparable),
+    [data.quotes],
   );
   async function toggleNotifs() {
     const next = !notifOpen;
@@ -312,10 +351,18 @@ export default function BuyerDashboardPage() {
   const requests = data.requests || [];
   const quotes = data.quotes || [];
   const hasActivity = requests.length > 0 || quotes.length > 0;
+  // Localized column labels for the shared comparison table (no fee column on
+  // the buyer dashboard — feeIfWon is unused here).
+  const cmpLabels: CompareLabels = {
+    title: t.cmpTitle, vendor: t.cmpVendor, quote: t.cmpQuote, timeline: t.cmpTimeline,
+    validUntil: t.cmpValidUntil, feeIfWon: '', status: t.cmpStatus, lowest: t.cmpLowest,
+    awaiting: t.cmpAwaiting, received: t.cmpReceived, accepted: t.cmpAccepted, sort: t.cmpSort,
+    priceAsc: t.cmpPriceAsc, priceDesc: t.cmpPriceDesc, az: t.cmpAz, note: t.cmpNote,
+  };
 
   return (
     <div className={`by ${ibmPlexSans.variable}`}>
-      <style dangerouslySetInnerHTML={{ __html: CSS + EMPTY_ACTION_CSS + ATTENTION_CSS + FIRSTRUN_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: CSS + EMPTY_ACTION_CSS + ATTENTION_CSS + FIRSTRUN_CSS + QUOTE_COMPARE_TABLE_CSS }} />
       <nav className="by-nav">
         <a className="by-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>{t.dashboardTag}</span></a>
         <div className="by-navlinks">
@@ -449,6 +496,27 @@ export default function BuyerDashboardPage() {
               {quotes.length === 0 ? (
                 <EmptyAction size="sm" icon={<PackageSearch strokeWidth={1.75} />} title={t.noQuoteRequestsYet} hint={t.noQuoteRequestsHint} actionLabel={t.browseTheMarketplace} actionHref="/marketplace" />
               ) : (
+                <>
+                {/* FIX 1 — side-by-side comparison for any need with 2+ priced quotes */}
+                {compareGroups.map((g) => (
+                  <div className="by-cmpgroup" key={g.key}>
+                    <div className="by-cmpcaption">{t.cmpFor}{g.sourceRequest ? ` · ${g.sourceRequest}` : ''}</div>
+                    <QuoteCompareTable
+                      labels={cmpLabels}
+                      locale={dateLocale}
+                      rows={g.quotes.map((q): CompareTableRow => ({
+                        id: q.id,
+                        vendor: q.vendor_name || t.cmpVendor,
+                        amount: q.quote_amount ?? null,
+                        currency: q.quote_currency,
+                        timeline: q.quote_timeline,
+                        validUntil: q.quote_valid_until,
+                        status: q.buyer_decision === 'accepted' ? 'accepted' : q.quote_amount != null ? 'received' : 'awaiting',
+                        ref: q.public_ref,
+                      }))}
+                    />
+                  </div>
+                ))}
                 <div className="by-list">
                   {quotes.map((q) => (
                     <div className="by-card" key={q.id}>
@@ -459,6 +527,7 @@ export default function BuyerDashboardPage() {
                         ) : (
                           <b>{q.listing_name || (q.kind === 'service' ? t.serviceRequest : t.productRequest)}</b>
                         )}
+                        {q.vendor_name && <span className="by-vendorname">{q.vendor_name}</span>}
                         <small>{fmtDate(q.created_at)}</small>
                         <span className="by-ref">{q.public_ref}</span>
                       </div>
@@ -532,7 +601,33 @@ export default function BuyerDashboardPage() {
                           {q.quote_message && <p className="by-qmsg">{q.quote_message}</p>}
                           {q.quote_valid_until && <div className="by-qvalid">{fmtValidUntil(q.quote_valid_until)}</div>}
                           {q.buyer_decision ? (
-                            <div className={'by-decided ' + q.buyer_decision}>{q.buyer_decision === 'accepted' ? t.youAccepted : t.youDeclined}</div>
+                            q.buyer_decision === 'accepted' ? (() => {
+                              // FIX 2 — the honest "what happens next" in the commission
+                              // model: you're connected, contact is unlocked in chat,
+                              // the deal is on record. No payment/escrow step exists.
+                              const deal = describeAcceptedDeal(q)!;
+                              return (
+                                <div className="by-nextpanel">
+                                  <div className="by-npttitle">{t.dealInProgress}</div>
+                                  {q.vendor_name && <p className="by-nptsub">{t.connectedWith} <b>{q.vendor_name}</b></p>}
+                                  <div className="by-nptterms">
+                                    {deal.amount != null && <span>{money(deal.amount)}</span>}
+                                    {deal.timeline && <span>{deal.timeline}</span>}
+                                    {deal.validUntil && <span>{fmtValidUntil(deal.validUntil)}</span>}
+                                  </div>
+                                  <ul className="by-nptsteps">
+                                    <li>{t.nextContactUnlocked}</li>
+                                    <li>{t.nextContinueChat}</li>
+                                    <li>{t.nextTracked}</li>
+                                  </ul>
+                                  <button className="by-nptcta" onClick={() => openChat(q.id)}>
+                                    <MessageCircle size={14} strokeWidth={2} aria-hidden="true" />{t.continueInChat}
+                                  </button>
+                                </div>
+                              );
+                            })() : (
+                              <div className="by-decided declined">{t.youDeclined}</div>
+                            )
                           ) : (
                             <>
                               <div className="by-qactions">
@@ -569,6 +664,7 @@ export default function BuyerDashboardPage() {
                     </div>
                   ))}
                 </div>
+                </>
               )}
             </section>
               </>
@@ -700,6 +796,22 @@ const CSS = `
 .by-decided{margin-top:10px;font-size:13px;font-weight:700;text-transform:capitalize;}
 .by-decided.accepted{color:var(--spec-success,#2F9E6A);}
 .by-decided.declined{color:var(--spec-error,#CE4B43);}
+.by-vendorname{font-size:12px;font-weight:600;color:var(--spec-violet-deep,#4A3DB0);background:rgba(108,92,224,.08);border-radius:99px;padding:2px 9px;}
+.by-cmpgroup{margin-bottom:16px;}
+.by-cmpcaption{font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--spec-text-2nd,#615F72);margin:0 0 8px 2px;}
+/* FIX 2 — post-accept "what happens next" panel */
+.by-nextpanel{margin-top:12px;background:#F3FAF6;border:1px solid rgba(47,158,106,.3);border-radius:12px;padding:14px 16px;}
+.by-npttitle{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#1F7A54;}
+.by-nptsub{margin:6px 0 0;font-size:14px;color:var(--spec-ink,#141320);}
+.by-nptsub b{font-weight:700;}
+.by-nptterms{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:9px;font-size:14px;font-weight:700;color:var(--spec-ink,#141320);font-variant-numeric:tabular-nums;}
+.by-nptterms span:not(:first-child){font-weight:500;color:var(--spec-text-2nd,#615F72);}
+.by-nptterms span:not(:first-child)::before{content:'·';margin-right:8px;color:#B7C7BD;}
+.by-nptsteps{margin:11px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px;}
+.by-nptsteps li{position:relative;padding-left:20px;font-size:13px;color:var(--spec-ink,#141320);line-height:1.5;}
+.by-nptsteps li::before{content:'✓';position:absolute;left:0;top:0;color:var(--spec-success,#2F9E6A);font-weight:800;font-size:12px;}
+.by-nptcta{margin-top:13px;display:inline-flex;align-items:center;gap:7px;font-family:inherit;font-size:13.5px;font-weight:700;background:var(--spec-success,#2F9E6A);border:none;color:#fff;border-radius:9px;padding:9px 16px;cursor:pointer;min-height:40px;}
+.by-nptcta:hover{background:#248059;}
 .by-chat{margin-top:11px;}
 .by-chatopen{position:relative;display:inline-flex;align-items:center;gap:7px;font-family:inherit;font-size:12.5px;font-weight:600;background:#E9F7F0;border:1px solid rgba(47,158,106,.35);color:#1F7A54;border-radius:9px;padding:8px 14px;cursor:pointer;}
 .by-chatdot{width:8px;height:8px;border-radius:99px;background:var(--spec-error,#CE4B43);box-shadow:0 0 0 2px #fff;}
