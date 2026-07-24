@@ -58,6 +58,7 @@ export async function POST(req: Request) {
     index: step.index,
     total: step.total,
     question: step.question,
+    corrected: step.corrected || false,
     locale,
   });
 }

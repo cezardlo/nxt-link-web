@@ -3,8 +3,6 @@
 // with OR without an LLM. The LLM (when available) only rephrases; this engine
 // guarantees the right follow-ups, one at a time, and a final summary.
 
-import type { Locale } from './branding';
-
 export type Category =
   | 'forklift' | 'staffing' | 'warehouse_tech' | 'transportation' | 'facility' | 'unsure';
 
@@ -27,14 +25,58 @@ const KEYWORDS: Record<Exclude<Category, 'unsure'>, string[]> = {
   facility: ['facility', 'maintenance', 'hvac', 'dock door', 'roof', 'electrical', 'plumbing', 'building', 'install', 'inspection', 'mantenimiento'],
 };
 
-export function detectCategory(text: string): Category {
+const CATEGORY_ORDER: Exclude<Category, 'unsure'>[] =
+  ['forklift', 'staffing', 'warehouse_tech', 'transportation', 'facility'];
+
+export function detectCategory(
+  text: string,
+  excluded?: Set<Exclude<Category, 'unsure'>>,
+): Category {
   const lower = text.toLowerCase();
   // forklift maintenance is the most specific signal; check it first
-  if (KEYWORDS.forklift.some((k) => lower.includes(k))) return 'forklift';
-  for (const cat of ['staffing', 'warehouse_tech', 'transportation', 'facility'] as const) {
+  for (const cat of CATEGORY_ORDER) {
+    if (excluded?.has(cat)) continue;
     if (KEYWORDS[cat].some((k) => lower.includes(k))) return cat;
   }
   return 'unsure';
+}
+
+// ── Self-correction: has the buyer rejected a category? ─────────────────────
+// A buyer's later reply can explicitly contradict the category the engine
+// locked onto ("1 pallet jack, not a forklift" / "no es un montacarga") —
+// that must reopen classification instead of railroading them through the
+// wrong branch's questions (audit 2026-07-23). We only look for a negation
+// word immediately before one of THAT category's own keywords, and only
+// within a single message at a time (never across the whole transcript) —
+// so an unrelated "No" answered to a later yes/no question can't retroactively
+// "negate" an unrelated keyword from an earlier message.
+const NEGATION_WORD = /^(not|no|isn'?t|aren'?t|don'?t|doesn'?t|wasn'?t|weren'?t)$/i;
+// How many words immediately before the keyword we treat as "negating" it.
+// Word-based (not a character count): a fixed char window would either miss
+// longer negations ("isn't really a forklift") or false-positive on a short
+// unrelated word (a "No, just the north dock door" answer to a yes/no
+// question shouldn't count as negating "dock door").
+const NEGATION_LOOKBACK_WORDS = 3;
+
+function isNegatedMatch(lowerText: string, keyword: string): boolean {
+  let idx = lowerText.indexOf(keyword);
+  while (idx !== -1) {
+    const before = lowerText.slice(0, idx);
+    const words = before.split(/[^a-zà-ÿñ']+/i).filter(Boolean);
+    const nearby = words.slice(-NEGATION_LOOKBACK_WORDS);
+    if (nearby.some((w) => NEGATION_WORD.test(w))) return true;
+    idx = lowerText.indexOf(keyword, idx + 1);
+  }
+  return false;
+}
+
+export function categoryIsNegated(text: string, category: Exclude<Category, 'unsure'>): boolean {
+  const lower = text.toLowerCase();
+  return KEYWORDS[category].some((kw) => isNegatedMatch(lower, kw));
+}
+
+function categoryRejectedAnywhere(units: string[], category: Exclude<Category, 'unsure'>): boolean {
+  return units.some((u) => u && categoryIsNegated(u, category));
 }
 
 // ── Per-category follow-up questions (exactly from the spec) ────────────────
@@ -125,6 +167,10 @@ export interface IntakeStep {
   total: number;
   done: boolean;
   summary?: RequestSummary;
+  // True when this step just re-opened classification because the buyer's
+  // latest answer contradicted the previously locked category — lets the
+  // client acknowledge the switch instead of silently changing the script.
+  corrected?: boolean;
 }
 
 export interface RequestSummary {
@@ -165,11 +211,43 @@ function findAnswer(answers: IntakeAnswer[], id: string): string {
 }
 
 export function nextStep(initialText: string, state: IntakeState): IntakeStep {
-  const category = state.category && state.category !== 'unsure'
-    ? state.category
-    : detectCategory(initialText || state.answers[0]?.a || '');
+  // Categories the buyer has explicitly rejected somewhere in the
+  // conversation so far ("not a forklift") — excluded from detection below
+  // even if one of their OTHER keywords (e.g. "pallet jack" is also a
+  // forklift keyword) still appears in the text. Recomputed fresh from the
+  // transcript every call, so a rejection sticks for the rest of the
+  // conversation without needing extra state on the wire.
+  const units = [initialText, ...state.answers.map((a) => a.a)];
+  const rejected = new Set(CATEGORY_ORDER.filter((cat) => categoryRejectedAnywhere(units, cat)));
+
+  const locked = state.category;
+  const needsDetection = !locked || locked === 'unsure' || rejected.has(locked as Exclude<Category, 'unsure'>);
+  // While no category is confidently locked, consider everything said so
+  // far — not just the opening message — so a clarifying answer (including
+  // the 'unsure' flow's own "is this related to equipment, people,
+  // technology…" question) can move the buyer into the right branch.
+  const category = needsDetection ? detectCategory(units.join(' '), rejected) : locked;
+  const corrected = Boolean(needsDetection && locked && locked !== 'unsure' && locked !== category);
+
   const plan = buildQuestionPlan(category);
-  const index = state.answers.filter((a) => a.id && a.id !== 'opening').length;
+  // Count leading plan questions already answered, matched BY ID rather than
+  // raw position — so a mid-conversation category switch (above) restarts
+  // that category's own question set instead of skipping ahead using stale
+  // positions left over from the category the buyer just corrected away from.
+  // On a switch, also drop answers keyed to the OLD category's own question
+  // ids (a couple of ids, e.g. 'type'/'photos', are reused by more than one
+  // category with different wording) so a stale answer can't be mistaken for
+  // an answer to the new category's differently-worded question of the same id.
+  const staleIds = corrected && locked && locked !== 'unsure'
+    ? new Set(FLOWS[locked].map((q) => q.id))
+    : null;
+  const answeredIds = new Set(
+    state.answers
+      .filter((a) => a.id && a.id !== 'opening' && !(staleIds && staleIds.has(a.id)))
+      .map((a) => a.id),
+  );
+  let index = 0;
+  while (index < plan.length && answeredIds.has(plan[index].id)) index++;
 
   if (index >= plan.length) {
     return {
@@ -179,9 +257,10 @@ export function nextStep(initialText: string, state: IntakeState): IntakeStep {
       total: plan.length,
       done: true,
       summary: buildSummary(category, initialText, state.answers),
+      corrected,
     };
   }
-  return { category, question: plan[index], index, total: plan.length, done: false };
+  return { category, question: plan[index], index, total: plan.length, done: false, corrected };
 }
 
 export function buildSummary(category: Category, problemText: string, answers: IntakeAnswer[]): RequestSummary {
