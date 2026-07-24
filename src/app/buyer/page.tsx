@@ -52,6 +52,7 @@ const T: Record<Lang, Record<string, string>> = {
     yourDashboard: 'Your dashboard', signedInAs: 'Signed in as',
     notifications: 'Notifications', close: 'Close', notifEmpty: 'Nothing yet — you’ll see quotes, messages, and pilot updates here.',
     loading: 'Loading…', signInFirst: 'Sign in to see your requests —', goToSignIn: 'go to sign in',
+    loadError: "Couldn't load your dashboard — check your connection and try again.", retry: 'Try again',
     verifyEmail: 'Verify your email to see your requests.', checkInbox: 'Check your inbox for the confirmation link, then reload this page.',
     needsAttention: 'Needs attention', reviewNow: 'Review now →',
     quoteAwaiting: 'quote', quotesAwaiting: 'quotes', awaitingDecision: 'awaiting your decision',
@@ -98,6 +99,7 @@ const T: Record<Lang, Record<string, string>> = {
     yourDashboard: 'Tu panel', signedInAs: 'Sesión iniciada como',
     notifications: 'Notificaciones', close: 'Cerrar', notifEmpty: 'Nada por aquí todavía — verás cotizaciones, mensajes y actualizaciones de pilotos aquí.',
     loading: 'Cargando…', signInFirst: 'Inicia sesión para ver tus solicitudes —', goToSignIn: 'ir a iniciar sesión',
+    loadError: 'No se pudo cargar tu panel — revisa tu conexión e inténtalo de nuevo.', retry: 'Intentar de nuevo',
     verifyEmail: 'Verifica tu correo para ver tus solicitudes.', checkInbox: 'Revisa tu bandeja de entrada por el enlace de confirmación y recarga esta página.',
     needsAttention: 'Necesita atención', reviewNow: 'Revisar ahora →',
     quoteAwaiting: 'cotización', quotesAwaiting: 'cotizaciones', awaitingDecision: 'esperando tu decisión',
@@ -166,6 +168,13 @@ export default function BuyerDashboardPage() {
 
   const [checking, setChecking] = useState(true);
   const [data, setData] = useState<DashboardData>({ signed_in: false });
+  // A genuine fetch/network/server failure is NOT the same as a confirmed
+  // "you're signed out" — /api/buyer/dashboard always answers 200 with an
+  // explicit signed_in:true/false (never a bare 401), so a thrown exception
+  // or a non-OK response here means we don't actually know the auth state.
+  // Conflating the two would tell a signed-in buyer hitting a network blip
+  // to "sign in first," which is misleading — show a distinct retry state.
+  const [loadError, setLoadError] = useState(false);
   const [savedCount, setSavedCount] = useState(0);
   const [reviewOpen, setReviewOpen] = useState<string | null>(null);
   const [rv, setRv] = useState({ rating: 5, title: '', body: '' });
@@ -202,8 +211,10 @@ export default function BuyerDashboardPage() {
   }
 
   const load = useCallback(async () => {
+    setLoadError(false);
     try {
       const res = await fetch('/api/buyer/dashboard');
+      if (!res.ok) { setLoadError(true); return; }
       const json = (await res.json()) as DashboardData;
       setData(json);
       const n = await fetch('/api/buyer/notifications').then((r) => r.json()).catch(() => null);
@@ -211,7 +222,7 @@ export default function BuyerDashboardPage() {
       const sv = await fetch('/api/buyer/saved').then((r) => r.json()).catch(() => null);
       if (sv?.ok && sv.signed_in) setSavedItems(sv.items || []);
     } catch {
-      setData({ signed_in: false });
+      setLoadError(true);
     } finally {
       setChecking(false);
     }
@@ -342,6 +353,11 @@ export default function BuyerDashboardPage() {
 
         {checking ? (
           <div className="by-empty">{t.loading}</div>
+        ) : loadError ? (
+          <div className="by-empty">
+            {t.loadError}<br />
+            <button className="by-rvopen" onClick={() => { setChecking(true); load(); }}>{t.retry}</button>
+          </div>
         ) : !data.signed_in ? (
           <div className="by-empty">{t.signInFirst} <a href="/login">{t.goToSignIn}</a></div>
         ) : data.email_verified === false ? (
