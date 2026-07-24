@@ -567,24 +567,14 @@ export default function MarketplacePage() {
     [fPilot, fEmergency, fVerified, fLocal, fFast].filter(Boolean).length;
   const marketplaceEmpty = !loading && !authError && cards.length === 0;
 
-  // "Storefront" home state: nothing searched or filtered yet → show discovery
-  // sections (category tiles, vendors, post-a-need banner) above the listings.
+  // "Storefront" home state: nothing searched or filtered yet — still gates
+  // the hero below. The two tile-browsing sections that used to render here
+  // (category tiles, featured vendors) were removed 2026-07-24 per
+  // workplace/research/marketplace-restructure-2026-07-24.md — listings now
+  // lead immediately after the department bar. homeCategories/homeVendors
+  // (the memos that built those tile lists) are gone with them; nothing else
+  // read from them — deptCounts/facets are computed independently of these.
   const pristine = !q.trim() && tab === 'all' && activeFilterCount === 0 && !savedOnly;
-  const homeCategories = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const c of cards) if (c.category) counts.set(c.category, (counts.get(c.category) || 0) + 1);
-    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 8);
-  }, [cards]);
-  const homeVendors = useMemo(() => {
-    const seen = new Map<string, { id: string; name: string; rating: number | null; count: number }>();
-    for (const c of cards) {
-      if (!c.vendor_id) continue;
-      const v = seen.get(c.vendor_id) || { id: c.vendor_id, name: c.vendor_name, rating: c.vendor_rating ?? null, count: 0 };
-      v.count++;
-      seen.set(c.vendor_id, v);
-    }
-    return Array.from(seen.values()).slice(0, 6);
-  }, [cards]);
 
   // Suggested related searches for empty states (from real category data).
   const suggestions = facets.categories.slice(0, 6).map(([c]) => c);
@@ -654,69 +644,35 @@ export default function MarketplacePage() {
         </div>
       </div>
 
-      {/* Browse by department — the primary functional aisles (Grainger/Amazon style) */}
+      {/* Browse by department — the primary functional aisles (Grainger/Amazon
+          style). Tidied 2026-07-24: wrapped in its own hairline-bordered band
+          so it reads as a distinct nav layer instead of blending into the
+          search bar above (NN/g guidance: highlight subcategories separately,
+          above the listings, not merged into the filter rail). Same data,
+          same behavior (functional_group filter + live counts) — visual only.
+          Not sticky on purpose — see research doc §"tidied department bar". */}
       {liveDepartments.length > 0 && (
-        <div className="mk-deptbar">
-          <button className={`mk-dept ${!fDept ? 'on' : ''}`} onClick={() => setFDept('')}>{lang === 'es' ? 'Todos los departamentos' : 'All departments'}</button>
-          {liveDepartments.map((d) => (
-            <button key={d.fg} className={`mk-dept ${fDept === d.fg ? 'on' : ''} ${d.is_service ? 'svc' : ''}`}
-              onClick={() => setFDept(fDept === d.fg ? '' : d.fg)}>
-              {(lang === 'es' ? d.label_es : d.label_en) || d.label_en}<span className="mk-deptn">{deptCounts.get(d.fg)}</span>
-            </button>
-          ))}
+        <div className="mk-deptband">
+          <div className="mk-deptbar">
+            <button className={`mk-dept ${!fDept ? 'on' : ''}`} onClick={() => setFDept('')}>{lang === 'es' ? 'Todos los departamentos' : 'All departments'}</button>
+            {liveDepartments.map((d) => (
+              <button key={d.fg} className={`mk-dept ${fDept === d.fg ? 'on' : ''} ${d.is_service ? 'svc' : ''}`}
+                onClick={() => setFDept(fDept === d.fg ? '' : d.fg)}>
+                {(lang === 'es' ? d.label_es : d.label_en) || d.label_en}<span className="mk-deptn">{deptCounts.get(d.fg)}</span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Storefront discovery sections (home state only) */}
-      {pristine && !loading && cards.length > 0 && (
-        <div className="mk-home">
-          {homeCategories.length > 0 && (
-            <section className="mk-homesec">
-              <h2>{lang === 'es' ? 'Explorar por categoría' : 'Browse by category'}</h2>
-              <div className="mk-cattiles">
-                {homeCategories.map(([cat, n]) => (
-                  <button key={cat} className="mk-cattile" onClick={() => setFCategory([cat])}>
-                    <span className="mk-catinit">{cat.slice(0, 1).toUpperCase()}</span>
-                    <b>{cat}</b>
-                    <small>{n} {lang === 'es' ? (n === 1 ? 'publicación' : 'publicaciones') : `listing${n === 1 ? '' : 's'}`}</small>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-
-          <section className="mk-rfq">
-            <div>
-              <b>{lang === 'es' ? '¿No encuentras lo que necesitas?' : "Can't find what you need?"}</b>
-              <p>{lang === 'es'
-                ? <>Describe tu problema una vez — NXT{'//'}LINK conecta proveedores y ellos te cotizan a través de la plataforma.</>
-                : <>Describe your problem once — NXT{'//'}LINK matches vendors and they quote you through the platform.</>}</p>
-            </div>
-            <Link href="/intake" className="mk-rfqbtn">{lang === 'es' ? 'Publicar una solicitud' : 'Post a request'}</Link>
-          </section>
-
-          {homeVendors.length > 0 && (
-            <section className="mk-homesec">
-              <h2>{lang === 'es' ? 'Proveedores destacados' : 'Featured vendors'}</h2>
-              <div className="mk-vstrip">
-                {homeVendors.map((v) => (
-                  <Link key={v.id} href={`/marketplace/vendor/${v.id}`} className="mk-vtile">
-                    <span className="mk-catinit">{v.name.slice(0, 1).toUpperCase()}</span>
-                    <div>
-                      <b>{v.name}</b>
-                      <small>
-                        {typeof v.rating === 'number' ? `★ ${v.rating.toFixed(1)} · ` : ''}{v.count} {lang === 'es' ? (v.count === 1 ? 'publicación' : 'publicaciones') : `listing${v.count === 1 ? '' : 's'}`}
-                      </small>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-
-          <h2 className="mk-allhead">{lang === 'es' ? 'Todas las publicaciones' : 'All listings'}</h2>
-        </div>
-      )}
+      {/* "Browse by category" tiles and "Featured vendors" storefront sections
+          removed 2026-07-24 (workplace/research/marketplace-restructure-
+          2026-07-24.md — Candidate A: listings should fill immediately after
+          the department bar, nothing should backfill the freed space). The
+          RFQ affordance that used to live in this block was NOT removed —
+          it now lives as a slim inline prompt in the results header below
+          (`.mk-rfqinline`) so it stays discoverable without pushing listings
+          down. */}
 
       {/* Tabs */}
       <div className="mk-tabsrow">
@@ -805,11 +761,24 @@ export default function MarketplacePage() {
 
           {/* Results */}
           <main className="mk-results">
-            <div className="mk-count">
-              {loading ? (lang === 'es' ? 'Cargando…' : 'Loading…') : lang === 'es'
-                ? `${results.length} ${tab === 'product' ? (results.length === 1 ? 'producto' : 'productos') : tab === 'service' ? (results.length === 1 ? 'servicio' : 'servicios') : (results.length === 1 ? 'resultado' : 'resultados')}`
-                : `${results.length} ${tab === 'product' ? (results.length === 1 ? 'product' : 'products') : tab === 'service' ? (results.length === 1 ? 'service' : 'services') : (results.length === 1 ? 'result' : 'results')}`}
-              {q && !loading ? <> {lang === 'es' ? 'para' : 'for'} <b>“{q}”</b></> : null}
+            <div className="mk-resultshead">
+              <div className="mk-count">
+                {loading ? (lang === 'es' ? 'Cargando…' : 'Loading…') : lang === 'es'
+                  ? `${results.length} ${tab === 'product' ? (results.length === 1 ? 'producto' : 'productos') : tab === 'service' ? (results.length === 1 ? 'servicio' : 'servicios') : (results.length === 1 ? 'resultado' : 'resultados')}`
+                  : `${results.length} ${tab === 'product' ? (results.length === 1 ? 'product' : 'products') : tab === 'service' ? (results.length === 1 ? 'service' : 'services') : (results.length === 1 ? 'result' : 'results')}`}
+                {q && !loading ? <> {lang === 'es' ? 'para' : 'for'} <b>“{q}”</b></> : null}
+              </div>
+              {/* Slim inline RFQ affordance — replaces the old "Can't find what
+                  you need?" storefront banner (removed 2026-07-24). Same
+                  destination (/intake), same message, but a single line next
+                  to the result count instead of a block above the grid, so
+                  listings still lead. Hidden while loading/session-expired,
+                  where it isn't the relevant next action. */}
+              {!loading && !authError && (
+                <Link href="/intake" className="mk-rfqinline">
+                  {lang === 'es' ? '¿No encuentras lo que necesitas? Publica una solicitud →' : "Can't find what you need? Post a request →"}
+                </Link>
+              )}
             </div>
             {activeFilterCount > 0 && (
               <div className="mk-activechips">
@@ -1111,27 +1080,14 @@ const CSS = `
 .mk-hero{max-width:1200px;margin:0 auto;padding:36px 20px 0;text-align:center;}
 .mk-hero h1{font-size:clamp(24px,4vw,38px);font-weight:800;letter-spacing:-.02em;color:var(--spec-ink);}
 .mk-hero p{color:var(--spec-text-2nd);font-size:15px;margin:10px auto 0;max-width:560px;line-height:1.6;}
-.mk-home{max-width:1200px;margin:0 auto;padding:8px 20px 0;}
-.mk-homesec h2,.mk-allhead{font-size:17px;font-weight:800;letter-spacing:-.01em;margin:26px 0 14px;color:var(--spec-ink);}
-.mk-cattiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;}
-.mk-cattile{font-family:inherit;text-align:left;display:flex;flex-direction:column;gap:6px;background:#fff;border:1px solid var(--spec-border);border-radius:14px;padding:16px;cursor:pointer;color:var(--spec-ink);transition:border-color var(--spec-duration-fast) var(--spec-ease),transform var(--spec-duration-fast) var(--spec-ease);}
-.mk-cattile:hover{border-color:var(--spec-violet);transform:translateY(-2px);}
-.mk-cattile b{font-size:14px;line-height:1.3;}
-.mk-cattile small{color:var(--spec-text-2nd);font-size:12px;}
-.mk-catinit{width:34px;height:34px;border-radius:10px;background:rgba(108,92,224,.14);color:var(--spec-violet-deep);display:grid;place-items:center;font-weight:800;font-size:15px;}
-.mk-rfq{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;background:linear-gradient(120deg,rgba(108,92,224,.1),rgba(47,158,106,.07));border:1px solid rgba(108,92,224,.3);border-radius:16px;padding:20px 22px;margin-top:26px;}
-.mk-rfq b{font-size:16.5px;color:var(--spec-ink);}
-.mk-rfq p{color:var(--spec-text-2nd);font-size:13.5px;margin:5px 0 0;line-height:1.5;max-width:520px;}
-.mk-rfqbtn{background:var(--spec-violet);color:#fff;font-weight:700;font-size:14px;padding:12px 22px;border-radius:11px;text-decoration:none;white-space:nowrap;}
-.mk-rfqbtn:hover{background:var(--spec-violet-deep);}
-.mk-vstrip{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
-.mk-vtile{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--spec-border);border-radius:14px;padding:14px 16px;text-decoration:none;color:var(--spec-ink);transition:border-color var(--spec-duration-fast) var(--spec-ease);}
-.mk-vtile:hover{border-color:var(--spec-violet);}
-.mk-vtile b{font-size:14px;display:block;line-height:1.3;}
-.mk-vtile small{color:var(--spec-text-2nd);font-size:12px;}
-.mk-deptbar{display:flex;gap:8px;overflow-x:auto;max-width:1200px;margin:0 auto;padding:14px 20px 4px;scrollbar-width:none;}
+/* Department band — tidied 2026-07-24: a hairline-bordered white band gives
+   the department strip its own visual layer, distinct from the search bar
+   above and the tabs row below (was a bare flex row sitting on the page
+   background). Same .mk-dept buttons/behavior inside, unchanged. */
+.mk-deptband{background:#fff;border-top:1px solid var(--spec-border);border-bottom:1px solid var(--spec-border);}
+.mk-deptbar{display:flex;gap:8px;overflow-x:auto;max-width:1200px;margin:0 auto;padding:12px 20px;scrollbar-width:none;}
 .mk-deptbar::-webkit-scrollbar{display:none;}
-.mk-dept{flex-shrink:0;display:inline-flex;align-items:center;gap:7px;font-family:inherit;font-size:13px;font-weight:600;color:var(--spec-text-2nd);background:#fff;border:1px solid var(--spec-border);border-radius:99px;padding:9px 15px;cursor:pointer;white-space:nowrap;transition:border-color var(--spec-duration-fast) var(--spec-ease),background var(--spec-duration-fast) var(--spec-ease);}
+.mk-dept{flex-shrink:0;display:inline-flex;align-items:center;gap:7px;font-family:inherit;font-size:13px;font-weight:600;color:var(--spec-text-2nd);background:var(--spec-warm-white);border:1px solid var(--spec-border);border-radius:99px;padding:9px 15px;cursor:pointer;white-space:nowrap;transition:border-color var(--spec-duration-fast) var(--spec-ease),background var(--spec-duration-fast) var(--spec-ease);}
 .mk-dept:hover{border-color:var(--spec-violet);}
 .mk-dept.on{background:rgba(108,92,224,.14);border-color:var(--spec-violet);color:var(--spec-violet-deep);}
 .mk-dept.svc{color:#1F7A54;}
@@ -1180,8 +1136,14 @@ const CSS = `
 .mk-facetgroup{display:flex;flex-direction:column;max-height:196px;overflow-y:auto;padding-right:2px;}
 .mk-railnote{font-size:11.5px;color:var(--spec-text-2nd);line-height:1.5;margin:2px 0 0;}
 .mk-results{min-width:0;}
-.mk-count{font-size:13.5px;color:var(--spec-text-2nd);margin:4px 2px 12px;}
+.mk-resultshead{display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:4px 2px 12px;}
+.mk-count{font-size:13.5px;color:var(--spec-text-2nd);}
 .mk-count b{color:var(--spec-violet-deep);}
+/* Slim inline "Can't find what you need?" prompt — replaces the old
+   full-width RFQ banner (removed 2026-07-24); sits on the same line as the
+   result count so it adds zero extra vertical space above the grid. */
+.mk-rfqinline{flex-shrink:0;font-size:12.5px;font-weight:600;color:var(--spec-violet-deep);text-decoration:none;white-space:nowrap;}
+.mk-rfqinline:hover{text-decoration:underline;}
 .mk-activechips{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 16px;}
 .mk-activechips button{font-family:inherit;font-size:12px;font-weight:600;padding:6px 11px;border-radius:99px;border:1px solid rgba(108,92,224,.35);background:rgba(108,92,224,.1);color:var(--spec-violet-deep);cursor:pointer;}
 .mk-activechips button:hover{background:rgba(108,92,224,.2);}
@@ -1251,6 +1213,11 @@ const CSS = `
 .mk-ctable th a{color:var(--spec-violet-deep);text-decoration:none;}
 .mk-ctable td:first-child{color:var(--spec-text-2nd);white-space:nowrap;}
 @media(max-width:860px){
+  /* Edge fade hints that more departments are scrollable off-screen — cheap,
+     mobile-only per the research doc (desktop's row usually fits without
+     scrolling, so a fade there would just dim fully-visible pills). */
+  .mk-deptbar{-webkit-mask-image:linear-gradient(to right,transparent 0,#000 16px,#000 calc(100% - 16px),transparent 100%);mask-image:linear-gradient(to right,transparent 0,#000 16px,#000 calc(100% - 16px),transparent 100%);}
+  .mk-resultshead{flex-direction:column;align-items:flex-start;gap:4px;}
   .mk-layout{grid-template-columns:1fr;}
   .mk-filterbtn{display:inline-flex;}
   .mk-rail{position:fixed;top:0;left:0;bottom:0;width:300px;max-width:88vw;z-index:50;border-radius:0;transform:translateX(-105%);transition:transform .22s var(--spec-ease);overflow-y:auto;}
