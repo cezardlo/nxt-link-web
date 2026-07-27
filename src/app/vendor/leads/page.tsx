@@ -49,7 +49,7 @@ interface Lead {
 const STATUSES = ['new', 'viewed', 'responded', 'won', 'lost'];
 const money = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 // Live estimate — calls the SAME sacred fee engine the server uses
-// (calculateFee: 5% on the first $50k, 3% above, $20k cap), so the vendor
+// (calculateFee: 4% on the first $50k, 2% above, $12,500 cap), so the vendor
 // preview can never drift from the commission NXT//LINK actually bills.
 function estimateCommission(amount: number): number {
   if (!(amount > 0)) return 0;
