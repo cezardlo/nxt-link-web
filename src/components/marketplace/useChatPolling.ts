@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
+import type { MessageAttachment } from '@/lib/messages/attachments';
 
 // Shared buyer<->vendor chat polling helper (used by /vendor/leads and
 // /buyer). Keeps the existing on-site chat feeling live WITHOUT adding
@@ -17,6 +18,10 @@ export interface ChatMessage {
   // Local-only: true for an optimistic bubble the server hasn't confirmed
   // yet. Never sent to/from the API.
   pending?: boolean;
+  // File attachments on this message (specs, drawings, POs). Empty/absent
+  // for plain text messages. Each `url` is a freshly-minted short-lived
+  // signed URL from the GET route — the Storage bucket is private.
+  attachments?: MessageAttachment[];
 }
 
 // Merge a freshly-polled thread (authoritative, from GET .../messages) into

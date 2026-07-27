@@ -9,11 +9,15 @@ import { IBM_Plex_Sans } from 'next/font/google';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
 import VendorNav from '@/components/VendorNav';
-import { Megaphone, MessageCircle, Inbox, Eye, Reply, Trophy, XCircle, type LucideIcon } from 'lucide-react';
+import { Megaphone, MessageCircle, Inbox, Eye, Reply, Trophy, XCircle, Paperclip, Download, X, type LucideIcon } from 'lucide-react';
 import { MatchReasons, MATCH_REASONS_CSS } from '@/components/marketplace/MatchReasons';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
 import { calculateFee } from '@/lib/fees/engine';
 import { useChatPolling, resolvePendingMessage, dropPendingMessage, type ChatMessage } from '@/components/marketplace/useChatPolling';
+import {
+  ALLOWED_ATTACHMENT_EXTENSIONS, MAX_ATTACHMENTS_PER_MESSAGE, formatFileSize,
+  validateAttachmentBatch,
+} from '@/lib/messages/attachments';
 
 // Design System v1.0 reskin (Premium Polish Phase 2, 2026-07-23): light
 // warm-white + violet, matching the rest of the marketplace. Visual/CSS only
@@ -98,6 +102,15 @@ const T: Record<Lang, Record<string, string>> = {
     noMessages: 'No messages yet — say hello.', messageBuyerPh: 'Message the buyer…', send: 'Send', sendingMsg: 'Sending…',
     guardNote: 'Emails, phone numbers, and links are hidden automatically until the buyer accepts — deals stay on NXT//LINK (your terms: commission owed during the protected period either way).',
     messages: 'Messages', newMessageHint: 'New message', live: 'Live',
+    attachFile: 'Attach a file', attachFileTitle: 'Attach specs, drawings, or a quote document', removeFile: 'Remove file',
+    uploadingFiles: 'Uploading…', downloadFile: 'Download',
+    attachHint: `PDF, PNG, JPG, WEBP, XLSX, CSV, DWG, DXF · up to 10 MB · up to ${MAX_ATTACHMENTS_PER_MESSAGE} files`,
+    no_files: 'Choose at least one file.',
+    too_many_files: `You can attach up to ${MAX_ATTACHMENTS_PER_MESSAGE} files per message.`,
+    file_empty: 'That file is empty.',
+    file_too_large: 'That file is too large — max 10 MB per file.',
+    file_type_not_allowed: 'That file type isn’t supported. Allowed: PDF, PNG, JPG, WEBP, XLSX, CSV, DWG, DXF.',
+    attachSendError: 'Could not send the attachment — please try again.',
     mark: 'Mark',
     reqQuote: 'Quote', reqSales: 'Sales', reqDemo: 'Demo', reqPilot: 'Pilot', reqQuestion: 'Question',
     stNew: 'new', stViewed: 'viewed', stResponded: 'responded', stWon: 'won', stLost: 'lost',
@@ -142,6 +155,15 @@ const T: Record<Lang, Record<string, string>> = {
     noMessages: 'Aún no hay mensajes — saluda.', messageBuyerPh: 'Mensaje para el comprador…', send: 'Enviar', sendingMsg: 'Enviando…',
     guardNote: 'Los correos, teléfonos y enlaces se ocultan automáticamente hasta que el comprador acepte — los tratos se quedan en NXT//LINK (tus términos: la comisión se debe durante el período protegido de cualquier forma).',
     messages: 'Mensajes', newMessageHint: 'Mensaje nuevo', live: 'En vivo',
+    attachFile: 'Adjuntar un archivo', attachFileTitle: 'Adjunta especificaciones, planos o un documento de cotización', removeFile: 'Quitar archivo',
+    uploadingFiles: 'Subiendo…', downloadFile: 'Descargar',
+    attachHint: `PDF, PNG, JPG, WEBP, XLSX, CSV, DWG, DXF · hasta 10 MB · hasta ${MAX_ATTACHMENTS_PER_MESSAGE} archivos`,
+    no_files: 'Elige al menos un archivo.',
+    too_many_files: `Puedes adjuntar hasta ${MAX_ATTACHMENTS_PER_MESSAGE} archivos por mensaje.`,
+    file_empty: 'Ese archivo está vacío.',
+    file_too_large: 'Ese archivo es demasiado grande — máximo 10 MB por archivo.',
+    file_type_not_allowed: 'Ese tipo de archivo no es compatible. Permitidos: PDF, PNG, JPG, WEBP, XLSX, CSV, DWG, DXF.',
+    attachSendError: 'No se pudo enviar el archivo adjunto — inténtalo de nuevo.',
     mark: 'Marcar',
     reqQuote: 'Cotización', reqSales: 'Ventas', reqDemo: 'Demo', reqPilot: 'Piloto', reqQuestion: 'Pregunta',
     stNew: 'nuevo', stViewed: 'visto', stResponded: 'respondido', stWon: 'ganado', stLost: 'perdido',
@@ -195,6 +217,10 @@ export default function VendorLeadsPage() {
   const [chatMsgs, setChatMsgs] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatBusy, setChatBusy] = useState(false);
+  const [attachFiles, setAttachFiles] = useState<File[]>([]);
+  const [attachBusy, setAttachBusy] = useState(false);
+  const [attachError, setAttachError] = useState<string | null>(null);
+  const attachInputRef = useRef<HTMLInputElement>(null);
   const chatListRef = useRef<HTMLDivElement>(null);
   useEffect(() => { chatListRef.current?.scrollTo({ top: chatListRef.current.scrollHeight }); }, [chatMsgs, chatFor]);
   // Auto-refresh the open thread only — polls the existing GET /messages
@@ -302,7 +328,7 @@ export default function VendorLeadsPage() {
   }
 
   async function openChat(leadId: string) {
-    setChatFor(leadId); setChatMsgs([]); setChatInput('');
+    setChatFor(leadId); setChatMsgs([]); setChatInput(''); setAttachFiles([]); setAttachError(null);
     // Clear the local unread hint for this thread right away — the server
     // side "all read" only happens via the bell (no per-thread mark-read
     // endpoint), so this is a same-session visual clear, not persisted.
@@ -311,29 +337,80 @@ export default function VendorLeadsPage() {
     const data = await res.json();
     if (data.ok) setChatMsgs(data.messages || []);
   }
+  function attachErrorText(code?: string, fallback?: string): string {
+    return (code && (t as Record<string, string>)[code]) || fallback || t.attachSendError;
+  }
+  function handleAttachSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const chosen = Array.from(e.target.files || []);
+    e.target.value = ''; // allow re-picking the same file later
+    if (chosen.length === 0) return;
+    const combined = [...attachFiles, ...chosen];
+    const validation = validateAttachmentBatch(combined.map((f) => ({ name: f.name, size: f.size })));
+    if (!validation.ok) {
+      setAttachError(attachErrorText(validation.error.code, validation.error.message));
+      return;
+    }
+    setAttachError(null);
+    setAttachFiles(combined);
+  }
+  function removeAttachFile(index: number) {
+    setAttachFiles((fs) => fs.filter((_, i) => i !== index));
+  }
   async function sendChat(leadId: string) {
     const text = chatInput.trim();
-    if (!text || chatBusy) return;
+    const files = attachFiles;
+    if ((!text && files.length === 0) || chatBusy || attachBusy) return;
     setChatInput('');
-    setChatBusy(true);
+    setAttachFiles([]);
+    setAttachError(null);
     // Optimistic bubble — appears immediately; the poll's dedupe-by-id means
     // it's never double-rendered once the server round-trip / next poll lands.
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    setChatMsgs((m) => [...m, { id: tempId, sender: 'vendor', body: text, created_at: new Date().toISOString(), pending: true }]);
+    const tempAttachments = files.map((f, i) => ({ id: `${tempId}-${i}`, file_name: f.name, file_type: f.type || null, size_bytes: f.size, url: null }));
+    setChatMsgs((m) => [...m, { id: tempId, sender: 'vendor', body: text, created_at: new Date().toISOString(), pending: true, attachments: tempAttachments }]);
+
+    if (files.length === 0) {
+      setChatBusy(true);
+      try {
+        const res = await fetch('/api/vendor/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quote_request_id: leadId, body: text }) });
+        const data = await res.json();
+        if (data.ok) {
+          setChatMsgs((m) => resolvePendingMessage(m, tempId, data.message));
+        } else {
+          setChatMsgs((m) => dropPendingMessage(m, tempId));
+          setChatInput(text);
+        }
+      } catch {
+        setChatMsgs((m) => dropPendingMessage(m, tempId));
+        setChatInput(text);
+      }
+      setChatBusy(false);
+      return;
+    }
+
+    setAttachBusy(true);
     try {
-      const res = await fetch('/api/vendor/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quote_request_id: leadId, body: text }) });
+      const fd = new FormData();
+      fd.append('quote_request_id', leadId);
+      fd.append('body', text);
+      for (const f of files) fd.append('file', f);
+      const res = await fetch('/api/vendor/messages', { method: 'POST', body: fd });
       const data = await res.json();
       if (data.ok) {
         setChatMsgs((m) => resolvePendingMessage(m, tempId, data.message));
       } else {
         setChatMsgs((m) => dropPendingMessage(m, tempId));
         setChatInput(text);
+        setAttachFiles(files);
+        setAttachError(attachErrorText(data.code, data.message));
       }
     } catch {
       setChatMsgs((m) => dropPendingMessage(m, tempId));
       setChatInput(text);
+      setAttachFiles(files);
+      setAttachError(t.attachSendError);
     }
-    setChatBusy(false);
+    setAttachBusy(false);
   }
 
   return (
@@ -603,17 +680,58 @@ export default function VendorLeadsPage() {
                           {chatMsgs.length === 0 && <div className="ld-chatempty">{t.noMessages}</div>}
                           {chatMsgs.map((m) => (
                             <div key={m.id} className={'ld-bubble ' + (m.sender === 'vendor' ? 'me' : 'them') + (m.pending ? ' pending' : '')}>
-                              {m.body}
+                              {m.body && <div>{m.body}</div>}
+                              {(m.attachments || []).length > 0 && (
+                                <div className="ld-attachlist">
+                                  {(m.attachments || []).map((a) => (
+                                    a.url ? (
+                                      <a key={a.id} className="ld-attachitem" href={a.url} target="_blank" rel="noreferrer" title={t.downloadFile}>
+                                        <Paperclip size={11} strokeWidth={2} aria-hidden="true" />
+                                        <span className="ld-attachname">{a.file_name}</span>
+                                        <small>{formatFileSize(a.size_bytes)}</small>
+                                        <Download size={11} strokeWidth={2} aria-hidden="true" />
+                                      </a>
+                                    ) : (
+                                      <span key={a.id} className="ld-attachitem is-pending">
+                                        <Paperclip size={11} strokeWidth={2} aria-hidden="true" />
+                                        <span className="ld-attachname">{a.file_name}</span>
+                                        <small>{formatFileSize(a.size_bytes)}</small>
+                                      </span>
+                                    )
+                                  ))}
+                                </div>
+                              )}
                               <small>{m.pending ? t.sendingMsg : new Date(m.created_at).toLocaleString()}</small>
                             </div>
                           ))}
                         </div>
+                        {attachFiles.length > 0 && (
+                          <div className="ld-attachchips">
+                            {attachFiles.map((f, i) => (
+                              <span className="ld-attachchip" key={`${f.name}-${i}`}>
+                                <span className="ld-attachname">{f.name}</span>
+                                <small>{formatFileSize(f.size)}</small>
+                                <button type="button" onClick={() => removeAttachFile(i)} aria-label={t.removeFile}><X size={11} strokeWidth={2.5} aria-hidden="true" /></button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {attachError && <p className="ld-attacherr">{attachError}</p>}
                         <div className="ld-chatrow">
+                          <input
+                            ref={attachInputRef} type="file" multiple className="sr-only" tabIndex={-1} aria-hidden="true"
+                            accept={ALLOWED_ATTACHMENT_EXTENSIONS.map((e) => `.${e}`).join(',')}
+                            onChange={handleAttachSelect}
+                          />
+                          <button type="button" className="ld-attachbtn" title={t.attachFileTitle} aria-label={t.attachFile} disabled={attachBusy || chatBusy} onClick={() => attachInputRef.current?.click()}>
+                            <Paperclip size={16} strokeWidth={2} aria-hidden="true" />
+                          </button>
                           <label className="sr-only" htmlFor={`ld-chat-${l.id}`}>{t.messageBuyerPh}</label>
                           <input id={`ld-chat-${l.id}`} value={chatInput} placeholder={t.messageBuyerPh} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') sendChat(l.id); }} />
-                          <button className="ld-qsend" disabled={chatBusy || !chatInput.trim()} onClick={() => sendChat(l.id)}>{t.send}</button>
+                          <button className="ld-qsend" disabled={chatBusy || attachBusy || (!chatInput.trim() && attachFiles.length === 0)} onClick={() => sendChat(l.id)}>{attachBusy ? t.uploadingFiles : t.send}</button>
                           <button className="ld-qcancel" onClick={() => setChatFor(null)}>{t.close}</button>
                         </div>
+                        <p className="ld-attachhint">{t.attachHint}</p>
                         {l.buyer_decision !== 'accepted' && <p className="ld-guardnote">{t.guardNote}</p>}
                       </div>
                     ) : (
@@ -791,6 +909,26 @@ const CSS = `
 .ld-chatrow{display:flex;gap:8px;}
 .ld-chatrow input{flex:1;font-family:inherit;font-size:14px;padding:10px 12px;border-radius:9px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-ink,#141320);outline:none;}
 .ld-chatrow input:focus{border-color:var(--spec-violet,#6C5CE0);box-shadow:0 0 0 3px rgba(108,92,224,.12);}
+.ld-attachbtn{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;flex:none;font-family:inherit;background:#fff;border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-text-2nd,#615F72);border-radius:9px;cursor:pointer;}
+.ld-attachbtn:hover{border-color:var(--spec-violet,#6C5CE0);color:var(--spec-violet,#6C5CE0);}
+.ld-attachbtn:disabled{opacity:.5;cursor:default;}
+.ld-attachhint{margin:7px 0 0;font-size:11px;color:var(--spec-text-2nd,#615F72);}
+.ld-attacherr{margin:8px 0;font-size:12.5px;color:var(--spec-error,#CE4B43);line-height:1.5;}
+.ld-attachchips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+.ld-attachchip{display:inline-flex;align-items:center;gap:6px;font-size:12px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-ink,#141320);border-radius:8px;padding:5px 8px;max-width:220px;}
+.ld-attachchip .ld-attachname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;}
+.ld-attachchip small{color:var(--spec-text-2nd,#615F72);flex:none;}
+.ld-attachchip button{display:inline-flex;align-items:center;justify-content:center;background:none;border:none;color:var(--spec-text-2nd,#615F72);cursor:pointer;padding:1px;flex:none;}
+.ld-attachchip button:hover{color:var(--spec-error,#CE4B43);}
+.ld-attachlist{display:flex;flex-direction:column;gap:5px;}
+.ld-attachitem{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;border-radius:8px;padding:6px 9px;text-decoration:none;max-width:100%;}
+.ld-attachitem .ld-attachname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ld-attachitem small{opacity:.75;flex:none;}
+.ld-bubble.me .ld-attachitem{background:rgba(255,255,255,.14);color:#fff;}
+.ld-bubble.me .ld-attachitem:hover{background:rgba(255,255,255,.24);}
+.ld-bubble.them .ld-attachitem{background:var(--spec-surface,#EFEDF5);border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-ink,#141320);}
+.ld-bubble.them .ld-attachitem:hover{border-color:var(--spec-violet,#6C5CE0);}
+.ld-attachitem.is-pending{opacity:.7;cursor:default;}
 .ld-qform select{font-family:inherit;font-size:14px;padding:10px 12px;border-radius:9px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-ink,#141320);outline:none;}
 .ld-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
 .ld-act{display:inline-flex;align-items:center;gap:6px;font-family:inherit;background:#fff;border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-ink,#141320);font-size:12px;font-weight:600;border-radius:8px;padding:7px 12px;min-height:30px;cursor:pointer;transition:filter .15s ease;}
