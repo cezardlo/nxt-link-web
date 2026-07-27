@@ -81,6 +81,7 @@ const T: Record<Lang, Record<string, string>> = {
     attachFile: 'Attach a file', attachFileTitle: 'Attach specs, drawings, or a PO', removeFile: 'Remove file',
     uploadingFiles: 'Uploading…', downloadFile: 'Download',
     attachHint: `PDF, PNG, JPG, WEBP, XLSX, CSV, DWG, DXF · up to 10 MB · up to ${MAX_ATTACHMENTS_PER_MESSAGE} files`,
+    attachContentsWarning: 'Files are shared as-is — contact details inside a document are not hidden until you accept.',
     no_files: 'Choose at least one file.',
     too_many_files: `You can attach up to ${MAX_ATTACHMENTS_PER_MESSAGE} files per message.`,
     file_empty: 'That file is empty.',
@@ -150,6 +151,7 @@ const T: Record<Lang, Record<string, string>> = {
     attachFile: 'Adjuntar un archivo', attachFileTitle: 'Adjunta especificaciones, planos u orden de compra', removeFile: 'Quitar archivo',
     uploadingFiles: 'Subiendo…', downloadFile: 'Descargar',
     attachHint: `PDF, PNG, JPG, WEBP, XLSX, CSV, DWG, DXF · hasta 10 MB · hasta ${MAX_ATTACHMENTS_PER_MESSAGE} archivos`,
+    attachContentsWarning: 'Los archivos se comparten tal cual — los datos de contacto dentro de un documento no se ocultan hasta que aceptes.',
     no_files: 'Elige al menos un archivo.',
     too_many_files: `Puedes adjuntar hasta ${MAX_ATTACHMENTS_PER_MESSAGE} archivos por mensaje.`,
     file_empty: 'Ese archivo está vacío.',
@@ -689,6 +691,7 @@ export default function BuyerDashboardPage() {
                               <button className="by-decline" onClick={() => setChatFor(null)}>{t.close}</button>
                             </div>
                             <p className="by-attachhint">{t.attachHint}</p>
+                            {q.buyer_decision !== 'accepted' && <p className="by-attachhint by-attachwarn">{t.attachContentsWarning}</p>}
                             {q.buyer_decision !== 'accepted' && <p className="by-guardnote">{t.guardChat}</p>}
                           </div>
                         ) : (
@@ -952,6 +955,7 @@ const CSS = `
 .by-attachbtn:hover{border-color:var(--spec-violet,#6C5CE0);color:var(--spec-violet,#6C5CE0);}
 .by-attachbtn:disabled{opacity:.5;cursor:default;}
 .by-attachhint{margin:7px 0 0;font-size:11px;color:var(--spec-text-2nd,#615F72);}
+.by-attachwarn{margin-top:3px;}
 .by-attacherr{margin:8px 0;font-size:12.5px;color:var(--spec-error,#CE4B43);line-height:1.5;}
 .by-attachchips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
 .by-attachchip{display:inline-flex;align-items:center;gap:6px;font-size:12px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-ink,#141320);border-radius:8px;padding:5px 8px;max-width:220px;}

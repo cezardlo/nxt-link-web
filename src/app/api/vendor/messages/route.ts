@@ -9,13 +9,17 @@
 // src/lib/messages/attachmentsServer.ts + the 20260727 migration) — same
 // signed-URL-on-read pattern as vendor brochures, no new bucket needed.
 //
-// KNOWN POLICY GAP (flagged for security review, not solved here): text
-// bodies are contact-masked pre-acceptance via maskContacts(), but an
-// uploaded FILE cannot be scanned/masked the same way — a spec sheet or PO
-// could contain a phone number or email inside the document itself. Files
-// are intentionally allowed pre-acceptance anyway (sharing specs/drawings
-// before a vendor can quote is the whole point of attachments), so this is a
-// real anti-circumvention leak vector that text-masking does not cover.
+// KNOWN POLICY GAP (flagged in security review 2026-07-27; the FILE NAME
+// leak was fixed — see below — the FILE CONTENTS gap was accepted, not
+// solved): text bodies AND attachment file names are contact-masked
+// pre-acceptance via maskContacts() (display-only — the DB row and storage
+// path are untouched, see displayAttachmentName() in attachmentsServer.ts).
+// An uploaded FILE'S CONTENTS still cannot be scanned/masked the same way —
+// a spec sheet or PO could contain a phone number or email inside the
+// document itself. Files are intentionally allowed pre-acceptance anyway
+// (sharing specs/drawings before a vendor can quote is the whole point of
+// attachments), so this remains a real anti-circumvention leak vector that
+// no masking can fully cover.
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -63,7 +67,12 @@ export async function GET(req: Request) {
   if (err) return err;
   const { data } = await db.from('messages').select('id, sender, body, created_at').eq('quote_request_id', qrId).order('created_at').limit(200);
   const messages = data || [];
-  const attachmentsByMessage = await loadMessageAttachments(db, messages.map((m) => m.id as string));
+  // FIX I-2: attachment file NAMES get the same pre-acceptance masking as
+  // message bodies — mirrors the exact `buyer_decision !== 'accepted'` check
+  // the POST handlers use for text.
+  const { data: opp } = await db.from('quote_requests').select('buyer_decision').eq('id', qrId).maybeSingle();
+  const maskNames = opp?.buyer_decision !== 'accepted';
+  const attachmentsByMessage = await loadMessageAttachments(db, messages.map((m) => m.id as string), { maskNames });
   const withAttachments = messages.map((m) => ({ ...m, attachments: attachmentsByMessage[m.id as string] || [] }));
   return NextResponse.json({ ok: true, messages: withAttachments });
 }
@@ -110,11 +119,13 @@ async function handleAttachmentUpload(req: Request) {
   }
 
   const { data: opp } = await db.from('quote_requests').select('email, public_ref, buyer_decision').eq('id', qrId).maybeSingle();
-  // Anti-circumvention: mask contact details in the TEXT part only — a
-  // file's contents cannot be scanned the same way. See the file-level note
-  // at the top of this route.
+  const maskNames = opp?.buyer_decision !== 'accepted';
+  // Anti-circumvention: mask contact details in the TEXT part (unchanged)
+  // AND in each attachment's display/download file name (FIX I-2, below) —
+  // a file's actual CONTENTS still cannot be scanned the same way. See the
+  // file-level note at the top of this route.
   let guarded = false;
-  if (opp?.buyer_decision !== 'accepted' && text) {
+  if (maskNames && text) {
     const g = maskContacts(text);
     text = g.masked; guarded = g.found;
   }
@@ -123,7 +134,7 @@ async function handleAttachmentUpload(req: Request) {
   if (msgErr || !msgRow) return NextResponse.json({ ok: false, message: msgErr?.message || 'Could not send message' }, { status: 500 });
 
   const uploads = await Promise.all(files.map(async (f) => ({ name: f.name, type: f.type, bytes: new Uint8Array(await f.arrayBuffer()) })));
-  const result = await uploadMessageAttachments(db, qrId, msgRow.id as string, uploads);
+  const result = await uploadMessageAttachments(db, qrId, msgRow.id as string, uploads, { maskNames });
   if (!result.ok) return NextResponse.json({ ok: false, message: result.message }, { status: 500 });
 
   await notifyBuyer(db, (opp?.email as string) || '', qrId, 'message', `New message from the vendor on ${opp?.public_ref || 'your request'} (with attachment)`);

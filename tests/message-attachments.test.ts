@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   buildAttachmentStoragePath,
+  contentTypeForFileName,
   extensionOf,
   formatFileSize,
   isAllowedAttachmentExtension,
@@ -11,6 +12,8 @@ import {
   sanitizeFileNameForStorage,
   validateAttachmentBatch,
 } from '@/lib/messages/attachments';
+
+const VALID_QR_ID = '11111111-1111-1111-1111-111111111111';
 
 // Message attachments let buyers/vendors share specs, drawings, and POs on a
 // thread (Alibaba/Fiverr-style). These are the size/type/count rejections
@@ -63,8 +66,36 @@ test('sanitizeFileNameForStorage: caps length so a pathological name cannot blow
 });
 
 test('buildAttachmentStoragePath: scopes under message-attachments/<quote_request_id>/ with a unique prefix', () => {
-  const path = buildAttachmentStoragePath('qr-123', '../secret.pdf', 'unique1');
-  assert.equal(path, 'message-attachments/qr-123/unique1_secret.pdf');
+  const path = buildAttachmentStoragePath(VALID_QR_ID, '../secret.pdf', 'unique1');
+  assert.equal(path, `message-attachments/${VALID_QR_ID}/unique1_secret.pdf`);
+});
+
+test('buildAttachmentStoragePath: accepts an uppercase UUID (case-insensitive)', () => {
+  const path = buildAttachmentStoragePath(VALID_QR_ID.toUpperCase(), 'secret.pdf', 'unique1');
+  assert.equal(path, `message-attachments/${VALID_QR_ID.toUpperCase()}/unique1_secret.pdf`);
+});
+
+test('buildAttachmentStoragePath (M-3): throws on a non-UUID quoteRequestId instead of baking it into the path', () => {
+  for (const bad of ['qr-123', '../../etc', '', 'not-a-uuid', VALID_QR_ID + '/../evil']) {
+    assert.throws(() => buildAttachmentStoragePath(bad, 'file.pdf', 'unique1'), `expected a throw for: ${JSON.stringify(bad)}`);
+  }
+});
+
+test('contentTypeForFileName (I-1b): maps the ALLOWED extensions to fixed MIME types, never the caller-declared type', () => {
+  assert.equal(contentTypeForFileName('spec.pdf'), 'application/pdf');
+  assert.equal(contentTypeForFileName('photo.PNG'), 'image/png');
+  assert.equal(contentTypeForFileName('photo.jpg'), 'image/jpeg');
+  assert.equal(contentTypeForFileName('photo.jpeg'), 'image/jpeg');
+  assert.equal(contentTypeForFileName('photo.webp'), 'image/webp');
+  assert.equal(contentTypeForFileName('sheet.xlsx'), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  assert.equal(contentTypeForFileName('data.csv'), 'text/csv');
+  assert.equal(contentTypeForFileName('part.dwg'), 'application/octet-stream');
+  assert.equal(contentTypeForFileName('part.dxf'), 'application/octet-stream');
+});
+
+test('contentTypeForFileName: an unexpected/disallowed extension still resolves to a safe generic binary type', () => {
+  assert.equal(contentTypeForFileName('malware.html'), 'application/octet-stream');
+  assert.equal(contentTypeForFileName('noext'), 'application/octet-stream');
 });
 
 test('formatFileSize: renders bytes/KB/MB sensibly', () => {

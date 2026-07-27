@@ -64,6 +64,31 @@ export function isAllowedAttachmentExtension(fileName: string): boolean {
   return (ALLOWED_ATTACHMENT_EXTENSIONS as readonly string[]).includes(ext);
 }
 
+// A browser's declared Content-Type on a file input is caller-supplied and
+// not trustworthy (a .pdf can be uploaded declaring image/svg+xml, etc.). We
+// never store or upload with it — Content-Type is derived ONLY from the
+// already-validated extension via this fixed map, same stricter pattern the
+// vendor brochures route uses. dwg/dxf have no universally-registered MIME
+// type, so they fall back to a generic binary type (never executed/rendered
+// by a browser either way — see FIX I-1 for why that matters).
+const ATTACHMENT_MIME_BY_EXTENSION: Record<string, string> = {
+  pdf: 'application/pdf',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  webp: 'image/webp',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  csv: 'text/csv',
+  dwg: 'application/octet-stream',
+  dxf: 'application/octet-stream',
+};
+
+/** Fixed extension → MIME mapping — NEVER the browser-declared File.type. */
+export function contentTypeForFileName(fileName: string): string {
+  const ext = extensionOf(fileName);
+  return ATTACHMENT_MIME_BY_EXTENSION[ext] || 'application/octet-stream';
+}
+
 /**
  * Storage-path-safe slug for a file name. This is for the STORAGE PATH only
  * — the original name is never trusted there (path traversal, separators,
@@ -76,8 +101,17 @@ export function sanitizeFileNameForStorage(fileName: string): string {
   return (cleaned || 'file').slice(-100);
 }
 
-/** Builds the Storage object path for one message attachment. `uniquePart` must be unique per file within the request (e.g. `${Date.now()}_${index}_${random}`) so two files with the same name in one send never collide. */
+// quote_requests.id is a Postgres uuid column — this is a defensive,
+// belt-and-suspenders check (M-3) so a malformed/unexpected id can never end
+// up baked into a Storage path, even though callers are expected to have
+// already resolved qrId through an ownership-scoped DB lookup by this point.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Builds the Storage object path for one message attachment. `uniquePart` must be unique per file within the request (e.g. `${Date.now()}_${index}_${random}`) so two files with the same name in one send never collide. Throws if `quoteRequestId` is not a well-formed UUID. */
 export function buildAttachmentStoragePath(quoteRequestId: string, fileName: string, uniquePart: string): string {
+  if (!UUID_RE.test(quoteRequestId)) {
+    throw new Error('buildAttachmentStoragePath: quoteRequestId must be a UUID');
+  }
   const safe = sanitizeFileNameForStorage(fileName);
   return `message-attachments/${quoteRequestId}/${uniquePart}_${safe}`;
 }
