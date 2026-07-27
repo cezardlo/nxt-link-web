@@ -243,26 +243,41 @@ strip, autocomplete, vendor moderation, NXT AI concierge + commission co-pilot,
 compare fill bars, view-as-buyer — all shipped.
 - **File attachments on buyer<->vendor message threads (sticky-platform gap,
   in-app messaging) — BUILT 2026-07-27 in worktree `msg-attachments-20260727`
-  (branch `wt/msg-attachments`, commit `8de82bb`), NOT deployed, PENDING
-  security review.** Buyers/vendors can attach specs, drawings, POs, and
-  photos to chat on `/buyer` and `/vendor/leads` (paperclip button, file
-  chips, download via signed URL) — PDF/PNG/JPG/WEBP/XLSX/CSV/DWG/DXF, max
-  10 MB/file, 5 files/message, bilingual errors. REUSES the existing private
-  `vendor-brochures` Storage bucket under a new
-  `message-attachments/<quote_request_id>/` prefix — no new bucket. New
-  `message_attachments` table: migration
+  (branch `wt/msg-attachments`, commits `8de82bb` + fix-first round
+  `eab5a5b`), NOT deployed. Security review verdict: FIX-FIRST then SHIP —
+  fixes applied same day, still PENDING re-review/deploy.** Buyers/vendors
+  can attach specs, drawings, POs, and photos to chat on `/buyer` and
+  `/vendor/leads` (paperclip button, file chips, download via signed URL) —
+  PDF/PNG/JPG/WEBP/XLSX/CSV/DWG/DXF, max 10 MB/file, 5 files/message,
+  bilingual errors. REUSES the existing private `vendor-brochures` Storage
+  bucket under a new `message-attachments/<quote_request_id>/` prefix — no
+  new bucket. New `message_attachments` table: migration
   `supabase/migrations/20260727_message_attachments.sql` (not yet applied to
   the live DB — attachments won't persist until it is). Both
   `/api/buyer/messages` and `/api/vendor/messages` extend the existing
   ownedThread auth check (only the two thread parties may upload/fetch) —
   now backed by pure, unit-tested decision functions in
-  `src/lib/messages/authz.ts`. **Flagged for the security review:** unlike
-  text (contact-masked pre-acceptance via `maskContacts`), an uploaded FILE's
-  contents cannot be scanned/masked — a spec sheet or PO could leak a phone
-  number or email before a deal is accepted; files are allowed
-  pre-acceptance anyway since sharing specs before a vendor can quote is the
-  point of the feature. 24 new tests (validation/sanitization + non-party
-  rejection). Typecheck 0, tests 191/191, build clean.
+  `src/lib/messages/authz.ts`. **Fix-first round (`eab5a5b`) closed 3 of the
+  review's findings:** (I-1) signed URLs now force a download
+  (`{ download: name }`) instead of letting a browser render a stored file
+  inline from the storage origin, AND Storage Content-Type / the stored
+  `file_type` are derived only from the validated extension via a fixed map
+  — the browser-declared `File.type` is never trusted/used anywhere; (I-2)
+  attachment file NAMES are now contact-masked pre-acceptance, mirroring the
+  exact `buyer_decision !== 'accepted'` check already used for message
+  bodies (`displayAttachmentName()` in `attachmentsServer.ts`, display-only —
+  DB row/storage path untouched); (M-3) `buildAttachmentStoragePath()` now
+  throws on a non-UUID `quoteRequestId`. Also added a small pre-acceptance
+  warning line near the attach button (EN/ES, copy supplied by the review —
+  **Cesar should approve/reword before ship**). **Still an accepted, flagged
+  gap (not fixable by masking):** a file's actual CONTENTS (not its name)
+  can't be scanned — a spec sheet or PO could still contain a phone number or
+  email inside the document itself; files are allowed pre-acceptance anyway
+  since sharing specs before a vendor can quote is the point of the feature.
+  36 tests total for this feature (24 original + 12 from the fix-first
+  round: content-type mapping, UUID rejection, pre-accept-masked/
+  post-accept-verbatim filename behavior). Typecheck 0, tests 199/199 (full
+  suite), build clean.
 - **Two flow-breaking gaps fixed (CEO flow assessment) — BUILT 2026-07-24 in
   worktree `worktree-agent-ae960b911fbd30718`, NOT deployed, PENDING security +
   money review.** FIX 1 (orphaned comparison): the real side-by-side quote table
