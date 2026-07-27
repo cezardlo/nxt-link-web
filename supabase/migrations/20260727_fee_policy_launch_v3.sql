@@ -3,7 +3,7 @@
 -- fee_policies ledger (Cesar's ruling 2026-07-27, supersedes launch-v2).
 --
 -- New schedule: 4% on the first $50,000 of the eligible subtotal, 2% above,
--- hard cap $12,500 per deal, no minimum. Matches src/lib/fees/engine.ts
+-- hard cap $20,000 per deal, no minimum. Matches src/lib/fees/engine.ts
 -- DEFAULT_FEE_POLICY (version 'launch-v3').
 --
 -- WHY THIS IS SAFE / OPTIONAL:
@@ -26,10 +26,10 @@
 insert into public.fee_policies (version, label, brackets, minimum_fee, maximum_fee, effective_from)
 values (
   'launch-v3',
-  'Launch schedule: 4% on first $50k, 2% above, $12,500 cap per deal, no minimum (requires legal/tax review before launch)',
+  'Launch schedule: 4% on first $50k, 2% above, $20k cap per deal, no minimum (requires legal/tax review before launch)',
   '[{"upTo":50000,"rate":0.04},{"upTo":null,"rate":0.02}]'::jsonb,
   null,
-  12500,
+  20000,
   null
 )
 on conflict (version) do nothing;

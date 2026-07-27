@@ -7,7 +7,9 @@ $20k / $25k" — those were superseded schedules, not the app.
 ## Current policy (launch-v3 — Cesar's ruling 2026-07-27)
 - **4%** on the first **$50,000** of net deal value
 - **2%** on everything above $50,000
-- Fee is **capped at $12,500** per deal (`appliedMaximum`)
+- Fee is **capped at $20,000** per deal (`appliedMaximum`) — cap engages only
+  above $950,000 net. (Cesar ruling 2026-07-27: cap corrected to $20k before
+  first release; the web-Claude brief said $12.5k — overridden.)
 - No minimum floor by default (a `minimumFee` can still be set per policy)
 
 ## First-deal benefit — 50% off (NOT a credit)

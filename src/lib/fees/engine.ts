@@ -5,9 +5,13 @@
 //
 // Fee model: marginal brackets (like tax brackets — no rate cliffs).
 // Launch schedule (owner ruling 2026-07-27; versioned as launch-v3 in DB):
-//   first $50,000 → 4%; above $50,000 → 2%; hard cap $12,500/deal; no min.
+//   first $50,000 → 4%; above $50,000 → 2%; hard cap $20,000/deal; no min.
 //   Worked examples: $100k → 2,000 + 1,000 = $3,000 (3.0%);
-//   $500k → 2,000 + 9,000 = $11,000; $1M → capped at $12,500.
+//   $500k → 2,000 + 9,000 = $11,000 (uncapped);
+//   $1M → 2,000 + 19,000 = $21,000 → capped at $20,000.
+//   The cap only engages above $950,000 of eligible subtotal:
+//   2,000 + 2% × (net − 50,000) > 20,000 ⟺ net > $950,000. At exactly $950k the
+//   bracket math lands on $20,000 — equal to the cap, so it is NOT clamped.
 // First-deal benefit (the first eligible deal per vendor company gets 50% OFF
 // the computed, already-capped commission) lives just below as
 // resolveFirstDealDiscount — a pure resolver applied by the deal/money layer,
@@ -42,13 +46,13 @@ export interface FeePolicy {
 /** Launch default — versioned as launch-v3 in DB. Requires legal/tax review. */
 export const DEFAULT_FEE_POLICY: FeePolicy = {
   version: 'launch-v3',
-  label: 'Launch schedule: 4% on first $50k, 2% above, $12,500 cap per deal, no minimum (requires legal/tax review before launch)',
+  label: 'Launch schedule: 4% on first $50k, 2% above, $20k cap per deal, no minimum (requires legal/tax review before launch)',
   brackets: [
     { upTo: 50_000, rate: 0.04 },
     { upTo: null, rate: 0.02 },
   ],
   minimumFee: null,
-  maximumFee: 12_500,
+  maximumFee: 20_000,
   negotiatedRate: null,
 };
 
@@ -99,8 +103,8 @@ export function resolveDisplayedProtectedUntil(input: DisplayedProtectedUntilInp
 // it from firstDealDiscountAmount() below.
 //
 // Order of operations (money-critical, fixed): brackets → cap → 50% off the
-// already-capped fee. i.e. the discount is taken AFTER the $12,500 cap, so a
-// capped first deal nets $6,250.
+// already-capped fee. i.e. the discount is taken AFTER the $20,000 cap, so a
+// capped first deal nets $10,000.
 
 /** First-deal benefit: fraction taken off the (already-capped) commission. */
 export const FIRST_DEAL_DISCOUNT_RATE = 0.5;

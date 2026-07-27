@@ -5,7 +5,7 @@
 // NOTE: business terms, NOT attorney-reviewed legal language. Per
 // MARKETPLACE_BLUEPRINT §13, a lawyer must review the final Vendor Agreement
 // before real commerce. The fee schedule mirrors the sacred fee engine
-// (src/lib/fees/engine.ts, launch-v3): 4% first $50k, 2% above, $12,500 cap.
+// (src/lib/fees/engine.ts, launch-v3): 4% first $50k, 2% above, $20k cap.
 
 export const VENDOR_TERMS_VERSION = 'v1-2026-07-08';
 
@@ -14,7 +14,7 @@ export interface TermItem { title: string; body: string }
 export const VENDOR_TERMS: TermItem[] = [
   {
     title: 'Commission on NXT//LINK deals',
-    body: 'NXT//LINK earns a disclosed commission on deals that begin from an NXT//LINK lead: 4% on the first $50,000 of the eligible subtotal, 2% above that, capped at $12,500. The commission is vendor-side and charged only on deals that close through NXT//LINK (subject to final legal/tax review).',
+    body: 'NXT//LINK earns a disclosed commission on deals that begin from an NXT//LINK lead: 4% on the first $50,000 of the eligible subtotal, 2% above that, capped at $20,000. The commission is vendor-side and charged only on deals that close through NXT//LINK (subject to final legal/tax review).',
   },
   {
     title: 'Protected period',

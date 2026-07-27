@@ -2,7 +2,7 @@
 
 // /admin/deals — concierge deal tracker + commission calculator (operator-only,
 // under the admin AccessGate). Record a deal → see the commission the fee engine
-// computes (4% first $50k, 2% above, $12,500 cap; optional first-deal 50%
+// computes (4% first $50k, 2% above, $20k cap; optional first-deal 50%
 // discount, operator-applied) → move it through payment → invoice. This is
 // the manual money loop for the MVP.
 
@@ -142,7 +142,7 @@ export default function AdminDealsPage() {
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div className="ad-wrap">
         <h1>Deals &amp; commissions</h1>
-        <p className="ad-sub">Concierge tracker — record a deal, the engine computes the commission (4% first $50k · 2% above · $12,500 cap), then move it to paid and invoice.</p>
+        <p className="ad-sub">Concierge tracker — record a deal, the engine computes the commission (4% first $50k · 2% above · $20k cap), then move it to paid and invoice.</p>
 
         {loading ? (
           <div className="ad-empty">Loading…</div>
@@ -197,7 +197,7 @@ export default function AdminDealsPage() {
                   {pv.lines.map((l, i) => (
                     <div key={i} className="ad-cline"><span>{money(l.amt)} at {(l.rate * 100).toFixed(0)}%</span><b>{money(l.fee)}</b></div>
                   ))}
-                  {pv.cap && <div className="ad-cline cap"><span>$12,500 cap applied</span><b>—</b></div>}
+                  {pv.cap && <div className="ad-cline cap"><span>$20,000 cap applied</span><b>—</b></div>}
                   <label className="ad-credit"><input type="checkbox" checked={f.is_free_credit} onChange={(e) => setF({ ...f, is_free_credit: e.target.checked })} /> First deal — 50% off (−{money(credit)})</label>
                   <div className="ad-cline total"><span>NXT//LINK commission</span><b>{money(commission)}</b></div>
                   <div className="ad-eff">Effective rate {(net > 0 ? (commission / net) * 100 : 0).toFixed(2)}% · protected 12 months</div>

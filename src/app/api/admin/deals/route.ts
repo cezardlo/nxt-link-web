@@ -1,7 +1,7 @@
 // Internal concierge deal tracker + commission calculator. Admin-only.
 // GET   — list manual deals (newest first)
 // POST  — create a deal; the fee engine computes commission from the NET amount
-//         (4% first $50k, 2% above, $12,500 cap), applies the first-deal 50%
+//         (4% first $50k, 2% above, $20k cap), applies the first-deal 50%
 //         discount if flagged, and stamps the 12-month protection window.
 // PATCH — update status (won → payment_confirmed → invoiced → paid …) / invoice ref.
 

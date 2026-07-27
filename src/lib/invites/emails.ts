@@ -10,7 +10,7 @@
 //   - The first-deal discount (50% off the first eligible deal) is NOT
 //     mentioned here (pending attorney sign-off).
 //   - Fee facts we MAY state: 4% on the first $50k, 2% above, capped at
-//     $12,500, charged only when a deal closes. Quoting is free.
+//     $20,000, charged only when a deal closes. Quoting is free.
 //   - Every email carries the unsubscribe link (hard stop rule).
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL || 'https://nxt-link-web.vercel.app').replace(/\/$/, '');
