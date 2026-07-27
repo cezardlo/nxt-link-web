@@ -28,7 +28,7 @@ function previewFee(net: number) {
   if (!(net > 0)) return { fee: 0, rate: 0, cap: false, lines: [] as Array<{ amt: number; rate: number; fee: number }> };
   const r = calculateFee(net);
   const lines = r.lines.map((l) => ({ amt: l.amountInBracket, rate: l.rate, fee: l.fee }));
-  return { fee: Math.round(r.fee), rate: r.effectiveRate, cap: r.appliedMaximum, lines };
+  return { fee: r.fee, rate: r.effectiveRate, cap: r.appliedMaximum, lines };
 }
 
 const STATUS_FLOW = ['reserved', 'won', 'payment_reported', 'payment_confirmed', 'invoiced', 'paid'];
