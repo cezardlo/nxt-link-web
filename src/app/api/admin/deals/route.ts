@@ -1,15 +1,15 @@
 // Internal concierge deal tracker + commission calculator. Admin-only.
 // GET   — list manual deals (newest first)
 // POST  — create a deal; the fee engine computes commission from the NET amount
-//         (5% first $50k, 3% above, $20k cap), applies a free credit if flagged,
-//         and stamps the 12-month protection window.
+//         (4% first $50k, 2% above, $12,500 cap), applies the first-deal 50%
+//         discount if flagged, and stamps the 12-month protection window.
 // PATCH — update status (won → payment_confirmed → invoiced → paid …) / invoice ref.
 
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { isAdminRequest } from '@/lib/assistant/auth';
-import { calculateFee, DEFAULT_FEE_POLICY, FREE_DEAL_CREDIT, PROTECTION_MONTHS } from '@/lib/fees/engine';
+import { calculateFee, DEFAULT_FEE_POLICY, firstDealDiscountAmount, FIRST_DEAL_DISCOUNT_RATE, PROTECTION_MONTHS } from '@/lib/fees/engine';
 import { effectiveModeration, MODERATION_LABEL } from '@/lib/vendor/moderation';
 import { LEDGER_DEAL_COLUMNS, isLedgerUnavailable, isMissingColumnError, mapLedgerRowToDeal, omitCommissionId, type LedgerDealRow, type LedgerSource } from '@/lib/admin/commission-ledger';
 
@@ -43,7 +43,7 @@ export async function GET(req: Request) {
     ledgerSource = 'view';
   }
 
-  return NextResponse.json({ ok: true, deals, policy: { version: DEFAULT_FEE_POLICY.version, brackets: DEFAULT_FEE_POLICY.brackets, cap: DEFAULT_FEE_POLICY.maximumFee, free_credit: FREE_DEAL_CREDIT, protection_months: PROTECTION_MONTHS }, ledger_source: ledgerSource });
+  return NextResponse.json({ ok: true, deals, policy: { version: DEFAULT_FEE_POLICY.version, brackets: DEFAULT_FEE_POLICY.brackets, cap: DEFAULT_FEE_POLICY.maximumFee, first_deal_discount_rate: FIRST_DEAL_DISCOUNT_RATE, protection_months: PROTECTION_MONTHS }, ledger_source: ledgerSource });
 }
 
 export async function POST(req: Request) {
@@ -57,9 +57,11 @@ export async function POST(req: Request) {
   if (!Number.isFinite(net) || net <= 0) return NextResponse.json({ ok: false, message: 'Enter a valid net amount' }, { status: 400 });
 
   const fee = calculateFee(net);
-  const isFreeCredit = Boolean(body.is_free_credit);
-  // A free credit reduces the commission by up to FREE_DEAL_CREDIT (not a full waiver).
-  const creditApplied = isFreeCredit ? Math.min(FREE_DEAL_CREDIT, fee.fee) : 0;
+  const isFirstDeal = Boolean(body.is_free_credit);
+  // First-deal benefit = 50% off the already-capped fee, via the shared engine
+  // helper (firstDealDiscountAmount) — the SAME 50% the vendor side shows, so
+  // the two can never diverge (this is the old $1,250-vs-$250 mismatch, gone).
+  const creditApplied = isFirstDeal ? firstDealDiscountAmount(fee.fee) : 0;
   const commission = Math.round((fee.fee - creditApplied) * 100) / 100;
 
   const s = (k: string, max = 300): string | null =>
@@ -89,7 +91,7 @@ export async function POST(req: Request) {
     commission_amount: commission,
     effective_rate: net > 0 ? Math.round((commission / net) * 10000) / 10000 : 0,
     applied_cap: fee.appliedMaximum,
-    is_free_credit: isFreeCredit,
+    is_free_credit: isFirstDeal,
     credit_applied: creditApplied || null,
     status: 'reserved',
     protected_until: protectedUntil.toISOString().slice(0, 10),

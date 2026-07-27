@@ -2,44 +2,52 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  CREDIT_WINDOW_DAYS,
   DEFAULT_FEE_POLICY,
-  FIRST_DEAL_CREDIT_FOUNDING,
-  FIRST_DEAL_CREDIT_STANDARD,
+  FIRST_DEAL_DISCOUNT_RATE,
+  FIRST_DEAL_WINDOW_DAYS,
   applyAdjustments,
   calculateFee,
   computeEligibleSubtotal,
   explainFee,
-  resolveFirstDealCredit,
+  firstDealDiscountAmount,
+  resolveFirstDealDiscount,
   type FeePolicy,
 } from '@/lib/fees/engine';
 
-test('worked example from the launch-v2 schedule: $60,000 → $2,800 at 4.67% effective', () => {
+// ── Bracket math: 4% first $50k, 2% above, $12,500 cap (launch-v3) ──────────
+
+test('worked example from the launch-v3 schedule: $60,000 → $2,200 at 3.67% effective', () => {
   const result = calculateFee(60_000);
-  assert.equal(result.fee, 2_800);
+  assert.equal(result.fee, 2_200);
   assert.deepEqual(
     result.lines.map((l) => l.fee),
-    [2_500, 300],
+    [2_000, 200],
   );
-  assert.equal(result.effectiveRate, 0.046667); // round2(2800/60000 * 10000) / 10000
+  assert.equal(result.effectiveRate, 0.036667); // round2(2200/60000 * 10000) / 10000
   assert.equal(result.policyVersion, DEFAULT_FEE_POLICY.version);
+  assert.equal(DEFAULT_FEE_POLICY.version, 'launch-v3');
 });
 
 test('marginal brackets have no rate cliffs at boundaries', () => {
   const atBoundary = calculateFee(10_000);
-  assert.equal(atBoundary.fee, 500);
+  assert.equal(atBoundary.fee, 400); // 4% of 10,000
   const justOver = calculateFee(10_000.01);
-  // one cent over adds ~0.05% of a cent, never a jump
+  // one cent over adds ~0.04% of a cent, never a jump
   assert.ok(justOver.fee - atBoundary.fee < 0.01);
   const under = calculateFee(5_000);
-  assert.equal(under.fee, 250);
+  assert.equal(under.fee, 200); // 4% of 5,000
   assert.equal(under.lines.length, 1);
 });
 
-test('top bracket applies only above $50,000', () => {
+test('bracket boundary: the top (2%) bracket applies only above $50,000', () => {
   const fifty = calculateFee(50_000);
-  assert.equal(fifty.fee, 2_500);
+  assert.equal(fifty.fee, 2_000); // 4% of 50,000, single bracket
   assert.equal(fifty.lines.length, 1);
+
+  // One dollar into the top bracket adds exactly 2 cents (2% of $1), no cliff.
+  const justOver = calculateFee(50_001);
+  assert.equal(justOver.fee, 2_000.02);
+  assert.equal(justOver.lines.length, 2);
 });
 
 test('zero subtotal produces zero fee and zero rate', () => {
@@ -49,17 +57,29 @@ test('zero subtotal produces zero fee and zero rate', () => {
   assert.equal(result.lines.length, 0);
 });
 
-test('minimum fee and cap clamp the result and are flagged', () => {
+test('cap boundary: $12,500 cap engages only above $575,000 of eligible subtotal', () => {
+  // 2,000 (4% of 50k) + 10,500 (2% of 525k) = 12,500 exactly — equal to the cap,
+  // so the cap does NOT flag (fee must exceed the cap to be clamped).
+  const atCap = calculateFee(575_000);
+  assert.equal(atCap.fee, 12_500);
+  assert.equal(atCap.appliedMaximum, false);
+
+  // 2,000 + 11,000 (2% of 550k) = 13,000 > 12,500 → clamped and flagged.
+  const overCap = calculateFee(600_000);
+  assert.equal(overCap.fee, 12_500);
+  assert.equal(overCap.appliedMaximum, true);
+
+  // $1,000,000 raw = 2,000 + 19,000 = 21,000 → clamped to the $12,500 cap.
+  const capped = calculateFee(1_000_000);
+  assert.equal(capped.fee, 12_500);
+  assert.equal(capped.appliedMaximum, true);
+});
+
+test('minimum fee floor clamps a tiny fee and is flagged', () => {
   const withMin: FeePolicy = { ...DEFAULT_FEE_POLICY, minimumFee: 1_000 };
-  const min = calculateFee(1_000, withMin); // raw 50 (5% of 1,000)
+  const min = calculateFee(1_000, withMin); // raw 40 (4% of 1,000)
   assert.equal(min.fee, 1_000);
   assert.equal(min.appliedMinimum, true);
-
-  // $1,000,000 raw = 2,500 (5% of 50k) + 28,500 (3% of 950k) = 31,000,
-  // which exceeds the real $20,000 policy cap — so the cap actually engages.
-  const capped = calculateFee(1_000_000);
-  assert.equal(capped.fee, 20_000);
-  assert.equal(capped.appliedMaximum, true);
 });
 
 test('negotiated rate replaces bracket math and is flagged', () => {
@@ -89,6 +109,8 @@ test('invalid policies are rejected', () => {
   );
   assert.throws(() => calculateFee(-5));
 });
+
+// ── Eligible subtotal (unchanged by the rate change) ───────────────────────
 
 test('eligible subtotal excludes tax, shipping, deposits, pass-throughs, refunds', () => {
   const { eligible, gross, exclusions } = computeEligibleSubtotal({
@@ -128,6 +150,8 @@ test('eligible subtotal never goes negative', () => {
   assert.equal(eligible, 0);
 });
 
+// ── Adjustments ────────────────────────────────────────────────────────────
+
 test('adjustments demand a reason and an approver', () => {
   const base = calculateFee(60_000);
   assert.throws(() => applyAdjustments(base, [{ amount: -500, reason: '', approvedBy: 'admin' }]));
@@ -135,8 +159,8 @@ test('adjustments demand a reason and an approver', () => {
   const adjusted = applyAdjustments(base, [
     { amount: -500, reason: 'partial shipment clawback', approvedBy: 'admin@nxtlink' },
   ]);
-  assert.equal(adjusted.adjustedFee, 2_300);
-  assert.equal(adjusted.fee, 2_800); // original preserved
+  assert.equal(adjusted.adjustedFee, 1_700);
+  assert.equal(adjusted.fee, 2_200); // original preserved
 });
 
 test('adjusted fee never goes negative', () => {
@@ -149,95 +173,110 @@ test('adjusted fee never goes negative', () => {
 
 test('explanations are bilingual and cite policy version + math', () => {
   const { en, es } = explainFee(calculateFee(60_000));
-  assert.ok(en.includes('$2,800'));
-  assert.ok(en.includes('4.7%'));
+  assert.ok(en.includes('$2,200'));
+  assert.ok(en.includes('3.7%'));
   assert.ok(en.includes(DEFAULT_FEE_POLICY.version));
-  assert.ok(es.includes('$2,800'));
+  assert.ok(es.includes('$2,200'));
   assert.ok(es.includes('Comisión'));
 });
 
 test('vendor leads live estimate mirrors calculateFee (single source of truth)', () => {
-  // /vendor/leads estimateCommission() now returns calculateFee(amount).fee
-  // verbatim — these are the exact numbers a vendor sees for common quote
-  // sizes, and they must equal the engine (never the retired 15/12.5/10 math).
-  assert.equal(calculateFee(25_000).fee, 1_250); // 5% of 25k
-  assert.equal(calculateFee(100_000).fee, 4_000); // 2,500 + 1,500
-  assert.equal(calculateFee(1_000_000).fee, 20_000); // $20k cap
+  // /vendor/leads estimateCommission() returns calculateFee(amount).fee verbatim
+  // — the exact numbers a vendor sees for common quote sizes under launch-v3.
+  assert.equal(calculateFee(25_000).fee, 1_000); // 4% of 25k
+  assert.equal(calculateFee(100_000).fee, 3_000); // 2,000 + 1,000
+  assert.equal(calculateFee(1_000_000).fee, 12_500); // $12,500 cap
 });
 
-test('resolveFirstDealCredit: standard tier caps at $250', () => {
+// ── First-deal discount: 50% off the already-capped fee ─────────────────────
+
+test('firstDealDiscountAmount is exactly 50% of the (capped) fee', () => {
+  assert.equal(FIRST_DEAL_DISCOUNT_RATE, 0.5);
+  assert.equal(firstDealDiscountAmount(2_200), 1_100);
+  assert.equal(firstDealDiscountAmount(12_500), 6_250); // capped fee → half
+  assert.equal(firstDealDiscountAmount(40), 20); // tiny deal
+  assert.throws(() => firstDealDiscountAmount(Number.NaN));
+  assert.throws(() => firstDealDiscountAmount(-1));
+});
+
+test('resolveFirstDealDiscount: first eligible deal nets 50% off', () => {
   const signupAt = new Date('2026-01-01T00:00:00Z');
   const now = new Date('2026-01-05T00:00:00Z');
-  const result = resolveFirstDealCredit({ tier: 'standard', signupAt, now, priorCreditedDeals: 0, fee: 2_800 });
+  const fee = calculateFee(60_000).fee; // 2,200
+  const result = resolveFirstDealDiscount({ signupAt, now, priorDiscountedDeals: 0, fee });
   assert.equal(result.eligible, true);
-  assert.equal(result.cap, FIRST_DEAL_CREDIT_STANDARD);
-  assert.equal(result.creditApplied, 250);
+  assert.equal(result.rate, 0.5);
+  assert.equal(result.discountApplied, 1_100);
+  assert.equal(result.netFee, 1_100);
 });
 
-test('resolveFirstDealCredit: founding tier caps at $1,250', () => {
+test('resolveFirstDealDiscount: order of operations is brackets → cap → 50% off', () => {
+  // $1,000,000 → bracket math 21,000 → capped 12,500 → 50% off → 6,250 net.
+  const fee = calculateFee(1_000_000).fee; // 12,500 (already capped)
   const signupAt = new Date('2026-01-01T00:00:00Z');
   const now = new Date('2026-01-05T00:00:00Z');
-  const result = resolveFirstDealCredit({ tier: 'founding', signupAt, now, priorCreditedDeals: 0, fee: 2_800 });
-  assert.equal(result.eligible, true);
-  assert.equal(result.cap, FIRST_DEAL_CREDIT_FOUNDING);
-  assert.equal(result.creditApplied, 1_250);
+  const result = resolveFirstDealDiscount({ signupAt, now, priorDiscountedDeals: 0, fee });
+  assert.equal(fee, 12_500);
+  assert.equal(result.discountApplied, 6_250);
+  assert.equal(result.netFee, 6_250);
 });
 
-test('resolveFirstDealCredit: credit clamps to the fee when the fee is below the cap', () => {
+test('resolveFirstDealDiscount: a tiny first deal still gets 50% off', () => {
   const signupAt = new Date('2026-01-01T00:00:00Z');
   const now = new Date('2026-01-05T00:00:00Z');
-  const standard = resolveFirstDealCredit({ tier: 'standard', signupAt, now, priorCreditedDeals: 0, fee: 100 });
-  assert.equal(standard.creditApplied, 100);
-  const founding = resolveFirstDealCredit({ tier: 'founding', signupAt, now, priorCreditedDeals: 0, fee: 900 });
-  assert.equal(founding.creditApplied, 900);
+  const fee = calculateFee(1_000).fee; // 40 (4% of 1,000)
+  const result = resolveFirstDealDiscount({ signupAt, now, priorDiscountedDeals: 0, fee });
+  assert.equal(result.discountApplied, 20);
+  assert.equal(result.netFee, 20);
 });
 
-test('resolveFirstDealCredit: eligible strictly before day 90, expired at day 90 and after', () => {
+test('resolveFirstDealDiscount: the SECOND deal for the same company pays the full fee', () => {
+  const signupAt = new Date('2026-01-01T00:00:00Z');
+  const now = new Date('2026-01-05T00:00:00Z');
+  const fee = calculateFee(60_000).fee; // 2,200
+  const result = resolveFirstDealDiscount({ signupAt, now, priorDiscountedDeals: 1, fee });
+  assert.equal(result.eligible, false);
+  assert.equal(result.rate, 0);
+  assert.equal(result.discountApplied, 0);
+  assert.equal(result.netFee, 2_200); // full fee, no discount
+});
+
+test('resolveFirstDealDiscount: eligible strictly before day 90, expired at day 90 and after', () => {
   const signupAt = new Date('2026-01-01T00:00:00Z');
   const oneDayMs = 24 * 60 * 60 * 1000;
   const dayOffset = (days: number) => new Date(signupAt.getTime() + days * oneDayMs);
+  const fee = calculateFee(25_000).fee; // 1,000
 
-  const day89 = resolveFirstDealCredit({ tier: 'standard', signupAt, now: dayOffset(89), priorCreditedDeals: 0, fee: 1_000 });
+  const day89 = resolveFirstDealDiscount({ signupAt, now: dayOffset(89), priorDiscountedDeals: 0, fee });
   assert.equal(day89.eligible, true);
-  assert.equal(day89.creditApplied, 250);
+  assert.equal(day89.discountApplied, 500);
 
-  const day90 = resolveFirstDealCredit({ tier: 'standard', signupAt, now: dayOffset(90), priorCreditedDeals: 0, fee: 1_000 });
+  const day90 = resolveFirstDealDiscount({ signupAt, now: dayOffset(90), priorDiscountedDeals: 0, fee });
   assert.equal(day90.eligible, false);
-  assert.equal(day90.creditApplied, 0);
+  assert.equal(day90.discountApplied, 0);
+  assert.equal(day90.netFee, 1_000);
 
-  const day91 = resolveFirstDealCredit({ tier: 'standard', signupAt, now: dayOffset(91), priorCreditedDeals: 0, fee: 1_000 });
+  const day91 = resolveFirstDealDiscount({ signupAt, now: dayOffset(91), priorDiscountedDeals: 0, fee });
   assert.equal(day91.eligible, false);
-  assert.equal(day91.creditApplied, 0);
+  assert.equal(day91.discountApplied, 0);
 
-  // expiresAt is exactly signupAt + CREDIT_WINDOW_DAYS days
-  assert.equal(day89.expiresAt.getTime(), signupAt.getTime() + CREDIT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  // expiresAt is exactly signupAt + FIRST_DEAL_WINDOW_DAYS days
+  assert.equal(day89.expiresAt.getTime(), signupAt.getTime() + FIRST_DEAL_WINDOW_DAYS * oneDayMs);
 });
 
-test('resolveFirstDealCredit: second deal for the same company is ineligible', () => {
+test('resolveFirstDealDiscount: malformed inputs throw instead of silently resolving', () => {
   const signupAt = new Date('2026-01-01T00:00:00Z');
   const now = new Date('2026-01-05T00:00:00Z');
-  const result = resolveFirstDealCredit({ tier: 'standard', signupAt, now, priorCreditedDeals: 1, fee: 2_800 });
-  assert.equal(result.eligible, false);
-  assert.equal(result.creditApplied, 0);
-});
+  const ok = { signupAt, now, priorDiscountedDeals: 0, fee: 1_000 };
 
-test('resolveFirstDealCredit: malformed inputs throw instead of silently resolving', () => {
-  const signupAt = new Date('2026-01-01T00:00:00Z');
-  const now = new Date('2026-01-05T00:00:00Z');
-  const ok = { tier: 'standard' as const, signupAt, now, priorCreditedDeals: 0, fee: 1_000 };
+  assert.throws(() => resolveFirstDealDiscount({ ...ok, fee: Number.NaN }), /fee/);
+  assert.throws(() => resolveFirstDealDiscount({ ...ok, fee: Number.POSITIVE_INFINITY }), /fee/);
 
-  // Unknown tier must never silently pick a cap — not even the smaller one.
-  assert.throws(() => resolveFirstDealCredit({ ...ok, tier: 'vip' as never }), /tier must be/);
-  assert.throws(() => resolveFirstDealCredit({ ...ok, tier: undefined as never }), /tier must be/);
+  assert.throws(() => resolveFirstDealDiscount({ ...ok, signupAt: null as never }), /signupAt/);
+  assert.throws(() => resolveFirstDealDiscount({ ...ok, signupAt: new Date('garbage') }), /signupAt/);
+  assert.throws(() => resolveFirstDealDiscount({ ...ok, now: null as never }), /now/);
+  assert.throws(() => resolveFirstDealDiscount({ ...ok, now: new Date(Number.NaN) }), /now/);
 
-  assert.throws(() => resolveFirstDealCredit({ ...ok, fee: Number.NaN }), /fee/);
-  assert.throws(() => resolveFirstDealCredit({ ...ok, fee: Number.POSITIVE_INFINITY }), /fee/);
-
-  assert.throws(() => resolveFirstDealCredit({ ...ok, signupAt: null as never }), /signupAt/);
-  assert.throws(() => resolveFirstDealCredit({ ...ok, signupAt: new Date('garbage') }), /signupAt/);
-  assert.throws(() => resolveFirstDealCredit({ ...ok, now: null as never }), /now/);
-  assert.throws(() => resolveFirstDealCredit({ ...ok, now: new Date(Number.NaN) }), /now/);
-
-  assert.throws(() => resolveFirstDealCredit({ ...ok, priorCreditedDeals: -1 }), /priorCreditedDeals/);
-  assert.throws(() => resolveFirstDealCredit({ ...ok, priorCreditedDeals: 0.5 }), /priorCreditedDeals/);
+  assert.throws(() => resolveFirstDealDiscount({ ...ok, priorDiscountedDeals: -1 }), /priorDiscountedDeals/);
+  assert.throws(() => resolveFirstDealDiscount({ ...ok, priorDiscountedDeals: 0.5 }), /priorDiscountedDeals/);
 });

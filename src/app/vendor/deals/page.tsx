@@ -1,7 +1,7 @@
 'use client';
 
 // /vendor/deals — the vendor's read-only view of their deals & commission.
-// Shows the vendor's first-deal fee-credit standing, each deal's status through
+// Shows the vendor's first-deal discount standing, each deal's status through
 // the pipeline, the NXT//LINK commission, and the protected-until date.
 // Concierge phase: operators drive the deals; the vendor just tracks where
 // things stand.
@@ -31,13 +31,13 @@ const STATUS_LABEL: Record<string, string> = {
   invoiced: 'Commission invoiced', paid: 'Paid', overdue: 'Overdue', disputed: 'Disputed', credited: 'Credited', cancelled: 'Cancelled',
 };
 
-interface Credit { tier: 'standard' | 'founding'; cap: number; available: boolean; expiresAt: string | null; }
+interface Credit { rate: number; available: boolean; expiresAt: string | null; }
 
 export default function VendorDealsPage() {
   const [loading, setLoading] = useState(true);
   const [signedIn, setSignedIn] = useState(true);
   const [deals, setDeals] = useState<Deal[]>([]);
-  const [credit, setCredit] = useState<Credit>({ tier: 'standard', cap: 250, available: false, expiresAt: null });
+  const [credit, setCredit] = useState<Credit>({ rate: 0.5, available: false, expiresAt: null });
 
   useEffect(() => {
     (async () => {
@@ -70,18 +70,18 @@ export default function VendorDealsPage() {
           <div className="vd-empty">Sign in to see your deals — <a href="/vendor-login">vendor sign in</a></div>
         ) : (
           <>
-            {/* First-deal fee-credit banner */}
+            {/* First-deal discount banner */}
             <div className="vd-credits">
               <div className="vd-creditmain">
                 {credit.available ? (
                   <>
-                    <b>First-deal credit: up to {money(credit.cap)} off your first commission</b>
-                    <span>New vendors get a one-time credit toward the NXT//LINK fee on their first closed deal (within 90 days of joining, one per company). On that deal and every deal after: 5% on the first $50k, 3% above, capped at $20,000 — charged only on deals that close through NXT//LINK, and only after you’ve been paid.</span>
+                    <b>First-deal offer: 50% off your first commission</b>
+                    <span>New vendors get 50% off the NXT//LINK fee on their first closed deal (within 90 days of joining, one per company). On that deal and every deal after: 4% on the first $50k, 2% above, capped at $12,500 — charged only on deals that close through NXT//LINK, and only after you’ve been paid.</span>
                   </>
                 ) : (
                   <>
                     <b>NXT//LINK commission</b>
-                    <span>5% on the first $50k, 3% above, capped at $20,000 — charged only on deals that close through NXT//LINK, and only after you’ve been paid.</span>
+                    <span>4% on the first $50k, 2% above, capped at $12,500 — charged only on deals that close through NXT//LINK, and only after you’ve been paid.</span>
                   </>
                 )}
               </div>

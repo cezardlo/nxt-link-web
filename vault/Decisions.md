@@ -17,8 +17,9 @@ Newest at top. One line each: what + why.
 - **Compare tables use fill bars** (price + timeline) so buyers compare at a
   glance.
 - **Vendors can "View as a buyer"** (LinkedIn-style preview).
-- **Fee engine = 5%/3%/$20k cap (launch-v2)** — the app's real math, NOT the
-  7/5/3%/$25k proposal. See [[Fees]].
+- **Fee engine = 4%/2%/$12.5k cap (launch-v3), first deal 50% off** — Cesar's
+  ruling 2026-07-27, supersedes the 5%/3%/$20k launch-v2 model and the old
+  first-deal credit ($250/$1,250). One resolver both sides. See [[Fees]].
 - **NXT AI features use `aiDraft()` with deterministic fallbacks** so they work
   even without an LLM key.
 

@@ -37,7 +37,7 @@ const T = {
     headline: 'Borderplex buyers post what they need. Quote it — free.',
     bullets: [
       ['Free to send · no commitment.', 'No monthly fee. No credit card. Quoting never costs a thing.'],
-      ['You pay only when a deal closes.', '5% on the first $50k, 3% above, capped at $20,000 — published, no surprises.'],
+      ['You pay only when a deal closes.', '4% on the first $50k, 2% above, capped at $12,500 — published, no surprises.'],
       ['Real requests, real people.', 'Every buyer request is reviewed by our team. Bilingual support.'],
     ],
     companyLabel: 'Company name',
@@ -68,7 +68,7 @@ const T = {
     headline: 'Los compradores de la frontera publican lo que necesitan. Cotícelo — gratis.',
     bullets: [
       ['Gratis · sin compromiso.', 'Sin mensualidad. Sin tarjeta. Cotizar nunca cuesta.'],
-      ['Paga solo cuando un trato se cierra.', '5% sobre los primeros $50,000 USD, 3% sobre el resto, con tope de $20,000 — publicado, sin sorpresas.'],
+      ['Paga solo cuando un trato se cierra.', '4% sobre los primeros $50,000 USD, 2% sobre el resto, con tope de $12,500 — publicado, sin sorpresas.'],
       ['Solicitudes reales, gente real.', 'Cada solicitud de compra la revisa nuestro equipo. Soporte bilingüe.'],
     ],
     companyLabel: 'Nombre de la empresa',

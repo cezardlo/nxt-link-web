@@ -10,7 +10,7 @@ import { NextResponse } from 'next/server';
 import { isAdminRequest } from '@/lib/assistant/auth';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { aiDraft } from '@/lib/assistant/llm';
-import { calculateFee, FIRST_DEAL_CREDIT_FOUNDING } from '@/lib/fees/engine';
+import { calculateFee, firstDealDiscountAmount } from '@/lib/fees/engine';
 
 const money = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 
@@ -86,7 +86,7 @@ export async function POST(req: Request) {
   // Log a deal → draft only. Compute commission with the authoritative engine.
   if (p.intent === 'log_deal' && p.net_amount) {
     const fee = calculateFee(p.net_amount);
-    const reply = `Ready to log: ${p.vendor_name || 'vendor'}${p.buyer_company ? ` → ${p.buyer_company}` : ''} at ${money(p.net_amount)}. Commission ${money(fee.fee)} (${(fee.effectiveRate * 100).toFixed(2)}%)${fee.appliedMaximum ? ', $20k cap applied' : ''}. I've filled the form — review and press “Record deal” to confirm. Founding-vendor credit (−${money(FIRST_DEAL_CREDIT_FOUNDING)}) is optional.`;
+    const reply = `Ready to log: ${p.vendor_name || 'vendor'}${p.buyer_company ? ` → ${p.buyer_company}` : ''} at ${money(p.net_amount)}. Commission ${money(fee.fee)} (${(fee.effectiveRate * 100).toFixed(2)}%)${fee.appliedMaximum ? ', $12,500 cap applied' : ''}. I've filled the form — review and press “Record deal” to confirm. First-deal 50% off (−${money(firstDealDiscountAmount(fee.fee))}) is optional.`;
     return NextResponse.json({
       ok: true, action: 'prefill_deal', reply,
       draft: { vendor_name: p.vendor_name, buyer_company: p.buyer_company, net_amount: p.net_amount, source_quote_id: sourceQuoteId },

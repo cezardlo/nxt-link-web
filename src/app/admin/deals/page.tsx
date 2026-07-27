@@ -2,12 +2,12 @@
 
 // /admin/deals — concierge deal tracker + commission calculator (operator-only,
 // under the admin AccessGate). Record a deal → see the commission the fee engine
-// computes (5% first $50k, 3% above, $20k cap; optional founding-vendor credit
-// up to $1,250, operator-applied) → move it through payment → invoice. This is
+// computes (4% first $50k, 2% above, $12,500 cap; optional first-deal 50%
+// discount, operator-applied) → move it through payment → invoice. This is
 // the manual money loop for the MVP.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FIRST_DEAL_CREDIT_FOUNDING } from '@/lib/fees/engine';
+import { calculateFee, firstDealDiscountAmount } from '@/lib/fees/engine';
 import { clearPrivateAccess } from '@/lib/privateAccess';
 
 interface Deal {
@@ -21,16 +21,14 @@ interface Deal {
 const money = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 const fmtDate = (s: string) => { try { return new Date(s).toLocaleDateString(); } catch { return ''; } };
 
-// Client mirror of the fee engine for an instant preview (server is authoritative).
+// Instant preview that calls the SAME sacred engine the server uses, so the
+// operator's live number can never drift from the billed commission (no more
+// hardcoded bracket mirror). Server remains authoritative.
 function previewFee(net: number) {
   if (!(net > 0)) return { fee: 0, rate: 0, cap: false, lines: [] as Array<{ amt: number; rate: number; fee: number }> };
-  const lines: Array<{ amt: number; rate: number; fee: number }> = [];
-  let fee = 0;
-  const first = Math.min(net, 50000);
-  lines.push({ amt: first, rate: 0.05, fee: first * 0.05 }); fee += first * 0.05;
-  if (net > 50000) { const rest = net - 50000; lines.push({ amt: rest, rate: 0.03, fee: rest * 0.03 }); fee += rest * 0.03; }
-  const cap = fee > 20000; if (cap) fee = 20000;
-  return { fee: Math.round(fee), rate: net > 0 ? fee / net : 0, cap, lines };
+  const r = calculateFee(net);
+  const lines = r.lines.map((l) => ({ amt: l.amountInBracket, rate: l.rate, fee: l.fee }));
+  return { fee: r.fee, rate: r.effectiveRate, cap: r.appliedMaximum, lines };
 }
 
 const STATUS_FLOW = ['reserved', 'won', 'payment_reported', 'payment_confirmed', 'invoiced', 'paid'];
@@ -79,7 +77,7 @@ export default function AdminDealsPage() {
 
   const net = Number(f.net_amount) || 0;
   const pv = useMemo(() => previewFee(net), [net]);
-  const credit = f.is_free_credit ? Math.min(FIRST_DEAL_CREDIT_FOUNDING, pv.fee) : 0;
+  const credit = f.is_free_credit ? firstDealDiscountAmount(pv.fee) : 0;
   const commission = Math.max(0, pv.fee - credit);
 
   async function create() {
@@ -144,7 +142,7 @@ export default function AdminDealsPage() {
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div className="ad-wrap">
         <h1>Deals &amp; commissions</h1>
-        <p className="ad-sub">Concierge tracker — record a deal, the engine computes the commission (5% first $50k · 3% above · $20k cap), then move it to paid and invoice.</p>
+        <p className="ad-sub">Concierge tracker — record a deal, the engine computes the commission (4% first $50k · 2% above · $12,500 cap), then move it to paid and invoice.</p>
 
         {loading ? (
           <div className="ad-empty">Loading…</div>
@@ -199,8 +197,8 @@ export default function AdminDealsPage() {
                   {pv.lines.map((l, i) => (
                     <div key={i} className="ad-cline"><span>{money(l.amt)} at {(l.rate * 100).toFixed(0)}%</span><b>{money(l.fee)}</b></div>
                   ))}
-                  {pv.cap && <div className="ad-cline cap"><span>$20,000 cap applied</span><b>—</b></div>}
-                  <label className="ad-credit"><input type="checkbox" checked={f.is_free_credit} onChange={(e) => setF({ ...f, is_free_credit: e.target.checked })} /> Apply founding-vendor credit (−{money(credit)})</label>
+                  {pv.cap && <div className="ad-cline cap"><span>$12,500 cap applied</span><b>—</b></div>}
+                  <label className="ad-credit"><input type="checkbox" checked={f.is_free_credit} onChange={(e) => setF({ ...f, is_free_credit: e.target.checked })} /> First deal — 50% off (−{money(credit)})</label>
                   <div className="ad-cline total"><span>NXT//LINK commission</span><b>{money(commission)}</b></div>
                   <div className="ad-eff">Effective rate {(net > 0 ? (commission / net) * 100 : 0).toFixed(2)}% · protected 12 months</div>
                 </div>

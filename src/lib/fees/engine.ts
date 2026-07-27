@@ -4,12 +4,14 @@
 // carries the exact policy version it was computed under.
 //
 // Fee model: marginal brackets (like tax brackets — no rate cliffs).
-// Launch schedule (owner decision; versioned as launch-v2 in DB):
-//   first $50,000 → 5%; above $50,000 → 3%; hard cap $20,000/project; no min.
-//   Worked examples: $100k → 2,500 + 1,500 = $4,000 (4.0%);
-//   $500k → 2,500 + 13,500 = $16,000; $1M → capped at $20,000.
-// Free-deal handling (first two eligible deals get up to a $1,250 commission
-// CREDIT each) lives in the deal/free-deal layer, not this pure calculator.
+// Launch schedule (owner ruling 2026-07-27; versioned as launch-v3 in DB):
+//   first $50,000 → 4%; above $50,000 → 2%; hard cap $12,500/deal; no min.
+//   Worked examples: $100k → 2,000 + 1,000 = $3,000 (3.0%);
+//   $500k → 2,000 + 9,000 = $11,000; $1M → capped at $12,500.
+// First-deal benefit (the first eligible deal per vendor company gets 50% OFF
+// the computed, already-capped commission) lives just below as
+// resolveFirstDealDiscount — a pure resolver applied by the deal/money layer,
+// never inside calculateFee. It REPLACES the retired first-deal CREDIT system.
 //
 // Eligible base = pre-tax transaction subtotal EXCLUDING sales/VAT tax,
 // refundable deposits, separately stated shipping/freight, pure pass-through
@@ -37,28 +39,19 @@ export interface FeePolicy {
   negotiatedRate?: number | null;
 }
 
-/** Launch default — versioned as launch-v2 in DB. Requires legal/tax review. */
+/** Launch default — versioned as launch-v3 in DB. Requires legal/tax review. */
 export const DEFAULT_FEE_POLICY: FeePolicy = {
-  version: 'launch-v2',
-  label: 'Launch schedule: 5% on first $50k, 3% above, $20k cap per project, no minimum (requires legal/tax review before launch)',
+  version: 'launch-v3',
+  label: 'Launch schedule: 4% on first $50k, 2% above, $12,500 cap per deal, no minimum (requires legal/tax review before launch)',
   brackets: [
-    { upTo: 50_000, rate: 0.05 },
-    { upTo: null, rate: 0.03 },
+    { upTo: 50_000, rate: 0.04 },
+    { upTo: null, rate: 0.02 },
   ],
   minimumFee: null,
-  maximumFee: 20_000,
+  maximumFee: 12_500,
   negotiatedRate: null,
 };
 
-/**
- * @deprecated Retired policy alias — the old rule was "first TWO deals, up to
- * $1,250 each". Cesar's decision 2026-07-21 replaced this with a tiered,
- * server-authoritative first-deal credit: see FIRST_DEAL_CREDIT_STANDARD /
- * FIRST_DEAL_CREDIT_FOUNDING / resolveFirstDealCredit below. Kept only until
- * its three remaining importers (admin/deals routes + vendor/deals) migrate
- * in a later slice — do not add new usages.
- */
-export const FREE_DEAL_CREDIT = 1250;
 /** Protected-introduction window (months) from the NXT//LINK introduction. */
 export const PROTECTION_MONTHS = 12;
 
@@ -97,46 +90,67 @@ export function resolveDisplayedProtectedUntil(input: DisplayedProtectedUntilInp
   return input.commissionProtectedUntil ?? null;
 }
 
-/** Standard first-deal fee credit for a normal invited vendor. */
-export const FIRST_DEAL_CREDIT_STANDARD = 250;
-/** First-deal fee credit for a manually-approved founding vendor. */
-export const FIRST_DEAL_CREDIT_FOUNDING = 1250;
-/** Credit eligibility window, in days after vendor signup (strictly before day 90). */
-export const CREDIT_WINDOW_DAYS = 90;
+// ── First-deal discount (Cesar's ruling 2026-07-27) ─────────────────────────
+// A vendor company's FIRST eligible deal gets 50% OFF the computed commission.
+// This REPLACES the retired first-deal CREDIT system (the tiered $250 / $1,250
+// credits and the deprecated $1,250 free-deal credit). There is no per-tier
+// dollar cap anymore: the same 50% applies to every eligible first deal, so the
+// admin side and the vendor side can never disagree on the amount — both derive
+// it from firstDealDiscountAmount() below.
+//
+// Order of operations (money-critical, fixed): brackets → cap → 50% off the
+// already-capped fee. i.e. the discount is taken AFTER the $12,500 cap, so a
+// capped first deal nets $6,250.
 
-/** Vendor credit tier — 'founding' is an operator-only, manually-set flag. */
-export type VendorTier = 'standard' | 'founding';
+/** First-deal benefit: fraction taken off the (already-capped) commission. */
+export const FIRST_DEAL_DISCOUNT_RATE = 0.5;
+/** First-deal eligibility window, in days after vendor signup (strictly before day 90). */
+export const FIRST_DEAL_WINDOW_DAYS = 90;
 
-export interface FirstDealCreditInput {
-  tier: VendorTier;
+/**
+ * The first-deal benefit as a dollar amount off a given (already-capped) fee.
+ * The ONE place the 50% is turned into money — both the vendor money path and
+ * the admin deal form call this, so the discount can never diverge between them.
+ */
+export function firstDealDiscountAmount(fee: number): number {
+  assertFinite(fee, 'fee');
+  return round2(fee * FIRST_DEAL_DISCOUNT_RATE);
+}
+
+export interface FirstDealDiscountInput {
   /** Vendor signup anchor — `vendor_profiles.created_at`. */
   signupAt: Date;
   /** Evaluation time (injectable for tests; production passes `new Date()`). */
   now: Date;
-  /** Count of this company's deals already credited (credit_applied > 0, not cancelled). */
-  priorCreditedDeals: number;
-  /** The calculated fee (from calculateFee) the credit would apply against. */
+  /** Count of this company's deals that already used the first-deal discount (credit_applied > 0, not cancelled). */
+  priorDiscountedDeals: number;
+  /** The calculated fee (from calculateFee, already capped) the discount applies against. */
   fee: number;
 }
 
-export interface FirstDealCreditResult {
+export interface FirstDealDiscountResult {
   eligible: boolean;
-  /** The credit ceiling for this vendor's tier ($250 or $1,250). */
-  cap: number;
-  /** min(cap, fee) when eligible, otherwise 0. */
-  creditApplied: number;
+  /** The discount fraction applied (FIRST_DEAL_DISCOUNT_RATE) when eligible, otherwise 0. */
+  rate: number;
+  /** round2(fee * FIRST_DEAL_DISCOUNT_RATE) when eligible, otherwise 0. */
+  discountApplied: number;
+  /** fee - discountApplied, never below 0. */
+  netFee: number;
   reason: string;
-  /** signupAt + CREDIT_WINDOW_DAYS days — the moment eligibility ends. */
+  /** signupAt + FIRST_DEAL_WINDOW_DAYS days — the moment eligibility ends. */
   expiresAt: Date;
 }
 
 /**
  * Pure, server-authoritative resolver for the one-per-company first-deal
- * credit. No DB access, no client input trusted beyond what the caller
- * already looked up (tier + signup date + prior credited count).
+ * discount. No DB access, no client input trusted beyond what the caller
+ * already looked up (signup date + prior-discounted count + the capped fee).
+ * Same eligibility spirit as the retired credit resolver — one per company,
+ * within FIRST_DEAL_WINDOW_DAYS of signup — but the benefit is 50% off, not a
+ * fixed-dollar credit.
  */
-export function resolveFirstDealCredit(input: FirstDealCreditInput): FirstDealCreditResult {
-  const { tier, signupAt, now, priorCreditedDeals, fee } = input;
+export function resolveFirstDealDiscount(input: FirstDealDiscountInput): FirstDealDiscountResult {
+  const { signupAt, now, priorDiscountedDeals, fee } = input;
   assertFinite(fee, 'fee');
   if (!(signupAt instanceof Date) || Number.isNaN(signupAt.getTime())) {
     throw new Error('signupAt must be a valid Date');
@@ -144,35 +158,40 @@ export function resolveFirstDealCredit(input: FirstDealCreditInput): FirstDealCr
   if (!(now instanceof Date) || Number.isNaN(now.getTime())) {
     throw new Error('now must be a valid Date');
   }
-  if (!Number.isInteger(priorCreditedDeals) || priorCreditedDeals < 0) {
-    throw new Error('priorCreditedDeals must be a non-negative integer');
-  }
-  // Money code fails loudly: a typo or miscast DB value must never silently
-  // pick a cap (even the smaller one).
-  if (tier !== 'standard' && tier !== 'founding') {
-    throw new Error("tier must be 'standard' or 'founding'");
+  if (!Number.isInteger(priorDiscountedDeals) || priorDiscountedDeals < 0) {
+    throw new Error('priorDiscountedDeals must be a non-negative integer');
   }
 
-  const cap = tier === 'founding' ? FIRST_DEAL_CREDIT_FOUNDING : FIRST_DEAL_CREDIT_STANDARD;
-  const expiresAt = new Date(signupAt.getTime() + CREDIT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const expiresAt = new Date(signupAt.getTime() + FIRST_DEAL_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
   let eligible: boolean;
   let reason: string;
-  if (priorCreditedDeals > 0) {
+  if (priorDiscountedDeals > 0) {
     eligible = false;
-    reason = 'ineligible: this company already used its one-per-company first-deal credit';
+    reason = 'ineligible: this company already used its one-per-company first-deal discount';
   } else if (now.getTime() >= expiresAt.getTime()) {
     eligible = false;
-    reason = `ineligible: more than ${CREDIT_WINDOW_DAYS} days since signup`;
+    reason = `ineligible: more than ${FIRST_DEAL_WINDOW_DAYS} days since signup`;
   } else {
     eligible = true;
-    reason = 'eligible: first deal, within the credit window';
+    reason = 'eligible: first deal, within the discount window';
   }
 
-  const creditApplied = eligible ? Math.min(cap, fee) : 0;
+  const discountApplied = eligible ? firstDealDiscountAmount(fee) : 0;
+  const netFee = round2(Math.max(0, fee - discountApplied));
 
-  return { eligible, cap, creditApplied, reason, expiresAt };
+  return { eligible, rate: eligible ? FIRST_DEAL_DISCOUNT_RATE : 0, discountApplied, netFee, reason, expiresAt };
 }
+
+// PHASE 2 EXTENSION POINT (NOT built here — out of scope 2026-07-27):
+// the 0% pre-existing-customer exemption. When an admin approves a vendor's
+// dated proof that a buyer was already their customer BEFORE the NXT//LINK
+// introduction, that deal owes no commission. It would slot in as a separate,
+// higher-priority pure resolver — e.g. resolvePreExistingCustomerExemption()
+// returning { exempt, proofRef, approvedBy } — applied to calculateFee(net).fee
+// BEFORE resolveFirstDealDiscount (an exempt deal is simply 0, so the first-deal
+// discount never runs on it). Keep it a pure function fed by admin-reviewed
+// inputs (never client-trusted), mirroring resolveFirstDealDiscount's shape.
 
 export type LineKind =
   | 'product'
