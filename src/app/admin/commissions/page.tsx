@@ -114,39 +114,43 @@ export default function AdminCommissionsPage() {
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
-.cm{min-height:100vh;background:#0A0A0F;color:#F0F0F5;font-family:'Outfit',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+.cm{min-height:100vh;background:#F8F7FB;color:#141320;font-family:'Outfit',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
 .cm *{box-sizing:border-box;}
-.cm-nav{display:flex;justify-content:space-between;align-items:center;padding:14px 26px;border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;background:rgba(10,10,15,.9);backdrop-filter:blur(20px);z-index:20;}
-.cm-brand{display:flex;align-items:baseline;gap:10px;color:#F0F0F5;text-decoration:none;}
-.cm-brand b{font-size:17px;}.cm-brand i{color:#A78BFA;font-style:normal;}
-.cm-brand span{color:#8080A0;font-size:13px;}
-.cm-link{color:#A78BFA;font-size:13.5px;font-weight:600;text-decoration:none;}
+.cm-nav{display:flex;justify-content:space-between;align-items:center;padding:14px 26px;border-bottom:1px solid rgba(20,19,32,.08);position:sticky;top:0;background:rgba(248,247,251,.9);backdrop-filter:blur(20px);z-index:20;}
+.cm-brand{display:flex;align-items:baseline;gap:10px;color:#141320;text-decoration:none;}
+.cm-brand b{font-size:17px;}.cm-brand i{color:#4A3DB0;font-style:normal;}
+.cm-brand span{color:#615F72;font-size:13px;}
+.cm-link{color:#4A3DB0;font-size:13.5px;font-weight:600;text-decoration:none;}
 .cm-wrap{max-width:1080px;margin:0 auto;padding:36px 20px 100px;}
 .cm-wrap h1{font-size:28px;font-weight:800;letter-spacing:-.02em;}
-.cm-sub{color:#8080A0;font-size:14px;margin:6px 0 22px;line-height:1.5;}
-.cm-notice{font-size:12.5px;color:#8080A0;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px 12px;margin:0 0 22px;}
-.cm-warn{display:inline-block;margin-left:6px;font-size:12px;color:#FBBF24;cursor:help;}
-.cm-empty{text-align:center;color:#8080A0;padding:60px 0;}
-.cm-empty a{color:#A78BFA;}
+.cm-sub{color:#615F72;font-size:14px;margin:6px 0 22px;line-height:1.5;}
+.cm-notice{font-size:12.5px;color:#615F72;background:rgba(20,19,32,.04);border:1px solid rgba(20,19,32,.08);border-radius:8px;padding:8px 12px;margin:0 0 22px;}
+.cm-warn{display:inline-block;margin-left:6px;font-size:12px;color:#C68A28;cursor:help;}
+.cm-empty{text-align:center;color:#615F72;padding:60px 0;}
+.cm-empty a{color:#4A3DB0;}
 .cm-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:26px;}
-.cm-tile{font-family:inherit;text-align:left;background:#12121B;border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:18px 20px;cursor:pointer;display:flex;flex-direction:column;gap:8px;color:#F0F0F5;}
-.cm-tile small{color:#8080A0;font-size:12px;}
+.cm-tile{font-family:inherit;text-align:left;background:#FFFFFF;border:1px solid rgba(20,19,32,.09);border-radius:16px;padding:18px 20px;cursor:pointer;display:flex;flex-direction:column;gap:8px;color:#141320;}
+.cm-tile small{color:#615F72;font-size:12px;}
 .cm-tile b{font-size:24px;font-weight:800;letter-spacing:-.02em;}
-.cm-tile.due b{color:#FBBF24;}
-.cm-tile.paid b{color:#34D399;}
-.cm-tile.on{border-color:#7C5CFC;background:rgba(124,92,252,.08);}
-.cm-tablewrap{overflow-x:auto;background:#12121B;border:1px solid rgba(255,255,255,.08);border-radius:16px;}
+.cm-tile.due b{color:#C68A28;}
+.cm-tile.paid b{color:#2F9E6A;}
+.cm-tile.on{border-color:#6C5CE0;background:rgba(108,92,224,.08);}
+.cm-tablewrap{overflow-x:auto;background:#FFFFFF;border:1px solid rgba(20,19,32,.08);border-radius:16px;}
 .cm-table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:820px;}
-.cm-table th{text-align:left;padding:12px 14px;color:#8080A0;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,.08);}
-.cm-table td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle;}
-.cm-fee{color:#C4B5FD;font-weight:700;}
-.cm-fee small{color:#8080A0;font-weight:400;}
-.cm-status{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:99px;background:rgba(255,255,255,.07);color:#C0C0D0;}
-.cm-status.quoted{background:rgba(124,92,252,.15);color:#C4B5FD;}
-.cm-status.accepted{background:rgba(52,211,153,.1);color:#6EE7B7;}
-.cm-status.won{background:rgba(251,191,36,.13);color:#FBBF24;}
-.cm-status.paid{background:rgba(52,211,153,.16);color:#34D399;}
-.cm-status.lost,.cm-status.void{background:rgba(252,165,165,.1);color:#FCA5A5;}
-.cm-btn{font-family:inherit;font-size:12px;font-weight:700;background:#7C5CFC;border:none;color:#fff;border-radius:8px;padding:7px 12px;cursor:pointer;}
-.cm-btn.ghost{background:none;border:1px solid rgba(255,255,255,.14);color:#8080A0;}
+.cm-table th{text-align:left;padding:12px 14px;color:#615F72;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid rgba(20,19,32,.08);}
+.cm-table td{padding:12px 14px;border-bottom:1px solid rgba(20,19,32,.05);vertical-align:middle;}
+.cm-fee{color:#4A3DB0;font-weight:700;}
+.cm-fee small{color:#615F72;font-weight:400;}
+.cm-status{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:99px;background:rgba(20,19,32,.07);color:#3B3A4A;}
+.cm-status.quoted{background:rgba(108,92,224,.15);color:#4A3DB0;}
+.cm-status.accepted{background:rgba(47,158,106,.1);color:#2F9E6A;}
+.cm-status.won{background:rgba(198,138,40,.13);color:#C68A28;}
+.cm-status.paid{background:rgba(47,158,106,.16);color:#2F9E6A;}
+.cm-status.lost,.cm-status.void{background:rgba(206,75,67,.1);color:#CE4B43;}
+.cm-btn{font-family:inherit;font-size:12px;font-weight:700;background:#6C5CE0;border:none;color:#fff;border-radius:8px;padding:7px 12px;cursor:pointer;transition:background .15s ease,border-color .15s ease,color .15s ease;}
+.cm-btn:hover{background:#4A3DB0;}
+.cm-btn.ghost{background:none;border:1px solid rgba(20,19,32,.14);color:#615F72;}
+.cm-btn.ghost:hover{border-color:#6C5CE0;color:#4A3DB0;}
+.cm button,.cm a{transition:background .15s ease,border-color .15s ease,color .15s ease;}
+.cm button:focus-visible,.cm a:focus-visible{outline:2px solid #6C5CE0;outline-offset:2px;border-radius:6px;}
 `;

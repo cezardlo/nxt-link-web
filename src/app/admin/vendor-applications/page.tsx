@@ -121,47 +121,49 @@ export default function AdminVendorApplicationsPage() {
 }
 
 const CSS = `
-.ap{min-height:100vh;background:#0A0A0F;color:#F0F0F5;font-family:'Outfit',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;}
+.ap{min-height:100vh;background:#F8F7FB;color:#141320;font-family:'Outfit',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;}
 .ap *{box-sizing:border-box;}
 .ap-wrap{max-width:900px;margin:0 auto;padding:34px 20px 90px;}
 .ap-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;}
 .ap-wrap h1{font-size:26px;font-weight:800;letter-spacing:-.02em;margin:0;}
-.ap-alt{color:#A78BFA;font-size:13px;font-weight:600;text-decoration:none;}
+.ap-alt{color:#4A3DB0;font-size:13px;font-weight:600;text-decoration:none;}
 .ap-alt:hover{text-decoration:underline;}
-.ap-sub{color:#8080A0;font-size:14px;margin:8px 0 20px;}
-.ap-sub b{color:#C0C0D0;}
-.ap-flash{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:#34D399;font-size:13px;padding:10px 14px;border-radius:10px;margin-bottom:16px;}
+.ap-sub{color:#615F72;font-size:14px;margin:8px 0 20px;}
+.ap-sub b{color:#3B3A4A;}
+.ap-flash{background:rgba(47,158,106,.12);border:1px solid rgba(47,158,106,.3);color:#2F9E6A;font-size:13px;padding:10px 14px;border-radius:10px;margin-bottom:16px;}
 .ap-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
-.ap-f{font-family:inherit;font-size:12.5px;font-weight:600;color:#C0C0D0;background:#14141F;border:1px solid rgba(255,255,255,.1);border-radius:99px;padding:8px 14px;cursor:pointer;}
-.ap-f.on{background:rgba(124,92,252,.16);border-color:#7C5CFC;color:#C4B5FD;}
-.ap-empty{color:#8080A0;font-size:14px;padding:34px 0;text-align:center;}
+.ap-f{font-family:inherit;font-size:12.5px;font-weight:600;color:#3B3A4A;background:#FFFFFF;border:1px solid rgba(20,19,32,.1);border-radius:99px;padding:8px 14px;cursor:pointer;}
+.ap-f.on{background:rgba(108,92,224,.16);border-color:#6C5CE0;color:#4A3DB0;}
+.ap-empty{color:#615F72;font-size:14px;padding:34px 0;text-align:center;}
 .ap-list{display:flex;flex-direction:column;gap:11px;}
-.ap-card{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;background:#12121B;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px 18px;}
+.ap-card{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;background:#FFFFFF;border:1px solid rgba(20,19,32,.08);border-radius:14px;padding:16px 18px;}
 .ap-main{min-width:0;flex:1;}
 .ap-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .ap-top b{font-size:15.5px;font-weight:700;}
-.ap-cat{font-size:11px;font-weight:600;color:#C4B5FD;background:rgba(124,92,252,.14);border:1px solid rgba(124,92,252,.25);border-radius:99px;padding:3px 10px;}
-.ap-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:rgba(255,255,255,.06);color:#C0C0D0;}
-.ap-badge.s-pending{background:rgba(251,191,36,.14);color:#FBBF24;}
-.ap-badge.s-approved{background:rgba(52,211,153,.14);color:#34D399;}
-.ap-ref{font-size:11px;color:#5A5A70;margin-left:auto;}
-.ap-contact{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:13px;color:#8080A0;}
-.ap-contact a{color:#A78BFA;text-decoration:none;}
+.ap-cat{font-size:11px;font-weight:600;color:#4A3DB0;background:rgba(108,92,224,.14);border:1px solid rgba(108,92,224,.25);border-radius:99px;padding:3px 10px;}
+.ap-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:rgba(20,19,32,.06);color:#3B3A4A;}
+.ap-badge.s-pending{background:rgba(198,138,40,.14);color:#C68A28;}
+.ap-badge.s-approved{background:rgba(47,158,106,.14);color:#2F9E6A;}
+.ap-ref{font-size:11px;color:#615F72;margin-left:auto;}
+.ap-contact{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:13px;color:#615F72;}
+.ap-contact a{color:#4A3DB0;text-decoration:none;}
 .ap-contact a:hover{text-decoration:underline;}
-.ap-date{margin-left:auto;color:#5A5A70;}
-.ap-note{font-size:13px;color:#B8B6CC;margin-top:9px;line-height:1.5;}
-.ap-note b,.ap-line b{color:#8080A0;font-weight:600;}
-.ap-line{font-size:12.5px;color:#B8B6CC;margin-top:5px;}
+.ap-date{margin-left:auto;color:#615F72;}
+.ap-note{font-size:13px;color:#3B3A4A;margin-top:9px;line-height:1.5;}
+.ap-note b,.ap-line b{color:#615F72;font-weight:600;}
+.ap-line{font-size:12.5px;color:#3B3A4A;margin-top:5px;}
 .ap-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
-.ap-tag{font-size:11px;font-weight:600;color:#C0C0D0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:99px;padding:3px 9px;}
-.ap-tag.alt{color:#93C5FD;background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.2);}
+.ap-tag{font-size:11px;font-weight:600;color:#3B3A4A;background:rgba(20,19,32,.06);border:1px solid rgba(20,19,32,.1);border-radius:99px;padding:3px 9px;}
+.ap-tag.alt{color:#3E6FD0;background:rgba(62,111,208,.1);border-color:rgba(62,111,208,.2);}
 .ap-actions{display:flex;flex-direction:column;gap:8px;flex-shrink:0;align-items:stretch;}
-.ap-adv{font-family:inherit;font-size:12.5px;font-weight:700;padding:9px 14px;border-radius:9px;border:none;background:#7C5CFC;color:#fff;cursor:pointer;white-space:nowrap;}
-.ap-adv:hover{background:#6344DF;}
+.ap-adv{font-family:inherit;font-size:12.5px;font-weight:700;padding:9px 14px;border-radius:9px;border:none;background:#6C5CE0;color:#fff;cursor:pointer;white-space:nowrap;}
+.ap-adv:hover{background:#4A3DB0;}
 .ap-adv:disabled{opacity:.5;cursor:default;}
-.ap-decline{font-family:inherit;font-size:12px;font-weight:600;padding:7px 14px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background:none;color:#8080A0;cursor:pointer;}
-.ap-decline:hover{color:#FCA5A5;border-color:rgba(248,113,113,.3);}
+.ap-decline{font-family:inherit;font-size:12px;font-weight:600;padding:7px 14px;border-radius:9px;border:1px solid rgba(20,19,32,.12);background:none;color:#615F72;cursor:pointer;}
+.ap-decline:hover{color:#CE4B43;border-color:rgba(206,75,67,.3);}
 .ap-decline:disabled{opacity:.5;cursor:default;}
-.ap-view{font-family:inherit;font-size:12.5px;font-weight:600;color:#34D399;text-decoration:none;white-space:nowrap;padding:9px 4px;}
+.ap-view{font-family:inherit;font-size:12.5px;font-weight:600;color:#2F9E6A;text-decoration:none;white-space:nowrap;padding:9px 4px;}
 .ap-view:hover{text-decoration:underline;}
+.ap button,.ap a{transition:background .15s ease,border-color .15s ease,color .15s ease;}
+.ap button:focus-visible,.ap a:focus-visible{outline:2px solid #6C5CE0;outline-offset:2px;border-radius:6px;}
 `;

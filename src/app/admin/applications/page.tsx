@@ -48,7 +48,7 @@ export default function AdminApplicationsPage() {
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div className="ap-wrap">
         <h1>Early-access applications</h1>
-        <p style={{ margin: '6px 0 0' }}><a href="/admin/vendor-applications" style={{ color: '#A78BFA', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>Full vendor applications (/apply) →</a></p>
+        <p style={{ margin: '6px 0 0' }}><a href="/admin/vendor-applications" style={{ color: '#4A3DB0', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>Full vendor applications (/apply) →</a></p>
         <p className="ap-sub">Your concierge waitlist. Reach out personally, then move each vendor through onboarding. Moving a vendor to “Onboarded” auto-sends their bilingual welcome email with a sign-in link.</p>
         {flash && <div className="ap-flash">{flash}</div>}
 
@@ -94,35 +94,37 @@ export default function AdminApplicationsPage() {
 }
 
 const CSS = `
-.ap{min-height:100vh;background:#0A0A0F;color:#F0F0F5;font-family:'Outfit',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;}
+.ap{min-height:100vh;background:#F8F7FB;color:#141320;font-family:'Outfit',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;}
 .ap *{box-sizing:border-box;}
 .ap-wrap{max-width:900px;margin:0 auto;padding:34px 20px 90px;}
 .ap-wrap h1{font-size:26px;font-weight:800;letter-spacing:-.02em;margin:0;}
-.ap-sub{color:#8080A0;font-size:14px;margin:8px 0 20px;}
-.ap-flash{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:#34D399;font-size:13px;padding:10px 14px;border-radius:10px;margin-bottom:16px;}
+.ap-sub{color:#615F72;font-size:14px;margin:8px 0 20px;}
+.ap-flash{background:rgba(47,158,106,.12);border:1px solid rgba(47,158,106,.3);color:#2F9E6A;font-size:13px;padding:10px 14px;border-radius:10px;margin-bottom:16px;}
 .ap-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
-.ap-f{font-family:inherit;font-size:12.5px;font-weight:600;color:#C0C0D0;background:#14141F;border:1px solid rgba(255,255,255,.1);border-radius:99px;padding:8px 14px;cursor:pointer;}
-.ap-f.on{background:rgba(124,92,252,.16);border-color:#7C5CFC;color:#C4B5FD;}
-.ap-empty{color:#8080A0;font-size:14px;padding:34px 0;text-align:center;}
+.ap-f{font-family:inherit;font-size:12.5px;font-weight:600;color:#3B3A4A;background:#FFFFFF;border:1px solid rgba(20,19,32,.1);border-radius:99px;padding:8px 14px;cursor:pointer;}
+.ap-f.on{background:rgba(108,92,224,.16);border-color:#6C5CE0;color:#4A3DB0;}
+.ap-empty{color:#615F72;font-size:14px;padding:34px 0;text-align:center;}
 .ap-list{display:flex;flex-direction:column;gap:11px;}
-.ap-card{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;background:#12121B;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px 18px;}
+.ap-card{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;background:#FFFFFF;border:1px solid rgba(20,19,32,.08);border-radius:14px;padding:16px 18px;}
 .ap-main{min-width:0;flex:1;}
 .ap-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .ap-top b{font-size:15.5px;font-weight:700;}
-.ap-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:rgba(255,255,255,.06);color:#C0C0D0;}
-.ap-badge.s-new{background:rgba(251,191,36,.14);color:#FBBF24;}
-.ap-badge.s-contacted{background:rgba(96,165,250,.14);color:#60A5FA;}
-.ap-badge.s-onboarding{background:rgba(124,92,252,.14);color:#C4B5FD;}
-.ap-badge.s-onboarded{background:rgba(52,211,153,.14);color:#34D399;}
-.ap-badge.s-declined{background:rgba(248,113,113,.12);color:#FCA5A5;}
-.ap-contact{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:13px;color:#8080A0;}
-.ap-contact a{color:#A78BFA;text-decoration:none;}
+.ap-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:rgba(20,19,32,.06);color:#3B3A4A;}
+.ap-badge.s-new{background:rgba(198,138,40,.14);color:#C68A28;}
+.ap-badge.s-contacted{background:rgba(62,111,208,.14);color:#3E6FD0;}
+.ap-badge.s-onboarding{background:rgba(108,92,224,.14);color:#4A3DB0;}
+.ap-badge.s-onboarded{background:rgba(47,158,106,.14);color:#2F9E6A;}
+.ap-badge.s-declined{background:rgba(206,75,67,.12);color:#CE4B43;}
+.ap-contact{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:13px;color:#615F72;}
+.ap-contact a{color:#4A3DB0;text-decoration:none;}
 .ap-contact a:hover{text-decoration:underline;}
-.ap-date{margin-left:auto;color:#5A5A70;}
-.ap-note{font-size:13px;color:#B8B6CC;margin-top:9px;line-height:1.5;font-style:italic;}
+.ap-date{margin-left:auto;color:#615F72;}
+.ap-note{font-size:13px;color:#3B3A4A;margin-top:9px;line-height:1.5;font-style:italic;}
 .ap-actions{display:flex;flex-direction:column;gap:8px;flex-shrink:0;}
-.ap-adv{font-family:inherit;font-size:12.5px;font-weight:700;padding:9px 14px;border-radius:9px;border:none;background:#7C5CFC;color:#fff;cursor:pointer;white-space:nowrap;}
-.ap-adv:hover{background:#6344DF;}
-.ap-decline{font-family:inherit;font-size:12px;font-weight:600;padding:7px 14px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background:none;color:#8080A0;cursor:pointer;}
-.ap-decline:hover{color:#FCA5A5;border-color:rgba(248,113,113,.3);}
+.ap-adv{font-family:inherit;font-size:12.5px;font-weight:700;padding:9px 14px;border-radius:9px;border:none;background:#6C5CE0;color:#fff;cursor:pointer;white-space:nowrap;}
+.ap-adv:hover{background:#4A3DB0;}
+.ap-decline{font-family:inherit;font-size:12px;font-weight:600;padding:7px 14px;border-radius:9px;border:1px solid rgba(20,19,32,.12);background:none;color:#615F72;cursor:pointer;}
+.ap-decline:hover{color:#CE4B43;border-color:rgba(206,75,67,.3);}
+.ap button,.ap a{transition:background .15s ease,border-color .15s ease,color .15s ease;}
+.ap button:focus-visible,.ap a:focus-visible{outline:2px solid #6C5CE0;outline-offset:2px;border-radius:6px;}
 `;
