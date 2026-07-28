@@ -50,7 +50,15 @@ interface DashboardData {
   requests?: IntakeRequest[]; quotes?: QuoteRequest[];
 }
 
-const money = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+// Same convention as QuoteCompareTable.money(): honor the quote's own currency
+// (vendors can quote MXN), fall back safely if the stored code is invalid.
+const money = (n: number, currency?: string | null) => {
+  try {
+    return n.toLocaleString('en-US', { style: 'currency', currency: currency || 'USD', maximumFractionDigits: 0 });
+  } catch {
+    return `$${n.toLocaleString()}`;
+  }
+};
 
 const T: Record<Lang, Record<string, string>> = {
   en: {
@@ -731,7 +739,7 @@ export default function BuyerDashboardPage() {
                         <div className="by-quote">
                           {/* M1: already shown as this quote's row in the compare table above — don't restate it here. */}
                           {!comparedQuoteIds.has(q.id) && (
-                            <div className="by-qhead">{t.quoteReceived} <b>{money(q.quote_amount)}</b>{q.quote_timeline ? ` · ${q.quote_timeline}` : ''}</div>
+                            <div className="by-qhead">{t.quoteReceived} <b>{money(q.quote_amount, q.quote_currency)}</b>{q.quote_timeline ? ` · ${q.quote_timeline}` : ''}</div>
                           )}
                           {q.quote_message && <p className="by-qmsg">{q.quote_message}</p>}
                           {q.quote_valid_until && <div className="by-qvalid">{fmtValidUntil(q.quote_valid_until)}</div>}
@@ -766,7 +774,7 @@ export default function BuyerDashboardPage() {
                           ) : (
                             <>
                               <div className="by-qactions">
-                                <button className="by-accept" disabled={decidingId === q.id} onClick={() => decide(q.id, 'accepted')}>{decidingId === q.id ? t.saving : `${t.accept} ${money(q.quote_amount)}`}</button>
+                                <button className="by-accept" disabled={decidingId === q.id} onClick={() => decide(q.id, 'accepted')}>{decidingId === q.id ? t.saving : `${t.accept} ${money(q.quote_amount, q.quote_currency)}`}</button>
                                 <button className="by-decline" disabled={decidingId === q.id} onClick={() => decide(q.id, 'declined')}>{decidingId === q.id ? t.saving : t.decline}</button>
                               </div>
                               <p className="by-guardnote">{t.guardAccept}</p>
