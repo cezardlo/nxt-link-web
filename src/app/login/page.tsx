@@ -219,7 +219,7 @@ function LoginInner() {
             />
             {ANY_OAUTH_ENABLED && <p className="li-googlenote">{bilingualCopy(OAUTH_CONTINUE_AGREES_MSG, lang)}</p>}
             <button type="button" className="li-magic" onClick={magicLink} disabled={magicBusy}>
-              <Mail size={16} aria-hidden="true" /> {magicBusy ? t.sendingLink : t.emailMeLink}
+              <Mail size={16} strokeWidth={1.75} aria-hidden="true" /> {magicBusy ? t.sendingLink : t.emailMeLink}
             </button>
             <input type="email" placeholder={t.emailPh} value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" style={{ marginTop: 2 }} />
             {err && !usePassword && <div className="li-err">{err}</div>}

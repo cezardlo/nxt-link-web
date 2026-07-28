@@ -393,7 +393,7 @@ export default function VendorStorefrontPage() {
 
       {isOwner && (
         <div className="vs-ownerbar">
-          <span><Eye size={14} aria-hidden="true" /> {t.ownerViewing}</span>
+          <span><Eye size={14} strokeWidth={1.75} aria-hidden="true" /> {t.ownerViewing}</span>
           <Link href="/vendor/portal">{t.backToEditing}</Link>
         </div>
       )}
@@ -408,9 +408,9 @@ export default function VendorStorefrontPage() {
               <div className="vs-name">{v.company_name}{v.verified && <span className="vs-tick" role="img" aria-label={lang === 'es' ? 'Verificado' : 'Verified'}><Check size={13} strokeWidth={3} aria-hidden="true" /></span>}</div>
               {v.tagline && <div className="vs-tag">{v.tagline}</div>}
               <div className="vs-meta">
-                {v.city && <span><MapPin size={13} aria-hidden="true" /> <b>{v.city}</b></span>}
-                {v.service_areas.length > 0 && <span><Globe size={13} aria-hidden="true" /> {v.service_areas.slice(0, 4).join(' · ')}</span>}
-                {v.response_time && <span><Zap size={13} aria-hidden="true" /> {t.respondsIn} <b>{v.response_time}</b></span>}
+                {v.city && <span><MapPin size={13} strokeWidth={1.75} aria-hidden="true" /> <b>{v.city}</b></span>}
+                {v.service_areas.length > 0 && <span><Globe size={13} strokeWidth={1.75} aria-hidden="true" /> {v.service_areas.slice(0, 4).join(' · ')}</span>}
+                {v.response_time && <span><Zap size={13} strokeWidth={1.75} aria-hidden="true" /> {t.respondsIn} <b>{v.response_time}</b></span>}
               </div>
               {badges.length > 0 && <div className="vs-badges">{badges.map(([c, tx, Icon], i) => <span key={i} className={`vs-badge ${c}`}>{Icon && <Icon size={12} aria-hidden="true" />}{tx}</span>)}</div>}
             </div>
@@ -553,7 +553,7 @@ export default function VendorStorefrontPage() {
             )}
 
             {d.certifications.length > 0 && (
-              <div className="vs-card"><h2>{t.certifications}</h2>{d.certifications.map((c) => <div key={c.id} className="vs-cert"><span className="vs-certi"><ShieldCheck size={15} aria-hidden="true" /></span>{c.name}{c.issuer ? ` · ${c.issuer}` : ''}</div>)}</div>
+              <div className="vs-card"><h2>{t.certifications}</h2>{d.certifications.map((c) => <div key={c.id} className="vs-cert"><span className="vs-certi"><ShieldCheck size={15} strokeWidth={1.75} aria-hidden="true" /></span>{c.name}{c.issuer ? ` · ${c.issuer}` : ''}</div>)}</div>
             )}
 
             {d.team.length > 0 && (
