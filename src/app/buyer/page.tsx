@@ -268,6 +268,17 @@ export default function BuyerDashboardPage() {
     ).filter((g) => g.comparable),
     [data.quotes],
   );
+  // M1 dedup fix — a quote already shown as a row in the compare table above
+  // must not ALSO restate its price + timeline headline in the full card
+  // below (the exact "$X · timeline" repeat is what read as the same quote
+  // twice). Everything else on the card — status, message, chat, bundle,
+  // pilots, accept/decline, expiry countdown, review — stays untouched: none
+  // of that lives in the table, and every quote (grouped or not) still needs
+  // its own Accept/Decline reachable from exactly one place.
+  const comparedQuoteIds = useMemo(
+    () => new Set(compareGroups.flatMap((g) => g.quotes.map((q) => q.id))),
+    [compareGroups],
+  );
   async function toggleNotifs() {
     const next = !notifOpen;
     setNotifOpen(next);
@@ -718,7 +729,10 @@ export default function BuyerDashboardPage() {
                       )}
                       {q.quote_amount != null && (
                         <div className="by-quote">
-                          <div className="by-qhead">{t.quoteReceived} <b>{money(q.quote_amount)}</b>{q.quote_timeline ? ` · ${q.quote_timeline}` : ''}</div>
+                          {/* M1: already shown as this quote's row in the compare table above — don't restate it here. */}
+                          {!comparedQuoteIds.has(q.id) && (
+                            <div className="by-qhead">{t.quoteReceived} <b>{money(q.quote_amount)}</b>{q.quote_timeline ? ` · ${q.quote_timeline}` : ''}</div>
+                          )}
                           {q.quote_message && <p className="by-qmsg">{q.quote_message}</p>}
                           {q.quote_valid_until && <div className="by-qvalid">{fmtValidUntil(q.quote_valid_until)}</div>}
                           {q.buyer_decision ? (
