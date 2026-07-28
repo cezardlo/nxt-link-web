@@ -79,45 +79,6 @@ interface ChatMessage {
 
 type Phase = 'intro' | 'asking' | 'summary' | 'submitted';
 
-// ---- Style tokens ----
-// Design System v1.0 (vault/Design-System.md) via the `--spec-*` CSS vars
-// already wired in globals.css — flipped from the old dark #0A0A0F/system-ui
-// theme to the light spec (Flow Blueprint 2026-07-22, Slice 2). Two levels
-// of dark-surface secondary text (TEXT_2/TEXT_3 at ~2.5-3.2:1, an audited
-// contrast failure) collapse into ONE AA-compliant secondary color on light
-// surfaces — differentiated by size/weight instead of a third, dimmer gray.
-const PAGE_BG = 'var(--spec-warm-white)';
-const CARD_BG = '#ffffff';
-const INPUT_BG = 'var(--spec-warm-white)';
-const BORDER = 'var(--spec-border)';
-const TEXT = 'var(--spec-ink)';
-const TEXT_2 = 'var(--spec-text-2nd)';
-const TEXT_3 = 'var(--spec-text-2nd)';
-const MUTED = 'var(--spec-text-2nd)';
-const ACCENT = 'var(--spec-violet)';
-// Disabled primary buttons: a neutral fill (WCAG doesn't require contrast on
-// disabled controls, but a dim violet-on-white reads as low-contrast text,
-// not "disabled" — a neutral surface reads unambiguously as inactive).
-const DISABLED_BG = 'var(--spec-border)';
-const DISABLED_TEXT = 'var(--spec-text-2nd)';
-const GREEN = 'var(--spec-success)';
-const RED = 'var(--spec-error)';
-const FONT_BODY = 'var(--font-ibm-plex-sans-intake),"IBM Plex Sans",system-ui,-apple-system,sans-serif';
-const FONT_HEAD = 'var(--font-space-grotesk),"Space Grotesk",system-ui,sans-serif';
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '12px 14px',
-  background: INPUT_BG,
-  border: `1px solid ${BORDER}`,
-  borderRadius: 12,
-  color: TEXT,
-  fontSize: 15,
-  outline: 'none',
-  boxSizing: 'border-box',
-  fontFamily: FONT_BODY,
-};
-
 // A buyer arriving from a vendor storefront that has no listings yet
 // (marketplace/vendor/[id]/page.tsx's quote CTA) lands here with a cheap,
 // client-only hint — ?vendor=<name>&vendor_id=<id>. No schema/API change:
@@ -320,7 +281,17 @@ function IntakeInner() {
   );
 
   return (
-    <div className={ibmPlexSans.variable} style={{ minHeight: '100vh', background: PAGE_BG, color: TEXT, fontFamily: FONT_BODY }}>
+    <div className={`iq ${ibmPlexSans.variable}`}>
+      {/* Design System v1.0 scoped-CSS refactor (2026-07-28, design batch 6):
+          this page used to be 100% inline style={{}} objects, which meant no
+          button on the RFQ flow could get a :hover state. Converted to the
+          site's standard className + <style> pattern (same shape as /account,
+          /buyer, /projects) — visual output is unchanged except for the
+          hover/active/focus-visible polish called out in the CSS below.
+          Zero state-machine, question-logic, validation, or submit/dispatch
+          code touched — only the JSX style attribute → className mapping. */}
+      <style dangerouslySetInnerHTML={{ __html: IQ_CSS }} />
+
       {/* ONE shared public header (Flow Blueprint 2026-07-22 §4, Slice 2) —
           replaces this page's old header-less/custom EN|ES-only nav. Bound
           to this page's own `locale` state (now the shared useLang/nxt_lang
@@ -328,28 +299,13 @@ function IntakeInner() {
           the same single source of truth. */}
       <PublicHeader lang={locale} onLangChange={setLocale} />
 
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: '40px 20px 60px' }}>
+      <div className="iq-wrap">
         {/* Header */}
-        <div style={{ marginBottom: 28 }}>
-          <h1 style={{ fontSize: 'var(--spec-text-h2)', fontWeight: 800, letterSpacing: 'var(--spec-tracking-heading)', marginBottom: 6, lineHeight: 1.2, fontFamily: FONT_HEAD, color: TEXT }}>
-            {isEs ? ASSISTANT.name_es : ASSISTANT.name}
-          </h1>
-          <p style={{ color: TEXT_3, fontSize: 15 }}>
-            {isEs ? ASSISTANT.subtitle_es : ASSISTANT.subtitle}
-          </p>
+        <div className="iq-head">
+          <h1>{isEs ? ASSISTANT.name_es : ASSISTANT.name}</h1>
+          <p className="iq-sub">{isEs ? ASSISTANT.subtitle_es : ASSISTANT.subtitle}</p>
           {vendorHint && phase !== 'submitted' && (
-            <div
-              style={{
-                marginTop: 14,
-                fontSize: 13,
-                color: 'var(--spec-violet-deep)',
-                background: 'rgba(108,92,224,.08)',
-                border: '1px solid rgba(108,92,224,.25)',
-                borderRadius: 10,
-                padding: '9px 12px',
-                lineHeight: 1.5,
-              }}
-            >
+            <div className="iq-hint">
               {tr(
                 `Continuing from ${vendorHint}'s profile — we'll match you with vendors including them.`,
                 `Continuando desde el perfil de ${vendorHint} — te conectaremos con proveedores, incluyéndolos a ellos.`
@@ -360,66 +316,28 @@ function IntakeInner() {
 
         {/* Submitted success card */}
         {phase === 'submitted' && (
-          <div
-            style={{
-              background: CARD_BG,
-              border: `1px solid ${BORDER}`,
-              borderRadius: 18,
-              padding: 32,
-              textAlign: 'center',
-            }}
-          >
-            <div
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: '50%',
-                background: '#EDF7F1',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 20px',
-                fontSize: 28,
-                color: GREEN,
-              }}
-            >
-              ✓
-            </div>
-            <h2 style={{ fontSize: 'var(--spec-text-h3)', fontWeight: 800, letterSpacing: 'var(--spec-tracking-heading)', marginBottom: 12, fontFamily: FONT_HEAD }}>
-              {tr('Request received', 'Solicitud recibida')}
-            </h2>
-            <p style={{ color: TEXT_2, fontSize: 16, marginBottom: 8 }}>
+          <div className="iq-card iq-card--success">
+            <div className="iq-checkicon">✓</div>
+            <h2 className="iq-successh2">{tr('Request received', 'Solicitud recibida')}</h2>
+            <p className="iq-refline">
               {tr('Your reference:', 'Tu referencia:')}{' '}
-              <span style={{ color: ACCENT, fontWeight: 700 }}>{publicRef}</span>
+              <span className="iq-refval">{publicRef}</span>
             </p>
             {/* "How it works" transparency timeline — an easy question ("what
                 happens next?") converts better than a vague promise. */}
-            <div style={{ maxWidth: 460, margin: '18px auto 0', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="iq-timeline">
               {[
                 [tr('Today', 'Hoy'), tr('A human at NXT//LINK reviews your request — nothing is shared before that.', 'Un humano de NXT//LINK revisa tu solicitud — nada se comparte antes de eso.')],
                 [tr('Next', 'Después'), tr('Matched vendors reply with quotes inside NXT//LINK. We notify you as they arrive.', 'Los proveedores compatibles responden con cotizaciones dentro de NXT//LINK. Te avisamos cuando lleguen.')],
                 [tr('Then', 'Luego'), tr('You compare and decide. Posting is free — no commitment until you accept a quote.', 'Comparas y decides. Publicar es gratis — sin compromiso hasta que aceptes una cotización.')],
               ].map(([step, text], i) => (
-                <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <span style={{ flex: 'none', minWidth: 64, fontSize: 'var(--spec-text-caption)', fontWeight: 800, letterSpacing: 'var(--spec-tracking-eyebrow)', textTransform: 'uppercase', color: ACCENT, paddingTop: 2 }}>{step}</span>
-                  <span style={{ color: TEXT_3, fontSize: 14, lineHeight: 1.55 }}>{text}</span>
+                <div key={i} className="iq-timeline-row">
+                  <span className="iq-timeline-step">{step}</span>
+                  <span className="iq-timeline-text">{text}</span>
                 </div>
               ))}
             </div>
-            <a
-              href="/"
-              style={{
-                display: 'inline-block',
-                marginTop: 24,
-                padding: '12px 24px',
-                background: ACCENT,
-                color: '#fff',
-                borderRadius: 10,
-                textDecoration: 'none',
-                fontWeight: 700,
-                fontSize: 15,
-              }}
-            >
+            <a href="/" className="iq-backlink">
               ← {tr('Back to NXT//LINK', 'Volver a NXT//LINK')}
             </a>
           </div>
@@ -427,29 +345,11 @@ function IntakeInner() {
 
         {/* Chat + input (intro / asking) */}
         {(phase === 'intro' || phase === 'asking') && (
-          <div
-            style={{
-              background: CARD_BG,
-              border: `1px solid ${BORDER}`,
-              borderRadius: 18,
-              padding: 24,
-            }}
-          >
+          <div className="iq-card iq-card--chat">
             {/* Messages */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 18 }}>
+            <div className="iq-messages">
               {phase === 'intro' && messages.length === 0 && (
-                <div
-                  style={{
-                    alignSelf: 'flex-start',
-                    maxWidth: '90%',
-                    background: 'var(--spec-surface)',
-                    color: TEXT,
-                    padding: '12px 14px',
-                    borderRadius: 14,
-                    fontSize: 15,
-                    lineHeight: 1.5,
-                  }}
-                >
+                <div className="iq-bubble iq-bubble--assistant">
                   {tr(
                     "Hi! I'm here to help you describe what you need. Tell me in your own words — what are you looking for?",
                     'Hola! Estoy aquí para ayudarte a describir lo que necesitas. Cuéntame en tus propias palabras — ¿qué buscas?'
@@ -460,16 +360,7 @@ function IntakeInner() {
               {messages.map((m, i) => (
                 <div
                   key={i}
-                  style={{
-                    alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
-                    maxWidth: '90%',
-                    background: m.role === 'user' ? ACCENT : 'var(--spec-surface)',
-                    color: m.role === 'user' ? '#fff' : TEXT,
-                    padding: '12px 14px',
-                    borderRadius: 14,
-                    fontSize: 15,
-                    lineHeight: 1.5,
-                  }}
+                  className={`iq-bubble ${m.role === 'user' ? 'iq-bubble--user' : 'iq-bubble--assistant'}`}
                 >
                   {m.text}
                 </div>
@@ -477,31 +368,21 @@ function IntakeInner() {
 
               {/* why helper line under current question */}
               {phase === 'asking' && currentQuestion && (currentQuestion.why_en || currentQuestion.why_es) && (
-                <div style={{ alignSelf: 'flex-start', maxWidth: '90%', color: MUTED, fontSize: 13, paddingLeft: 4 }}>
+                <div className="iq-why">
                   {isEs ? currentQuestion.why_es : currentQuestion.why_en}
                 </div>
               )}
 
-              {progress && (
-                <div style={{ color: ACCENT, fontSize: 12, fontWeight: 600, letterSpacing: 0.5 }}>
-                  {progress}
-                </div>
-              )}
+              {progress && <div className="iq-progress">{progress}</div>}
 
-              {loading && (
-                <div style={{ color: MUTED, fontSize: 13 }}>
-                  {tr('Thinking…', 'Pensando…')}
-                </div>
-              )}
+              {loading && <div className="iq-thinking">{tr('Thinking…', 'Pensando…')}</div>}
             </div>
 
-            {error && (
-              <p style={{ color: RED, fontSize: 13, marginBottom: 12 }}>{error}</p>
-            )}
+            {error && <p className="iq-error">{error}</p>}
 
             {/* Input row */}
-            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
-              <label htmlFor="intake-input" style={{ position: 'absolute', left: -9999 }}>
+            <div className="iq-inputrow">
+              <label htmlFor="intake-input" className="iq-sr-only">
                 {tr('Your message', 'Tu mensaje')}
               </label>
               <textarea
@@ -516,22 +397,12 @@ function IntakeInner() {
                 }}
                 rows={2}
                 placeholder={phase === 'intro' ? introPlaceholder : tr('Type your answer…', 'Escribe tu respuesta…')}
-                style={{ ...inputStyle, resize: 'vertical' }}
+                className="iq-input iq-input--area"
               />
               <button
                 onClick={handleSend}
                 disabled={loading || !input.trim()}
-                style={{
-                  padding: '12px 20px',
-                  background: loading || !input.trim() ? DISABLED_BG : ACCENT,
-                  color: loading || !input.trim() ? DISABLED_TEXT : '#fff',
-                  border: 'none',
-                  borderRadius: 12,
-                  fontSize: 15,
-                  fontWeight: 700,
-                  cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
-                  whiteSpace: 'nowrap',
-                }}
+                className="iq-sendbtn"
               >
                 {tr('Send', 'Enviar')}
               </button>
@@ -547,16 +418,7 @@ function IntakeInner() {
                 type="button"
                 onClick={handleEditAnswers}
                 disabled={loading}
-                style={{
-                  marginTop: 12,
-                  background: 'transparent',
-                  border: 'none',
-                  padding: 0,
-                  color: MUTED,
-                  fontSize: 13,
-                  textDecoration: 'underline',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                }}
+                className="iq-restart"
               >
                 {tr("That's not it — start over", 'Eso no es — empezar de nuevo')}
               </button>
@@ -566,17 +428,8 @@ function IntakeInner() {
 
         {/* Request Summary card */}
         {phase === 'summary' && summary && (
-          <div
-            style={{
-              background: CARD_BG,
-              border: `1px solid ${BORDER}`,
-              borderRadius: 18,
-              padding: 28,
-            }}
-          >
-            <h2 style={{ fontSize: 'var(--spec-text-h3)', fontWeight: 800, letterSpacing: 'var(--spec-tracking-heading)', marginBottom: 18, fontFamily: FONT_HEAD }}>
-              {tr('Request Summary', 'Resumen de Solicitud')}
-            </h2>
+          <div className="iq-card iq-card--summary">
+            <h2 className="iq-summaryh2">{tr('Request Summary', 'Resumen de Solicitud')}</h2>
 
             <SummaryFields summary={summary} isEs={isEs} />
 
@@ -585,11 +438,9 @@ function IntakeInner() {
                 measured ~3:1, below the AA floor — one of the audited
                 contrast failures this reskin fixes). */}
             {summary.missing_info && summary.missing_info.length > 0 && (
-              <div style={{ marginTop: 18, background: 'rgba(198,138,40,.08)', border: '1px solid rgba(198,138,40,.3)', borderRadius: 10, padding: '12px 14px' }}>
-                <div style={{ color: TEXT, fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
-                  {tr('Missing information', 'Información faltante')}
-                </div>
-                <ul style={{ margin: 0, paddingLeft: 18, color: TEXT, fontSize: 14, lineHeight: 1.6 }}>
+              <div className="iq-missing">
+                <div className="iq-missing-label">{tr('Missing information', 'Información faltante')}</div>
+                <ul className="iq-missing-list">
                   {summary.missing_info.map((item, i) => (
                     <li key={i}>{item}</li>
                   ))}
@@ -599,24 +450,11 @@ function IntakeInner() {
 
             {/* Recommended categories chips */}
             {summary.recommended_categories && summary.recommended_categories.length > 0 && (
-              <div style={{ marginTop: 18 }}>
-                <div style={{ color: TEXT_3, fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
-                  {tr('Recommended categories', 'Categorías recomendadas')}
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <div className="iq-cats">
+                <div className="iq-cats-label">{tr('Recommended categories', 'Categorías recomendadas')}</div>
+                <div className="iq-chips">
                   {summary.recommended_categories.map((c, i) => (
-                    <span
-                      key={i}
-                      style={{
-                        padding: '4px 12px',
-                        background: 'rgba(108,92,224,.12)',
-                        color: ACCENT,
-                        border: '1px solid rgba(108,92,224,.35)',
-                        borderRadius: 999,
-                        fontSize: 13,
-                        fontWeight: 600,
-                      }}
-                    >
+                    <span key={i} className="iq-chip">
                       {c}
                     </span>
                   ))}
@@ -624,61 +462,53 @@ function IntakeInner() {
               </div>
             )}
 
-            <p style={{ fontSize: 16, fontWeight: 700, margin: '26px 0 16px' }}>
-              {tr('Does this look correct?', '¿Esto se ve correcto?')}
-            </p>
+            <p className="iq-confirmline">{tr('Does this look correct?', '¿Esto se ve correcto?')}</p>
 
             {/* Contact fields */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 18 }}>
+            <div className="iq-contactgrid">
               <div>
-                <label
-                  htmlFor="contact-name"
-                  style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: TEXT_2 }}
-                >
-                  {tr('Your name', 'Tu nombre')} <span style={{ color: ACCENT }}>*</span>
+                <label htmlFor="contact-name" className="iq-label">
+                  {tr('Your name', 'Tu nombre')} <span className="iq-req">*</span>
                 </label>
                 <input
                   id="contact-name"
                   value={contactName}
                   onChange={(e) => setContactName(e.target.value)}
-                  style={inputStyle}
+                  className="iq-input"
                 />
               </div>
               <div>
-                <label
-                  htmlFor="contact-email"
-                  style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: TEXT_2 }}
-                >
-                  {tr('Email', 'Correo')} <span style={{ color: ACCENT }}>*</span>
+                <label htmlFor="contact-email" className="iq-label">
+                  {tr('Email', 'Correo')} <span className="iq-req">*</span>
                 </label>
                 <input
                   id="contact-email"
                   type="email"
                   value={contactEmail}
                   onChange={(e) => setContactEmail(e.target.value)}
-                  style={inputStyle}
+                  className="iq-input"
                 />
               </div>
             </div>
 
             {/* Files reveal */}
             {showFiles && (
-              <div style={{ marginBottom: 18 }}>
+              <div className="iq-files">
                 <input
                   type="file"
                   multiple
                   onChange={handleFiles}
-                  style={{ color: TEXT_2, fontSize: 14 }}
+                  className="iq-fileinput"
                   aria-label={tr('Add files', 'Agregar archivos')}
                 />
                 {fileNames.length > 0 && (
-                  <ul style={{ margin: '10px 0 0', paddingLeft: 18, color: TEXT_2, fontSize: 14, lineHeight: 1.6 }}>
+                  <ul className="iq-filelist">
                     {fileNames.map((n, i) => (
                       <li key={i}>{n}</li>
                     ))}
                   </ul>
                 )}
-                <p style={{ color: MUTED, fontSize: 12, marginTop: 8 }}>
+                <p className="iq-filenote">
                   {tr(
                     'Files are private by default — a human reviews before anything is shared.',
                     'Los archivos son privados por defecto — un humano revisa antes de compartir.'
@@ -687,61 +517,19 @@ function IntakeInner() {
               </div>
             )}
 
-            {error && <p style={{ color: RED, fontSize: 13, marginBottom: 12 }}>{error}</p>}
+            {error && <p className="iq-error">{error}</p>}
 
             {/* Action buttons */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-              <button
-                onClick={handleSubmit}
-                disabled={loading}
-                style={{
-                  flex: '1 1 160px',
-                  padding: '14px',
-                  background: loading ? DISABLED_BG : ACCENT,
-                  color: loading ? DISABLED_TEXT : '#fff',
-                  border: 'none',
-                  borderRadius: 12,
-                  fontSize: 15,
-                  fontWeight: 700,
-                  cursor: loading ? 'wait' : 'pointer',
-                }}
-              >
+            <div className="iq-actions">
+              <button onClick={handleSubmit} disabled={loading} className="iq-submitbtn">
                 {loading
                   ? tr('Submitting…', 'Enviando…')
                   : tr('Submit Request', 'Enviar Solicitud')}
               </button>
-              <button
-                onClick={handleEditAnswers}
-                disabled={loading}
-                style={{
-                  flex: '1 1 120px',
-                  padding: '14px',
-                  background: 'transparent',
-                  color: TEXT,
-                  border: `1px solid ${BORDER}`,
-                  borderRadius: 12,
-                  fontSize: 15,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
+              <button onClick={handleEditAnswers} disabled={loading} className="iq-secondarybtn">
                 {tr('Edit Answers', 'Editar Respuestas')}
               </button>
-              <button
-                onClick={() => setShowFiles((s) => !s)}
-                disabled={loading}
-                style={{
-                  flex: '1 1 120px',
-                  padding: '14px',
-                  background: 'transparent',
-                  color: TEXT,
-                  border: `1px solid ${BORDER}`,
-                  borderRadius: 12,
-                  fontSize: 15,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
+              <button onClick={() => setShowFiles((s) => !s)} disabled={loading} className="iq-secondarybtn">
                 {tr('Add Files', 'Agregar Archivos')}
               </button>
             </div>
@@ -749,9 +537,7 @@ function IntakeInner() {
         )}
 
         {/* Guardrail note */}
-        <p style={{ color: MUTED, fontSize: 12, lineHeight: 1.6, marginTop: 20, textAlign: 'center' }}>
-          {guardrail}
-        </p>
+        <p className="iq-guardrail">{guardrail}</p>
       </div>
     </div>
   );
@@ -787,7 +573,7 @@ function SummaryFields({ summary, isEs }: { summary: RequestSummary; isEs: boole
     rows.push({
       label: tr('Permissions', 'Permisos'),
       value: (
-        <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.6 }}>
+        <ul className="iq-permlist">
           {summary.permissions.map((p, i) => (
             <li key={i}>{p}</li>
           ))}
@@ -797,19 +583,15 @@ function SummaryFields({ summary, isEs }: { summary: RequestSummary; isEs: boole
   }
 
   if (rows.length === 0) {
-    return (
-      <p style={{ color: MUTED, fontSize: 14 }}>
-        {tr('No details captured yet.', 'Aún no hay detalles capturados.')}
-      </p>
-    );
+    return <p className="iq-empty">{tr('No details captured yet.', 'Aún no hay detalles capturados.')}</p>;
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="iq-fields">
       {rows.map((row, i) => (
-        <div key={i} style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 12, alignItems: 'start' }}>
-          <div style={{ color: TEXT_3, fontSize: 13, fontWeight: 600 }}>{row.label}</div>
-          <div style={{ color: TEXT, fontSize: 14, lineHeight: 1.5 }}>{row.value}</div>
+        <div key={i} className="iq-field-row">
+          <div className="iq-field-label">{row.label}</div>
+          <div className="iq-field-value">{row.value}</div>
         </div>
       ))}
     </div>
@@ -823,3 +605,122 @@ export default function IntakePage() {
     </Suspense>
   );
 }
+
+// ---- Styles ----
+// Design System v1.0 (vault/Design-System.md) via the `--spec-*` CSS vars
+// already wired in globals.css — flipped from the old dark #0A0A0F/system-ui
+// theme to the light spec (Flow Blueprint 2026-07-22, Slice 2). Two levels
+// of dark-surface secondary text (TEXT_2/TEXT_3 at ~2.5-3.2:1, an audited
+// contrast failure) collapse into ONE AA-compliant secondary color on light
+// surfaces — differentiated by size/weight instead of a third, dimmer gray.
+//
+// Converted 2026-07-28 (design batch 6) from 100% inline style={{}} objects
+// to this scoped-CSS + className pattern (matching /account, /buyer,
+// /projects) so buttons can finally get real :hover states. Every rule below
+// carries forward the exact property values from the old inline style
+// objects — the only *new* declarations are the hover/active/focus-visible
+// polish, called out inline. Disabled-state buttons that previously branched
+// their inline style on `loading`/`disabled` now use the native `:disabled`
+// selector instead — the underlying `disabled={...}` expressions are
+// unchanged, this just lets CSS read the same boolean the DOM already has.
+const IQ_CSS = `
+.iq{min-height:100vh;background:var(--spec-warm-white,#F8F7FB);color:var(--spec-ink,#141320);font-family:var(--font-ibm-plex-sans-intake),"IBM Plex Sans",system-ui,-apple-system,sans-serif;}
+
+/* Focus ring — matches every other reskinned page's own scoped rule. */
+.iq a:focus-visible,.iq button:focus-visible,.iq input:focus-visible,.iq textarea:focus-visible{outline:2px solid var(--spec-violet,#6C5CE0);outline-offset:2px;border-radius:6px;}
+
+.iq-wrap{max-width:640px;margin:0 auto;padding:40px 20px 60px;}
+
+.iq-head{margin-bottom:28px;}
+.iq-head h1{font-size:var(--spec-text-h2);font-weight:800;letter-spacing:var(--spec-tracking-heading);margin-bottom:6px;line-height:1.2;font-family:var(--font-space-grotesk),"Space Grotesk",system-ui,sans-serif;color:var(--spec-ink,#141320);}
+.iq-sub{color:var(--spec-text-2nd,#615F72);font-size:15px;}
+.iq-hint{margin-top:14px;font-size:13px;color:var(--spec-violet-deep,#4A3DB0);background:rgba(108,92,224,.08);border:1px solid rgba(108,92,224,.25);border-radius:10px;padding:9px 12px;line-height:1.5;}
+
+.iq-card{background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:18px;}
+.iq-card--success{padding:32px;text-align:center;}
+.iq-card--chat{padding:24px;}
+.iq-card--summary{padding:28px;}
+
+.iq-checkicon{width:64px;height:64px;border-radius:50%;background:#EDF7F1;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:28px;color:var(--spec-success,#2F9E6A);}
+.iq-successh2{font-size:var(--spec-text-h3);font-weight:800;letter-spacing:var(--spec-tracking-heading);margin-bottom:12px;font-family:var(--font-space-grotesk),"Space Grotesk",system-ui,sans-serif;}
+.iq-summaryh2{font-size:var(--spec-text-h3);font-weight:800;letter-spacing:var(--spec-tracking-heading);margin-bottom:18px;font-family:var(--font-space-grotesk),"Space Grotesk",system-ui,sans-serif;}
+
+.iq-refline{color:var(--spec-text-2nd,#615F72);font-size:16px;margin-bottom:8px;}
+.iq-refval{color:var(--spec-violet,#6C5CE0);font-weight:700;}
+
+.iq-timeline{max-width:460px;margin:18px auto 0;text-align:left;display:flex;flex-direction:column;gap:12px;}
+.iq-timeline-row{display:flex;gap:12px;align-items:flex-start;}
+.iq-timeline-step{flex:none;min-width:64px;font-size:var(--spec-text-caption);font-weight:800;letter-spacing:var(--spec-tracking-eyebrow);text-transform:uppercase;color:var(--spec-violet,#6C5CE0);padding-top:2px;}
+.iq-timeline-text{color:var(--spec-text-2nd,#615F72);font-size:14px;line-height:1.55;}
+
+/* Back-to-home CTA is an <a>, not a <button>, so it doesn't get the global
+   button:active rule (globals.css:161) — add its own hover + press feedback,
+   same treatment as the audit's homepage anchor-CTA recommendation. */
+.iq-backlink{display:inline-block;margin-top:24px;padding:12px 24px;background:var(--spec-violet,#6C5CE0);color:#fff;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease),transform var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.iq-backlink:hover{background:var(--spec-violet-deep,#4A3DB0);}
+.iq-backlink:active{transform:scale(.98);}
+
+.iq-messages{display:flex;flex-direction:column;gap:12px;margin-bottom:18px;}
+.iq-bubble{max-width:90%;padding:12px 14px;border-radius:14px;font-size:15px;line-height:1.5;}
+.iq-bubble--assistant{align-self:flex-start;background:var(--spec-surface,#EFEDF5);color:var(--spec-ink,#141320);}
+.iq-bubble--user{align-self:flex-end;background:var(--spec-violet,#6C5CE0);color:#fff;}
+.iq-why{align-self:flex-start;max-width:90%;color:var(--spec-text-2nd,#615F72);font-size:13px;padding-left:4px;}
+.iq-progress{color:var(--spec-violet,#6C5CE0);font-size:12px;font-weight:600;letter-spacing:.5px;}
+.iq-thinking{color:var(--spec-text-2nd,#615F72);font-size:13px;}
+.iq-error{color:var(--spec-error,#CE4B43);font-size:13px;margin-bottom:12px;}
+
+.iq-inputrow{display:flex;gap:10px;align-items:flex-end;}
+.iq-sr-only{position:absolute;left:-9999px;}
+
+.iq-input,.iq-input--area{width:100%;padding:12px 14px;background:var(--spec-warm-white,#F8F7FB);border:1px solid var(--spec-border,#E2DFEC);border-radius:12px;color:var(--spec-ink,#141320);font-size:15px;outline:none;box-sizing:border-box;font-family:var(--font-ibm-plex-sans-intake),"IBM Plex Sans",system-ui,-apple-system,sans-serif;}
+.iq-input--area{resize:vertical;}
+
+/* Primary buttons — hover/active/transition polish (design batch 6). All
+   four ("Send", "Submit Request", "Edit Answers", "Add Files") previously
+   only branched their fill color on loading/disabled and never had a hover
+   state at all, since inline styles can't express :hover. */
+.iq-sendbtn{padding:12px 20px;background:var(--spec-violet,#6C5CE0);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.iq-sendbtn:hover{background:var(--spec-violet-deep,#4A3DB0);}
+.iq-sendbtn:disabled{background:var(--spec-border,#E2DFEC);color:var(--spec-text-2nd,#615F72);cursor:not-allowed;}
+
+.iq-restart{margin-top:12px;background:transparent;border:none;padding:0;color:var(--spec-text-2nd,#615F72);font-size:13px;text-decoration:underline;cursor:pointer;transition:color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.iq-restart:hover{color:var(--spec-violet-deep,#4A3DB0);}
+.iq-restart:disabled{cursor:not-allowed;}
+
+.iq-missing{margin-top:18px;background:rgba(198,138,40,.08);border:1px solid rgba(198,138,40,.3);border-radius:10px;padding:12px 14px;}
+.iq-missing-label{color:var(--spec-ink,#141320);font-size:13px;font-weight:700;margin-bottom:6px;}
+.iq-missing-list{margin:0;padding-left:18px;color:var(--spec-ink,#141320);font-size:14px;line-height:1.6;}
+
+.iq-cats{margin-top:18px;}
+.iq-cats-label{color:var(--spec-text-2nd,#615F72);font-size:13px;font-weight:600;margin-bottom:8px;}
+.iq-chips{display:flex;flex-wrap:wrap;gap:8px;}
+.iq-chip{padding:4px 12px;background:rgba(108,92,224,.12);color:var(--spec-violet,#6C5CE0);border:1px solid rgba(108,92,224,.35);border-radius:999px;font-size:13px;font-weight:600;}
+
+.iq-confirmline{font-size:16px;font-weight:700;margin:26px 0 16px;}
+
+.iq-contactgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
+.iq-label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--spec-text-2nd,#615F72);}
+.iq-req{color:var(--spec-violet,#6C5CE0);}
+
+.iq-files{margin-bottom:18px;}
+.iq-fileinput{color:var(--spec-text-2nd,#615F72);font-size:14px;}
+.iq-filelist{margin:10px 0 0;padding-left:18px;color:var(--spec-text-2nd,#615F72);font-size:14px;line-height:1.6;}
+.iq-filenote{color:var(--spec-text-2nd,#615F72);font-size:12px;margin-top:8px;}
+
+.iq-actions{display:flex;flex-wrap:wrap;gap:12px;}
+.iq-submitbtn{flex:1 1 160px;padding:14px;background:var(--spec-violet,#6C5CE0);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.iq-submitbtn:hover{background:var(--spec-violet-deep,#4A3DB0);}
+.iq-submitbtn:disabled{background:var(--spec-border,#E2DFEC);color:var(--spec-text-2nd,#615F72);cursor:wait;}
+
+.iq-secondarybtn{flex:1 1 120px;padding:14px;background:transparent;color:var(--spec-ink,#141320);border:1px solid var(--spec-border,#E2DFEC);border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease),border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.iq-secondarybtn:hover{background:var(--spec-warm-white,#F8F7FB);border-color:#C7C2DE;}
+
+.iq-guardrail{color:var(--spec-text-2nd,#615F72);font-size:12px;line-height:1.6;margin-top:20px;text-align:center;}
+
+.iq-fields{display:flex;flex-direction:column;gap:12px;}
+.iq-field-row{display:grid;grid-template-columns:140px 1fr;gap:12px;align-items:start;}
+.iq-field-label{color:var(--spec-text-2nd,#615F72);font-size:13px;font-weight:600;}
+.iq-field-value{color:var(--spec-ink,#141320);font-size:14px;line-height:1.5;}
+.iq-permlist{margin:0;padding-left:18px;line-height:1.6;}
+.iq-empty{color:var(--spec-text-2nd,#615F72);font-size:14px;}
+`;
