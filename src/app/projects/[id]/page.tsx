@@ -466,7 +466,7 @@ const CSS = `
 .pd-count{font-size:11px;font-weight:600;color:var(--spec-violet-deep,#4A3DB0);background:rgba(108,92,224,.1);padding:3px 9px;border-radius:99px;}
 .pd-tasks{display:flex;flex-direction:column;gap:7px;}
 .pd-task{display:flex;align-items:center;gap:10px;background:var(--spec-surface,#EFEDF5);border:1px solid var(--spec-border,#E2DFEC);border-radius:10px;padding:10px 12px;}
-.pd-task.done .pd-tasktext span{text-decoration:line-through;color:#8A87A0;}
+.pd-task.done .pd-tasktext span{text-decoration:line-through;color:#706D88;}
 .pd-check{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-success,#2F9E6A);font-size:12px;cursor:pointer;flex-shrink:0;display:grid;place-items:center;}
 .pd-task.done .pd-check{background:#E9F7F0;border-color:transparent;}
 .pd-tasktext{display:flex;flex-direction:column;gap:2px;font-size:13.5px;}
@@ -506,7 +506,7 @@ const CSS = `
 .pd-evdot{width:11px;height:11px;border-radius:50%;background:var(--spec-violet,#6C5CE0);flex-shrink:0;margin-top:3px;box-shadow:0 0 0 3px rgba(108,92,224,.15);}
 .pd-evtitle{font-size:13.5px;font-weight:700;}
 .pd-evdetail{font-size:12px;color:var(--spec-text-2nd,#615F72);margin-top:2px;}
-.pd-evmeta{font-size:11px;color:#8A87A0;margin-top:3px;}
+.pd-evmeta{font-size:11px;color:#706D88;margin-top:3px;}
 .pd-cmpwrap{background:#fff;border:1px solid rgba(108,92,224,.25);border-radius:14px;padding:16px 18px;margin-bottom:16px;}
 .pd-cmphead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
 .pd-cmphead b{font-size:15px;font-weight:800;}
@@ -528,7 +528,7 @@ const CSS = `
 .pd-cmpfee{color:var(--spec-violet-deep,#4A3DB0);font-variant-numeric:tabular-nums;white-space:nowrap;}
 .pd-cmpwait{color:var(--spec-text-2nd,#615F72);font-weight:600;}
 .pd-lowest{display:inline-block;margin-left:7px;font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:99px;background:#E9F7F0;color:#1F7A54;vertical-align:middle;}
-.pd-cmpnote{font-size:11px;color:#8A87A0;margin:12px 0 0;line-height:1.5;}
+.pd-cmpnote{font-size:11px;color:#706D88;margin:12px 0 0;line-height:1.5;}
 .pd-quotes{display:flex;flex-direction:column;gap:11px;}
 .pd-quote{background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:12px;padding:14px;}
 .pd-qtop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}

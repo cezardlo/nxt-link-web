@@ -245,7 +245,7 @@ const CSS = `
 .bp-card{background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:18px;padding:24px;}
 .bp-lbl{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--spec-violet-deep,#4A3DB0);margin-bottom:12px;}
 .bp-logo{display:flex;align-items:center;gap:16px;margin-bottom:20px;}
-.bp-logobox{width:76px;height:76px;flex-shrink:0;border-radius:14px;border:1px solid var(--spec-border,#E2DFEC);background:var(--spec-surface,#EFEDF5);display:grid;place-items:center;overflow:hidden;color:#8A87A0;font-size:12px;letter-spacing:.12em;text-transform:uppercase;}
+.bp-logobox{width:76px;height:76px;flex-shrink:0;border-radius:14px;border:1px solid var(--spec-border,#E2DFEC);background:var(--spec-surface,#EFEDF5);display:grid;place-items:center;overflow:hidden;color:#706D88;font-size:12px;letter-spacing:.12em;text-transform:uppercase;}
 .bp-logobox img{width:100%;height:100%;object-fit:contain;}
 .bp-logoactions{display:flex;gap:10px;align-items:center;}
 .bp-logobtn{position:relative;overflow:hidden;}

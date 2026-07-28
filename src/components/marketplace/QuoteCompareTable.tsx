@@ -205,5 +205,5 @@ export const QUOTE_COMPARE_TABLE_CSS = `
 .qct-stat.accepted{background:#E9F7F0;color:#1F7A54;}
 .qct-stat.received{background:rgba(108,92,224,.1);color:var(--spec-violet-deep,#4A3DB0);}
 .qct-stat.awaiting{background:#FBF3E7;color:var(--spec-warning,#C68A28);}
-.qct-note{font-size:11px;color:#8A87A0;margin:12px 0 0;line-height:1.5;}
+.qct-note{font-size:11px;color:#706D88;margin:12px 0 0;line-height:1.5;}
 `;
