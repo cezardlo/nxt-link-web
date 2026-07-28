@@ -64,3 +64,4 @@ token.json
 
 .vercel
 .env*
+!.env.example

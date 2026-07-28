@@ -3,6 +3,21 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Supabase host for the CSP connect-src/frame-src/form-action allowances below.
+// Derived from the deployment's own env var so each site (demo vs. real) only
+// ever allow-lists its OWN Supabase project — falls back to the historical
+// hardcoded demo-site project ref when the var isn't set (local/CI configs
+// that predate this split).
+const SUPABASE_HOST = (() => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) return 'yvykselwehxjwsqercjg.supabase.co';
+  try {
+    return new URL(url).host;
+  } catch {
+    return 'yvykselwehxjwsqercjg.supabase.co';
+  }
+})();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   webpack(config) {
@@ -79,9 +94,9 @@ const nextConfig = {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data: https://fonts.gstatic.com",
-      "connect-src 'self' https://yvykselwehxjwsqercjg.supabase.co wss://yvykselwehxjwsqercjg.supabase.co https://va.vercel-scripts.com",
-      "frame-src 'self' https://www.youtube.com https://player.vimeo.com https://accounts.google.com https://*.linkedin.com https://login.microsoftonline.com https://yvykselwehxjwsqercjg.supabase.co",
-      "form-action 'self' https://accounts.google.com https://*.linkedin.com https://login.microsoftonline.com https://yvykselwehxjwsqercjg.supabase.co",
+      `connect-src 'self' https://${SUPABASE_HOST} wss://${SUPABASE_HOST} https://va.vercel-scripts.com`,
+      `frame-src 'self' https://www.youtube.com https://player.vimeo.com https://accounts.google.com https://*.linkedin.com https://login.microsoftonline.com https://${SUPABASE_HOST}`,
+      `form-action 'self' https://accounts.google.com https://*.linkedin.com https://login.microsoftonline.com https://${SUPABASE_HOST}`,
       "worker-src 'self' blob:",
       "manifest-src 'self'",
     ].join('; ');
