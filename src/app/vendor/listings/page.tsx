@@ -9,9 +9,24 @@ import { IBM_Plex_Sans } from 'next/font/google';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import { scoreListing } from '@/lib/marketplace/completeness';
 import { pilotEntriesOf, customFieldsOf, type PilotEntry, type CustomField } from '@/lib/marketplace/types';
+import { autosaveKey, serializeAutosave, parseAutosave, isAutosaveWorthKeeping, mergeWithDefaults, sanitizeRestoredListingArrays } from '@/lib/vendor/listing-autosave';
 import ChipTagInput from '@/components/marketplace/ChipTagInput';
 import VendorNav from '@/components/VendorNav';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
+
+// Photo -> AI draft: 1-4 product photos per extraction, mirrors the server
+// cap in src/app/api/vendor/listings/extract/route.ts (MAX_IMAGES/
+// MAX_IMAGE_BYTES/MAX_TOTAL_IMAGE_BYTES — keep these four in sync with that
+// file). Sized against Vercel's fixed ~4.5 MB serverless request-body limit,
+// not the 8 MB the listing-media route allows for an already-attached image.
+const MAX_PHOTOS = 4;
+const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
+const MAX_TOTAL_PHOTO_BYTES = 4 * 1024 * 1024;
+// Client-side downscale target before upload (see resizeImageForUpload) —
+// keeps typical 12MP+ phone photos comfortably under the caps above without
+// the vendor having to think about it, and cuts the Gemini bill.
+const MAX_PHOTO_EDGE_PX = 1600;
+const RESIZE_JPEG_QUALITY = 0.85;
 
 // Vendor-flexibility caps (2026-07-23) — soft client-side guards that mirror
 // the hard caps enforced server-side in normalizeListingInput/cleanBlock
@@ -73,6 +88,38 @@ const join = (v: unknown) => (Array.isArray(v) ? v.join(', ') : '');
 const joinL = (v: unknown) => (Array.isArray(v) ? v.join('\n') : '');
 const gs = (o: Record<string, unknown> | null | undefined, k: string) => (o && typeof o[k] === 'string' ? (o[k] as string) : '');
 
+/** Best-effort client-side downscale before upload: shrinks the longest edge
+ * to MAX_PHOTO_EDGE_PX and re-encodes as JPEG at RESIZE_JPEG_QUALITY. Keeps
+ * typical multi-MB phone-camera photos comfortably under the server's
+ * per-photo/combined caps (and Vercel's fixed request-body limit) without
+ * the vendor having to think about it, and cuts the Gemini bill. Never
+ * throws: on any failure (older browser without createImageBitmap/canvas
+ * support, decode failure, etc.) or when the photo is already small enough,
+ * it falls back to returning the ORIGINAL file untouched — resizing is a
+ * pure optimization, never a requirement for the upload to work. */
+async function resizeImageForUpload(file: File): Promise<File> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const longestEdge = Math.max(bitmap.width, bitmap.height);
+    if (longestEdge <= MAX_PHOTO_EDGE_PX) { bitmap.close?.(); return file; }
+    const scale = MAX_PHOTO_EDGE_PX / longestEdge;
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = width; canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) { bitmap.close?.(); return file; }
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close?.();
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', RESIZE_JPEG_QUALITY));
+    if (!blob) return file;
+    const resizedName = file.name.replace(/\.[^./\\]+$/, '') + '.jpg';
+    return new File([blob], resizedName, { type: 'image/jpeg' });
+  } catch {
+    return file;
+  }
+}
+
 // EN/ES dictionary — same shared LanguageToggle/useLang pattern as
 // /vendor/leads (nxt_lang in localStorage). This page had no lang mechanism
 // at all before; every vendor-visible string below now goes through `t`.
@@ -98,8 +145,13 @@ const T: Record<Lang, Record<string, string>> = {
     formNewProduct: 'New product', formNewService: 'New service',
     backToListings: '← Back to listings',
     aiFillOptional: 'AI fill (optional)',
-    aiFillHint: 'Upload a spec sheet / brochure or paste text — AI drafts the fields below. It never invents: anything missing stays empty. You review before publishing.',
+    aiFillHint: 'Add product photos, upload a spec sheet / brochure, or paste text — AI drafts the fields below. It never invents: anything missing stays empty. You review before publishing.',
     reading: 'Reading…', uploadDocument: 'Upload document', pasteHint: '…or paste product/service text here', draftFromText: 'Draft from text',
+    entryPhotos: '📸 Add photos (camera/gallery)', entryBrochure: '📄 Drop a brochure (PDF)', entryDescribe: '⌨️ Describe it',
+    photoDisclosure: 'Photos are sent to our AI provider to draft your listing — NXT//LINK does not save them.',
+    tooManyPhotos: 'Only the first 4 photos were used.',
+    photosTooLarge: 'These photos are too large — try fewer or smaller photos.',
+    resumeTitle: 'Resume where you left off?', resumeRestore: 'Restore', resumeDiscard: 'Discard',
     nameLabelProduct: 'Product name *', nameLabelService: 'Service name *',
     categoryLabel: 'Category', categoryHint: 'Type your own or pick a suggestion below',
     descriptionLabel: 'Description', descriptionPh: 'What it is, what problem it solves, why it is different.',
@@ -166,8 +218,13 @@ const T: Record<Lang, Record<string, string>> = {
     formNewProduct: 'Nuevo producto', formNewService: 'Nuevo servicio',
     backToListings: '← Volver a publicaciones',
     aiFillOptional: 'Completar con IA (opcional)',
-    aiFillHint: 'Sube una ficha técnica / folleto o pega texto — la IA redacta los campos de abajo. Nunca inventa: lo que falta queda vacío. Tú revisas antes de publicar.',
+    aiFillHint: 'Agrega fotos del producto, sube una ficha técnica / folleto, o pega texto — la IA redacta los campos de abajo. Nunca inventa: lo que falta queda vacío. Tú revisas antes de publicar.',
     reading: 'Leyendo…', uploadDocument: 'Subir documento', pasteHint: '…o pega aquí el texto del producto/servicio', draftFromText: 'Redactar desde texto',
+    entryPhotos: '📸 Agregar fotos (cámara/galería)', entryBrochure: '📄 Subir un folleto (PDF)', entryDescribe: '⌨️ Descríbelo',
+    photoDisclosure: 'Las fotos se envían a nuestro proveedor de IA para redactar tu publicación — NXT//LINK no las guarda.',
+    tooManyPhotos: 'Solo se usaron las primeras 4 fotos.',
+    photosTooLarge: 'Estas fotos son demasiado grandes — intenta con menos fotos o fotos más pequeñas.',
+    resumeTitle: '¿Continuar donde quedaste?', resumeRestore: 'Restaurar', resumeDiscard: 'Descartar',
     nameLabelProduct: 'Nombre del producto *', nameLabelService: 'Nombre del servicio *',
     categoryLabel: 'Categoría', categoryHint: 'Escribe la tuya o elige una sugerencia abajo',
     descriptionLabel: 'Descripción', descriptionPh: 'Qué es, qué problema resuelve, por qué es diferente.',
@@ -308,7 +365,16 @@ export default function VendorListingsPage() {
   const [aiBusy, setAiBusy] = useState(false);
   const [aiSummary, setAiSummary] = useState('');
   const [pasteText, setPasteText] = useState('');
+  const [showPaste, setShowPaste] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Autosave (localStorage only — never sent to the server): protects
+  // against losing unsaved work on tab close/refresh. Scoped by the signed-in
+  // vendor's own auth id so a shared browser never mixes up two vendors'
+  // drafts. See src/lib/vendor/listing-autosave.ts for the serialize/parse
+  // logic (unit tested there).
+  const [authId, setAuthId] = useState<string | null>(null);
+  const [resumeOffer, setResumeOffer] = useState<{ key: string; form: Record<string, unknown> } | null>(null);
 
   // Review-before-publish
   const [reviewFor, setReviewFor] = useState<{ kind: Kind; listing: Listing } | null>(null);
@@ -338,8 +404,27 @@ export default function VendorListingsPage() {
 
   useEffect(() => {
     const sb = createBrowserSupabaseClient();
-    sb.auth.getSession().then(({ data }) => { if (data.session) load(); else setChecking(false); });
+    sb.auth.getSession().then(({ data }) => {
+      if (data.session) { setAuthId(data.session.user.id); load(); }
+      else setChecking(false);
+    });
   }, [load]);
+
+  // Debounced (~1s) autosave of the open editor's form into localStorage.
+  // Paused while a resume offer is unanswered so it never overwrites the
+  // stashed draft with the blank/loaded form before the vendor decides.
+  useEffect(() => {
+    if (!editing || resumeOffer || !authId) return;
+    const key = autosaveKey(authId, editing.kind, editing.id);
+    const timer = setTimeout(() => {
+      try {
+        if (isAutosaveWorthKeeping(f as unknown as Record<string, unknown>)) {
+          window.localStorage.setItem(key, serializeAutosave(f));
+        }
+      } catch { /* storage full/blocked (e.g. private browsing) — best effort only */ }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [f, editing, authId, resumeOffer]);
 
   // Suggested chips for Category / Industries come from REAL data: the
   // canonical taxonomy (same source as the public marketplace's category
@@ -372,8 +457,43 @@ export default function VendorListingsPage() {
     return Array.from(new Set(mine)).sort((a, b) => a.localeCompare(b));
   }, [products, services]);
 
-  function openNew(kind: Kind) { setEditing({ kind, id: null }); setF(EMPTY); setDocId(null); setAiSummary(''); setPasteText(''); setMsg(''); }
-  function openEdit(kind: Kind, l: Listing) { setEditing({ kind, id: l.id }); setF(fromListing(l)); setDocId(null); setAiSummary(''); setPasteText(''); setMsg(''); }
+  // Checks localStorage for a stashed draft matching this exact editor slot
+  // (vendor + kind + listing id/'new') and, if one is worth keeping, offers
+  // to resume it instead of silently applying it — the vendor chooses.
+  function checkResumeOffer(kind: Kind, id: string | null) {
+    if (!authId) { setResumeOffer(null); return; }
+    try {
+      const key = autosaveKey(authId, kind, id);
+      const snap = parseAutosave<Record<string, unknown>>(window.localStorage.getItem(key));
+      if (snap && isAutosaveWorthKeeping(snap.form)) { setResumeOffer({ key, form: snap.form }); return; }
+    } catch { /* localStorage unavailable (private browsing, etc.) */ }
+    setResumeOffer(null);
+  }
+  function applyResumeOffer() {
+    if (!resumeOffer) return;
+    // Form has no index signature, so it isn't structurally a
+    // Record<string, unknown> as far as TS's generic constraint checking is
+    // concerned — the cast is safe because mergeWithDefaults only ever reads
+    // `defaults`' own keys off `stored` and returns the same shape as
+    // `defaults` (never adds/removes keys).
+    const merged = mergeWithDefaults(EMPTY as unknown as Record<string, unknown>, resumeOffer.form) as unknown as Form;
+    // mergeWithDefaults only checks Array.isArray at the field level — a
+    // crafted/corrupt localStorage entry like `pilots:[null]` would sail
+    // straight through and crash the render (p.duration on null). Route the
+    // four vendor-extensible array fields through the same element-level
+    // sanitizers fromListing() already trusts for untrusted DB data.
+    const restored = sanitizeRestoredListingArrays(merged, PILOT_MAX, CUSTOM_MAX);
+    setF(restored);
+    setResumeOffer(null);
+  }
+  function discardResumeOffer() {
+    if (!resumeOffer) return;
+    try { window.localStorage.removeItem(resumeOffer.key); } catch { /* best effort */ }
+    setResumeOffer(null);
+  }
+
+  function openNew(kind: Kind) { setEditing({ kind, id: null }); setF(EMPTY); setDocId(null); setAiSummary(''); setPasteText(''); setShowPaste(false); setMsg(''); checkResumeOffer(kind, null); }
+  function openEdit(kind: Kind, l: Listing) { setEditing({ kind, id: l.id }); setF(fromListing(l)); setDocId(null); setAiSummary(''); setPasteText(''); setShowPaste(false); setMsg(''); checkResumeOffer(kind, l.id); }
 
   function mergeDraft(draft: Record<string, unknown>) {
     const d = draft as Partial<Listing> & Record<string, unknown>;
@@ -438,6 +558,44 @@ export default function VendorListingsPage() {
     setAiBusy(false);
   }
 
+  // Photos -> AI draft. Same draft shape/mergeDraft as the document/text
+  // path above; the extract endpoint routes to a vision-capable model when
+  // it sees `images` in the multipart body (src/lib/marketplace/extract.ts
+  // extractListingDraftFromImages). Caps client-side to MAX_PHOTOS as a
+  // friendly heads-up — the server enforces the real limit either way.
+  async function aiFillImages(files: File[]) {
+    if (!editing) return;
+    const capped = files.slice(0, MAX_PHOTOS);
+    const wasCapped = files.length > MAX_PHOTOS;
+    setAiBusy(true); setMsg(wasCapped ? t.tooManyPhotos : ''); setAiSummary('');
+    try {
+      // Downscale first (typical phone photos are well over the caps below);
+      // resizeImageForUpload never throws and falls back to the original
+      // file untouched if it can't shrink it.
+      const resized = await Promise.all(capped.map((file) => resizeImageForUpload(file)));
+      const totalBytes = resized.reduce((sum, file) => sum + file.size, 0);
+      const oversized = resized.some((file) => file.size > MAX_PHOTO_BYTES);
+      if (oversized || totalBytes > MAX_TOTAL_PHOTO_BYTES) {
+        // Fail closed BEFORE building the request — mirrors the server's own
+        // MAX_IMAGE_BYTES/MAX_TOTAL_IMAGE_BYTES caps (route.ts) so the vendor
+        // gets a friendly, immediate answer instead of a round trip that
+        // would just get rejected (or, worse, rejected by Vercel's platform
+        // body-size limit before our code even runs).
+        setMsg(t.photosTooLarge);
+        setAiBusy(false);
+        return;
+      }
+      const fd = new FormData();
+      fd.append('kind', editing.kind);
+      resized.forEach((file) => fd.append('images', file));
+      const res = await fetch('/api/vendor/listings/extract', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.ok) { mergeDraft(data.draft || {}); setAiSummary(data.summary || ''); if (data.document_id) setDocId(data.document_id); }
+      else setMsg(data.message || t.couldNotExtract);
+    } catch { setMsg(t.couldNotExtract); }
+    setAiBusy(false);
+  }
+
   async function save(): Promise<Listing | null> {
     if (!editing) return null;
     if (!f.name.trim()) { setMsg(t.giveNameFirst); return null; }
@@ -452,6 +610,12 @@ export default function VendorListingsPage() {
     const data = await res.json();
     setSaving(false);
     if (!data.ok) { setMsg(data.message || t.couldNotSave); return null; }
+    // Real save succeeded — the stashed local draft for this slot has served
+    // its purpose and is cleared (matches editing.id as it was BEFORE the
+    // id gets assigned below, i.e. the exact key autosave was writing to).
+    if (authId) {
+      try { window.localStorage.removeItem(autosaveKey(authId, editing.kind, editing.id)); } catch { /* best effort */ }
+    }
     if (!editing.id) setEditing({ kind: editing.kind, id: data.listing.id });
     setMsg(t.savedMsg);
     load();
@@ -629,17 +793,66 @@ export default function VendorListingsPage() {
             <button className="sc-link" onClick={() => { setEditing(null); setMsg(''); }}>{t.backToListings}</button>
           </div>
 
+          {resumeOffer && (
+            <div className="sc-resume">
+              <span>{t.resumeTitle}</span>
+              <div className="sc-resume-actions">
+                <button type="button" className="sc-btn sm" onClick={applyResumeOffer}>{t.resumeRestore}</button>
+                <button type="button" className="sc-btn sm ghost" onClick={discardResumeOffer}>{t.resumeDiscard}</button>
+              </div>
+            </div>
+          )}
+
           <div className="sc-ai">
             <div className="sc-lbl">{t.aiFillOptional}</div>
             <p className="sc-hint">{t.aiFillHint}</p>
-            <div className="sc-airow">
-              <label className="sc-btn sm ghost">
-                {aiBusy ? t.reading : t.uploadDocument}
-                <input type="file" accept=".pdf,.txt" style={{ display: 'none' }} disabled={aiBusy} onChange={(e) => { const file = e.target.files?.[0]; if (file) aiFill(file); e.target.value = ''; }} />
+            {/* Three equal ways in — photos (camera or gallery), a brochure
+                document, or typed/pasted text — all feed the same aiFill*
+                -> mergeDraft pipeline. */}
+            <div className="sc-entryrow">
+              <div className="sc-entrycell">
+                <label className={'sc-entrybtn' + (aiBusy ? ' disabled' : '')}>
+                  <span className="sc-entryicon" aria-hidden="true">📸</span>
+                  <span>{aiBusy ? t.reading : t.entryPhotos}</span>
+                  {/* No `capture` attribute on purpose: with `multiple` set,
+                      capture="environment" forces the camera straight open
+                      on most mobile browsers and hides the gallery option,
+                      contradicting the "camera/gallery" label. A plain file
+                      input already offers "Take Photo" alongside the photo
+                      library on iOS/Android — both ways in stay available. */}
+                  <input
+                    className="sc-hiddeninput"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    multiple
+                    disabled={aiBusy}
+                    onChange={(e) => { const files = Array.from(e.target.files || []); e.target.value = ''; if (files.length) aiFillImages(files); }}
+                  />
+                </label>
+                <p className="sc-entrynote">{t.photoDisclosure}</p>
+              </div>
+              <label className={'sc-entrybtn' + (aiBusy ? ' disabled' : '')}>
+                <span className="sc-entryicon" aria-hidden="true">📄</span>
+                <span>{aiBusy ? t.reading : t.entryBrochure}</span>
+                <input
+                  className="sc-hiddeninput"
+                  type="file"
+                  accept=".pdf,.txt"
+                  disabled={aiBusy}
+                  onChange={(e) => { const file = e.target.files?.[0]; if (file) aiFill(file); e.target.value = ''; }}
+                />
               </label>
-              <textarea rows={2} placeholder={t.pasteHint} value={pasteText} onChange={(e) => setPasteText(e.target.value)} />
-              <button className="sc-btn sm" disabled={aiBusy || pasteText.trim().length < 40} onClick={() => aiFill()}>{aiBusy ? t.reading : t.draftFromText}</button>
+              <button type="button" className="sc-entrybtn" disabled={aiBusy} onClick={() => setShowPaste((v) => !v)}>
+                <span className="sc-entryicon" aria-hidden="true">⌨️</span>
+                <span>{t.entryDescribe}</span>
+              </button>
             </div>
+            {showPaste && (
+              <div className="sc-airow">
+                <textarea rows={2} placeholder={t.pasteHint} value={pasteText} onChange={(e) => setPasteText(e.target.value)} />
+                <button className="sc-btn sm" disabled={aiBusy || pasteText.trim().length < 40} onClick={() => aiFill()}>{aiBusy ? t.reading : t.draftFromText}</button>
+              </div>
+            )}
             {aiSummary && <div className="sc-aisum">{aiSummary}</div>}
           </div>
 
@@ -880,10 +1093,22 @@ const CSS = `
 .sc-btn.sm{padding:9px 14px;font-size:13px;}
 .sc-btn.ghost{background:#fff;border:1px solid rgba(108,92,224,.4);color:var(--spec-violet-deep,#4A3DB0);}
 .sc-ai{border:1.5px dashed rgba(108,92,224,.35);background:rgba(108,92,224,.05);border-radius:14px;padding:16px;margin-bottom:20px;}
-.sc-airow{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;}
+.sc-entryrow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:4px;align-items:start;}
+@media(max-width:640px){.sc-entryrow{grid-template-columns:1fr;}}
+.sc-entrycell{display:flex;flex-direction:column;gap:6px;}
+.sc-entrybtn{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-family:inherit;font-size:13px;font-weight:600;line-height:1.3;text-align:center;padding:14px 10px;border-radius:12px;border:1.5px solid rgba(108,92,224,.35);background:#fff;color:var(--spec-violet-deep,#4A3DB0);cursor:pointer;width:100%;}
+.sc-entrybtn:hover{border-color:var(--spec-violet,#6C5CE0);background:rgba(108,92,224,.06);}
+.sc-entrybtn:focus-within,.sc-entrybtn:focus-visible{outline:2px solid var(--spec-violet,#6C5CE0);outline-offset:2px;}
+.sc-entrybtn.disabled{opacity:.55;pointer-events:none;}
+.sc-entryicon{font-size:20px;line-height:1;}
+.sc-entrynote{margin:0;padding:0 4px;font-size:11px;line-height:1.4;color:var(--spec-text-2nd,#615F72);text-align:center;}
+.sc-hiddeninput{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+.sc-airow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;margin-top:12px;}
 @media(max-width:640px){.sc-airow{grid-template-columns:1fr;}}
 .sc-airow textarea{font-family:inherit;font-size:13.5px;padding:10px 12px;border-radius:10px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-ink,#141320);outline:none;resize:vertical;}
 .sc-aisum{margin-top:12px;font-size:13px;color:var(--spec-violet-deep,#4A3DB0);line-height:1.5;}
+.sc-resume{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#EFF4FE;border:1px solid rgba(62,111,208,.3);color:#2B4E96;padding:12px 15px;border-radius:12px;margin-bottom:16px;font-size:13.5px;}
+.sc-resume-actions{display:flex;gap:10px;flex-shrink:0;}
 .sc-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
 .sc-grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:12px;}
 @media(max-width:560px){.sc-grid{grid-template-columns:1fr;}}
