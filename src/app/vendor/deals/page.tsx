@@ -209,7 +209,7 @@ const CSS = `
 .vd-desc{font-size:13px;color:var(--spec-text-2nd,#615F72);margin-top:8px;line-height:1.5;}
 .vd-row{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:12px;padding-top:12px;border-top:1px solid var(--spec-border,#E2DFEC);}
 .vd-row>div{display:flex;flex-direction:column;gap:2px;}
-.vd-row span{font-size:11px;color:#8A87A0;}
+.vd-row span{font-size:11px;color:#706D88;}
 .vd-row b{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;}
 .vd-row em{font-style:normal;font-size:11px;color:var(--spec-success,#2F9E6A);}
 `;
