@@ -40,7 +40,7 @@ const SECTIONS = [
     'Reviews may only be left after a verified engagement (an accepted quote).',
   ]},
   { t: '5. Vendor terms', p: [
-    'Before publishing listings or receiving leads, vendors must accept the NXT//LINK vendor terms, which include: a disclosed commission on NXT//LINK-originated deals (4% on the first $50,000 of the eligible subtotal, 2% above that, capped at $12,500 — subject to final review); a protected period (currently 90 days) during which commission remains owed even if the same opportunity closes off-platform; responding to platform leads inside the platform; not redirecting platform buyers off-platform; keeping listings accurate; and reporting closed deals. NXT//LINK may suspend vendors who violate these rules.',
+    'Before publishing listings or receiving leads, vendors must accept the NXT//LINK vendor terms, which include: a disclosed commission on NXT//LINK-originated deals (4% on the first $50,000 of the eligible subtotal, 2% above that, capped at $20,000 — subject to final review); a protected period (currently 90 days) during which commission remains owed even if the same opportunity closes off-platform; responding to platform leads inside the platform; not redirecting platform buyers off-platform; keeping listings accurate; and reporting closed deals. NXT//LINK may suspend vendors who violate these rules.',
   ]},
   { t: '6. Content and conduct', p: [
     'You may not post unlawful, misleading, or infringing content; misrepresent credentials or certifications; scrape the platform; or interfere with its operation. NXT//LINK may remove content and restrict accounts to protect the marketplace.',

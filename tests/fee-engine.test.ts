@@ -14,7 +14,7 @@ import {
   type FeePolicy,
 } from '@/lib/fees/engine';
 
-// ── Bracket math: 4% first $50k, 2% above, $12,500 cap (launch-v3) ──────────
+// ── Bracket math: 4% first $50k, 2% above, $20,000 cap (launch-v3) ──────────
 
 test('worked example from the launch-v3 schedule: $60,000 → $2,200 at 3.67% effective', () => {
   const result = calculateFee(60_000);
@@ -57,22 +57,49 @@ test('zero subtotal produces zero fee and zero rate', () => {
   assert.equal(result.lines.length, 0);
 });
 
-test('cap boundary: $12,500 cap engages only above $575,000 of eligible subtotal', () => {
-  // 2,000 (4% of 50k) + 10,500 (2% of 525k) = 12,500 exactly — equal to the cap,
+test('cap boundary: $20,000 cap engages only above $950,000 of eligible subtotal', () => {
+  // 2,000 (4% of 50k) + 18,000 (2% of 900k) = 20,000 exactly — equal to the cap,
   // so the cap does NOT flag (fee must exceed the cap to be clamped).
-  const atCap = calculateFee(575_000);
-  assert.equal(atCap.fee, 12_500);
+  const atCap = calculateFee(950_000);
+  assert.equal(atCap.fee, 20_000);
   assert.equal(atCap.appliedMaximum, false);
 
-  // 2,000 + 11,000 (2% of 550k) = 13,000 > 12,500 → clamped and flagged.
-  const overCap = calculateFee(600_000);
-  assert.equal(overCap.fee, 12_500);
+  // 2,000 + 19,000 (2% of 950k) = 21,000 > 20,000 → clamped and flagged.
+  const overCap = calculateFee(1_000_000);
+  assert.equal(overCap.fee, 20_000);
   assert.equal(overCap.appliedMaximum, true);
 
-  // $1,000,000 raw = 2,000 + 19,000 = 21,000 → clamped to the $12,500 cap.
-  const capped = calculateFee(1_000_000);
-  assert.equal(capped.fee, 12_500);
+  // A very large deal stays clamped at the $20,000 cap.
+  const capped = calculateFee(5_000_000);
+  assert.equal(capped.fee, 20_000);
   assert.equal(capped.appliedMaximum, true);
+});
+
+test('launch-v3 policy constants are pinned: 4% / 2% / $20,000 cap / no minimum', () => {
+  // Money guard. The cap moved $12,500 → $20,000 by Cesar's ruling 2026-07-27;
+  // this test exists so it can never drift again without a deliberate failure.
+  // Must stay in lockstep with supabase/migrations/20260727_fee_policy_launch_v3.sql.
+  assert.equal(DEFAULT_FEE_POLICY.version, 'launch-v3');
+  assert.equal(DEFAULT_FEE_POLICY.maximumFee, 20_000);
+  assert.equal(DEFAULT_FEE_POLICY.minimumFee, null);
+  assert.equal(DEFAULT_FEE_POLICY.negotiatedRate, null);
+  assert.deepEqual(DEFAULT_FEE_POLICY.brackets, [
+    { upTo: 50_000, rate: 0.04 },
+    { upTo: null, rate: 0.02 },
+  ]);
+});
+
+test('cap clamps from exactly one dollar past the $950,000 threshold', () => {
+  // $950,000 is the last subtotal whose bracket math equals the cap exactly.
+  const atThreshold = calculateFee(950_000);
+  assert.equal(atThreshold.rawFee, 20_000);
+  assert.equal(atThreshold.appliedMaximum, false);
+
+  // One dollar more adds 2 cents of raw fee, which now EXCEEDS the cap.
+  const oneOver = calculateFee(950_001);
+  assert.equal(oneOver.rawFee, 20_000.02);
+  assert.equal(oneOver.fee, 20_000);
+  assert.equal(oneOver.appliedMaximum, true);
 });
 
 test('minimum fee floor clamps a tiny fee and is flagged', () => {
@@ -185,7 +212,7 @@ test('vendor leads live estimate mirrors calculateFee (single source of truth)',
   // — the exact numbers a vendor sees for common quote sizes under launch-v3.
   assert.equal(calculateFee(25_000).fee, 1_000); // 4% of 25k
   assert.equal(calculateFee(100_000).fee, 3_000); // 2,000 + 1,000
-  assert.equal(calculateFee(1_000_000).fee, 12_500); // $12,500 cap
+  assert.equal(calculateFee(1_000_000).fee, 20_000); // $20,000 cap
 });
 
 // ── First-deal discount: 50% off the already-capped fee ─────────────────────
@@ -193,7 +220,7 @@ test('vendor leads live estimate mirrors calculateFee (single source of truth)',
 test('firstDealDiscountAmount is exactly 50% of the (capped) fee', () => {
   assert.equal(FIRST_DEAL_DISCOUNT_RATE, 0.5);
   assert.equal(firstDealDiscountAmount(2_200), 1_100);
-  assert.equal(firstDealDiscountAmount(12_500), 6_250); // capped fee → half
+  assert.equal(firstDealDiscountAmount(20_000), 10_000); // capped fee → half
   assert.equal(firstDealDiscountAmount(40), 20); // tiny deal
   assert.throws(() => firstDealDiscountAmount(Number.NaN));
   assert.throws(() => firstDealDiscountAmount(-1));
@@ -211,14 +238,14 @@ test('resolveFirstDealDiscount: first eligible deal nets 50% off', () => {
 });
 
 test('resolveFirstDealDiscount: order of operations is brackets → cap → 50% off', () => {
-  // $1,000,000 → bracket math 21,000 → capped 12,500 → 50% off → 6,250 net.
-  const fee = calculateFee(1_000_000).fee; // 12,500 (already capped)
+  // $1,000,000 → bracket math 21,000 → capped 20,000 → 50% off → 10,000 net.
+  const fee = calculateFee(1_000_000).fee; // 20,000 (already capped)
   const signupAt = new Date('2026-01-01T00:00:00Z');
   const now = new Date('2026-01-05T00:00:00Z');
   const result = resolveFirstDealDiscount({ signupAt, now, priorDiscountedDeals: 0, fee });
-  assert.equal(fee, 12_500);
-  assert.equal(result.discountApplied, 6_250);
-  assert.equal(result.netFee, 6_250);
+  assert.equal(fee, 20_000);
+  assert.equal(result.discountApplied, 10_000);
+  assert.equal(result.netFee, 10_000);
 });
 
 test('resolveFirstDealDiscount: a tiny first deal still gets 50% off', () => {

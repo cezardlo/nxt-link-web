@@ -76,12 +76,12 @@ export default function VendorDealsPage() {
                 {credit.available ? (
                   <>
                     <b>First-deal offer: 50% off your first commission</b>
-                    <span>New vendors get 50% off the NXT//LINK fee on their first closed deal (within 90 days of joining, one per company). On that deal and every deal after: 4% on the first $50k, 2% above, capped at $12,500 — charged only on deals that close through NXT//LINK, and only after you’ve been paid.</span>
+                    <span>New vendors get 50% off the NXT//LINK fee on their first closed deal (within 90 days of joining, one per company). On that deal and every deal after: 4% on the first $50k, 2% above, capped at $20,000 — charged only on deals that close through NXT//LINK, and only after you’ve been paid.</span>
                   </>
                 ) : (
                   <>
                     <b>NXT//LINK commission</b>
-                    <span>4% on the first $50k, 2% above, capped at $12,500 — charged only on deals that close through NXT//LINK, and only after you’ve been paid.</span>
+                    <span>4% on the first $50k, 2% above, capped at $20,000 — charged only on deals that close through NXT//LINK, and only after you’ve been paid.</span>
                   </>
                 )}
               </div>
