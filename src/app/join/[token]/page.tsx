@@ -346,7 +346,7 @@ const CSS = `
 .jn-brand i{color:#6C5CE0;font-style:normal;}
 .jn-supply{display:block;margin:16px 0 2px;}
 .jn-supplylbl{display:block;font-size:12.5px;font-weight:600;color:#615F72;}
-.jn-supplyhint{display:block;font-size:12px;color:#8A87A0;margin:2px 0 8px;}
+.jn-supplyhint{display:block;font-size:12px;color:#706D88;margin:2px 0 8px;}
 .jn-card{width:100%;max-width:460px;background:#fff;border:1px solid #E2DFEC;border-radius:16px;padding:26px 22px;box-shadow:0 8px 30px rgba(74,61,176,.08);}
 .jn-card h1{font-size:21px;font-weight:700;letter-spacing:-.01em;line-height:1.35;margin:6px 0 0;}
 .jn-tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.18em;color:#6C5CE0;margin:0;}
@@ -370,13 +370,13 @@ const CSS = `
 .jn-google:hover{background:#F8F7FB;border-color:#C7C2DE;}
 .jn-google:disabled{opacity:.5;cursor:not-allowed;}
 .jn-google + .jn-google{margin-top:10px;}
-.jn-or{display:flex;align-items:center;gap:10px;margin:18px 0 4px;color:#8A87A0;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;}
+.jn-or{display:flex;align-items:center;gap:10px;margin:18px 0 4px;color:#706D88;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;}
 .jn-or::before,.jn-or::after{content:'';flex:1;height:1px;background:#E2DFEC;}
 .jn-cta{display:block;width:100%;text-align:center;font-family:inherit;font-size:15.5px;font-weight:700;padding:14px;min-height:52px;border-radius:12px;border:none;background:#6C5CE0;color:#fff;cursor:pointer;margin-top:16px;text-decoration:none;}
 .jn-cta:hover{background:#4A3DB0;}
 .jn-cta:disabled{opacity:.65;cursor:wait;}
 .jn-under{text-align:center;font-size:12.5px;color:#615F72;margin:10px 0 0;}
-.jn-timeline{text-align:center;font-size:12px;color:#8A87A0;margin:6px 0 0;line-height:1.5;}
+.jn-timeline{text-align:center;font-size:12px;color:#706D88;margin:6px 0 0;line-height:1.5;}
 .jn-muted{font-size:14px;color:#615F72;line-height:1.6;margin:8px 0 14px;}
 .jn-sentmark{width:44px;height:44px;border-radius:99px;background:#E9F7F0;color:#1E8A5E;font-size:20px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-bottom:10px;}
 .jn-notyou{margin-top:16px;font-size:13px;color:#615F72;text-decoration:none;}

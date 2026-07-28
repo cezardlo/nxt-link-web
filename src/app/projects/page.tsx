@@ -326,7 +326,7 @@ const CSS = `
 .pw-btn{font-family:inherit;font-size:14px;font-weight:700;padding:12px 20px;border-radius:10px;border:none;background:var(--spec-violet,#6C5CE0);color:#fff;cursor:pointer;box-shadow:0 10px 26px -12px rgba(108,92,224,.5);}
 .pw-btn:hover{background:var(--spec-violet-deep,#4A3DB0);}.pw-btn:disabled{opacity:.5;cursor:default;}
 .pw-btn.wide{width:100%;margin-top:16px;padding:14px;}
-.pw-note{color:#8A87A0;font-size:12.5px;}
+.pw-note{color:#706D88;font-size:12.5px;}
 .pw-note.center{text-align:center;display:block;margin-top:10px;}
 .pw-draft{}
 .pw-drafthead{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}

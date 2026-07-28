@@ -355,7 +355,7 @@ const CSS = `
 .qc-qtyval{min-width:26px;text-align:center;font-size:14.5px;font-weight:700;}
 .qc-note{flex:1;min-width:200px;font-family:inherit;font-size:13.5px;padding:9px 12px;border-radius:9px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-ink,#141320);outline:none;}
 .qc-note:focus{border-color:var(--spec-violet,#6C5CE0);}
-.qc-clear{font-family:inherit;font-size:12.5px;font-weight:600;background:none;border:none;color:#8A87A0;cursor:pointer;text-decoration:underline;padding:0;margin:2px 0 8px;}
+.qc-clear{font-family:inherit;font-size:12.5px;font-weight:600;background:none;border:none;color:#706D88;cursor:pointer;text-decoration:underline;padding:0;margin:2px 0 8px;}
 .qc-clear:hover{color:var(--spec-ink,#141320);}
 .qc-form{background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:16px;padding:20px;margin-top:18px;display:flex;flex-direction:column;gap:12px;position:relative;}
 .qc-form h2{font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-size:16px;font-weight:700;margin:0;}
@@ -372,7 +372,7 @@ const CSS = `
 .qc-secondary:hover{border-color:var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);}
 .qc-submit{width:100%;}
 .qc-safenote{margin:0;font-size:12.5px;font-weight:600;color:var(--spec-success,#2F9E6A);text-align:center;}
-.qc-disclosure{margin:0;font-size:11.5px;line-height:1.5;color:#8A87A0;}
+.qc-disclosure{margin:0;font-size:11.5px;line-height:1.5;color:#706D88;}
 .qc-disclosure a{color:var(--spec-text-2nd,#615F72);}
 .qc-sent{background:#F3FAF6;border:1px solid rgba(47,158,106,.3);border-radius:18px;padding:26px 24px;}
 .qc-sent>b{font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-size:19px;color:#1F7A54;}

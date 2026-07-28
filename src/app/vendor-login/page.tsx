@@ -247,11 +247,11 @@ const CSS = `
 .vl-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;font-family:var(--sans);font-size:15px;font-weight:600;padding:13px;min-height:48px;border-radius:12px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;}
 .vl-google:hover{background:var(--bg);border-color:#C7C2DE;}.vl-google:disabled{opacity:.6;}
 .vl-google + .vl-google{margin-top:10px;}
-.vl-or{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--muted2);font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;}
+.vl-or{display:flex;align-items:center;gap:10px;margin:16px 0;color:#706D88;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;}
 .vl-or::before,.vl-or::after{content:'';flex:1;height:1px;background:var(--line);}
 .vl-sent{background:var(--pbg);border:1px solid rgba(108,92,224,.25);color:var(--p2);padding:14px 16px;border-radius:12px;font-size:14px;line-height:1.5;}
 .vl-switch{text-align:center;margin-top:22px;font-size:13.5px;color:var(--muted);}
 .vl-switch button{background:none;border:none;color:var(--p2);font:700 13.5px var(--sans);cursor:pointer;}
-.vl-alt{display:block;text-align:center;margin-top:16px;color:var(--muted2);font-size:12.5px;text-decoration:none;}
+.vl-alt{display:block;text-align:center;margin-top:16px;color:#706D88;font-size:12.5px;text-decoration:none;}
 .vl-alt:hover{color:var(--p2);}
 `;
