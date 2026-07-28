@@ -4,8 +4,9 @@
 // structured fields, AI fill from a document or pasted text, image upload,
 // and draft→publish control. Everything is scoped to the signed-in vendor.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
+import { Camera, FileText, PenLine } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import { scoreListing } from '@/lib/marketplace/completeness';
 import { pilotEntriesOf, customFieldsOf, type PilotEntry, type CustomField } from '@/lib/marketplace/types';
@@ -147,7 +148,7 @@ const T: Record<Lang, Record<string, string>> = {
     aiFillOptional: 'AI fill (optional)',
     aiFillHint: 'Add product photos, upload a spec sheet / brochure, or paste text — AI drafts the fields below. It never invents: anything missing stays empty. You review before publishing.',
     reading: 'Reading…', uploadDocument: 'Upload document', pasteHint: '…or paste product/service text here', draftFromText: 'Draft from text',
-    entryPhotos: '📸 Add photos (camera/gallery)', entryBrochure: '📄 Drop a brochure (PDF)', entryDescribe: '⌨️ Describe it',
+    entryPhotos: 'Add photos (camera/gallery)', entryBrochure: 'Drop a brochure (PDF)', entryDescribe: 'Describe it',
     photoDisclosure: 'Photos are sent to our AI provider to draft your listing — NXT//LINK does not save them.',
     tooManyPhotos: 'Only the first 4 photos were used.',
     photosTooLarge: 'These photos are too large — try fewer or smaller photos.',
@@ -220,7 +221,7 @@ const T: Record<Lang, Record<string, string>> = {
     aiFillOptional: 'Completar con IA (opcional)',
     aiFillHint: 'Agrega fotos del producto, sube una ficha técnica / folleto, o pega texto — la IA redacta los campos de abajo. Nunca inventa: lo que falta queda vacío. Tú revisas antes de publicar.',
     reading: 'Leyendo…', uploadDocument: 'Subir documento', pasteHint: '…o pega aquí el texto del producto/servicio', draftFromText: 'Redactar desde texto',
-    entryPhotos: '📸 Agregar fotos (cámara/galería)', entryBrochure: '📄 Subir un folleto (PDF)', entryDescribe: '⌨️ Descríbelo',
+    entryPhotos: 'Agregar fotos (cámara/galería)', entryBrochure: 'Subir un folleto (PDF)', entryDescribe: 'Descríbelo',
     photoDisclosure: 'Las fotos se envían a nuestro proveedor de IA para redactar tu publicación — NXT//LINK no las guarda.',
     tooManyPhotos: 'Solo se usaron las primeras 4 fotos.',
     photosTooLarge: 'Estas fotos son demasiado grandes — intenta con menos fotos o fotos más pequeñas.',
@@ -390,6 +391,18 @@ export default function VendorListingsPage() {
       .then((r) => r.json()).then((d) => { if (d.ok) setExtras({ documents: d.documents, case_studies: d.case_studies }); })
       .catch(() => {});
   }
+
+  // Review-before-publish modal: dialog semantics + Escape-to-close, mirroring
+  // the one reference implementation sitewide (src/app/admin/invites/page.tsx
+  // QROverlay) — focus a safe control on open, restore on Escape.
+  const modalCloseRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!reviewFor) return;
+    modalCloseRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setReviewFor(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [reviewFor]);
 
   const load = useCallback(async () => {
     const res = await fetch('/api/vendor/listings');
@@ -812,7 +825,7 @@ export default function VendorListingsPage() {
             <div className="sc-entryrow">
               <div className="sc-entrycell">
                 <label className={'sc-entrybtn' + (aiBusy ? ' disabled' : '')}>
-                  <span className="sc-entryicon" aria-hidden="true">📸</span>
+                  <span className="sc-entryicon" aria-hidden="true"><Camera size={20} strokeWidth={1.75} /></span>
                   <span>{aiBusy ? t.reading : t.entryPhotos}</span>
                   {/* No `capture` attribute on purpose: with `multiple` set,
                       capture="environment" forces the camera straight open
@@ -832,7 +845,7 @@ export default function VendorListingsPage() {
                 <p className="sc-entrynote">{t.photoDisclosure}</p>
               </div>
               <label className={'sc-entrybtn' + (aiBusy ? ' disabled' : '')}>
-                <span className="sc-entryicon" aria-hidden="true">📄</span>
+                <span className="sc-entryicon" aria-hidden="true"><FileText size={20} strokeWidth={1.75} /></span>
                 <span>{aiBusy ? t.reading : t.entryBrochure}</span>
                 <input
                   className="sc-hiddeninput"
@@ -843,7 +856,7 @@ export default function VendorListingsPage() {
                 />
               </label>
               <button type="button" className="sc-entrybtn" disabled={aiBusy} onClick={() => setShowPaste((v) => !v)}>
-                <span className="sc-entryicon" aria-hidden="true">⌨️</span>
+                <span className="sc-entryicon" aria-hidden="true"><PenLine size={20} strokeWidth={1.75} /></span>
                 <span>{t.entryDescribe}</span>
               </button>
             </div>
@@ -943,9 +956,9 @@ export default function VendorListingsPage() {
       )}
 
       {reviewFor && (
-        <div className="sc-modal" onClick={() => setReviewFor(null)}>
+        <div className="sc-modal" role="dialog" aria-modal="true" aria-labelledby="sc-modal-title" onClick={() => setReviewFor(null)}>
           <div className="sc-modal-in" onClick={(e) => e.stopPropagation()}>
-            <div className="sc-lbl">{t.reviewBeforePublishing}</div>
+            <div className="sc-lbl" id="sc-modal-title">{t.reviewBeforePublishing}</div>
             <p className="sc-hint">{t.reviewHint}</p>
 
             <div className="sc-prev-card">
@@ -1010,7 +1023,7 @@ export default function VendorListingsPage() {
             </label>
             {pubErr && <div className="sc-warn">{pubErr}</div>}
             <div className="sc-actions">
-              <button className="sc-btn ghost" onClick={() => setReviewFor(null)}>{t.keepEditing}</button>
+              <button ref={modalCloseRef} className="sc-btn ghost" onClick={() => setReviewFor(null)}>{t.keepEditing}</button>
               <button className="sc-btn" disabled={!accOk || pubBusy} onClick={publishNow}>{pubBusy ? t.publishing : t.publishToMarketplace}</button>
             </div>
           </div>
@@ -1050,7 +1063,7 @@ const CSS = `
 .sc-head h1{font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-size:28px;font-weight:700;letter-spacing:-.01em;}
 .sc-sub{color:var(--spec-text-2nd,#615F72);font-size:14px;margin-top:6px;}
 .sc-headr{display:flex;gap:14px;}
-.sc-link{font-family:inherit;background:none;border:none;color:var(--spec-violet-deep,#4A3DB0);font-size:13.5px;font-weight:600;cursor:pointer;text-decoration:none;padding:0;}
+.sc-link{font-family:inherit;background:none;border:none;color:var(--spec-violet-deep,#4A3DB0);font-size:13.5px;font-weight:600;cursor:pointer;text-decoration:none;padding:0;transition:color 220ms var(--spec-ease);}
 .sc-link:hover{color:var(--spec-violet,#6C5CE0);}
 .sc-msg{background:rgba(108,92,224,.08);border:1px solid rgba(108,92,224,.25);color:var(--spec-violet-deep,#4A3DB0);padding:11px 15px;border-radius:12px;font-size:13.5px;margin-bottom:16px;}
 .sc-card{background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:18px;padding:24px;margin-bottom:20px;}
@@ -1062,7 +1075,7 @@ const CSS = `
 .sc-list li{display:flex;flex-direction:column;gap:9px;padding:12px 14px;border:1px solid var(--spec-border,#E2DFEC);border-radius:11px;background:var(--spec-surface,#EFEDF5);font-size:14px;}
 .sc-rowtop{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
 .sc-reorder{display:inline-flex;flex-direction:column;gap:2px;margin-right:2px;}
-.sc-reorder button{font-family:inherit;font-size:9px;line-height:1;padding:3px 6px;border-radius:6px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-ink,#141320);cursor:pointer;}
+.sc-reorder button{font-family:inherit;font-size:9px;line-height:1;padding:3px 6px;border-radius:6px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-ink,#141320);cursor:pointer;transition:border-color 220ms var(--spec-ease),color 220ms var(--spec-ease);}
 .sc-reorder button:hover:not(:disabled){border-color:var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);}
 .sc-reorder button:disabled{opacity:.3;cursor:default;}
 .sc-meter{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
@@ -1077,7 +1090,7 @@ const CSS = `
 .sc-list small{color:var(--spec-text-2nd,#615F72);}
 .sc-spacer{flex:1;}
 .sc-list a{color:var(--spec-violet-deep,#4A3DB0);font-size:12.5px;text-decoration:none;}
-.sc-list button{font-family:inherit;background:#fff;border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-ink,#141320);font-size:12.5px;border-radius:8px;padding:6px 11px;cursor:pointer;}
+.sc-list button{font-family:inherit;background:#fff;border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-ink,#141320);font-size:12.5px;border-radius:8px;padding:6px 11px;cursor:pointer;transition:border-color 220ms var(--spec-ease),color 220ms var(--spec-ease);}
 .sc-list button:hover{border-color:var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);}
 .sc-list button.sc-pub{border-color:rgba(47,158,106,.4);color:#1F7A54;}
 .sc-list button.sc-del{color:var(--spec-text-2nd,#615F72);}
@@ -1088,15 +1101,16 @@ const CSS = `
 .sc-status.needs_review{background:#FDEEE3;color:#B5651D;}
 .sc-status.ready{background:#E7F0FD;color:#3E6FD0;}
 .sc-status.unpublished{background:var(--spec-surface,#EFEDF5);color:var(--spec-text-2nd,#615F72);}
-.sc-btn{font-family:inherit;font-size:14px;font-weight:700;padding:12px 20px;border-radius:10px;border:none;background:var(--spec-violet,#6C5CE0);color:#fff;cursor:pointer;}
+.sc-btn{font-family:inherit;font-size:14px;font-weight:700;padding:12px 20px;border-radius:10px;border:none;background:var(--spec-violet,#6C5CE0);color:#fff;cursor:pointer;transition:background 220ms var(--spec-ease);}
 .sc-btn:hover{background:var(--spec-violet-deep,#4A3DB0);}.sc-btn:disabled{opacity:.55;}
+.sc-btn:active:not(:disabled){transform:scale(.98);transition:transform .1s ease;}
 .sc-btn.sm{padding:9px 14px;font-size:13px;}
 .sc-btn.ghost{background:#fff;border:1px solid rgba(108,92,224,.4);color:var(--spec-violet-deep,#4A3DB0);}
 .sc-ai{border:1.5px dashed rgba(108,92,224,.35);background:rgba(108,92,224,.05);border-radius:14px;padding:16px;margin-bottom:20px;}
 .sc-entryrow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:4px;align-items:start;}
 @media(max-width:640px){.sc-entryrow{grid-template-columns:1fr;}}
 .sc-entrycell{display:flex;flex-direction:column;gap:6px;}
-.sc-entrybtn{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-family:inherit;font-size:13px;font-weight:600;line-height:1.3;text-align:center;padding:14px 10px;border-radius:12px;border:1.5px solid rgba(108,92,224,.35);background:#fff;color:var(--spec-violet-deep,#4A3DB0);cursor:pointer;width:100%;}
+.sc-entrybtn{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-family:inherit;font-size:13px;font-weight:600;line-height:1.3;text-align:center;padding:14px 10px;border-radius:12px;border:1.5px solid rgba(108,92,224,.35);background:#fff;color:var(--spec-violet-deep,#4A3DB0);cursor:pointer;width:100%;transition:border-color 220ms var(--spec-ease),background 220ms var(--spec-ease);}
 .sc-entrybtn:hover{border-color:var(--spec-violet,#6C5CE0);background:rgba(108,92,224,.06);}
 .sc-entrybtn:focus-within,.sc-entrybtn:focus-visible{outline:2px solid var(--spec-violet,#6C5CE0);outline-offset:2px;}
 .sc-entrybtn.disabled{opacity:.55;pointer-events:none;}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
+import { Handshake, Eye, Check, PartyPopper, Sparkles, Laptop, X } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import ChatWidget from '@/components/ChatWidget';
 import CategoryPicker from '@/components/CategoryPicker';
@@ -47,12 +48,12 @@ const TR: Record<string, { en: string; es: string }> = {
   title_welcome: { en: 'Welcome{name} — let’s build your profile', es: 'Bienvenido{name} — construyamos tu perfil' },
   title_done: { en: 'Your company profile', es: 'Tu perfil de empresa' },
   sub: { en: 'This is what buyers see and what NXT//LINK matches you to. Fill it in once; keep it current.', es: 'Esto es lo que ven los compradores y con lo que NXT//LINK te conecta. Complétalo una vez y mantenlo al día.' },
-  vprop: { en: '🤝 NXT//LINK doesn’t just list you — we put you directly in front of buyers who are ready to purchase, and we can help coordinate the deal, quotes, and cross-border logistics across the El Paso–Juárez region whenever you want a hand.', es: '🤝 NXT//LINK no solo te publica — te ponemos frente a compradores listos para comprar, y podemos ayudarte a coordinar el trato, las cotizaciones y la logística transfronteriza en la región El Paso–Juárez cuando lo necesites.' },
-  preview: { en: '👁 View as a buyer', es: '👁 Ver como comprador' },
+  vprop: { en: 'NXT//LINK doesn’t just list you — we put you directly in front of buyers who are ready to purchase, and we can help coordinate the deal, quotes, and cross-border logistics across the El Paso–Juárez region whenever you want a hand.', es: 'NXT//LINK no solo te publica — te ponemos frente a compradores listos para comprar, y podemos ayudarte a coordinar el trato, las cotizaciones y la logística transfronteriza en la región El Paso–Juárez cuando lo necesites.' },
+  preview: { en: 'View as a buyer', es: 'Ver como comprador' },
   saving: { en: 'Saving…', es: 'Guardando…' },
-  saved: { en: '✓ Saved', es: '✓ Guardado' },
+  saved: { en: 'Saved', es: 'Guardado' },
   autosave: { en: 'Auto-saves as you type', es: 'Se guarda solo mientras escribes' },
-  live: { en: '🎉 Your profile is complete and buyer-ready.', es: '🎉 Tu perfil está completo y listo para compradores.' },
+  live: { en: 'Your profile is complete and buyer-ready.', es: 'Tu perfil está completo y listo para compradores.' },
   rv_title: { en: 'You’re in — your storefront is in review', es: 'Ya estás dentro — tu tienda está en revisión' },
   rv_body: { en: 'A human on our team reviews every new company. While that happens you can do everything below — nothing you build is lost, and your listings go live the moment you’re approved.', es: 'Una persona de nuestro equipo revisa cada empresa nueva. Mientras tanto puedes hacer todo lo de abajo — nada de lo que construyas se pierde, y tus publicaciones salen en vivo en cuanto te aprueben.' },
   rv_now_1: { en: 'Build your profile and storefront', es: 'Construye tu perfil y tu tienda' },
@@ -61,8 +62,8 @@ const TR: Record<string, { en: string; es: string }> = {
   rv_cta: { en: 'Speed it up — finish your review application (2 min) →', es: 'Acelera la revisión — completa tu solicitud (2 min) →' },
   rv_cta_hint: { en: 'We pre-filled it with what you already told us — never twice.', es: 'Ya la prellenamos con lo que nos dijiste — nunca dos veces.' },
   live_link: { en: 'See how buyers see it →', es: 'Mira cómo lo ven los compradores →' },
-  cx_start: { en: '✦ Set up with NXT AI — answer 2 questions, I’ll draft it all', es: '✦ Configura con NXT AI — responde 2 preguntas y lo redacto todo' },
-  cx_title: { en: '✦ NXT AI · Set up your profile', es: '✦ NXT AI · Configura tu perfil' },
+  cx_start: { en: 'Set up with NXT AI — answer 2 questions, I’ll draft it all', es: 'Configura con NXT AI — responde 2 preguntas y lo redacto todo' },
+  cx_title: { en: 'NXT AI · Set up your profile', es: 'NXT AI · Configura tu perfil' },
   cx_p1: { en: 'Answer two quick things and I’ll draft your whole profile — you can edit anything after.', es: 'Responde dos cosas rápidas y redacto tu perfil completo — puedes editar todo después.' },
   cx_name_q: { en: 'Your company name', es: 'El nombre de tu empresa' },
   cx_do_q: { en: 'In one sentence, what do you do?', es: 'En una frase, ¿qué haces?' },
@@ -81,7 +82,7 @@ const TR: Record<string, { en: string; es: string }> = {
   sec_products: { en: 'Products / services you sell', es: 'Productos / servicios que vendes' },
   sec_areas: { en: 'Service areas', es: 'Zonas de servicio' },
   areas_hint: { en: 'where you install / serve', es: 'dónde instalas / atiendes' },
-  software_note: { en: '💻 You sell software — no install site or service region needed, so we skip that. NXT//LINK reaches buyers across the whole Borderplex for you.', es: '💻 Vendes software — no se necesita sitio de instalación ni zona de servicio, así que lo omitimos. NXT//LINK llega a compradores en todo el Borderplex por ti.' },
+  software_note: { en: 'You sell software — no install site or service region needed, so we skip that. NXT//LINK reaches buyers across the whole Borderplex for you.', es: 'Vendes software — no se necesita sitio de instalación ni zona de servicio, así que lo omitimos. NXT//LINK llega a compradores en todo el Borderplex por ti.' },
   sec_awards: { en: 'Awards & recognitions', es: 'Premios y reconocimientos' },
   sec_cases: { en: 'Case studies', es: 'Casos de éxito' },
   sec_certs: { en: 'Certifications', es: 'Certificaciones' },
@@ -93,7 +94,7 @@ const TR: Record<string, { en: string; es: string }> = {
   f_website: { en: 'Website', es: 'Sitio web' },
   f_city: { en: 'City', es: 'Ciudad' },
   f_about: { en: 'About your company', es: 'Acerca de tu empresa' },
-  write_me: { en: '✨ Write it for me', es: '✨ Escríbelo por mí' },
+  write_me: { en: 'Write it for me', es: 'Escríbelo por mí' },
   writing: { en: 'Writing…', es: 'Escribiendo…' },
   save_profile: { en: 'Save profile', es: 'Guardar perfil' },
   saving_btn: { en: 'Saving…', es: 'Guardando…' },
@@ -502,17 +503,21 @@ export default function VendorPortalPage() {
         <div className="vp-titlerow">
           <h1>{pct === 100 ? t('title_done') : t('title_welcome').replace('{name}', firstName ? `, ${firstName}` : '')}</h1>
           <div className="vp-titleactions">
-            <span className="vp-autosave">{autosaving ? t('saving') : savedAt ? `${t('saved')} ${savedAt}` : t('autosave')}</span>
-            <a className="vp-preview" href={`/marketplace/vendor/${vendor.id}`} target="_blank" rel="noreferrer">{t('preview')}</a>
+            <span className="vp-autosave">
+              {autosaving ? t('saving') : savedAt ? (
+                <span className="vp-inlineicon"><Check size={12} strokeWidth={2} aria-hidden="true" /> {t('saved')} {savedAt}</span>
+              ) : t('autosave')}
+            </span>
+            <a className="vp-preview vp-inlineicon" href={`/marketplace/vendor/${vendor.id}`} target="_blank" rel="noreferrer"><Eye size={14} strokeWidth={1.75} aria-hidden="true" /> {t('preview')}</a>
           </div>
         </div>
         <p className="vp-sub">{t('sub')}</p>
-        <div className="vp-vprop">{t('vprop')}</div>
+        <div className="vp-vprop"><Handshake size={18} strokeWidth={1.75} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2, color: 'var(--green)' }} /> {t('vprop')}</div>
         {msg && <div className="vp-msg">{msg}</div>}
 
         {cxOpen && (
           <section className="vp-cx">
-            <div className="vp-cxhd"><b>{t('cx_title')}</b><button className="vp-cxx" onClick={() => setCxOpen(false)}>✕</button></div>
+            <div className="vp-cxhd"><b className="vp-inlineicon"><Sparkles size={16} strokeWidth={1.75} aria-hidden="true" />{t('cx_title')}</b><button className="vp-cxx" onClick={() => setCxOpen(false)} aria-label={lang === 'es' ? 'Cerrar' : 'Close'}><X size={16} strokeWidth={2} aria-hidden="true" /></button></div>
             {!cxDraft ? (
               <>
                 <p className="vp-cxp">{t('cx_p1')}</p>
@@ -558,11 +563,11 @@ export default function VendorPortalPage() {
         )}
 
         {pct === 100 ? (
-          <div className="vp-live">{t('live')} <a href={`/marketplace/vendor/${vendor.id}`} target="_blank" rel="noreferrer">{t('live_link')}</a></div>
+          <div className="vp-live"><span className="vp-inlineicon"><PartyPopper size={16} strokeWidth={1.75} aria-hidden="true" />{t('live')}</span> <a href={`/marketplace/vendor/${vendor.id}`} target="_blank" rel="noreferrer">{t('live_link')}</a></div>
         ) : (
           <>
             {!cxOpen && (
-              <button className="vp-cxstart" onClick={openConcierge}>{t('cx_start')}</button>
+              <button className="vp-cxstart" onClick={openConcierge}><Sparkles size={14} strokeWidth={1.75} aria-hidden="true" />{t('cx_start')}</button>
             )}
             <ProfileStrengthMeter input={meterInput} lang={lang} links={{ listing: '/vendor/listings' }} />
           </>
@@ -580,7 +585,10 @@ export default function VendorPortalPage() {
           </section>
         )}
         {agreement && agreement.accepted && (
-          <div className="vp-accepted">✓ NXT//LINK vendor terms accepted{agreement.accepted_at ? ` on ${new Date(agreement.accepted_at).toLocaleDateString()}` : ''}. You can publish listings and receive leads.</div>
+          <div className="vp-accepted" style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <Check size={16} strokeWidth={2} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
+            <span>NXT//LINK vendor terms accepted{agreement.accepted_at ? ` on ${new Date(agreement.accepted_at).toLocaleDateString()}` : ''}. You can publish listings and receive leads.</span>
+          </div>
         )}
 
         <section className="vp-card">
@@ -628,7 +636,7 @@ export default function VendorPortalPage() {
             <span className="vp-fieldlbl">
               <span>{t('f_about')}</span>
               <span className="vp-fieldright">
-                <button type="button" className="vp-genbtn" disabled={genBusy} onClick={generateDescription}>{genBusy ? t('writing') : t('write_me')}</button>
+                <button type="button" className="vp-genbtn vp-inlineicon" disabled={genBusy} onClick={generateDescription}><Sparkles size={12} strokeWidth={1.75} aria-hidden="true" />{genBusy ? t('writing') : t('write_me')}</button>
                 <em className="vp-count">{(vendor.description || '').trim().length} chars</em>
               </span>
             </span>
@@ -650,7 +658,10 @@ export default function VendorPortalPage() {
           <div className="vp-lbl" style={{ marginTop: 22 }}>{t('sec_products')}</div>
           <CategoryPicker selected={vendor.categories || []} onToggle={(v) => toggle(vendor.categories || [], v, 'categories')} lang={lang} />
           {softwareOnly ? (
-            <p className="vp-hint" style={{ marginTop: 18 }}>{t('software_note')}</p>
+            <p className="vp-hint" style={{ marginTop: 18, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              <Laptop size={16} strokeWidth={1.75} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2, color: 'var(--muted)' }} />
+              <span>{t('software_note')}</span>
+            </p>
           ) : (
             <>
               <div className="vp-lbl" style={{ marginTop: 22 }}>{t('sec_areas')} <span className="vp-lblhint">{t('areas_hint')}</span></div>
@@ -662,7 +673,7 @@ export default function VendorPortalPage() {
           {(vendor.achievements || []).length > 0 && (
             <div className="vp-chips">
               {(vendor.achievements || []).map((a) => (
-                <button key={a} type="button" className="vp-chip on" title="Remove" onClick={() => set('achievements', (vendor.achievements || []).filter((x) => x !== a))}>{a} ✕</button>
+                <button key={a} type="button" className="vp-chip on vp-inlineicon" title="Remove" onClick={() => set('achievements', (vendor.achievements || []).filter((x) => x !== a))}>{a}<X size={12} strokeWidth={2} aria-hidden="true" /></button>
               ))}
             </div>
           )}
@@ -905,13 +916,13 @@ const CSS = `
 .vp-mk{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--p),var(--pd));display:grid;place-items:center;font-family:var(--serif);font-size:17px;color:#fff;}
 .vp-brand b{font-size:18px;font-weight:700;letter-spacing:-.02em;}.vp-brand i{color:var(--p2);font-style:normal;}
 .vp-navr{display:flex;align-items:center;gap:14px;}
-.vp-navlink{color:var(--p2);font-size:13.5px;font-weight:600;text-decoration:none;}
+.vp-navlink{color:var(--p2);font-size:13.5px;font-weight:600;text-decoration:none;transition:color 220ms var(--spec-ease);}
 .vp-navlink:hover{color:var(--p3);}
 .vp-badge{font:600 11px/1 var(--sans);padding:5px 11px;border-radius:99px;text-transform:capitalize;}
 .vp-badge.pending{background:#FBF3E7;color:var(--spec-warning,#C68A28);}
 .vp-badge.approved{background:#E9F7F0;color:var(--green);}
 .vp-badge.paused,.vp-badge.rejected{background:var(--surf2);color:var(--muted);}
-.vp-signout{background:none;border:1px solid var(--line);color:var(--ink2);font:500 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer;}
+.vp-signout{background:none;border:1px solid var(--line);color:var(--ink2);font:500 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer;transition:border-color 220ms var(--spec-ease),color 220ms var(--spec-ease);}
 .vp-signout:hover{border-color:var(--p2);color:var(--ink);}
 .vp-wrap{max-width:760px;margin:0 auto;padding:44px 24px 100px;}
 .vp-wrap h1{font-size:30px;font-weight:800;letter-spacing:-.02em;margin-bottom:8px;}
@@ -923,28 +934,31 @@ const CSS = `
 .vp-review ul{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:7px;}
 .vp-review li{font-size:13.5px;color:var(--ink2);padding-left:24px;position:relative;}
 .vp-review li::before{content:'✓';position:absolute;left:0;top:0;color:var(--green);font-weight:800;}
-.vp-reviewcta{display:inline-block;font-size:13.5px;font-weight:700;color:#fff;background:var(--p);border-radius:10px;padding:11px 16px;text-decoration:none;}
+.vp-reviewcta{display:inline-block;font-size:13.5px;font-weight:700;color:#fff;background:var(--p);border-radius:10px;padding:11px 16px;text-decoration:none;transition:background 220ms var(--spec-ease);}
 .vp-reviewcta:hover{background:var(--pd);}
+.vp-reviewcta:active{transform:scale(.98);transition:transform .1s ease;}
 .vp-reviewcta:focus-visible{outline:2px solid var(--p3);outline-offset:2px;}
 .vp-reviewhint{display:block;font-size:12px;color:var(--muted);margin-top:8px;}
 .vp-titlerow{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;}
-.vp-preview{flex-shrink:0;color:var(--p2);font-size:13px;font-weight:600;text-decoration:none;border:1px solid var(--line);border-radius:10px;padding:9px 14px;background:var(--surf);}
+.vp-preview{flex-shrink:0;color:var(--p2);font-size:13px;font-weight:600;text-decoration:none;border:1px solid var(--line);border-radius:10px;padding:9px 14px;background:var(--surf);transition:border-color 220ms var(--spec-ease),color 220ms var(--spec-ease);}
 .vp-preview:hover{border-color:var(--p2);color:var(--p3);}
+.vp-preview:active{transform:scale(.98);transition:transform .1s ease;}
+.vp-inlineicon{display:inline-flex;align-items:center;gap:6px;}
 .vp-live{background:linear-gradient(120deg,rgba(47,158,106,.12),rgba(108,92,224,.06));border:1px solid rgba(47,158,106,.3);color:#1F7A54;border-radius:15px;padding:15px 18px;margin-bottom:22px;font-size:14.5px;font-weight:600;}
 .vp-live a{color:var(--green);font-weight:700;text-decoration:none;}
 .vp-live a:hover{text-decoration:underline;}
 .vp-fieldlbl{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
 .vp-fieldright{display:flex;align-items:center;gap:12px;flex-shrink:0;}
-.vp-count{font-style:normal;font-size:11.5px;color:var(--muted2);font-weight:500;flex-shrink:0;}
+.vp-count{font-style:normal;font-size:11.5px;color:#706D88;font-weight:500;flex-shrink:0;}
 .vp-why{font-size:12px;color:var(--muted);margin-top:6px;font-weight:300;}
-.vp-genbtn{font-family:var(--sans);font-size:11.5px;font-weight:700;color:var(--p3);background:var(--pbg);border:1px solid rgba(108,92,224,.3);border-radius:99px;padding:5px 11px;cursor:pointer;}
+.vp-genbtn{font-family:var(--sans);font-size:11.5px;font-weight:700;color:var(--p3);background:var(--pbg);border:1px solid rgba(108,92,224,.3);border-radius:99px;padding:5px 11px;cursor:pointer;transition:background 220ms var(--spec-ease);}
 .vp-genbtn:hover{background:rgba(108,92,224,.18);}
 .vp-genbtn:disabled{opacity:.6;cursor:default;}
 .vp-titleactions{display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap;}
 .vp-autosave{font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap;}
 .vp-vprop{background:linear-gradient(120deg,rgba(47,158,106,.08),rgba(108,92,224,.05));border:1px solid rgba(47,158,106,.22);border-radius:13px;padding:13px 16px;margin-bottom:20px;font-size:13.5px;line-height:1.6;color:var(--ink2);}
 .vp-lblhint{font-weight:500;letter-spacing:0;text-transform:none;color:var(--muted);font-size:11.5px;margin-left:6px;}
-.vp-cxstart{display:block;width:100%;font-family:var(--sans);font-size:13.5px;font-weight:700;color:var(--p3);background:rgba(108,92,224,.1);border:1px dashed rgba(108,92,224,.4);border-radius:12px;padding:12px 14px;margin-bottom:16px;cursor:pointer;}
+.vp-cxstart{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;font-family:var(--sans);font-size:13.5px;font-weight:700;color:var(--p3);background:rgba(108,92,224,.1);border:1px dashed rgba(108,92,224,.4);border-radius:12px;padding:12px 14px;margin-bottom:16px;cursor:pointer;transition:background 220ms var(--spec-ease);}
 .vp-cxstart:hover{background:rgba(108,92,224,.18);}
 .vp-cx{background:linear-gradient(160deg,rgba(108,92,224,.1),rgba(47,158,106,.04)),var(--surf);border:1px solid rgba(108,92,224,.3);border-radius:18px;padding:22px 24px;margin-bottom:22px;}
 .vp-cxhd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
@@ -969,7 +983,7 @@ const CSS = `
 .vp-field input,.vp-field textarea{font-family:var(--sans);padding:12px 14px;border-radius:11px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:14.5px;outline:none;width:100%;resize:vertical;}
 .vp-field input:focus,.vp-field textarea:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
 .vp-chips{display:flex;flex-wrap:wrap;gap:9px;}
-.vp-chip{font-family:var(--sans);padding:9px 15px;border-radius:99px;border:1px solid var(--line);background:var(--bg);color:var(--ink2);font-size:13px;font-weight:500;cursor:pointer;}
+.vp-chip{font-family:var(--sans);padding:9px 15px;border-radius:99px;border:1px solid var(--line);background:var(--bg);color:var(--ink2);font-size:13px;font-weight:500;cursor:pointer;transition:border-color 220ms var(--spec-ease);}
 .vp-chip:hover{border-color:var(--p2);}
 .vp-chip.on{background:var(--pbg);border-color:var(--p);color:var(--p3);}
 .vp-addown{display:flex;gap:9px;margin-top:12px;}
@@ -995,7 +1009,7 @@ const CSS = `
 .vp-cscard{background:var(--bg2);border:1px solid var(--line);border-radius:13px;padding:15px 17px;}
 .vp-cshead{display:flex;justify-content:space-between;align-items:center;gap:12px;}
 .vp-cshead b{font-size:14.5px;}
-.vp-cshead button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12.5px;}
+.vp-cshead button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12.5px;transition:color 220ms var(--spec-ease);}
 .vp-cshead button:hover{color:var(--spec-error,#CE4B43);}
 .vp-cscard p{font-size:13px;color:var(--ink2);margin:8px 0 0;line-height:1.55;}
 .vp-cscard p span{color:var(--muted);}
@@ -1009,7 +1023,7 @@ const CSS = `
 .vp-cert b{font-size:14px;}
 .vp-cert small{color:var(--muted);font-size:12px;}
 .vp-cert a{color:var(--p2);font-size:12.5px;font-weight:600;}
-.vp-cert button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12.5px;}
+.vp-cert button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12.5px;transition:color 220ms var(--spec-ease);}
 .vp-cert button:hover{color:var(--spec-error,#CE4B43);}
 .vp-csform .vp-fgrid input{font-family:var(--sans);padding:11px 13px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:14px;outline:none;width:100%;}
 .vp-datef{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--muted);}
@@ -1020,14 +1034,15 @@ const CSS = `
 .vp-photo{background:var(--bg2);border:1px solid var(--line);border-radius:11px;overflow:hidden;}
 .vp-photo img{width:100%;height:110px;object-fit:cover;display:block;}
 .vp-photofoot{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 10px;font-size:11.5px;color:var(--ink2);}
-.vp-photofoot button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11.5px;}
+.vp-photofoot button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11.5px;transition:color 220ms var(--spec-ease);}
 .vp-photofoot button:hover{color:var(--spec-error,#CE4B43);}
 .vp-agreement{border-color:rgba(108,92,224,.4);background:rgba(108,92,224,.05);}
 .vp-terms{margin:4px 0 12px;padding-left:18px;display:flex;flex-direction:column;gap:9px;font-size:13.5px;color:var(--ink2);line-height:1.55;}
 .vp-terms b{color:var(--ink);}
 .vp-accepted{background:#E9F7F0;border:1px solid rgba(47,158,106,.3);color:#1F7A54;border-radius:12px;padding:11px 15px;font-size:13.5px;margin-bottom:20px;}
-.vp-btn{font-family:var(--sans);border:none;cursor:pointer;font-size:14.5px;font-weight:600;border-radius:10px;padding:13px 22px;background:var(--p);color:#fff;box-shadow:0 4px 18px rgba(108,92,224,.28);}
+.vp-btn{font-family:var(--sans);border:none;cursor:pointer;font-size:14.5px;font-weight:600;border-radius:10px;padding:13px 22px;background:var(--p);color:#fff;box-shadow:0 4px 18px rgba(108,92,224,.28);transition:background 220ms var(--spec-ease);}
 .vp-btn:hover{background:var(--pd);}.vp-btn:disabled{opacity:.6;}
+.vp-btn:active:not(:disabled){transform:scale(.98);transition:transform .1s ease;}
 .vp-btn.sm{padding:11px 16px;font-size:13.5px;}
 .vp-vform{display:grid;grid-template-columns:1fr 1.6fr auto;gap:10px;margin-bottom:18px;}
 @media(max-width:600px){.vp-vform{grid-template-columns:1fr;}}
@@ -1039,9 +1054,9 @@ const CSS = `
 .vp-viframe iframe{position:absolute;inset:0;width:100%;height:100%;border:none;}
 .vp-vlink{display:block;padding:20px;color:var(--p2);font-size:13.5px;word-break:break-all;}
 .vp-vfoot{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;font-size:12.5px;color:var(--ink2);}
-.vp-vfoot button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;}
+.vp-vfoot button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;transition:color 220ms var(--spec-ease);}
 .vp-vfoot button:hover{color:var(--spec-error,#CE4B43);}
-.vp-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:26px;border:1.5px dashed rgba(108,92,224,.35);border-radius:14px;color:var(--p2);cursor:pointer;background:var(--pbg);margin-bottom:16px;}
+.vp-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:26px;border:1.5px dashed rgba(108,92,224,.35);border-radius:14px;color:var(--p2);cursor:pointer;background:var(--pbg);margin-bottom:16px;transition:border-color 220ms var(--spec-ease);}
 .vp-drop:hover{border-color:var(--p);}
 .vp-drop input{display:none;}
 .vp-files{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
@@ -1049,7 +1064,7 @@ const CSS = `
 .vp-files li a{color:var(--p2);flex:1;}
 .vp-files li span:first-child{flex:1;color:var(--ink2);}
 .vp-fmeta{color:var(--muted);font-size:12px;}
-.vp-files button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12.5px;}
+.vp-files button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12.5px;transition:color 220ms var(--spec-ease);}
 .vp-files button:hover{color:var(--spec-error,#CE4B43);}
 .vp-files button.vp-ai{color:var(--p2);font-weight:600;}
 .vp-files button.vp-ai:hover{color:var(--p3);}
