@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { IBM_Plex_Sans } from 'next/font/google';
+import { MapPin, Globe, Zap, Eye, ShieldCheck, Check, type LucideIcon } from 'lucide-react';
 import { levelAtLeast } from '@/components/marketplace/TrustBadges';
 import { useLang, type Lang } from '@/components/LanguageToggle';
 import PublicHeader from '@/components/PublicHeader';
@@ -151,7 +152,7 @@ const T: Record<Lang, Record<string, string>> = {
     challenge: 'Challenge:',
     solution: 'Solution:',
     reviewsOnly: '· from verified NXT//LINK deals only',
-    verifiedDeal: '✓ Verified deal',
+    verifiedDeal: 'Verified deal',
     workWithVendor: 'Work with this vendor',
     protectedIntro: 'All quotes, files, and messaging run through NXT//LINK. Your introduction is protected.',
     requestAQuote: 'Request a quote',
@@ -169,10 +170,10 @@ const T: Record<Lang, Record<string, string>> = {
     certifications: 'Certifications',
     team: 'Team',
     teamNote: 'Direct contact is shared after a protected NXT//LINK introduction.',
-    badgeVerifiedIdentity: '✓ Verified identity',
-    badgeVerifiedBusiness: '✓ Verified business',
-    badgeInsurance: '✓ Insurance reviewed',
-    badgeCertified: '✓ Certified',
+    badgeVerifiedIdentity: 'Verified identity',
+    badgeVerifiedBusiness: 'Verified business',
+    badgeInsurance: 'Insurance reviewed',
+    badgeCertified: 'Certified',
     badgePilot: 'Pilot available',
     badgeCrossBorder: 'Cross-border ready',
     badgeEmergency: '24/7 emergency',
@@ -232,7 +233,7 @@ const T: Record<Lang, Record<string, string>> = {
     challenge: 'Reto:',
     solution: 'Solución:',
     reviewsOnly: '· solo de tratos verificados en NXT//LINK',
-    verifiedDeal: '✓ Trato verificado',
+    verifiedDeal: 'Trato verificado',
     workWithVendor: 'Trabaja con este proveedor',
     protectedIntro: 'Todas las cotizaciones, archivos y mensajes se gestionan a través de NXT//LINK. Tu presentación está protegida.',
     requestAQuote: 'Solicitar cotización',
@@ -250,10 +251,10 @@ const T: Record<Lang, Record<string, string>> = {
     certifications: 'Certificaciones',
     team: 'Equipo',
     teamNote: 'El contacto directo se comparte después de una presentación protegida por NXT//LINK.',
-    badgeVerifiedIdentity: '✓ Identidad verificada',
-    badgeVerifiedBusiness: '✓ Empresa verificada',
-    badgeInsurance: '✓ Seguro revisado',
-    badgeCertified: '✓ Certificado',
+    badgeVerifiedIdentity: 'Identidad verificada',
+    badgeVerifiedBusiness: 'Empresa verificada',
+    badgeInsurance: 'Seguro revisado',
+    badgeCertified: 'Certificado',
     badgePilot: 'Piloto disponible',
     badgeCrossBorder: 'Lista para cruce fronterizo',
     badgeEmergency: 'Emergencia 24/7',
@@ -322,11 +323,11 @@ export default function VendorStorefrontPage() {
     : `/intake?vendor=${encodeURIComponent(v.company_name)}&vendor_id=${v.id}`;
 
   // Build the badge + stat + nav sets from real data only.
-  const badges: Array<[string, string]> = [];
-  if (levelAtLeast(v.verification_level, 'identity_verified')) badges.push(['v', t.badgeVerifiedIdentity]);
-  else if (v.verified) badges.push(['v', t.badgeVerifiedBusiness]);
-  if (levelAtLeast(v.verification_level, 'insurance_reviewed')) badges.push(['g', t.badgeInsurance]);
-  if (levelAtLeast(v.verification_level, 'certifications_reviewed')) badges.push(['p', t.badgeCertified]);
+  const badges: Array<[string, string, LucideIcon?]> = [];
+  if (levelAtLeast(v.verification_level, 'identity_verified')) badges.push(['v', t.badgeVerifiedIdentity, Check]);
+  else if (v.verified) badges.push(['v', t.badgeVerifiedBusiness, Check]);
+  if (levelAtLeast(v.verification_level, 'insurance_reviewed')) badges.push(['g', t.badgeInsurance, Check]);
+  if (levelAtLeast(v.verification_level, 'certifications_reviewed')) badges.push(['p', t.badgeCertified, Check]);
   if (v.pilot_available) badges.push(['p', t.badgePilot]);
   if (v.cross_border) badges.push(['a', t.badgeCrossBorder]);
   if (v.emergency_available) badges.push(['g', t.badgeEmergency]);
@@ -392,7 +393,7 @@ export default function VendorStorefrontPage() {
 
       {isOwner && (
         <div className="vs-ownerbar">
-          <span>👁 {t.ownerViewing}</span>
+          <span><Eye size={14} aria-hidden="true" /> {t.ownerViewing}</span>
           <Link href="/vendor/portal">{t.backToEditing}</Link>
         </div>
       )}
@@ -404,14 +405,14 @@ export default function VendorStorefrontPage() {
           <div className="vs-headrow">
             <div className="vs-logo">{v.logo_url ? <img src={v.logo_url} alt={v.company_name} /> : initials(v.company_name)}</div>
             <div className="vs-headmain">
-              <div className="vs-name">{v.company_name}{v.verified && <span className="vs-tick" title="Verified">✓</span>}</div>
+              <div className="vs-name">{v.company_name}{v.verified && <span className="vs-tick" role="img" aria-label={lang === 'es' ? 'Verificado' : 'Verified'}><Check size={13} strokeWidth={3} aria-hidden="true" /></span>}</div>
               {v.tagline && <div className="vs-tag">{v.tagline}</div>}
               <div className="vs-meta">
-                {v.city && <span>📍 <b>{v.city}</b></span>}
-                {v.service_areas.length > 0 && <span>🌎 {v.service_areas.slice(0, 4).join(' · ')}</span>}
-                {v.response_time && <span>⚡ {t.respondsIn} <b>{v.response_time}</b></span>}
+                {v.city && <span><MapPin size={13} aria-hidden="true" /> <b>{v.city}</b></span>}
+                {v.service_areas.length > 0 && <span><Globe size={13} aria-hidden="true" /> {v.service_areas.slice(0, 4).join(' · ')}</span>}
+                {v.response_time && <span><Zap size={13} aria-hidden="true" /> {t.respondsIn} <b>{v.response_time}</b></span>}
               </div>
-              {badges.length > 0 && <div className="vs-badges">{badges.map(([c, tx], i) => <span key={i} className={`vs-badge ${c}`}>{tx}</span>)}</div>}
+              {badges.length > 0 && <div className="vs-badges">{badges.map(([c, tx, Icon], i) => <span key={i} className={`vs-badge ${c}`}>{Icon && <Icon size={12} aria-hidden="true" />}{tx}</span>)}</div>}
             </div>
           </div>
 
@@ -515,7 +516,7 @@ export default function VendorStorefrontPage() {
                 <h2>{t.navReviews} <span className="vs-subtle">{t.reviewsOnly}</span></h2>
                 {d.reviews.map((r, i) => (
                   <div key={i} className="vs-rev">
-                    <div className="vs-revtop"><span className="vs-stars">{stars(r.rating)}</span><span className="vs-revverif">{t.verifiedDeal}</span></div>
+                    <div className="vs-revtop"><span className="vs-stars">{stars(r.rating)}</span><span className="vs-revverif"><Check size={11} aria-hidden="true" />{t.verifiedDeal}</span></div>
                     {r.title && <div className="vs-revtitle">{r.title}</div>}
                     {r.body && <p className="vs-revbody">{r.body}</p>}
                   </div>
@@ -552,7 +553,7 @@ export default function VendorStorefrontPage() {
             )}
 
             {d.certifications.length > 0 && (
-              <div className="vs-card"><h2>{t.certifications}</h2>{d.certifications.map((c) => <div key={c.id} className="vs-cert"><span className="vs-certi">🛡️</span>{c.name}{c.issuer ? ` · ${c.issuer}` : ''}</div>)}</div>
+              <div className="vs-card"><h2>{t.certifications}</h2>{d.certifications.map((c) => <div key={c.id} className="vs-cert"><span className="vs-certi"><ShieldCheck size={15} aria-hidden="true" /></span>{c.name}{c.issuer ? ` · ${c.issuer}` : ''}</div>)}</div>
             )}
 
             {d.team.length > 0 && (
@@ -584,12 +585,14 @@ const CSS = `
 .vs-empty{max-width:600px;margin:90px auto;text-align:center;color:var(--spec-text-2nd);padding:0 20px;}
 .vs-empty a{color:var(--spec-violet-deep);}
 .vs-emptyhead{display:block;font-size:18px;color:var(--spec-ink);margin-bottom:10px;}
-.vs-signin{display:inline-block;margin-top:6px;font-size:13px;font-weight:700;padding:10px 20px;border-radius:11px;background:var(--spec-violet);color:#fff;text-decoration:none;}
+.vs-signin{display:inline-block;margin-top:6px;font-size:13px;font-weight:700;padding:10px 20px;border-radius:11px;background:var(--spec-violet);color:#fff;text-decoration:none;transition:background var(--spec-duration-fast) var(--spec-ease);}
 .vs-signin:hover{background:var(--spec-violet-deep);}
+.vs-signin:active{transform:scale(.98);transition:transform .1s ease;}
 .vs-utilnav{display:flex;gap:8px;align-items:center;padding:10px 22px;background:#fff;border-bottom:1px solid var(--spec-border);}
 .vs-pill{font-size:12.5px;font-weight:600;color:var(--spec-text-2nd);background:var(--spec-warm-white);border:1px solid var(--spec-border);border-radius:99px;padding:7px 13px;}
 .vs-pill.on{background:rgba(108,92,224,.14);border-color:var(--spec-violet);color:var(--spec-violet-deep);}
 .vs-ownerbar{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;padding:9px 18px;background:rgba(108,92,224,.1);border-bottom:1px solid rgba(108,92,224,.25);font-size:13px;color:var(--spec-violet-deep);}
+.vs-ownerbar span{display:inline-flex;align-items:center;gap:6px;}
 .vs-ownerbar a{color:var(--spec-ink);font-weight:700;text-decoration:none;}
 .vs-ownerbar a:hover{text-decoration:underline;}
 .vs-banner{height:190px;background-color:var(--spec-ink);background-size:cover;background-position:center;background-image:radial-gradient(600px 300px at 80% 0%,rgba(108,92,224,.55),transparent 60%),radial-gradient(500px 300px at 10% 120%,rgba(47,158,106,.32),transparent 55%),linear-gradient(120deg,#1c1832,#101a29);}
@@ -599,22 +602,24 @@ const CSS = `
 .vs-logo{width:112px;height:112px;border-radius:24px;background:linear-gradient(135deg,var(--spec-violet),var(--spec-success));display:grid;place-items:center;font-size:38px;font-weight:800;color:#fff;border:4px solid #fff;flex-shrink:0;overflow:hidden;box-shadow:0 14px 40px -12px rgba(20,19,32,.4);}
 .vs-logo img{width:100%;height:100%;object-fit:cover;}
 .vs-headmain{flex:1;min-width:260px;padding-bottom:4px;}
-.vs-name{font-size:clamp(23px,3.4vw,31px);font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-family:var(--font-space-grotesk),'Space Grotesk',system-ui,sans-serif;color:var(--spec-ink);}
+.vs-name{font-size:clamp(23px,3.4vw,31px);font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-family:var(--font-space-grotesk),'Space Grotesk',system-ui,sans-serif;color:var(--spec-ink);text-wrap:balance;}
 .vs-tick{width:22px;height:22px;border-radius:50%;background:#3E6FD0;color:#fff;display:inline-grid;place-items:center;font-size:13px;font-weight:900;}
 .vs-tag{color:var(--spec-text-2nd);font-size:14.5px;margin-top:6px;max-width:60ch;}
 .vs-meta{display:flex;gap:16px;flex-wrap:wrap;margin-top:11px;font-size:13px;color:var(--spec-text-2nd);}
+.vs-meta span{display:inline-flex;align-items:center;gap:5px;}
 .vs-meta b{color:var(--spec-ink);font-weight:600;}
 .vs-badges{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px;}
-.vs-badge{font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:99px;border:1px solid transparent;}
+.vs-badge{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:99px;border:1px solid transparent;}
 .vs-badge.v{background:rgba(62,111,208,.12);color:#3E6FD0;border-color:rgba(62,111,208,.3);}
 .vs-badge.g{background:rgba(47,158,106,.12);color:#1F7A54;border-color:rgba(47,158,106,.3);}
 .vs-badge.a{background:rgba(198,138,40,.12);color:#8A5D14;border-color:rgba(198,138,40,.3);}
 .vs-badge.p{background:rgba(108,92,224,.12);color:var(--spec-violet-deep);border-color:rgba(108,92,224,.3);}
 .vs-actions{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0 6px;}
-.vs-btn{font-family:inherit;font-size:14px;font-weight:700;border-radius:11px;padding:12px 20px;cursor:pointer;border:1px solid var(--spec-border);background:transparent;color:var(--spec-ink);}
+.vs-btn{font-family:inherit;font-size:14px;font-weight:700;border-radius:11px;padding:12px 20px;cursor:pointer;border:1px solid var(--spec-border);background:transparent;color:var(--spec-ink);transition:border-color var(--spec-duration-fast) var(--spec-ease),background var(--spec-duration-fast) var(--spec-ease);}
 .vs-btn:hover{border-color:var(--spec-violet);}
 .vs-btn.pri{background:var(--spec-violet);border-color:var(--spec-violet);color:#fff;box-shadow:0 12px 30px -12px rgba(108,92,224,.6);}
 .vs-btn.pri:hover{background:var(--spec-violet-deep);}
+.vs-btn.pri:active{transform:scale(.98);transition:transform .1s ease;}
 .vs-btn.vs-full{width:100%;text-align:center;}
 .vs-stats{display:grid;gap:1px;background:var(--spec-border);border:1px solid var(--spec-border);border-radius:14px;overflow:hidden;margin-top:16px;}
 .vs-stat{background:#fff;padding:15px 16px;}
@@ -624,7 +629,7 @@ const CSS = `
    PublicHeader is the only thing above this that stays pinned. */
 .vs-subnav{position:sticky;top:var(--spec-topbar-h);z-index:40;display:flex;gap:4px;overflow-x:auto;background:#fff;border-bottom:1px solid var(--spec-border);margin-top:24px;scrollbar-width:none;}
 .vs-subnav::-webkit-scrollbar{display:none;}
-.vs-subnav a{font-size:13.5px;font-weight:600;color:var(--spec-text-2nd);padding:14px 15px;border-bottom:2px solid transparent;white-space:nowrap;}
+.vs-subnav a{font-size:13.5px;font-weight:600;color:var(--spec-text-2nd);padding:14px 15px;border-bottom:2px solid transparent;white-space:nowrap;transition:color var(--spec-duration-fast) var(--spec-ease);}
 .vs-subnav a:hover{color:var(--spec-ink);}
 .vs-grid{display:grid;grid-template-columns:1fr 320px;gap:26px;padding:30px 0 90px;align-items:start;}
 @media(max-width:900px){.vs-grid{grid-template-columns:1fr;}}
@@ -665,7 +670,7 @@ const CSS = `
 .vs-cmp th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--spec-text-2nd);padding:0 12px 10px;border-bottom:1px solid var(--spec-border);}
 .vs-cmp td{padding:13px 12px;border-bottom:1px solid var(--spec-border);vertical-align:top;color:var(--spec-ink);}
 .vs-cmp tr:last-child td{border-bottom:none;}
-.vs-cmpname{font-weight:700;color:var(--spec-ink);display:block;}
+.vs-cmpname{font-weight:700;color:var(--spec-ink);display:block;transition:color var(--spec-duration-fast) var(--spec-ease);}
 .vs-cmpname:hover{color:var(--spec-violet-deep);}
 .vs-cmpcat{font-size:11.5px;color:var(--spec-text-2nd);}
 .vs-kind{font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap;}
@@ -677,7 +682,7 @@ const CSS = `
 .vs-bar i{display:block;height:100%;border-radius:99px;background:var(--spec-violet);}
 .vs-bar i.best{background:#3E6FD0;}
 .vs-cmpbest{color:var(--spec-text-2nd);max-width:220px;}
-.vs-cmpview{font-weight:700;color:var(--spec-violet-deep);white-space:nowrap;}
+.vs-cmpview{font-weight:700;color:var(--spec-violet-deep);white-space:nowrap;transition:color var(--spec-duration-fast) var(--spec-ease);}
 .vs-cmpview:hover{color:var(--spec-violet);}
 .vs-cmpnote{font-size:11.5px;color:var(--spec-text-2nd);margin:14px 0 0;line-height:1.5;}
 .vs-cs{border:1px solid var(--spec-border);border-radius:13px;padding:16px 18px;margin-bottom:12px;background:#fff;}
@@ -689,7 +694,7 @@ const CSS = `
 .vs-rev:last-child{border-bottom:none;padding-bottom:0;}
 .vs-revtop{display:flex;justify-content:space-between;align-items:center;gap:10px;}
 .vs-stars{color:#8A5D14;font-size:13px;letter-spacing:1px;}
-.vs-revverif{font-size:10.5px;font-weight:700;color:#1F7A54;background:rgba(47,158,106,.12);padding:2px 8px;border-radius:99px;}
+.vs-revverif{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:700;color:#1F7A54;background:rgba(47,158,106,.12);padding:2px 8px;border-radius:99px;}
 .vs-revtitle{font-size:14px;font-weight:700;margin-top:8px;color:var(--spec-ink);}
 .vs-revbody{font-size:13.5px;color:var(--spec-ink);margin:6px 0 0;line-height:1.55;}
 .vs-side{position:sticky;top:calc(var(--spec-topbar-h) + 56px);display:flex;flex-direction:column;gap:0;}
