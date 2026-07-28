@@ -60,6 +60,11 @@ export async function callGeminiVisionJson(input: GeminiVisionInput): Promise<st
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
       cache: 'no-store',
+      // A slow/hung provider must not hold the request (and the vendor's
+      // browser) open indefinitely. fetch() rejects with a TimeoutError once
+      // this fires; extractListingDraftFromImages' catch-all converts that
+      // into the same friendly fallback draft as any other provider failure.
+      signal: AbortSignal.timeout(25_000),
     },
     { retries: 1, retryDelayMs: 600, dedupeInFlight: false },
   );

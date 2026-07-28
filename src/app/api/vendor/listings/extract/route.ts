@@ -21,16 +21,18 @@ import { logAiDraft } from '@/lib/assistant/llm';
 const BUCKET = 'listing-docs';
 const MAX_BYTES = 15 * 1024 * 1024;
 
-// Photo path (product photos -> AI draft). Mirrors the image constraints
-// already enforced on the listing media upload endpoint
-// (src/app/api/vendor/listings/media/route.ts) so a photo a vendor could
-// already attach to a listing is also one they can draft from.
+// Photo path (product photos -> AI draft). Sized against Vercel's Node
+// serverless function request-body limit (~4.5 MB, fixed, not configurable
+// on any plan) rather than the listing-media route's 8 MB — that limit is
+// for a single already-attached image going to Storage, not a multipart
+// request that has to arrive in one piece before our code ever runs. The 4
+// MB combined cap keeps the whole multipart body safely under the platform
+// ceiling with headroom for boundaries/other fields; the client
+// (vendor/listings/page.tsx aiFillImages) also downscales photos and
+// pre-checks these same numbers before it ever builds the request.
 const MAX_IMAGES = 4;
-const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
-// Extra belt-and-suspenders cap on the combined multipart payload sent to
-// Gemini (4 photos at the 8 MB ceiling each would be a ~43 MB base64 body) —
-// keeps a worst-case upload from ballooning into a huge outbound request.
-const MAX_TOTAL_IMAGE_BYTES = 20 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
+const MAX_TOTAL_IMAGE_BYTES = 4 * 1024 * 1024;
 const ALLOWED_IMG = ['image/png', 'image/jpeg', 'image/webp'];
 
 export async function POST(req: Request) {
@@ -65,7 +67,7 @@ export async function POST(req: Request) {
           return NextResponse.json({ ok: false, message: 'Photos must be PNG, JPEG, or WebP.' }, { status: 400 });
         }
         if (img.size > MAX_IMAGE_BYTES) {
-          return NextResponse.json({ ok: false, message: 'Each photo must be 8 MB or smaller.' }, { status: 400 });
+          return NextResponse.json({ ok: false, message: 'Each photo must be 3 MB or smaller.' }, { status: 400 });
         }
         totalBytes += img.size;
       }

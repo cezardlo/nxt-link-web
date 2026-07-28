@@ -6,8 +6,10 @@ import {
   isAutosaveWorthKeeping,
   mergeWithDefaults,
   parseAutosave,
+  sanitizeRestoredListingArrays,
   serializeAutosave,
 } from '@/lib/vendor/listing-autosave';
+import type { CustomField, PilotEntry } from '@/lib/marketplace/types';
 
 // Local-only draft persistence for the vendor listing editor (never lose
 // work on a tab close). These are the pure serialize/restore/merge rules —
@@ -109,4 +111,52 @@ test('mergeWithDefaults: missing keys fall back to defaults; unknown extra keys 
 test('mergeWithDefaults: null/non-object stored input yields the defaults unchanged', () => {
   assert.deepEqual(mergeWithDefaults(DEFAULTS, null), DEFAULTS);
   assert.deepEqual(mergeWithDefaults(DEFAULTS, 'garbage'), DEFAULTS);
+});
+
+// --- sanitizeRestoredListingArrays: closes the gap mergeWithDefaults leaves
+// open (it only checks Array.isArray at the field level, never validates
+// what's INSIDE the array). A crafted/corrupt localStorage entry like
+// `pilots:[null]` must never reach React state, or the editor crashes
+// rendering `p.duration` on null. ---------------------------------------
+
+test('sanitizeRestoredListingArrays: pilots:[null] alone resolves to an empty, working list — never crashes', () => {
+  const form = { pilots: [null] as unknown as PilotEntry[], impl_custom: [] as CustomField[], ws_custom: [] as CustomField[], pr_custom: [] as CustomField[] };
+  const restored = sanitizeRestoredListingArrays(form, 8, 20);
+  assert.deepEqual(restored.pilots, []);
+});
+
+test('sanitizeRestoredListingArrays: drops null/garbage entries but keeps the valid ones alongside them', () => {
+  const form = {
+    pilots: [null, { duration: '30 days', cost: 'Free', scope: 'Site A' }, 'garbage'] as unknown as PilotEntry[],
+    impl_custom: [null, { label: 'Financing', value: '0% APR' }, { label: '', value: 'orphan value, no label' }] as unknown as CustomField[],
+    ws_custom: [] as CustomField[],
+    pr_custom: 'not-an-array-at-all' as unknown as CustomField[],
+  };
+  const restored = sanitizeRestoredListingArrays(form, 8, 20);
+  assert.deepEqual(restored.pilots, [{ duration: '30 days', cost: 'Free', scope: 'Site A' }]);
+  assert.deepEqual(restored.impl_custom, [{ label: 'Financing', value: '0% APR' }]);
+  assert.deepEqual(restored.ws_custom, []);
+  assert.deepEqual(restored.pr_custom, []); // non-array input degrades to [] instead of throwing
+});
+
+test('sanitizeRestoredListingArrays: caps at the same pilot/custom-field limits as a normal save', () => {
+  const manyPilots = Array.from({ length: 12 }, (_, i) => ({ duration: `${i} days`, cost: '', scope: '' }));
+  const manyCustom = Array.from({ length: 30 }, (_, i) => ({ label: `Field ${i}`, value: `Value ${i}` }));
+  const form = { pilots: manyPilots, impl_custom: manyCustom, ws_custom: [] as CustomField[], pr_custom: [] as CustomField[] };
+  const restored = sanitizeRestoredListingArrays(form, 8, 20);
+  assert.equal(restored.pilots.length, 8);
+  assert.equal(restored.impl_custom.length, 20);
+});
+
+test('restoring a stashed draft end-to-end (mergeWithDefaults + sanitizeRestoredListingArrays): pilots:[null] never reaches a "restored" form', () => {
+  const DEFAULTS = { name: '', pilots: [] as PilotEntry[], impl_custom: [] as CustomField[], ws_custom: [] as CustomField[], pr_custom: [] as CustomField[] };
+  const corruptStoredDraft = { name: 'Recovered forklift listing', pilots: [null, { duration: '30 days', cost: '', scope: '' }] };
+  const merged = mergeWithDefaults(DEFAULTS, corruptStoredDraft);
+  const restored = sanitizeRestoredListingArrays(merged, 8, 20);
+  assert.equal(restored.name, 'Recovered forklift listing');
+  // The crafted `null` element never reaches the form — that's the crash
+  // pilotEntriesOf/customFieldsOf exist to prevent (rendering `p.duration`
+  // on a null pilot). The well-formed entry sitting next to it is untouched.
+  assert.deepEqual(restored.pilots, [{ duration: '30 days', cost: '', scope: '' }]);
+  assert.deepEqual(restored.impl_custom, []);
 });

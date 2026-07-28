@@ -8,6 +8,8 @@
 // Kept framework-free and generic (no dependency on the page's `Form` type)
 // so this logic is unit-testable without pulling in React/Next.
 
+import { pilotEntriesOf, customFieldsOf, type PilotEntry, type CustomField } from '@/lib/marketplace/types';
+
 const PREFIX = 'nxt_listing_draft_v1';
 // A stashed draft older than this is treated as if nothing was saved — never
 // offered back to the vendor as "resume where you left off".
@@ -83,4 +85,34 @@ export function mergeWithDefaults<T extends Record<string, unknown>>(defaults: T
     else if (Array.isArray(base) && Array.isArray(value)) next[key] = value as T[typeof key];
   });
   return next;
+}
+
+/** The four vendor-extensible array fields on the listing editor's Form
+ * (pilots + the three custom {label,value} blocks: implementation/
+ * warranty_support/pricing). */
+export interface ListingFormArrayFields {
+  pilots: PilotEntry[];
+  impl_custom: CustomField[];
+  ws_custom: CustomField[];
+  pr_custom: CustomField[];
+}
+
+/** Element-level sanitization pass for those four fields, meant to run
+ * AFTER mergeWithDefaults on a restored autosave draft. mergeWithDefaults
+ * only checks `Array.isArray(...)` at the field level — it does not (and
+ * shouldn't, being generic) validate what is INSIDE the array. A
+ * crafted/corrupted localStorage entry like `pilots:[null]` would sail
+ * straight through and later crash the editor rendering `p.duration` on
+ * null. This routes those four fields through the exact same element-level
+ * sanitizers (pilotEntriesOf/customFieldsOf, src/lib/marketplace/types.ts)
+ * the rest of the app already trusts for untrusted JSONB coming out of the
+ * database — same contract, same guarantees, nothing new to reason about. */
+export function sanitizeRestoredListingArrays<T extends ListingFormArrayFields>(form: T, pilotMax: number, customMax: number): T {
+  return {
+    ...form,
+    pilots: pilotEntriesOf({ entries: form.pilots }).slice(0, pilotMax),
+    impl_custom: customFieldsOf({ custom: form.impl_custom }).slice(0, customMax),
+    ws_custom: customFieldsOf({ custom: form.ws_custom }).slice(0, customMax),
+    pr_custom: customFieldsOf({ custom: form.pr_custom }).slice(0, customMax),
+  };
 }

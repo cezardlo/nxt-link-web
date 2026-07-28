@@ -85,3 +85,21 @@ test('extractListingDraftFromImages: a provider error (e.g. a stale/expired key)
     }
   });
 });
+
+test('extractListingDraftFromImages: a provider timeout (25s AbortSignal firing) degrades to the friendly fallback draft, never hangs or throws', async () => {
+  await withEnv('GEMINI_API_KEY', 'test-key', async () => {
+    const restore = setFetch(async () => {
+      const timeoutError = new Error('The operation was aborted due to timeout');
+      timeoutError.name = 'TimeoutError';
+      throw timeoutError;
+    });
+    try {
+      const { draft, provider } = await extractListingDraftFromImages('product', [{ base64: 'AAAA', mimeType: 'image/png' }]);
+      assert.equal(provider, 'fallback');
+      assert.deepEqual(draft.fields, {});
+      assert.match(draft.summary, /manually|brochure/i);
+    } finally {
+      restore();
+    }
+  });
+});

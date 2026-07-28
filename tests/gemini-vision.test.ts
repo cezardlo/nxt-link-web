@@ -98,3 +98,36 @@ test('callGeminiVisionJson: throws when the response has no usable candidate tex
     }
   });
 });
+
+test('callGeminiVisionJson: passes an AbortSignal on the fetch init so a hung provider cannot block forever', async () => {
+  await withEnv('GEMINI_API_KEY', 'test-key', async () => {
+    let capturedSignal: unknown;
+    const restore = setFetch(async (_input, init) => {
+      capturedSignal = init?.signal;
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{}' }] } }] }), { status: 200 });
+    });
+    try {
+      await callGeminiVisionJson({ systemPrompt: 'sys', userPrompt: 'user', images: [{ base64: 'A', mimeType: 'image/png' }] });
+      assert.ok(capturedSignal instanceof AbortSignal);
+    } finally {
+      restore();
+    }
+  });
+});
+
+test('callGeminiVisionJson: a provider timeout rejects instead of hanging (mirrors what AbortSignal.timeout() throws)', async () => {
+  await withEnv('GEMINI_API_KEY', 'test-key', async () => {
+    const restore = setFetch(async () => {
+      const timeoutError = new Error('The operation was aborted due to timeout');
+      timeoutError.name = 'TimeoutError';
+      throw timeoutError;
+    });
+    try {
+      await assert.rejects(
+        () => callGeminiVisionJson({ systemPrompt: 'sys', userPrompt: 'user', images: [{ base64: 'A', mimeType: 'image/png' }] }),
+      );
+    } finally {
+      restore();
+    }
+  });
+});
