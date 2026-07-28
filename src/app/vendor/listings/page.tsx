@@ -11,6 +11,7 @@ import { scoreListing } from '@/lib/marketplace/completeness';
 import { pilotEntriesOf, customFieldsOf, type PilotEntry, type CustomField } from '@/lib/marketplace/types';
 import ChipTagInput from '@/components/marketplace/ChipTagInput';
 import VendorNav from '@/components/VendorNav';
+import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
 
 // Vendor-flexibility caps (2026-07-23) — soft client-side guards that mirror
 // the hard caps enforced server-side in normalizeListingInput/cleanBlock
@@ -71,6 +72,148 @@ const lines = (s: string) => s.split('\n').map((x) => x.trim()).filter(Boolean);
 const join = (v: unknown) => (Array.isArray(v) ? v.join(', ') : '');
 const joinL = (v: unknown) => (Array.isArray(v) ? v.join('\n') : '');
 const gs = (o: Record<string, unknown> | null | undefined, k: string) => (o && typeof o[k] === 'string' ? (o[k] as string) : '');
+
+// EN/ES dictionary — same shared LanguageToggle/useLang pattern as
+// /vendor/leads (nxt_lang in localStorage). This page had no lang mechanism
+// at all before; every vendor-visible string below now goes through `t`.
+const T: Record<Lang, Record<string, string>> = {
+  en: {
+    loading: 'Loading…', signInTitle: 'Sign in to manage your listings', goToSignIn: 'Go to sign in →',
+    couldNotExtract: 'Could not extract', giveNameFirst: 'Give the listing a name first.',
+    couldNotSave: 'Could not save', savedMsg: 'Saved. Nothing is public until you review and publish.',
+    couldNotPublish: 'Could not publish', publishedMsg: 'Published — it is now live in the marketplace.',
+    archiveConfirm: 'Archive this listing? It will come down from the marketplace immediately.',
+    saveListingFirst: 'Save the listing first, then add photos.', photoAdded: 'Photo added.', uploadFailed: 'Upload failed',
+    pageTitle: 'Your listings', pageSub: 'What buyers see in the marketplace. Drafts are private until you publish.',
+    leadsInboxLink: 'Leads inbox', companyProfileLink: 'Company profile',
+    emailWarn: 'Your email is not verified yet — you can build and save listings, but publishing is locked until you click the confirmation link we emailed you.',
+    products: 'Products', services: 'Services',
+    newProduct: '+ New product', newService: '+ New service',
+    noProductsYet: 'No products yet. Create one — AI can draft it from a spec sheet.',
+    noServicesYet: 'No services yet. Create one — AI can draft it from a spec sheet.',
+    moveUp: 'Move up', moveDown: 'Move down', noCategory: 'No category',
+    viewLive: 'View live', edit: 'Edit', unpublish: 'Unpublish', reviewPublish: 'Review & publish', archive: 'Archive',
+    completeSuffix: '% complete', nextPrefix: 'Next:',
+    formEditProduct: 'Edit product', formEditService: 'Edit service',
+    formNewProduct: 'New product', formNewService: 'New service',
+    backToListings: '← Back to listings',
+    aiFillOptional: 'AI fill (optional)',
+    aiFillHint: 'Upload a spec sheet / brochure or paste text — AI drafts the fields below. It never invents: anything missing stays empty. You review before publishing.',
+    reading: 'Reading…', uploadDocument: 'Upload document', pasteHint: '…or paste product/service text here', draftFromText: 'Draft from text',
+    nameLabelProduct: 'Product name *', nameLabelService: 'Service name *',
+    categoryLabel: 'Category', categoryHint: 'Type your own or pick a suggestion below',
+    descriptionLabel: 'Description', descriptionPh: 'What it is, what problem it solves, why it is different.',
+    bestForLabel: 'Best for', industriesLabel: 'Industries served', chipHint: 'Type one and press Enter',
+    useCasesLabel: 'Use cases', leadTimeLabel: 'Lead time', leadTimePh: 'e.g. 2-4 weeks',
+    specsLabel: 'Specifications (one per line, "Name: value")', specsPh: 'Capacity: 5,000 lb\nPower: Electric 48V',
+    availabilityLabel: 'Availability:', buy: 'Buy', rent: 'Rent', lease: 'Lease',
+    serviceAreasLabel: 'Service areas (comma-separated)', serviceAreasPh: 'El Paso, Juárez, Cross-border',
+    responseTimeLabel: 'Response time', responseTimePh: 'e.g. Same day, 24-48 hours',
+    processLabel: 'How it works (one step per line)', processPh: 'Site visit and assessment\nWritten quote\nScheduled service',
+    certificationsLabel: 'Certifications / licenses (comma-separated)',
+    pricingModelLabel: 'Pricing model', pricingModelPh: 'e.g. Monthly contract, Per visit',
+    emergencyLabel: '24/7 emergency service available',
+    pilotDemoSummary: 'Pilot / demo', pilotAvailableLabel: 'Pilot or demo available',
+    durationLabel: 'Duration', durationPh: 'e.g. 30 days', costLabel: 'Cost', costPh: 'e.g. Free, $2,500',
+    scopeLabel: 'Scope', scopePh: 'What the pilot covers', remove: 'Remove', addAnotherPilot: '+ Add another pilot or demo',
+    implementationSummary: 'Implementation',
+    implRequirementsLabel: 'Requirements (comma-separated)', implRequirementsPh: 'WiFi coverage, Dock access',
+    implTimelineLabel: 'Typical timeline', implTimelinePh: 'e.g. 2 weeks',
+    implTrainingLabel: 'Training included', implTrainingPh: 'e.g. 2-day on-site training',
+    warrantySummary: 'Warranty & support', wsWarrantyLabel: 'Warranty', wsWarrantyPh: 'e.g. 2 years parts & labor',
+    wsChannelsLabel: 'Support channels (comma-separated)', wsChannelsPh: 'Phone, On-site, Email',
+    wsSlaLabel: 'SLA', wsSlaPh: 'e.g. 4-hour response',
+    pricingSummary: 'Pricing', prModelLabel: 'Model', prModelPh: 'e.g. Per unit, Subscription',
+    prRangeLabel: 'Range shown to buyers', prRangePh: 'e.g. $15k-$40k — or leave empty for "Request quote"',
+    prNotesLabel: 'Notes', prNotesPh: 'Financing, volume discounts…',
+    fieldNameLabel: 'Field name', fieldValueLabel: 'Value', addField: '+ Add field',
+    photosLabel: 'Photos:', addPhoto: 'Add photo (PNG/JPG/WebP)',
+    saving: 'Saving…', saveDraft: 'Save draft',
+    reviewBeforePublishing: 'Review before publishing',
+    reviewHint: 'This is exactly what buyers will see. Check every line — you are responsible for its accuracy.',
+    photoAttached: 'Photo attached', noPhoto: 'No photo', bestForPrefix: 'Best for:',
+    prevDescription: 'Description', prevIndustries: 'Industries', prevSpecs: 'Specs', listedSuffix: 'listed',
+    prevAvailability: 'Availability', prevLeadTime: 'Lead time', prevServiceAreas: 'Service areas',
+    prevResponseTime: 'Response time', prevCertifications: 'Certifications', prevPilotDemo: 'Pilot / demo',
+    pilotAvailableFallback: 'Available', pilotsListedSuffix: 'pilots / demos listed',
+    prevWarranty: 'Warranty', prevPricing: 'Pricing', requestQuoteFallback: 'Request quote',
+    prevPhotos: 'Photos', prevDocuments: 'Documents', checking: 'checking…', prevCaseStudies: 'Case studies',
+    reviewFooterHint: 'Empty fields simply will not show. AI-drafted content only used what was in your document — anything missing was left blank on purpose.',
+    accuracyConfirm: 'I confirm this information is accurate, current, and approved to be displayed on NXT LINK.',
+    keepEditing: 'Keep editing', publishing: 'Publishing…', publishToMarketplace: 'Publish to marketplace',
+    previewEmptyNote: 'empty — will not display',
+    stDraft: 'Draft', stPublished: 'Published', stNeedsReview: 'Needs review', stReady: 'Ready', stUnpublished: 'Unpublished',
+    kindProduct: 'product', kindService: 'service',
+  },
+  es: {
+    loading: 'Cargando…', signInTitle: 'Inicia sesión para administrar tus publicaciones', goToSignIn: 'Ir a iniciar sesión →',
+    couldNotExtract: 'No se pudo extraer', giveNameFirst: 'Primero dale un nombre a la publicación.',
+    couldNotSave: 'No se pudo guardar', savedMsg: 'Guardado. Nada es público hasta que lo revises y publiques.',
+    couldNotPublish: 'No se pudo publicar', publishedMsg: 'Publicado — ahora está en vivo en el marketplace.',
+    archiveConfirm: '¿Archivar esta publicación? Se retirará del marketplace de inmediato.',
+    saveListingFirst: 'Guarda la publicación primero y luego agrega fotos.', photoAdded: 'Foto agregada.', uploadFailed: 'Error al subir',
+    pageTitle: 'Tus publicaciones', pageSub: 'Lo que los compradores ven en el marketplace. Los borradores son privados hasta que publiques.',
+    leadsInboxLink: 'Bandeja de leads', companyProfileLink: 'Perfil de la empresa',
+    emailWarn: 'Tu correo aún no está verificado — puedes crear y guardar publicaciones, pero la publicación está bloqueada hasta que hagas clic en el enlace de confirmación que te enviamos.',
+    products: 'Productos', services: 'Servicios',
+    newProduct: '+ Nuevo producto', newService: '+ Nuevo servicio',
+    noProductsYet: 'Aún no hay productos. Crea uno — la IA puede redactarlo a partir de una ficha técnica.',
+    noServicesYet: 'Aún no hay servicios. Crea uno — la IA puede redactarlo a partir de una ficha técnica.',
+    moveUp: 'Subir', moveDown: 'Bajar', noCategory: 'Sin categoría',
+    viewLive: 'Ver en vivo', edit: 'Editar', unpublish: 'Despublicar', reviewPublish: 'Revisar y publicar', archive: 'Archivar',
+    completeSuffix: '% completo', nextPrefix: 'Siguiente:',
+    formEditProduct: 'Editar producto', formEditService: 'Editar servicio',
+    formNewProduct: 'Nuevo producto', formNewService: 'Nuevo servicio',
+    backToListings: '← Volver a publicaciones',
+    aiFillOptional: 'Completar con IA (opcional)',
+    aiFillHint: 'Sube una ficha técnica / folleto o pega texto — la IA redacta los campos de abajo. Nunca inventa: lo que falta queda vacío. Tú revisas antes de publicar.',
+    reading: 'Leyendo…', uploadDocument: 'Subir documento', pasteHint: '…o pega aquí el texto del producto/servicio', draftFromText: 'Redactar desde texto',
+    nameLabelProduct: 'Nombre del producto *', nameLabelService: 'Nombre del servicio *',
+    categoryLabel: 'Categoría', categoryHint: 'Escribe la tuya o elige una sugerencia abajo',
+    descriptionLabel: 'Descripción', descriptionPh: 'Qué es, qué problema resuelve, por qué es diferente.',
+    bestForLabel: 'Ideal para', industriesLabel: 'Industrias atendidas', chipHint: 'Escribe uno y presiona Enter',
+    useCasesLabel: 'Casos de uso', leadTimeLabel: 'Plazo de entrega', leadTimePh: 'ej. 2-4 semanas',
+    specsLabel: 'Especificaciones (una por línea, "Nombre: valor")', specsPh: 'Capacidad: 5,000 lb\nEnergía: Eléctrico 48V',
+    availabilityLabel: 'Disponibilidad:', buy: 'Comprar', rent: 'Rentar', lease: 'Arrendar',
+    serviceAreasLabel: 'Áreas de servicio (separadas por comas)', serviceAreasPh: 'El Paso, Juárez, transfronterizo',
+    responseTimeLabel: 'Tiempo de respuesta', responseTimePh: 'ej. Mismo día, 24-48 horas',
+    processLabel: 'Cómo funciona (un paso por línea)', processPh: 'Visita al sitio y evaluación\nCotización por escrito\nServicio programado',
+    certificationsLabel: 'Certificaciones / licencias (separadas por comas)',
+    pricingModelLabel: 'Modelo de precios', pricingModelPh: 'ej. Contrato mensual, Por visita',
+    emergencyLabel: 'Servicio de emergencia 24/7 disponible',
+    pilotDemoSummary: 'Piloto / demo', pilotAvailableLabel: 'Piloto o demo disponible',
+    durationLabel: 'Duración', durationPh: 'ej. 30 días', costLabel: 'Costo', costPh: 'ej. Gratis, $2,500',
+    scopeLabel: 'Alcance', scopePh: 'Qué cubre el piloto', remove: 'Quitar', addAnotherPilot: '+ Agregar otro piloto o demo',
+    implementationSummary: 'Implementación',
+    implRequirementsLabel: 'Requisitos (separados por comas)', implRequirementsPh: 'Cobertura WiFi, Acceso a andén',
+    implTimelineLabel: 'Plazo típico', implTimelinePh: 'ej. 2 semanas',
+    implTrainingLabel: 'Capacitación incluida', implTrainingPh: 'ej. 2 días de capacitación en sitio',
+    warrantySummary: 'Garantía y soporte', wsWarrantyLabel: 'Garantía', wsWarrantyPh: 'ej. 2 años de piezas y mano de obra',
+    wsChannelsLabel: 'Canales de soporte (separados por comas)', wsChannelsPh: 'Teléfono, En sitio, Correo',
+    wsSlaLabel: 'SLA', wsSlaPh: 'ej. Respuesta en 4 horas',
+    pricingSummary: 'Precios', prModelLabel: 'Modelo', prModelPh: 'ej. Por unidad, Suscripción',
+    prRangeLabel: 'Rango mostrado a compradores', prRangePh: 'ej. $15k-$40k — o deja vacío para "Solicitar cotización"',
+    prNotesLabel: 'Notas', prNotesPh: 'Financiamiento, descuentos por volumen…',
+    fieldNameLabel: 'Nombre del campo', fieldValueLabel: 'Valor', addField: '+ Agregar campo',
+    photosLabel: 'Fotos:', addPhoto: 'Agregar foto (PNG/JPG/WebP)',
+    saving: 'Guardando…', saveDraft: 'Guardar borrador',
+    reviewBeforePublishing: 'Revisar antes de publicar',
+    reviewHint: 'Esto es exactamente lo que verán los compradores. Revisa cada línea — eres responsable de su exactitud.',
+    photoAttached: 'Foto adjunta', noPhoto: 'Sin foto', bestForPrefix: 'Ideal para:',
+    prevDescription: 'Descripción', prevIndustries: 'Industrias', prevSpecs: 'Especificaciones', listedSuffix: 'agregadas',
+    prevAvailability: 'Disponibilidad', prevLeadTime: 'Plazo de entrega', prevServiceAreas: 'Áreas de servicio',
+    prevResponseTime: 'Tiempo de respuesta', prevCertifications: 'Certificaciones', prevPilotDemo: 'Piloto / demo',
+    pilotAvailableFallback: 'Disponible', pilotsListedSuffix: 'pilotos / demos registrados',
+    prevWarranty: 'Garantía', prevPricing: 'Precios', requestQuoteFallback: 'Solicitar cotización',
+    prevPhotos: 'Fotos', prevDocuments: 'Documentos', checking: 'verificando…', prevCaseStudies: 'Casos de éxito',
+    reviewFooterHint: 'Los campos vacíos simplemente no se mostrarán. El contenido redactado por IA solo usó lo que había en tu documento — lo que faltaba se dejó vacío a propósito.',
+    accuracyConfirm: 'Confirmo que esta información es precisa, está actualizada y está aprobada para mostrarse en NXT LINK.',
+    keepEditing: 'Seguir editando', publishing: 'Publicando…', publishToMarketplace: 'Publicar en el marketplace',
+    previewEmptyNote: 'vacío — no se mostrará',
+    stDraft: 'Borrador', stPublished: 'Publicado', stNeedsReview: 'Necesita revisión', stReady: 'Listo', stUnpublished: 'Sin publicar',
+    kindProduct: 'producto', kindService: 'servicio',
+  },
+};
 
 function toBody(kind: Kind, f: Form): Record<string, unknown> {
   const specsObj: Record<string, string> = {};
@@ -149,6 +292,9 @@ function fromListing(l: Listing): Form {
 }
 
 export default function VendorListingsPage() {
+  const [lang, setLang] = useLang(); // stored `nxt_lang` — shared across marketplace pages
+  const t = T[lang];
+  const STATUS_LABEL: Record<string, string> = { draft: t.stDraft, published: t.stPublished, needs_review: t.stNeedsReview, ready: t.stReady, unpublished: t.stUnpublished };
   const [checking, setChecking] = useState(true);
   const [signedIn, setSignedIn] = useState(false);
   const [products, setProducts] = useState<Listing[]>([]);
@@ -287,14 +433,14 @@ export default function VendorListingsPage() {
       }
       const data = await res.json();
       if (data.ok) { mergeDraft(data.draft || {}); setAiSummary(data.summary || ''); if (data.document_id) setDocId(data.document_id); }
-      else setMsg(data.message || 'Could not extract');
-    } catch { setMsg('Could not extract'); }
+      else setMsg(data.message || t.couldNotExtract);
+    } catch { setMsg(t.couldNotExtract); }
     setAiBusy(false);
   }
 
   async function save(): Promise<Listing | null> {
     if (!editing) return null;
-    if (!f.name.trim()) { setMsg('Give the listing a name first.'); return null; }
+    if (!f.name.trim()) { setMsg(t.giveNameFirst); return null; }
     setSaving(true); setMsg('');
     const body: Record<string, unknown> = { ...toBody(editing.kind, f), kind: editing.kind };
     if (editing.id) body.id = editing.id;
@@ -305,9 +451,9 @@ export default function VendorListingsPage() {
     });
     const data = await res.json();
     setSaving(false);
-    if (!data.ok) { setMsg(data.message || 'Could not save'); return null; }
+    if (!data.ok) { setMsg(data.message || t.couldNotSave); return null; }
     if (!editing.id) setEditing({ kind: editing.kind, id: data.listing.id });
-    setMsg('Saved. Nothing is public until you review and publish.');
+    setMsg(t.savedMsg);
     load();
     return data.listing as Listing;
   }
@@ -326,9 +472,9 @@ export default function VendorListingsPage() {
     });
     const data = await res.json();
     setPubBusy(false);
-    if (!data.ok) { setPubErr(data.message || 'Could not publish'); return; }
+    if (!data.ok) { setPubErr(data.message || t.couldNotPublish); return; }
     setReviewFor(null); setAccOk(false); setEditing(null);
-    setMsg('Published — it is now live in the marketplace.');
+    setMsg(t.publishedMsg);
     load();
   }
 
@@ -337,7 +483,7 @@ export default function VendorListingsPage() {
     load();
   }
   async function archive(kind: Kind, id: string) {
-    if (!confirm('Archive this listing? It will come down from the marketplace immediately.')) return;
+    if (!confirm(t.archiveConfirm)) return;
     await fetch(`/api/vendor/listings?kind=${kind}&id=${id}`, { method: 'DELETE' });
     load();
   }
@@ -356,20 +502,22 @@ export default function VendorListingsPage() {
     })));
   }
   async function uploadImage(file: File) {
-    if (!editing?.id) { setMsg('Save the listing first, then add photos.'); return; }
+    if (!editing?.id) { setMsg(t.saveListingFirst); return; }
     const fd = new FormData(); fd.append('kind', editing.kind); fd.append('id', editing.id); fd.append('file', file);
     const res = await fetch('/api/vendor/listings/media', { method: 'POST', body: fd });
     const data = await res.json();
-    setMsg(data.ok ? 'Photo added.' : (data.message || 'Upload failed'));
+    setMsg(data.ok ? t.photoAdded : (data.message || t.uploadFailed));
     load();
   }
 
-  if (checking) return <Shell><div className="sc-empty">Loading…</div></Shell>;
+  if (checking) return <Shell lang={lang} setLang={setLang}><div className="sc-empty">{t.loading}</div></Shell>;
   if (!signedIn) {
-    return <Shell><div className="sc-gate"><h1>Sign in to manage your listings</h1><a className="sc-btn" href="/vendor-login">Go to sign in →</a></div></Shell>;
+    return <Shell lang={lang} setLang={setLang}><div className="sc-gate"><h1>{t.signInTitle}</h1><a className="sc-btn" href="/vendor-login">{t.goToSignIn}</a></div></Shell>;
   }
 
-  const T = (k: keyof Form, label: string, ph = '', rows = 0) => (
+  // Renamed from the generic `T` to avoid colliding with the `T` translation
+  // dictionary above — this one renders a labeled text/textarea form field.
+  const Field = (k: keyof Form, label: string, ph = '', rows = 0) => (
     <label className="sc-field"><span>{label}</span>
       {rows
         ? <textarea rows={rows} placeholder={ph} value={f[k] as string} onChange={(e) => setF({ ...f, [k]: e.target.value })} />
@@ -393,73 +541,75 @@ export default function VendorListingsPage() {
     <div className="sc-custom">
       {f[key].map((c, i) => (
         <div className="sc-customrow" key={i}>
-          <input placeholder="Field name / Nombre del campo" maxLength={60} value={c.label} onChange={(e) => updateCustom(key, i, 'label', e.target.value)} aria-label="Field name / Nombre del campo" />
-          <input placeholder="Value / Valor" maxLength={300} value={c.value} onChange={(e) => updateCustom(key, i, 'value', e.target.value)} aria-label="Value / Valor" />
-          <button type="button" className="sc-link" onClick={() => removeCustom(key, i)}>Remove / Quitar</button>
+          <input placeholder={t.fieldNameLabel} maxLength={60} value={c.label} onChange={(e) => updateCustom(key, i, 'label', e.target.value)} aria-label={t.fieldNameLabel} />
+          <input placeholder={t.fieldValueLabel} maxLength={300} value={c.value} onChange={(e) => updateCustom(key, i, 'value', e.target.value)} aria-label={t.fieldValueLabel} />
+          <button type="button" className="sc-link" onClick={() => removeCustom(key, i)}>{t.remove}</button>
         </div>
       ))}
-      <button type="button" className="sc-btn sm ghost" disabled={f[key].length >= CUSTOM_MAX} onClick={() => addCustom(key)}>+ Add field / + Agregar campo</button>
+      <button type="button" className="sc-btn sm ghost" disabled={f[key].length >= CUSTOM_MAX} onClick={() => addCustom(key)}>{t.addField}</button>
     </div>
   );
 
+  const Pv = (label: string, v: string) => <Prev label={label} v={v} emptyText={t.previewEmptyNote} />;
+  const KIND_LABEL: Record<Kind, string> = { product: t.kindProduct, service: t.kindService };
+
   return (
-    <Shell>
+    <Shell lang={lang} setLang={setLang}>
       <div className="sc-head">
         <div>
-          <h1>Your listings</h1>
-          <p className="sc-sub">What buyers see in the marketplace. Drafts are private until you publish.</p>
+          <h1>{t.pageTitle}</h1>
+          <p className="sc-sub">{t.pageSub}</p>
         </div>
         <div className="sc-headr">
-          <a className="sc-link" href="/vendor/leads">Leads inbox</a>
-          <a className="sc-link" href="/vendor/portal">Company profile</a>
+          <a className="sc-link" href="/vendor/leads">{t.leadsInboxLink}</a>
+          <a className="sc-link" href="/vendor/portal">{t.companyProfileLink}</a>
         </div>
       </div>
       {!emailVerified && (
         <div className="sc-warn">
-          Your email is not verified yet — you can build and save listings, but publishing is
-          locked until you click the confirmation link we emailed you.
+          {t.emailWarn}
         </div>
       )}
       {msg && <div className="sc-msg">{msg}</div>}
 
       {!editing && (
         <>
-          {([['product', 'Products', products], ['service', 'Services', services]] as Array<[Kind, string, Listing[]]>).map(([kind, label, rows]) => (
+          {([['product', t.products, products], ['service', t.services, services]] as Array<[Kind, string, Listing[]]>).map(([kind, label, rows]) => (
             <section className="sc-card" key={kind}>
               <div className="sc-cardhead">
                 <div className="sc-lbl">{label} ({rows.length})</div>
-                <button className="sc-btn sm" onClick={() => openNew(kind)}>+ New {kind}</button>
+                <button className="sc-btn sm" onClick={() => openNew(kind)}>{kind === 'product' ? t.newProduct : t.newService}</button>
               </div>
-              {rows.length === 0 ? <p className="sc-hint">No {label.toLowerCase()} yet. Create one — AI can draft it from a spec sheet.</p> : (
+              {rows.length === 0 ? <p className="sc-hint">{kind === 'product' ? t.noProductsYet : t.noServicesYet}</p> : (
                 <ul className="sc-list">
                   {rows.map((l, i) => {
-                    const score = scoreListing(kind, l as unknown as Record<string, unknown>);
+                    const score = scoreListing(kind, l as unknown as Record<string, unknown>, lang);
                     return (
                     <li key={l.id}>
                       <div className="sc-rowtop">
                         {rows.length > 1 && (
                           <span className="sc-reorder">
-                            <button aria-label="Move up" disabled={i === 0} onClick={() => move(kind, i, 'up')}>▲</button>
-                            <button aria-label="Move down" disabled={i === rows.length - 1} onClick={() => move(kind, i, 'down')}>▼</button>
+                            <button aria-label={t.moveUp} disabled={i === 0} onClick={() => move(kind, i, 'up')}>▲</button>
+                            <button aria-label={t.moveDown} disabled={i === rows.length - 1} onClick={() => move(kind, i, 'down')}>▼</button>
                           </span>
                         )}
-                        <span className={'sc-status ' + l.status}>{l.status}</span>
+                        <span className={'sc-status ' + l.status}>{STATUS_LABEL[l.status] || l.status}</span>
                         <b>{l.name}</b>
-                        <small>{l.category || 'No category'}</small>
+                        <small>{l.category || t.noCategory}</small>
                         <span className="sc-spacer" />
-                        {l.status === 'published' && <a href={`/marketplace/${kind}/${l.id}`} target="_blank" rel="noreferrer">View live</a>}
-                        <button onClick={() => openEdit(kind, l)}>Edit</button>
+                        {l.status === 'published' && <a href={`/marketplace/${kind}/${l.id}`} target="_blank" rel="noreferrer">{t.viewLive}</a>}
+                        <button onClick={() => openEdit(kind, l)}>{t.edit}</button>
                         {l.status === 'published'
-                          ? <button onClick={() => setStatus(kind, l.id, 'unpublished')}>Unpublish</button>
-                          : <button className="sc-pub" onClick={() => openReview(kind, l)}>Review &amp; publish</button>}
-                        <button className="sc-del" onClick={() => archive(kind, l.id)}>Archive</button>
+                          ? <button onClick={() => setStatus(kind, l.id, 'unpublished')}>{t.unpublish}</button>
+                          : <button className="sc-pub" onClick={() => openReview(kind, l)}>{t.reviewPublish}</button>}
+                        <button className="sc-del" onClick={() => archive(kind, l.id)}>{t.archive}</button>
                       </div>
                       {/* Completeness meter — complete listings rank higher & win more quotes */}
                       <div className="sc-meter" title={score.missing.join(' · ')}>
                         <div className="sc-meterbar"><div className={'sc-meterfill' + (score.percent >= 80 ? ' good' : score.percent >= 50 ? ' mid' : ' low')} style={{ width: `${score.percent}%` }} /></div>
-                        <span className="sc-meterpct">{score.percent}% complete</span>
+                        <span className="sc-meterpct">{score.percent}{t.completeSuffix}</span>
                         {score.missing.length > 0 && score.percent < 100 && (
-                          <span className="sc-meterhint">Next: {score.missing.slice(0, 2).join(' · ')}</span>
+                          <span className="sc-meterhint">{t.nextPrefix} {score.missing.slice(0, 2).join(' · ')}</span>
                         )}
                       </div>
                     </li>
@@ -475,106 +625,106 @@ export default function VendorListingsPage() {
       {editing && (
         <section className="sc-card">
           <div className="sc-cardhead">
-            <div className="sc-lbl">{editing.id ? 'Edit' : 'New'} {editing.kind}</div>
-            <button className="sc-link" onClick={() => { setEditing(null); setMsg(''); }}>← Back to listings</button>
+            <div className="sc-lbl">{editing.id ? (editing.kind === 'product' ? t.formEditProduct : t.formEditService) : (editing.kind === 'product' ? t.formNewProduct : t.formNewService)}</div>
+            <button className="sc-link" onClick={() => { setEditing(null); setMsg(''); }}>{t.backToListings}</button>
           </div>
 
           <div className="sc-ai">
-            <div className="sc-lbl">AI fill (optional)</div>
-            <p className="sc-hint">Upload a spec sheet / brochure or paste text — AI drafts the fields below. It never invents: anything missing stays empty. You review before publishing.</p>
+            <div className="sc-lbl">{t.aiFillOptional}</div>
+            <p className="sc-hint">{t.aiFillHint}</p>
             <div className="sc-airow">
               <label className="sc-btn sm ghost">
-                {aiBusy ? 'Reading…' : 'Upload document'}
+                {aiBusy ? t.reading : t.uploadDocument}
                 <input type="file" accept=".pdf,.txt" style={{ display: 'none' }} disabled={aiBusy} onChange={(e) => { const file = e.target.files?.[0]; if (file) aiFill(file); e.target.value = ''; }} />
               </label>
-              <textarea rows={2} placeholder="…or paste product/service text here" value={pasteText} onChange={(e) => setPasteText(e.target.value)} />
-              <button className="sc-btn sm" disabled={aiBusy || pasteText.trim().length < 40} onClick={() => aiFill()}>{aiBusy ? 'Reading…' : 'Draft from text'}</button>
+              <textarea rows={2} placeholder={t.pasteHint} value={pasteText} onChange={(e) => setPasteText(e.target.value)} />
+              <button className="sc-btn sm" disabled={aiBusy || pasteText.trim().length < 40} onClick={() => aiFill()}>{aiBusy ? t.reading : t.draftFromText}</button>
             </div>
             {aiSummary && <div className="sc-aisum">{aiSummary}</div>}
           </div>
 
           <div className="sc-grid">
-            {T('name', `${editing.kind === 'product' ? 'Product' : 'Service'} name *`)}
-            {Chip('Category / Categoría', f.category ? [f.category] : [], (next) => setF({ ...f, category: next[next.length - 1] || '' }), {
+            {Field('name', editing.kind === 'product' ? t.nameLabelProduct : t.nameLabelService)}
+            {Chip(t.categoryLabel, f.category ? [f.category] : [], (next) => setF({ ...f, category: next[next.length - 1] || '' }), {
               suggestions: suggestedCategories, max: 1,
-              placeholder: 'Type your own or pick a suggestion below / Escribe la tuya o elige una sugerencia',
+              placeholder: t.categoryHint,
             })}
           </div>
-          {T('overview', 'Description', 'What it is, what problem it solves, why it is different.', 4)}
+          {Field('overview', t.descriptionLabel, t.descriptionPh, 4)}
           <div className="sc-grid">
-            {Chip('Best for / Ideal para', f.best_for, (next) => setF({ ...f, best_for: next }), {
-              suggestions: suggestedBestFor, max: 10, placeholder: 'Type one and press Enter / Escribe uno y presiona Enter',
+            {Chip(t.bestForLabel, f.best_for, (next) => setF({ ...f, best_for: next }), {
+              suggestions: suggestedBestFor, max: 10, placeholder: t.chipHint,
             })}
-            {Chip('Industries served / Industrias atendidas', f.industries, (next) => setF({ ...f, industries: next }), {
-              suggestions: suggestedIndustries, max: 15, placeholder: 'Type one and press Enter / Escribe una y presiona Enter',
+            {Chip(t.industriesLabel, f.industries, (next) => setF({ ...f, industries: next }), {
+              suggestions: suggestedIndustries, max: 15, placeholder: t.chipHint,
             })}
           </div>
 
           {editing.kind === 'product' ? (
             <>
               <div className="sc-grid">
-                {Chip('Use cases / Casos de uso', f.use_cases, (next) => setF({ ...f, use_cases: next }), {
-                  suggestions: suggestedUseCases, max: 12, placeholder: 'Type one and press Enter / Escribe uno y presiona Enter',
+                {Chip(t.useCasesLabel, f.use_cases, (next) => setF({ ...f, use_cases: next }), {
+                  suggestions: suggestedUseCases, max: 12, placeholder: t.chipHint,
                 })}
-                {T('lead_time', 'Lead time', 'e.g. 2-4 weeks')}
+                {Field('lead_time', t.leadTimeLabel, t.leadTimePh)}
               </div>
-              {T('specs', 'Specifications (one per line, "Name: value")', 'Capacity: 5,000 lb\nPower: Electric 48V', 4)}
-              <div className="sc-cbrow"><span className="sc-lblsm">Availability:</span>{C('buy', 'Buy')}{C('rent', 'Rent')}{C('lease', 'Lease')}</div>
+              {Field('specs', t.specsLabel, t.specsPh, 4)}
+              <div className="sc-cbrow"><span className="sc-lblsm">{t.availabilityLabel}</span>{C('buy', t.buy)}{C('rent', t.rent)}{C('lease', t.lease)}</div>
             </>
           ) : (
             <>
               <div className="sc-grid">
-                {T('service_areas', 'Service areas (comma-separated)', 'El Paso, Juárez, Cross-border')}
-                {T('response_time', 'Response time', 'e.g. Same day, 24-48 hours')}
+                {Field('service_areas', t.serviceAreasLabel, t.serviceAreasPh)}
+                {Field('response_time', t.responseTimeLabel, t.responseTimePh)}
               </div>
-              {T('process', 'How it works (one step per line)', 'Site visit and assessment\nWritten quote\nScheduled service', 4)}
+              {Field('process', t.processLabel, t.processPh, 4)}
               <div className="sc-grid">
-                {T('certifications', 'Certifications / licenses (comma-separated)')}
-                {T('pricing_model', 'Pricing model', 'e.g. Monthly contract, Per visit')}
+                {Field('certifications', t.certificationsLabel)}
+                {Field('pricing_model', t.pricingModelLabel, t.pricingModelPh)}
               </div>
-              <div className="sc-cbrow">{C('emergency_available', '24/7 emergency service available')}</div>
+              <div className="sc-cbrow">{C('emergency_available', t.emergencyLabel)}</div>
             </>
           )}
 
-          <details className="sc-block"><summary>Pilot / demo</summary>
-            <div className="sc-cbrow">{C('pilot_available', 'Pilot or demo available')}</div>
+          <details className="sc-block"><summary>{t.pilotDemoSummary}</summary>
+            <div className="sc-cbrow">{C('pilot_available', t.pilotAvailableLabel)}</div>
             {f.pilots.map((p, i) => (
               <div className="sc-pilot-entry" key={i}>
                 <div className="sc-grid3">
-                  <label className="sc-field"><span>Duration</span><input placeholder="e.g. 30 days" value={p.duration} onChange={(e) => updatePilot(i, 'duration', e.target.value)} /></label>
-                  <label className="sc-field"><span>Cost</span><input placeholder="e.g. Free, $2,500" value={p.cost} onChange={(e) => updatePilot(i, 'cost', e.target.value)} /></label>
-                  <label className="sc-field"><span>Scope</span><input placeholder="What the pilot covers" value={p.scope} onChange={(e) => updatePilot(i, 'scope', e.target.value)} /></label>
+                  <label className="sc-field"><span>{t.durationLabel}</span><input placeholder={t.durationPh} value={p.duration} onChange={(e) => updatePilot(i, 'duration', e.target.value)} /></label>
+                  <label className="sc-field"><span>{t.costLabel}</span><input placeholder={t.costPh} value={p.cost} onChange={(e) => updatePilot(i, 'cost', e.target.value)} /></label>
+                  <label className="sc-field"><span>{t.scopeLabel}</span><input placeholder={t.scopePh} value={p.scope} onChange={(e) => updatePilot(i, 'scope', e.target.value)} /></label>
                 </div>
-                <button type="button" className="sc-link" onClick={() => removePilot(i)}>Remove / Quitar</button>
+                <button type="button" className="sc-link" onClick={() => removePilot(i)}>{t.remove}</button>
               </div>
             ))}
-            <button type="button" className="sc-btn sm ghost" disabled={f.pilots.length >= PILOT_MAX} onClick={addPilot}>+ Add another pilot or demo / + Agregar otro piloto o demo</button>
+            <button type="button" className="sc-btn sm ghost" disabled={f.pilots.length >= PILOT_MAX} onClick={addPilot}>{t.addAnotherPilot}</button>
           </details>
-          <details className="sc-block"><summary>Implementation</summary>
-            <div className="sc-grid3">{T('impl_requirements', 'Requirements (comma-separated)', 'WiFi coverage, Dock access')}{T('impl_timeline', 'Typical timeline', 'e.g. 2 weeks')}{T('impl_training', 'Training included', 'e.g. 2-day on-site training')}</div>
+          <details className="sc-block"><summary>{t.implementationSummary}</summary>
+            <div className="sc-grid3">{Field('impl_requirements', t.implRequirementsLabel, t.implRequirementsPh)}{Field('impl_timeline', t.implTimelineLabel, t.implTimelinePh)}{Field('impl_training', t.implTrainingLabel, t.implTrainingPh)}</div>
             {CustomFields('impl_custom')}
           </details>
-          <details className="sc-block"><summary>Warranty &amp; support</summary>
-            <div className="sc-grid3">{T('ws_warranty', 'Warranty', 'e.g. 2 years parts & labor')}{T('ws_channels', 'Support channels (comma-separated)', 'Phone, On-site, Email')}{T('ws_sla', 'SLA', 'e.g. 4-hour response')}</div>
+          <details className="sc-block"><summary>{t.warrantySummary}</summary>
+            <div className="sc-grid3">{Field('ws_warranty', t.wsWarrantyLabel, t.wsWarrantyPh)}{Field('ws_channels', t.wsChannelsLabel, t.wsChannelsPh)}{Field('ws_sla', t.wsSlaLabel, t.wsSlaPh)}</div>
             {CustomFields('ws_custom')}
           </details>
-          <details className="sc-block"><summary>Pricing</summary>
-            <div className="sc-grid3">{T('pr_model', 'Model', 'e.g. Per unit, Subscription')}{T('pr_range', 'Range shown to buyers', 'e.g. $15k-$40k — or leave empty for "Request quote"')}{T('pr_notes', 'Notes', 'Financing, volume discounts…')}</div>
+          <details className="sc-block"><summary>{t.pricingSummary}</summary>
+            <div className="sc-grid3">{Field('pr_model', t.prModelLabel, t.prModelPh)}{Field('pr_range', t.prRangeLabel, t.prRangePh)}{Field('pr_notes', t.prNotesLabel, t.prNotesPh)}</div>
             {CustomFields('pr_custom')}
           </details>
 
           {editing.id && (
             <div className="sc-photos">
-              <span className="sc-lblsm">Photos:</span>
-              <label className="sc-btn sm ghost">Add photo (PNG/JPG/WebP)
+              <span className="sc-lblsm">{t.photosLabel}</span>
+              <label className="sc-btn sm ghost">{t.addPhoto}
                 <input type="file" accept="image/png,image/jpeg,image/webp" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadImage(file); e.target.value = ''; }} />
               </label>
             </div>
           )}
 
           <div className="sc-actions">
-            <button className="sc-btn ghost" disabled={saving} onClick={() => save()}>{saving ? 'Saving…' : 'Save draft'}</button>
-            <button className="sc-btn" disabled={saving} onClick={reviewAndPublish}>{saving ? 'Saving…' : 'Review & publish'}</button>
+            <button className="sc-btn ghost" disabled={saving} onClick={() => save()}>{saving ? t.saving : t.saveDraft}</button>
+            <button className="sc-btn" disabled={saving} onClick={reviewAndPublish}>{saving ? t.saving : t.reviewPublish}</button>
           </div>
         </section>
       )}
@@ -582,8 +732,8 @@ export default function VendorListingsPage() {
       {reviewFor && (
         <div className="sc-modal" onClick={() => setReviewFor(null)}>
           <div className="sc-modal-in" onClick={(e) => e.stopPropagation()}>
-            <div className="sc-lbl">Review before publishing</div>
-            <p className="sc-hint">This is exactly what buyers will see. Check every line — you are responsible for its accuracy.</p>
+            <div className="sc-lbl">{t.reviewBeforePublishing}</div>
+            <p className="sc-hint">{t.reviewHint}</p>
 
             <div className="sc-prev-card">
               {(() => {
@@ -591,11 +741,11 @@ export default function VendorListingsPage() {
                 const img = (l.image_paths || [])[0];
                 return (
                   <>
-                    <div className="sc-prev-img">{img && /^https?:/.test(img) ? <img src={img} alt="" /> : <span>{img ? 'Photo attached' : 'No photo'}</span>}</div>
+                    <div className="sc-prev-img">{img && /^https?:/.test(img) ? <img src={img} alt="" /> : <span>{img ? t.photoAttached : t.noPhoto}</span>}</div>
                     <div className="sc-prev-body">
                       <b>{l.name}</b>
-                      <small>{l.category || 'No category'} · {reviewFor.kind}</small>
-                      {(l.best_for || []).length > 0 && <em>Best for: {(l.best_for || []).join(', ')}</em>}
+                      <small>{l.category || t.noCategory} · {KIND_LABEL[reviewFor.kind]}</small>
+                      {(l.best_for || []).length > 0 && <em>{t.bestForPrefix} {(l.best_for || []).join(', ')}</em>}
                     </div>
                   </>
                 );
@@ -603,51 +753,52 @@ export default function VendorListingsPage() {
             </div>
 
             <ul className="sc-prev-list">
-              <Prev label="Description" v={reviewFor.listing.overview || ''} />
-              <Prev label="Industries" v={(reviewFor.listing.industries || []).join(', ')} />
+              {Pv(t.prevDescription, reviewFor.listing.overview || '')}
+              {Pv(t.prevIndustries, (reviewFor.listing.industries || []).join(', '))}
               {reviewFor.kind === 'product' ? (
                 <>
-                  <Prev label="Specs" v={reviewFor.listing.specs ? `${Object.keys(reviewFor.listing.specs).length} listed` : ''} />
-                  <Prev label="Availability" v={(reviewFor.listing.availability || []).join(', ')} />
-                  <Prev label="Lead time" v={reviewFor.listing.lead_time || ''} />
+                  {Pv(t.prevSpecs, reviewFor.listing.specs ? `${Object.keys(reviewFor.listing.specs).length} ${t.listedSuffix}` : '')}
+                  {Pv(t.prevAvailability, (reviewFor.listing.availability || []).join(', '))}
+                  {Pv(t.prevLeadTime, reviewFor.listing.lead_time || '')}
                 </>
               ) : (
                 <>
-                  <Prev label="Service areas" v={(reviewFor.listing.service_areas || []).join(', ')} />
-                  <Prev label="Response time" v={reviewFor.listing.response_time || ''} />
-                  <Prev label="Certifications" v={(reviewFor.listing.certifications || []).join(', ')} />
+                  {Pv(t.prevServiceAreas, (reviewFor.listing.service_areas || []).join(', '))}
+                  {Pv(t.prevResponseTime, reviewFor.listing.response_time || '')}
+                  {Pv(t.prevCertifications, (reviewFor.listing.certifications || []).join(', '))}
                 </>
               )}
-              <Prev label="Pilot / demo" v={(() => {
+              {Pv(t.prevPilotDemo, (() => {
                 const entries = pilotEntriesOf(reviewFor.listing.pilot);
                 if (!entries.length) return '';
-                if (entries.length === 1) return [entries[0].duration, entries[0].cost, entries[0].scope].filter(Boolean).join(' · ') || 'Available';
-                return `${entries.length} pilots / demos listed`;
-              })()} />
-              <Prev label="Warranty" v={String(reviewFor.listing.warranty_support?.warranty || '')} />
-              <Prev label="Pricing" v={String(reviewFor.listing.pricing?.range || reviewFor.listing.pricing?.model || reviewFor.listing.pricing_model || 'Request quote')} />
+                if (entries.length === 1) return [entries[0].duration, entries[0].cost, entries[0].scope].filter(Boolean).join(' · ') || t.pilotAvailableFallback;
+                return `${entries.length} ${t.pilotsListedSuffix}`;
+              })())}
+              {Pv(t.prevWarranty, String(reviewFor.listing.warranty_support?.warranty || ''))}
+              {Pv(t.prevPricing, String(reviewFor.listing.pricing?.range || reviewFor.listing.pricing?.model || reviewFor.listing.pricing_model || t.requestQuoteFallback))}
               {/* Vendor-added custom fields — same generic {label, value} rows
                   buyers will see on the listing page, so review shows exactly
-                  what will publish. */}
+                  what will publish. Labels here are the vendor's own text, not
+                  dictionary keys — only the empty-state note is localized. */}
               {[
                 ...customFieldsOf(reviewFor.listing.implementation),
                 ...customFieldsOf(reviewFor.listing.warranty_support),
                 ...customFieldsOf(reviewFor.listing.pricing),
-              ].map((c, i) => <Prev key={`custom-${i}`} label={c.label} v={c.value} />)}
-              <Prev label="Photos" v={`${(reviewFor.listing.image_paths || []).length}`} />
-              <Prev label="Documents" v={extras ? (extras.documents.length ? extras.documents.map((doc) => doc.title || doc.file_name).join(' · ') : '') : 'checking…'} />
-              <Prev label="Case studies" v={extras ? (extras.case_studies.length ? extras.case_studies.map((c) => c.title).join(' · ') : '') : 'checking…'} />
+              ].map((c, i) => <Prev key={`custom-${i}`} label={c.label} v={c.value} emptyText={t.previewEmptyNote} />)}
+              {Pv(t.prevPhotos, `${(reviewFor.listing.image_paths || []).length}`)}
+              {Pv(t.prevDocuments, extras ? (extras.documents.length ? extras.documents.map((doc) => doc.title || doc.file_name).join(' · ') : '') : t.checking)}
+              {Pv(t.prevCaseStudies, extras ? (extras.case_studies.length ? extras.case_studies.map((c) => c.title).join(' · ') : '') : t.checking)}
             </ul>
-            <p className="sc-hint">Empty fields simply will not show. AI-drafted content only used what was in your document — anything missing was left blank on purpose.</p>
+            <p className="sc-hint">{t.reviewFooterHint}</p>
 
             <label className="sc-cb sc-acc">
               <input type="checkbox" checked={accOk} onChange={(e) => setAccOk(e.target.checked)} />
-              I confirm this information is accurate, current, and approved to be displayed on NXT LINK.
+              {t.accuracyConfirm}
             </label>
             {pubErr && <div className="sc-warn">{pubErr}</div>}
             <div className="sc-actions">
-              <button className="sc-btn ghost" onClick={() => setReviewFor(null)}>Keep editing</button>
-              <button className="sc-btn" disabled={!accOk || pubBusy} onClick={publishNow}>{pubBusy ? 'Publishing…' : 'Publish to marketplace'}</button>
+              <button className="sc-btn ghost" onClick={() => setReviewFor(null)}>{t.keepEditing}</button>
+              <button className="sc-btn" disabled={!accOk || pubBusy} onClick={publishNow}>{pubBusy ? t.publishing : t.publishToMarketplace}</button>
             </div>
           </div>
         </div>
@@ -656,15 +807,15 @@ export default function VendorListingsPage() {
   );
 }
 
-function Prev({ label, v }: { label: string; v: string }) {
-  return <li><span>{label}</span><div>{v || <i>empty — will not display</i>}</div></li>;
+function Prev({ label, v, emptyText }: { label: string; v: string; emptyText: string }) {
+  return <li><span>{label}</span><div>{v || <i>{emptyText}</i>}</div></li>;
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ children, lang, setLang }: { children: React.ReactNode; lang: Lang; setLang: (l: Lang) => void }) {
   return (
     <div className={`sc ${ibmPlexSans.variable}`}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
-      <VendorNav active="listings" />
+      <VendorNav active="listings" extra={<LanguageToggle lang={lang} onChange={setLang} variant="light" />} />
       <main className="sc-wrap">{children}</main>
     </div>
   );

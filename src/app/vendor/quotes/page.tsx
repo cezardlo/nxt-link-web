@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
 import VendorNav from '@/components/VendorNav';
+import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
 
 // Design System v1.0 reskin (Premium Polish Phase 2, 2026-07-23): visual/CSS
 // only — every handler and state above is unchanged.
@@ -35,15 +36,82 @@ interface Proposal {
 }
 
 const ITEM_KINDS = [
-  { v: 'product', en: 'Product / equipment' }, { v: 'labor', en: 'Labor' },
-  { v: 'install', en: 'Installation' }, { v: 'shipping', en: 'Shipping' },
-  { v: 'travel', en: 'Travel / mobile fee' }, { v: 'other', en: 'Other' },
+  { v: 'product', en: 'Product / equipment', es: 'Producto / equipo' }, { v: 'labor', en: 'Labor', es: 'Mano de obra' },
+  { v: 'install', en: 'Installation', es: 'Instalación' }, { v: 'shipping', en: 'Shipping', es: 'Envío' },
+  { v: 'travel', en: 'Travel / mobile fee', es: 'Viaje / cargo de traslado' }, { v: 'other', en: 'Other', es: 'Otro' },
 ];
 const money = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 const fmtDate = (s: string) => { try { return new Date(s).toLocaleDateString(); } catch { return ''; } };
 const EMPTY_ITEM: Item = { description: '', qty: 1, unit_price: 0, kind: 'product' };
+const DEFAULT_PAYMENT_TERMS: Record<Lang, string> = {
+  en: '50% deposit, 50% on completion',
+  es: '50% de depósito, 50% al finalizar',
+};
+
+// EN/ES dictionary — same shared LanguageToggle/useLang pattern as
+// /vendor/leads (nxt_lang in localStorage). This page had no lang mechanism
+// at all before; every vendor-visible string below now goes through `t`.
+const T: Record<Lang, Record<string, string>> = {
+  en: {
+    pageTitle: 'Quotes & proposals',
+    pageSub: 'Answer a lead in about two minutes. Your proposal is saved, versioned, and delivered inside NXT//LINK.',
+    signInFirst: 'Sign in to see your leads —', goToSignIn: 'vendor sign in',
+    loadingLeads: 'Loading your leads…',
+    noOpenLeads: 'No open leads yet. When a buyer requests a quote on one of your listings, it appears here.',
+    openLeadsHead: 'Open leads', serviceRequest: 'Service request', productRequest: 'Product request',
+    buyerFallback: 'Buyer', quoted: 'quoted', awaitingQuote: 'awaiting quote',
+    pickLeadHint: '← Pick a lead to build its proposal.',
+    request: 'Request', revSent: 'Rev', sent: 'sent',
+    lineItems: 'Line items', descriptionPh: 'Description (e.g. 5,000 lb electric forklift)',
+    qtyPh: 'Qty', unitPh: 'Unit $', addLine: '+ Add line',
+    subtotal: 'Subtotal', tax: 'Tax', discount: 'Discount', total: 'Total',
+    feeIfWonPrefix: 'NXT//LINK success fee if won:', feeIfWonSuffix: '— only due when you get paid.',
+    terms: 'Terms', leadTime: 'Lead time', leadTimePh: 'e.g. 2–3 weeks',
+    warranty: 'Warranty', warrantyPh: 'e.g. 2-year parts & labor', paymentTerms: 'Payment terms',
+    quoteValidUntil: 'Quote valid until',
+    assumptions: 'Assumptions', assumptionsPh: 'What this quote assumes (site access, power, etc.)',
+    exclusions: 'Exclusions', exclusionsPh: 'What is NOT included',
+    messageToBuyer: 'Message to the buyer', messageToBuyerPh: 'Short note — contact details are shared automatically after acceptance.',
+    saveDraft: 'Save draft', sendRevisedProposal: 'Send revised proposal →', sendProposal: 'Send proposal →',
+    proposalSent: 'Proposal sent to the buyer (revision {rev}). NXT//LINK fee if won: {fee}.',
+    draftSaved: 'Draft saved — finish it anytime.',
+    somethingWrong: 'Something went wrong.', somethingWrongRetry: 'Something went wrong. Please try again.',
+    history: 'History', draftStatus: 'draft',
+    stDraft: 'draft', stSubmitted: 'submitted', stRevised: 'revised', stFinal: 'final',
+  },
+  es: {
+    pageTitle: 'Cotizaciones y propuestas',
+    pageSub: 'Responde a un lead en unos dos minutos. Tu propuesta se guarda, se versiona y se entrega dentro de NXT//LINK.',
+    signInFirst: 'Inicia sesión para ver tus leads —', goToSignIn: 'inicio de sesión de proveedor',
+    loadingLeads: 'Cargando tus leads…',
+    noOpenLeads: 'Aún no hay leads abiertos. Cuando un comprador solicite una cotización en una de tus publicaciones, aparecerá aquí.',
+    openLeadsHead: 'Leads abiertos', serviceRequest: 'Solicitud de servicio', productRequest: 'Solicitud de producto',
+    buyerFallback: 'Comprador', quoted: 'cotizado', awaitingQuote: 'esperando cotización',
+    pickLeadHint: '← Elige un lead para armar su propuesta.',
+    request: 'Solicitud', revSent: 'Rev', sent: 'enviada',
+    lineItems: 'Partidas', descriptionPh: 'Descripción (ej. montacargas eléctrico de 5,000 lb)',
+    qtyPh: 'Cant.', unitPh: 'Unidad $', addLine: '+ Agregar partida',
+    subtotal: 'Subtotal', tax: 'Impuesto', discount: 'Descuento', total: 'Total',
+    feeIfWonPrefix: 'Comisión de éxito de NXT//LINK si se gana:', feeIfWonSuffix: '— solo se debe cuando te paguen.',
+    terms: 'Términos', leadTime: 'Plazo de entrega', leadTimePh: 'ej. 2–3 semanas',
+    warranty: 'Garantía', warrantyPh: 'ej. 2 años de piezas y mano de obra', paymentTerms: 'Términos de pago',
+    quoteValidUntil: 'Cotización válida hasta',
+    assumptions: 'Supuestos', assumptionsPh: 'Qué asume esta cotización (acceso al sitio, energía, etc.)',
+    exclusions: 'Exclusiones', exclusionsPh: 'Qué NO está incluido',
+    messageToBuyer: 'Mensaje para el comprador', messageToBuyerPh: 'Nota breve — los datos de contacto se comparten automáticamente después de la aceptación.',
+    saveDraft: 'Guardar borrador', sendRevisedProposal: 'Enviar propuesta revisada →', sendProposal: 'Enviar propuesta →',
+    proposalSent: 'Propuesta enviada al comprador (revisión {rev}). Comisión NXT//LINK si se gana: {fee}.',
+    draftSaved: 'Borrador guardado — termínalo cuando quieras.',
+    somethingWrong: 'Algo salió mal.', somethingWrongRetry: 'Algo salió mal. Inténtalo de nuevo.',
+    history: 'Historial', draftStatus: 'borrador',
+    stDraft: 'borrador', stSubmitted: 'enviada', stRevised: 'revisada', stFinal: 'final',
+  },
+};
 
 export default function VendorProposalsPage() {
+  const [lang, setLang] = useLang(); // stored `nxt_lang` — shared across marketplace pages
+  const t = T[lang];
+  const STATUS_LABEL: Record<string, string> = { draft: t.stDraft, submitted: t.stSubmitted, revised: t.stRevised, final: t.stFinal };
   const [loading, setLoading] = useState(true);
   const [signedIn, setSignedIn] = useState(true);
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -53,7 +121,7 @@ export default function VendorProposalsPage() {
   const [items, setItems] = useState<Item[]>([{ ...EMPTY_ITEM }]);
   const [tax, setTax] = useState(0);
   const [discount, setDiscount] = useState(0);
-  const [terms, setTerms] = useState({ lead_time: '', warranty: '', payment_terms: '50% deposit, 50% on completion', valid_until: '', assumptions: '', exclusions: '', notes: '' });
+  const [terms, setTerms] = useState({ lead_time: '', warranty: '', payment_terms: DEFAULT_PAYMENT_TERMS[lang], valid_until: '', assumptions: '', exclusions: '', notes: '' });
   const [commission, setCommission] = useState<{ amount: number; rate: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -76,14 +144,14 @@ export default function VendorProposalsPage() {
   // Live commission preview (debounced) so the fee is never a surprise.
   useEffect(() => {
     if (total <= 0) { setCommission(null); return; }
-    const t = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       try {
         const r = await fetch(`/api/vendor/quote?amount=${total}`);
         const j = await r.json();
         if (j.ok) setCommission({ amount: j.commission_amount, rate: j.effective_rate });
       } catch { /* ignore */ }
     }, 400);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [total]);
 
   const pickLead = useCallback(async (lead: Lead) => {
@@ -91,7 +159,7 @@ export default function VendorProposalsPage() {
     // Smart default: start the first line from what they asked about.
     setItems([{ ...EMPTY_ITEM, description: lead.listing_name || '' }]);
     setTax(0); setDiscount(0);
-    setTerms({ lead_time: '', warranty: '', payment_terms: '50% deposit, 50% on completion', valid_until: '', assumptions: '', exclusions: '', notes: '' });
+    setTerms({ lead_time: '', warranty: '', payment_terms: DEFAULT_PAYMENT_TERMS[lang], valid_until: '', assumptions: '', exclusions: '', notes: '' });
     try {
       const r = await fetch(`/api/vendor/proposals?quote_request_id=${lead.id}`);
       const j = await r.json();
@@ -103,13 +171,13 @@ export default function VendorProposalsPage() {
         setTax(editable.tax || 0); setDiscount(editable.discount || 0);
         setTerms({
           lead_time: editable.lead_time || '', warranty: editable.warranty || '',
-          payment_terms: editable.payment_terms || '50% deposit, 50% on completion',
+          payment_terms: editable.payment_terms || DEFAULT_PAYMENT_TERMS[lang],
           valid_until: editable.valid_until || '', assumptions: editable.assumptions || '',
           exclusions: editable.exclusions || '', notes: editable.notes || '',
         });
       }
     } catch { setHistory([]); }
-  }, []);
+  }, [lang]);
 
   async function send(action: 'save' | 'submit') {
     if (!sel) return;
@@ -122,11 +190,11 @@ export default function VendorProposalsPage() {
       const j = await r.json();
       if (j.ok) {
         setMsg(action === 'submit'
-          ? `✓ Proposal sent to the buyer (revision ${j.revision}). NXT//LINK fee if won: ${money(j.commission.amount)}.`
-          : '✓ Draft saved — finish it anytime.');
+          ? `✓ ${t.proposalSent.replace('{rev}', String(j.revision)).replace('{fee}', money(j.commission.amount))}`
+          : `✓ ${t.draftSaved}`);
         pickLead(sel);
-      } else setMsg(j.message || 'Something went wrong.');
-    } catch { setMsg('Something went wrong. Please try again.'); }
+      } else setMsg(j.message || t.somethingWrong);
+    } catch { setMsg(t.somethingWrongRetry); }
     setBusy(false);
   }
 
@@ -135,30 +203,30 @@ export default function VendorProposalsPage() {
   return (
     <div className={`vp ${ibmPlexSans.variable}`}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
-      <VendorNav active="quotes" />
+      <VendorNav active="quotes" extra={<LanguageToggle lang={lang} onChange={setLang} variant="light" />} />
 
       <div className="vp-wrap">
-        <h1>Quotes &amp; proposals</h1>
-        <p className="vp-sub">Answer a lead in about two minutes. Your proposal is saved, versioned, and delivered inside NXT//LINK.</p>
+        <h1>{t.pageTitle}</h1>
+        <p className="vp-sub">{t.pageSub}</p>
 
         {!signedIn ? (
-          <div className="vp-empty">Sign in to see your leads — <a href="/vendor-login">vendor sign in</a></div>
+          <div className="vp-empty">{t.signInFirst} <a href="/vendor-login">{t.goToSignIn}</a></div>
         ) : loading ? (
-          <div className="vp-empty">Loading your leads…</div>
+          <div className="vp-empty">{t.loadingLeads}</div>
         ) : leads.length === 0 ? (
-          <div className="vp-empty">No open leads yet. When a buyer requests a quote on one of your listings, it appears here.</div>
+          <div className="vp-empty">{t.noOpenLeads}</div>
         ) : (
           <div className="vp-layout">
             {/* Lead picker */}
             <aside className="vp-leads">
-              <div className="vp-leadhead">Open leads ({leads.length})</div>
+              <div className="vp-leadhead">{t.openLeadsHead} ({leads.length})</div>
               {leads.map((l) => (
                 <button key={l.id} className={`vp-lead ${sel?.id === l.id ? 'on' : ''}`} onClick={() => pickLead(l)}>
-                  <div className="vp-leadname">{l.listing_name || (l.kind === 'service' ? 'Service request' : 'Product request')}</div>
-                  <div className="vp-leadmeta">{l.company || l.contact_name || 'Buyer'} · {fmtDate(l.created_at)}</div>
+                  <div className="vp-leadname">{l.listing_name || (l.kind === 'service' ? t.serviceRequest : t.productRequest)}</div>
+                  <div className="vp-leadmeta">{l.company || l.contact_name || t.buyerFallback} · {fmtDate(l.created_at)}</div>
                   <div className="vp-leadrow">
                     <span className="vp-ref">{l.public_ref}</span>
-                    {l.quote_amount ? <span className="vp-quoted">quoted {money(l.quote_amount)}</span> : <span className="vp-await">awaiting quote</span>}
+                    {l.quote_amount ? <span className="vp-quoted">{t.quoted} {money(l.quote_amount)}</span> : <span className="vp-await">{t.awaitingQuote}</span>}
                   </div>
                 </button>
               ))}
@@ -167,67 +235,67 @@ export default function VendorProposalsPage() {
             {/* Builder */}
             <main className="vp-main">
               {!sel ? (
-                <div className="vp-empty">← Pick a lead to build its proposal.</div>
+                <div className="vp-empty">{t.pickLeadHint}</div>
               ) : (
                 <>
                   <div className="vp-selhead">
                     <div>
-                      <div className="vp-selname">{sel.listing_name || 'Request'} <span className="vp-ref">{sel.public_ref}</span></div>
+                      <div className="vp-selname">{sel.listing_name || t.request} <span className="vp-ref">{sel.public_ref}</span></div>
                       {sel.message && <div className="vp-buyermsg">“{sel.message.slice(0, 240)}”</div>}
                     </div>
-                    {latestSubmitted && <span className="vp-rev">Rev {latestSubmitted.revision} sent {latestSubmitted.submitted_at ? fmtDate(latestSubmitted.submitted_at) : ''}</span>}
+                    {latestSubmitted && <span className="vp-rev">{t.revSent} {latestSubmitted.revision} {t.sent} {latestSubmitted.submitted_at ? fmtDate(latestSubmitted.submitted_at) : ''}</span>}
                   </div>
 
                   {/* Line items */}
-                  <div className="vp-sec">Line items</div>
+                  <div className="vp-sec">{t.lineItems}</div>
                   <div className="vp-items">
                     {items.map((it, i) => (
                       <div key={i} className="vp-item">
-                        <input className="vp-desc" placeholder="Description (e.g. 5,000 lb electric forklift)" value={it.description}
+                        <input className="vp-desc" placeholder={t.descriptionPh} value={it.description}
                           onChange={(e) => setItems(items.map((x, j) => j === i ? { ...x, description: e.target.value } : x))} />
                         <select value={it.kind} onChange={(e) => setItems(items.map((x, j) => j === i ? { ...x, kind: e.target.value } : x))}>
-                          {ITEM_KINDS.map((k) => <option key={k.v} value={k.v}>{k.en}</option>)}
+                          {ITEM_KINDS.map((k) => <option key={k.v} value={k.v}>{lang === 'es' ? k.es : k.en}</option>)}
                         </select>
                         <input className="vp-num" type="number" min={1} value={it.qty || ''}
-                          onChange={(e) => setItems(items.map((x, j) => j === i ? { ...x, qty: Number(e.target.value) } : x))} placeholder="Qty" />
+                          onChange={(e) => setItems(items.map((x, j) => j === i ? { ...x, qty: Number(e.target.value) } : x))} placeholder={t.qtyPh} />
                         <input className="vp-num wide" type="number" min={0} value={it.unit_price || ''}
-                          onChange={(e) => setItems(items.map((x, j) => j === i ? { ...x, unit_price: Number(e.target.value) } : x))} placeholder="Unit $" />
+                          onChange={(e) => setItems(items.map((x, j) => j === i ? { ...x, unit_price: Number(e.target.value) } : x))} placeholder={t.unitPh} />
                         <span className="vp-line">{money((it.qty || 0) * (it.unit_price || 0))}</span>
                         {items.length > 1 && <button className="vp-x" onClick={() => setItems(items.filter((_, j) => j !== i))}>×</button>}
                       </div>
                     ))}
                   </div>
-                  <button className="vp-add" onClick={() => setItems([...items, { ...EMPTY_ITEM, kind: 'labor' }])}>+ Add line</button>
+                  <button className="vp-add" onClick={() => setItems([...items, { ...EMPTY_ITEM, kind: 'labor' }])}>{t.addLine}</button>
 
                   {/* Totals */}
                   <div className="vp-totals">
-                    <div><span>Subtotal</span><b>{money(subtotal)}</b></div>
-                    <div><span>Tax</span><input type="number" min={0} value={tax || ''} onChange={(e) => setTax(Number(e.target.value))} placeholder="0" /></div>
-                    <div><span>Discount</span><input type="number" min={0} value={discount || ''} onChange={(e) => setDiscount(Number(e.target.value))} placeholder="0" /></div>
-                    <div className="vp-total"><span>Total</span><b>{money(total)}</b></div>
+                    <div><span>{t.subtotal}</span><b>{money(subtotal)}</b></div>
+                    <div><span>{t.tax}</span><input type="number" min={0} value={tax || ''} onChange={(e) => setTax(Number(e.target.value))} placeholder="0" /></div>
+                    <div><span>{t.discount}</span><input type="number" min={0} value={discount || ''} onChange={(e) => setDiscount(Number(e.target.value))} placeholder="0" /></div>
+                    <div className="vp-total"><span>{t.total}</span><b>{money(total)}</b></div>
                     {commission && (
-                      <div className="vp-fee">NXT//LINK success fee if won: <b>{money(commission.amount)}</b> ({(commission.rate * 100).toFixed(1)}%) — only due when you get paid.</div>
+                      <div className="vp-fee">{t.feeIfWonPrefix} <b>{money(commission.amount)}</b> ({(commission.rate * 100).toFixed(1)}%) {t.feeIfWonSuffix}</div>
                     )}
                   </div>
 
                   {/* Terms — smart defaults, all editable */}
-                  <div className="vp-sec">Terms</div>
+                  <div className="vp-sec">{t.terms}</div>
                   <div className="vp-grid">
-                    <label>Lead time<input value={terms.lead_time} onChange={(e) => setTerms({ ...terms, lead_time: e.target.value })} placeholder="e.g. 2–3 weeks" /></label>
-                    <label>Warranty<input value={terms.warranty} onChange={(e) => setTerms({ ...terms, warranty: e.target.value })} placeholder="e.g. 2-year parts &amp; labor" /></label>
-                    <label>Payment terms<input value={terms.payment_terms} onChange={(e) => setTerms({ ...terms, payment_terms: e.target.value })} /></label>
-                    <label>Quote valid until<input type="date" value={terms.valid_until} onChange={(e) => setTerms({ ...terms, valid_until: e.target.value })} /></label>
+                    <label>{t.leadTime}<input value={terms.lead_time} onChange={(e) => setTerms({ ...terms, lead_time: e.target.value })} placeholder={t.leadTimePh} /></label>
+                    <label>{t.warranty}<input value={terms.warranty} onChange={(e) => setTerms({ ...terms, warranty: e.target.value })} placeholder={t.warrantyPh} /></label>
+                    <label>{t.paymentTerms}<input value={terms.payment_terms} onChange={(e) => setTerms({ ...terms, payment_terms: e.target.value })} /></label>
+                    <label>{t.quoteValidUntil}<input type="date" value={terms.valid_until} onChange={(e) => setTerms({ ...terms, valid_until: e.target.value })} /></label>
                   </div>
                   <div className="vp-grid">
-                    <label>Assumptions<textarea rows={2} value={terms.assumptions} onChange={(e) => setTerms({ ...terms, assumptions: e.target.value })} placeholder="What this quote assumes (site access, power, etc.)" /></label>
-                    <label>Exclusions<textarea rows={2} value={terms.exclusions} onChange={(e) => setTerms({ ...terms, exclusions: e.target.value })} placeholder="What is NOT included" /></label>
+                    <label>{t.assumptions}<textarea rows={2} value={terms.assumptions} onChange={(e) => setTerms({ ...terms, assumptions: e.target.value })} placeholder={t.assumptionsPh} /></label>
+                    <label>{t.exclusions}<textarea rows={2} value={terms.exclusions} onChange={(e) => setTerms({ ...terms, exclusions: e.target.value })} placeholder={t.exclusionsPh} /></label>
                   </div>
-                  <label className="vp-noteslab">Message to the buyer<textarea rows={2} value={terms.notes} onChange={(e) => setTerms({ ...terms, notes: e.target.value })} placeholder="Short note — contact details are shared automatically after acceptance." /></label>
+                  <label className="vp-noteslab">{t.messageToBuyer}<textarea rows={2} value={terms.notes} onChange={(e) => setTerms({ ...terms, notes: e.target.value })} placeholder={t.messageToBuyerPh} /></label>
 
                   <div className="vp-actions">
-                    <button className="vp-save" disabled={busy} onClick={() => send('save')}>Save draft</button>
+                    <button className="vp-save" disabled={busy} onClick={() => send('save')}>{t.saveDraft}</button>
                     <button className="vp-send" disabled={busy || total <= 0} onClick={() => send('submit')}>
-                      {latestSubmitted ? 'Send revised proposal →' : 'Send proposal →'}
+                      {latestSubmitted ? t.sendRevisedProposal : t.sendProposal}
                     </button>
                   </div>
                   {msg && <div className={`vp-msg ${msg.startsWith('✓') ? 'ok' : 'err'}`}>{msg}</div>}
@@ -235,14 +303,14 @@ export default function VendorProposalsPage() {
                   {/* Revision history */}
                   {history.length > 0 && (
                     <>
-                      <div className="vp-sec">History</div>
+                      <div className="vp-sec">{t.history}</div>
                       <div className="vp-hist">
                         {history.map((p) => (
                           <div key={p.id} className="vp-histrow">
-                            <span className={`vp-hstat ${p.status}`}>{p.status}</span>
-                            <span>Rev {p.revision}</span>
+                            <span className={`vp-hstat ${p.status}`}>{STATUS_LABEL[p.status] || p.status}</span>
+                            <span>{t.revSent} {p.revision}</span>
                             <span>{money(p.total || 0)}</span>
-                            <span className="vp-hdate">{p.submitted_at ? fmtDate(p.submitted_at) : 'draft'}</span>
+                            <span className="vp-hdate">{p.submitted_at ? fmtDate(p.submitted_at) : t.draftStatus}</span>
                           </div>
                         ))}
                       </div>
