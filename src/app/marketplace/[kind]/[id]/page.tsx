@@ -274,6 +274,13 @@ export default function ListingDetailPage() {
   const actionsT = ACTIONS[lang];
   const [d, setD] = useState<Detail | null>(null);
   const [missing, setMissing] = useState(false);
+  // Session expired (or never signed in) mid-browse — the listing detail API
+  // returns 401 + code:'auth_required' when the session cookie is gone (same
+  // shape /marketplace's grid already handles). Distinct from "not found":
+  // shows a re-login state, never the 404 message. Preserve path+query so
+  // sign-in returns the buyer to exactly this listing.
+  const [authError, setAuthError] = useState(false);
+  const [authNext, setAuthNext] = useState('/marketplace');
   const [tab, setTab] = useState('overview');
   const [imgIdx, setImgIdx] = useState(0);
 
@@ -305,8 +312,15 @@ export default function ListingDetailPage() {
 
   useEffect(() => {
     fetch(`/api/marketplace/listings/${params.id}?kind=${kind}`)
-      .then((r) => r.json())
-      .then((data) => { if (data.ok) setD(data); else setMissing(true); })
+      .then(async (r) => ({ status: r.status, data: await r.json().catch(() => null) }))
+      .then(({ status, data }) => {
+        if (status === 401 && data?.code === 'auth_required') {
+          setAuthNext(window.location.pathname + window.location.search);
+          setAuthError(true);
+          return;
+        }
+        if (data?.ok) setD(data); else setMissing(true);
+      })
       .catch(() => setMissing(true));
     // Signed-in buyers: prefill the request form from their profile.
     fetch('/api/buyer/profile')
@@ -349,6 +363,22 @@ export default function ListingDetailPage() {
     setRepDone(true);
   }
 
+  if (authError) {
+    const es = lang === 'es';
+    return (
+      <div className="dt"><style dangerouslySetInnerHTML={{ __html: CSS }} />
+        <div className="dt-empty">
+          <div className="dt-emptycard">
+            <b>{es ? 'Tu sesión terminó' : 'Your session ended'}</b>
+            <p>{es
+              ? 'Por tu seguridad cerramos tu sesión tras un tiempo de inactividad. Inicia sesión de nuevo para seguir viendo el marketplace.'
+              : 'For your security you were signed out after a period of inactivity. Sign in again to keep browsing the marketplace.'}</p>
+            <Link className="dt-signin" href={`/login?next=${encodeURIComponent(authNext)}`}>{es ? 'Iniciar sesión' : 'Sign in'}</Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
   if (missing) return <div className="dt"><style dangerouslySetInnerHTML={{ __html: CSS }} /><div className="dt-empty">{t.notFound} <Link href="/marketplace">{t.backToMarketplace}</Link></div></div>;
   if (!d) return <div className="dt"><style dangerouslySetInnerHTML={{ __html: CSS }} /><div className="dt-empty">{t.loading}</div></div>;
 
@@ -665,6 +695,11 @@ const CSS = `
 .dt h1,.dt h3,.dt h4{font-family:var(--font-space-grotesk),'Space Grotesk',system-ui,sans-serif;}
 .dt-empty{min-height:60vh;display:grid;place-items:center;color:var(--spec-text-2nd);}
 .dt-empty a{color:var(--spec-violet-deep);}
+.dt-emptycard{background:#fff;border:1px solid var(--spec-border);border-radius:18px;padding:44px 26px;text-align:center;max-width:440px;}
+.dt-emptycard b{display:block;font-size:18px;color:var(--spec-ink);margin-bottom:8px;}
+.dt-emptycard p{font-size:14px;line-height:1.6;color:var(--spec-text-2nd);margin:0 0 18px;}
+.dt-signin{display:inline-block;font-size:12.5px;font-weight:700;padding:9px 18px;border-radius:9px;background:var(--spec-violet);color:#fff;text-decoration:none;}
+.dt-signin:hover{background:var(--spec-violet-deep);}
 .dt-subnav{display:flex;justify-content:space-between;align-items:center;padding:14px 26px;border-bottom:1px solid var(--spec-border);background:#fff;}
 .dt-crumbs{display:flex;align-items:center;gap:8px;font-size:13px;min-width:0;flex-wrap:wrap;}
 .dt-crumbs a{color:var(--spec-violet-deep);text-decoration:none;font-weight:600;}

@@ -269,16 +269,44 @@ export default function VendorStorefrontPage() {
   const [missing, setMissing] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [sort, setSort] = useState<'name' | 'price_asc' | 'price_desc'>('name');
+  // Session expired (or never signed in) mid-browse — the storefront API
+  // returns 401 + code:'auth_required' when the session cookie is gone (same
+  // shape /marketplace's grid already handles). Distinct from "not found":
+  // shows a re-login state, never the 404 message. Preserve path+query so
+  // sign-in returns the buyer to exactly this storefront.
+  const [authError, setAuthError] = useState(false);
+  const [authNext, setAuthNext] = useState('/marketplace');
 
   useEffect(() => {
     fetch(`/api/marketplace/vendor/${params.id}`)
-      .then((r) => r.json())
-      .then((data) => { if (data.ok) { setD(data); document.title = `${data.vendor.company_name} — NXT//LINK`; } else setMissing(true); })
+      .then(async (r) => ({ status: r.status, data: await r.json().catch(() => null) }))
+      .then(({ status, data }) => {
+        if (status === 401 && data?.code === 'auth_required') {
+          setAuthNext(window.location.pathname + window.location.search);
+          setAuthError(true);
+          return;
+        }
+        if (data?.ok) { setD(data); document.title = `${data.vendor.company_name} — NXT//LINK`; } else setMissing(true);
+      })
       .catch(() => setMissing(true));
     fetch('/api/vendor/profile').then((r) => (r.ok ? r.json() : null))
       .then((me) => { if (me?.ok && me.vendor?.id === params.id) setIsOwner(true); }).catch(() => {});
   }, [params.id]);
 
+  if (authError) {
+    const es = lang === 'es';
+    return (
+      <div className="vs"><style dangerouslySetInnerHTML={{ __html: CSS }} />
+        <div className="vs-empty">
+          <b className="vs-emptyhead">{es ? 'Tu sesión terminó' : 'Your session ended'}</b>
+          <p>{es
+            ? 'Por tu seguridad cerramos tu sesión tras un tiempo de inactividad. Inicia sesión de nuevo para seguir viendo el marketplace.'
+            : 'For your security you were signed out after a period of inactivity. Sign in again to keep browsing the marketplace.'}</p>
+          <Link className="vs-signin" href={`/login?next=${encodeURIComponent(authNext)}`}>{es ? 'Iniciar sesión' : 'Sign in'}</Link>
+        </div>
+      </div>
+    );
+  }
   if (missing) return <div className="vs"><style dangerouslySetInnerHTML={{ __html: CSS }} /><div className="vs-empty">{t.notFound} <Link href="/marketplace">{t.backToMarketplace}</Link></div></div>;
   if (!d) return <div className="vs"><style dangerouslySetInnerHTML={{ __html: CSS }} /><div className="vs-empty">{t.loading}</div></div>;
 
@@ -555,6 +583,9 @@ const CSS = `
 .vs h2,.vs h3,.vs h4{font-family:var(--font-space-grotesk),'Space Grotesk',system-ui,sans-serif;}
 .vs-empty{max-width:600px;margin:90px auto;text-align:center;color:var(--spec-text-2nd);padding:0 20px;}
 .vs-empty a{color:var(--spec-violet-deep);}
+.vs-emptyhead{display:block;font-size:18px;color:var(--spec-ink);margin-bottom:10px;}
+.vs-signin{display:inline-block;margin-top:6px;font-size:13px;font-weight:700;padding:10px 20px;border-radius:11px;background:var(--spec-violet);color:#fff;text-decoration:none;}
+.vs-signin:hover{background:var(--spec-violet-deep);}
 .vs-utilnav{display:flex;gap:8px;align-items:center;padding:10px 22px;background:#fff;border-bottom:1px solid var(--spec-border);}
 .vs-pill{font-size:12.5px;font-weight:600;color:var(--spec-text-2nd);background:var(--spec-warm-white);border:1px solid var(--spec-border);border-radius:99px;padding:7px 13px;}
 .vs-pill.on{background:rgba(108,92,224,.14);border-color:var(--spec-violet);color:var(--spec-violet-deep);}
