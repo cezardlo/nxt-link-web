@@ -1013,6 +1013,16 @@ function NoResults({ lang, q, savedOnly, suggestions, onPick, onReset }: { lang:
 function CompareModal({ cards, lang, onClose }: { cards: Card[]; lang: Lang; onClose: () => void }) {
   const es = lang === 'es';
   const yes = es ? 'Sí' : 'Yes';
+  // Modal a11y (audit Global Quick Win #6): role="dialog" + aria-modal, focus
+  // moved to the close button on open, Escape closes — same reference
+  // pattern as src/app/admin/invites/page.tsx's QROverlay.
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
   const rows: Array<[string, (c: Card) => string]> = es ? [
     ['Proveedor', (c) => c.vendor_name],
     ['Tipo', (c) => KIND_LABEL_ES[c.kind]],
@@ -1043,9 +1053,15 @@ function CompareModal({ cards, lang, onClose }: { cards: Card[]; lang: Lang; onC
     ['Verified', (c) => (c.vendor_verified ? yes : '—')],
   ];
   return (
-    <div className="mk-modal" onClick={onClose}>
+    <div
+      className="mk-modal"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={es ? `Comparar ${cards.length} publicaciones` : `Compare ${cards.length} listings`}
+    >
       <div className="mk-modal-in" onClick={(e) => e.stopPropagation()}>
-        <div className="mk-modal-head"><b>{es ? `Comparar ${cards.length} publicaciones` : `Compare ${cards.length} listings`}</b><button onClick={onClose}>{es ? 'Cerrar' : 'Close'}</button></div>
+        <div className="mk-modal-head"><b>{es ? `Comparar ${cards.length} publicaciones` : `Compare ${cards.length} listings`}</b><button ref={closeRef} onClick={onClose}>{es ? 'Cerrar' : 'Close'}</button></div>
         <div className="mk-ctable-wrap">
           <table className="mk-ctable">
             <thead><tr><th></th>{cards.map((c) => <th key={c.id}><Link href={`/marketplace/${c.kind}/${c.id}`}>{c.name}</Link></th>)}</tr></thead>
@@ -1078,7 +1094,7 @@ const CSS = `
 .mk-pill{font-family:inherit;font-size:13px;font-weight:600;color:var(--spec-text-2nd);background:var(--spec-warm-white);border:1px solid var(--spec-border);border-radius:99px;padding:8px 14px;cursor:pointer;text-decoration:none;white-space:nowrap;}
 .mk-pill.on{background:rgba(108,92,224,.12);border-color:var(--spec-violet);color:var(--spec-violet-deep);}
 .mk-hero{max-width:1200px;margin:0 auto;padding:36px 20px 0;text-align:center;}
-.mk-hero h1{font-size:clamp(24px,4vw,38px);font-weight:800;letter-spacing:-.02em;color:var(--spec-ink);}
+.mk-hero h1{font-size:clamp(24px,4vw,38px);font-weight:800;letter-spacing:-.02em;color:var(--spec-ink);text-wrap:balance;}
 .mk-hero p{color:var(--spec-text-2nd);font-size:15px;margin:10px auto 0;max-width:560px;line-height:1.6;}
 /* Department band — tidied 2026-07-24: a hairline-bordered white band gives
    the department strip its own visual layer, distinct from the search bar
@@ -1098,7 +1114,7 @@ const CSS = `
 .mk-searchwrap{position:relative;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--spec-border);border-radius:14px;padding:0 16px;color:var(--spec-text-2nd);transition:border-color var(--spec-duration-fast) var(--spec-ease);}
 .mk-suggest{position:absolute;top:calc(100% + 8px);left:0;right:0;z-index:40;list-style:none;margin:0;padding:6px;background:#fff;border:1px solid var(--spec-border);border-radius:13px;box-shadow:0 24px 60px -18px rgba(20,19,32,.3);max-height:340px;overflow-y:auto;}
 .mk-suggest li{margin:0;}
-.mk-suggest button{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:none;border:none;color:var(--spec-ink);font-family:inherit;font-size:14px;padding:10px 12px;border-radius:9px;cursor:pointer;}
+.mk-suggest button{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:none;border:none;color:var(--spec-ink);font-family:inherit;font-size:14px;padding:10px 12px;border-radius:9px;cursor:pointer;transition:background var(--spec-duration-fast) var(--spec-ease);}
 .mk-suggest button:hover{background:rgba(108,92,224,.1);}
 .mk-suggest button svg{flex-shrink:0;width:15px;height:15px;opacity:.6;}
 .mk-sglabel{flex:1;}
@@ -1145,7 +1161,7 @@ const CSS = `
 .mk-rfqinline{flex-shrink:0;font-size:12.5px;font-weight:600;color:var(--spec-violet-deep);text-decoration:none;white-space:nowrap;}
 .mk-rfqinline:hover{text-decoration:underline;}
 .mk-activechips{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 16px;}
-.mk-activechips button{font-family:inherit;font-size:12px;font-weight:600;padding:6px 11px;border-radius:99px;border:1px solid rgba(108,92,224,.35);background:rgba(108,92,224,.1);color:var(--spec-violet-deep);cursor:pointer;}
+.mk-activechips button{font-family:inherit;font-size:12px;font-weight:600;padding:6px 11px;border-radius:99px;border:1px solid rgba(108,92,224,.35);background:rgba(108,92,224,.1);color:var(--spec-violet-deep);cursor:pointer;transition:background var(--spec-duration-fast) var(--spec-ease);}
 .mk-activechips button:hover{background:rgba(108,92,224,.2);}
 .mk-activechips button.all{border-color:var(--spec-border);background:none;color:var(--spec-text-2nd);}
 .mk-cnames{max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -1167,22 +1183,23 @@ const CSS = `
 .mk-badge.urgent{background:rgba(198,138,40,.14);color:#8A5D14;}
 .mk-badge.trust{background:rgba(47,158,106,.14);color:#1F7A54;}
 .mk-badge.cert{background:rgba(108,92,224,.14);color:var(--spec-violet-deep);}
-.mk-name{font-size:15.5px;font-weight:700;color:var(--spec-ink);text-decoration:none;line-height:1.3;}
+.mk-name{font-size:15.5px;font-weight:700;color:var(--spec-ink);text-decoration:none;line-height:1.3;transition:color var(--spec-duration-fast) var(--spec-ease);}
 .mk-name:hover{color:var(--spec-violet-deep);}
 .mk-vendor{font-size:12.5px;color:var(--spec-text-2nd);}
-.mk-vlink{color:var(--spec-text-2nd);text-decoration:none;font-weight:600;}
+.mk-vlink{color:var(--spec-text-2nd);text-decoration:none;font-weight:600;transition:color var(--spec-duration-fast) var(--spec-ease);}
 .mk-vlink:hover{color:var(--spec-violet-deep);text-decoration:underline;}
-.mk-rating{margin-left:8px;color:#8A5D14;font-weight:600;white-space:nowrap;}
+.mk-rating{margin-left:8px;color:#8A5D14;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums;}
 .mk-rating small{color:var(--spec-text-2nd);font-weight:400;}
 .mk-tags{display:flex;flex-wrap:wrap;gap:5px;}
 .mk-tags span{font-size:11px;color:var(--spec-violet-deep);background:rgba(108,92,224,.08);padding:3px 8px;border-radius:6px;}
-.mk-meta{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--spec-text-2nd);margin-top:auto;padding-top:4px;}
+.mk-meta{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--spec-text-2nd);margin-top:auto;padding-top:4px;font-variant-numeric:tabular-nums;}
 .mk-actions{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap;}
 .mk-mini{font-family:inherit;font-size:12px;font-weight:600;padding:8px 10px;border-radius:9px;border:1px solid var(--spec-border);background:none;color:var(--spec-text-2nd);cursor:pointer;text-decoration:none;}
 .mk-mini.on{border-color:var(--spec-violet);color:var(--spec-violet-deep);background:rgba(108,92,224,.1);}
 .mk-mini:disabled{opacity:.5;}
-.mk-quote{margin-left:auto;font-size:12.5px;font-weight:700;padding:8px 12px;border-radius:9px;background:var(--spec-violet);color:#fff;text-decoration:none;white-space:nowrap;}
+.mk-quote{margin-left:auto;font-size:12.5px;font-weight:700;padding:8px 12px;border-radius:9px;background:var(--spec-violet);color:#fff;text-decoration:none;white-space:nowrap;transition:background var(--spec-duration-fast) var(--spec-ease);}
 .mk-quote:hover{background:var(--spec-violet-deep);}
+a.mk-quote:active{transform:scale(.98);transition:transform .1s ease;}
 .mk-skeletons{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px;}
 .mk-skel{height:290px;border-radius:16px;background:linear-gradient(100deg,#EFEDF5 30%,#E4E1EF 50%,#EFEDF5 70%);background-size:200% 100%;animation:mkpulse 1.3s ease-in-out infinite;}
 @keyframes mkpulse{0%{background-position:100% 0;}100%{background-position:-100% 0;}}
@@ -1193,13 +1210,14 @@ const CSS = `
 .mk-empty p{font-size:14px;line-height:1.6;max-width:420px;margin:0 auto 18px;}
 .mk-emptyactions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
 .mk-starters{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:18px;}
-.mk-starters button{font-family:inherit;font-size:13px;color:var(--spec-violet-deep);background:rgba(108,92,224,.08);border:1px solid rgba(108,92,224,.3);border-radius:99px;padding:8px 14px;cursor:pointer;}
+.mk-starters button{font-family:inherit;font-size:13px;color:var(--spec-violet-deep);background:rgba(108,92,224,.08);border:1px solid rgba(108,92,224,.3);border-radius:99px;padding:8px 14px;cursor:pointer;transition:background var(--spec-duration-fast) var(--spec-ease);}
 .mk-starters button:hover{background:rgba(108,92,224,.16);}
 .mk-solutions{max-width:720px;margin:10px auto;padding:44px 24px 120px;text-align:center;}
 .mk-solutions h2{font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--spec-ink);}
 .mk-solutions p{color:var(--spec-text-2nd);font-size:15px;line-height:1.6;margin:12px auto 24px;max-width:560px;}
-.mk-asknxt{display:inline-block;margin-top:8px;font-size:14.5px;font-weight:700;padding:13px 22px;border-radius:12px;background:var(--spec-violet);color:#fff;text-decoration:none;}
+.mk-asknxt{display:inline-block;margin-top:8px;font-size:14.5px;font-weight:700;padding:13px 22px;border-radius:12px;background:var(--spec-violet);color:#fff;text-decoration:none;transition:background var(--spec-duration-fast) var(--spec-ease);}
 .mk-asknxt:hover{background:var(--spec-violet-deep);}
+a.mk-asknxt:active{transform:scale(.98);transition:transform .1s ease;}
 .mk-scrim{display:none;}
 .mk-cbar{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--spec-border);border-radius:14px;padding:12px 18px;font-size:13.5px;color:var(--spec-ink);z-index:35;box-shadow:0 10px 40px rgba(20,19,32,.2);}
 .mk-modal{position:fixed;inset:0;background:rgba(20,19,32,.5);display:grid;place-items:center;z-index:40;padding:20px;}
