@@ -1,21 +1,4 @@
 {
-  "headers": [
-    {
-      "source": "/landing.html",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, s-maxage=3600, stale-while-revalidate=86400" },
-        { "key": "CDN-Cache-Control", "value": "max-age=3600" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" }
-      ]
-    },
-    {
-      "source": "/admin.html",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, s-maxage=3600, stale-while-revalidate=86400" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" }
-      ]
-    }
-  ],
   "crons": [
     {
       "path": "/api/cron/profile-nudges",
