@@ -5,10 +5,17 @@
 // the pipeline, the NXT//LINK commission, and the protected-until date.
 // Concierge phase: operators drive the deals; the vendor just tracks where
 // things stand.
+//
+// EN/ES via the shared LanguageToggle/useLang pattern (same as /vendor/leads,
+// /vendor/listings, /vendor/quotes — nxt_lang in localStorage). This page had
+// no lang mechanism at all before; every vendor-visible string now goes
+// through `t`. The two commission/fee sentences are frozen wording pending
+// owner sign-off — translated literally, numbers untouched.
 
 import { useEffect, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
 import VendorNav from '@/components/VendorNav';
+import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
 
 // Design System v1.0 reskin (Premium Polish Phase 2, 2026-07-23): visual/CSS
 // only — every handler and state above is unchanged.
@@ -26,14 +33,56 @@ interface Deal {
 }
 const money = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 const fmtDate = (s: string) => { try { return new Date(s).toLocaleDateString(); } catch { return ''; } };
-const STATUS_LABEL: Record<string, string> = {
-  reserved: 'Reserved', won: 'Won', payment_reported: 'Payment reported', payment_confirmed: 'Payment confirmed',
-  invoiced: 'Commission invoiced', paid: 'Paid', overdue: 'Overdue', disputed: 'Disputed', credited: 'Credited', cancelled: 'Cancelled',
-};
 
 interface Credit { rate: number; available: boolean; expiresAt: string | null; }
 
+const T: Record<Lang, Record<string, string>> = {
+  en: {
+    title: 'My deals & commission',
+    subtitle: 'Where each deal stands, and what you owe NXT//LINK — only ever after you’ve been paid.',
+    signInPrefix: 'Sign in to see your deals —', goToSignIn: 'vendor sign in',
+    creditHeadAvailable: 'First-deal offer: 50% off your first commission',
+    creditBodyAvailable: 'New vendors get 50% off the NXT//LINK fee on their first closed deal (within 90 days of joining, one per company). On that deal and every deal after: 4% on the first $50k, 2% above, capped at $20,000 — charged only on deals that close through NXT//LINK, and only after you’ve been paid.',
+    creditHeadDefault: 'NXT//LINK commission',
+    creditBodyDefault: '4% on the first $50k, 2% above, capped at $20,000 — charged only on deals that close through NXT//LINK, and only after you’ve been paid.',
+    statDeals: 'Deals', statCommission: 'Commission (all deals)', statPaid: 'Paid',
+    loading: 'Loading…',
+    emptyDeals: 'No deals yet. When NXT//LINK introduces you to a buyer and you win the work, it shows up here.',
+    buyerFallback: 'Buyer',
+    dealValue: 'Deal value', nxtFee: 'NXT//LINK fee', creditApplied: '· credit applied',
+    protectedUntil: 'Protected until', invoiceLabel: 'Invoice',
+    stReserved: 'Reserved', stWon: 'Won', stPaymentReported: 'Payment reported', stPaymentConfirmed: 'Payment confirmed',
+    stInvoiced: 'Commission invoiced', stPaid: 'Paid', stOverdue: 'Overdue', stDisputed: 'Disputed',
+    stCredited: 'Credited', stCancelled: 'Cancelled',
+  },
+  es: {
+    title: 'Mis tratos y comisión',
+    subtitle: 'En qué punto está cada trato, y qué le debes a NXT//LINK — solo después de que te hayan pagado.',
+    signInPrefix: 'Inicia sesión para ver tus tratos —', goToSignIn: 'inicio de sesión de proveedor',
+    creditHeadAvailable: 'Oferta de primer trato: 50% de descuento en tu primera comisión',
+    creditBodyAvailable: 'Los proveedores nuevos reciben 50% de descuento en la comisión de NXT//LINK en su primer trato cerrado (dentro de los primeros 90 días después de unirse, uno por empresa). En ese trato y en cada trato posterior: 4% sobre los primeros $50k, 2% por encima de eso, con un tope de $20,000 — cobrado solo en tratos que se cierran a través de NXT//LINK, y solo después de que te hayan pagado.',
+    creditHeadDefault: 'Comisión de NXT//LINK',
+    creditBodyDefault: '4% sobre los primeros $50k, 2% por encima de eso, con un tope de $20,000 — cobrado solo en tratos que se cierran a través de NXT//LINK, y solo después de que te hayan pagado.',
+    statDeals: 'Tratos', statCommission: 'Comisión (todos los tratos)', statPaid: 'Pagado',
+    loading: 'Cargando…',
+    emptyDeals: 'Aún no hay tratos. Cuando NXT//LINK te presente a un comprador y ganes el trabajo, aparecerá aquí.',
+    buyerFallback: 'Comprador',
+    dealValue: 'Valor del trato', nxtFee: 'Comisión NXT//LINK', creditApplied: '· crédito aplicado',
+    protectedUntil: 'Protegido hasta', invoiceLabel: 'Factura',
+    stReserved: 'Reservado', stWon: 'Ganado', stPaymentReported: 'Pago reportado', stPaymentConfirmed: 'Pago confirmado',
+    stInvoiced: 'Comisión facturada', stPaid: 'Pagado', stOverdue: 'Vencido', stDisputed: 'Disputado',
+    stCredited: 'Acreditado', stCancelled: 'Cancelado',
+  },
+};
+
 export default function VendorDealsPage() {
+  const [lang, setLang] = useLang();
+  const t = T[lang];
+  const STATUS_LABEL: Record<string, string> = {
+    reserved: t.stReserved, won: t.stWon, payment_reported: t.stPaymentReported, payment_confirmed: t.stPaymentConfirmed,
+    invoiced: t.stInvoiced, paid: t.stPaid, overdue: t.stOverdue, disputed: t.stDisputed, credited: t.stCredited, cancelled: t.stCancelled,
+  };
+
   const [loading, setLoading] = useState(true);
   const [signedIn, setSignedIn] = useState(true);
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -60,14 +109,14 @@ export default function VendorDealsPage() {
   return (
     <div className={`vd ${ibmPlexSans.variable}`}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
-      <VendorNav active="deals" />
+      <VendorNav active="deals" extra={<LanguageToggle lang={lang} onChange={setLang} variant="light" />} />
 
       <div className="vd-wrap">
-        <h1>My deals &amp; commission</h1>
-        <p className="vd-sub">Where each deal stands, and what you owe NXT//LINK — only ever after you’ve been paid.</p>
+        <h1>{t.title}</h1>
+        <p className="vd-sub">{t.subtitle}</p>
 
         {!signedIn ? (
-          <div className="vd-empty">Sign in to see your deals — <a href="/vendor-login">vendor sign in</a></div>
+          <div className="vd-empty">{t.signInPrefix} <a href="/vendor-login">{t.goToSignIn}</a></div>
         ) : (
           <>
             {/* First-deal discount banner */}
@@ -75,13 +124,13 @@ export default function VendorDealsPage() {
               <div className="vd-creditmain">
                 {credit.available ? (
                   <>
-                    <b>First-deal offer: 50% off your first commission</b>
-                    <span>New vendors get 50% off the NXT//LINK fee on their first closed deal (within 90 days of joining, one per company). On that deal and every deal after: 4% on the first $50k, 2% above, capped at $20,000 — charged only on deals that close through NXT//LINK, and only after you’ve been paid.</span>
+                    <b>{t.creditHeadAvailable}</b>
+                    <span>{t.creditBodyAvailable}</span>
                   </>
                 ) : (
                   <>
-                    <b>NXT//LINK commission</b>
-                    <span>4% on the first $50k, 2% above, capped at $20,000 — charged only on deals that close through NXT//LINK, and only after you’ve been paid.</span>
+                    <b>{t.creditHeadDefault}</b>
+                    <span>{t.creditBodyDefault}</span>
                   </>
                 )}
               </div>
@@ -91,27 +140,27 @@ export default function VendorDealsPage() {
             </div>
 
             <div className="vd-stats">
-              <div className="vd-stat"><b>{totals.deals}</b><span>Deals</span></div>
-              <div className="vd-stat"><b>{money(totals.owed)}</b><span>Commission (all deals)</span></div>
-              <div className="vd-stat"><b>{money(totals.paid)}</b><span>Paid</span></div>
+              <div className="vd-stat"><b>{totals.deals}</b><span>{t.statDeals}</span></div>
+              <div className="vd-stat"><b>{money(totals.owed)}</b><span>{t.statCommission}</span></div>
+              <div className="vd-stat"><b>{money(totals.paid)}</b><span>{t.statPaid}</span></div>
             </div>
 
-            {loading ? <div className="vd-empty">Loading…</div> : deals.length === 0 ? (
-              <div className="vd-empty">No deals yet. When NXT//LINK introduces you to a buyer and you win the work, it shows up here.</div>
+            {loading ? <div className="vd-empty">{t.loading}</div> : deals.length === 0 ? (
+              <div className="vd-empty">{t.emptyDeals}</div>
             ) : (
               <div className="vd-list">
                 {deals.map((d) => (
                   <div key={d.id} className="vd-card">
                     <div className="vd-cardtop">
-                      <div><b>{d.buyer_company || 'Buyer'}</b>{d.opportunity_ref && <span className="vd-ref">{d.opportunity_ref}</span>}</div>
+                      <div><b>{d.buyer_company || t.buyerFallback}</b>{d.opportunity_ref && <span className="vd-ref">{d.opportunity_ref}</span>}</div>
                       <span className={`vd-badge s-${d.status}`}>{STATUS_LABEL[d.status] || d.status}</span>
                     </div>
                     {d.description && <div className="vd-desc">{d.description}</div>}
                     <div className="vd-row">
-                      <div><span>Deal value</span><b>{money(d.net_amount)}</b></div>
-                      <div><span>NXT//LINK fee</span><b>{money(Number(d.commission_amount) || 0)}{d.is_free_credit && <em> · credit applied</em>}</b></div>
-                      {d.protected_until && <div><span>Protected until</span><b>{fmtDate(d.protected_until)}</b></div>}
-                      {d.invoice_ref && <div><span>Invoice</span><b>{d.invoice_ref}</b></div>}
+                      <div><span>{t.dealValue}</span><b>{money(d.net_amount)}</b></div>
+                      <div><span>{t.nxtFee}</span><b>{money(Number(d.commission_amount) || 0)}{d.is_free_credit && <em> {t.creditApplied}</em>}</b></div>
+                      {d.protected_until && <div><span>{t.protectedUntil}</span><b>{fmtDate(d.protected_until)}</b></div>}
+                      {d.invoice_ref && <div><span>{t.invoiceLabel}</span><b>{d.invoice_ref}</b></div>}
                     </div>
                   </div>
                 ))}
