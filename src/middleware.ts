@@ -157,7 +157,15 @@ export function middleware(req: NextRequest) {
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('X-Frame-Options', 'SAMEORIGIN');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  // camera=(self) — the AI listing editor's photo capture (vendor/listings)
+  // uses <input type="file" capture="environment">, which some mobile
+  // browsers gate behind the Permissions-Policy camera directive even for a
+  // same-origin file picker. Everything else (microphone, geolocation) stays
+  // fully denied. See also the matching header in next.config.mjs headers()
+  // — Next.js merges next.config.js headers with the middleware response,
+  // so BOTH copies must agree or a browser can end up combining two
+  // conflicting Permissions-Policy header values.
+  response.headers.set('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
 
   // Authenticated API responses must NEVER be stored by a shared cache (CDN/proxy):
   // the edge cache key is URL-only and ignores the auth cookie, so a cached private

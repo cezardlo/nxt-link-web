@@ -107,10 +107,15 @@ const nextConfig = {
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          // camera=(self) — the AI listing editor (vendor/listings) lets a
+          // vendor capture a product photo directly via
+          // <input capture="environment">; same-origin only. Everything
+          // else stays denied. Kept in sync with src/middleware.ts, which
+          // sets this same header on every response — both must agree.
           {
             key: 'Permissions-Policy',
             value:
-              'camera=(), microphone=(), geolocation=(), browsing-topics=(), interest-cohort=()',
+              'camera=(self), microphone=(), geolocation=(), browsing-topics=(), interest-cohort=()',
           },
           // HSTS: force HTTPS for a year, incl. subdomains. Safe — Vercel serves
           // HTTPS only. No `preload` flag (opting into the browser preload list
