@@ -5,9 +5,10 @@ export const metadata = { title: 'Privacy Policy — NXT//LINK' };
 
 export default function PrivacyPage() {
   return (
-    <div style={S.page}>
+    <div style={S.page} className="pp-page">
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div style={S.wrap}>
-        <Link href="/" style={S.brand}>NXT//LINK</Link>
+        <Link href="/" style={S.brand} className="pp-brand">NXT//LINK</Link>
         <div style={S.draft}>DRAFT — pending attorney review. This plain-language policy describes how the platform handles data today.</div>
         <h1 style={S.h1}>Privacy Policy</h1>
         <p style={S.meta}>Last updated: July 9, 2026</p>
@@ -19,7 +20,7 @@ export default function PrivacyPage() {
           </section>
         ))}
 
-        <p style={S.p}>Questions or requests? Email <a style={S.a} href="mailto:hello@nxtlinktech.com">hello@nxtlinktech.com</a>. See also our <Link style={S.a} href="/terms">Terms of Service</Link>.</p>
+        <p style={S.p}>Questions or requests? Email <a style={S.a} className="pp-a" href="mailto:hello@nxtlinktech.com">hello@nxtlinktech.com</a>. See also our <Link style={S.a} className="pp-a" href="/terms">Terms of Service</Link>.</p>
       </div>
     </div>
   );
@@ -51,14 +52,26 @@ const SECTIONS = [
   ]},
 ];
 
+// Design System v1.0 light reskin (2026-07-28, design batch 1): swaps the old
+// v4 dark theme (#0A0A0F) for the spec's warm-white + violet tokens, same as
+// every other public page. Visual/CSS only — SECTIONS copy above is
+// byte-identical, untouched. The `pp-` classes below only add a
+// :hover/:focus-visible ring in the brand violet (inline style objects can't
+// express pseudo-classes); the global `a:focus-visible` rule already gave
+// every link a visible ring, this just brings the color on-brand for light bg.
+const CSS = `
+.pp-a:hover{color:var(--spec-violet,#6C5CE0);text-decoration:underline;}
+.pp-a:focus-visible,.pp-brand:focus-visible{outline:2px solid var(--spec-violet,#6C5CE0);outline-offset:2px;border-radius:2px;}
+`;
+
 const S: Record<string, React.CSSProperties> = {
-  page: { minHeight: '100vh', background: '#0A0A0F', color: '#E5E4F0', fontFamily: 'system-ui, sans-serif' },
-  wrap: { maxWidth: 720, margin: '0 auto', padding: '40px 20px 90px', lineHeight: 1.7 },
-  brand: { color: '#A78BFA', fontWeight: 800, letterSpacing: '.2em', textDecoration: 'none', fontSize: 13 },
-  draft: { margin: '18px 0', background: 'rgba(251,191,36,.08)', border: '1px solid rgba(251,191,36,.35)', color: '#FBBF24', borderRadius: 12, padding: '12px 16px', fontSize: 13, lineHeight: 1.6 },
-  h1: { fontSize: 30, fontWeight: 800, margin: '10px 0 4px' },
-  h2: { fontSize: 17, fontWeight: 700, margin: '26px 0 8px', color: '#F0F0F5' },
-  meta: { color: '#8080A0', fontSize: 13, marginBottom: 8 },
-  p: { color: '#B8B6CC', fontSize: 14.5, margin: '0 0 10px' },
-  a: { color: '#A78BFA' },
+  page: { minHeight: '100dvh', background: 'var(--spec-warm-white, #F8F7FB)', color: 'var(--spec-ink, #141320)', fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif" },
+  wrap: { maxWidth: '68ch', margin: '0 auto', padding: '40px 20px 90px', lineHeight: 1.7 },
+  brand: { color: 'var(--spec-violet, #6C5CE0)', fontFamily: 'var(--font-space-grotesk), "Space Grotesk", system-ui, sans-serif', fontWeight: 700, letterSpacing: '.2em', textDecoration: 'none', fontSize: 13 },
+  draft: { margin: '18px 0', background: '#FBF3E7', border: '1px solid #EFD9AE', color: '#8A5D14', borderRadius: 'var(--spec-radius-md, 12px)', padding: '12px 16px', fontSize: 13, lineHeight: 1.6 },
+  h1: { fontFamily: 'var(--font-space-grotesk), "Space Grotesk", system-ui, sans-serif', fontSize: 'var(--spec-text-h1, 40px)', fontWeight: 700, letterSpacing: 'var(--spec-tracking-heading, -0.02em)', lineHeight: 1.15, margin: '10px 0 4px', color: 'var(--spec-ink, #141320)' },
+  h2: { fontFamily: 'var(--font-space-grotesk), "Space Grotesk", system-ui, sans-serif', fontSize: 'var(--spec-text-h4, 19px)', fontWeight: 700, margin: '26px 0 8px', color: 'var(--spec-ink, #141320)' },
+  meta: { color: 'var(--spec-text-2nd, #615F72)', fontSize: 'var(--spec-text-caption, 12px)', marginBottom: 8 },
+  p: { color: 'var(--spec-text-2nd, #615F72)', fontSize: 'var(--spec-text-body-sm, 14px)', margin: '0 0 10px' },
+  a: { color: 'var(--spec-violet-deep, #4A3DB0)', textDecoration: 'none' },
 };
