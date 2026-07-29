@@ -22,6 +22,17 @@ export interface DispatchableRequest {
   location?: string | null;
   contact_name?: string | null;
   contact_email?: string | null;
+  // Structured RFQ fields (Slice R1) — NON-BLIND ONLY. Deliberately no
+  // budget_min/budget_max field exists on this type: the buyer's budget must
+  // NEVER reach a vendor-facing quote_requests row created here (BLIND BUDGET
+  // INVARIANT, workplace/plans/rfq-seamless-build-2026-07-29.md). Leaving the
+  // field off the type makes leaking it a compile error, not just a review
+  // catch — see tests/rfq-blind-budget.test.ts.
+  request_kind?: string | null;
+  quantity?: number | null;
+  delivery_location?: string | null;
+  preferred_timeline?: string | null;
+  structured_specs?: Record<string, unknown> | null;
 }
 
 export interface DispatchResult {
@@ -113,6 +124,11 @@ export async function dispatchRequestToVendors(
             message,
             answers: { request_type: 'open_rfq', source_request: ref, dispatched: true },
             status: 'new',
+            request_kind: request.request_kind || null,
+            quantity: request.quantity ?? null,
+            delivery_location: request.delivery_location || null,
+            preferred_timeline: request.preferred_timeline || null,
+            structured_specs: request.structured_specs || {},
           })
           .select('id')
           .single();
