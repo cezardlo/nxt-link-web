@@ -14,6 +14,7 @@ import { calculateFee } from '@/lib/fees/engine';
 import { notifyBuyer } from '@/lib/notify';
 import { maskContacts } from '@/lib/guard';
 import { sendMail } from '@/lib/mail';
+import { validateQuoteExtras, isRequestKind } from '@/lib/requests/structured';
 
 const PROTECTED_PERIOD_DAYS = 90;
 const ITEM_KINDS = ['product', 'labor', 'install', 'shipping', 'travel', 'other'];
@@ -69,9 +70,18 @@ export async function POST(req: Request) {
   const db = getSupabaseClient({ admin: true });
   // The lead must belong to THIS vendor.
   const { data: opp } = await db.from('quote_requests')
-    .select('id, vendor_id, email, public_ref, opportunity_ref')
+    .select('id, vendor_id, email, public_ref, opportunity_ref, request_kind')
     .eq('id', qrId).eq('vendor_id', vendor.id).maybeSingle();
   if (!opp) return NextResponse.json({ ok: false, message: 'Lead not found' }, { status: 404 });
+
+  // request_kind comes from the OPPORTUNITY itself (set at request-creation
+  // time), never trusted from the vendor's body — a vendor can't mismatch the
+  // per-kind extras schema. No request_kind (older row) validates extras to {}.
+  const requestKind = isRequestKind(opp.request_kind) ? opp.request_kind : null;
+  const extras = validateQuoteExtras(requestKind, body.quote_extras);
+  if (!extras.ok) {
+    return NextResponse.json({ ok: false, message: extras.errors[0], errors: extras.errors }, { status: 400 });
+  }
 
   const items = cleanItems(body.line_items);
   const subtotal = items.reduce((s, i) => s + i.qty * i.unit_price, 0);
@@ -98,6 +108,8 @@ export async function POST(req: Request) {
     assumptions: s('assumptions', 1500),
     exclusions: s('exclusions', 1500),
     notes: maskContacts(String(body.notes || '').slice(0, 3000)).masked || null,
+    request_kind: requestKind,
+    quote_extras: extras.value,
   };
 
   // Find my latest revision for this lead.
@@ -129,7 +141,7 @@ export async function POST(req: Request) {
   }
 
   if (action === 'save') {
-    return NextResponse.json({ ok: true, proposal_id: proposalId, revision, status: 'draft', subtotal, total });
+    return NextResponse.json({ ok: true, proposal_id: proposalId, revision, status: 'draft', subtotal, total, request_kind: requestKind, quote_extras: extras.value });
   }
 
   // SUBMIT: freeze the revision, mirror summary, commission, notify.
@@ -156,6 +168,9 @@ export async function POST(req: Request) {
     protected_until: protectedUntil,
     status: 'responded',
     updated_at: now.toISOString(),
+    quote_payment_terms: fields.payment_terms,
+    quote_warranty: fields.warranty,
+    quote_extras: extras.value,
   }).eq('id', qrId).eq('vendor_id', vendor.id);
   if (upErr) return NextResponse.json({ ok: false, message: upErr.message }, { status: 500 });
 
@@ -188,5 +203,6 @@ export async function POST(req: Request) {
   return NextResponse.json({
     ok: true, proposal_id: proposalId, revision, status: 'submitted', subtotal, total,
     commission: { amount: fee.fee, effective_rate: fee.effectiveRate, protected_until: protectedUntil },
+    request_kind: requestKind, payment_terms: fields.payment_terms, warranty: fields.warranty, quote_extras: extras.value,
   });
 }

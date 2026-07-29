@@ -10,6 +10,7 @@ import { notifyVendor } from '@/lib/notify';
 import { sendMail } from '@/lib/mail';
 import { isRestricted } from '@/lib/vendor/moderation';
 import { getSessionUser } from '@/lib/auth/require-user';
+import { validateStructuredRequest, type StructuredRequestFields } from '@/lib/requests/structured';
 
 export async function POST(req: Request) {
   // Login wall (owner decision, 2026-07-23): sending a quote/service request now
@@ -50,13 +51,35 @@ export async function POST(req: Request) {
   const phone = String(body.phone || '').trim().slice(0, 60);
   const message = String(body.message || '').trim().slice(0, 3000);
 
+  // Structured RFQ fields (Slice R1). Optional — an old-shape caller (nothing
+  // new in the body) validates cleanly to all-null/empty. request_kind here
+  // is NOT taken from the client: this route is always tied to a real
+  // listing, so its own `kind` (product/service) is the server-known truth.
+  const structured = validateStructuredRequest(body);
+  if (!structured.ok) {
+    return NextResponse.json({ ok: false, code: 'invalid_structured_fields', message: structured.errors[0], errors: structured.errors }, { status: 400 });
+  }
+  const structuredFields: StructuredRequestFields = { ...structured.value, request_kind: kind };
+
   // ---- Bundle mode (quote cart): several listings, ONE request per vendor ----
   // The cart may span vendors; each vendor gets exactly one quote_requests row,
   // so the opportunity stays the unit of the existing pipeline (one quote, one
   // accept, one commission via calculateFee — nothing new). The item list lives
   // in answers.items (jsonb) — same no-schema-change pattern as request_type.
   if (Array.isArray(body.items) && body.items.length > 0) {
-    return handleBundle(body.items, { company, contact, email, phone, message }, user.id);
+    // Bundle rows span both products AND services, so no single request_kind
+    // applies — each per-vendor row is tagged by ITS OWN listing kind below,
+    // same as the single-listing path. Only the cart-wide fields (location/
+    // timeline/budget/specs) are shared; per-item quantity already exists
+    // (items[].qty, validated below — unchanged from before this slice).
+    const cartWideFields = {
+      delivery_location: structuredFields.delivery_location,
+      preferred_timeline: structuredFields.preferred_timeline,
+      budget_min: structuredFields.budget_min,
+      budget_max: structuredFields.budget_max,
+      structured_specs: structuredFields.structured_specs,
+    };
+    return handleBundle(body.items, { company, contact, email, phone, message }, user.id, cartWideFields);
   }
 
   if (!listingId) return NextResponse.json({ ok: false, code: 'listing_id_required', message: 'listing_id is required' }, { status: 400 });
@@ -91,6 +114,13 @@ export async function POST(req: Request) {
     company, contact_name: contact, email, phone, message,
     answers: { request_type: requestType, requested_by: user.id },
     status: 'new',
+    request_kind: structuredFields.request_kind,
+    quantity: structuredFields.quantity,
+    delivery_location: structuredFields.delivery_location,
+    preferred_timeline: structuredFields.preferred_timeline,
+    budget_min: structuredFields.budget_min,
+    budget_max: structuredFields.budget_max,
+    structured_specs: structuredFields.structured_specs,
   }).select('public_ref').single();
   if (error) return NextResponse.json({ ok: false, code: 'create_failed', message: error.message }, { status: 500 });
 
@@ -106,7 +136,20 @@ export async function POST(req: Request) {
     }).catch(() => {});
   }
 
-  return NextResponse.json({ ok: true, public_ref: data.public_ref });
+  // Echo back what was saved (this response goes to the BUYER who just
+  // submitted it — including their own budget here is not a vendor-facing
+  // leak; see src/lib/requests/vendor-view.ts for where the invariant is
+  // actually enforced, on the vendor-READING routes).
+  return NextResponse.json({
+    ok: true, public_ref: data.public_ref,
+    request_kind: structuredFields.request_kind,
+    quantity: structuredFields.quantity,
+    delivery_location: structuredFields.delivery_location,
+    preferred_timeline: structuredFields.preferred_timeline,
+    budget_min: structuredFields.budget_min,
+    budget_max: structuredFields.budget_max,
+    structured_specs: structuredFields.structured_specs,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -120,8 +163,19 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const MAX_BUNDLE_ITEMS = 50;
 
 interface BundleContact { company: string; contact: string; email: string; phone: string; message: string }
+// Cart-wide structured fields (Slice R1) — shared by every per-vendor row a
+// bundle submission creates. request_kind/quantity are deliberately excluded
+// here: a cart can mix product + service listings (no single kind applies),
+// and quantity is already per-item (items[].qty, unchanged by this slice).
+interface BundleStructuredFields {
+  delivery_location: string | null;
+  preferred_timeline: string | null;
+  budget_min: number | null;
+  budget_max: number | null;
+  structured_specs: Record<string, unknown>;
+}
 
-async function handleBundle(rawItems: unknown[], c: BundleContact, requestedBy: string) {
+async function handleBundle(rawItems: unknown[], c: BundleContact, requestedBy: string, structured: BundleStructuredFields) {
   if (!c.company) return NextResponse.json({ ok: false, code: 'company_required', message: 'Company is required' }, { status: 400 });
   if (!c.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c.email)) return NextResponse.json({ ok: false, code: 'email_invalid', message: 'A valid email is required' }, { status: 400 });
 
@@ -205,6 +259,12 @@ async function handleBundle(rawItems: unknown[], c: BundleContact, requestedBy: 
       company: c.company, contact_name: c.contact, email: c.email, phone: c.phone, message: c.message,
       answers: { request_type: 'quote', bundle: true, items, requested_by: requestedBy },
       status: 'new',
+      request_kind: first.kind,
+      delivery_location: structured.delivery_location,
+      preferred_timeline: structured.preferred_timeline,
+      budget_min: structured.budget_min,
+      budget_max: structured.budget_max,
+      structured_specs: structured.structured_specs,
     }).select('id, public_ref').single();
     if (error || !data) { failures.push(vendorInfo.get(vendorId)?.company_name || vendorId); continue; }
 
