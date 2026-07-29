@@ -45,9 +45,13 @@ export async function GET() {
   // name below — needed to tell competing quotes apart in the comparison view
   // (FIX 1). This is not contact data: vendor email/phone are never selected or
   // returned here, so masking (src/lib/guard.ts) is unaffected.
+  // updated_at added (Slice RV, 2026-07-29) — every writer on quote_requests
+  // (vendor/quote, vendor/proposals, vendor/leads PATCH, and now the auto-
+  // 'viewed' write below) already stamps it, so it's a reliable "last
+  // activity" signal for the buyer's own request card — no schema change.
   const { data: quotes } = await db
     .from('quote_requests')
-    .select('id, public_ref, kind, product_id, service_id, vendor_id, company, message, status, created_at, quote_amount, quote_currency, quote_message, quote_timeline, quote_valid_until, quoted_at, buyer_decision, answers')
+    .select('id, public_ref, kind, product_id, service_id, vendor_id, company, message, status, created_at, updated_at, quote_amount, quote_currency, quote_message, quote_timeline, quote_valid_until, quoted_at, buyer_decision, answers')
     .ilike('email', emailMatch)
     .order('created_at', { ascending: false })
     .limit(100);
