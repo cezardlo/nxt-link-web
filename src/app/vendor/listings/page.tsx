@@ -6,7 +6,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
-import { Camera, FileText, PenLine } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import { scoreListing } from '@/lib/marketplace/completeness';
 import { pilotEntriesOf, customFieldsOf, type PilotEntry, type CustomField } from '@/lib/marketplace/types';
@@ -553,61 +552,9 @@ export default function VendorListingsPage() {
     setF((prev) => ({ ...prev, [key]: prev[key].filter((_, j) => j !== i) }));
   }
 
-  async function aiFill(file?: File) {
-    if (!editing) return;
-    setAiBusy(true); setMsg(''); setAiSummary('');
-    try {
-      let res: Response;
-      if (file) {
-        const fd = new FormData(); fd.append('kind', editing.kind); fd.append('file', file);
-        res = await fetch('/api/vendor/listings/extract', { method: 'POST', body: fd });
-      } else {
-        res = await fetch('/api/vendor/listings/extract', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: editing.kind, text: pasteText }) });
-      }
-      const data = await res.json();
-      if (data.ok) { mergeDraft(data.draft || {}); setAiSummary(data.summary || ''); if (data.document_id) setDocId(data.document_id); }
-      else setMsg(data.message || t.couldNotExtract);
-    } catch { setMsg(t.couldNotExtract); }
-    setAiBusy(false);
-  }
-
-  // Photos -> AI draft. Same draft shape/mergeDraft as the document/text
-  // path above; the extract endpoint routes to a vision-capable model when
-  // it sees `images` in the multipart body (src/lib/marketplace/extract.ts
-  // extractListingDraftFromImages). Caps client-side to MAX_PHOTOS as a
-  // friendly heads-up — the server enforces the real limit either way.
-  async function aiFillImages(files: File[]) {
-    if (!editing) return;
-    const capped = files.slice(0, MAX_PHOTOS);
-    const wasCapped = files.length > MAX_PHOTOS;
-    setAiBusy(true); setMsg(wasCapped ? t.tooManyPhotos : ''); setAiSummary('');
-    try {
-      // Downscale first (typical phone photos are well over the caps below);
-      // resizeImageForUpload never throws and falls back to the original
-      // file untouched if it can't shrink it.
-      const resized = await Promise.all(capped.map((file) => resizeImageForUpload(file)));
-      const totalBytes = resized.reduce((sum, file) => sum + file.size, 0);
-      const oversized = resized.some((file) => file.size > MAX_PHOTO_BYTES);
-      if (oversized || totalBytes > MAX_TOTAL_PHOTO_BYTES) {
-        // Fail closed BEFORE building the request — mirrors the server's own
-        // MAX_IMAGE_BYTES/MAX_TOTAL_IMAGE_BYTES caps (route.ts) so the vendor
-        // gets a friendly, immediate answer instead of a round trip that
-        // would just get rejected (or, worse, rejected by Vercel's platform
-        // body-size limit before our code even runs).
-        setMsg(t.photosTooLarge);
-        setAiBusy(false);
-        return;
-      }
-      const fd = new FormData();
-      fd.append('kind', editing.kind);
-      resized.forEach((file) => fd.append('images', file));
-      const res = await fetch('/api/vendor/listings/extract', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (data.ok) { mergeDraft(data.draft || {}); setAiSummary(data.summary || ''); if (data.document_id) setDocId(data.document_id); }
-      else setMsg(data.message || t.couldNotExtract);
-    } catch { setMsg(t.couldNotExtract); }
-    setAiBusy(false);
-  }
+  // AI-fill entry UI removed 2026-07-28 per Cesar ("normal product upload") —
+  // the /api/vendor/listings/extract endpoint and mergeDraft/resize helpers
+  // remain server/dormant-side in case the assist returns later.
 
   async function save(): Promise<Listing | null> {
     if (!editing) return null;
@@ -815,59 +762,6 @@ export default function VendorListingsPage() {
               </div>
             </div>
           )}
-
-          <div className="sc-ai">
-            <div className="sc-lbl">{t.aiFillOptional}</div>
-            <p className="sc-hint">{t.aiFillHint}</p>
-            {/* Three equal ways in — photos (camera or gallery), a brochure
-                document, or typed/pasted text — all feed the same aiFill*
-                -> mergeDraft pipeline. */}
-            <div className="sc-entryrow">
-              <div className="sc-entrycell">
-                <label className={'sc-entrybtn' + (aiBusy ? ' disabled' : '')}>
-                  <span className="sc-entryicon" aria-hidden="true"><Camera size={20} strokeWidth={1.75} /></span>
-                  <span>{aiBusy ? t.reading : t.entryPhotos}</span>
-                  {/* No `capture` attribute on purpose: with `multiple` set,
-                      capture="environment" forces the camera straight open
-                      on most mobile browsers and hides the gallery option,
-                      contradicting the "camera/gallery" label. A plain file
-                      input already offers "Take Photo" alongside the photo
-                      library on iOS/Android — both ways in stay available. */}
-                  <input
-                    className="sc-hiddeninput"
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    multiple
-                    disabled={aiBusy}
-                    onChange={(e) => { const files = Array.from(e.target.files || []); e.target.value = ''; if (files.length) aiFillImages(files); }}
-                  />
-                </label>
-                <p className="sc-entrynote">{t.photoDisclosure}</p>
-              </div>
-              <label className={'sc-entrybtn' + (aiBusy ? ' disabled' : '')}>
-                <span className="sc-entryicon" aria-hidden="true"><FileText size={20} strokeWidth={1.75} /></span>
-                <span>{aiBusy ? t.reading : t.entryBrochure}</span>
-                <input
-                  className="sc-hiddeninput"
-                  type="file"
-                  accept=".pdf,.txt"
-                  disabled={aiBusy}
-                  onChange={(e) => { const file = e.target.files?.[0]; if (file) aiFill(file); e.target.value = ''; }}
-                />
-              </label>
-              <button type="button" className="sc-entrybtn" disabled={aiBusy} onClick={() => setShowPaste((v) => !v)}>
-                <span className="sc-entryicon" aria-hidden="true"><PenLine size={20} strokeWidth={1.75} /></span>
-                <span>{t.entryDescribe}</span>
-              </button>
-            </div>
-            {showPaste && (
-              <div className="sc-airow">
-                <textarea rows={2} placeholder={t.pasteHint} value={pasteText} onChange={(e) => setPasteText(e.target.value)} />
-                <button className="sc-btn sm" disabled={aiBusy || pasteText.trim().length < 40} onClick={() => aiFill()}>{aiBusy ? t.reading : t.draftFromText}</button>
-              </div>
-            )}
-            {aiSummary && <div className="sc-aisum">{aiSummary}</div>}
-          </div>
 
           <div className="sc-grid">
             {Field('name', editing.kind === 'product' ? t.nameLabelProduct : t.nameLabelService)}
