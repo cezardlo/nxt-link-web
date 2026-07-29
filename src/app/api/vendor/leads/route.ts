@@ -8,6 +8,7 @@ import { getVendorSession, getOrCreateVendorProfile } from '@/lib/vendor/auth';
 import { sendMail } from '@/lib/mail';
 import { maskContacts } from '@/lib/guard';
 import { resolveDisplayedProtectedUntil } from '@/lib/fees/engine';
+import { stripBlindBudgetFields } from '@/lib/requests/vendor-view';
 
 const STATUSES = ['new', 'viewed', 'responded', 'won', 'lost', 'spam'];
 
@@ -19,8 +20,12 @@ export async function GET() {
   if (!vendor) return NextResponse.json({ ok: false, message: 'Profile not found' }, { status: 404 });
 
   const db = getSupabaseClient({ admin: true });
+  // NOTE: budget_min/budget_max are deliberately never in this select — the
+  // buyer's budget must NEVER reach the vendor leads inbox (BLIND BUDGET
+  // INVARIANT). stripBlindBudgetFields() below is a second, defense-in-depth
+  // line in case a future edit ever widens this list carelessly.
   const { data: leads } = await db.from('quote_requests')
-    .select('id, public_ref, kind, product_id, service_id, company, contact_name, email, phone, message, answers, status, created_at, quote_amount, quote_currency, quote_message, quote_timeline, quote_valid_until, quoted_at, buyer_decision')
+    .select('id, public_ref, kind, product_id, service_id, company, contact_name, email, phone, message, answers, status, created_at, quote_amount, quote_currency, quote_message, quote_timeline, quote_valid_until, quoted_at, buyer_decision, request_kind, quantity, delivery_location, preferred_timeline, structured_specs, quote_payment_terms, quote_warranty, quote_extras')
     .eq('vendor_id', vendor.id).order('created_at', { ascending: false }).limit(200);
 
   // Resolve listing names + commission amounts in bulk.
@@ -112,7 +117,7 @@ export async function GET() {
         };
       }
       return {
-        ...l,
+        ...stripBlindBudgetFields(l as Record<string, unknown>),
         message,
         answers,
         email: revealed ? l.email : null,

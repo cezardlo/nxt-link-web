@@ -11,6 +11,7 @@ import { calculateFee, DEFAULT_FEE_POLICY } from '@/lib/fees/engine';
 import { notifyBuyer } from '@/lib/notify';
 import { maskContacts } from '@/lib/guard';
 import { sendMail } from '@/lib/mail';
+import { validateQuoteExtras, isRequestKind } from '@/lib/requests/structured';
 
 const PROTECTED_PERIOD_DAYS = 90;
 
@@ -40,8 +41,21 @@ export async function POST(req: Request) {
 
   const db = getSupabaseClient({ admin: true });
   // The opportunity must belong to THIS vendor.
-  const { data: opp } = await db.from('quote_requests').select('id, vendor_id, email, public_ref').eq('id', id).eq('vendor_id', vendor.id).maybeSingle();
+  const { data: opp } = await db.from('quote_requests').select('id, vendor_id, email, public_ref, request_kind').eq('id', id).eq('vendor_id', vendor.id).maybeSingle();
   if (!opp) return NextResponse.json({ ok: false, message: 'Lead not found' }, { status: 404 });
+
+  // Structured quote fields (Slice R1). request_kind comes from the
+  // OPPORTUNITY itself (set at request-creation time) — never trusted from
+  // the vendor's own request body, so a vendor can't mismatch the extras
+  // schema. An opportunity with no request_kind (older row) always validates
+  // quote_extras to {} — no schema to enforce yet.
+  const requestKind = isRequestKind(opp.request_kind) ? opp.request_kind : null;
+  const extras = validateQuoteExtras(requestKind, body.quote_extras);
+  if (!extras.ok) {
+    return NextResponse.json({ ok: false, message: extras.errors[0], errors: extras.errors }, { status: 400 });
+  }
+  const paymentTerms = String(body.payment_terms || '').trim().slice(0, 300) || null;
+  const warranty = String(body.warranty || '').trim().slice(0, 400) || null;
 
   const fee = calculateFee(amount);
   const now = new Date();
@@ -58,6 +72,9 @@ export async function POST(req: Request) {
     protected_until: protectedUntil,
     status: 'responded',
     updated_at: now.toISOString(),
+    quote_payment_terms: paymentTerms,
+    quote_warranty: warranty,
+    quote_extras: extras.value,
   }).eq('id', id).eq('vendor_id', vendor.id);
   if (upErr) return NextResponse.json({ ok: false, message: upErr.message }, { status: 500 });
 
@@ -86,5 +103,9 @@ export async function POST(req: Request) {
     }).catch(() => {});
   }
 
-  return NextResponse.json({ ok: true, commission: { amount: fee.fee, effective_rate: fee.effectiveRate, protected_until: protectedUntil } });
+  return NextResponse.json({
+    ok: true,
+    commission: { amount: fee.fee, effective_rate: fee.effectiveRate, protected_until: protectedUntil },
+    payment_terms: paymentTerms, warranty, quote_extras: extras.value,
+  });
 }

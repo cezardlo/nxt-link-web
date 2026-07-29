@@ -19,6 +19,7 @@ import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getVendorSession, getOrCreateVendorProfile } from '@/lib/vendor/auth';
 import { notifyBuyer } from '@/lib/notify';
 import { canReceiveLeads } from '@/lib/vendor/moderation';
+import { shouldShareClientRequestBudget } from '@/lib/requests/vendor-view';
 
 const OPEN_STATUSES = ['request_received', 'new'];
 
@@ -32,8 +33,12 @@ export async function GET() {
   const db = getSupabaseClient({ admin: true });
   // Never select contact_email here — the browse response must stay
   // contact-free (POST re-queries it separately when a response is created).
+  // share_budget gates the LEGACY free-text budget_range (see below — fixes a
+  // pre-existing leak where this column was always returned regardless of
+  // the buyer's share_budget choice). budget_min/budget_max (Slice R1,
+  // ALWAYS blind, no opt-in) are deliberately never selected here at all.
   const { data: reqs } = await db.from('client_requests')
-    .select('id, public_ref, category, problem, location, urgency, budget_range, created_at')
+    .select('id, public_ref, category, problem, location, urgency, budget_range, share_budget, created_at, request_kind, quantity_int, delivery_location, preferred_timeline, structured_specs')
     .in('status', OPEN_STATUSES)
     .order('created_at', { ascending: false })
     .limit(50);
@@ -59,9 +64,17 @@ export async function GET() {
     ];
     return {
       id: r.id, public_ref: r.public_ref, category: r.category, problem: r.problem,
-      location: r.location, urgency: r.urgency, budget_range: r.budget_range,
+      location: r.location, urgency: r.urgency,
+      // Fixed leak: this used to return budget_range unconditionally. Now it
+      // only shows if the buyer explicitly opted in (share_budget=true) —
+      // nothing in the app has ever set that, so this is "always hidden"
+      // today, never a regression from what buyers actually consented to.
+      budget_range: shouldShareClientRequestBudget(r as { share_budget?: boolean | null }) ? r.budget_range : null,
       created_at: r.created_at, relevant: reasons.length > 0, reasons,
       responded: respondedRefs.has(r.public_ref as string),
+      request_kind: r.request_kind, quantity: r.quantity_int,
+      delivery_location: r.delivery_location, preferred_timeline: r.preferred_timeline,
+      structured_specs: r.structured_specs,
     };
   }).sort((a, b) => Number(b.relevant) - Number(a.relevant));
 
@@ -94,8 +107,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, message: 'Profile not found' }, { status: 404 });
   }
 
+  // NOTE: budget_min/budget_max are deliberately never selected here — this
+  // row (minus contact info, which stays server-side) becomes the basis of a
+  // vendor-visible quote_requests lead below (BLIND BUDGET INVARIANT).
   const { data: r } = await db.from('client_requests')
-    .select('id, public_ref, category, problem, location, urgency, contact_name, contact_email')
+    .select('id, public_ref, category, problem, location, urgency, contact_name, contact_email, request_kind, quantity_int, delivery_location, preferred_timeline, structured_specs')
     .eq('id', id).in('status', OPEN_STATUSES).maybeSingle();
   if (!r) return NextResponse.json({ ok: false, message: 'Request not found or closed' }, { status: 404 });
   if (!r.contact_email) return NextResponse.json({ ok: false, message: 'This request has no reachable buyer' }, { status: 400 });
@@ -114,6 +130,11 @@ export async function POST(req: Request) {
     message: `[Open request ${r.public_ref}] ${r.problem || ''}${r.location ? ` — ${r.location}` : ''}`.slice(0, 3000),
     answers: { request_type: 'open_rfq', source_request: r.public_ref },
     status: 'new',
+    request_kind: r.request_kind || null,
+    quantity: r.quantity_int ?? null,
+    delivery_location: r.delivery_location || null,
+    preferred_timeline: r.preferred_timeline || null,
+    structured_specs: r.structured_specs || {},
   }).select('id, public_ref').single();
   if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
 

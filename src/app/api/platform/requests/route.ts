@@ -9,6 +9,7 @@ import { logAudit } from '@/lib/assistant/llm';
 import { isAdminRequest } from '@/lib/assistant/auth';
 import { dispatchRequestToVendors } from '@/lib/requests/dispatch';
 import { getSessionUser } from '@/lib/auth/require-user';
+import { validateStructuredRequest } from '@/lib/requests/structured';
 
 export async function POST(req: Request) {
   // Login wall (owner decision, 2026-07-23; mirrors /api/marketplace/request:19-20):
@@ -33,6 +34,25 @@ export async function POST(req: Request) {
   // every other intake route — had no length bound, so a scripted caller could
   // bloat the row unbounded.
   const cap = (v: unknown, n: number) => String(v || '').slice(0, n);
+
+  // Structured RFQ fields (Slice R1) — NEW, typed columns alongside the
+  // existing free-text ones above (quantity/location/deadline/budget_range
+  // stay exactly as they were; old callers that never send these keep
+  // working unchanged). Read from the same `summary` object as the existing
+  // intake fields, under distinct keys so there is zero ambiguity with the
+  // legacy free-text values already read above.
+  const structured = validateStructuredRequest({
+    request_kind: body.request_kind,
+    quantity: summary.quantity_int,
+    delivery_location: summary.delivery_location,
+    preferred_timeline: summary.preferred_timeline,
+    budget_min: summary.budget_min,
+    budget_max: summary.budget_max,
+    structured_specs: summary.structured_specs,
+  });
+  if (!structured.ok) {
+    return NextResponse.json({ ok: false, code: 'invalid_structured_fields', message: structured.errors[0], errors: structured.errors }, { status: 400 });
+  }
 
   const row = {
     category: cap(summary.category || body.category, 120),
@@ -59,6 +79,13 @@ export async function POST(req: Request) {
     status: 'request_received',
     pipeline_stage: 'new_request',
     source: 'intake_assistant',
+    request_kind: structured.value.request_kind,
+    quantity_int: structured.value.quantity,
+    delivery_location: structured.value.delivery_location,
+    preferred_timeline: structured.value.preferred_timeline,
+    budget_min: structured.value.budget_min,
+    budget_max: structured.value.budget_max,
+    structured_specs: structured.value.structured_specs,
   };
 
   if (!isSupabaseConfigured()) {
@@ -85,10 +112,27 @@ export async function POST(req: Request) {
         location: row.location,
         contact_name: row.contact_name,
         contact_email: row.contact_email,
+        // Non-blind structured fields only — DispatchableRequest has no
+        // budget_min/budget_max field at all (see dispatch.ts), so a matched
+        // vendor's lead can never carry the buyer's budget, structurally.
+        request_kind: row.request_kind,
+        quantity: row.quantity_int,
+        delivery_location: row.delivery_location,
+        preferred_timeline: row.preferred_timeline,
+        structured_specs: row.structured_specs,
       });
       dispatched = result.dispatched;
     }
-    return NextResponse.json({ ok: true, stored: true, id: data?.id, public_ref: data?.public_ref, dispatched });
+    return NextResponse.json({
+      ok: true, stored: true, id: data?.id, public_ref: data?.public_ref, dispatched,
+      request_kind: row.request_kind,
+      quantity: row.quantity_int,
+      delivery_location: row.delivery_location,
+      preferred_timeline: row.preferred_timeline,
+      budget_min: row.budget_min,
+      budget_max: row.budget_max,
+      structured_specs: row.structured_specs,
+    });
   } catch (e) {
     // Degrade gracefully when the DB is unreachable/misconfigured: still return
     // a reference so the client flow completes instead of erroring.
