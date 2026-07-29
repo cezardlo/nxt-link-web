@@ -103,6 +103,10 @@ function IntakeInner() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [progress, setProgress] = useState<string>('');
   const [error, setError] = useState('');
+  // Set when submit is rejected because the visitor isn't signed in
+  // (/api/platform/requests now requires a session — security fix C2). We show
+  // a friendly "sign in to send" prompt instead of a generic error.
+  const [needsSignin, setNeedsSignin] = useState(false);
 
   // contact + files for summary phase
   const [contactName, setContactName] = useState('');
@@ -249,6 +253,7 @@ function IntakeInner() {
     }
     setLoading(true);
     setError('');
+    setNeedsSignin(false);
     try {
       const res = await fetch('/api/platform/requests', {
         method: 'POST',
@@ -260,6 +265,7 @@ function IntakeInner() {
           vendor_scope: 'both',
         }),
       });
+      if (res.status === 401) { setNeedsSignin(true); return; }
       const data = (await res.json()) as SubmitResponse;
       if (!data.ok) throw new Error('not ok');
       setPublicRef(data.public_ref);
@@ -379,6 +385,12 @@ function IntakeInner() {
             </div>
 
             {error && <p className="iq-error">{error}</p>}
+            {needsSignin && (
+              <p className="iq-error">
+                {tr('Please sign in to send your request.', 'Inicia sesión para enviar tu solicitud.')}{' '}
+                <a className="iq-signin" href={`/login?next=${encodeURIComponent('/intake')}`}>{tr('Sign in →', 'Iniciar sesión →')}</a>
+              </p>
+            )}
 
             {/* Input row */}
             <div className="iq-inputrow">
@@ -518,6 +530,12 @@ function IntakeInner() {
             )}
 
             {error && <p className="iq-error">{error}</p>}
+            {needsSignin && (
+              <p className="iq-error">
+                {tr('Please sign in to send your request.', 'Inicia sesión para enviar tu solicitud.')}{' '}
+                <a className="iq-signin" href={`/login?next=${encodeURIComponent('/intake')}`}>{tr('Sign in →', 'Iniciar sesión →')}</a>
+              </p>
+            )}
 
             {/* Action buttons */}
             <div className="iq-actions">
@@ -668,6 +686,8 @@ const IQ_CSS = `
 .iq-progress{color:var(--spec-violet,#6C5CE0);font-size:12px;font-weight:600;letter-spacing:.5px;}
 .iq-thinking{color:var(--spec-text-2nd,#615F72);font-size:13px;}
 .iq-error{color:var(--spec-error,#CE4B43);font-size:13px;margin-bottom:12px;}
+.iq-signin{color:var(--spec-violet-deep,#4A3DB0);font-weight:700;text-decoration:underline;}
+.iq-signin:hover{color:var(--spec-violet,#6C5CE0);}
 
 .iq-inputrow{display:flex;gap:10px;align-items:flex-end;}
 .iq-sr-only{position:absolute;left:-9999px;}
