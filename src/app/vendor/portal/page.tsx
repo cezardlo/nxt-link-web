@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
 import { Handshake, Eye, Check, PartyPopper, Sparkles, Laptop, X } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
-import ChatWidget from '@/components/ChatWidget';
 import CategoryPicker from '@/components/CategoryPicker';
 import LanguageToggle, { useLang } from '@/components/LanguageToggle';
 import ProfileStrengthMeter, { computeProfileStrength } from '@/components/ProfileStrengthMeter';
@@ -828,7 +827,6 @@ export default function VendorPortalPage() {
           )}
         </section>
       </main>
-      <ChatWidget mode="vendor" locale={lang} />
     </div>
   );
 }

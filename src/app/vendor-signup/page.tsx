@@ -27,7 +27,6 @@ import { useEffect, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
 import LanguageToggle, { useLang } from '@/components/LanguageToggle';
 import SupplyChips from '@/components/SupplyChips';
-import ChatWidget from '@/components/ChatWidget';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
 import OAuthButton from '@/components/OAuthButton';
 import { GOOGLE_TERMS_ERROR_MSG, ANY_OAUTH_ENABLED } from '@/lib/auth/oauth';
@@ -294,7 +293,6 @@ export default function VendorQuickSignupPage() {
       </div>
 
       {!sentTo && <a className="qs-signin" href="/login">{t.haveAccount}</a>}
-      <ChatWidget mode="vendor" locale={lang} />
     </div>
   );
 }
