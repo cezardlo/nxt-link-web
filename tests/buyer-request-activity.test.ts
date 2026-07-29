@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   computeRequestActivity,
+  deriveRequestStage,
   isRequestStale,
   linkedQuotes,
   STALE_HINT_HOURS,
@@ -102,4 +103,55 @@ test(`isRequestStale: false before ${STALE_HINT_HOURS}h, true at/after it, with 
 
 test('isRequestStale: a brand-new request (0 quotes, 0 elapsed) is not flagged stale', () => {
   assert.equal(isRequestStale({ created_at: new Date().toISOString() }, { quotesReceived: 0 }), false);
+});
+
+// Slice RV item 4 — the buyer's original request card's status pill, derived
+// purely from its linked quotes (client_requests.status never updates after
+// creation, so trusting it would freeze every card at "Received" forever —
+// the exact dead end the RFQ process map flagged).
+
+test('deriveRequestStage: no linked vendors yet = sent', () => {
+  assert.equal(deriveRequestStage([]), 'sent');
+});
+
+test('deriveRequestStage: only new/sent_to_vendor leads = sent', () => {
+  assert.equal(deriveRequestStage([{ status: 'new' }, { status: 'sent_to_vendor' }]), 'sent');
+});
+
+test('deriveRequestStage: at least one lead progressed past new/sent_to_vendor, no price yet = viewed', () => {
+  assert.equal(deriveRequestStage([{ status: 'new' }, { status: 'viewed' }]), 'viewed');
+});
+
+test('deriveRequestStage: any linked quote carries a price = quotes_received', () => {
+  assert.equal(
+    deriveRequestStage([{ status: 'new' }, { status: 'responded', quote_amount: 4200 }]),
+    'quotes_received',
+  );
+});
+
+test('deriveRequestStage: any accepted decision wins even if others are still pending/priced', () => {
+  assert.equal(
+    deriveRequestStage([
+      { status: 'responded', quote_amount: 500 },
+      { status: 'won', quote_amount: 4200, buyer_decision: 'accepted' },
+    ]),
+    'accepted',
+  );
+});
+
+test('deriveRequestStage: every linked lead closed without an accept = closed', () => {
+  assert.equal(
+    deriveRequestStage([
+      { status: 'lost', quote_amount: 100, buyer_decision: 'declined' },
+      { status: 'spam' },
+    ]),
+    'closed',
+  );
+});
+
+test('deriveRequestStage: one lead still open keeps the request out of "closed" even if another is lost', () => {
+  assert.equal(
+    deriveRequestStage([{ status: 'lost', buyer_decision: 'declined' }, { status: 'viewed' }]),
+    'viewed',
+  );
 });

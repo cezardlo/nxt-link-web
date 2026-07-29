@@ -12,6 +12,7 @@ export interface LinkableQuote {
   id: string;
   status?: string | null;
   quote_amount?: number | null;
+  buyer_decision?: string | null;
   created_at: string;
   updated_at?: string | null;
   answers?: { source_request?: string | null } | null;
@@ -76,4 +77,32 @@ export function isRequestStale(
   const created = new Date(request.created_at).getTime();
   if (!Number.isFinite(created)) return false;
   return nowMs - created >= STALE_HINT_HOURS * 3600_000;
+}
+
+// --- Status pill (Slice RV, item 4) -----------------------------------------
+// A discrete, calm pipeline pill for a buyer's ORIGINAL request card — derived
+// purely from the statuses/decisions already on its linked quote_requests
+// rows (never a write, never a new column). client_requests.status itself is
+// insert-only (no writer exists anywhere in src/ — a known, separately-scoped
+// gap), so this is computed fresh on every render instead of trusting that
+// stale column. Mirrors the exact vocabulary in the binding spec: Sent →
+// Viewed → Quotes received → Accepted/Closed "as data supports".
+
+export type RequestStage = 'sent' | 'viewed' | 'quotes_received' | 'accepted' | 'closed';
+
+/** Statuses that count as "a vendor closed this out without the buyer accepting". */
+const CLOSED_WITHOUT_ACCEPT_STATUSES = new Set(['lost', 'spam']);
+
+export function deriveRequestStage(
+  linked: Array<Pick<LinkableQuote, 'status' | 'quote_amount' | 'buyer_decision'>>,
+): RequestStage {
+  if (linked.length === 0) return 'sent';
+  if (linked.some((q) => q.buyer_decision === 'accepted')) return 'accepted';
+  const allClosedNoAccept = linked.every(
+    (q) => q.buyer_decision === 'declined' || CLOSED_WITHOUT_ACCEPT_STATUSES.has(q.status || ''),
+  );
+  if (allClosedNoAccept) return 'closed';
+  if (linked.some((q) => q.quote_amount != null)) return 'quotes_received';
+  if (linked.some((q) => !!q.status && !UNSEEN_STATUSES.has(q.status))) return 'viewed';
+  return 'sent';
 }

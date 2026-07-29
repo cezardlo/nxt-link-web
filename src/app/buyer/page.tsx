@@ -14,7 +14,7 @@ import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAct
 import { useChatPolling, resolvePendingMessage, dropPendingMessage, type ChatMessage } from '@/components/marketplace/useChatPolling';
 import { QuoteCompareTable, QUOTE_COMPARE_TABLE_CSS, type CompareLabels, type CompareTableRow } from '@/components/marketplace/QuoteCompareTable';
 import { groupQuotesForCompare, describeAcceptedDeal } from '@/lib/buyer/compare';
-import { computeRequestActivity, isRequestStale } from '@/lib/buyer/requestStats';
+import { computeRequestActivity, isRequestStale, linkedQuotes, deriveRequestStage, type RequestStage } from '@/lib/buyer/requestStats';
 import {
   ALLOWED_ATTACHMENT_EXTENSIONS, MAX_ATTACHMENTS_PER_MESSAGE, formatFileSize,
   validateAttachmentBatch,
@@ -92,6 +92,14 @@ const T: Record<Lang, Record<string, string>> = {
     relJustNow: 'just now', relMinAgo: '{n} min ago', relHourAgo: '{n}h ago', relDayAgo: '{n}d ago',
     reviewingRequest: "We're still finding vendors for this request.",
     noQuotesYetHint: "No quotes yet — we'll notify you as soon as one arrives.",
+    teachExpect: "Here's what a quote will look like:",
+    exampleBadge: 'Example', sampleVendorName: 'Vendor name', samplePrice: '$4,200',
+    sampleTimeline: '2–3 weeks', sampleWarranty: '1-year warranty',
+    // Aggregate pipeline pill for the buyer's original request card (Slice RV,
+    // item 4) — derived from its linked quotes' real statuses, never a raw
+    // stored value (client_requests.status never updates after creation).
+    pipelineSent: 'Sent', pipelineViewed: 'Viewed', pipelineQuotesReceived: 'Quotes received',
+    pipelineAccepted: 'Accepted', pipelineClosed: 'Closed',
     bundlePrefix: 'Bundle', bundleItem: 'item', bundleItems: 'items',
     noMessagesVendor: 'No messages yet — ask the vendor anything.', messageVendorPh: 'Message the vendor…', send: 'Send', sendingMsg: 'Sending…',
     guardChat: 'For your protection, contact details are hidden in chat until you accept a quote — keep the conversation on NXT//LINK.',
@@ -170,6 +178,11 @@ const T: Record<Lang, Record<string, string>> = {
     relJustNow: 'justo ahora', relMinAgo: 'hace {n} min', relHourAgo: 'hace {n} h', relDayAgo: 'hace {n} d',
     reviewingRequest: 'Todavía estamos buscando proveedores para esta solicitud.',
     noQuotesYetHint: 'Aún no hay cotizaciones — te avisaremos en cuanto llegue una.',
+    teachExpect: 'Así se verá una cotización:',
+    exampleBadge: 'Ejemplo', sampleVendorName: 'Nombre del proveedor', samplePrice: '$4,200',
+    sampleTimeline: '2–3 semanas', sampleWarranty: 'Garantía de 1 año',
+    pipelineSent: 'Enviada', pipelineViewed: 'Vista', pipelineQuotesReceived: 'Cotizaciones recibidas',
+    pipelineAccepted: 'Aceptada', pipelineClosed: 'Cerrada',
     bundlePrefix: 'Paquete', bundleItem: 'artículo', bundleItems: 'artículos',
     noMessagesVendor: 'Aún no hay mensajes — pregúntale algo al proveedor.', messageVendorPh: 'Mensaje para el proveedor…', send: 'Enviar', sendingMsg: 'Enviando…',
     guardChat: 'Para tu protección, los datos de contacto se ocultan en el chat hasta que aceptes una cotización — mantén la conversación en NXT//LINK.',
@@ -225,8 +238,14 @@ export default function BuyerDashboardPage() {
   const [lang, setLang] = useLang(); // stored `nxt_lang` — shared across marketplace pages
   const t = T[lang];
   const dateLocale = lang === 'es' ? 'es-MX' : 'en-US';
-  const REQUEST_LABEL: Record<string, string> = { request_received: t.received, new_request: t.received };
   const QUOTE_LABEL: Record<string, string> = { new: t.statusSent, viewed: t.statusSeenByVendor, responded: t.statusVendorResponding, won: t.statusClosed, lost: t.statusClosed, spam: t.statusClosed };
+  // Slice RV item 4 — the aggregate pipeline pill for a buyer's ORIGINAL
+  // request card, derived (never stored) from its linked quotes' real
+  // statuses via src/lib/buyer/requestStats.deriveRequestStage.
+  const STAGE_LABEL: Record<RequestStage, string> = {
+    sent: t.pipelineSent, viewed: t.pipelineViewed, quotes_received: t.pipelineQuotesReceived,
+    accepted: t.pipelineAccepted, closed: t.pipelineClosed,
+  };
   const PILOT_KIND_LABEL: Record<string, string> = { demo: t.pkDemo, pilot: t.pkPilot, site_visit: t.pkSiteVisit };
   const PILOT_STATUS_LABEL: Record<string, string> = { proposed: t.psProposed, scheduled: t.psScheduled, in_progress: t.psInProgress, completed: t.psCompleted, cancelled: t.psCancelled };
   const PILOT_OUTCOME_LABEL: Record<string, string> = { passed: t.poPassed, failed: t.poFailed, inconclusive: t.poInconclusive };
@@ -612,10 +631,11 @@ export default function BuyerDashboardPage() {
                     // No new data source, no schema change.
                     const activity = computeRequestActivity(r, quotes);
                     const stale = isRequestStale(r, activity);
+                    const stage = deriveRequestStage(linkedQuotes(r.public_ref, quotes));
                     return (
                     <div className="by-card" key={r.id}>
                       <div className="by-top">
-                        <span className="by-status">{REQUEST_LABEL[r.status || ''] || r.status || t.received}</span>
+                        <span className={'by-status ' + (stage === 'quotes_received' || stage === 'accepted' ? 'resp' : '')}>{STAGE_LABEL[stage]}</span>
                         <b>{r.category || t.request}</b>
                         <small>{fmtDate(r.created_at)}</small>
                         <span className="by-ref">{r.public_ref}</span>
@@ -642,7 +662,7 @@ export default function BuyerDashboardPage() {
                         )}
                       </div>
                       {activity.sentTo === 0 && <p className="by-actnote">{t.reviewingRequest}</p>}
-                      {stale && <p className="by-actnote">{t.noQuotesYetHint}</p>}
+                      {stale && <NoQuotesYetTeaching t={t} />}
                     </div>
                     );
                   })}
@@ -712,7 +732,7 @@ export default function BuyerDashboardPage() {
                           intake requests above — no SLA claim, just real elapsed
                           time vs. whether a quote actually arrived. */}
                       {q.quote_amount == null && isRequestStale({ created_at: q.created_at }, { quotesReceived: 0 }) && (
-                        <p className="by-actnote">{t.noQuotesYetHint}</p>
+                        <NoQuotesYetTeaching t={t} />
                       )}
                       {/* Message the vendor — inside NXT//LINK */}
                       <div className="by-chat">
@@ -887,6 +907,38 @@ export default function BuyerDashboardPage() {
   );
 }
 
+// Slice RV — design addendum item 7 (2026-07-29): the "0 quotes yet" moment
+// is a teaching state, not a dead end. A calm illustration + the honest
+// no-SLA copy ("we'll notify you as soon as one arrives" — never a promised
+// response time) plus an OPTIONAL sample quote card, unmistakably marked
+// Example/Ejemplo (never real data — see design charter's "no fake stats"
+// rule, satisfied here because the badge makes it explicit this is a
+// template, not a claim). Reduced-motion safe by construction: nothing here
+// animates.
+function NoQuotesYetTeaching({ t }: { t: Record<string, string> }) {
+  return (
+    <div className="by-teach">
+      <svg className="by-teachsvg" width="64" height="48" viewBox="0 0 120 84" aria-hidden="true" focusable="false">
+        <rect x="14" y="30" width="92" height="40" rx="10" fill="#EFEDF5" stroke="#E2DFEC" />
+        <rect x="24" y="14" width="92" height="40" rx="10" fill="#fff" stroke="#E2DFEC" strokeWidth="1.5" />
+        <rect x="34" y="26" width="48" height="6" rx="3" fill="#D7D3E6" />
+        <rect x="34" y="38" width="72" height="6" rx="3" fill="#EDEBF6" />
+        <rect x="34" y="48" width="30" height="8" rx="4" fill="#A99DF2" />
+        <circle cx="98" cy="20" r="3" fill="#6C5CE0" />
+      </svg>
+      <div className="by-teachbody">
+        <p className="by-teachhint">{t.noQuotesYetHint}</p>
+        <span className="by-teachexpect">{t.teachExpect}</span>
+        <div className="by-teachsample">
+          <span className="by-teachbadge">{t.exampleBadge}</span>
+          <div className="by-teachrow"><span>{t.sampleVendorName}</span><b>{t.samplePrice}</b></div>
+          <div className="by-teachmeta">{t.sampleTimeline} · {t.sampleWarranty}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FirstRunPrompt({ t }: { t: Record<string, string> }) {
   return (
     <div className="by-firstrun">
@@ -988,6 +1040,18 @@ const CSS = `
 .by-actstat svg{color:#706D88;flex-shrink:0;}
 .by-acttime{color:#706D88;}
 .by-actnote{margin:9px 0 0;font-size:12.5px;color:var(--spec-text-2nd,#615F72);line-height:1.5;}
+/* Slice RV — "0 quotes yet" teaching state (design addendum item 7) */
+.by-teach{display:flex;gap:14px;align-items:flex-start;margin-top:12px;padding:14px 16px;border-radius:12px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);box-shadow:0 4px 12px rgba(124,58,237,.08);}
+.by-teachsvg{flex:none;}
+.by-teachbody{flex:1;min-width:0;}
+.by-teachhint{margin:0 0 10px;font-size:13px;color:var(--spec-ink,#141320);line-height:1.5;}
+.by-teachexpect{display:block;margin:0 0 6px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8A87A0;}
+.by-teachsample{position:relative;border:1px dashed #C7C2DE;border-radius:10px;padding:11px 12px;background:var(--spec-surface,#EFEDF5);}
+.by-teachbadge{position:absolute;top:-9px;right:10px;font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;background:#fff;border:1px solid #C7C2DE;color:#706D88;border-radius:99px;padding:2px 8px;}
+.by-teachrow{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;color:#706D88;}
+.by-teachrow b{color:var(--spec-ink,#141320);font-size:14px;font-weight:700;}
+.by-teachmeta{margin-top:5px;font-size:11.5px;color:#8A87A0;}
+@media(max-width:480px){.by-teach{flex-direction:column;}}
 .by-savedgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;}
 .by-saveditem{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:12px;padding:11px 14px;color:var(--spec-ink,#141320);text-decoration:none;font-size:13.5px;}
 .by-saveditem:hover{border-color:var(--spec-violet,#6C5CE0);}
