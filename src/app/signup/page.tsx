@@ -48,20 +48,18 @@
 // provider); buyer role threads oauth_lane=buyer (no profile to create,
 // click-wrap still recorded fail-closed). See src/lib/auth/oauth.ts.
 //
-// 2026-07-23 4th role choice, "Something else": for visitors who don't fit
-// buyer/vendor/both. Functionally treated as a buyer — sellerMode stays
-// false, apiRole 'client', post-signup redirect /buyer, "check your email"
-// screen uses the buyer copy. Adds ONE optional free-text field (state
-// `useCase`, shown on the details step) that rides into POST /api/auth/signup
-// as `use_case` and is stored in the new account's Supabase user metadata
-// (password-signup path only — not threaded into the magic-link vendor
-// path). Never sent to the API as a role value — apiRole is still only
-// 'client' | 'vendor'.
+// 2026-07-29 (Cesar): the role QUESTION is gone entirely — signup is one
+// step, every account is created as a buyer ('client'), and selling starts
+// later via a "Start selling" option once they're inside (routes to /apply,
+// the reviewed vendor application). Vendor-direct recruiting still uses the
+// separate /vendor-signup page. The right-side trust card explains the
+// one-account-both-sides model. The API's optional `use_case`/`vendor_type`
+// fields still exist server-side; this page always sends null for them.
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { IBM_Plex_Sans } from 'next/font/google';
-import { ArrowLeft, Check, HelpCircle, RefreshCw, ShoppingCart, Store } from 'lucide-react';
+import { Check, RefreshCw } from 'lucide-react';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
 import OAuthButton from '@/components/OAuthButton';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
@@ -80,131 +78,60 @@ const ibmPlexSans = IBM_Plex_Sans({
   display: 'swap',
 });
 
-type Mode = 'buyer' | 'vendor' | 'both' | 'other';
-type Step = 'role' | 'details';
-
-// Vendor/supplier business types (maturity + kind) captured at signup and
-// stored in user metadata for the vendor's fit profile. Unchanged from the
-// prior pass — same values /api/auth/signup already accepts as vendor_type.
-const VENDOR_TYPES: Array<{ value: string; en: string; es: string }> = [
-  { value: 'Manufacturer', en: 'Manufacturer', es: 'Fabricante' },
-  { value: 'Distributor / Supplier', en: 'Distributor / product vendor', es: 'Distribuidor / proveedor' },
-  { value: 'Service provider', en: 'Service provider', es: 'Proveedor de servicios' },
-  { value: 'System integrator', en: 'System integrator', es: 'Integrador de sistemas' },
-  { value: 'Consultant', en: 'Consultant', es: 'Consultor' },
-  { value: 'Startup / emerging', en: 'Startup / emerging', es: 'Startup / emergente' },
-  { value: 'Other', en: 'Other', es: 'Otro' },
-];
-
 const T: Record<Lang, Record<string, string>> = {
   en: {
-    step: 'Step', of: 'of', back: 'Back to account type',
     eyebrow: 'Your industrial buying workspace',
-    roleTitle: 'How will you use NXT//LINK?',
-    roleSub: 'Choose what fits today. You can use buyer tools and vendor tools from the same account.',
-    buyer: 'Buy for my company',
-    recommended: 'Recommended start',
-    buyerDesc: 'Find vendors, request quotes, and track purchases.',
-    vendor: 'Join as a vendor',
-    vendorDesc: 'Publish products and services, answer buyers, and manage quotes.',
-    both: 'Buyer and vendor',
-    bothDesc: 'Use one account for sourcing and for your company’s vendor storefront.',
-    other: 'Something else',
-    otherDesc: 'Tell us what you’re here for and we’ll point you the right way.',
-    otherUsePlaceholder: 'What are you looking to do on NXT//LINK?',
-    continue: 'Continue',
     detailsTitle: 'Create your account',
     detailsSub: 'This takes about a minute. You can finish your profile after you enter.',
-    account: 'Account',
     email: 'Work email',
     password: 'Password (8+ characters)',
     show: 'Show', hide: 'Hide',
-    vendorType: 'What kind of business is it? (optional)',
-    otherPlaceholder: 'Tell us what kind of business it is',
     agreeStart: 'I agree to the', terms: 'Terms of Service', and: 'and', privacy: 'Privacy Policy',
     orEmail: 'or continue with email',
     create: 'Create account', creating: 'Creating…',
     signInLead: 'Already have an account?', signIn: 'Sign in',
-    team: 'NXT Link operator? Team accounts are provided internally.',
     trustTitle: 'Free to join and start a conversation',
     trustText: 'There is no fee to ask questions, request a quote, or propose a pilot. NXT//LINK earns a clearly disclosed commission only when business is completed through the platform.',
     trustActions: 'RFQs · quotes · messages',
     trustTeam: 'NXT//LINK team accounts are provided internally.',
+    bothSidesTitle: 'One account, both sides',
+    bothSidesText: 'Most companies end up buying and selling. The same account lets you search the marketplace, ask questions, and request quotes — and when you’re ready, you can start selling too.',
     sentTitle: 'Check your email',
     sentText: 'We sent a confirmation link to',
     sentBuyer: 'Until your email is verified, some actions stay limited.',
-    sentVendor: 'After you verify, the next step is a short vendor application — a human on our team reviews every one.',
     confirmed: 'Already confirmed? Sign in',
     errTerms: 'Please accept the Terms of Service and Privacy Policy.',
     errCreate: 'Could not create the account. Try again.',
   },
   es: {
-    step: 'Paso', of: 'de', back: 'Volver al tipo de cuenta',
     eyebrow: 'Tu espacio de compras industriales',
-    roleTitle: '¿Cómo usarás NXT//LINK?',
-    roleSub: 'Elige lo que necesitas hoy. Puedes comprar y vender desde la misma cuenta.',
-    buyer: 'Comprar para mi empresa',
-    recommended: 'Inicio recomendado',
-    buyerDesc: 'Encuentra proveedores, solicita cotizaciones y sigue tus compras.',
-    vendor: 'Unirme como proveedor',
-    vendorDesc: 'Publica productos y servicios, responde a compradores y gestiona cotizaciones.',
-    both: 'Comprador y proveedor',
-    bothDesc: 'Usa una cuenta para abastecerte y para el escaparate de proveedor de tu empresa.',
-    other: 'Algo más',
-    otherDesc: 'Cuéntanos para qué estás aquí y te orientamos hacia lo correcto.',
-    otherUsePlaceholder: '¿Qué buscas hacer en NXT//LINK?',
-    continue: 'Continuar',
     detailsTitle: 'Crea tu cuenta',
     detailsSub: 'Toma cerca de un minuto. Puedes completar tu perfil después de entrar.',
-    account: 'Cuenta',
     email: 'Correo de trabajo',
     password: 'Contraseña (8+ caracteres)',
     show: 'Mostrar', hide: 'Ocultar',
-    vendorType: '¿Qué tipo de empresa es? (opcional)',
-    otherPlaceholder: 'Dinos qué tipo de empresa es',
     agreeStart: 'Acepto los', terms: 'Términos de Servicio', and: 'y el', privacy: 'Aviso de Privacidad',
     orEmail: 'o continúa con correo',
     create: 'Crear cuenta', creating: 'Creando…',
     signInLead: '¿Ya tienes una cuenta?', signIn: 'Inicia sesión',
-    team: '¿Eres del equipo NXT Link? Las cuentas de operador se otorgan internamente.',
     trustTitle: 'Gratis para unirte y comenzar una conversación',
     trustText: 'No hay costo por hacer preguntas, pedir una cotización o proponer un piloto. NXT//LINK gana una comisión claramente informada solo cuando el negocio se completa dentro de la plataforma.',
     trustActions: 'Cotizaciones · solicitudes · mensajes',
     trustTeam: 'Las cuentas del equipo NXT//LINK se otorgan internamente.',
+    bothSidesTitle: 'Una cuenta, ambos lados',
+    bothSidesText: 'La mayoría de las empresas terminan comprando y vendiendo. La misma cuenta te permite buscar en el marketplace, hacer preguntas y solicitar cotizaciones — y cuando estés listo, también puedes empezar a vender.',
     sentTitle: 'Revisa tu correo',
     sentText: 'Enviamos un enlace de confirmación a',
     sentBuyer: 'Hasta que verifiques tu correo, algunas acciones permanecen limitadas.',
-    sentVendor: 'Después de verificar, el siguiente paso es una breve solicitud de proveedor — nuestro equipo revisa cada una.',
     confirmed: '¿Ya confirmaste? Inicia sesión',
     errTerms: 'Acepta los Términos de Servicio y el Aviso de Privacidad.',
     errCreate: 'No pudimos crear la cuenta. Intenta de nuevo.',
   },
 };
 
-const ROLE_OPTIONS: Array<{ mode: Mode; icon: typeof ShoppingCart; titleKey: 'buyer' | 'vendor' | 'both' | 'other'; descKey: 'buyerDesc' | 'vendorDesc' | 'bothDesc' | 'otherDesc' }> = [
-  { mode: 'buyer', icon: ShoppingCart, titleKey: 'buyer', descKey: 'buyerDesc' },
-  { mode: 'vendor', icon: Store, titleKey: 'vendor', descKey: 'vendorDesc' },
-  { mode: 'both', icon: RefreshCw, titleKey: 'both', descKey: 'bothDesc' },
-  { mode: 'other', icon: HelpCircle, titleKey: 'other', descKey: 'otherDesc' },
-];
-
 export default function SignupPage() {
   const [lang, setLang] = useLang();
   const t = T[lang];
-  const [step, setStep] = useState<Step>('role');
-  // Buyer is the safest reversible default for a marketplace visitor.
-  const [mode, setMode] = useState<Mode>('buyer');
-  const [vendorType, setVendorType] = useState('');
-  // Free-text for the "Other" business type — lets a vendor say in their own
-  // words what they are when none of the preset chips fit (Cesar's ask). It
-  // rides into the SAME persisted vendor_type field as "Other: <their words>"
-  // (the API already stores + caps vendor_type at 60 chars) — no dropped data.
-  const [vendorTypeOther, setVendorTypeOther] = useState('');
-  // Free-text for the 4th role choice, "Something else" — lets a visitor who
-  // isn't a clean buyer/vendor/both fit say in their own words why they're
-  // here. Treated like a buyer functionally (sellerMode stays false, apiRole
-  // 'client'); the text just rides along as optional metadata (use_case).
-  const [useCase, setUseCase] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [agree, setAgree] = useState(false);
@@ -225,14 +152,6 @@ export default function SignupPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // "Buyer and vendor" is the SAME account + SAME organic vendor lane as
-  // plain "vendor" — there is no third role in the data model, only a third
-  // choice in this UI (task instruction: role choices map to the two
-  // existing lanes).
-  const sellerMode = mode === 'vendor' || mode === 'both';
-  const apiRole: 'client' | 'vendor' = sellerMode ? 'vendor' : 'client';
-  const roleLabel = t[mode];
-
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!agree) {
@@ -240,12 +159,6 @@ export default function SignupPage() {
       return;
     }
     setBusy(true); setErr('');
-    // When "Other" is chosen and they typed a description, persist their own
-    // words ("Other: <text>"); otherwise the plain chip value. Buyers send null.
-    const resolvedVendorType =
-      vendorType === 'Other' && vendorTypeOther.trim()
-        ? `Other: ${vendorTypeOther.trim()}`
-        : vendorType;
     try {
       const r = await fetch('/api/auth/signup', {
         method: 'POST',
@@ -253,9 +166,9 @@ export default function SignupPage() {
         body: JSON.stringify({
           email: email.trim(),
           password,
-          role: apiRole,
-          vendor_type: sellerMode ? resolvedVendorType || null : null,
-          use_case: mode === 'other' ? (useCase.trim() || null) : null,
+          role: 'client',
+          vendor_type: null,
+          use_case: null,
           locale: lang,
           terms_accepted: agree,
         }),
@@ -264,9 +177,8 @@ export default function SignupPage() {
       if (!j.ok) { setErr(j.message || t.errCreate); setBusy(false); return; }
       if (j.session) {
         // Email confirmation disabled in project settings — go straight in.
-        // Organic vendors go to the application/review flow, buyers to /buyer.
         await fetch('/api/auth/me');
-        window.location.href = sellerMode ? '/apply?from=signup' : '/buyer';
+        window.location.href = '/buyer';
         return;
       }
       setSent(true);
@@ -298,108 +210,28 @@ export default function SignupPage() {
 
       <section className="su-layout">
         <div className="su-card">
-          {!sent && (
-            <div className="su-progress" aria-label={`${t.step} ${step === 'role' ? 1 : 2} ${t.of} 2`}>
-              <span>{t.step} {step === 'role' ? 1 : 2} {t.of} 2</span>
-              <div><i className="on" /><i className={step === 'details' ? 'on' : ''} /></div>
-            </div>
-          )}
-
           {sent ? (
             <div className="su-sent">
               <div className="su-success"><Check aria-hidden="true" /></div>
               <h1>{t.sentTitle}</h1>
               <p className="su-sub">{t.sentText} <b>{email}</b>.</p>
-              <div className="su-next">{sellerMode ? t.sentVendor : t.sentBuyer}</div>
+              <div className="su-next">{t.sentBuyer}</div>
               <Link className="su-btn" href="/login">{t.confirmed}</Link>
             </div>
-          ) : step === 'role' ? (
-            <>
-              <p className="su-eyebrow">{t.eyebrow}</p>
-              <h1>{t.roleTitle}</h1>
-              <p className="su-sub">{t.roleSub}</p>
-
-              <div className="su-roles" role="group" aria-label={t.roleTitle}>
-                {ROLE_OPTIONS.map(({ mode: option, icon: Icon, titleKey, descKey }) => (
-                  <button
-                    type="button"
-                    key={option}
-                    className={'su-role' + (mode === option ? ' on' : '')}
-                    aria-pressed={mode === option}
-                    onClick={() => { setMode(option); if (option === 'buyer' || option === 'other') { setVendorType(''); setVendorTypeOther(''); } if (option !== 'other') setUseCase(''); }}
-                  >
-                    <span className="su-roleicon"><Icon aria-hidden="true" /></span>
-                    <span className="su-roletext">
-                      <b>{t[titleKey]} {option === 'buyer' && <em className="su-recommended">{t.recommended}</em>}</b>
-                      <small>{t[descKey]}</small>
-                    </span>
-                    <span className="su-radio">{mode === option && <Check aria-hidden="true" />}</span>
-                  </button>
-                ))}
-              </div>
-
-              <button className="su-btn" type="button" onClick={() => setStep('details')}>{t.continue}</button>
-
-              <p className="su-hint">{t.team}</p>
-              <p className="su-signin">{t.signInLead} <Link href="/login">{t.signIn}</Link></p>
-            </>
           ) : (
             <>
-              <button className="su-back" type="button" onClick={() => setStep('role')}>
-                <ArrowLeft size={16} aria-hidden="true" /> {t.back}
-              </button>
-              <p className="su-eyebrow">{t.account}: {roleLabel}</p>
+              <p className="su-eyebrow">{t.eyebrow}</p>
               <h1>{t.detailsTitle}</h1>
               <p className="su-sub">{t.detailsSub}</p>
-
-              {sellerMode && (
-                <fieldset className="su-vtype">
-                  <legend>{t.vendorType}</legend>
-                  <div className="su-chips">
-                    {VENDOR_TYPES.map(({ value, en, es }) => (
-                      <button type="button" key={value} aria-pressed={vendorType === value} className={'su-chip' + (vendorType === value ? ' on' : '')} onClick={() => { const next = vendorType === value ? '' : value; setVendorType(next); if (next !== 'Other') setVendorTypeOther(''); }}>
-                        {lang === 'es' ? es : en}
-                      </button>
-                    ))}
-                  </div>
-                  {vendorType === 'Other' && (
-                    <input
-                      className="su-otherinput"
-                      type="text"
-                      value={vendorTypeOther}
-                      onChange={(e) => setVendorTypeOther(e.target.value)}
-                      placeholder={t.otherPlaceholder}
-                      aria-label={t.otherPlaceholder}
-                      maxLength={48}
-                      autoFocus
-                    />
-                  )}
-                </fieldset>
-              )}
-
-              {mode === 'other' && (
-                <fieldset className="su-vtype">
-                  <legend>{t.otherUsePlaceholder}</legend>
-                  <input
-                    className="su-otherinput"
-                    type="text"
-                    value={useCase}
-                    onChange={(e) => setUseCase(e.target.value)}
-                    placeholder={t.otherUsePlaceholder}
-                    aria-label={t.otherUsePlaceholder}
-                    maxLength={200}
-                  />
-                </fieldset>
-              )}
 
               {ANY_OAUTH_ENABLED && (
                 <div className="su-oauth">
                   {agreeCheckbox}
                   <GoogleAuthButton
                     lang={lang}
-                    next={sellerMode ? '/vendor/portal?welcome=1' : '/buyer'}
+                    next="/buyer"
                     from="/signup"
-                    lane={sellerMode ? 'organic' : 'buyer'}
+                    lane="buyer"
                     disabled={!agree}
                     onError={setErr}
                     className="su-google"
@@ -408,9 +240,9 @@ export default function SignupPage() {
                   <OAuthButton
                     provider="linkedin_oidc"
                     lang={lang}
-                    next={sellerMode ? '/vendor/portal?welcome=1' : '/buyer'}
+                    next="/buyer"
                     from="/signup"
-                    lane={sellerMode ? 'organic' : 'buyer'}
+                    lane="buyer"
                     disabled={!agree}
                     onError={setErr}
                     className="su-google"
@@ -419,9 +251,9 @@ export default function SignupPage() {
                   <OAuthButton
                     provider="azure"
                     lang={lang}
-                    next={sellerMode ? '/vendor/portal?welcome=1' : '/buyer'}
+                    next="/buyer"
                     from="/signup"
-                    lane={sellerMode ? 'organic' : 'buyer'}
+                    lane="buyer"
                     disabled={!agree}
                     onError={setErr}
                     className="su-google"
@@ -457,6 +289,9 @@ export default function SignupPage() {
           <p>{t.trustText}</p>
           <div className="su-trustline"><span><Check aria-hidden="true" /></span>{t.trustActions}</div>
           <div className="su-trustline"><span><Check aria-hidden="true" /></span>{t.trustTeam}</div>
+          <div className="su-trusticon su-bothicon"><RefreshCw aria-hidden="true" /></div>
+          <h2>{t.bothSidesTitle}</h2>
+          <p>{t.bothSidesText}</p>
         </aside>
       </section>
     </main>
@@ -474,36 +309,16 @@ const CSS = `
 
 .su-layout{width:min(1060px,100%);margin:auto;display:grid;grid-template-columns:minmax(0,600px) minmax(240px,1fr);gap:26px;align-items:center;}
 .su-card{background:#fff;border:1px solid var(--spec-border,#E2DFEC);box-shadow:0 24px 60px rgba(74,61,176,.1);border-radius:20px;padding:32px;}
-.su-progress{display:flex;align-items:center;justify-content:space-between;color:var(--spec-text-2nd,#615F72);font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:var(--spec-tracking-eyebrow,.12em);margin-bottom:26px;}
-.su-progress div{display:flex;gap:6px;}
-.su-progress i{display:block;width:40px;height:4px;border-radius:99px;background:var(--spec-surface,#EFEDF5);}
-.su-progress i.on{background:var(--spec-violet,#6C5CE0);}
 .su-eyebrow{color:var(--spec-violet-deep,#4A3DB0);font-size:11.5px;font-weight:800;letter-spacing:var(--spec-tracking-eyebrow,.12em);text-transform:uppercase;margin:0 0 10px;}
 .su-card h1{color:var(--spec-ink,#141320);font-size:clamp(24px,3.6vw,var(--spec-text-h2,30px));line-height:1.1;letter-spacing:var(--spec-tracking-heading,-.02em);margin:0;}
 .su-sub{color:var(--spec-text-2nd,#615F72);font-size:14px;line-height:1.6;margin:11px 0 22px;max-width:520px;}
 .su-sub b{color:var(--spec-violet-deep,#4A3DB0);}
-
-.su-roles{display:flex;flex-direction:column;gap:10px;margin:0 0 18px;}
-.su-role{width:100%;display:grid;grid-template-columns:42px 1fr 22px;gap:13px;align-items:center;text-align:left;padding:15px;background:var(--spec-warm-white,#F8F7FB);border:1px solid var(--spec-border,#E2DFEC);border-radius:14px;color:var(--spec-ink,#141320);cursor:pointer;font:inherit;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),background var(--spec-duration-fast,150ms) var(--spec-ease,ease),transform var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
-.su-role:hover{border-color:var(--spec-lilac,#A99DF2);transform:translateY(-1px);}
-.su-role.on{border-color:var(--spec-violet,#6C5CE0);background:rgba(108,92,224,.07);}
-.su-roleicon{width:40px;height:40px;border-radius:11px;background:rgba(108,92,224,.12);color:var(--spec-violet-deep,#4A3DB0);display:grid;place-items:center;}
-.su-roleicon svg{width:19px;height:19px;}
-.su-roletext{min-width:0;}
-.su-roletext b{display:block;font-size:14.5px;margin-bottom:3px;color:var(--spec-ink,#141320);}
-.su-roletext small{display:block;color:var(--spec-text-2nd,#615F72);font-size:12px;line-height:1.45;}
-.su-radio{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--spec-border,#E2DFEC);display:grid;place-items:center;}
-.su-role.on .su-radio{background:var(--spec-violet,#6C5CE0);border-color:var(--spec-violet,#6C5CE0);}
-.su-radio svg{width:12px;stroke-width:3;color:#fff;}
-.su-recommended{display:inline-block;margin-left:7px;padding:2px 7px;border-radius:99px;background:rgba(108,92,224,.1);color:var(--spec-violet-deep,#4A3DB0);font-size:9px;font-style:normal;font-weight:800;letter-spacing:.03em;text-transform:uppercase;vertical-align:1px;}
 
 .su-btn{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;border:0;border-radius:11px;background:var(--spec-violet,#6C5CE0);color:#fff;text-decoration:none;font:700 14.5px inherit;cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .su-btn:hover{background:var(--spec-violet-deep,#4A3DB0);}
 .su-btn:disabled{opacity:.45;cursor:not-allowed;}
 .su-signin{text-align:center;color:var(--spec-text-2nd,#615F72);font-size:13px;margin:16px 0 0;}
 .su-signin a,.su-agree a{color:var(--spec-violet-deep,#4A3DB0);}
-.su-hint{color:#706D88;font-size:12px;line-height:1.6;margin:16px 0 0;text-align:center;}
-.su-back{display:flex;align-items:center;gap:6px;background:none;border:0;color:var(--spec-violet-deep,#4A3DB0);font:650 13px inherit;cursor:pointer;padding:0;margin-bottom:16px;}
 
 .su-card form{display:flex;flex-direction:column;gap:14px;}
 .su-field span{display:block;color:var(--spec-text-2nd,#615F72);font-size:12px;font-weight:700;margin:0 0 6px;}
@@ -513,15 +328,6 @@ const CSS = `
 .su-pwrow input{padding-right:66px !important;}
 .su-pwtoggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--spec-text-2nd,#615F72);font:650 12px inherit;cursor:pointer;padding:8px;}
 .su-pwtoggle:hover{color:var(--spec-violet-deep,#4A3DB0);}
-.su-vtype{border:0;padding:0;margin:0 0 4px;}
-.su-vtype legend{color:var(--spec-text-2nd,#615F72);font-size:12px;font-weight:700;margin:0 0 10px;padding:0;}
-.su-chips{display:flex;flex-wrap:wrap;gap:8px;}
-.su-chip{font:600 12px inherit;padding:8px 12px;border-radius:99px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-text-2nd,#615F72);cursor:pointer;}
-.su-chip:hover{border-color:var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);}
-.su-chip.on{background:rgba(108,92,224,.1);border-color:var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);}
-.su-otherinput{width:100%;margin-top:10px;height:42px;border:1px solid var(--spec-border,#E2DFEC);border-radius:10px;background:var(--spec-warm-white,#F8F7FB);color:var(--spec-ink,#141320);font:14px inherit;padding:0 13px;outline:none;}
-.su-otherinput::placeholder{color:#8A87A0;}
-.su-otherinput:focus{border-color:var(--spec-violet,#6C5CE0);background:#fff;box-shadow:0 0 0 3px rgba(108,92,224,.12);}
 .su-agree{display:flex;gap:10px;align-items:flex-start;cursor:pointer;margin:2px 0 0;}
 .su-agree input{width:16px;height:16px;flex:0 0 auto;margin-top:2px;accent-color:var(--spec-violet,#6C5CE0);cursor:pointer;}
 .su-agree input:focus-visible{outline:2px solid var(--spec-violet,#6C5CE0);outline-offset:2px;}
@@ -541,6 +347,7 @@ const CSS = `
 .su-trust h2{color:var(--spec-ink,#141320);font-size:var(--spec-text-h4,19px);line-height:1.2;letter-spacing:var(--spec-tracking-heading,-.02em);margin:0 0 12px;}
 .su-trust>p{font-size:13.5px;line-height:1.7;margin:0 0 18px;}
 .su-trustline{display:flex;align-items:flex-start;gap:9px;font-size:12px;line-height:1.5;margin:10px 0;}
+.su-bothicon{margin-top:28px;}
 .su-trustline span{width:16px;height:16px;border-radius:50%;background:#E9F7F0;color:#1F7A54;display:grid;place-items:center;flex:0 0 auto;}
 .su-trustline svg{width:10px;stroke-width:3;}
 
@@ -563,8 +370,6 @@ const CSS = `
 @media(max-width:420px){
   .su{padding-left:10px;padding-right:10px;}
   .su-header{padding:0 4px;}
-  .su-role{grid-template-columns:38px 1fr 20px;padding:13px;gap:10px;}
-  .su-roleicon{width:36px;height:36px;}
   .su-card{padding:20px 15px;}
 }
 `;

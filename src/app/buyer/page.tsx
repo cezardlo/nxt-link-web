@@ -9,7 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
-import { PackageSearch, Inbox, Lightbulb, MessageCircle, Paperclip, Download, X } from 'lucide-react';
+import { PackageSearch, Inbox, Lightbulb, MessageCircle, Paperclip, Download, X, Store } from 'lucide-react';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
 import { useChatPolling, resolvePendingMessage, dropPendingMessage, type ChatMessage } from '@/components/marketplace/useChatPolling';
 import { QuoteCompareTable, QUOTE_COMPARE_TABLE_CSS, type CompareLabels, type CompareTableRow } from '@/components/marketplace/QuoteCompareTable';
@@ -128,6 +128,9 @@ const T: Record<Lang, Record<string, string>> = {
     firstRunCard2Title: 'I need help figuring out what I need — let suppliers propose solutions',
     firstRunCard2Hint: 'Describe your problem once — NXT//LINK matches vendors and they quote you.',
     firstRunBrowseLink: 'Just browsing? Explore categories',
+    startSellTitle: 'Want to sell on NXT//LINK?',
+    startSellHint: 'Set up your company storefront with a short application. Our team reviews and approves every vendor.',
+    startSellCta: 'Start selling',
     docTitle: 'My dashboard — NXT//LINK',
     kindProduct: 'product', kindService: 'service',
   },
@@ -198,6 +201,9 @@ const T: Record<Lang, Record<string, string>> = {
     firstRunCard2Title: 'Necesito ayuda para saber qué necesito — que los proveedores propongan soluciones',
     firstRunCard2Hint: 'Describe tu problema una vez — NXT//LINK conecta proveedores y ellos te cotizan.',
     firstRunBrowseLink: '¿Solo estás explorando? Explora las categorías',
+    startSellTitle: '¿Quieres vender en NXT//LINK?',
+    startSellHint: 'Crea el escaparate de tu empresa con una solicitud breve. Nuestro equipo revisa y aprueba a cada proveedor.',
+    startSellCta: 'Empezar a vender',
     docTitle: 'Mi panel — NXT//LINK',
     kindProduct: 'producto', kindService: 'servicio',
   },
@@ -826,13 +832,22 @@ function FirstRunPrompt({ t }: { t: Record<string, string> }) {
       {/* Card 2 ("help me figure out what I need" -> /intake) removed
           2026-07-28 per Cesar: open-ended requests belong later in the
           journey, and with a young catalog they have nowhere to route.
-          Buyers land on the specific-search path only. */}
+          Buyers land on the specific-search path only.
+          2026-07-29 (Cesar): the slot now holds "Start selling" — signup no
+          longer asks buyer-vs-vendor, so selling starts HERE (OfferUp/Alibaba
+          pattern: plain signup, a visible sell entry, review before live). */}
       <div className="by-frcards">
         <a href="/marketplace" className="by-frcard">
           <span className="by-fricon"><PackageSearch size={18} strokeWidth={1.75} /></span>
           <b>{t.firstRunCard1Title}</b>
           <p>{t.firstRunCard1Hint}</p>
           <span className="by-frcta">{t.firstRunCard1Cta} →</span>
+        </a>
+        <a href="/apply" className="by-frcard">
+          <span className="by-fricon"><Store size={18} strokeWidth={1.75} /></span>
+          <b>{t.startSellTitle}</b>
+          <p>{t.startSellHint}</p>
+          <span className="by-frcta">{t.startSellCta} →</span>
         </a>
       </div>
     </div>
