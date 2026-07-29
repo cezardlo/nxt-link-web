@@ -158,13 +158,13 @@ const T: Record<Lang, Record<string, string>> = {
     search: 'Search',
     popular: 'Popular',
     quick1: 'Forklift repair', quick2: 'Warehouse racking', quick3: 'Barcode scanners', quick4: 'Pilot-ready solutions',
-    customEyebrow: 'Custom or complex purchase',
-    customTitle: 'Tell vendors exactly what you need.',
-    customBody: 'Add specifications, quantity, timing, and files. You choose who receives it.',
-    customPoint1: 'Quotes, demos, and pilots',
-    customPoint2: 'Messages and documents stay together',
-    postRequest: 'Post a sourcing request',
-    requestNote: 'Use this when a simple search is not enough.',
+    joinEyebrow: 'New here?',
+    joinTitle: 'Join NXT//LINK free.',
+    joinBody: 'Create your free account to browse the marketplace, request quotes, and message vendors directly.',
+    joinPoint1: 'Free for buyers — no fees, no commitment',
+    joinPoint2: 'Quotes, messages, and documents in one place',
+    joinFree: 'Join free',
+    alreadyAccount: 'Already have an account?',
     trustVerified: 'Verified Vendors',
     trustProtected: 'Protected Introductions (12 months)',
     trustFree: 'Free to send · no commitment',
@@ -240,13 +240,13 @@ const T: Record<Lang, Record<string, string>> = {
     search: 'Buscar',
     popular: 'Popular',
     quick1: 'Reparación de montacargas', quick2: 'Racks de almacén', quick3: 'Escáneres de códigos', quick4: 'Soluciones con piloto',
-    customEyebrow: 'Compra personalizada o compleja',
-    customTitle: 'Diles a los proveedores exactamente qué necesitas.',
-    customBody: 'Agrega especificaciones, cantidad, tiempo y archivos. Tú eliges quién la recibe.',
-    customPoint1: 'Cotizaciones, demos y pilotos',
-    customPoint2: 'Mensajes y documentos juntos',
-    postRequest: 'Publicar solicitud de compra',
-    requestNote: 'Úsala cuando una búsqueda simple no sea suficiente.',
+    joinEyebrow: '¿Nuevo aquí?',
+    joinTitle: 'Únete a NXT//LINK gratis.',
+    joinBody: 'Crea tu cuenta gratuita para explorar el marketplace, pedir cotizaciones y hablar directamente con proveedores.',
+    joinPoint1: 'Gratis para compradores — sin cuotas, sin compromiso',
+    joinPoint2: 'Cotizaciones, mensajes y documentos en un solo lugar',
+    joinFree: 'Únete gratis',
+    alreadyAccount: '¿Ya tienes cuenta?',
     trustVerified: 'Proveedores verificados',
     trustProtected: 'Introducciones protegidas (12 meses)',
     trustFree: 'Gratis enviar · sin compromiso',
@@ -459,18 +459,22 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Join card — replaced the old "tell vendors what you need" RFQ
+              card (Cesar 2026-07-28: with a fresh empty catalog, posting a
+              request had no vendors to route to; sign-up is the useful
+              first step). /intake itself still exists for signed-in use. */}
           <aside className="hp-requestcard" aria-labelledby="hp-request-title">
-            <span className="hp-requesteyebrow">{t.customEyebrow}</span>
-            <h2 id="hp-request-title">{t.customTitle}</h2>
-            <p>{t.customBody}</p>
+            <span className="hp-requesteyebrow">{t.joinEyebrow}</span>
+            <h2 id="hp-request-title">{t.joinTitle}</h2>
+            <p>{t.joinBody}</p>
             <ul>
-              <li><Check size={16} aria-hidden="true" />{t.customPoint1}</li>
-              <li><Check size={16} aria-hidden="true" />{t.customPoint2}</li>
+              <li><Check size={16} aria-hidden="true" />{t.joinPoint1}</li>
+              <li><Check size={16} aria-hidden="true" />{t.joinPoint2}</li>
             </ul>
-            <Link className="hp-requestbtn" href="/intake">
-              {t.postRequest}<ArrowRight size={16} aria-hidden="true" />
+            <Link className="hp-requestbtn" href="/signup">
+              {t.joinFree}<ArrowRight size={16} aria-hidden="true" />
             </Link>
-            <small>{t.requestNote}</small>
+            <small>{t.alreadyAccount} <Link href="/login">{t.signIn}</Link></small>
           </aside>
         </div>
       </section>
@@ -671,7 +675,7 @@ export default function Home() {
 
       {/* Mobile-only sticky primary CTA */}
       <div className="hp-mobilecta">
-        <Link className="hp-mobilectabtn" href="/intake">{t.postRequest}</Link>
+        <Link className="hp-mobilectabtn" href="/signup">{t.joinFree}</Link>
       </div>
     </div>
   );
@@ -731,6 +735,8 @@ const CSS = `
 .hp-requestbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:46px;padding:0 18px;border-radius:var(--spec-radius-btn);color:#fff;background:var(--spec-violet);font-weight:700;font-size:14px;transition:background var(--spec-duration-fast) var(--spec-ease);}
 .hp-requestbtn:hover{background:var(--spec-violet-deep);}
 .hp-requestcard small{display:block;margin-top:10px;color:var(--spec-text-2nd);font-size:11px;text-align:center;}
+.hp-requestcard small a{color:var(--spec-violet-deep);font-weight:700;text-decoration:underline;transition:color var(--spec-duration-fast) var(--spec-ease);}
+.hp-requestcard small a:hover{color:var(--spec-violet);}
 
 @media(max-width:900px){
   .hp-heroin{grid-template-columns:1fr;padding:40px 20px 40px;gap:30px;}
