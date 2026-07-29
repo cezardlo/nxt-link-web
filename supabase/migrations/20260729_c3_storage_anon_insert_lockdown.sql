@@ -1,0 +1,34 @@
+-- ============================================================================
+-- NXT//LINK — security hardening (full-site audit 2026-07-28, finding C3)
+-- Apply order: 1 of 3 for 2026-07-29 (independent of the other two — no
+-- ordering dependency between them, but listed first for the coordinator).
+--
+-- WHAT: remove the anon/authenticated INSERT policies on the two PRIVATE vendor
+-- storage buckets.
+--
+--   vendor_logos_public_insert           INSERT TO anon, authenticated
+--                                        WITH CHECK (bucket_id = 'vendor-logos')
+--   vendor_product_images_public_insert  INSERT TO anon, authenticated
+--                                        WITH CHECK (bucket_id = 'vendor-product-images')
+--
+-- WHY IT IS A HOLE: the check tests ONLY the bucket name. Combined with the
+-- NEXT_PUBLIC_SUPABASE_ANON_KEY that ships in every page bundle, anyone could
+-- POST arbitrary files straight to Storage, bypassing every app-layer control
+-- (8 MB cap, PNG/JPEG/WebP allowlist, SVG block, honeypot, click-wrap gate).
+--
+-- WHY DROPPING IS SAFE (no legitimate flow breaks): every real upload path uses
+-- the service-role client, which BYPASSES RLS entirely, so it never needed
+-- these policies. Verified callers, all `getSupabaseClient({ admin: true })`:
+--   src/app/api/apply/submit/route.ts (public intake logo + product images)
+--   src/app/api/vendor/logo/route.ts, .../banner/route.ts, .../gallery/route.ts,
+--   .../certifications/route.ts, src/app/api/apply/my/media/route.ts,
+--   src/app/api/buyer/profile/logo/route.ts
+-- No `'use client'` component uploads to these buckets with the browser key.
+--
+-- The admin-only SELECT policies (vendor_logos_admin_select,
+-- vendor_product_images_admin_select) are LEFT INTACT. Buckets stay private.
+-- Idempotent.
+-- ============================================================================
+
+drop policy if exists vendor_logos_public_insert on storage.objects;
+drop policy if exists vendor_product_images_public_insert on storage.objects;

@@ -30,6 +30,17 @@ function getClientIP(req: NextRequest): string {
     'unknown';
 }
 
+/** Constant-time string compare. The Edge middleware runtime has no
+ *  node:crypto.timingSafeEqual, so this mirrors the byte-compare in
+ *  src/lib/http/cron-auth.ts (a length mismatch short-circuits — the
+ *  CRON_SECRET length is not sensitive). */
+function timingSafeEqualStr(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
   const entry = rateMap.get(ip);
@@ -82,8 +93,25 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Allow Vercel cron jobs
-  if (req.headers.get('authorization')?.includes('Bearer') && pathname.startsWith('/api/')) {
+  // Allow Vercel Cron through the bot/headless/rate-limit gates — but ONLY when
+  // it presents the CORRECT secret. Vercel Cron sends `Authorization: Bearer
+  // <CRON_SECRET>` on scheduled runs; a cron call is not a browser and would
+  // otherwise be blocked by the headless-browser check below (it sends no
+  // Accept-Language). The OLD code let ANY request whose Authorization header
+  // merely CONTAINED the word "Bearer" skip every control — so
+  // `Authorization: Bearer x` silently disabled rate-limiting AND the security
+  // headers for all public traffic (security audit 2026-07-28, H4). Now the
+  // header is compared constant-time against the real secret and the exemption
+  // is scoped to the cron path, so a bogus token falls through to the rate
+  // limiter and the security headers like any other request. The cron route
+  // handlers still enforce requireCronSecret themselves — this is only the edge
+  // pre-check that keeps a legitimate scheduled run from tripping the bot gates.
+  const cronSecret = process.env.CRON_SECRET;
+  if (
+    cronSecret &&
+    pathname.startsWith('/api/cron') &&
+    timingSafeEqualStr(req.headers.get('authorization') || '', `Bearer ${cronSecret}`)
+  ) {
     return NextResponse.next();
   }
 

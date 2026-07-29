@@ -8,8 +8,18 @@ import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { logAudit } from '@/lib/assistant/llm';
 import { isAdminRequest } from '@/lib/assistant/auth';
 import { dispatchRequestToVendors } from '@/lib/requests/dispatch';
+import { getSessionUser } from '@/lib/auth/require-user';
 
 export async function POST(req: Request) {
+  // Login wall (owner decision, 2026-07-23; mirrors /api/marketplace/request:19-20):
+  // submitting a buyer request now REQUIRES a signed-in account. This closes the
+  // old anonymous, free-typed-email hole where anyone could loop this endpoint
+  // and make the platform email real vendors from its own sending domain
+  // (security audit 2026-07-28, C2). The sibling marketplace RFQ route was
+  // walled for exactly this reason; this lane was missed.
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ ok: false, code: 'auth_required', message: 'Sign in to submit a request' }, { status: 401 });
+
   let body: Record<string, unknown>;
   try {
     body = await req.json();
@@ -19,15 +29,19 @@ export async function POST(req: Request) {
 
   const summary = (body.summary as Record<string, unknown>) || {};
   const contact = (body.contact as Record<string, unknown>) || {};
+  // Cap every free-text field: audit C2 flagged that these intake fields — unlike
+  // every other intake route — had no length bound, so a scripted caller could
+  // bloat the row unbounded.
+  const cap = (v: unknown, n: number) => String(v || '').slice(0, n);
 
   const row = {
-    category: String(summary.category || body.category || ''),
-    problem: String(summary.problem || ''),
-    quantity: String(summary.quantity || ''),
-    location: String(summary.location || ''),
-    deadline: String(summary.deadline || ''),
-    urgency: String(summary.urgency || ''),
-    budget_range: String(summary.budget_range || ''),
+    category: cap(summary.category || body.category, 120),
+    problem: cap(summary.problem, 4000),
+    quantity: cap(summary.quantity, 200),
+    location: cap(summary.location, 300),
+    deadline: cap(summary.deadline, 200),
+    urgency: cap(summary.urgency, 120),
+    budget_range: cap(summary.budget_range, 200),
     nda_required: Boolean(summary.nda_required),
     vendor_scope: ['local', 'global', 'both'].includes(String(body.vendor_scope))
       ? String(body.vendor_scope)
@@ -36,8 +50,11 @@ export async function POST(req: Request) {
     ai_summary: summary,
     missing_info: summary.missing_info || [],
     recommended_categories: summary.recommended_categories || [],
-    contact_email: String(contact.email || ''),
-    contact_name: String(contact.name || ''),
+    // Attribute the request to the authenticated account, NOT a free-typed value
+    // — the signed-in email is the source of truth, so a request can't be
+    // attributed to a spoofed address (audit C2).
+    contact_email: ((user.email || String(contact.email || '')).trim().toLowerCase()).slice(0, 200),
+    contact_name: cap(contact.name, 200),
     locale: body.locale === 'es' ? 'es' : 'en',
     status: 'request_received',
     pipeline_stage: 'new_request',
