@@ -123,7 +123,7 @@ const T: Record<Lang, Record<string, string>> = {
     submitReview: 'Submit review', saving: 'Saving…', cancel: 'Cancel', leaveReview: 'Leave a review',
     firstRunTitle: 'What do you need today?',
     firstRunCard1Title: 'I’m looking for a specific product or service',
-    firstRunCard1Hint: 'Search the marketplace — thousands of listings from verified Borderplex vendors.',
+    firstRunCard1Hint: 'Search the marketplace — products and services from verified Borderplex vendors.',
     firstRunCard1Cta: 'Search the marketplace',
     firstRunCard2Title: 'I need help figuring out what I need — let suppliers propose solutions',
     firstRunCard2Hint: 'Describe your problem once — NXT//LINK matches vendors and they quote you.',
@@ -193,7 +193,7 @@ const T: Record<Lang, Record<string, string>> = {
     submitReview: 'Enviar reseña', saving: 'Guardando…', cancel: 'Cancelar', leaveReview: 'Dejar una reseña',
     firstRunTitle: '¿Qué necesitas hoy?',
     firstRunCard1Title: 'Busco un producto o servicio específico',
-    firstRunCard1Hint: 'Explora el marketplace — miles de publicaciones de proveedores verificados del Borderplex.',
+    firstRunCard1Hint: 'Explora el marketplace — productos y servicios de proveedores verificados del Borderplex.',
     firstRunCard1Cta: 'Buscar en el marketplace',
     firstRunCard2Title: 'Necesito ayuda para saber qué necesito — que los proveedores propongan soluciones',
     firstRunCard2Hint: 'Describe tu problema una vez — NXT//LINK conecta proveedores y ellos te cotizan.',
@@ -823,6 +823,10 @@ function FirstRunPrompt({ t }: { t: Record<string, string> }) {
   return (
     <div className="by-firstrun">
       <h2>{t.firstRunTitle}</h2>
+      {/* Card 2 ("help me figure out what I need" -> /intake) removed
+          2026-07-28 per Cesar: open-ended requests belong later in the
+          journey, and with a young catalog they have nowhere to route.
+          Buyers land on the specific-search path only. */}
       <div className="by-frcards">
         <a href="/marketplace" className="by-frcard">
           <span className="by-fricon"><PackageSearch size={18} strokeWidth={1.75} /></span>
@@ -830,14 +834,7 @@ function FirstRunPrompt({ t }: { t: Record<string, string> }) {
           <p>{t.firstRunCard1Hint}</p>
           <span className="by-frcta">{t.firstRunCard1Cta} →</span>
         </a>
-        <a href="/intake" className="by-frcard">
-          <span className="by-fricon"><Lightbulb size={18} strokeWidth={1.75} /></span>
-          <b>{t.firstRunCard2Title}</b>
-          <p>{t.firstRunCard2Hint}</p>
-          <span className="by-frcta">{t.describeWhatYouNeed} →</span>
-        </a>
       </div>
-      <a href="/marketplace" className="by-frbrowse">{t.firstRunBrowseLink}</a>
     </div>
   );
 }
