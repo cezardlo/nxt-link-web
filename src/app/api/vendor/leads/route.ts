@@ -8,6 +8,7 @@ import { getVendorSession, getOrCreateVendorProfile } from '@/lib/vendor/auth';
 import { sendMail } from '@/lib/mail';
 import { maskContacts } from '@/lib/guard';
 import { resolveDisplayedProtectedUntil } from '@/lib/fees/engine';
+import { AUTO_VIEWABLE_STATUSES, canAutoMarkViewed } from '@/lib/vendor/leadStatus';
 
 const STATUSES = ['new', 'viewed', 'responded', 'won', 'lost', 'spam'];
 
@@ -25,6 +26,33 @@ export async function GET() {
 
   // Resolve listing names + commission amounts in bulk.
   const rows = leads || [];
+
+  // Auto-"viewed" signal (Slice RV, 2026-07-29): opening the leads inbox IS
+  // opening the request's detail — every field (message, quote form, chat)
+  // renders inline per lead on this page, there is no separate detail route.
+  // Guarded by canAutoMarkViewed: only 'new'/'sent_to_vendor' leads upgrade;
+  // the DB update itself re-checks status at write time (.in('status', ...)),
+  // so a lead a vendor just responded to in a concurrent request can never be
+  // pulled back down to 'viewed'. Best-effort — never breaks the lead list.
+  const toAutoView = rows.filter((l) => canAutoMarkViewed(l.status as string | null)).map((l) => l.id as string);
+  if (toAutoView.length) {
+    try {
+      const viewedAt = new Date().toISOString();
+      const { data: viewedRows } = await db.from('quote_requests')
+        .update({ status: 'viewed', updated_at: viewedAt })
+        .eq('vendor_id', vendor.id)
+        .in('id', toAutoView)
+        .in('status', AUTO_VIEWABLE_STATUSES as unknown as string[])
+        .select('id');
+      const viewedIds = new Set((viewedRows || []).map((r) => r.id as string));
+      for (const l of rows) {
+        if (viewedIds.has(l.id as string)) l.status = 'viewed';
+      }
+    } catch {
+      // Non-critical — the lead list still renders with its pre-fetch status.
+    }
+  }
+
   const pIds = Array.from(new Set(rows.map((l) => l.product_id).filter(Boolean)));
   const sIds = Array.from(new Set(rows.map((l) => l.service_id).filter(Boolean)));
   const ids = rows.map((l) => l.id);

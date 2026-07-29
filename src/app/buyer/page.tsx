@@ -9,11 +9,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
-import { PackageSearch, Inbox, Lightbulb, MessageCircle, Paperclip, Download, X } from 'lucide-react';
+import { PackageSearch, Inbox, Lightbulb, MessageCircle, Paperclip, Download, X, Eye } from 'lucide-react';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
 import { useChatPolling, resolvePendingMessage, dropPendingMessage, type ChatMessage } from '@/components/marketplace/useChatPolling';
 import { QuoteCompareTable, QUOTE_COMPARE_TABLE_CSS, type CompareLabels, type CompareTableRow } from '@/components/marketplace/QuoteCompareTable';
 import { groupQuotesForCompare, describeAcceptedDeal } from '@/lib/buyer/compare';
+import { computeRequestActivity, isRequestStale } from '@/lib/buyer/requestStats';
 import {
   ALLOWED_ATTACHMENT_EXTENSIONS, MAX_ATTACHMENTS_PER_MESSAGE, formatFileSize,
   validateAttachmentBatch,
@@ -42,6 +43,7 @@ interface QuoteRequest {
   quote_amount?: number | null; quote_currency?: string | null; quote_message?: string | null;
   quote_timeline?: string | null; quote_valid_until?: string | null; quoted_at?: string | null;
   buyer_decision?: string | null; reviewed?: boolean;
+  updated_at?: string | null;
   answers?: { request_type?: string; bundle?: boolean; source_request?: string | null; items?: Array<{ listing_id: string; kind: string; name: string; qty: number; note?: string }> } | null;
   pilots?: Array<{ kind: string; status: string; scheduled_for: string | null; location: string | null; scope: string | null; outcome: string | null }>;
 }
@@ -82,6 +84,14 @@ const T: Record<Lang, Record<string, string>> = {
     received: 'Received', request: 'Request', urgency: 'Urgency',
     serviceRequest: 'Service request', productRequest: 'Product request',
     statusSent: 'Sent', statusSeenByVendor: 'Seen by vendor', statusVendorResponding: 'Vendor responding', statusClosed: 'Closed',
+    // Request activity stats (Slice RV, 2026-07-29) — real computed numbers
+    // from the vendor leads this request already spawned, never invented.
+    sentToPrefix: 'Sent to', vendorSingular: 'vendor', vendorsPlural: 'vendors',
+    quoteReceivedWord: 'quote received', quotesReceivedWord: 'quotes received',
+    viewedByPrefix: 'Viewed by', lastActivityPrefix: 'Last activity',
+    relJustNow: 'just now', relMinAgo: '{n} min ago', relHourAgo: '{n}h ago', relDayAgo: '{n}d ago',
+    reviewingRequest: "We're still finding vendors for this request.",
+    noQuotesYetHint: "No quotes yet — we'll notify you as soon as one arrives.",
     bundlePrefix: 'Bundle', bundleItem: 'item', bundleItems: 'items',
     noMessagesVendor: 'No messages yet — ask the vendor anything.', messageVendorPh: 'Message the vendor…', send: 'Send', sendingMsg: 'Sending…',
     guardChat: 'For your protection, contact details are hidden in chat until you accept a quote — keep the conversation on NXT//LINK.',
@@ -152,6 +162,14 @@ const T: Record<Lang, Record<string, string>> = {
     received: 'Recibida', request: 'Solicitud', urgency: 'Urgencia',
     serviceRequest: 'Solicitud de servicio', productRequest: 'Solicitud de producto',
     statusSent: 'Enviada', statusSeenByVendor: 'Vista por el proveedor', statusVendorResponding: 'El proveedor está respondiendo', statusClosed: 'Cerrada',
+    // Estadísticas de actividad de la solicitud (Slice RV, 2026-07-29) — cifras
+    // reales calculadas de las solicitudes a proveedores ya generadas, nunca inventadas.
+    sentToPrefix: 'Enviada a', vendorSingular: 'proveedor', vendorsPlural: 'proveedores',
+    quoteReceivedWord: 'cotización recibida', quotesReceivedWord: 'cotizaciones recibidas',
+    viewedByPrefix: 'Vista por', lastActivityPrefix: 'Última actividad',
+    relJustNow: 'justo ahora', relMinAgo: 'hace {n} min', relHourAgo: 'hace {n} h', relDayAgo: 'hace {n} d',
+    reviewingRequest: 'Todavía estamos buscando proveedores para esta solicitud.',
+    noQuotesYetHint: 'Aún no hay cotizaciones — te avisaremos en cuanto llegue una.',
     bundlePrefix: 'Paquete', bundleItem: 'artículo', bundleItems: 'artículos',
     noMessagesVendor: 'Aún no hay mensajes — pregúntale algo al proveedor.', messageVendorPh: 'Mensaje para el proveedor…', send: 'Enviar', sendingMsg: 'Enviando…',
     guardChat: 'Para tu protección, los datos de contacto se ocultan en el chat hasta que aceptes una cotización — mantén la conversación en NXT//LINK.',
@@ -225,6 +243,22 @@ export default function BuyerDashboardPage() {
       if (days === 0) return `${t.validUntil} ${date} · ${t.expiresToday}`;
       return `${t.validUntil} ${date} · ${days} ${days === 1 ? t.dayLeft : t.daysLeft}`;
     } catch { return `${t.validUntil} ${s}`; }
+  };
+  // "2h ago" / "hace 2 h" — a real elapsed-time readout for the request
+  // activity line (Slice RV), fully bilingual via the T dict (not a
+  // hardcoded word swap — Spanish "hace" leads, English "ago" trails).
+  const fmtRelative = (s: string) => {
+    try {
+      const ms = Date.now() - new Date(s).getTime();
+      if (!Number.isFinite(ms) || ms < 0) return '';
+      const mins = Math.floor(ms / 60000);
+      if (mins < 1) return t.relJustNow;
+      if (mins < 60) return t.relMinAgo.replace('{n}', String(mins));
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return t.relHourAgo.replace('{n}', String(hrs));
+      const days = Math.floor(hrs / 24);
+      return t.relDayAgo.replace('{n}', String(days));
+    } catch { return ''; }
   };
 
   const [checking, setChecking] = useState(true);
@@ -569,7 +603,16 @@ export default function BuyerDashboardPage() {
                 <EmptyAction size="sm" icon={<Inbox strokeWidth={1.75} />} title={t.noRequestsYet} hint={t.noRequestsHint} actionLabel={t.describeWhatYouNeed} actionHref="/intake" />
               ) : (
                 <div className="by-list">
-                  {requests.map((r) => (
+                  {requests.map((r) => {
+                    // Slice RV: real, already-derivable activity for THIS
+                    // request — every quote_requests row the fan-out
+                    // (src/lib/requests/dispatch.ts) or a vendor's self-claim
+                    // (api/vendor/open-requests) created for it, matched by
+                    // the shared answers.source_request = this public_ref.
+                    // No new data source, no schema change.
+                    const activity = computeRequestActivity(r, quotes);
+                    const stale = isRequestStale(r, activity);
+                    return (
                     <div className="by-card" key={r.id}>
                       <div className="by-top">
                         <span className="by-status">{REQUEST_LABEL[r.status || ''] || r.status || t.received}</span>
@@ -582,8 +625,27 @@ export default function BuyerDashboardPage() {
                         {r.location && <span>{r.location}</span>}
                         {r.urgency && <span>{t.urgency}: {r.urgency}</span>}
                       </div>
+                      <div className="by-activity">
+                        <span className="by-actstat">
+                          {t.sentToPrefix} <b>{activity.sentTo}</b> {activity.sentTo === 1 ? t.vendorSingular : t.vendorsPlural}
+                        </span>
+                        <span className="by-actstat">
+                          <b>{activity.quotesReceived}</b> {activity.quotesReceived === 1 ? t.quoteReceivedWord : t.quotesReceivedWord}
+                        </span>
+                        {activity.viewedBy > 0 && (
+                          <span className="by-actstat">
+                            <Eye size={12} strokeWidth={2} aria-hidden="true" /> {t.viewedByPrefix} <b>{activity.viewedBy}</b>
+                          </span>
+                        )}
+                        {activity.lastActivityAt && (
+                          <span className="by-actstat by-acttime">{t.lastActivityPrefix} · {fmtRelative(activity.lastActivityAt)}</span>
+                        )}
+                      </div>
+                      {activity.sentTo === 0 && <p className="by-actnote">{t.reviewingRequest}</p>}
+                      {stale && <p className="by-actnote">{t.noQuotesYetHint}</p>}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </section>
@@ -646,6 +708,12 @@ export default function BuyerDashboardPage() {
                         </div>
                       )}
                       {q.message && <p className="by-msg">{q.message}</p>}
+                      {/* Slice RV: same calm, honest "no quotes yet" hint as the
+                          intake requests above — no SLA claim, just real elapsed
+                          time vs. whether a quote actually arrived. */}
+                      {q.quote_amount == null && isRequestStale({ created_at: q.created_at }, { quotesReceived: 0 }) && (
+                        <p className="by-actnote">{t.noQuotesYetHint}</p>
+                      )}
                       {/* Message the vendor — inside NXT//LINK */}
                       <div className="by-chat">
                         {chatFor === q.id ? (
@@ -913,6 +981,13 @@ const CSS = `
 .by-bundle li em{font-style:normal;color:var(--spec-text-2nd,#615F72);}
 .by-bqty{display:inline-block;min-width:30px;font-weight:700;color:var(--spec-violet-deep,#4A3DB0);}
 .by-meta{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--spec-text-2nd,#615F72);margin-top:10px;}
+/* Slice RV — request activity stats (real computed numbers, big-value/small-label) */
+.by-activity{display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--spec-border,#E2DFEC);font-size:12.5px;color:var(--spec-text-2nd,#615F72);}
+.by-actstat{display:inline-flex;align-items:center;gap:4px;}
+.by-actstat b{color:var(--spec-violet-deep,#4A3DB0);font-weight:700;font-variant-numeric:tabular-nums;}
+.by-actstat svg{color:#706D88;flex-shrink:0;}
+.by-acttime{color:#706D88;}
+.by-actnote{margin:9px 0 0;font-size:12.5px;color:var(--spec-text-2nd,#615F72);line-height:1.5;}
 .by-savedgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;}
 .by-saveditem{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:12px;padding:11px 14px;color:var(--spec-ink,#141320);text-decoration:none;font-size:13.5px;}
 .by-saveditem:hover{border-color:var(--spec-violet,#6C5CE0);}
