@@ -84,3 +84,40 @@ test('safeRelativePath falls back when the value is missing', () => {
   assert.equal(safeRelativePath(null, '/login'), '/login');
   assert.equal(safeRelativePath(undefined, '/login'), '/login');
 });
+
+// H1 (full-site security audit 2026-07-28): a raw control character slipped past
+// the old shape check because [^/] matches it, and the WHATWG URL parser strips
+// tab/LF/CR from a value before parsing — so slash-newline-slash-evil.com
+// resolved to the protocol-relative, cross-origin //evil.com. URLSearchParams
+// .get() decodes %0A/%09/%0D to the raw char before safeRelativePath runs, so
+// these raw cases cover the percent-encoded vectors too. Control chars and the
+// backslash are built with String.fromCharCode so the test source stays plain
+// ASCII (no fragile escape literals).
+const LF = String.fromCharCode(10);
+const TAB = String.fromCharCode(9);
+const CR = String.fromCharCode(13);
+const NUL = String.fromCharCode(0);
+const DEL = String.fromCharCode(127);
+const BSL = String.fromCharCode(92);
+test('safeRelativePath rejects a raw newline (open-redirect bypass)', () => {
+  assert.equal(safeRelativePath('/' + LF + '/evil.com', '/login'), '/login');
+});
+test('safeRelativePath rejects a raw tab (open-redirect bypass)', () => {
+  assert.equal(safeRelativePath('/' + TAB + '/evil.com', '/login'), '/login');
+});
+test('safeRelativePath rejects a raw carriage return (open-redirect bypass)', () => {
+  assert.equal(safeRelativePath('/' + CR + '/evil.com', '/login'), '/login');
+});
+test('safeRelativePath rejects control chars (NUL, DEL) anywhere in the value', () => {
+  assert.equal(safeRelativePath('/' + NUL + '/evil.com', '/login'), '/login');
+  assert.equal(safeRelativePath('/vendor/portal' + LF, '/login'), '/login');
+  assert.equal(safeRelativePath('/path' + DEL, '/login'), '/login');
+});
+test('safeRelativePath still rejects protocol-relative and backslash, incl. combined with a control char', () => {
+  assert.equal(safeRelativePath('//evil.com', '/login'), '/login');
+  assert.equal(safeRelativePath('/' + BSL + 'evil.com', '/login'), '/login');
+  assert.equal(safeRelativePath('/' + TAB + '/' + BSL + '//evil.com', '/login'), '/login');
+});
+test('safeRelativePath still accepts a legit path with percent-encoding and a query string', () => {
+  assert.equal(safeRelativePath('/marketplace?q=fork%20lift&dept=warehouse', '/login'), '/marketplace?q=fork%20lift&dept=warehouse');
+});

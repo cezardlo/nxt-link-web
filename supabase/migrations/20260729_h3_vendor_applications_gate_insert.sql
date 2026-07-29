@@ -1,0 +1,38 @@
+-- ============================================================================
+-- NXT//LINK — security hardening (full-site audit 2026-07-28, finding H3)
+-- Apply order: 2 of 3 for 2026-07-29.
+--
+-- WHAT: drop the two direct-INSERT policies on public.vendor_applications.
+--
+--   vendor_applications_anon_insert           INSERT TO anon
+--                                             WITH CHECK (auth_id IS NULL)
+--   vendor_applications_authenticated_insert  INSERT TO authenticated
+--                                 WITH CHECK (auth_id IS NULL OR auth_id = auth.uid())
+--
+-- WHY IT IS A HOLE: these let the anon/authenticated roles INSERT straight into
+-- the table via PostgREST using the public anon key, which bypasses the
+-- fail-closed click-wrap gate + recordLegalAcceptance, the category allowlist,
+-- the field-length caps, the honeypot/min-fill anti-bot, and the email-format
+-- check that /api/apply/submit enforces before it writes. The click-wrap
+-- acceptance row is what makes the vendor terms enforceable, so a DB-layer
+-- insert is a compliance hole as much as a spam one.
+--
+-- WHY DROPPING IS SAFE (no legitimate lane breaks): the ONLY writer that INSERTs
+-- into vendor_applications is src/app/api/apply/submit/route.ts:113, using
+-- `getSupabaseClient({ admin: true })` (service role) — which BYPASSES RLS.
+-- Every other reference (src/lib/apply/auth.ts, src/app/api/apply/my/*,
+-- src/app/api/admin/vendor-applications, account deletion, auth/callback) also
+-- uses the service-role client and is SELECT/UPDATE/DELETE, not INSERT. No
+-- `'use client'` code inserts here with the browser key. The invited + organic
+-- VENDOR SIGNUP lanes create rows in vendor_profiles, NOT vendor_applications,
+-- so they are unaffected.
+--
+-- LEFT INTACT: vendor_applications_owner_select, vendor_applications_owner_update
+-- (a signed-in applicant may still read/edit their OWN row), the admin policies,
+-- and vendor_applications_service_all. The guard_vendor_application_update()
+-- trigger still prevents non-admins from touching status/admin_notes/approved_at.
+-- Idempotent.
+-- ============================================================================
+
+drop policy if exists vendor_applications_anon_insert on public.vendor_applications;
+drop policy if exists vendor_applications_authenticated_insert on public.vendor_applications;

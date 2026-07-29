@@ -212,7 +212,16 @@ export function bilingualCopy(msg: { en: string; es: string }, first: 'en' | 'es
  */
 export function safeRelativePath(value: string | null | undefined, fallback: string): string {
   if (!value) return fallback;
-  if (value.includes('\\')) return fallback; // browsers can treat \ as / — same-shaped attack as //
+  // Reject ASCII control chars (incl. tab U+0009, LF U+000A, CR U+000D), DEL, and
+  // backslash BEFORE the shape check. A raw control char slips past `/^\/[^/]/`
+  // because `[^/]` matches it — and the WHATWG URL parser (and every browser)
+  // STRIPS tab/LF/CR from a value before parsing, so `/\n/evil.com` becomes the
+  // protocol-relative, cross-origin `//evil.com` once a caller does
+  // `new URL(value, origin)`. `URLSearchParams.get()` has already decoded any
+  // `%0A`/`%09`/`%0D` to the raw char by the time we run, so this also covers the
+  // percent-encoded vectors. Backslash is rejected for the same `\ → /` reason.
+  // (Open-redirect hardening — security audit 2026-07-28, H1.)
+  if (/[\u0000-\u001F\u007F\\]/.test(value)) return fallback;
   if (!/^\/[^/]/.test(value)) return fallback; // single leading slash only, not protocol-relative
   return value;
 }
