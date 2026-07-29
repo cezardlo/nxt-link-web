@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
-import { Handshake, Eye, Check, PartyPopper, Sparkles, Laptop, X } from 'lucide-react';
+import { Handshake, Eye, Check, PartyPopper, Laptop, X } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import CategoryPicker from '@/components/CategoryPicker';
 import LanguageToggle, { useLang } from '@/components/LanguageToggle';
@@ -61,17 +61,6 @@ const TR: Record<string, { en: string; es: string }> = {
   rv_cta: { en: 'Speed it up — finish your review application (2 min) →', es: 'Acelera la revisión — completa tu solicitud (2 min) →' },
   rv_cta_hint: { en: 'We pre-filled it with what you already told us — never twice.', es: 'Ya la prellenamos con lo que nos dijiste — nunca dos veces.' },
   live_link: { en: 'See how buyers see it →', es: 'Mira cómo lo ven los compradores →' },
-  cx_start: { en: 'Set up with NXT AI — answer 2 questions, I’ll draft it all', es: 'Configura con NXT AI — responde 2 preguntas y lo redacto todo' },
-  cx_title: { en: 'NXT AI · Set up your profile', es: 'NXT AI · Configura tu perfil' },
-  cx_p1: { en: 'Answer two quick things and I’ll draft your whole profile — you can edit anything after.', es: 'Responde dos cosas rápidas y redacto tu perfil completo — puedes editar todo después.' },
-  cx_name_q: { en: 'Your company name', es: 'El nombre de tu empresa' },
-  cx_do_q: { en: 'In one sentence, what do you do?', es: 'En una frase, ¿qué haces?' },
-  cx_draft_btn: { en: 'Draft my profile →', es: 'Redactar mi perfil →' },
-  cx_drafting: { en: 'Drafting…', es: 'Redactando…' },
-  cx_p2: { en: 'Here’s what I drafted. Use it as a starting point — edit anything after.', es: 'Esto es lo que redacté. Úsalo como punto de partida — edita lo que quieras.' },
-  cx_use: { en: 'Use this — set up my profile', es: 'Usar esto — configurar mi perfil' },
-  cx_setting: { en: 'Setting up…', es: 'Configurando…' },
-  cx_retry: { en: 'Try again', es: 'Intentar de nuevo' },
   sec_company: { en: 'Company', es: 'Empresa' },
   sec_industry: { en: 'Industries your clients are in', es: 'Industrias de tus clientes' },
   sec_industry_hint: { en: 'Buyers filter by their own industry — pick every industry you serve.', es: 'Los compradores filtran por su industria — elige todas las que atiendes.' },
@@ -93,8 +82,6 @@ const TR: Record<string, { en: string; es: string }> = {
   f_website: { en: 'Website', es: 'Sitio web' },
   f_city: { en: 'City', es: 'Ciudad' },
   f_about: { en: 'About your company', es: 'Acerca de tu empresa' },
-  write_me: { en: 'Write it for me', es: 'Escríbelo por mí' },
-  writing: { en: 'Writing…', es: 'Escribiendo…' },
   save_profile: { en: 'Save profile', es: 'Guardar perfil' },
   saving_btn: { en: 'Saving…', es: 'Guardando…' },
 };
@@ -151,13 +138,7 @@ export default function VendorPortalPage() {
   const [catFam, setCatFam] = useState<Record<string, string>>({});
   const [savedAt, setSavedAt] = useState('');
   const [autosaving, setAutosaving] = useState(false);
-  const [genBusy, setGenBusy] = useState(false);
   const firstEdit = useRef(true);
-  const [cxOpen, setCxOpen] = useState(false);
-  const [cxName, setCxName] = useState('');
-  const [cxSummary, setCxSummary] = useState('');
-  const [cxBusy, setCxBusy] = useState(false);
-  const [cxDraft, setCxDraft] = useState<{ description: string; tagline: string; categories: string[]; offerings: Array<{ kind: 'product' | 'service'; name: string; category: string }> } | null>(null);
   // Shared language state — the one LanguageToggle + `nxt_lang` key app-wide.
   const [lang, switchLang] = useLang('en');
   const t = (k: string) => (TR[k] ? (lang === 'es' ? TR[k].es : TR[k].en) : k);
@@ -241,54 +222,6 @@ export default function VendorPortalPage() {
     JSON.stringify(vendor?.categories), JSON.stringify(vendor?.service_areas),
     JSON.stringify(vendor?.industries), JSON.stringify(vendor?.client_types),
     JSON.stringify(vendor?.achievements)]);
-
-  // AI: draft a company description from what we already know. Vendor edits/keeps it.
-  async function generateDescription() {
-    if (!vendor) return;
-    setGenBusy(true); setMsg('');
-    try {
-      const res = await fetch('/api/vendor/profile/describe', { method: 'POST' });
-      const data = await res.json();
-      if (data.ok && data.description) { set('description', data.description); setMsg('Draft description added — edit it to sound like you, then it auto-saves.'); }
-      else setMsg(data.message || 'Could not draft a description');
-    } catch { setMsg('Could not draft a description'); }
-    setGenBusy(false);
-  }
-
-  // NXT AI Onboarding Concierge: name + one sentence → full profile draft.
-  function openConcierge() {
-    setCxName(vendor && vendor.company_name !== 'New company' ? vendor.company_name : '');
-    setCxSummary(''); setCxDraft(null); setCxOpen(true);
-  }
-  async function runConcierge() {
-    const summary = cxSummary.trim(); if (!summary || cxBusy) return;
-    setCxBusy(true);
-    try {
-      const r = await fetch('/api/vendor/onboard/concierge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company_name: cxName.trim(), summary }) });
-      const j = await r.json();
-      if (j.ok) setCxDraft({ description: j.description, tagline: j.tagline, categories: j.categories || [], offerings: j.offerings || [] });
-      else setMsg(j.message || 'NXT AI could not draft that — try adding a bit more detail.');
-    } catch { setMsg('NXT AI could not draft that — try again.'); }
-    setCxBusy(false);
-  }
-  async function applyConcierge() {
-    if (!vendor || !cxDraft) return;
-    setCxBusy(true);
-    const merge = (a: string[], b: string[]) => Array.from(new Set([...(a || []), ...b]));
-    const nextName = cxName.trim() && vendor.company_name === 'New company' ? cxName.trim() : vendor.company_name;
-    const updated = { ...vendor, company_name: nextName, description: cxDraft.description, tagline: cxDraft.tagline, categories: merge(vendor.categories, cxDraft.categories) };
-    setVendor(updated);
-    await fetch('/api/vendor/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ company_name: updated.company_name, tagline: updated.tagline, description: updated.description, categories: updated.categories }) }).catch(() => {});
-    setSavedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    for (const o of cxDraft.offerings) {
-      await fetch('/api/vendor/listings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: o.kind, name: o.name, category: o.category }) }).catch(() => {});
-    }
-    firstEdit.current = true; // don't let the apply trigger a redundant autosave
-    setCxBusy(false); setCxOpen(false); setCxDraft(null);
-    setMsg('✦ NXT AI set up your profile. Review each section, add your logo, then add prices to your offerings to go live.');
-    load();
-  }
 
   async function addVideo() {
     if (!videoUrl.trim()) return;
@@ -514,39 +447,6 @@ export default function VendorPortalPage() {
         <div className="vp-vprop"><Handshake size={18} strokeWidth={1.75} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2, color: 'var(--green)' }} /> {t('vprop')}</div>
         {msg && <div className="vp-msg">{msg}</div>}
 
-        {cxOpen && (
-          <section className="vp-cx">
-            <div className="vp-cxhd"><b className="vp-inlineicon"><Sparkles size={16} strokeWidth={1.75} aria-hidden="true" />{t('cx_title')}</b><button className="vp-cxx" onClick={() => setCxOpen(false)} aria-label={lang === 'es' ? 'Cerrar' : 'Close'}><X size={16} strokeWidth={2} aria-hidden="true" /></button></div>
-            {!cxDraft ? (
-              <>
-                <p className="vp-cxp">{t('cx_p1')}</p>
-                <label className="vp-field"><span>{t('cx_name_q')}</span>
-                  <input value={cxName} onChange={(e) => setCxName(e.target.value)} placeholder="El Paso Forklift Solutions" />
-                </label>
-                <label className="vp-field" style={{ marginTop: 12 }}><span>{t('cx_do_q')}</span>
-                  <input value={cxSummary} onChange={(e) => setCxSummary(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && runConcierge()} placeholder={lang === 'es' ? 'Vendemos, rentamos y reparamos montacargas en El Paso y Juárez.' : 'We sell, rent, and repair forklifts in El Paso and Juárez.'} />
-                </label>
-                <button className="vp-btn" style={{ marginTop: 16 }} disabled={cxBusy || !cxSummary.trim()} onClick={runConcierge}>{cxBusy ? t('cx_drafting') : t('cx_draft_btn')}</button>
-              </>
-            ) : (
-              <>
-                <p className="vp-cxp">{t('cx_p2')}</p>
-                <div className="vp-cxprev">
-                  {cxDraft.tagline && <div className="vp-cxrow"><span>Tagline</span><b>{cxDraft.tagline}</b></div>}
-                  <div className="vp-cxrow"><span>About</span><p>{cxDraft.description}</p></div>
-                  {cxDraft.categories.length > 0 && <div className="vp-cxrow"><span>Categories</span><div className="vp-chips">{cxDraft.categories.map((c) => <span key={c} className="vp-chip on">{c}</span>)}</div></div>}
-                  {cxDraft.offerings.length > 0 && <div className="vp-cxrow"><span>Offerings</span><ul className="vp-cxoff">{cxDraft.offerings.map((o, i) => <li key={i}><em>{o.kind}</em> {o.name}{o.category ? ` · ${o.category}` : ''}</li>)}</ul></div>}
-                </div>
-                <div className="vp-cxacts">
-                  <button className="vp-btn" disabled={cxBusy} onClick={applyConcierge}>{cxBusy ? t('cx_setting') : t('cx_use')}</button>
-                  <button className="vp-signout" disabled={cxBusy} onClick={() => setCxDraft(null)}>{t('cx_retry')}</button>
-                </div>
-                {cxDraft.offerings.length > 0 && <p className="vp-hint" style={{ marginTop: 12, marginBottom: 0 }}>Offerings are added as drafts — open Listings to add prices and publish.</p>}
-              </>
-            )}
-          </section>
-        )}
-
         {inReview && (
           <section className="vp-review">
             <b>{t('rv_title')}</b>
@@ -564,12 +464,7 @@ export default function VendorPortalPage() {
         {pct === 100 ? (
           <div className="vp-live"><span className="vp-inlineicon"><PartyPopper size={16} strokeWidth={1.75} aria-hidden="true" />{t('live')}</span> <a href={`/marketplace/vendor/${vendor.id}`} target="_blank" rel="noreferrer">{t('live_link')}</a></div>
         ) : (
-          <>
-            {!cxOpen && (
-              <button className="vp-cxstart" onClick={openConcierge}><Sparkles size={14} strokeWidth={1.75} aria-hidden="true" />{t('cx_start')}</button>
-            )}
-            <ProfileStrengthMeter input={meterInput} lang={lang} links={{ listing: '/vendor/listings' }} />
-          </>
+          <ProfileStrengthMeter input={meterInput} lang={lang} links={{ listing: '/vendor/listings' }} />
         )}
 
         {agreement && !agreement.accepted && (
@@ -635,12 +530,11 @@ export default function VendorPortalPage() {
             <span className="vp-fieldlbl">
               <span>{t('f_about')}</span>
               <span className="vp-fieldright">
-                <button type="button" className="vp-genbtn vp-inlineicon" disabled={genBusy} onClick={generateDescription}><Sparkles size={12} strokeWidth={1.75} aria-hidden="true" />{genBusy ? t('writing') : t('write_me')}</button>
                 <em className="vp-count">{(vendor.description || '').trim().length} chars</em>
               </span>
             </span>
             <textarea rows={4} value={vendor.description || ''} onChange={(e) => set('description', e.target.value)} />
-            <span className="vp-why">{(vendor.description || '').trim().length < 40 ? 'A clear 2–3 sentence description helps buyers trust you — aim for 40+ characters. No time? Tap “Write it for me”.' : 'Looks good. Say what you do, who you serve, and what makes you different.'}</span>
+            <span className="vp-why">{(vendor.description || '').trim().length < 40 ? 'A clear 2–3 sentence description helps buyers trust you — aim for 40+ characters.' : 'Looks good. Say what you do, who you serve, and what makes you different.'}</span>
           </label>
         </section>
 
@@ -949,29 +843,10 @@ const CSS = `
 .vp-fieldright{display:flex;align-items:center;gap:12px;flex-shrink:0;}
 .vp-count{font-style:normal;font-size:11.5px;color:#706D88;font-weight:500;flex-shrink:0;}
 .vp-why{font-size:12px;color:var(--muted);margin-top:6px;font-weight:300;}
-.vp-genbtn{font-family:var(--sans);font-size:11.5px;font-weight:700;color:var(--p3);background:var(--pbg);border:1px solid rgba(108,92,224,.3);border-radius:99px;padding:5px 11px;cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
-.vp-genbtn:hover{background:rgba(108,92,224,.18);}
-.vp-genbtn:disabled{opacity:.6;cursor:default;}
 .vp-titleactions{display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap;}
 .vp-autosave{font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap;}
 .vp-vprop{background:linear-gradient(120deg,rgba(47,158,106,.08),rgba(108,92,224,.05));border:1px solid rgba(47,158,106,.22);border-radius:13px;padding:13px 16px;margin-bottom:20px;font-size:13.5px;line-height:1.6;color:var(--ink2);}
 .vp-lblhint{font-weight:500;letter-spacing:0;text-transform:none;color:var(--muted);font-size:11.5px;margin-left:6px;}
-.vp-cxstart{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;font-family:var(--sans);font-size:13.5px;font-weight:700;color:var(--p3);background:rgba(108,92,224,.1);border:1px dashed rgba(108,92,224,.4);border-radius:12px;padding:12px 14px;margin-bottom:16px;cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
-.vp-cxstart:hover{background:rgba(108,92,224,.18);}
-.vp-cx{background:linear-gradient(160deg,rgba(108,92,224,.1),rgba(47,158,106,.04)),var(--surf);border:1px solid rgba(108,92,224,.3);border-radius:18px;padding:22px 24px;margin-bottom:22px;}
-.vp-cxhd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
-.vp-cxhd b{font-size:16px;font-weight:800;}
-.vp-cxx{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;}
-.vp-cxp{font-size:13.5px;color:var(--ink2);margin:0 0 16px;line-height:1.55;}
-.vp-cxprev{background:var(--bg);border:1px solid var(--line);border-radius:13px;padding:16px;display:flex;flex-direction:column;gap:14px;}
-.vp-cxrow{display:flex;flex-direction:column;gap:6px;}
-.vp-cxrow>span{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--p2);}
-.vp-cxrow b{font-size:14.5px;}
-.vp-cxrow p{font-size:14px;color:var(--ink2);line-height:1.6;margin:0;}
-.vp-cxoff{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px;}
-.vp-cxoff li{font-size:13.5px;color:var(--ink2);}
-.vp-cxoff em{font-style:normal;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--p3);background:var(--pbg);padding:2px 7px;border-radius:99px;margin-right:6px;}
-.vp-cxacts{display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap;}
 .vp-card{background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:26px;margin-bottom:20px;backdrop-filter:blur(10px);}
 .vp-lbl{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--p2);margin-bottom:14px;}
 .vp-hint{color:var(--muted);font-size:13.5px;margin:0 0 16px;font-weight:300;}
