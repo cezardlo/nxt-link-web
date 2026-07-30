@@ -74,7 +74,28 @@ export async function GET(req: Request) {
   const maskNames = opp?.buyer_decision !== 'accepted';
   const attachmentsByMessage = await loadMessageAttachments(db, messages.map((m) => m.id as string), { maskNames });
   const withAttachments = messages.map((m) => ({ ...m, attachments: attachmentsByMessage[m.id as string] || [] }));
-  return NextResponse.json({ ok: true, messages: withAttachments });
+
+  // R4 offer-in-chat: MY proposal revision history for this lead (the vendor
+  // already has quote_amount/buyer_decision/commission from GET /api/vendor/
+  // leads — this only adds what that route doesn't carry: the full
+  // revision-by-revision history, and whether the BUYER has read the "you
+  // got a quote" notification (the real "Seen" signal — see
+  // src/lib/messages/offerTimeline.ts). Drafts excluded: a vendor's own
+  // in-progress WIP is never shown as a sent offer, even in their own thread.
+  const [{ data: proposals }, { data: quoteNotifs }] = await Promise.all([
+    db.from('quote_proposals')
+      .select('id, revision, status, total, currency, lead_time, valid_until, payment_terms, warranty, notes, submitted_at, created_at')
+      .eq('quote_request_id', qrId).order('revision', { ascending: true }).limit(50),
+    db.from('notifications').select('read_at').eq('quote_request_id', qrId).eq('recipient', 'buyer').eq('type', 'quote').limit(20),
+  ]);
+  const buyerHasSeenOffer = (quoteNotifs || []).some((n) => !!n.read_at);
+
+  return NextResponse.json({
+    ok: true,
+    messages: withAttachments,
+    proposals: proposals || [],
+    buyer_has_seen_offer: buyerHasSeenOffer,
+  });
 }
 
 export async function POST(req: Request) {

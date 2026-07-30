@@ -68,11 +68,52 @@ export async function GET(req: Request) {
   // FIX I-2: attachment file NAMES get the same pre-acceptance masking as
   // message bodies — mirrors the exact `buyer_decision !== 'accepted'` check
   // the POST handlers use for text.
-  const { data: opp } = await db.from('quote_requests').select('buyer_decision').eq('id', qrId).maybeSingle();
+  const { data: opp } = await db.from('quote_requests')
+    .select('buyer_decision, quote_amount, quote_currency, quote_timeline, quote_valid_until, quote_payment_terms, quote_warranty, quote_message, quoted_at, created_at')
+    .eq('id', qrId).maybeSingle();
   const maskNames = opp?.buyer_decision !== 'accepted';
   const attachmentsByMessage = await loadMessageAttachments(db, messages.map((m) => m.id as string), { maskNames });
   const withAttachments = messages.map((m) => ({ ...m, attachments: attachmentsByMessage[m.id as string] || [] }));
-  return NextResponse.json({ ok: true, messages: withAttachments });
+
+  // R4 offer-in-chat: this thread's structured proposal history (drafts
+  // excluded — a vendor's private WIP is never a buyer-visible offer card),
+  // plus whether the buyer has read the "you got a quote" notification (the
+  // real, existing signal behind the "Seen" status — same one the dashboard's
+  // unreadChatIds hint already reads, just for type:'quote' instead of
+  // 'message'). See src/lib/messages/offerTimeline.ts for how these combine.
+  const [{ data: proposals }, { data: quoteNotifs }, { data: commission }] = await Promise.all([
+    db.from('quote_proposals')
+      .select('id, revision, status, total, currency, lead_time, valid_until, payment_terms, warranty, notes, submitted_at, created_at')
+      .eq('quote_request_id', qrId).order('revision', { ascending: true }).limit(50),
+    db.from('notifications').select('read_at').eq('quote_request_id', qrId).eq('recipient', 'buyer').eq('type', 'quote').limit(20),
+    db.from('commissions').select('invoice_number, status').eq('quote_request_id', qrId).maybeSingle(),
+  ]);
+  const buyerHasSeenOffer = (quoteNotifs || []).some((n) => !!n.read_at);
+
+  return NextResponse.json({
+    ok: true,
+    messages: withAttachments,
+    proposals: proposals || [],
+    offer: opp
+      ? {
+          buyer_decision: opp.buyer_decision ?? null,
+          buyer_has_seen_offer: buyerHasSeenOffer,
+          commission: commission ? { invoice_number: commission.invoice_number ?? null, status: commission.status ?? null } : null,
+          legacy: {
+            id: qrId,
+            quote_amount: opp.quote_amount ?? null,
+            quote_currency: opp.quote_currency ?? null,
+            quote_timeline: opp.quote_timeline ?? null,
+            quote_valid_until: opp.quote_valid_until ?? null,
+            quote_payment_terms: opp.quote_payment_terms ?? null,
+            quote_warranty: opp.quote_warranty ?? null,
+            quote_message: opp.quote_message ?? null,
+            quoted_at: opp.quoted_at ?? null,
+            created_at: opp.created_at,
+          },
+        }
+      : null,
+  });
 }
 
 export async function POST(req: Request) {
