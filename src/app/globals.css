@@ -43,6 +43,14 @@
   --spec-text-body-sm: 14px;
   --spec-text-caption: 12px;
 
+  /* Display-tier font alias (nxtlink-design kit naming: --font-display,
+     tokens/fonts.css). Space Grotesk is already loaded app-wide via
+     next/font/google in src/app/layout.tsx as --font-space-grotesk; this
+     token gives scoped page CSS one name to reach it instead of repeating
+     the fallback stack. Use on Display/H1/H2 headings only — H3 and below
+     stay on each page's IBM Plex Sans variable. */
+  --font-display: var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
+
   /* Letter-spacing — one value for every uppercase eyebrow/kicker/label,
      one for headings H1-H3 (Display/hero keeps its own -.03em treatment). */
   --spec-tracking-eyebrow: 0.12em;
@@ -64,6 +72,24 @@
 
 @media (max-width: 760px) {
   :root { --spec-space-section: 56px; }
+}
+
+/* --- Additive semantic tokens (source: design kit tokens/colors.css,
+   C:\Users\Cesar\.agents\skills\nxtlink-design, 2026-07-30). Values are
+   IDENTICAL to the kit — verified against the live --spec-* palette above,
+   the kit only extends it. Purely additive: nothing here overrides an
+   existing token, and no page is swept to use these yet — that is a future
+   consistency pass. */
+:root {
+  --spec-info:          #3E6FD0;
+  --spec-active:        #0E9C8A;
+  --spec-success-bg:    #E7F5EE;
+  --spec-warning-bg:    #FBF2E1;
+  --spec-error-bg:      #FBECEB;
+  --spec-info-bg:       #E9EFFB;
+  --spec-violet-bg:     #EDEAFB;
+  --spec-active-bg:     #E2F5F2;
+  --spec-border-strong: #D3CEE3;
 }
 
 /* --- NXT LINK Design System v4 --- */
