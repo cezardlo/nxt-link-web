@@ -9,15 +9,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
-import { PackageSearch, Inbox, Lightbulb, MessageCircle, Paperclip, Download, X, Store, Eye } from 'lucide-react';
+import { PackageSearch, Inbox, Lightbulb, MessageCircle, Paperclip, Download, X, Store, Eye, Bell } from 'lucide-react';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
 import { useChatPolling, resolvePendingMessage, dropPendingMessage, type ChatMessage } from '@/components/marketplace/useChatPolling';
+import { useNotificationPolling } from '@/components/marketplace/useNotificationPolling';
+import { RequestAttachmentUpload, REQUEST_ATTACHMENTS_CSS } from '@/components/marketplace/RequestAttachments';
+import { MAX_REQUEST_ATTACHMENTS_PER_REQUEST, type RequestAttachment } from '@/lib/requests/attachments';
 import { type CompareTableRow } from '@/components/marketplace/QuoteCompareTable';
 import { QuoteCompareDeck, QUOTE_COMPARE_DECK_CSS, type DeckLabels } from '@/components/marketplace/QuoteCompareDeck';
 import { OfferCard, OFFER_CARD_CSS, type OfferCardLabels, OFFER_CARD_LABELS_ES, DEFAULT_OFFER_CARD_LABELS } from '@/components/marketplace/OfferCard';
 import { DealTracker, DEAL_TRACKER_CSS, type DealTrackerLabels, DEAL_TRACKER_LABELS_ES, DEFAULT_DEAL_TRACKER_LABELS } from '@/components/marketplace/DealTracker';
 import { groupQuotesForCompare, describeAcceptedDeal } from '@/lib/buyer/compare';
-import { computeRequestActivity, isRequestStale, linkedQuotes, deriveRequestStage, type RequestStage } from '@/lib/buyer/requestStats';
+import { computeRequestActivity, isRequestStale, isStaleWithNoResponse, linkedQuotes, deriveRequestStage, type RequestStage } from '@/lib/buyer/requestStats';
 import { buildOfferTimeline, offerRevisionsForThread, type OfferRevisionInput, type LegacyOfferSource } from '@/lib/messages/offerTimeline';
 import { buildThreadTimeline, latestOffer } from '@/lib/messages/threadTimeline';
 import { deriveDealMilestone } from '@/lib/messages/dealTracker';
@@ -53,6 +56,7 @@ interface QuoteRequest {
   updated_at?: string | null;
   answers?: { request_type?: string; bundle?: boolean; source_request?: string | null; items?: Array<{ listing_id: string; kind: string; name: string; qty: number; note?: string }> } | null;
   pilots?: Array<{ kind: string; status: string; scheduled_for: string | null; location: string | null; scope: string | null; outcome: string | null }>;
+  attachments?: RequestAttachment[];
 }
 interface DashboardData {
   signed_in: boolean; email_verified?: boolean; email?: string | null;
@@ -121,6 +125,22 @@ const T: Record<Lang, Record<string, string>> = {
     file_too_large: 'That file is too large — max 10 MB per file.',
     file_type_not_allowed: 'That file type isn’t supported. Allowed: PDF, PNG, JPG, WEBP, XLSX, CSV, DWG, DXF.',
     attachSendError: 'Could not send the attachment — please try again.',
+    // Request attachments (Slice R5, 2026-07-30) — distinct from the chat
+    // attachment strings above (different caps: 4 MB/file, 8 files/request).
+    reqAttachHeading: 'Attachments', reqAttachEmpty: 'No files attached yet.',
+    reqAttachButton: 'Attach a file',
+    reqAttachNoFile: 'Choose a file.',
+    reqAttachTooManyFiles: `You can attach up to ${MAX_REQUEST_ATTACHMENTS_PER_REQUEST} files per request.`,
+    reqAttachFileEmpty: 'That file is empty.',
+    reqAttachFileTooLarge: 'That file is too large — max 4 MB per file.',
+    reqAttachFileTypeNotAllowed: 'That file type isn’t supported. Allowed: PDF, PNG, JPG, WEBP, XLSX, CSV, DWG, DXF.',
+    reqAttachUploadFailed: 'Could not attach that file — please try again.',
+    // Stale-request in-app nudge (Slice R5) — only shown when the request
+    // actually reached real vendors and none has quoted after the stale
+    // window (STALE_HINT_HOURS). No invented SLA.
+    staleNudgeTitle: 'Still no quotes after a couple of days',
+    staleNudgeBody: 'Your request went to {n} {vendorWord}, but none has quoted yet. You can browse the marketplace to reach out to more vendors directly, or keep waiting — we’ll notify you the moment a quote arrives.',
+    staleNudgeCta: 'Browse marketplace',
     pkDemo: 'Demo', pkPilot: 'Pilot', pkSiteVisit: 'Site visit',
     psProposed: 'Proposed', psScheduled: 'Scheduled', psInProgress: 'In progress', psCompleted: 'Completed', psCancelled: 'Cancelled',
     poPassed: 'Passed', poFailed: 'Failed', poInconclusive: 'Inconclusive',
@@ -210,6 +230,17 @@ const T: Record<Lang, Record<string, string>> = {
     file_too_large: 'Ese archivo es demasiado grande — máximo 10 MB por archivo.',
     file_type_not_allowed: 'Ese tipo de archivo no es compatible. Permitidos: PDF, PNG, JPG, WEBP, XLSX, CSV, DWG, DXF.',
     attachSendError: 'No se pudo enviar el archivo adjunto — inténtalo de nuevo.',
+    reqAttachHeading: 'Adjuntos', reqAttachEmpty: 'Aún no hay archivos adjuntos.',
+    reqAttachButton: 'Adjuntar un archivo',
+    reqAttachNoFile: 'Elige un archivo.',
+    reqAttachTooManyFiles: `Puedes adjuntar hasta ${MAX_REQUEST_ATTACHMENTS_PER_REQUEST} archivos por solicitud.`,
+    reqAttachFileEmpty: 'Ese archivo está vacío.',
+    reqAttachFileTooLarge: 'Ese archivo es demasiado grande — máximo 4 MB por archivo.',
+    reqAttachFileTypeNotAllowed: 'Ese tipo de archivo no es compatible. Permitidos: PDF, PNG, JPG, WEBP, XLSX, CSV, DWG, DXF.',
+    reqAttachUploadFailed: 'No se pudo adjuntar ese archivo — inténtalo de nuevo.',
+    staleNudgeTitle: 'Todavía sin cotizaciones después de un par de días',
+    staleNudgeBody: 'Tu solicitud se envió a {n} {vendorWord}, pero ninguno ha cotizado todavía. Puedes explorar el mercado para contactar a más proveedores directamente, o esperar — te avisaremos en cuanto llegue una cotización.',
+    staleNudgeCta: 'Explorar el mercado',
     pkDemo: 'Demo', pkPilot: 'Piloto', pkSiteVisit: 'Visita al sitio',
     psProposed: 'Propuesto', psScheduled: 'Programado', psInProgress: 'En progreso', psCompleted: 'Completado', psCancelled: 'Cancelado',
     poPassed: 'Aprobado', poFailed: 'Fallido', poInconclusive: 'No concluyente',
@@ -357,6 +388,13 @@ export default function BuyerDashboardPage() {
   const [notifs, setNotifs] = useState<Array<{ id: string; title: string; read_at: string | null; created_at: string; type?: string; quote_request_id?: string | null }>>([]);
   const [notifUnread, setNotifUnread] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
+  // Slice R5 — keep the unread badge fresh without an aggressive page-wide
+  // poll: light 30s tick, only while signed in, paused on a hidden tab, same
+  // discipline as useChatPolling (see useNotificationPolling.ts).
+  useNotificationPolling(!checking && !!data.signed_in, '/api/buyer/notifications', ({ notifications, unread }) => {
+    setNotifs(notifications as typeof notifs);
+    setNotifUnread(unread);
+  });
   const [decidingId, setDecidingId] = useState<string | null>(null);
   const [decideError, setDecideError] = useState<{ id: string; message: string } | null>(null);
   // Cheap unread-chat hint: reuses the notifications already fetched on load
@@ -472,6 +510,19 @@ export default function BuyerDashboardPage() {
   function attachErrorText(code?: string, fallback?: string): string {
     return (code && (t as Record<string, string>)[code]) || fallback || t.attachSendError;
   }
+  // Request-attachment error codes (Slice R5) — distinct dict keys from the
+  // chat-attachment ones above (different caps: 4 MB/file, 8 files/request —
+  // reusing the same code->string keys would show the WRONG numbers).
+  function reqAttachErrorText(code?: string): string {
+    switch (code) {
+      case 'too_many_files': return t.reqAttachTooManyFiles;
+      case 'file_too_large': return t.reqAttachFileTooLarge;
+      case 'file_type_not_allowed': return t.reqAttachFileTypeNotAllowed;
+      case 'file_empty': return t.reqAttachFileEmpty;
+      case 'no_file': return t.reqAttachNoFile;
+      default: return t.reqAttachUploadFailed;
+    }
+  }
   function handleAttachSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const chosen = Array.from(e.target.files || []);
     e.target.value = ''; // allow re-picking the same file later
@@ -574,12 +625,12 @@ export default function BuyerDashboardPage() {
 
   return (
     <div className={`by ${ibmPlexSans.variable}`}>
-      <style dangerouslySetInnerHTML={{ __html: CSS + EMPTY_ACTION_CSS + ATTENTION_CSS + FIRSTRUN_CSS + QUOTE_COMPARE_DECK_CSS + OFFER_CARD_CSS + DEAL_TRACKER_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: CSS + EMPTY_ACTION_CSS + ATTENTION_CSS + FIRSTRUN_CSS + QUOTE_COMPARE_DECK_CSS + OFFER_CARD_CSS + DEAL_TRACKER_CSS + REQUEST_ATTACHMENTS_CSS }} />
       <nav className="by-nav">
         <a className="by-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>{t.dashboardTag}</span></a>
         <div className="by-navlinks">
           <button className="by-bell" onClick={toggleNotifs} aria-label={t.notifications}>
-            {t.alerts}{notifUnread > 0 && <span className="by-belldot">{notifUnread}</span>}
+            <Bell size={13} strokeWidth={2} aria-hidden="true" /> {t.alerts}{notifUnread > 0 && <span className="by-belldot">{notifUnread}</span>}
           </button>
           <button className="by-link by-refresh" onClick={() => { setChecking(true); load(); }} aria-label="Refresh">{t.refresh}</button>
           <a className="by-link" href="/marketplace">{t.browseMarketplace}</a>
@@ -723,7 +774,11 @@ export default function BuyerDashboardPage() {
                         )}
                       </div>
                       {activity.sentTo === 0 && <p className="by-actnote">{t.reviewingRequest}</p>}
-                      {stale && <NoQuotesYetTeaching t={t} />}
+                      {stale && (
+                        isStaleWithNoResponse(activity, stale)
+                          ? <StaleRequestNudge t={t} sentTo={activity.sentTo} />
+                          : <NoQuotesYetTeaching t={t} />
+                      )}
                     </div>
                     );
                   })}
@@ -807,6 +862,16 @@ export default function BuyerDashboardPage() {
                       {q.quote_amount == null && isRequestStale({ created_at: q.created_at }, { quotesReceived: 0 }) && (
                         <NoQuotesYetTeaching t={t} />
                       )}
+                      {/* Request attachments (Slice R5) — spec sheets,
+                          drawings, POs, photos for THIS request. */}
+                      <RequestAttachmentUpload
+                        quoteRequestId={q.id}
+                        initialAttachments={q.attachments || []}
+                        labels={{
+                          heading: t.reqAttachHeading, empty: t.reqAttachEmpty, download: t.downloadFile,
+                          attach: t.reqAttachButton, uploading: t.uploadingFiles, errorFor: reqAttachErrorText,
+                        }}
+                      />
                       {/* Message the vendor — inside NXT//LINK */}
                       <div className="by-chat">
                         {chatFor === q.id ? (() => {
@@ -1061,6 +1126,22 @@ function NoQuotesYetTeaching({ t }: { t: Record<string, string> }) {
   );
 }
 
+// Stale-request in-app nudge (Slice R5) — shown INSTEAD of the generic
+// teaching card above when the request actually reached real vendors
+// (sentTo > 0) and none has quoted after the stale window. More specific,
+// more actionable; no invented SLA (see isStaleWithNoResponse).
+function StaleRequestNudge({ t, sentTo }: { t: Record<string, string>; sentTo: number }) {
+  const vendorWord = sentTo === 1 ? t.vendorSingular : t.vendorsPlural;
+  const body = t.staleNudgeBody.replace('{n}', String(sentTo)).replace('{vendorWord}', vendorWord);
+  return (
+    <div className="by-stale">
+      <b>{t.staleNudgeTitle}</b>
+      <p>{body}</p>
+      <a className="by-stalecta" href="/marketplace">{t.staleNudgeCta}</a>
+    </div>
+  );
+}
+
 function FirstRunPrompt({ t }: { t: Record<string, string> }) {
   return (
     <div className="by-firstrun">
@@ -1134,7 +1215,8 @@ const CSS = `
 .by-sechead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;border-bottom:1px solid var(--spec-border,#E2DFEC);padding-bottom:8px;}
 .by-sechead h2{font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.01em;}
 .by-cnt{font-size:11.5px;font-weight:700;color:var(--spec-violet-deep,#4A3DB0);background:rgba(108,92,224,.1);border-radius:99px;padding:2px 9px;margin-left:7px;vertical-align:2px;}
-.by-bell{position:relative;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--spec-violet-deep,#4A3DB0);background:rgba(108,92,224,.08);border:1px solid rgba(108,92,224,.3);border-radius:99px;padding:7px 14px;cursor:pointer;}
+.by-bell{position:relative;display:inline-flex;align-items:center;gap:5px;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--spec-violet-deep,#4A3DB0);background:rgba(108,92,224,.08);border:1px solid rgba(108,92,224,.3);border-radius:99px;padding:7px 14px;cursor:pointer;}
+.by-bell svg{flex-shrink:0;}
 .by-refresh{background:none;border:none;cursor:pointer;font-family:inherit;}
 .by-belldot{margin-left:7px;background:var(--spec-error,#CE4B43);color:#fff;font-size:11px;font-weight:800;border-radius:99px;padding:1px 7px;}
 .by-notifs{background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:14px;padding:16px 18px;margin:14px 0 6px;box-shadow:0 8px 24px rgba(20,19,32,.08);}
@@ -1183,6 +1265,12 @@ const CSS = `
 .by-teachrow b{color:var(--spec-ink,#141320);font-size:14px;font-weight:700;}
 .by-teachmeta{margin-top:5px;font-size:11.5px;color:#8A87A0;}
 @media(max-width:480px){.by-teach{flex-direction:column;}}
+/* Slice R5 — stale-request actionable nudge (distinct from the teaching card above) */
+.by-stale{margin-top:12px;padding:14px 16px;border-radius:12px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);box-shadow:0 4px 12px rgba(124,58,237,.08);}
+.by-stale b{display:block;font-size:13.5px;color:var(--spec-ink,#141320);}
+.by-stale p{margin:6px 0 10px;font-size:12.5px;color:var(--spec-text-2nd,#615F72);line-height:1.5;}
+.by-stalecta{display:inline-block;font-size:12.5px;font-weight:700;color:var(--spec-violet-deep,#4A3DB0);text-decoration:none;}
+.by-stalecta:hover{text-decoration:underline;}
 .by-savedgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;}
 .by-saveditem{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:12px;padding:11px 14px;color:var(--spec-ink,#141320);text-decoration:none;font-size:13.5px;}
 .by-saveditem:hover{border-color:var(--spec-violet,#6C5CE0);}

@@ -9,8 +9,10 @@ import { sendMail } from '@/lib/mail';
 import { maskContacts } from '@/lib/guard';
 import { resolveDisplayedProtectedUntil } from '@/lib/fees/engine';
 import { AUTO_VIEWABLE_STATUSES, canAutoMarkViewed } from '@/lib/vendor/leadStatus';
+import { AUTO_VIEWABLE_INVITATION_STATUSES, canMarkInvitationViewed } from '@/lib/requests/invitations';
 import { stripBlindBudgetFields } from '@/lib/requests/vendor-view';
 import { scoreVendors, type MatchableVendor } from '@/lib/matching';
+import { loadRequestAttachments } from '@/lib/requests/attachmentsServer';
 
 const STATUSES = ['new', 'viewed', 'responded', 'won', 'lost', 'spam'];
 
@@ -56,6 +58,37 @@ export async function GET() {
       }
     } catch {
       // Non-critical — the lead list still renders with its pre-fetch status.
+    }
+  }
+
+  // Slice R1b (2026-07-30) — direct-invite tracking (request_invitations).
+  // Mirrors the EXACT double-guarded never-downgrade pattern the quote_requests
+  // auto-'viewed' write above uses, for the SEPARATE invitation status
+  // vocabulary (invited/viewed/quoted/declined): fetch current status, filter
+  // in-memory with canMarkInvitationViewed, then re-check status again in the
+  // update itself. Best-effort — never breaks the lead list.
+  const invitedLeadIds = rows
+    .filter((l) => Boolean((l.answers as { invited?: boolean } | null)?.invited))
+    .map((l) => l.id as string);
+  if (invitedLeadIds.length) {
+    try {
+      const { data: invRows } = await db.from('request_invitations')
+        .select('quote_request_id, status')
+        .eq('vendor_id', vendor.id)
+        .in('quote_request_id', invitedLeadIds);
+      const toMarkViewed = (invRows || [])
+        .filter((r) => canMarkInvitationViewed(r.status as string | null))
+        .map((r) => r.quote_request_id as string);
+      if (toMarkViewed.length) {
+        await db.from('request_invitations')
+          .update({ status: 'viewed', updated_at: new Date().toISOString() })
+          .eq('vendor_id', vendor.id)
+          .in('quote_request_id', toMarkViewed)
+          .in('status', AUTO_VIEWABLE_INVITATION_STATUSES as unknown as string[]);
+      }
+    } catch {
+      // Non-critical — the lead list still renders; the invite badge below
+      // never depends on request_invitations, only on answers.invited.
     }
   }
 
@@ -113,6 +146,13 @@ export async function GET() {
     const arr = pilotsByQr.get(p.quote_request_id as string) || [];
     arr.push(p); pilotsByQr.set(p.quote_request_id as string, arr);
   }
+
+  // Request attachments (Slice R5) — read-only here (buyers upload, vendors
+  // only see/download). Same pre-accept name-masking as buyer free text
+  // (message/bundle notes) above: a file name is just as much an
+  // anti-circumvention leak vector as body text.
+  const revealedIds = new Set(rows.filter((l) => l.buyer_decision === 'accepted').map((l) => l.id as string));
+  const attachmentsByQr = await loadRequestAttachments(db, ids, { maskNamesFor: (qrId) => !revealedIds.has(qrId) });
 
   // Opportunity framing (Slice R3): honest "why this matches you" chips —
   // REAL overlap only, nothing invented, no response-time claims (real-
@@ -183,6 +223,12 @@ export async function GET() {
         };
       }
       const sourceRef = (l.answers as { source_request?: string } | null)?.source_request;
+      // Slice R1b: a lead the buyer hand-picked this vendor for (send-mode B)
+      // never gets a scoreVendors-computed reason — the honest reason is
+      // simply that the buyer chose them (never invent a match metric for a
+      // manual pick). The client renders a "Direct invite" badge + this
+      // reason instead of the normal match-score chips.
+      const invited = Boolean((l.answers as { invited?: boolean } | null)?.invited);
       return {
         ...stripBlindBudgetFields(l as Record<string, unknown>),
         message,
@@ -194,7 +240,9 @@ export async function GET() {
         listing_name: names.get((l.product_id || l.service_id) as string) || null,
         commission,
         pilots: pilotsByQr.get(l.id) || [],
-        match_reasons: sourceRef ? matchReasonsByRef.get(sourceRef) || [] : [],
+        attachments: attachmentsByQr[l.id as string] || [],
+        match_reasons: invited ? [] : (sourceRef ? matchReasonsByRef.get(sourceRef) || [] : []),
+        invited,
       };
     }),
   });

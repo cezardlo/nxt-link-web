@@ -19,7 +19,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { IBM_Plex_Sans } from 'next/font/google';
 import {
-  MapPin, Globe, Zap, Eye, ShieldCheck, Check, BadgeCheck, Calendar, Languages, Star, Images, Video,
+  MapPin, Globe, Zap, Eye, ShieldCheck, Check, BadgeCheck, Calendar, Languages, Star, Images, Video, UserPlus,
   type LucideIcon,
 } from 'lucide-react';
 import { levelAtLeast } from '@/components/marketplace/TrustBadges';
@@ -169,6 +169,7 @@ const T: Record<Lang, Record<string, string>> = {
     workWithVendor: 'Work with this vendor',
     protectedIntro: 'All quotes, files, and messaging run through NXT//LINK. Your introduction is protected.',
     requestAQuote: 'Request a quote',
+    inviteToQuote: 'Invite to quote',
     noListingsYet: 'This vendor hasn’t published listings yet — describe what you need and we’ll match you, including with this vendor.',
     quickFacts: 'Quick facts',
     companyType: 'Company type',
@@ -255,6 +256,7 @@ const T: Record<Lang, Record<string, string>> = {
     workWithVendor: 'Trabaja con este proveedor',
     protectedIntro: 'Todas las cotizaciones, archivos y mensajes se gestionan a través de NXT//LINK. Tu presentación está protegida.',
     requestAQuote: 'Solicitar cotización',
+    inviteToQuote: 'Invitar a cotizar',
     noListingsYet: 'Este proveedor aún no ha publicado publicaciones — describe lo que necesitas y te conectaremos, incluyendo con este proveedor.',
     quickFacts: 'Datos rápidos',
     companyType: 'Tipo de empresa',
@@ -353,6 +355,13 @@ export default function VendorStorefrontPage() {
   const quoteHref = firstListing
     ? `/marketplace/${firstListing.kind}/${firstListing.id}#quote`
     : `/intake?vendor=${encodeURIComponent(v.company_name)}&vendor_id=${v.id}`;
+  // Slice R1b (2026-07-30) — "invite specific vendors" send mode: unlike
+  // quoteHref above (tied to a listing, or a soft hint when there is none),
+  // this ALWAYS creates a real invitation for THIS vendor regardless of
+  // whether they have listings — reuses the existing /intake +
+  // /api/platform/requests pipeline (no parallel request path), tagged
+  // ?invite=1 so /intake sends send_mode:'invite' instead of auto-match.
+  const inviteHref = `/intake?vendor=${encodeURIComponent(v.company_name)}&vendor_id=${v.id}&invite=1`;
 
   // Header/identity band: years active is derived from year_founded only when
   // it's a sane year — never a placeholder when the vendor hasn't set one.
@@ -701,6 +710,10 @@ export default function VendorStorefrontPage() {
               <p>{t.protectedIntro}</p>
               {!firstListing && <p className="vs-nolisting">{t.noListingsYet}</p>}
               <Link className="vs-btn pri vs-full" href={quoteHref}>{t.requestAQuote}</Link>
+              <Link className="vs-invitelink" href={inviteHref}>
+                <UserPlus size={13} strokeWidth={1.75} aria-hidden="true" />
+                {t.inviteToQuote}
+              </Link>
             </div>
 
             <div className="vs-card">
@@ -776,6 +789,9 @@ const CSS = `
 .vs-btn.pri:hover{background:var(--spec-violet-deep);}
 .vs-btn.pri:active{transform:scale(.98);transition:transform .1s ease;}
 .vs-btn.vs-full{width:100%;text-align:center;}
+.vs-invitelink{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:8px;padding:8px 0;font-size:12.5px;font-weight:600;color:var(--spec-violet-deep);text-decoration:none;border-radius:8px;transition:background var(--spec-duration-fast) var(--spec-ease);}
+.vs-invitelink:hover{background:rgba(108,92,224,.08);}
+.vs-invitelink:focus-visible{outline:2px solid var(--spec-violet);outline-offset:2px;}
 .vs-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:1px;background:var(--spec-border);border:1px solid var(--spec-border);border-radius:14px;overflow:hidden;margin-top:16px;}
 .vs-stat{background:#fff;padding:15px 16px;}
 .vs-stat b{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;display:block;color:var(--spec-ink);}

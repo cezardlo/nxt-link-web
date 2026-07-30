@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getBuyerSession } from '@/lib/buyer/auth';
+import { loadRequestAttachments } from '@/lib/requests/attachmentsServer';
 
 // Escape LIKE wildcards so an email is matched literally (case-insensitive).
 function likeLiteral(value: string): string {
@@ -91,12 +92,24 @@ export async function GET() {
     arr.push(p); pilotsByQr.set(p.quote_request_id as string, arr);
   }
 
+  // Request attachments (Slice R5) — this is the buyer's OWN request, so
+  // nothing needs pre-accept name-masking (that's only for the VENDOR-facing
+  // read in GET /api/vendor/leads).
+  const attachmentsByQr = await loadRequestAttachments(db, qIds);
+
   return NextResponse.json({
     ok: true,
     signed_in: true,
     email_verified: true,
     email: session.email,
     requests: requests || [],
-    quotes: qRows.map((q) => ({ ...q, listing_name: names.get((q.product_id || q.service_id) as string) || null, vendor_name: vendorNames.get(q.vendor_id as string) || null, reviewed: reviewed.has(q.id), pilots: pilotsByQr.get(q.id) || [] })),
+    quotes: qRows.map((q) => ({
+      ...q,
+      listing_name: names.get((q.product_id || q.service_id) as string) || null,
+      vendor_name: vendorNames.get(q.vendor_id as string) || null,
+      reviewed: reviewed.has(q.id),
+      pilots: pilotsByQr.get(q.id) || [],
+      attachments: attachmentsByQr[q.id as string] || [],
+    })),
   });
 }

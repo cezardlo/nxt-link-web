@@ -7,9 +7,33 @@ import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { logAudit } from '@/lib/assistant/llm';
 import { isAdminRequest } from '@/lib/assistant/auth';
-import { dispatchRequestToVendors } from '@/lib/requests/dispatch';
+import { dispatchRequestToVendors, inviteVendorsToRequest, MAX_VENDORS, MAX_INVITES } from '@/lib/requests/dispatch';
 import { getSessionUser } from '@/lib/auth/require-user';
 import { validateStructuredRequest } from '@/lib/requests/structured';
+
+// Send-mode B (Slice R1b, 2026-07-30): "Invite specific vendors chosen from
+// the marketplace" — workplace/plans/rfq-seamless-build-2026-07-29.md.
+// Default 'auto_match' preserves every existing caller's behavior byte-for-
+// byte (nothing new in the body validates to this default, same as every
+// other Slice R1/RV addition on this route).
+const SEND_MODES = ['auto_match', 'invite', 'both'] as const;
+type SendMode = (typeof SEND_MODES)[number];
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function cleanInviteVendorIds(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of v) {
+    const id = String(raw || '');
+    if (UUID_RE.test(id) && !seen.has(id)) {
+      seen.add(id);
+      out.push(id);
+    }
+    if (out.length >= MAX_INVITES) break;
+  }
+  return out;
+}
 
 export async function POST(req: Request) {
   // Login wall (owner decision, 2026-07-23; mirrors /api/marketplace/request:19-20):
@@ -53,6 +77,9 @@ export async function POST(req: Request) {
   if (!structured.ok) {
     return NextResponse.json({ ok: false, code: 'invalid_structured_fields', message: structured.errors[0], errors: structured.errors }, { status: 400 });
   }
+
+  const sendMode: SendMode = SEND_MODES.includes(body.send_mode as SendMode) ? (body.send_mode as SendMode) : 'auto_match';
+  const inviteVendorIds = cleanInviteVendorIds(body.invite_vendor_ids);
 
   const row = {
     category: cap(summary.category || body.category, 120),
@@ -100,11 +127,15 @@ export async function POST(req: Request) {
     if (error) throw error;
     await logAudit({ action: 'client_request_submitted', role: 'client', request_id: data?.id, after_status: 'request_received' });
 
-    // Push the request to matched vendors so it actually reaches them instead
-    // of waiting for a vendor to browse open requests. Best-effort, non-blocking.
+    // Push the request out to vendors so it actually reaches them instead of
+    // waiting for one to browse open requests. Best-effort, non-blocking.
+    // Two send modes (Slice R1b): auto_match (unchanged existing behavior,
+    // the default) and invite/both (buyer hand-picked specific vendors —
+    // see src/lib/requests/dispatch.ts inviteVendorsToRequest).
     let dispatched = 0;
+    let invited = 0;
     if (data?.id) {
-      const result = await dispatchRequestToVendors(db, {
+      const dispatchable = {
         id: data.id as string,
         public_ref: (data.public_ref as string) || null,
         category: row.category,
@@ -120,11 +151,41 @@ export async function POST(req: Request) {
         delivery_location: row.delivery_location,
         preferred_timeline: row.preferred_timeline,
         structured_specs: row.structured_specs,
-      });
-      dispatched = result.dispatched;
+      };
+
+      if (sendMode === 'invite' && inviteVendorIds.length) {
+        const inviteResult = await inviteVendorsToRequest(db, dispatchable, inviteVendorIds);
+        invited = inviteResult.invited;
+        // No dead ends (spec §3): if every chosen vendor turned out to be
+        // unreachable (e.g. suspended between page load and submit), fall
+        // back to auto-match so the request still goes somewhere — invite
+        // mode itself still sent to ONLY the chosen vendors, this is a
+        // resilience path, not a silent auto-blast on top of a successful invite.
+        if (inviteResult.invited === 0) {
+          const result = await dispatchRequestToVendors(db, dispatchable);
+          dispatched = result.dispatched;
+        }
+      } else if (sendMode === 'both' && inviteVendorIds.length) {
+        const inviteResult = await inviteVendorsToRequest(db, dispatchable, inviteVendorIds);
+        invited = inviteResult.invited;
+        // Keep the COMBINED total bounded at MAX_VENDORS — auto-match only
+        // fills whatever's left after the buyer's own picks, and never
+        // re-invites a vendor already invited above.
+        const remaining = MAX_VENDORS - inviteResult.invitedVendorIds.length;
+        if (remaining > 0) {
+          const result = await dispatchRequestToVendors(db, dispatchable, {
+            excludeVendorIds: inviteResult.invitedVendorIds,
+            maxVendors: remaining,
+          });
+          dispatched = result.dispatched;
+        }
+      } else {
+        const result = await dispatchRequestToVendors(db, dispatchable);
+        dispatched = result.dispatched;
+      }
     }
     return NextResponse.json({
-      ok: true, stored: true, id: data?.id, public_ref: data?.public_ref, dispatched,
+      ok: true, stored: true, id: data?.id, public_ref: data?.public_ref, dispatched, invited,
       request_kind: row.request_kind,
       quantity: row.quantity_int,
       delivery_location: row.delivery_location,

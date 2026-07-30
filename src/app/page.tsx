@@ -419,7 +419,11 @@ export default function Home() {
     <div className={`hp ${ibmPlexSans.variable}`}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
-      <PublicHeader lang={lang} onLangChange={setLang} />
+      {/* condensed: the hero right below carries the big search bar and the
+          Join-free card, and the #for-vendors band has the vendor CTA — the
+          header trio duplicated all three (Cesar 2026-07-30 dedupe ask).
+          Sign in stays top-right for returning users. */}
+      <PublicHeader lang={lang} onLangChange={setLang} condensed />
 
       <AccountDeletedNotice lang={lang} />
 
