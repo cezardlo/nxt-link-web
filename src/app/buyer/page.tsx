@@ -42,6 +42,7 @@ interface QuoteRequest {
   company: string | null; message: string | null; status: string; created_at: string;
   quote_amount?: number | null; quote_currency?: string | null; quote_message?: string | null;
   quote_timeline?: string | null; quote_valid_until?: string | null; quoted_at?: string | null;
+  quote_payment_terms?: string | null; quote_warranty?: string | null;
   buyer_decision?: string | null; reviewed?: boolean;
   updated_at?: string | null;
   answers?: { request_type?: string; bundle?: boolean; source_request?: string | null; items?: Array<{ listing_id: string; kind: string; name: string; qty: number; note?: string }> } | null;
@@ -129,6 +130,7 @@ const T: Record<Lang, Record<string, string>> = {
     cmpPriceDesc: 'Price ↓', cmpAz: 'A–Z',
     cmpNote: 'Lowest price isn’t always the best value — weigh timeline and fit. Contact details stay hidden until you accept.',
     cmpFor: 'Comparing quotes for the same request',
+    cmpPaymentTerms: 'Payment terms', cmpWarranty: 'Warranty',
     // Post-accept "what happens next" (FIX 2)
     dealInProgress: 'Deal in progress', connectedWith: 'You’re connected with',
     nextContactUnlocked: 'Contact details are now unlocked in your chat — you can share your phone and email with the vendor.',
@@ -215,6 +217,7 @@ const T: Record<Lang, Record<string, string>> = {
     cmpPriceDesc: 'Precio ↓', cmpAz: 'A–Z',
     cmpNote: 'El precio más bajo no siempre es la mejor opción — considera el tiempo y la compatibilidad. Los datos de contacto quedan ocultos hasta que aceptas.',
     cmpFor: 'Comparando cotizaciones de la misma solicitud',
+    cmpPaymentTerms: 'Términos de pago', cmpWarranty: 'Garantía',
     // Qué sigue después de aceptar (FIX 2)
     dealInProgress: 'Trato en progreso', connectedWith: 'Estás conectado con',
     nextContactUnlocked: 'Los datos de contacto ya están desbloqueados en tu chat — puedes compartir tu teléfono y correo con el proveedor.',
@@ -512,7 +515,8 @@ export default function BuyerDashboardPage() {
   // the buyer dashboard — feeIfWon is unused here).
   const cmpLabels: CompareLabels = {
     title: t.cmpTitle, vendor: t.cmpVendor, quote: t.cmpQuote, timeline: t.cmpTimeline,
-    validUntil: t.cmpValidUntil, feeIfWon: '', status: t.cmpStatus, lowest: t.cmpLowest,
+    validUntil: t.cmpValidUntil, feeIfWon: '', paymentTerms: t.cmpPaymentTerms, warranty: t.cmpWarranty,
+    status: t.cmpStatus, lowest: t.cmpLowest,
     awaiting: t.cmpAwaiting, received: t.cmpReceived, accepted: t.cmpAccepted, sort: t.cmpSort,
     priceAsc: t.cmpPriceAsc, priceDesc: t.cmpPriceDesc, az: t.cmpAz, note: t.cmpNote,
   };
@@ -697,6 +701,8 @@ export default function BuyerDashboardPage() {
                         currency: q.quote_currency,
                         timeline: q.quote_timeline,
                         validUntil: q.quote_valid_until,
+                        paymentTerms: q.quote_payment_terms,
+                        warranty: q.quote_warranty,
                         status: q.buyer_decision === 'accepted' ? 'accepted' : q.quote_amount != null ? 'received' : 'awaiting',
                         ref: q.public_ref,
                       }))}

@@ -10,6 +10,7 @@ import { maskContacts } from '@/lib/guard';
 import { resolveDisplayedProtectedUntil } from '@/lib/fees/engine';
 import { AUTO_VIEWABLE_STATUSES, canAutoMarkViewed } from '@/lib/vendor/leadStatus';
 import { stripBlindBudgetFields } from '@/lib/requests/vendor-view';
+import { scoreVendors, type MatchableVendor } from '@/lib/matching';
 
 const STATUSES = ['new', 'viewed', 'responded', 'won', 'lost', 'spam'];
 
@@ -113,6 +114,43 @@ export async function GET() {
     arr.push(p); pilotsByQr.set(p.quote_request_id as string, arr);
   }
 
+  // Opportunity framing (Slice R3): honest "why this matches you" chips —
+  // REAL overlap only, nothing invented, no response-time claims (real-
+  // computed-stats rule). Only leads that came from an OPEN request (auto-
+  // dispatched by src/lib/requests/dispatch.ts, or self-claimed via
+  // POST /api/vendor/open-requests) carry an answers.source_request ref back
+  // to the originating client_requests row — that row is where category/
+  // location actually live (quote_requests itself has no free-text category
+  // column). A direct listing-tied lead (buyer clicked YOUR OWN listing) gets
+  // no chips: matching would be circular, there's nothing to explain.
+  // Reuses the SAME scoreVendors() the dispatch/self-claim paths already use
+  // to route these leads, so the reasons shown here can never diverge from
+  // the logic that actually decided this vendor should see the lead.
+  const sourceRefs = Array.from(new Set(
+    rows
+      .map((l) => (l.answers as { source_request?: string } | null)?.source_request)
+      .filter((r): r is string => Boolean(r)),
+  ));
+  const matchReasonsByRef = new Map<string, string[]>();
+  if (sourceRefs.length) {
+    const { data: srcRows } = await db.from('client_requests')
+      .select('public_ref, category, location').in('public_ref', sourceRefs);
+    const selfAsVendor: MatchableVendor = {
+      id: vendor.id,
+      company_name: vendor.company_name || '',
+      categories: vendor.categories || [],
+      service_areas: vendor.service_areas || [],
+      status: 'approved',
+    };
+    for (const r of srcRows || []) {
+      const scored = scoreVendors(
+        { category: (r.category as string) || '', location: (r.location as string) || '' },
+        [selfAsVendor],
+      );
+      matchReasonsByRef.set(r.public_ref as string, scored[0]?.reasons || []);
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     leads: rows.map((l) => {
@@ -144,6 +182,7 @@ export async function GET() {
           }),
         };
       }
+      const sourceRef = (l.answers as { source_request?: string } | null)?.source_request;
       return {
         ...stripBlindBudgetFields(l as Record<string, unknown>),
         message,
@@ -155,6 +194,7 @@ export async function GET() {
         listing_name: names.get((l.product_id || l.service_id) as string) || null,
         commission,
         pilots: pilotsByQr.get(l.id) || [],
+        match_reasons: sourceRef ? matchReasonsByRef.get(sourceRef) || [] : [],
       };
     }),
   });

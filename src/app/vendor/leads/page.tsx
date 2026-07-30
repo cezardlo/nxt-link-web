@@ -18,6 +18,9 @@ import {
   ALLOWED_ATTACHMENT_EXTENSIONS, MAX_ATTACHMENTS_PER_MESSAGE, formatFileSize,
   validateAttachmentBatch,
 } from '@/lib/messages/attachments';
+import {
+  validateQuoteExtras, autoCalcProductTotal, type RequestKind, type QuoteExtras,
+} from '@/lib/requests/structured';
 
 // Design System v1.0 reskin (Premium Polish Phase 2, 2026-07-23): light
 // warm-white + violet, matching the rest of the marketplace. Visual/CSS only
@@ -48,7 +51,77 @@ interface Lead {
   answers?: { request_type?: string; bundle?: boolean; items?: BundleItem[] } | null;
   quote_amount?: number | null; quote_currency?: string | null; quote_message?: string | null;
   quote_timeline?: string | null; quote_valid_until?: string | null; quoted_at?: string | null;
+  quote_payment_terms?: string | null; quote_warranty?: string | null; quote_extras?: QuoteExtras | null;
   buyer_decision?: string | null; commission?: Commission | null; pilots?: Pilot[];
+  // Opportunity framing (Slice R3) — structured facts written at request-
+  // creation time (R1) + the honest match-reason chips GET /api/vendor/leads
+  // computes from real overlap only. NEVER includes budget (blind by design —
+  // budget_min/budget_max are stripped server-side before this ever ships).
+  request_kind?: RequestKind | null; quantity?: number | null;
+  delivery_location?: string | null; preferred_timeline?: string | null;
+  structured_specs?: Record<string, unknown> | null;
+  match_reasons?: string[];
+}
+
+// Slice R3 — the structured quote template. One flat form covers the COMMON
+// fields (every kind) + the PER-KIND extras (only the ones for the
+// opportunity's own request_kind are ever sent — see buildQuoteExtras).
+// All string-typed so plain <input>/<select> can bind directly; converted to
+// numbers only at submit time.
+interface QuoteFormState {
+  total: string; totalTouched: boolean; currency: string;
+  lead_time: string; valid_until: string; payment_terms: string; warranty: string; notes: string;
+  unit_price: string; installation: string; training: string; shipping_cost: string;
+  scope_summary: string; duration: string; team_size: string; emergency_response: string;
+  license_model: string; pricing_details: string; implementation_cost: string; annual_support: string; sla_summary: string;
+}
+function emptyQform(): QuoteFormState {
+  return {
+    total: '', totalTouched: false, currency: 'USD',
+    lead_time: '', valid_until: '', payment_terms: '', warranty: '', notes: '',
+    unit_price: '', installation: '', training: '', shipping_cost: '',
+    scope_summary: '', duration: '', team_size: '', emergency_response: '',
+    license_model: '', pricing_details: '', implementation_cost: '', annual_support: '', sla_summary: '',
+  };
+}
+const numOrNull = (v: string): number | null => (v.trim() === '' ? null : Number.isFinite(Number(v)) ? Number(v) : null);
+/** Build the payload for the OPPORTUNITY's own kind only — an opportunity
+ * with no request_kind (older row, pre-R1) always builds {} since there's no
+ * per-kind schema to fill in yet, same rule the server validates against. */
+function buildQuoteExtras(kind: RequestKind | null | undefined, f: QuoteFormState): QuoteExtras {
+  if (kind === 'product') {
+    return {
+      unit_price: numOrNull(f.unit_price),
+      installation: (f.installation || null) as QuoteExtras['installation'],
+      training: (f.training || null) as QuoteExtras['training'],
+      shipping_cost: numOrNull(f.shipping_cost),
+    };
+  }
+  if (kind === 'service') {
+    return {
+      scope_summary: f.scope_summary.trim() || null,
+      duration: f.duration.trim() || null,
+      team_size: numOrNull(f.team_size),
+      emergency_response: f.emergency_response.trim() || null,
+    };
+  }
+  if (kind === 'technology') {
+    return {
+      license_model: (f.license_model || null) as QuoteExtras['license_model'],
+      pricing_details: f.pricing_details.trim() || null,
+      implementation_cost: numOrNull(f.implementation_cost),
+      annual_support: numOrNull(f.annual_support),
+      sla_summary: f.sla_summary.trim() || null,
+    };
+  }
+  return {};
+}
+/** Pre-accept only, per the binding spec (post-accept quote behavior is a
+ * separate, Opus-reviewed money batch — never touched here). A lead the
+ * buyer already accepted or definitively closed can't be revised from this
+ * UI; the underlying API is untouched either way. */
+function canReviseQuote(l: Lead): boolean {
+  return l.buyer_decision !== 'accepted' && l.status !== 'won' && l.status !== 'lost';
 }
 const STATUSES = ['new', 'viewed', 'responded', 'won', 'lost'];
 const money = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
@@ -79,11 +152,35 @@ const T: Record<Lang, Record<string, string>> = {
     manageListings: 'Manage your listings', completeProfile: 'Complete your profile',
     contactHidden: 'Contact details unlock when the buyer accepts your quote — use Messages below',
     yourQuote: 'Your quote:', commission: 'NXT//LINK commission:', protectedTo: 'protected to',
-    quoteAmount: 'Quote amount (USD)', timeline: 'Timeline', timelinePh: 'e.g. 4–6 weeks', validUntil: 'Valid until',
-    scopeNotesPh: 'Scope and notes for the buyer…', estCommission: 'Estimated NXT//LINK commission:',
+    quoteAmount: 'Total price', timeline: 'Lead time / delivery date', timelinePh: 'e.g. 4–6 weeks', validUntil: 'Quote expiration date',
+    scopeNotesPh: 'Optional short message to the buyer…', estCommission: 'Estimated NXT//LINK commission:',
     estCommissionNote: '— give the buyer the same-scope price; do not add this on top.',
     sendQuote: 'Send quote through NXT//LINK', sending: 'Sending…', cancel: 'Cancel',
-    updateQuote: 'Update quote', sendQuoteBtn: 'Send quote',
+    updateQuote: 'Revise quote', sendQuoteBtn: 'Prepare quote',
+    // Slice R3 — the structured quote template (common fields, reused across kinds)
+    currencyLabel: 'Currency', totalAutoHint: 'Auto-calculated from unit price + shipping — you can still edit it',
+    paymentTermsLabel: 'Payment terms', paymentTermsPh: 'e.g. 30% upfront, 70% on delivery',
+    warrantyLabel: 'Warranty', warrantyPh: 'e.g. 1 year parts and labor',
+    saveDraft: 'Save draft', draftSaved: 'Draft saved — resume anytime before you submit.',
+    reviseNote: 'Revising sends the buyer an updated quote — this only works before they accept.',
+    needTotal: 'Enter a total price before submitting.',
+    quoteSendError: 'Could not send the quote — please try again.',
+    selectPh: '— select —',
+    // Per-kind extras
+    unitPrice: 'Unit price', installationLabel: 'Installation', installationIncluded: 'Included',
+    installationExtra: 'Extra cost', installationNone: 'Not available',
+    trainingLabel: 'Training', trainingIncluded: 'Included', trainingExtra: 'Extra cost',
+    shippingCost: 'Shipping cost',
+    scopeSummary: 'Scope summary (included / excluded)', scopeSummaryPh: 'What’s included… what’s not included…',
+    durationLabel: 'Duration', durationPh: 'e.g. 3 days', teamSize: 'Team size',
+    emergencyResponse: 'Emergency response time (if applicable)', emergencyResponsePh: 'e.g. 2 hours',
+    licenseModel: 'License model', licenseSubscription: 'Subscription', licensePerpetual: 'Perpetual', licenseTiered: 'Tiered',
+    pricingDetails: 'Pricing details', pricingDetailsPh: 'e.g. $500/mo per seat',
+    implementationCost: 'Implementation cost', annualSupport: 'Annual support / maintenance fee',
+    slaSummary: 'SLA summary', slaSummaryPh: 'e.g. 99.9% uptime, 4h response',
+    // Opportunity framing (the vendor lead card's "matched opportunity" facts)
+    kindProduct: 'Product', kindService: 'Service', kindTechnology: 'Technology',
+    qtyLabel: 'Qty', quoteByLabel: 'Quote by',
     finalAmount: 'Final purchase amount (USD)', poNumber: 'PO number', poPh: 'Buyer’s PO #',
     invoiceNum: 'Your invoice #', invoicePh: 'Your invoice to the buyer',
     commissionOnAmount: 'NXT//LINK commission on this amount:', commissionBilled: '— billed to you with 30-day terms.',
@@ -133,11 +230,35 @@ const T: Record<Lang, Record<string, string>> = {
     manageListings: 'Administrar tus publicaciones', completeProfile: 'Completar tu perfil',
     contactHidden: 'Los datos de contacto se desbloquean cuando el comprador acepta tu cotización — usa Mensajes abajo',
     yourQuote: 'Tu cotización:', commission: 'Comisión NXT//LINK:', protectedTo: 'protegido hasta',
-    quoteAmount: 'Monto de la cotización (USD)', timeline: 'Plazo', timelinePh: 'ej. 4–6 semanas', validUntil: 'Válido hasta',
-    scopeNotesPh: 'Alcance y notas para el comprador…', estCommission: 'Comisión NXT//LINK estimada:',
+    quoteAmount: 'Precio total', timeline: 'Plazo de entrega / fecha de entrega', timelinePh: 'ej. 4–6 semanas', validUntil: 'Fecha de vencimiento de la cotización',
+    scopeNotesPh: 'Mensaje corto opcional para el comprador…', estCommission: 'Comisión NXT//LINK estimada:',
     estCommissionNote: '— dale al comprador el precio del mismo alcance; no la agregues encima.',
     sendQuote: 'Enviar cotización a través de NXT//LINK', sending: 'Enviando…', cancel: 'Cancelar',
-    updateQuote: 'Actualizar cotización', sendQuoteBtn: 'Enviar cotización',
+    updateQuote: 'Revisar cotización', sendQuoteBtn: 'Preparar cotización',
+    // Slice R3 — plantilla estructurada de cotización (campos comunes, reutilizados entre tipos)
+    currencyLabel: 'Moneda', totalAutoHint: 'Calculado automáticamente con el precio unitario + envío — puedes editarlo',
+    paymentTermsLabel: 'Términos de pago', paymentTermsPh: 'ej. 30% por adelantado, 70% a la entrega',
+    warrantyLabel: 'Garantía', warrantyPh: 'ej. 1 año en piezas y mano de obra',
+    saveDraft: 'Guardar borrador', draftSaved: 'Borrador guardado — puedes continuar cuando quieras antes de enviarlo.',
+    reviseNote: 'Revisar envía al comprador una cotización actualizada — solo funciona antes de que acepte.',
+    needTotal: 'Ingresa un precio total antes de enviar.',
+    quoteSendError: 'No se pudo enviar la cotización — inténtalo de nuevo.',
+    selectPh: '— selecciona —',
+    // Extras por tipo
+    unitPrice: 'Precio unitario', installationLabel: 'Instalación', installationIncluded: 'Incluida',
+    installationExtra: 'Costo adicional', installationNone: 'No disponible',
+    trainingLabel: 'Capacitación', trainingIncluded: 'Incluida', trainingExtra: 'Costo adicional',
+    shippingCost: 'Costo de envío',
+    scopeSummary: 'Resumen del alcance (incluido / excluido)', scopeSummaryPh: 'Qué está incluido… qué no está incluido…',
+    durationLabel: 'Duración', durationPh: 'ej. 3 días', teamSize: 'Tamaño del equipo',
+    emergencyResponse: 'Tiempo de respuesta de emergencia (si aplica)', emergencyResponsePh: 'ej. 2 horas',
+    licenseModel: 'Modelo de licencia', licenseSubscription: 'Suscripción', licensePerpetual: 'Perpetua', licenseTiered: 'Por niveles',
+    pricingDetails: 'Detalles de precios', pricingDetailsPh: 'ej. $500/mes por usuario',
+    implementationCost: 'Costo de implementación', annualSupport: 'Cuota anual de soporte / mantenimiento',
+    slaSummary: 'Resumen del SLA', slaSummaryPh: 'ej. 99.9% de disponibilidad, respuesta en 4h',
+    // Contexto de la oportunidad (tarjeta de lead del vendedor)
+    kindProduct: 'Producto', kindService: 'Servicio', kindTechnology: 'Tecnología',
+    qtyLabel: 'Cant.', quoteByLabel: 'Cotizar antes del',
     finalAmount: 'Monto final de la compra (USD)', poNumber: 'Número de orden de compra', poPh: 'Orden de compra del comprador',
     invoiceNum: 'Tu número de factura', invoicePh: 'Tu factura al comprador',
     commissionOnAmount: 'Comisión NXT//LINK sobre este monto:', commissionBilled: '— facturado a ti con términos de 30 días.',
@@ -177,6 +298,42 @@ const T: Record<Lang, Record<string, string>> = {
   },
 };
 
+// Opportunity framing (Slice R3) — the "Matched Opportunities" feel on a
+// vendor's own lead card: real structured facts + honest match-reason chips.
+// quantity/location/timeline/request_kind come straight from R1's structured
+// request columns; quote_deadline and the quantity unit live inside
+// structured_specs (read defensively — both keys are new/optional additions
+// from a parallel slice, so an older or in-flight request may not have
+// either yet; absent = skipped, never invented). match_reasons is computed
+// SERVER-SIDE from real category/service-area overlap only (GET
+// /api/vendor/leads) — this component only renders what it's given.
+function OpportunityFacts({ lead, t, lang }: { lead: Lead; t: Record<string, string>; lang: Lang }) {
+  const KIND_LABEL: Record<string, string> = { product: t.kindProduct, service: t.kindService, technology: t.kindTechnology };
+  const specs = (lead.structured_specs || {}) as Record<string, unknown>;
+  const qtyUnit = typeof specs.quantity_unit === 'string' ? specs.quantity_unit
+    : typeof specs.unit === 'string' ? specs.unit
+    : typeof specs.qty_unit === 'string' ? specs.qty_unit : null;
+  const quoteDeadlineRaw = typeof specs.quote_deadline === 'string' ? specs.quote_deadline : null;
+  const quoteDeadline = quoteDeadlineRaw ? (() => { try { return new Date(quoteDeadlineRaw).toLocaleDateString(lang === 'es' ? 'es-MX' : 'en-US'); } catch { return null; } })() : null;
+  const reasons = lead.match_reasons || [];
+  const hasFacts = Boolean(lead.request_kind || lead.quantity != null || lead.delivery_location || lead.preferred_timeline || quoteDeadline);
+  if (!hasFacts && reasons.length === 0) return null;
+  return (
+    <div className="ld-oppfacts">
+      {hasFacts && (
+        <div className="ld-oppchips">
+          {lead.request_kind && <span className="ld-oppchip ld-oppkind">{KIND_LABEL[lead.request_kind] || lead.request_kind}</span>}
+          {lead.quantity != null && <span className="ld-oppchip">{t.qtyLabel} {lead.quantity}{qtyUnit ? ` ${qtyUnit}` : ''}</span>}
+          {lead.delivery_location && <span className="ld-oppchip">{lead.delivery_location}</span>}
+          {lead.preferred_timeline && <span className="ld-oppchip">{lead.preferred_timeline}</span>}
+          {quoteDeadline && <span className="ld-oppchip ld-oppdeadline">{t.quoteByLabel} {quoteDeadline}</span>}
+        </div>
+      )}
+      {reasons.length > 0 && <MatchReasons reasons={reasons} compact />}
+    </div>
+  );
+}
+
 export default function VendorLeadsPage() {
   const [lang, setLang] = useLang(); // stored `nxt_lang` — shared across marketplace pages
   const t = T[lang];
@@ -193,8 +350,11 @@ export default function VendorLeadsPage() {
   const [signedIn, setSignedIn] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [openQuote, setOpenQuote] = useState<string | null>(null);
-  const [qform, setQform] = useState({ amount: '', timeline: '', valid_until: '', message: '' });
-  const [qBusy, setQBusy] = useState(false);
+  const [qform, setQform] = useState<QuoteFormState>(emptyQform());
+  const [qLoading, setQLoading] = useState(false);
+  const [qBusy, setQBusy] = useState<'save' | 'submit' | null>(null);
+  const [qError, setQError] = useState<string | null>(null);
+  const [qDraftSaved, setQDraftSaved] = useState(false);
   const [openPilot, setOpenPilot] = useState<string | null>(null);
   const [pform, setPform] = useState({ kind: 'demo', scheduled_for: '', location: '', scope: '', success_criteria: '' });
   const [pBusy, setPBusy] = useState(false);
@@ -280,28 +440,107 @@ export default function VendorLeadsPage() {
     await fetch('/api/vendor/leads', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status }) });
   }
 
-  async function sendQuote(leadId: string) {
-    const amount = Number(qform.amount);
-    if (!(amount > 0)) return;
-    setQBusy(true);
-    const res = await fetch('/api/vendor/quote', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quote_request_id: leadId, amount, timeline: qform.timeline, valid_until: qform.valid_until || null, message: qform.message }),
-    });
-    const data = await res.json();
-    if (data.ok) {
-      setLeads((ls) => ls.map((l) => (l.id === leadId ? {
-        ...l, status: 'responded', quote_amount: amount, quote_timeline: qform.timeline || null,
-        quote_valid_until: qform.valid_until || null, quote_message: qform.message || null,
-        commission: { commission_amount: data.commission.amount, effective_rate: data.commission.effective_rate, status: 'quoted', protected_until: data.commission.protected_until },
-      } : l)));
-      setOpenQuote(null); setQform({ amount: '', timeline: '', valid_until: '', message: '' });
-    }
-    setQBusy(false);
-  }
-  function openQuoteForm(l: Lead) {
-    setQform({ amount: l.quote_amount != null ? String(l.quote_amount) : '', timeline: l.quote_timeline || '', valid_until: l.quote_valid_until || '', message: l.quote_message || '' });
+  // "Prepare Quote" — opens the structured template (Slice R3). Loads MY
+  // latest draft/revision for this lead from the proposals API (the SAME
+  // draft+revision store the submit path writes to — never a second save
+  // path) so a vendor can resume a draft they started earlier, or see the
+  // fields they last submitted when revising pre-accept.
+  async function openQuoteForm(l: Lead) {
     setOpenQuote(l.id);
+    setQError(null);
+    setQDraftSaved(false);
+    setQform(emptyQform());
+    setQLoading(true);
+    try {
+      const res = await fetch(`/api/vendor/proposals?quote_request_id=${l.id}`);
+      const data = await res.json();
+      const latest = data.ok ? (data.proposals || [])[0] : null;
+      if (latest) {
+        const extras = (latest.quote_extras || {}) as Record<string, unknown>;
+        const str = (v: unknown) => (v == null ? '' : String(v));
+        setQform({
+          total: str(latest.total), totalTouched: true, currency: latest.currency || 'USD',
+          lead_time: str(latest.lead_time), valid_until: str(latest.valid_until),
+          payment_terms: str(latest.payment_terms), warranty: str(latest.warranty), notes: str(latest.notes),
+          unit_price: str(extras.unit_price), installation: str(extras.installation), training: str(extras.training),
+          shipping_cost: str(extras.shipping_cost),
+          scope_summary: str(extras.scope_summary), duration: str(extras.duration), team_size: str(extras.team_size),
+          emergency_response: str(extras.emergency_response),
+          license_model: str(extras.license_model), pricing_details: str(extras.pricing_details),
+          implementation_cost: str(extras.implementation_cost), annual_support: str(extras.annual_support),
+          sla_summary: str(extras.sla_summary),
+        });
+      }
+    } catch {
+      // No existing draft/proposal to prefill from — the blank template is fine.
+    }
+    setQLoading(false);
+  }
+  // Live auto-calc (products only): unit price × quantity + shipping, but
+  // ONLY until the vendor edits the total field directly — once touched, we
+  // never silently overwrite their number again this session.
+  function patchQform(patch: Partial<QuoteFormState>, kind: RequestKind | null | undefined, quantity: number | null | undefined) {
+    setQform((prev) => {
+      const next = { ...prev, ...patch };
+      if (kind === 'product' && !next.totalTouched && ('unit_price' in patch || 'shipping_cost' in patch)) {
+        const auto = autoCalcProductTotal(
+          { unit_price: numOrNull(next.unit_price), shipping_cost: numOrNull(next.shipping_cost) },
+          quantity,
+        );
+        if (auto != null) next.total = String(auto);
+      }
+      return next;
+    });
+  }
+  // Save draft (action:'save') or submit/revise (action:'submit') — both
+  // paths go through POST /api/vendor/proposals, the SAME structured,
+  // draft+revision-aware API (src/app/api/vendor/proposals/route.ts). Client
+  // validation reuses validateQuoteExtras directly (src/lib/requests/
+  // structured.ts) — the exact function the server calls — so there is no
+  // separate "mirror" that can drift from server truth.
+  async function submitProposal(l: Lead, action: 'save' | 'submit') {
+    const extras = buildQuoteExtras(l.request_kind, qform);
+    const check = validateQuoteExtras(l.request_kind ?? null, extras);
+    if (!check.ok) { setQError(check.errors[0]); return; }
+    const total = Number(qform.total) || 0;
+    if (action === 'submit' && !(total > 0)) { setQError(t.needTotal); return; }
+    setQError(null);
+    setQDraftSaved(false);
+    setQBusy(action);
+    const line_items = total > 0 ? [{
+      description: t.quoteAmount, // "Total price" / "Precio total" — the one line item carrying the template's total
+      qty: 1, unit_price: total,
+      kind: l.request_kind === 'service' ? 'labor' : l.request_kind === 'technology' ? 'other' : 'product',
+    }] : [];
+    try {
+      const res = await fetch('/api/vendor/proposals', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quote_request_id: l.id, action, line_items,
+          currency: qform.currency || 'USD',
+          lead_time: qform.lead_time || null,
+          warranty: qform.warranty || null,
+          payment_terms: qform.payment_terms || null,
+          valid_until: qform.valid_until || null,
+          notes: qform.notes || null,
+          quote_extras: extras,
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) { setQError(data.message || t.quoteSendError); setQBusy(null); return; }
+      if (action === 'save') { setQDraftSaved(true); setQBusy(null); return; }
+      setLeads((ls) => ls.map((x) => (x.id === l.id ? {
+        ...x, status: 'responded', quote_amount: data.total ?? total, quote_currency: qform.currency || 'USD',
+        quote_timeline: qform.lead_time || null, quote_valid_until: qform.valid_until || null,
+        quote_message: qform.notes || null,
+        quote_payment_terms: qform.payment_terms || null, quote_warranty: qform.warranty || null,
+        quote_extras: (data.quote_extras ?? extras) as QuoteExtras,
+        commission: { commission_amount: data.commission.amount, effective_rate: data.commission.effective_rate, status: 'quoted', protected_until: data.commission.protected_until },
+      } : x)));
+      setOpenQuote(null); setQform(emptyQform()); setQBusy(null);
+    } catch {
+      setQError(t.quoteSendError); setQBusy(null);
+    }
   }
 
   async function createPilot(leadId: string) {
@@ -497,6 +736,13 @@ export default function VendorLeadsPage() {
                     <span className="ld-ref">{l.public_ref}</span>
                   </div>
 
+                  {/* Opportunity framing (Slice R3) — the structured facts the
+                      buyer gave (kind, quantity, location, timeline, quote
+                      deadline) + honest "why this matches you" chips. NEVER
+                      budget — R1's blind-budget invariant strips it server-side
+                      before this response ever ships; nothing here renders it. */}
+                  <OpportunityFacts lead={l} t={t} lang={lang} />
+
                   {/* Bundled quote request (quote cart): show EVERY item, not just the first */}
                   {(l.answers?.items?.length || 0) > 0 && (
                     <div className="ld-bundle">
@@ -551,25 +797,105 @@ export default function VendorLeadsPage() {
                         <span>{t.yourQuote} <b>{money(l.quote_amount)}</b></span>
                         {l.commission && <span>{t.commission} <b>{money(l.commission.commission_amount)}</b></span>}
                         {l.quote_timeline && <span>{l.quote_timeline}</span>}
+                        {(l.quote_payment_terms || l.quote_warranty) && (
+                          <span className="ld-qterms">{[l.quote_payment_terms, l.quote_warranty].filter(Boolean).join(' · ')}</span>
+                        )}
                         {l.commission?.protected_until && <span className="ld-prot">{t.protectedTo} {new Date(l.commission.protected_until).toLocaleDateString()}</span>}
                       </div>
                     )}
                     {openQuote === l.id ? (
                       <div className="ld-qform">
-                        <div className="ld-qrow">
-                          <label>{t.quoteAmount}<input type="number" min="0" value={qform.amount} onChange={(e) => setQform({ ...qform, amount: e.target.value })} placeholder="e.g. 25000" /></label>
-                          <label>{t.timeline}<input value={qform.timeline} onChange={(e) => setQform({ ...qform, timeline: e.target.value })} placeholder={t.timelinePh} /></label>
-                          <label>{t.validUntil}<input type="date" value={qform.valid_until} onChange={(e) => setQform({ ...qform, valid_until: e.target.value })} /></label>
-                        </div>
-                        <textarea rows={3} value={qform.message} onChange={(e) => setQform({ ...qform, message: e.target.value })} placeholder={t.scopeNotesPh} />
-                        <div className="ld-qcom">{t.estCommission} <b>{money(estimateCommission(Number(qform.amount)))}</b> <small>{t.estCommissionNote}</small></div>
-                        <div className="ld-qactions">
-                          <button className="ld-qsend" disabled={qBusy || !(Number(qform.amount) > 0)} onClick={() => sendQuote(l.id)}>{qBusy ? t.sending : t.sendQuote}</button>
-                          <button className="ld-qcancel" onClick={() => setOpenQuote(null)}>{t.cancel}</button>
-                        </div>
+                        {qLoading ? <p className="ld-qloading">{t.loading}</p> : (
+                          <>
+                            {l.quote_amount != null && canReviseQuote(l) && <p className="ld-revisenote">{t.reviseNote}</p>}
+                            <div className="ld-qrow">
+                              <label>{t.quoteAmount}
+                                <input type="number" min="0" step="0.01" value={qform.total} onChange={(e) => patchQform({ total: e.target.value, totalTouched: true }, l.request_kind, l.quantity)} placeholder="e.g. 25000" />
+                              </label>
+                              <label>{t.currencyLabel}
+                                <select value={qform.currency} onChange={(e) => setQform((f) => ({ ...f, currency: e.target.value }))}>
+                                  <option value="USD">USD</option><option value="MXN">MXN</option><option value="CAD">CAD</option><option value="EUR">EUR</option>
+                                </select>
+                              </label>
+                              <label>{t.timeline}<input value={qform.lead_time} onChange={(e) => setQform((f) => ({ ...f, lead_time: e.target.value }))} placeholder={t.timelinePh} maxLength={200} /></label>
+                            </div>
+                            {l.request_kind === 'product' && <p className="ld-autohint">{t.totalAutoHint}</p>}
+
+                            <div className="ld-qrow">
+                              <label>{t.validUntil}<input type="date" value={qform.valid_until} onChange={(e) => setQform((f) => ({ ...f, valid_until: e.target.value }))} /></label>
+                              <label>{t.paymentTermsLabel}<input value={qform.payment_terms} onChange={(e) => setQform((f) => ({ ...f, payment_terms: e.target.value }))} placeholder={t.paymentTermsPh} maxLength={300} /></label>
+                              <label>{t.warrantyLabel}<input value={qform.warranty} onChange={(e) => setQform((f) => ({ ...f, warranty: e.target.value }))} placeholder={t.warrantyPh} maxLength={400} /></label>
+                            </div>
+
+                            {/* Per-kind extras — only the fields the OPPORTUNITY's own request_kind accepts (validated server-side by validateQuoteExtras) */}
+                            {l.request_kind === 'product' && (
+                              <div className="ld-qextras">
+                                <div className="ld-qrow">
+                                  <label>{t.unitPrice}<input type="number" min="0" step="0.01" value={qform.unit_price} onChange={(e) => patchQform({ unit_price: e.target.value }, l.request_kind, l.quantity)} /></label>
+                                  <label>{t.shippingCost}<input type="number" min="0" step="0.01" value={qform.shipping_cost} onChange={(e) => patchQform({ shipping_cost: e.target.value }, l.request_kind, l.quantity)} /></label>
+                                  <label>{t.installationLabel}
+                                    <select value={qform.installation} onChange={(e) => setQform((f) => ({ ...f, installation: e.target.value }))}>
+                                      <option value="">{t.selectPh}</option>
+                                      <option value="included">{t.installationIncluded}</option>
+                                      <option value="extra">{t.installationExtra}</option>
+                                      <option value="not_available">{t.installationNone}</option>
+                                    </select>
+                                  </label>
+                                </div>
+                                <label>{t.trainingLabel}
+                                  <select value={qform.training} onChange={(e) => setQform((f) => ({ ...f, training: e.target.value }))}>
+                                    <option value="">{t.selectPh}</option>
+                                    <option value="included">{t.trainingIncluded}</option>
+                                    <option value="extra">{t.trainingExtra}</option>
+                                  </select>
+                                </label>
+                              </div>
+                            )}
+                            {l.request_kind === 'service' && (
+                              <div className="ld-qextras">
+                                <textarea rows={2} value={qform.scope_summary} onChange={(e) => setQform((f) => ({ ...f, scope_summary: e.target.value }))} placeholder={t.scopeSummaryPh} maxLength={1000} />
+                                <div className="ld-qrow">
+                                  <label>{t.durationLabel}<input value={qform.duration} onChange={(e) => setQform((f) => ({ ...f, duration: e.target.value }))} placeholder={t.durationPh} maxLength={200} /></label>
+                                  <label>{t.teamSize}<input type="number" min="1" step="1" value={qform.team_size} onChange={(e) => setQform((f) => ({ ...f, team_size: e.target.value }))} /></label>
+                                  <label>{t.emergencyResponse}<input value={qform.emergency_response} onChange={(e) => setQform((f) => ({ ...f, emergency_response: e.target.value }))} placeholder={t.emergencyResponsePh} maxLength={200} /></label>
+                                </div>
+                              </div>
+                            )}
+                            {l.request_kind === 'technology' && (
+                              <div className="ld-qextras">
+                                <div className="ld-qrow">
+                                  <label>{t.licenseModel}
+                                    <select value={qform.license_model} onChange={(e) => setQform((f) => ({ ...f, license_model: e.target.value }))}>
+                                      <option value="">{t.selectPh}</option>
+                                      <option value="subscription">{t.licenseSubscription}</option>
+                                      <option value="perpetual">{t.licensePerpetual}</option>
+                                      <option value="tiered">{t.licenseTiered}</option>
+                                    </select>
+                                  </label>
+                                  <label>{t.implementationCost}<input type="number" min="0" step="0.01" value={qform.implementation_cost} onChange={(e) => setQform((f) => ({ ...f, implementation_cost: e.target.value }))} /></label>
+                                  <label>{t.annualSupport}<input type="number" min="0" step="0.01" value={qform.annual_support} onChange={(e) => setQform((f) => ({ ...f, annual_support: e.target.value }))} /></label>
+                                </div>
+                                <input value={qform.pricing_details} onChange={(e) => setQform((f) => ({ ...f, pricing_details: e.target.value }))} placeholder={t.pricingDetailsPh} maxLength={1000} />
+                                <input value={qform.sla_summary} onChange={(e) => setQform((f) => ({ ...f, sla_summary: e.target.value }))} placeholder={t.slaSummaryPh} maxLength={500} />
+                              </div>
+                            )}
+
+                            <textarea rows={2} value={qform.notes} onChange={(e) => setQform((f) => ({ ...f, notes: e.target.value }))} placeholder={t.scopeNotesPh} maxLength={3000} />
+                            <div className="ld-qcom">{t.estCommission} <b>{money(estimateCommission(Number(qform.total) || 0))}</b> <small>{t.estCommissionNote}</small></div>
+                            {qError && <p className="ld-formerr" role="alert">{qError}</p>}
+                            {qDraftSaved && <p className="ld-draftok">{t.draftSaved}</p>}
+                            <div className="ld-qactions">
+                              <button className="ld-qsend" disabled={qBusy !== null || !(Number(qform.total) > 0)} onClick={() => submitProposal(l, 'submit')}>{qBusy === 'submit' ? t.sending : t.sendQuote}</button>
+                              <button className="ld-qdraft" disabled={qBusy !== null} onClick={() => submitProposal(l, 'save')}>{qBusy === 'save' ? t.saving : t.saveDraft}</button>
+                              <button className="ld-qcancel" onClick={() => { setOpenQuote(null); setQError(null); }}>{t.cancel}</button>
+                            </div>
+                          </>
+                        )}
                       </div>
                     ) : (
-                      <button className="ld-qopen" onClick={() => openQuoteForm(l)}>{l.quote_amount != null ? t.updateQuote : t.sendQuoteBtn}</button>
+                      (l.quote_amount == null || canReviseQuote(l)) && (
+                        <button className="ld-qopen" onClick={() => openQuoteForm(l)}>{l.quote_amount != null ? t.updateQuote : t.sendQuoteBtn}</button>
+                      )
                     )}
                   </div>
 
@@ -861,6 +1187,23 @@ const CSS = `
 .ld-qsend:disabled{opacity:.5;cursor:not-allowed;}
 .ld-qcancel{font-family:inherit;font-size:13px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-ink,#141320);border-radius:9px;padding:10px 14px;cursor:pointer;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .ld-qcancel:hover{border-color:#C7C2DE;}
+/* Slice R3 — opportunity framing (structured facts + honest match chips) */
+.ld-oppfacts{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+.ld-oppchips{display:flex;flex-wrap:wrap;gap:6px;}
+.ld-oppchip{font-size:12px;font-weight:600;color:var(--spec-text-2nd,#615F72);background:var(--spec-surface,#EFEDF5);border:1px solid var(--spec-border,#E2DFEC);border-radius:99px;padding:4px 11px;white-space:nowrap;}
+.ld-oppkind{color:var(--spec-ink,#141320);text-transform:capitalize;}
+.ld-oppdeadline{color:#8A5D14;background:#FBF3E7;border-color:rgba(198,138,40,.35);}
+/* Slice R3 — the structured quote template's per-kind extras + save-draft/revise/error affordances */
+.ld-qextras{display:flex;flex-direction:column;gap:10px;padding-top:2px;}
+.ld-autohint{margin:-2px 0 0;font-size:11.5px;color:var(--spec-text-2nd,#615F72);}
+.ld-revisenote{margin:0;font-size:12.5px;color:var(--spec-violet-deep,#4A3DB0);background:rgba(108,92,224,.06);border:1px solid rgba(108,92,224,.2);border-radius:9px;padding:8px 12px;}
+.ld-formerr{margin:0;font-size:12.5px;font-weight:600;color:var(--spec-error,#CE4B43);background:#FBECEA;border:1px solid rgba(206,75,67,.3);border-radius:9px;padding:8px 12px;}
+.ld-draftok{margin:0;font-size:12.5px;font-weight:600;color:#1F7A54;background:#E9F7F0;border:1px solid rgba(47,158,106,.3);border-radius:9px;padding:8px 12px;}
+.ld-qloading{margin:0;font-size:13px;color:var(--spec-text-2nd,#615F72);}
+.ld-qterms{color:var(--spec-text-2nd,#615F72);font-size:12.5px;}
+.ld-qdraft{font-family:inherit;font-size:13px;font-weight:600;background:#fff;border:1px solid var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);border-radius:9px;padding:10px 14px;cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.ld-qdraft:hover{background:rgba(108,92,224,.08);}
+.ld-qdraft:disabled{opacity:.5;cursor:not-allowed;}
 .ld-purchase{margin-top:14px;border-top:1px solid var(--spec-border,#E2DFEC);padding-top:14px;}
 .ld-purbtn{font-family:inherit;font-size:13px;font-weight:700;background:#E9F7F0;border:1px solid rgba(47,158,106,.4);color:#1F7A54;border-radius:10px;padding:10px 16px;cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .ld-purbtn:hover{background:#DBF1E5;}

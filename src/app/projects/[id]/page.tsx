@@ -34,7 +34,7 @@ interface Task { id: string; title: string; detail: string | null; due_date: str
 interface Decision { id: string; decision: string; reason: string | null; decided_at: string }
 interface Ev { id: string; actor_name: string | null; event: string; detail: Record<string, unknown>; created_at: string }
 interface Commission { commission_amount: number | null; effective_rate: number | null; status: string | null }
-interface Quote { id: string; public_ref: string; opportunity_ref: string | null; kind: string; company: string | null; quote_amount: number | null; quote_currency: string | null; quote_timeline: string | null; quote_valid_until: string | null; quoted_at: string | null; status: string; buyer_decision: string | null; commission: Commission | null }
+interface Quote { id: string; public_ref: string; opportunity_ref: string | null; kind: string; company: string | null; quote_amount: number | null; quote_currency: string | null; quote_timeline: string | null; quote_valid_until: string | null; quoted_at: string | null; status: string; buyer_decision: string | null; commission: Commission | null; quote_payment_terms?: string | null; quote_warranty?: string | null }
 interface Approval { id: string; kind: string; status: string; approver_name: string | null; note: string | null; due_date: string | null; decided_at: string | null }
 interface Milestone { id: string; kind: string; title: string | null; status: string; due_date: string | null; note: string | null }
 
@@ -286,6 +286,8 @@ export default function ProjectWorkspacePage() {
                     currency: q.quote_currency,
                     timeline: q.quote_timeline,
                     validUntil: q.quote_valid_until,
+                    paymentTerms: q.quote_payment_terms,
+                    warranty: q.quote_warranty,
                     feeAmount: q.commission?.commission_amount ?? null,
                     status: q.buyer_decision === 'accepted' ? 'accepted' : q.quote_amount != null ? 'received' : 'awaiting',
                     ref: q.opportunity_ref || q.public_ref,
