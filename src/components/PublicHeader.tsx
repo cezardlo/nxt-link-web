@@ -59,6 +59,7 @@ const T: Record<Lang, Record<string, string>> = {
     openSearchAria: 'Open search',
     signIn: 'Sign in',
     join: 'Join free',
+    myDashboard: 'My dashboard',
     becomeVendor: 'Become a Vendor',
     savedForQuote: 'Saved for Quote',
     menuAria: 'Menu',
@@ -74,6 +75,7 @@ const T: Record<Lang, Record<string, string>> = {
     openSearchAria: 'Abrir búsqueda',
     signIn: 'Iniciar sesión',
     join: 'Únete gratis',
+    myDashboard: 'Mi panel',
     becomeVendor: 'Conviértete en proveedor',
     savedForQuote: 'Guardado para cotizar',
     menuAria: 'Menú',
@@ -101,6 +103,27 @@ const PublicHeader = forwardRef<PublicHeaderHandle, { lang: Lang; onLangChange: 
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Signed-in awareness (Cesar live report 2026-07-30: /marketplace sits
+  // behind the login wall, so every viewer there is signed in — offering
+  // them "Sign in / Join free / Become a Vendor" is incoherent). Default
+  // renders the anonymous CTAs; once /api/auth/me confirms a session they
+  // swap for one "My dashboard" link routed by role (same mapping as
+  // auth/callback's routedDefault).
+  const [me, setMe] = useState<{ role: string } | null>(null);
+  useEffect(() => {
+    let active = true;
+    fetch('/api/auth/me')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (active && d?.signed_in) setMe({ role: String(d.role || 'client') });
+      })
+      .catch(() => { /* network error -> keep anonymous CTAs */ });
+    return () => { active = false; };
+  }, []);
+  const dashHref = me?.role === 'admin' || me?.role === 'super_admin'
+    ? '/admin'
+    : me?.role === 'vendor' ? '/vendor/portal' : '/buyer';
 
   useImperativeHandle(ref, () => ({
     focusSearch() {
@@ -174,9 +197,15 @@ const PublicHeader = forwardRef<PublicHeaderHandle, { lang: Lang; onLangChange: 
               <span>{t.savedForQuote}</span>
               <span className={'ph-quoten' + (count > 0 ? ' has' : '')} aria-hidden="true">{count}</span>
             </Link>
-            {!condensed && <Link className="ph-vendorlink" href="/vendor-signup">{t.becomeVendor}</Link>}
-            <a className="ph-signin" href="/login">{t.signIn}</a>
-            {!condensed && <a className="ph-joinbtn" href="/signup">{t.join}</a>}
+            {me ? (
+              <a className="ph-joinbtn" href={dashHref}>{t.myDashboard}</a>
+            ) : (
+              <>
+                {!condensed && <Link className="ph-vendorlink" href="/vendor-signup">{t.becomeVendor}</Link>}
+                <a className="ph-signin" href="/login">{t.signIn}</a>
+                {!condensed && <a className="ph-joinbtn" href="/signup">{t.join}</a>}
+              </>
+            )}
           </div>
 
           <button
@@ -204,9 +233,15 @@ const PublicHeader = forwardRef<PublicHeaderHandle, { lang: Lang; onLangChange: 
             <span className={'ph-quoten' + (count > 0 ? ' has' : '')} aria-hidden="true">{count}</span>
           </Link>
           <LanguageToggle lang={lang} onChange={onLangChange} variant="light" />
-          {!condensed && <Link className="ph-vendorlink" href="/vendor-signup" onClick={() => setMenuOpen(false)}>{t.becomeVendor}</Link>}
-          <a className="ph-signin" href="/login">{t.signIn}</a>
-          {!condensed && <a className="ph-joinbtn" href="/signup">{t.join}</a>}
+          {me ? (
+            <a className="ph-joinbtn" href={dashHref}>{t.myDashboard}</a>
+          ) : (
+            <>
+              {!condensed && <Link className="ph-vendorlink" href="/vendor-signup" onClick={() => setMenuOpen(false)}>{t.becomeVendor}</Link>}
+              <a className="ph-signin" href="/login">{t.signIn}</a>
+              {!condensed && <a className="ph-joinbtn" href="/signup">{t.join}</a>}
+            </>
+          )}
         </div>
       )}
     </header>
