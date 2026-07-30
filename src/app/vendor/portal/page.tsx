@@ -2,15 +2,28 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
-import { Handshake, Eye, Check, PartyPopper, Laptop, X } from 'lucide-react';
+import { Handshake, Eye, Check, PartyPopper, Laptop, X, ChevronDown } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import CategoryPicker from '@/components/CategoryPicker';
 import LanguageToggle, { useLang } from '@/components/LanguageToggle';
-import ProfileStrengthMeter, { computeProfileStrength } from '@/components/ProfileStrengthMeter';
 import VendorNav from '@/components/VendorNav';
 
 // Design System v1.0 reskin (Premium Polish Phase 2, 2026-07-23): visual/CSS
 // only — every handler and state above is unchanged.
+//
+// Portal-friendly restructure (2026-07-30, "the monster page" rebuild): the
+// single long scroll is now FOUR focused tabs — Storefront / Capabilities /
+// Trust & Proof / Agreement — per CESAR'S PORTAL REDESIGN BLUEPRINT
+// (workplace/plans/vendor-onboarding-uber-flow-2026-07-29.md). Every field,
+// editor, upload path, and handler below is unchanged; only WHERE each piece
+// renders moved. The old "Profile strength — 30%" ring + lock icons is
+// replaced by a persistent, plain calm checklist (green check = done, violet
+// highlight = suggested next, no percentages, no locks, no "unlocks" copy) —
+// sidebar on desktop, a collapsible strip on mobile. Tab state lives in the
+// URL hash (#storefront/#capabilities/#trust/#agreement) so refresh keeps
+// place. This page complements — does not duplicate — the guided card-flow
+// at /vendor/onboarding; first-time vendors (nothing filled in yet) get a
+// gentle pointer to it from the checklist.
 const ibmPlexSans = IBM_Plex_Sans({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
@@ -33,6 +46,11 @@ const CLIENT_TYPES = [
 const CLIENT_SIZES = [
   'Small businesses (1–50 people)', 'Mid-size companies (51–500)', 'Large companies (500+)', 'Enterprise / Fortune 500',
 ];
+
+// The four portal workspaces (blueprint, verbatim grouping). Tab state lives
+// in the URL hash, not just component state, so a refresh keeps place.
+type TabKey = 'storefront' | 'capabilities' | 'trust' | 'agreement';
+const TAB_ORDER: TabKey[] = ['storefront', 'capabilities', 'trust', 'agreement'];
 
 type Lang = 'en' | 'es';
 // First-pass bilingual strings for the vendor onboarding flow (EN/ES toggle).
@@ -84,6 +102,27 @@ const TR: Record<string, { en: string; es: string }> = {
   f_about: { en: 'About your company', es: 'Acerca de tu empresa' },
   save_profile: { en: 'Save profile', es: 'Guardar perfil' },
   saving_btn: { en: 'Saving…', es: 'Guardando…' },
+
+  // Tabs (Portal restructure, 2026-07-30 — replaces the single long scroll
+  // with four focused workspaces per CESAR'S PORTAL REDESIGN BLUEPRINT).
+  tab_storefront: { en: 'Storefront', es: 'Tienda' },
+  tab_capabilities: { en: 'Capabilities', es: 'Capacidades' },
+  tab_trust: { en: 'Trust & Proof', es: 'Confianza y pruebas' },
+  tab_agreement: { en: 'Agreement', es: 'Acuerdo' },
+
+  // Calm checklist sidebar (replaces the "Profile strength — 30%" ring + lock
+  // icons: plain items, green check when done, violet highlight on the
+  // suggested-next one — no percentages, no lock icons, no "unlocks" copy).
+  checklist_title: { en: 'Your progress', es: 'Tu progreso' },
+  strip_summary: { en: '{n} of {total} done', es: '{n} de {total} completos' },
+  check_name_logo: { en: 'Company name & logo', es: 'Nombre y logo de la empresa' },
+  check_tagline_about: { en: 'Tagline & description', es: 'Frase y descripción' },
+  check_industries: { en: 'Industries you serve', es: 'Industrias que atiendes' },
+  check_service_areas: { en: 'Service areas', es: 'Zonas de servicio' },
+  check_listing: { en: 'Your first listing', es: 'Tu primera publicación' },
+  check_proof: { en: 'Proof — a certification, photo, or case study', es: 'Prueba — una certificación, foto o caso de éxito' },
+  check_agreement: { en: 'Vendor agreement', es: 'Acuerdo de proveedor' },
+  guided_flow: { en: 'Prefer step-by-step? Set up with the guided flow →', es: '¿Prefieres paso a paso? Configura con la guía →' },
 };
 
 interface Vendor {
@@ -142,6 +181,31 @@ export default function VendorPortalPage() {
   // Shared language state — the one LanguageToggle + `nxt_lang` key app-wide.
   const [lang, switchLang] = useLang('en');
   const t = (k: string) => (TR[k] ? (lang === 'es' ? TR[k].es : TR[k].en) : k);
+  const tf = (k: string, vals: Record<string, string | number>) => {
+    let s = t(k);
+    for (const [key, v] of Object.entries(vals)) s = s.replace(`{${key}}`, String(v));
+    return s;
+  };
+
+  // Which of the four workspaces is showing. Lives in the URL hash so a
+  // refresh (or a shared link) keeps the vendor's place — read once on
+  // mount, and kept in sync with back/forward navigation.
+  const [tab, setTabState] = useState<TabKey>('storefront');
+  useEffect(() => {
+    const fromHash = (): TabKey | null => {
+      const h = window.location.hash.replace('#', '');
+      return (TAB_ORDER as string[]).includes(h) ? (h as TabKey) : null;
+    };
+    const initial = fromHash();
+    if (initial) setTabState(initial);
+    const onHashChange = () => { const h = fromHash(); if (h) setTabState(h); };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+  function setTab(next: TabKey) {
+    setTabState(next);
+    if (typeof window !== 'undefined') window.history.replaceState(null, '', `#${next}`);
+  }
 
   const load = useCallback(async () => {
     const res = await fetch('/api/vendor/profile');
@@ -397,19 +461,6 @@ export default function VendorPortalPage() {
     );
   }
 
-  // Profile Strength — computed by THE one shared meter (30% pre-credited at
-  // signup; 5 items max, each naming its unlock; disappears at 100%).
-  const meterInput = {
-    hasLogo: !!logoUrl,
-    taglineLen: (vendor.tagline || '').trim().length,
-    descriptionLen: (vendor.description || '').trim().length,
-    listingCount,
-    hasWebsite: !!(vendor.website || '').trim(),
-    hasPhone: !!(vendor.phone || '').trim(),
-    hasCity: !!(vendor.city || '').trim(),
-    proofCount: certs.length + photos.length + caseStudies.length,
-  };
-  const pct = computeProfileStrength(meterInput).pct;
   const firstName = (vendor.contact_name || '').trim().split(/\s+/)[0] || '';
   const inReview = vendor.status !== 'approved';
 
@@ -417,6 +468,28 @@ export default function VendorPortalPage() {
   // service region — so we skip the Service areas question for software-only vendors.
   const selCats = vendor.categories || [];
   const softwareOnly = selCats.length > 0 && selCats.every((c) => catFam[c] === 'technology');
+
+  // Calm checklist — replaces the "Profile strength — 30%" ring + lock icons
+  // (CESAR'S PORTAL REDESIGN BLUEPRINT). Plain done/not-done items; no
+  // percentage, no locks, no "unlocks" copy. The first not-done item gets the
+  // one violet "suggested next" highlight per screen.
+  const proofCount = certs.length + photos.length + caseStudies.length;
+  const checklist: { key: string; label: string; done: boolean; tab?: TabKey; href?: string }[] = [
+    { key: 'name_logo', label: t('check_name_logo'), done: !!vendor.company_name.trim() && !!logoUrl, tab: 'storefront' },
+    { key: 'tagline_about', label: t('check_tagline_about'), done: (vendor.tagline || '').trim().length > 0 && (vendor.description || '').trim().length >= 40, tab: 'storefront' },
+    { key: 'industries', label: t('check_industries'), done: (vendor.industries || []).length > 0, tab: 'capabilities' },
+  ];
+  if (!softwareOnly) {
+    checklist.push({ key: 'service_areas', label: t('check_service_areas'), done: (vendor.service_areas || []).length > 0, tab: 'capabilities' });
+  }
+  checklist.push(
+    { key: 'listing', label: t('check_listing'), done: listingCount > 0, href: '/vendor/listings' },
+    { key: 'proof', label: t('check_proof'), done: proofCount > 0, tab: 'trust' },
+    { key: 'agreement', label: t('check_agreement'), done: !!agreement?.accepted, tab: 'agreement' },
+  );
+  const doneCount = checklist.filter((c) => c.done).length;
+  const allDone = doneCount === checklist.length;
+  const suggestedKey = checklist.find((c) => !c.done)?.key;
 
   return (
     <div className={`vp ${ibmPlexSans.variable}`}>
@@ -433,7 +506,7 @@ export default function VendorPortalPage() {
 
       <main className="vp-wrap">
         <div className="vp-titlerow">
-          <h1>{pct === 100 ? t('title_done') : t('title_welcome').replace('{name}', firstName ? `, ${firstName}` : '')}</h1>
+          <h1>{allDone ? t('title_done') : t('title_welcome').replace('{name}', firstName ? `, ${firstName}` : '')}</h1>
           <div className="vp-titleactions">
             <span className="vp-autosave">
               {autosaving ? t('saving') : savedAt ? (
@@ -461,267 +534,357 @@ export default function VendorPortalPage() {
           </section>
         )}
 
-        {pct === 100 ? (
+        {allDone && (
           <div className="vp-live"><span className="vp-inlineicon"><PartyPopper size={16} strokeWidth={1.75} aria-hidden="true" />{t('live')}</span> <a href={`/marketplace/vendor/${vendor.id}`} target="_blank" rel="noreferrer">{t('live_link')}</a></div>
-        ) : (
-          <ProfileStrengthMeter input={meterInput} lang={lang} links={{ listing: '/vendor/listings' }} />
         )}
 
-        {agreement && !agreement.accepted && (
-          <section className="vp-card vp-agreement">
-            <div className="vp-lbl">Vendor agreement — required before you can publish</div>
-            <p className="vp-hint">To publish listings and receive buyer leads, accept the NXT//LINK vendor terms. In short: {agreement.summary}</p>
-            <ul className="vp-terms">
-              {agreement.terms.map((t) => <li key={t.title}><b>{t.title}.</b> {t.body}</li>)}
-            </ul>
-            <p className="vp-hint" style={{ fontSize: 12 }}>Plain-language business terms, not final legal wording — a lawyer reviews the full agreement before real commerce.</p>
-            <button className="vp-btn" disabled={agBusy} onClick={acceptTerms}>{agBusy ? 'Saving…' : 'I accept the NXT//LINK vendor terms'}</button>
-          </section>
-        )}
-        {agreement && agreement.accepted && (
-          <div className="vp-accepted" style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-            <Check size={16} strokeWidth={2} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
-            <span>NXT//LINK vendor terms accepted{agreement.accepted_at ? ` on ${new Date(agreement.accepted_at).toLocaleDateString()}` : ''}. You can publish listings and receive leads.</span>
-          </div>
-        )}
+        <div className="vp-shell">
+          <aside className="vp-sidebar" aria-label={t('checklist_title')}>
+            <div className="vp-sidebar-title">{t('checklist_title')}</div>
+            <ChecklistList items={checklist} suggestedKey={suggestedKey} onSelect={setTab} />
+            {doneCount === 0 && <a className="vp-guidedlink" href="/vendor/onboarding">{t('guided_flow')}</a>}
+          </aside>
 
-        <section className="vp-card">
-          <div className="vp-lbl">{t('sec_company')}</div>
-          <div className="vp-banner">
-            <div className="vp-bannerimg">
-              {bannerUrl ? <img src={bannerUrl} alt="Storefront banner" /> : <div className="vp-bannerph">Cover banner — shown across the top of your storefront</div>}
-            </div>
-            <div className="vp-logoactions" style={{ marginTop: 10 }}>
-              <label className="vp-btn sm vp-logobtn">
-                {bannerBusy ? 'Uploading…' : bannerUrl ? 'Replace banner' : 'Upload banner'}
-                <input type="file" accept="image/png,image/jpeg,image/webp" disabled={bannerBusy} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadBanner(f); e.target.value = ''; }} />
-              </label>
-              {bannerUrl && <button className="vp-signout" type="button" onClick={removeBanner}>Remove</button>}
-              <p className="vp-hint" style={{ margin: 0 }}>Wide image works best (about 1200×300) · up to 8&nbsp;MB</p>
-            </div>
-          </div>
-          <div className="vp-logo">
-            <div className="vp-logobox">
-              {logoUrl ? <img src={logoUrl} alt="Company logo" /> : <span>Logo</span>}
-            </div>
-            <div className="vp-logoactions">
-              <label className="vp-btn sm vp-logobtn">
-                {logoBusy ? 'Uploading…' : logoUrl ? 'Replace logo' : 'Upload logo'}
-                <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" disabled={logoBusy} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadLogo(f); e.target.value = ''; }} />
-              </label>
-              {logoUrl && <button className="vp-signout" type="button" onClick={removeLogo}>Remove</button>}
-              <p className="vp-hint" style={{ margin: 0 }}>PNG, JPG, WEBP, or SVG · up to 5&nbsp;MB</p>
-            </div>
-          </div>
-          <div className="vp-fgrid">
-            <Field label={t('f_company')} value={vendor.company_name} onChange={(v) => set('company_name', v)} />
-            <Field label={t('f_contact')} value={vendor.contact_name || ''} onChange={(v) => set('contact_name', v)} />
-            <Field label={t('f_website')} value={vendor.website || ''} onChange={(v) => set('website', v)} />
-            <Field label={t('f_city')} value={vendor.city || ''} onChange={(v) => set('city', v)} />
-          </div>
-          <div style={{ marginTop: 16 }}>
-            <PhoneField value={vendor.phone || ''} onChange={(v) => set('phone', v)} />
-          </div>
-          <label className="vp-field" style={{ marginTop: 18 }}>
-            <span className="vp-fieldlbl">Tagline — one line under your name (e.g. &ldquo;Forklift service across the Borderplex since 2009&rdquo;)<em className="vp-count">{(vendor.tagline || '').length}/160</em></span>
-            <input value={vendor.tagline || ''} maxLength={160} onChange={(e) => set('tagline', e.target.value)} />
-          </label>
-          <label className="vp-field" style={{ marginTop: 18 }}>
-            <span className="vp-fieldlbl">
-              <span>{t('f_about')}</span>
-              <span className="vp-fieldright">
-                <em className="vp-count">{(vendor.description || '').trim().length} chars</em>
-              </span>
-            </span>
-            <textarea rows={4} value={vendor.description || ''} onChange={(e) => set('description', e.target.value)} />
-            <span className="vp-why">{(vendor.description || '').trim().length < 40 ? 'A clear 2–3 sentence description helps buyers trust you — aim for 40+ characters.' : 'Looks good. Say what you do, who you serve, and what makes you different.'}</span>
-          </label>
-        </section>
+          <div className="vp-main">
+            <details className="vp-stripmobile">
+              <summary>
+                <span>{tf('strip_summary', { n: doneCount, total: checklist.length })}</span>
+                <ChevronDown size={16} strokeWidth={2} aria-hidden="true" />
+              </summary>
+              <ChecklistList items={checklist} suggestedKey={suggestedKey} onSelect={setTab} />
+              {doneCount === 0 && <a className="vp-guidedlink" href="/vendor/onboarding">{t('guided_flow')}</a>}
+            </details>
 
-        <section className="vp-card">
-          <div className="vp-lbl">{t('sec_industry')}</div>
-          <p className="vp-hint">{t('sec_industry_hint')}</p>
-          <ChipGroup options={Array.from(new Set([...INDUSTRIES, ...(vendor.industries || [])]))} selected={vendor.industries || []} onToggle={(v) => toggle(vendor.industries || [], v, 'industries')} />
-          <AddYourOwn placeholder="Add another industry (e.g. Mining, Textiles)…" existing={vendor.industries || []} onAdd={(v) => set('industries', [...(vendor.industries || []), v])} />
-          <div className="vp-lbl" style={{ marginTop: 22 }}>{t('sec_clientsize')}</div>
-          <p className="vp-hint">{t('sec_clientsize_hint')}</p>
-          <ChipGroup options={CLIENT_SIZES} selected={vendor.client_types || []} onToggle={(v) => toggle(vendor.client_types || [], v, 'client_types')} />
-          <div className="vp-lbl" style={{ marginTop: 22 }}>{t('sec_clients')}</div>
-          <ChipGroup options={Array.from(new Set([...CLIENT_TYPES, ...((vendor.client_types || []).filter((v) => !CLIENT_SIZES.includes(v)))]))} selected={vendor.client_types || []} onToggle={(v) => toggle(vendor.client_types || [], v, 'client_types')} />
-          <div className="vp-lbl" style={{ marginTop: 22 }}>{t('sec_products')}</div>
-          <CategoryPicker selected={vendor.categories || []} onToggle={(v) => toggle(vendor.categories || [], v, 'categories')} lang={lang} />
-          {softwareOnly ? (
-            <p className="vp-hint" style={{ marginTop: 18, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-              <Laptop size={16} strokeWidth={1.75} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2, color: 'var(--muted)' }} />
-              <span>{t('software_note')}</span>
-            </p>
-          ) : (
-            <>
-              <div className="vp-lbl" style={{ marginTop: 22 }}>{t('sec_areas')} <span className="vp-lblhint">{t('areas_hint')}</span></div>
-              <ChipGroup options={AREAS} selected={vendor.service_areas || []} onToggle={(v) => toggle(vendor.service_areas || [], v, 'service_areas')} />
-            </>
-          )}
-          <div className="vp-lbl" style={{ marginTop: 22 }}>{t('sec_awards')}</div>
-          <p className="vp-hint">Industry analyst mentions, awards, and honors — e.g. Gartner Cool Vendor, Inc. 5000, ISO 9001. Shown on your public storefront.</p>
-          {(vendor.achievements || []).length > 0 && (
-            <div className="vp-chips">
-              {(vendor.achievements || []).map((a) => (
-                <button key={a} type="button" className="vp-chip on vp-inlineicon" title="Remove" onClick={() => set('achievements', (vendor.achievements || []).filter((x) => x !== a))}>{a}<X size={12} strokeWidth={2} aria-hidden="true" /></button>
+            <nav className="vp-tabnav" role="tablist">
+              {TAB_ORDER.map((tk) => (
+                <button
+                  key={tk}
+                  type="button"
+                  role="tab"
+                  id={`vp-tab-${tk}`}
+                  aria-selected={tab === tk}
+                  aria-controls={`vp-panel-${tk}`}
+                  className={'vp-tab' + (tab === tk ? ' on' : '')}
+                  onClick={() => setTab(tk)}
+                >
+                  {t(`tab_${tk}`)}
+                </button>
               ))}
-            </div>
-          )}
-          <AddYourOwn placeholder="Add an award or recognition (e.g. Gartner Cool Vendor 2025)…" existing={vendor.achievements || []} onAdd={(v) => set('achievements', [...(vendor.achievements || []), v])} />
-          <button className="vp-btn" style={{ marginTop: 24 }} disabled={saving} onClick={save}>{saving ? t('saving_btn') : t('save_profile')}</button>
-        </section>
+            </nav>
 
-        <section className="vp-card">
-          <div className="vp-lbl">{t('sec_cases')} <span className="vp-cnt">{caseStudies.length}/3</span></div>
-          <p className="vp-hint">Show up to 3 real results. Buyers trust proof — the challenge, what you did, and the measurable outcome.</p>
-          {caseStudies.length > 0 && (
-            <div className="vp-cslist">
-              {caseStudies.map((c) => (
-                <div className="vp-cscard" key={c.id}>
-                  <div className="vp-cshead"><b>{c.title}</b><button type="button" onClick={() => removeCaseStudy(c.id)}>Remove</button></div>
-                  {c.challenge && <p><span>Challenge:</span> {c.challenge}</p>}
-                  {c.solution && <p><span>Solution:</span> {c.solution}</p>}
-                  {c.result && <p><span>Result:</span> {c.result}</p>}
-                </div>
-              ))}
-            </div>
-          )}
-          {caseStudies.length < 3 ? (
-            <div className="vp-csform">
-              <input placeholder="Title — e.g. “Cut picking time 40% for a 3PL”" value={cs.title} onChange={(e) => setCs({ ...cs, title: e.target.value })} />
-              <textarea rows={2} placeholder="Challenge — what problem did the customer have?" value={cs.challenge} onChange={(e) => setCs({ ...cs, challenge: e.target.value })} />
-              <textarea rows={2} placeholder="Solution — what you delivered" value={cs.solution} onChange={(e) => setCs({ ...cs, solution: e.target.value })} />
-              <textarea rows={2} placeholder="Result — the measurable outcome" value={cs.result} onChange={(e) => setCs({ ...cs, result: e.target.value })} />
-              <button className="vp-btn sm" type="button" disabled={csBusy} onClick={addCaseStudy}>{csBusy ? 'Adding…' : 'Add case study'}</button>
-            </div>
-          ) : <p className="vp-hint">You&apos;ve added the maximum of 3. Remove one to add another.</p>}
-        </section>
-
-        <section className="vp-card">
-          <div className="vp-lbl">{t('sec_certs')} <span className="vp-cnt">{certs.length}/12</span></div>
-          <p className="vp-hint">ISO, OSHA, licenses, insurance — with issuer, dates, and an optional photo/PDF of the certificate. Shown on your storefront; buyers filter by these.</p>
-          {certs.length > 0 && (
-            <div className="vp-certlist">
-              {certs.map((c) => (
-                <div className="vp-cert" key={c.id}>
-                  <div className="vp-certmain">
-                    <b>{c.name}</b>
-                    <small>{[c.issuer, c.credential && `#${c.credential}`, c.expires_on && `expires ${c.expires_on}`].filter(Boolean).join(' · ')}</small>
+            <div id={`vp-panel-${tab}`} role="tabpanel" aria-labelledby={`vp-tab-${tab}`}>
+              {tab === 'storefront' && (
+                <section className="vp-card">
+                  <div className="vp-lbl">{t('sec_company')}</div>
+                  <div className="vp-banner">
+                    <div className="vp-bannerimg">
+                      {bannerUrl ? <img src={bannerUrl} alt="Storefront banner" /> : <div className="vp-bannerph">Cover banner — shown across the top of your storefront</div>}
+                    </div>
+                    <div className="vp-logoactions" style={{ marginTop: 10 }}>
+                      <label className="vp-btn sm vp-logobtn">
+                        {bannerBusy ? 'Uploading…' : bannerUrl ? 'Replace banner' : 'Upload banner'}
+                        <input type="file" accept="image/png,image/jpeg,image/webp" disabled={bannerBusy} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadBanner(f); e.target.value = ''; }} />
+                      </label>
+                      {bannerUrl && <button className="vp-signout" type="button" onClick={removeBanner}>Remove</button>}
+                      <p className="vp-hint" style={{ margin: 0 }}>Wide image works best (about 1200×300) · up to 8&nbsp;MB</p>
+                    </div>
                   </div>
-                  {c.image_url && <a href={c.image_url} target="_blank" rel="noreferrer">Proof</a>}
-                  <button type="button" onClick={() => removeCert(c.id)}>Remove</button>
-                </div>
-              ))}
-            </div>
-          )}
-          {certs.length < 12 && (
-            <div className="vp-csform">
-              <div className="vp-fgrid">
-                <input placeholder="Certification name * — e.g. ISO 9001:2015" value={certForm.name} onChange={(e) => setCertForm({ ...certForm, name: e.target.value })} />
-                <input placeholder="Issuer — e.g. SGS" value={certForm.issuer} onChange={(e) => setCertForm({ ...certForm, issuer: e.target.value })} />
-                <input placeholder="Certificate #" value={certForm.credential} onChange={(e) => setCertForm({ ...certForm, credential: e.target.value })} />
-                <label className="vp-datef">Expires<input type="date" value={certForm.expires_on} onChange={(e) => setCertForm({ ...certForm, expires_on: e.target.value })} /></label>
-              </div>
-              <label className="vp-fileline">
-                {certFile ? certFile.name : 'Attach certificate photo/PDF (optional)'}
-                <input type="file" accept="image/png,image/jpeg,image/webp,application/pdf" onChange={(e) => setCertFile(e.target.files?.[0] || null)} />
-              </label>
-              <button className="vp-btn sm" type="button" disabled={certBusy} onClick={addCert}>{certBusy ? 'Adding…' : 'Add certification'}</button>
-            </div>
-          )}
-        </section>
+                  <div className="vp-logo">
+                    <div className="vp-logobox">
+                      {logoUrl ? <img src={logoUrl} alt="Company logo" /> : <span>Logo</span>}
+                    </div>
+                    <div className="vp-logoactions">
+                      <label className="vp-btn sm vp-logobtn">
+                        {logoBusy ? 'Uploading…' : logoUrl ? 'Replace logo' : 'Upload logo'}
+                        <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" disabled={logoBusy} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadLogo(f); e.target.value = ''; }} />
+                      </label>
+                      {logoUrl && <button className="vp-signout" type="button" onClick={removeLogo}>Remove</button>}
+                      <p className="vp-hint" style={{ margin: 0 }}>PNG, JPG, WEBP, or SVG · up to 5&nbsp;MB</p>
+                    </div>
+                  </div>
+                  <div className="vp-fgrid">
+                    <Field label={t('f_company')} value={vendor.company_name} onChange={(v) => set('company_name', v)} />
+                    <Field label={t('f_contact')} value={vendor.contact_name || ''} onChange={(v) => set('contact_name', v)} />
+                    <Field label={t('f_website')} value={vendor.website || ''} onChange={(v) => set('website', v)} />
+                    <Field label={t('f_city')} value={vendor.city || ''} onChange={(v) => set('city', v)} />
+                  </div>
+                  <div style={{ marginTop: 16 }}>
+                    <PhoneField value={vendor.phone || ''} onChange={(v) => set('phone', v)} />
+                  </div>
+                  <label className="vp-field" style={{ marginTop: 18 }}>
+                    <span className="vp-fieldlbl">Tagline — one line under your name (e.g. &ldquo;Forklift service across the Borderplex since 2009&rdquo;)<em className="vp-count">{(vendor.tagline || '').length}/160</em></span>
+                    <input value={vendor.tagline || ''} maxLength={160} onChange={(e) => set('tagline', e.target.value)} />
+                  </label>
+                  <label className="vp-field" style={{ marginTop: 18 }}>
+                    <span className="vp-fieldlbl">
+                      <span>{t('f_about')}</span>
+                      <span className="vp-fieldright">
+                        <em className="vp-count">{(vendor.description || '').trim().length} chars</em>
+                      </span>
+                    </span>
+                    <textarea rows={4} value={vendor.description || ''} onChange={(e) => set('description', e.target.value)} />
+                    <span className="vp-why">{(vendor.description || '').trim().length < 40 ? 'A clear 2–3 sentence description helps buyers trust you — aim for 40+ characters.' : 'Looks good. Say what you do, who you serve, and what makes you different.'}</span>
+                  </label>
+                </section>
+              )}
 
-        <section className="vp-card">
-          <div className="vp-lbl">{t('sec_gallery')} <span className="vp-cnt">{photos.length}/12</span></div>
-          <p className="vp-hint">Facility, equipment, and completed-work photos. High-quality images make buyers trust you faster.</p>
-          {photos.length > 0 && (
-            <div className="vp-gallery">
-              {photos.map((p) => (
-                <div className="vp-photo" key={p.id}>
-                  {p.image_url && <img src={p.image_url} alt={p.caption || 'Gallery photo'} />}
-                  <div className="vp-photofoot"><span>{p.caption || ''}</span><button type="button" onClick={() => removePhoto(p.id)}>Remove</button></div>
-                </div>
-              ))}
-            </div>
-          )}
-          {photos.length < 12 && (
-            <div className="vp-vform" style={{ gridTemplateColumns: '1.6fr auto' }}>
-              <input placeholder="Caption (optional)" value={photoCaption} onChange={(e) => setPhotoCaption(e.target.value)} />
-              <label className="vp-btn sm vp-logobtn">
-                {photoBusy ? 'Uploading…' : 'Add photo'}
-                <input type="file" accept="image/png,image/jpeg,image/webp" disabled={photoBusy} onChange={(e) => { const f = e.target.files?.[0]; if (f) addPhoto(f); e.target.value = ''; }} />
-              </label>
-            </div>
-          )}
-        </section>
+              {tab === 'capabilities' && (
+                <section className="vp-card">
+                  <div className="vp-lbl">{t('sec_industry')}</div>
+                  <p className="vp-hint">{t('sec_industry_hint')}</p>
+                  <ChipGroup options={Array.from(new Set([...INDUSTRIES, ...(vendor.industries || [])]))} selected={vendor.industries || []} onToggle={(v) => toggle(vendor.industries || [], v, 'industries')} />
+                  <AddYourOwn placeholder="Add another industry (e.g. Mining, Textiles)…" existing={vendor.industries || []} onAdd={(v) => set('industries', [...(vendor.industries || []), v])} />
+                  <div className="vp-lbl" style={{ marginTop: 22 }}>{t('sec_clientsize')}</div>
+                  <p className="vp-hint">{t('sec_clientsize_hint')}</p>
+                  <ChipGroup options={CLIENT_SIZES} selected={vendor.client_types || []} onToggle={(v) => toggle(vendor.client_types || [], v, 'client_types')} />
+                  <div className="vp-lbl" style={{ marginTop: 22 }}>{t('sec_clients')}</div>
+                  <ChipGroup options={Array.from(new Set([...CLIENT_TYPES, ...((vendor.client_types || []).filter((v) => !CLIENT_SIZES.includes(v)))]))} selected={vendor.client_types || []} onToggle={(v) => toggle(vendor.client_types || [], v, 'client_types')} />
+                  <div className="vp-lbl" style={{ marginTop: 22 }}>{t('sec_products')}</div>
+                  <CategoryPicker selected={vendor.categories || []} onToggle={(v) => toggle(vendor.categories || [], v, 'categories')} lang={lang} />
+                  {softwareOnly ? (
+                    <p className="vp-hint" style={{ marginTop: 18, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                      <Laptop size={16} strokeWidth={1.75} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2, color: 'var(--muted)' }} />
+                      <span>{t('software_note')}</span>
+                    </p>
+                  ) : (
+                    <>
+                      <div className="vp-lbl" style={{ marginTop: 22 }}>{t('sec_areas')} <span className="vp-lblhint">{t('areas_hint')}</span></div>
+                      <ChipGroup options={AREAS} selected={vendor.service_areas || []} onToggle={(v) => toggle(vendor.service_areas || [], v, 'service_areas')} />
+                    </>
+                  )}
+                  <button className="vp-btn" style={{ marginTop: 24 }} disabled={saving} onClick={save}>{saving ? t('saving_btn') : t('save_profile')}</button>
+                </section>
+              )}
 
-        <section className="vp-card">
-          <div className="vp-lbl">{t('sec_videos')}</div>
-          <p className="vp-hint">Paste a YouTube or Vimeo link to show what you do (up to 8 videos).</p>
-          <div className="vp-vform">
-            <input placeholder="Title (optional)" value={videoTitle} onChange={(e) => setVideoTitle(e.target.value)} />
-            <input placeholder="https://youtube.com/watch?v=…" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addVideo()} />
-            <button className="vp-btn sm" onClick={addVideo}>Add video</button>
+              {tab === 'trust' && (
+                <>
+                  <section className="vp-card">
+                    <div className="vp-lbl">{t('sec_certs')} <span className="vp-cnt">{certs.length}/12</span></div>
+                    <p className="vp-hint">ISO, OSHA, licenses, insurance — with issuer, dates, and an optional photo/PDF of the certificate. Shown on your storefront; buyers filter by these.</p>
+                    {certs.length > 0 && (
+                      <div className="vp-certlist">
+                        {certs.map((c) => (
+                          <div className="vp-cert" key={c.id}>
+                            <div className="vp-certmain">
+                              <b>{c.name}</b>
+                              <small>{[c.issuer, c.credential && `#${c.credential}`, c.expires_on && `expires ${c.expires_on}`].filter(Boolean).join(' · ')}</small>
+                            </div>
+                            {c.image_url && <a href={c.image_url} target="_blank" rel="noreferrer">Proof</a>}
+                            <button type="button" onClick={() => removeCert(c.id)}>Remove</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {certs.length < 12 && (
+                      <div className="vp-csform">
+                        <div className="vp-fgrid">
+                          <input placeholder="Certification name * — e.g. ISO 9001:2015" value={certForm.name} onChange={(e) => setCertForm({ ...certForm, name: e.target.value })} />
+                          <input placeholder="Issuer — e.g. SGS" value={certForm.issuer} onChange={(e) => setCertForm({ ...certForm, issuer: e.target.value })} />
+                          <input placeholder="Certificate #" value={certForm.credential} onChange={(e) => setCertForm({ ...certForm, credential: e.target.value })} />
+                          <label className="vp-datef">Expires<input type="date" value={certForm.expires_on} onChange={(e) => setCertForm({ ...certForm, expires_on: e.target.value })} /></label>
+                        </div>
+                        <label className="vp-fileline">
+                          {certFile ? certFile.name : 'Attach certificate photo/PDF (optional)'}
+                          <input type="file" accept="image/png,image/jpeg,image/webp,application/pdf" onChange={(e) => setCertFile(e.target.files?.[0] || null)} />
+                        </label>
+                        <button className="vp-btn sm" type="button" disabled={certBusy} onClick={addCert}>{certBusy ? 'Adding…' : 'Add certification'}</button>
+                      </div>
+                    )}
+                  </section>
+
+                  <section className="vp-card">
+                    <div className="vp-lbl">{t('sec_cases')} <span className="vp-cnt">{caseStudies.length}/3</span></div>
+                    <p className="vp-hint">Show up to 3 real results. Buyers trust proof — the challenge, what you did, and the measurable outcome.</p>
+                    {caseStudies.length > 0 && (
+                      <div className="vp-cslist">
+                        {caseStudies.map((c) => (
+                          <div className="vp-cscard" key={c.id}>
+                            <div className="vp-cshead"><b>{c.title}</b><button type="button" onClick={() => removeCaseStudy(c.id)}>Remove</button></div>
+                            {c.challenge && <p><span>Challenge:</span> {c.challenge}</p>}
+                            {c.solution && <p><span>Solution:</span> {c.solution}</p>}
+                            {c.result && <p><span>Result:</span> {c.result}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {caseStudies.length < 3 ? (
+                      <div className="vp-csform">
+                        <input placeholder="Title — e.g. “Cut picking time 40% for a 3PL”" value={cs.title} onChange={(e) => setCs({ ...cs, title: e.target.value })} />
+                        <textarea rows={2} placeholder="Challenge — what problem did the customer have?" value={cs.challenge} onChange={(e) => setCs({ ...cs, challenge: e.target.value })} />
+                        <textarea rows={2} placeholder="Solution — what you delivered" value={cs.solution} onChange={(e) => setCs({ ...cs, solution: e.target.value })} />
+                        <textarea rows={2} placeholder="Result — the measurable outcome" value={cs.result} onChange={(e) => setCs({ ...cs, result: e.target.value })} />
+                        <button className="vp-btn sm" type="button" disabled={csBusy} onClick={addCaseStudy}>{csBusy ? 'Adding…' : 'Add case study'}</button>
+                      </div>
+                    ) : <p className="vp-hint">You&apos;ve added the maximum of 3. Remove one to add another.</p>}
+                  </section>
+
+                  <section className="vp-card">
+                    <div className="vp-lbl">{t('sec_gallery')} <span className="vp-cnt">{photos.length}/12</span></div>
+                    <p className="vp-hint">Facility, equipment, and completed-work photos. High-quality images make buyers trust you faster.</p>
+                    {photos.length > 0 && (
+                      <div className="vp-gallery">
+                        {photos.map((p) => (
+                          <div className="vp-photo" key={p.id}>
+                            {p.image_url && <img src={p.image_url} alt={p.caption || 'Gallery photo'} />}
+                            <div className="vp-photofoot"><span>{p.caption || ''}</span><button type="button" onClick={() => removePhoto(p.id)}>Remove</button></div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {photos.length < 12 && (
+                      <div className="vp-vform" style={{ gridTemplateColumns: '1.6fr auto' }}>
+                        <input placeholder="Caption (optional)" value={photoCaption} onChange={(e) => setPhotoCaption(e.target.value)} />
+                        <label className="vp-btn sm vp-logobtn">
+                          {photoBusy ? 'Uploading…' : 'Add photo'}
+                          <input type="file" accept="image/png,image/jpeg,image/webp" disabled={photoBusy} onChange={(e) => { const f = e.target.files?.[0]; if (f) addPhoto(f); e.target.value = ''; }} />
+                        </label>
+                      </div>
+                    )}
+                  </section>
+
+                  <section className="vp-card">
+                    <div className="vp-lbl">{t('sec_videos')}</div>
+                    <p className="vp-hint">Paste a YouTube or Vimeo link to show what you do (up to 8 videos).</p>
+                    <div className="vp-vform">
+                      <input placeholder="Title (optional)" value={videoTitle} onChange={(e) => setVideoTitle(e.target.value)} />
+                      <input placeholder="https://youtube.com/watch?v=…" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addVideo()} />
+                      <button className="vp-btn sm" onClick={addVideo}>Add video</button>
+                    </div>
+                    {videos.length > 0 && (
+                      <div className="vp-vgrid">
+                        {videos.map((v) => (
+                          <div className="vp-vcard" key={v.id}>
+                            {v.provider === 'other' ? <a className="vp-vlink" href={v.url} target="_blank" rel="noreferrer">{v.title || v.url}</a>
+                              : <div className="vp-viframe"><iframe src={v.embed_url} title={v.title || 'video'} allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen /></div>}
+                            <div className="vp-vfoot"><span>{v.title || 'Untitled'}</span><button onClick={() => removeVideo(v.id)}>Remove</button></div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+
+                  <section className="vp-card">
+                    <div className="vp-lbl">{t('sec_brochures')}</div>
+                    <p className="vp-hint">Upload a brochure, then press &ldquo;AI fill&rdquo; and we&apos;ll draft your profile from it — you review and approve before anything is saved.</p>
+                    <label className="vp-drop">
+                      <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.ppt,.pptx,.doc,.docx" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile(f); e.target.value = ''; }} />
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 16V4" /><path d="m7 9 5-5 5 5" /><path d="M5 20h14" /></svg>
+                      <span>Upload a file</span>
+                    </label>
+                    {brochures.length > 0 && (
+                      <ul className="vp-files">
+                        {brochures.map((b) => (
+                          <li key={b.id}>
+                            {b.public_url ? <a href={b.public_url} target="_blank" rel="noreferrer">{b.title || b.file_name}</a> : <span>{b.title || b.file_name}</span>}
+                            <span className="vp-fmeta">{(b.size_bytes / 1024 / 1024).toFixed(1)} MB</span>
+                            <button className="vp-ai" disabled={!!extractingId} onClick={() => extractFromBrochure(b.id)}>{extractingId === b.id ? 'Reading…' : 'AI fill'}</button>
+                            <button onClick={() => removeBrochure(b.id)}>Remove</button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {draft && (
+                      <div className="vp-draft">
+                        <div className="vp-lbl">AI draft from {draftSource}</div>
+                        <p className="vp-hint">{draft.summary}</p>
+                        <ul className="vp-draft-list">
+                          {draft.company_name && <li><b>Company:</b> {draft.company_name}</li>}
+                          {draft.description && <li><b>About:</b> {draft.description}</li>}
+                          {draft.categories.length > 0 && <li><b>Products / services:</b> {draft.categories.join(', ')}</li>}
+                          {draft.industries.length > 0 && <li><b>Industries:</b> {draft.industries.join(', ')}</li>}
+                          {draft.service_areas.length > 0 && <li><b>Service areas:</b> {draft.service_areas.join(', ')}</li>}
+                          {draft.client_types.length > 0 && <li><b>Client types:</b> {draft.client_types.join(', ')}</li>}
+                          {draft.website && <li><b>Website:</b> {draft.website}</li>}
+                          {draft.city && <li><b>City:</b> {draft.city}</li>}
+                        </ul>
+                        <div className="vp-draft-actions">
+                          <button className="vp-btn sm" onClick={applyDraft}>Use this draft</button>
+                          <button className="vp-signout" onClick={() => setDraft(null)}>Dismiss</button>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+
+                  <section className="vp-card">
+                    <div className="vp-lbl">{t('sec_awards')}</div>
+                    <p className="vp-hint">Industry analyst mentions, awards, and honors — e.g. Gartner Cool Vendor, Inc. 5000, ISO 9001. Shown on your public storefront.</p>
+                    {(vendor.achievements || []).length > 0 && (
+                      <div className="vp-chips">
+                        {(vendor.achievements || []).map((a) => (
+                          <button key={a} type="button" className="vp-chip on vp-inlineicon" title="Remove" onClick={() => set('achievements', (vendor.achievements || []).filter((x) => x !== a))}>{a}<X size={12} strokeWidth={2} aria-hidden="true" /></button>
+                        ))}
+                      </div>
+                    )}
+                    <AddYourOwn placeholder="Add an award or recognition (e.g. Gartner Cool Vendor 2025)…" existing={vendor.achievements || []} onAdd={(v) => set('achievements', [...(vendor.achievements || []), v])} />
+                  </section>
+                </>
+              )}
+
+              {tab === 'agreement' && (
+                <>
+                  {agreement && !agreement.accepted && (
+                    <section className="vp-card vp-agreement">
+                      <div className="vp-lbl">Vendor agreement — required before you can publish</div>
+                      <p className="vp-hint">To publish listings and receive buyer leads, accept the NXT//LINK vendor terms. In short: {agreement.summary}</p>
+                      <ul className="vp-terms">
+                        {agreement.terms.map((t) => <li key={t.title}><b>{t.title}.</b> {t.body}</li>)}
+                      </ul>
+                      <p className="vp-hint" style={{ fontSize: 12 }}>Plain-language business terms, not final legal wording — a lawyer reviews the full agreement before real commerce.</p>
+                      <button className="vp-btn" disabled={agBusy} onClick={acceptTerms}>{agBusy ? 'Saving…' : 'I accept the NXT//LINK vendor terms'}</button>
+                    </section>
+                  )}
+                  {agreement && agreement.accepted && (
+                    <div className="vp-accepted" style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                      <Check size={16} strokeWidth={2} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
+                      <span>NXT//LINK vendor terms accepted{agreement.accepted_at ? ` on ${new Date(agreement.accepted_at).toLocaleDateString()}` : ''}. You can publish listings and receive leads.</span>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
-          {videos.length > 0 && (
-            <div className="vp-vgrid">
-              {videos.map((v) => (
-                <div className="vp-vcard" key={v.id}>
-                  {v.provider === 'other' ? <a className="vp-vlink" href={v.url} target="_blank" rel="noreferrer">{v.title || v.url}</a>
-                    : <div className="vp-viframe"><iframe src={v.embed_url} title={v.title || 'video'} allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen /></div>}
-                  <div className="vp-vfoot"><span>{v.title || 'Untitled'}</span><button onClick={() => removeVideo(v.id)}>Remove</button></div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className="vp-card">
-          <div className="vp-lbl">{t('sec_brochures')}</div>
-          <p className="vp-hint">Upload a brochure, then press &ldquo;AI fill&rdquo; and we&apos;ll draft your profile from it — you review and approve before anything is saved.</p>
-          <label className="vp-drop">
-            <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.ppt,.pptx,.doc,.docx" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile(f); e.target.value = ''; }} />
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 16V4" /><path d="m7 9 5-5 5 5" /><path d="M5 20h14" /></svg>
-            <span>Upload a file</span>
-          </label>
-          {brochures.length > 0 && (
-            <ul className="vp-files">
-              {brochures.map((b) => (
-                <li key={b.id}>
-                  {b.public_url ? <a href={b.public_url} target="_blank" rel="noreferrer">{b.title || b.file_name}</a> : <span>{b.title || b.file_name}</span>}
-                  <span className="vp-fmeta">{(b.size_bytes / 1024 / 1024).toFixed(1)} MB</span>
-                  <button className="vp-ai" disabled={!!extractingId} onClick={() => extractFromBrochure(b.id)}>{extractingId === b.id ? 'Reading…' : 'AI fill'}</button>
-                  <button onClick={() => removeBrochure(b.id)}>Remove</button>
-                </li>
-              ))}
-            </ul>
-          )}
-          {draft && (
-            <div className="vp-draft">
-              <div className="vp-lbl">AI draft from {draftSource}</div>
-              <p className="vp-hint">{draft.summary}</p>
-              <ul className="vp-draft-list">
-                {draft.company_name && <li><b>Company:</b> {draft.company_name}</li>}
-                {draft.description && <li><b>About:</b> {draft.description}</li>}
-                {draft.categories.length > 0 && <li><b>Products / services:</b> {draft.categories.join(', ')}</li>}
-                {draft.industries.length > 0 && <li><b>Industries:</b> {draft.industries.join(', ')}</li>}
-                {draft.service_areas.length > 0 && <li><b>Service areas:</b> {draft.service_areas.join(', ')}</li>}
-                {draft.client_types.length > 0 && <li><b>Client types:</b> {draft.client_types.join(', ')}</li>}
-                {draft.website && <li><b>Website:</b> {draft.website}</li>}
-                {draft.city && <li><b>City:</b> {draft.city}</li>}
-              </ul>
-              <div className="vp-draft-actions">
-                <button className="vp-btn sm" onClick={applyDraft}>Use this draft</button>
-                <button className="vp-signout" onClick={() => setDraft(null)}>Dismiss</button>
-              </div>
-            </div>
-          )}
-        </section>
+        </div>
       </main>
     </div>
+  );
+}
+
+// Calm checklist list — shared by the desktop sidebar and the mobile
+// collapsible strip. Plain items: a green check when done, one violet
+// highlight on the suggested-next (first not-done) item. No percentages, no
+// locks, no "unlocks" copy (CESAR'S PORTAL REDESIGN BLUEPRINT).
+function ChecklistList({ items, suggestedKey, onSelect }: {
+  items: { key: string; label: string; done: boolean; tab?: TabKey; href?: string }[];
+  suggestedKey?: string;
+  onSelect: (t: TabKey) => void;
+}) {
+  return (
+    <ul className="vp-checklist">
+      {items.map((it) => {
+        const cls = 'vp-check-item' + (it.done ? ' done' : '') + (it.key === suggestedKey ? ' suggested' : '');
+        const dot = <span className="vp-check-dot" aria-hidden="true">{it.done && <CheckDraw />}</span>;
+        return (
+          <li key={it.key}>
+            {it.href ? (
+              <a className={cls} href={it.href}>{dot}<span>{it.label}</span></a>
+            ) : (
+              <button type="button" className={cls} onClick={() => it.tab && onSelect(it.tab)}>{dot}<span>{it.label}</span></button>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+// A small self-drawing checkmark for "done" checklist items — reduced-motion
+// safe via the global `@media (prefers-reduced-motion: reduce)` rule in
+// globals.css, which collapses every animation/transition duration app-wide.
+function CheckDraw() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="vp-checkdraw" />
+    </svg>
   );
 }
 
@@ -816,9 +979,9 @@ const CSS = `
 .vp-badge.paused,.vp-badge.rejected{background:var(--surf2);color:var(--muted);}
 .vp-signout{background:none;border:1px solid var(--line);color:var(--ink2);font:500 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .vp-signout:hover{border-color:var(--p2);color:var(--ink);}
-.vp-wrap{max-width:760px;margin:0 auto;padding:44px 24px 100px;}
+.vp-wrap{max-width:1080px;margin:0 auto;padding:44px 24px 100px;}
 .vp-wrap h1{font-size:30px;font-weight:800;letter-spacing:-.02em;margin-bottom:8px;}
-.vp-sub{color:var(--muted);font-size:15px;line-height:1.6;font-weight:300;margin-bottom:28px;}
+.vp-sub{color:var(--muted);font-size:15px;line-height:1.6;font-weight:300;margin-bottom:28px;max-width:640px;}
 .vp-msg{background:var(--pbg);border:1px solid rgba(108,92,224,.25);color:var(--p3);padding:11px 15px;border-radius:12px;font-size:13.5px;margin-bottom:20px;}
 .vp-review{background:#FBF3E7;border:1px solid #EFD9AE;border-radius:18px;padding:20px 22px;margin-bottom:22px;}
 .vp-review b{font-size:15.5px;font-weight:800;display:block;color:#8A5D14;}
@@ -845,9 +1008,9 @@ const CSS = `
 .vp-why{font-size:12px;color:var(--muted);margin-top:6px;font-weight:300;}
 .vp-titleactions{display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap;}
 .vp-autosave{font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap;}
-.vp-vprop{background:linear-gradient(120deg,rgba(47,158,106,.08),rgba(108,92,224,.05));border:1px solid rgba(47,158,106,.22);border-radius:13px;padding:13px 16px;margin-bottom:20px;font-size:13.5px;line-height:1.6;color:var(--ink2);}
+.vp-vprop{background:linear-gradient(120deg,rgba(47,158,106,.08),rgba(108,92,224,.05));border:1px solid rgba(47,158,106,.22);border-radius:13px;padding:13px 16px;margin-bottom:20px;font-size:13.5px;line-height:1.6;color:var(--ink2);max-width:640px;}
 .vp-lblhint{font-weight:500;letter-spacing:0;text-transform:none;color:var(--muted);font-size:11.5px;margin-left:6px;}
-.vp-card{background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:26px;margin-bottom:20px;backdrop-filter:blur(10px);}
+.vp-card{background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:26px;margin-bottom:20px;backdrop-filter:blur(10px);box-shadow:0 4px 12px rgba(124,58,237,.08);}
 .vp-lbl{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--p2);margin-bottom:14px;}
 .vp-hint{color:var(--muted);font-size:13.5px;margin:0 0 16px;font-weight:300;}
 .vp-fgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
@@ -946,4 +1109,33 @@ const CSS = `
 .vp-draft-list{list-style:none;margin:0 0 16px;padding:0;display:flex;flex-direction:column;gap:8px;font-size:13.5px;color:var(--ink2);line-height:1.5;}
 .vp-draft-list b{color:var(--ink);}
 .vp-draft-actions{display:flex;gap:10px;}
+
+/* --- Calm checklist sidebar + tab shell (Portal restructure, 2026-07-30) --- */
+.vp-shell{display:flex;align-items:flex-start;gap:32px;}
+.vp-sidebar{display:none;width:248px;flex-shrink:0;flex-direction:column;gap:14px;position:sticky;top:104px;}
+.vp-sidebar-title{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+.vp-checklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;}
+.vp-check-item{width:100%;display:flex;align-items:center;gap:10px;background:none;border:none;text-align:left;text-decoration:none;font-family:var(--sans);font-size:13.5px;font-weight:600;color:var(--muted);padding:10px;border-radius:10px;cursor:pointer;min-height:44px;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease),color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.vp-check-item:hover{background:var(--surf2);}
+.vp-check-item.suggested{color:var(--pd);background:var(--pbg);}
+.vp-check-item.done{color:var(--ink);}
+.vp-check-dot{width:20px;height:20px;flex-shrink:0;border-radius:50%;border:1.5px solid #C7C2DE;display:grid;place-items:center;color:#fff;}
+.vp-check-item.done .vp-check-dot{background:var(--green);border-color:transparent;}
+.vp-checkdraw{stroke-dasharray:20;stroke-dashoffset:20;animation:vp-draw 420ms ease-out forwards;}
+@keyframes vp-draw{to{stroke-dashoffset:0;}}
+.vp-guidedlink{display:block;font-size:12.5px;font-weight:600;color:var(--p2);text-decoration:none;margin-top:4px;padding:10px;border-radius:10px;background:var(--surf2);}
+.vp-guidedlink:hover{color:var(--p3);}
+.vp-stripmobile{display:block;border:1px solid var(--line);border-radius:14px;background:var(--surf);margin-bottom:18px;overflow:hidden;}
+.vp-stripmobile summary{list-style:none;display:flex;align-items:center;justify-content:space-between;padding:13px 16px;font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer;min-height:44px;}
+.vp-stripmobile summary::-webkit-details-marker{display:none;}
+.vp-stripmobile[open] summary{color:var(--ink);border-bottom:1px solid var(--line);}
+.vp-stripmobile .vp-checklist,.vp-stripmobile .vp-guidedlink{margin:8px 10px;}
+.vp-stripmobile .vp-checklist{margin-bottom:0;}
+.vp-main{flex:1;min-width:0;max-width:760px;}
+.vp-tabnav{display:flex;gap:0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-bottom:22px;border-bottom:1px solid var(--line);}
+.vp-tabnav::-webkit-scrollbar{display:none;}
+.vp-tab{flex-shrink:0;font-family:var(--sans);background:none;border:none;color:var(--muted);font-size:14px;font-weight:600;padding:12px 4px;margin-right:24px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;min-height:44px;transition:color var(--spec-duration-fast,150ms) var(--spec-ease,ease),border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.vp-tab:hover{color:var(--ink);}
+.vp-tab.on{color:var(--p3);border-color:var(--p);}
+@media(min-width:900px){.vp-sidebar{display:flex;}.vp-stripmobile{display:none;}}
 `;
