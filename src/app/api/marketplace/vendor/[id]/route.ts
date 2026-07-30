@@ -9,10 +9,12 @@ import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { autoReactivateIfExpired } from '@/lib/vendor/moderation';
 import { getSessionUser } from '@/lib/auth/require-user';
+import { isAdminRequest } from '@/lib/assistant/auth';
+import { decideStorefrontPreview } from '@/lib/vendor/authz';
 
 const CARD = 'id, name, category, overview, best_for, image_paths, pilot, pricing, warranty_support, implementation';
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: { id: string } }) {
   // Login wall (owner decision, 2026-07-23): vendor storefronts are signed-in-only.
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ ok: false, code: 'auth_required', message: 'Sign in to view this vendor' }, { status: 401 });
@@ -21,7 +23,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const db = getSupabaseClient({ admin: true });
 
   const { data: vendor } = await db.from('vendor_profiles')
-    .select('id, company_name, city, website, description, status, moderation_status, suspended_until, verification_level, categories, industries, service_areas, client_types, achievements, logo_path, banner_path, tagline, company_type, year_founded, employee_count, languages, response_time, emergency_available, cross_border, installation_available, pilot_available, main_expertise, problems_solved, capabilities, brands_supported')
+    .select('id, company_name, city, website, description, status, moderation_status, suspended_until, verification_level, categories, industries, service_areas, client_types, achievements, logo_path, banner_path, tagline, company_type, year_founded, employee_count, languages, response_time, emergency_available, cross_border, installation_available, pilot_available, main_expertise, problems_solved, capabilities, brands_supported, auth_id')
     .eq('id', id).maybeSingle();
   if (!vendor) return NextResponse.json({ ok: false, message: 'Vendor not found' }, { status: 404 });
 
@@ -30,10 +32,26 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   // vendors — an invited vendor is no longer born approved (F1 decision,
   // 2026-07-22): the invite link gets them a frictionless account, not a
   // public storefront. Hidden vendors return the SAME body as an unknown id
-  // — no "pending" vs "suspended" vs "doesn't exist" oracle.
+  // — no "pending" vs "suspended" vs "doesn't exist" oracle... UNLESS the
+  // caller is the vendor who owns this exact profile, or an admin — they get
+  // an explicit `preview: true` storefront so the "View as a buyer" link
+  // isn't a dead end while their business is still under review (2026-07-29).
+  // See decideStorefrontPreview (src/lib/vendor/authz.ts) for the fail-closed
+  // ownership rule; this never runs for vendors that ARE already live.
   const modStatus = await autoReactivateIfExpired(db, id, vendor);
-  if (modStatus !== 'active' || vendor.status !== 'approved') {
-    return NextResponse.json({ ok: false, message: 'Vendor not found' }, { status: 404 });
+  const isLive = modStatus === 'active' && vendor.status === 'approved';
+  let preview = false;
+  if (!isLive) {
+    const decision = decideStorefrontPreview({
+      isAdmin: await isAdminRequest(req),
+      callerAuthId: user.id,
+      vendorId: id,
+      vendorAuthId: (vendor.auth_id as string | null) || null,
+    });
+    if (decision === 'not_found') {
+      return NextResponse.json({ ok: false, message: 'Vendor not found' }, { status: 404 });
+    }
+    preview = true;
   }
 
   const [{ data: products }, { data: services }, { data: cases }, { data: videos }, { data: reviews }, { data: certRows }, { data: galleryRows }, { data: team }, { count: dealsClosed }] = await Promise.all([
@@ -91,6 +109,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 
   return NextResponse.json({
     ok: true,
+    preview,
     vendor: {
       id: vendor.id,
       company_name: vendor.company_name,
