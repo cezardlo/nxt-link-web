@@ -14,6 +14,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutGrid, Rows3 } from 'lucide-react';
 import { QuoteCompareTable, QUOTE_COMPARE_TABLE_CSS, type CompareLabels, type CompareTableRow, type CompareStatus } from './QuoteCompareTable';
 import { bestValueByMetric, identicalMetrics, shouldShowMetric, type CompareMetricKey } from '@/lib/buyer/compareDeck';
+import { CountUp, staggerStyle } from '@/components/motion/Motion';
 
 export interface DeckLabels extends CompareLabels {
   showDifferencesOnly: string;
@@ -123,7 +124,8 @@ export function QuoteCompareDeck({
                 <div
                   key={r.id}
                   ref={(el) => { cardRefs.current[i] = el; }}
-                  className={'qcd-card' + (isBest ? ' qcd-best' : '') + (r.status === 'accepted' ? ' qcd-accepted' : '')}
+                  className={'qcd-card nxm-in' + (isBest ? ' qcd-best' : '') + (r.status === 'accepted' ? ' qcd-accepted' : '')}
+                  style={staggerStyle(i)}
                 >
                   <div className="qcd-ctop">
                     <b className="qcd-vendor">{r.vendor || labels.vendor}</b>
@@ -132,8 +134,20 @@ export function QuoteCompareDeck({
                   {r.ref && <span className="qcd-ref">{r.ref}</span>}
 
                   <div className="qcd-price">
-                    {r.amount != null ? money(r.amount, r.currency, locale) : <span className="qcd-wait">{labels.awaiting}</span>}
-                    {isBestPrice && <span className="qcd-badge">{labels.bestValue}</span>}
+                    {/* Design addendum #2 — 400ms ease-out count-up. Display-only:
+                        CountUp interpolates the raw number through the SAME
+                        money() formatter this file already used, so the value
+                        it lands on is byte-identical to money(r.amount, ...). */}
+                    {r.amount != null ? (
+                      <CountUp value={r.amount} duration={400} format={(n) => money(n, r.currency, locale)} />
+                    ) : (
+                      <span className="qcd-wait">{labels.awaiting}</span>
+                    )}
+                    {/* One soft violet pulse then settle (addendum #2) — CSS
+                        animation-fill-mode:both means it plays once on mount
+                        and never "un-pulses"; a plain re-render with the same
+                        class list does not retrigger it (see Motion.tsx). */}
+                    {isBestPrice && <span className="qcd-badge nxm-pulse">{labels.bestValue}</span>}
                   </div>
 
                   {show('leadTime') && r.timeline && (
@@ -192,10 +206,12 @@ export const QUOTE_COMPARE_DECK_CSS = QUOTE_COMPARE_TABLE_CSS + `
 .qcd-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
 .qcd-diff{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--spec-text-2nd,#615F72);cursor:pointer;}
 .qcd-viewtoggle{display:flex;border:1px solid var(--spec-border,#E2DFEC);border-radius:9px;overflow:hidden;}
-.qcd-viewtoggle button{display:inline-flex;align-items:center;gap:5px;font-family:inherit;font-size:11.5px;font-weight:600;color:var(--spec-ink,#141320);background:var(--spec-surface,#EFEDF5);border:none;padding:6px 10px;cursor:pointer;}
+.qcd-viewtoggle button{display:inline-flex;align-items:center;gap:5px;font-family:inherit;font-size:11.5px;font-weight:600;color:var(--spec-ink,#141320);background:var(--spec-surface,#EFEDF5);border:none;padding:6px 10px;cursor:pointer;transition:transform var(--nxm-duration-press,100ms) var(--nxm-ease,ease);}
+.qcd-viewtoggle button:active{transform:scale(var(--nxm-press-scale,.98));}
 .qcd-viewtoggle button.on{background:rgba(108,92,224,.12);color:var(--spec-violet-deep,#4A3DB0);}
-.qcd-scroll{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x proximity;padding:4px 2px 10px;-webkit-overflow-scrolling:touch;}
-.qcd-card{scroll-snap-align:start;flex:0 0 260px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:14px;padding:14px 16px;box-shadow:0 2px 10px rgba(108,92,224,.06);border-top:3px solid transparent;}
+.qcd-scroll{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x proximity;padding:4px 2px 10px;-webkit-overflow-scrolling:touch;--nxm-stagger-step:100ms;}
+.qcd-card{scroll-snap-align:start;flex:0 0 260px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:14px;padding:14px 16px;box-shadow:0 2px 10px rgba(108,92,224,.06);border-top:3px solid transparent;transition:transform var(--nxm-duration-hover,150ms) var(--nxm-ease,ease),box-shadow var(--nxm-duration-hover,150ms) var(--nxm-ease,ease);}
+.qcd-card:hover{transform:translateY(var(--nxm-lift-y,-2px));box-shadow:0 10px 24px rgba(20,19,32,.10);}
 .qcd-card.qcd-best{border-top-color:var(--spec-violet,#6C5CE0);}
 .qcd-card.qcd-accepted{background:#F3FAF6;border-color:rgba(31,122,84,.3);}
 .qcd-ctop{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}

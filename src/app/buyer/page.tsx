@@ -18,6 +18,8 @@ import BuyerEnrichmentCard, {
   BUYER_ENRICHMENT_CARD_CSS, isEnrichmentComplete, isEnrichmentDismissed, dismissEnrichment,
   type BuyerEnrichmentProfile,
 } from '@/components/buyer/BuyerEnrichmentCard';
+import { AcceptCelebration, ACCEPT_CELEBRATION_CSS } from '@/components/buyer/AcceptCelebration';
+import { MOTION_CSS, staggerStyle } from '@/components/motion/Motion';
 import { MAX_REQUEST_ATTACHMENTS_PER_REQUEST, type RequestAttachment } from '@/lib/requests/attachments';
 import { type CompareTableRow } from '@/components/marketplace/QuoteCompareTable';
 import { QuoteCompareDeck, QUOTE_COMPARE_DECK_CSS, type DeckLabels } from '@/components/marketplace/QuoteCompareDeck';
@@ -185,6 +187,12 @@ const T: Record<Lang, Record<string, string>> = {
     startSellCta: 'Start selling',
     docTitle: 'My dashboard — NXT//LINK',
     kindProduct: 'product', kindService: 'service',
+    // Accept celebration (RFQ design addendum #5, 2026-07-30) — NEW strings,
+    // flagged for Cesar sign-off. Copy deviation locked by the coordinator:
+    // "your order is protected" is banned (implies buyer-protection/fund-
+    // holding we don't offer); this is the honest replacement.
+    celebrateHeadline: 'You’re all set. We’ve notified the vendor.',
+    celebrateCta: 'Back to dashboard',
   },
   es: {
     dashboardTag: 'Panel', alerts: 'Alertas', refresh: 'Actualizar',
@@ -284,6 +292,8 @@ const T: Record<Lang, Record<string, string>> = {
     startSellCta: 'Empezar a vender',
     docTitle: 'Mi panel — NXT//LINK',
     kindProduct: 'producto', kindService: 'servicio',
+    celebrateHeadline: 'Todo listo. Ya avisamos al proveedor.',
+    celebrateCta: 'Volver al panel',
   },
 };
 
@@ -408,6 +418,10 @@ export default function BuyerDashboardPage() {
   });
   const [decidingId, setDecidingId] = useState<string | null>(null);
   const [decideError, setDecideError] = useState<{ id: string; message: string } | null>(null);
+  // Accept celebration overlay (design addendum #5) — set ONLY after decide()
+  // below confirms a real server-side 'accepted' success; pure presentation
+  // state, never read by decide()'s own request/response handling.
+  const [celebrateId, setCelebrateId] = useState<string | null>(null);
   // Cheap unread-chat hint: reuses the notifications already fetched on load
   // (no extra API call) — a quote request has an unread message if there's
   // an unread 'message' notification pointing at it.
@@ -510,6 +524,11 @@ export default function BuyerDashboardPage() {
       if (!res.ok || !json?.ok) {
         setData((d) => ({ ...d, quotes: prevQuotes ?? d.quotes }));
         setDecideError({ id, message: t.decideError });
+      } else if (decision === 'accepted') {
+        // Presentation only — the accept request/response handling above is
+        // untouched; this just tells the celebration overlay to show once
+        // the server has actually confirmed the accept.
+        setCelebrateId(id);
       }
     } catch {
       setData((d) => ({ ...d, quotes: prevQuotes ?? d.quotes }));
@@ -656,7 +675,7 @@ export default function BuyerDashboardPage() {
 
   return (
     <div className={`by ${ibmPlexSans.variable}`}>
-      <style dangerouslySetInnerHTML={{ __html: CSS + EMPTY_ACTION_CSS + ATTENTION_CSS + FIRSTRUN_CSS + QUOTE_COMPARE_DECK_CSS + OFFER_CARD_CSS + DEAL_TRACKER_CSS + REQUEST_ATTACHMENTS_CSS + BUYER_ENRICHMENT_CARD_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: MOTION_CSS + CSS + EMPTY_ACTION_CSS + ATTENTION_CSS + FIRSTRUN_CSS + QUOTE_COMPARE_DECK_CSS + OFFER_CARD_CSS + DEAL_TRACKER_CSS + REQUEST_ATTACHMENTS_CSS + BUYER_ENRICHMENT_CARD_CSS + ACCEPT_CELEBRATION_CSS }} />
       <nav className="by-nav">
         <a className="by-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>{t.dashboardTag}</span></a>
         <div className="by-navlinks">
@@ -677,7 +696,7 @@ export default function BuyerDashboardPage() {
         {data.email && <p className="by-sub">{t.signedInAs} {data.email}</p>}
 
         {notifOpen && (
-          <div className="by-notifs">
+          <div className="by-notifs nxm-panel">
             <div className="by-notifhead"><b>{t.notifications}</b><button onClick={() => setNotifOpen(false)}>{t.close}</button></div>
             {notifs.length === 0 ? <p className="by-notifempty">{t.notifEmpty}</p> : (
               <ul>
@@ -779,7 +798,7 @@ export default function BuyerDashboardPage() {
                 <EmptyAction size="sm" icon={<Inbox strokeWidth={1.75} />} title={t.noRequestsYet} hint={t.noRequestsHint} actionLabel={t.describeWhatYouNeed} actionHref="/intake" />
               ) : (
                 <div className="by-list">
-                  {requests.map((r) => {
+                  {requests.map((r, ri) => {
                     // Slice RV: real, already-derivable activity for THIS
                     // request — every quote_requests row the fan-out
                     // (src/lib/requests/dispatch.ts) or a vendor's self-claim
@@ -790,7 +809,7 @@ export default function BuyerDashboardPage() {
                     const stale = isRequestStale(r, activity);
                     const stage = deriveRequestStage(linkedQuotes(r.public_ref, quotes));
                     return (
-                    <div className="by-card" key={r.id}>
+                    <div className="by-card nxm-in nxm-lift" style={staggerStyle(ri)} key={r.id}>
                       <div className="by-top">
                         <span className={'by-status ' + (stage === 'quotes_received' || stage === 'accepted' ? 'resp' : '')}>{STAGE_LABEL[stage]}</span>
                         <b>{r.category || t.request}</b>
@@ -871,8 +890,8 @@ export default function BuyerDashboardPage() {
                   </div>
                 ))}
                 <div className="by-list">
-                  {quotes.map((q) => (
-                    <div className="by-card" key={q.id}>
+                  {quotes.map((q, qi) => (
+                    <div className="by-card nxm-in nxm-lift" style={staggerStyle(qi)} key={q.id}>
                       <div className="by-top">
                         <span className={'by-status ' + (q.status === 'responded' ? 'resp' : '')}>{QUOTE_LABEL[q.status] || q.status}</span>
                         {(q.product_id || q.service_id) ? (
@@ -946,7 +965,7 @@ export default function BuyerDashboardPage() {
                             buyerDecision, commission: offerCtx?.commission ?? null,
                           });
                           return (
-                          <div className="by-chatbox">
+                          <div className="by-chatbox nxm-panel">
                             <div className="by-chathead">
                               <span>{t.messageVendor}</span>
                               <span className="by-live" aria-hidden="true"><i />{t.live}</span>
@@ -1105,7 +1124,7 @@ export default function BuyerDashboardPage() {
                             q.reviewed ? (
                               <div className="by-reviewed">{t.reviewedVendor}</div>
                             ) : reviewOpen === q.id ? (
-                              <div className="by-rvform">
+                              <div className="by-rvform nxm-panel">
                                 <div className="by-stars">
                                   {[1, 2, 3, 4, 5].map((n) => (
                                     <button key={n} type="button" className={n <= rv.rating ? 'on' : ''} onClick={() => setRv({ ...rv, rating: n })} aria-label={lang === 'es' ? `${n} estrella${n > 1 ? 's' : ''}` : `${n} star${n > 1 ? 's' : ''}`}>★</button>
@@ -1135,6 +1154,12 @@ export default function BuyerDashboardPage() {
           </>
         )}
       </main>
+      {celebrateId && (
+        <AcceptCelebration
+          labels={{ headline: t.celebrateHeadline, cta: t.celebrateCta }}
+          onClose={() => setCelebrateId(null)}
+        />
+      )}
     </div>
   );
 }
@@ -1199,13 +1224,13 @@ function FirstRunPrompt({ t }: { t: Record<string, string> }) {
           longer asks buyer-vs-vendor, so selling starts HERE (OfferUp/Alibaba
           pattern: plain signup, a visible sell entry, review before live). */}
       <div className="by-frcards">
-        <a href="/marketplace" className="by-frcard">
+        <a href="/marketplace" className="by-frcard nxm-in" style={staggerStyle(0)}>
           <span className="by-fricon"><PackageSearch size={18} strokeWidth={1.75} /></span>
           <b>{t.firstRunCard1Title}</b>
           <p>{t.firstRunCard1Hint}</p>
           <span className="by-frcta">{t.firstRunCard1Cta} →</span>
         </a>
-        <a href="/apply" className="by-frcard">
+        <a href="/apply" className="by-frcard nxm-in" style={staggerStyle(1)}>
           <span className="by-fricon"><Store size={18} strokeWidth={1.75} /></span>
           <b>{t.startSellTitle}</b>
           <p>{t.startSellHint}</p>
@@ -1331,10 +1356,11 @@ const CSS = `
 .by-qmsg{margin:9px 0 0;font-size:13.5px;color:var(--spec-ink,#141320);line-height:1.55;white-space:pre-wrap;}
 .by-qvalid{margin-top:8px;font-size:12.5px;color:var(--spec-text-2nd,#615F72);}
 .by-qactions{display:flex;gap:9px;margin-top:12px;}
-.by-accept{font-family:inherit;font-size:13.5px;font-weight:700;background:var(--spec-success,#2F9E6A);border:none;color:#fff;border-radius:9px;padding:9px 16px;cursor:pointer;min-height:40px;}
+.by-accept{font-family:inherit;font-size:13.5px;font-weight:700;background:var(--spec-success,#2F9E6A);border:none;color:#fff;border-radius:9px;padding:9px 16px;cursor:pointer;min-height:40px;transition:background var(--nxm-duration-hover,150ms) var(--nxm-ease,ease),transform var(--nxm-duration-press,100ms) var(--nxm-ease,ease);}
 .by-accept:hover{background:#248059;}
+.by-accept:active,.by-decline:active,.by-nptcta:active,.by-rvopen:active{transform:scale(var(--nxm-press-scale,.98));}
 .by-accept:disabled,.by-decline:disabled{opacity:.6;cursor:not-allowed;}
-.by-decline{font-family:inherit;font-size:13px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-ink,#141320);border-radius:9px;padding:9px 14px;cursor:pointer;min-height:40px;}
+.by-decline{font-family:inherit;font-size:13px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-ink,#141320);border-radius:9px;padding:9px 14px;cursor:pointer;min-height:40px;transition:border-color var(--nxm-duration-hover,150ms) var(--nxm-ease,ease),transform var(--nxm-duration-press,100ms) var(--nxm-ease,ease);}
 .by-decline:hover{border-color:#C7C2DE;}
 .by-decided{margin-top:10px;font-size:13px;font-weight:700;text-transform:capitalize;}
 .by-decided.accepted{color:var(--spec-success,#2F9E6A);}
@@ -1353,7 +1379,7 @@ const CSS = `
 .by-nptsteps{margin:11px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px;}
 .by-nptsteps li{position:relative;padding-left:20px;font-size:13px;color:var(--spec-ink,#141320);line-height:1.5;}
 .by-nptsteps li::before{content:'✓';position:absolute;left:0;top:0;color:var(--spec-success,#2F9E6A);font-weight:800;font-size:12px;}
-.by-nptcta{margin-top:13px;display:inline-flex;align-items:center;gap:7px;font-family:inherit;font-size:13.5px;font-weight:700;background:var(--spec-success,#2F9E6A);border:none;color:#fff;border-radius:9px;padding:9px 16px;cursor:pointer;min-height:40px;}
+.by-nptcta{margin-top:13px;display:inline-flex;align-items:center;gap:7px;font-family:inherit;font-size:13.5px;font-weight:700;background:var(--spec-success,#2F9E6A);border:none;color:#fff;border-radius:9px;padding:9px 16px;cursor:pointer;min-height:40px;transition:background var(--nxm-duration-hover,150ms) var(--nxm-ease,ease),transform var(--nxm-duration-press,100ms) var(--nxm-ease,ease);}
 .by-nptcta:hover{background:#248059;}
 .by-chat{margin-top:11px;}
 .by-chatopen{position:relative;display:inline-flex;align-items:center;gap:7px;font-family:inherit;font-size:12.5px;font-weight:600;background:#E9F7F0;border:1px solid rgba(47,158,106,.35);color:#1F7A54;border-radius:9px;padding:8px 14px;cursor:pointer;}
@@ -1406,7 +1432,7 @@ const CSS = `
 .by-poutcome.failed{background:#FBECEA;color:var(--spec-error,#CE4B43);}
 .by-poutcome.inconclusive{background:#FBF3E7;color:var(--spec-warning,#C68A28);}
 .by-reviewed{margin-top:10px;font-size:13px;color:var(--spec-success,#2F9E6A);font-weight:600;}
-.by-rvopen{margin-top:10px;font-family:inherit;font-size:12.5px;font-weight:600;background:#fff;border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-violet-deep,#4A3DB0);border-radius:9px;padding:8px 14px;cursor:pointer;}
+.by-rvopen{margin-top:10px;font-family:inherit;font-size:12.5px;font-weight:600;background:#fff;border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-violet-deep,#4A3DB0);border-radius:9px;padding:8px 14px;cursor:pointer;transition:transform var(--nxm-duration-press,100ms) var(--nxm-ease,ease);}
 .by-rvform{margin-top:12px;display:flex;flex-direction:column;gap:9px;}
 .by-stars{display:flex;gap:3px;}
 .by-stars button{background:none;border:none;font-size:24px;line-height:1;color:#D7D3E6;cursor:pointer;padding:0;}

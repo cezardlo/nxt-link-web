@@ -1322,8 +1322,9 @@ const CSS = `
 .vo-foot{flex-shrink:0;padding:16px 20px calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:rgba(248,247,251,.92);backdrop-filter:blur(16px);}
 .vo-error{color:#CE4B43;font-size:13px;margin:0 0 10px;text-align:center;}
 .vo-ctarow{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:520px;margin:0 auto;}
-.vo-back{font-family:var(--sans);background:none;border:none;color:var(--muted);font-size:14px;font-weight:600;padding:14px 12px;min-height:48px;border-radius:10px;cursor:pointer;}
+.vo-back{font-family:var(--sans);background:none;border:none;color:var(--muted);font-size:14px;font-weight:600;padding:14px 12px;min-height:48px;border-radius:10px;cursor:pointer;transition:color 150ms ease,transform 100ms ease;}
 .vo-back:hover{color:var(--ink);}
+.vo-back:active{transform:scale(.98);}
 .vo-savedflash{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;color:var(--green);opacity:0;transition:opacity 200ms ease-out;flex-shrink:0;}
 .vo-savedflash.show{opacity:1;}
 .vo-btn{font-family:var(--sans);border:none;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;border-radius:12px;padding:14px 28px;min-height:48px;min-width:112px;background:var(--p);color:#fff;box-shadow:var(--shadow);transition:background 150ms ease;}
