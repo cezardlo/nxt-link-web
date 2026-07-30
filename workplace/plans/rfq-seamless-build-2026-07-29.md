@@ -94,3 +94,10 @@ The Alibaba TradeManager / Fiverr custom-offer pattern → R4 centerpiece:
 - Each card tracks status with a small icon+label: Sent → Seen → Revised (old card fades, delta callout) → Accepted / Declined / Expired. Status derives from real data (viewed writes, proposal state, expiration date) — nothing invented.
 - Acceptance from the card = the EXISTING accept path (explicit button + confirm; never gesture-triggered; post-accept behavior untouched — money batch).
 - 🔒 SCOPE GUARD: "contract" here = the structured OFFER card. Real legal contract documents (uploads, e-signatures, binding PDFs) are a SEPARATE future feature needing attorney input — do NOT build document-signing in R4. The vendor agreement clickwrap stays the only legal-record mechanism.
+
+## 2026-07-30 — Pinned deal tracker in chat (Cesar voice: "tracking throughout the conversation… current milestones… click an icon… go up in the conversation")
+R4 addition, completing offer-in-chat:
+- Every buyer↔vendor thread gets a slim PINNED HEADER (stays visible while scrolling): the deal's current milestone as calm pills (e.g. Request → Quote sent → Revised → Accepted → In progress → Completed, derived from real statuses only, no invented states) + a small offer icon with the CURRENT price.
+- Tapping the pinned tracker (or its icon) SCROLLS the conversation to the relevant embedded offer card (anchor jump, smooth but reduced-motion safe) — "go up in the conversation" without hunting.
+- If multiple offers/revisions exist, the tracker points at the LATEST card; older cards remain in the timeline, faded w/ Revised badges.
+- Mobile: the pinned bar collapses to icon + current milestone; tap = same jump. Thumb-safe.
