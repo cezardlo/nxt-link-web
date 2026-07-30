@@ -32,11 +32,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
 import {
-  Image as LogoIcon, Building2, Phone, Quote, FileText, Factory, Users,
+  Image as LogoIcon, Building2, Building, Phone, Quote, FileText, Factory, Users,
   Boxes, MapPin, Award, Check, X, ShieldCheck, Camera, Video as VideoIcon,
-  Handshake, ChevronRight, ChevronDown, ExternalLink, type LucideIcon,
+  Handshake, ChevronRight, ChevronDown, ExternalLink, Warehouse, ShoppingCart,
+  UtensilsCrossed, Car, Snowflake, ArrowLeftRight, HardHat, Truck, Pill, Plane,
+  Wrench, Home, Landmark, type LucideIcon,
 } from 'lucide-react';
-import CategoryPicker from '@/components/CategoryPicker';
+import CategoryChipPicker from './CategoryChipPicker';
 import LanguageToggle, { useLang } from '@/components/LanguageToggle';
 import {
   SECTION_ORDER, STOREFRONT_STEPS, CAPABILITIES_STEPS, TRUST_STEPS, AGREEMENT_STEPS,
@@ -63,6 +65,30 @@ const INDUSTRIES = [
 const CLIENT_SIZES = [
   'Small businesses (1–50 people)', 'Mid-size companies (51–500)', 'Large companies (500+)', 'Enterprise / Fortune 500',
 ];
+
+// Icon maps for the 2026-07-30 "more visual and interactive" pass — pure
+// presentation, no effect on stored values (still plain strings in
+// vendor.industries / vendor.client_types).
+const INDUSTRY_ICON: Record<string, LucideIcon> = {
+  'Warehousing & 3PL': Warehouse,
+  'Manufacturing': Factory,
+  'Retail & E-commerce': ShoppingCart,
+  'Food & Beverage': UtensilsCrossed,
+  'Automotive': Car,
+  'Cold Chain': Snowflake,
+  'Import / Export & Customs': ArrowLeftRight,
+  'Construction': HardHat,
+  'Distribution Centers': Truck,
+  'Pharma & Healthcare': Pill,
+  'Aerospace & Defense': Plane,
+  'General Industrial': Wrench,
+};
+const CLIENT_SIZE_ICON: Record<string, LucideIcon> = {
+  'Small businesses (1–50 people)': Home,
+  'Mid-size companies (51–500)': Building,
+  'Large companies (500+)': Building2,
+  'Enterprise / Fortune 500': Landmark,
+};
 
 type Lang = 'en' | 'es';
 type View = { mode: 'hub' } | { mode: 'section'; section: SectionKey; stepId: StepId };
@@ -151,7 +177,7 @@ const TR: Record<string, { en: string; es: string }> = {
   add_industry_ph: { en: 'Add another industry…', es: 'Agrega otra industria…' },
   h_client_size: { en: 'What size companies do you serve?', es: '¿De qué tamaño son las empresas que atiendes?' },
   h_categories: { en: 'What do you sell?', es: '¿Qué vendes?' },
-  sub_categories: { en: 'Search or browse — pick everything that applies.', es: 'Busca o explora — elige todo lo que aplique.' },
+  sub_categories: { en: 'Search, or tap a popular category below.', es: 'Busca, o toca una categoría popular abajo.' },
   h_service_areas: { en: 'Where do you provide service?', es: '¿Dónde das servicio?' },
 
   // Trust & Proof cards
@@ -202,6 +228,7 @@ const TR: Record<string, { en: string; es: string }> = {
   accepted_review: { en: 'A human on our team reviews every new company — your listings go live the moment you’re approved.', es: 'Una persona de nuestro equipo revisa cada empresa nueva — tus publicaciones salen en vivo en cuanto te aprueben.' },
   accepted_live: { en: 'You can publish listings and receive leads.', es: 'Puedes publicar tus listados y recibir prospectos.' },
   go_portal: { en: 'Go to my portal', es: 'Ir a mi portal' },
+  preview_storefront: { en: 'Preview storefront', es: 'Ver mi tienda' },
 };
 
 export default function VendorOnboardingPage() {
@@ -414,6 +441,12 @@ export default function VendorOnboardingPage() {
               <h1 className="vo-hub-h">{t('hub_h')}</h1>
               <p className="vo-hub-sub">{t('hub_sub')}</p>
               <p className="vo-hub-progress">{tf('hub_progress', { n: doneCount })}</p>
+              {status.storefront && (
+                <a className="vo-hub-preview" href={`/marketplace/vendor/${vendor.id}`} target="_blank" rel="noreferrer">
+                  <ExternalLink size={14} strokeWidth={1.75} aria-hidden="true" />
+                  {t('preview_storefront')}
+                </a>
+              )}
               <div className="vo-hub-grid">
                 {SECTION_ORDER.map((key) => {
                   const Icon = SECTION_ICON[key];
@@ -426,7 +459,7 @@ export default function VendorOnboardingPage() {
                         <b>{t(`sec_${key}_label`)}</b>
                         <span className="vo-hub-card-blurb">{t(`sec_${key}_blurb`)}</span>
                         <span className={'vo-hub-card-status' + (s ? ' done' : '')}>
-                          {s ? (<><Check size={13} strokeWidth={2.5} aria-hidden="true" />{t('status_complete')}</>) : (
+                          {s ? (<><CheckDraw />{t('status_complete')}</>) : (
                             key === 'agreement' ? t('status_not_started') : tf('status_progress', { done: 0, total })
                           )}
                         </span>
@@ -444,7 +477,7 @@ export default function VendorOnboardingPage() {
               logo={{ logoUrl, logoBusy, uploadLogo, removeLogo }}
               trust={{ certifications, photos, caseStudies, videos, videoBusy, addVideo, removeVideo }}
               agreementData={{
-                listingCount, proofCount, agreement, agreementBusy, acceptTerms, inReview,
+                listingCount, proofCount, agreement, agreementBusy, acceptTerms, inReview, vendorId: vendor.id,
               }}
               onTouchStart={onTouchStart}
               onTouchEnd={onTouchEnd}
@@ -493,7 +526,7 @@ function SectionFlow({
   agreementData: {
     listingCount: number; proofCount: number;
     agreement: { accepted: boolean; accepted_at: string | null } | null;
-    agreementBusy: boolean; acceptTerms: () => Promise<boolean>; inReview: boolean;
+    agreementBusy: boolean; acceptTerms: () => Promise<boolean>; inReview: boolean; vendorId: string;
   };
   onTouchStart: (e: React.TouchEvent) => void;
   onTouchEnd: (e: React.TouchEvent) => void;
@@ -529,6 +562,7 @@ function SectionFlow({
 
       <div className="vo-viewport" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         <div key={view.stepId} className={'vo-card ' + (direction === 'fwd' ? 'vo-in-fwd' : 'vo-in-back')}>
+          {Icon && <span className="vo-cardicon" aria-hidden="true"><Icon size={20} strokeWidth={1.75} /></span>}
           {renderCard({
             section: view.section, step: view.stepId, headingId: `vo-h-${view.stepId}`,
             t, tf, lang, vendor, set, toggle, logo, trust, agreementData, Icon,
@@ -575,7 +609,7 @@ function renderCard(props: {
   agreementData: {
     listingCount: number; proofCount: number;
     agreement: { accepted: boolean; accepted_at: string | null } | null;
-    agreementBusy: boolean; acceptTerms: () => Promise<boolean>; inReview: boolean;
+    agreementBusy: boolean; acceptTerms: () => Promise<boolean>; inReview: boolean; vendorId: string;
   };
   Icon?: LucideIcon;
   softwareOnly: boolean;
@@ -663,6 +697,7 @@ function renderCard(props: {
               options={Array.from(new Set([...INDUSTRIES, ...(vendor.industries || [])]))}
               selected={vendor.industries || []}
               onToggle={(v) => toggle(vendor.industries || [], v, 'industries')}
+              icons={INDUSTRY_ICON}
             />
             <AddYourOwn
               placeholder={t('add_industry_ph')} addLabel={t('add_btn')} existing={vendor.industries || []}
@@ -679,7 +714,7 @@ function renderCard(props: {
         <>
           <h2 id={headingId} className="vo-h">{t('h_client_size')}</h2>
           <div role="group" aria-labelledby={headingId}>
-            <ChipGroup options={CLIENT_SIZES} selected={vendor.client_types || []} onToggle={(v) => toggle(vendor.client_types || [], v, 'client_types')} />
+            <IconCardGroup options={CLIENT_SIZES} selected={vendor.client_types || []} onToggle={(v) => toggle(vendor.client_types || [], v, 'client_types')} icons={CLIENT_SIZE_ICON} />
           </div>
         </>
       );
@@ -690,7 +725,7 @@ function renderCard(props: {
           <h2 id={headingId} className="vo-h">{t('h_categories')}</h2>
           <p className="vo-sub">{t('sub_categories')}</p>
           <div data-no-swipe className="vo-catwrap">
-            <CategoryPicker selected={vendor.categories || []} onToggle={(v) => toggle(vendor.categories || [], v, 'categories')} lang={lang} />
+            <CategoryChipPicker selected={vendor.categories || []} onToggle={(v) => toggle(vendor.categories || [], v, 'categories')} lang={lang} />
           </div>
         </>
       );
@@ -828,12 +863,12 @@ function TermsCard({ t, tf, headingId, agreementData }: {
   headingId: string;
   agreementData: {
     agreement: { accepted: boolean; accepted_at: string | null; summary?: string; terms?: { title: string; body: string }[] } | null;
-    agreementBusy: boolean; acceptTerms: () => Promise<boolean>; inReview: boolean;
+    agreementBusy: boolean; acceptTerms: () => Promise<boolean>; inReview: boolean; vendorId: string;
   };
 }) {
   const [checked, setChecked] = useState(false);
   const [error, setError] = useState(false);
-  const { agreement, agreementBusy, acceptTerms, inReview } = agreementData;
+  const { agreement, agreementBusy, acceptTerms, inReview, vendorId } = agreementData;
 
   const rows = useMemo(() => {
     const terms = agreement?.terms || [];
@@ -862,6 +897,10 @@ function TermsCard({ t, tf, headingId, agreementData }: {
             <p>{inReview ? t('accepted_review') : t('accepted_live')}</p>
           </div>
         </div>
+        <a className="vo-btn vo-previewbtn" href={`/marketplace/vendor/${vendorId}`} target="_blank" rel="noreferrer">
+          <ExternalLink size={15} strokeWidth={1.75} aria-hidden="true" />
+          {t('preview_storefront')}
+        </a>
       </>
     );
   }
@@ -938,14 +977,46 @@ function TextField({ label, value, onChange, inputMode }: {
   );
 }
 
-function ChipGroup({ options, selected, onToggle }: { options: string[]; selected: string[]; onToggle: (v: string) => void }) {
+function ChipGroup({ options, selected, onToggle, icons }: {
+  options: string[]; selected: string[]; onToggle: (v: string) => void; icons?: Record<string, LucideIcon>;
+}) {
   return (
     <div className="vo-chips">
-      {options.map((o) => (
-        <button key={o} type="button" className={'vo-chip' + (selected.includes(o) ? ' on' : '')} aria-pressed={selected.includes(o)} onClick={() => onToggle(o)}>
-          {o}
-        </button>
-      ))}
+      {options.map((o) => {
+        const on = selected.includes(o);
+        const Icon = icons?.[o];
+        return (
+          <button key={o} type="button" className={'vo-chip' + (on ? ' on' : '')} aria-pressed={on} onClick={() => onToggle(o)}>
+            {Icon && <Icon size={15} strokeWidth={1.75} aria-hidden="true" />}
+            <span>{o}</span>
+            {on && <Check size={13} strokeWidth={2.5} className="vo-chip-check" aria-hidden="true" />}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// Client-size / company-scale picker as icon cards (bigger tap targets, a
+// building-scale icon per option) instead of plain text chips — the same
+// selected-state contract (violet fill + check) as ChipGroup, just a
+// roomier layout for a 4-option single-purpose card.
+function IconCardGroup({ options, selected, onToggle, icons }: {
+  options: string[]; selected: string[]; onToggle: (v: string) => void; icons: Record<string, LucideIcon>;
+}) {
+  return (
+    <div className="vo-iconcards">
+      {options.map((o) => {
+        const on = selected.includes(o);
+        const Icon = icons[o];
+        return (
+          <button key={o} type="button" className={'vo-iconcard' + (on ? ' on' : '')} aria-pressed={on} onClick={() => onToggle(o)}>
+            {Icon && <span className="vo-iconcard-icon"><Icon size={22} strokeWidth={1.75} aria-hidden="true" /></span>}
+            <span className="vo-iconcard-label">{o}</span>
+            {on && <span className="vo-iconcard-check" aria-hidden="true"><Check size={13} strokeWidth={2.5} /></span>}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -1021,7 +1092,8 @@ function LocationAreasCard({ headingId, t, lang, city, onCityChange, showAreas, 
               key={key} type="button" className={'vo-chip' + (on ? ' on' : '')} aria-pressed={on}
               onClick={() => { onCityChange(label); setOtherOpen(false); }}
             >
-              {label}
+              <span>{label}</span>
+              {on && <Check size={13} strokeWidth={2.5} className="vo-chip-check" aria-hidden="true" />}
             </button>
           );
         })}
@@ -1029,7 +1101,8 @@ function LocationAreasCard({ headingId, t, lang, city, onCityChange, showAreas, 
           type="button" className={'vo-chip' + (otherOpen ? ' on' : '')} aria-pressed={otherOpen}
           onClick={() => { setOtherOpen(true); if (matchedKey) onCityChange(''); }}
         >
-          {t('loc_other')}
+          <span>{t('loc_other')}</span>
+          {otherOpen && <Check size={13} strokeWidth={2.5} className="vo-chip-check" aria-hidden="true" />}
         </button>
       </div>
       {otherOpen && (
@@ -1115,11 +1188,13 @@ const CSS = `
 .vo-hubwrap{flex:1;overflow-y:auto;padding:8px 24px 32px;max-width:680px;margin:0 auto;width:100%;}
 .vo-hub-h{font-family:var(--serif);font-size:28px;font-weight:700;letter-spacing:-.02em;margin:8px 0 8px;}
 .vo-hub-sub{font-size:15px;color:var(--muted);line-height:1.5;margin:0 0 16px;max-width:520px;}
-.vo-hub-progress{font-size:13px;font-weight:600;color:var(--pd);margin:0 0 20px;}
+.vo-hub-progress{font-size:13px;font-weight:600;color:var(--pd);margin:0 0 8px;}
+.vo-hub-preview{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--pd);text-decoration:none;padding:6px 0;margin:0 0 16px;min-height:44px;}
+.vo-hub-preview:hover{color:var(--p);text-decoration:underline;}
 .vo-hub-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-.vo-hub-card{display:flex;align-items:flex-start;gap:12px;text-align:left;background:var(--surf);border:1px solid var(--line);border-radius:16px;padding:20px;cursor:pointer;box-shadow:var(--shadow);transition:transform 150ms ease,box-shadow 150ms ease;}
+.vo-hub-card{display:flex;align-items:flex-start;gap:12px;text-align:left;background:var(--surf);border:1px solid var(--line);border-radius:16px;padding:20px;cursor:pointer;box-shadow:var(--shadow);transition:transform 150ms ease,box-shadow 150ms ease,border-color var(--spec-duration-reveal,220ms) var(--spec-ease,ease),background var(--spec-duration-reveal,220ms) var(--spec-ease,ease);}
 .vo-hub-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(124,58,237,.1);}
-.vo-hub-card.done{border-color:rgba(47,158,106,.35);}
+.vo-hub-card.done{border-color:rgba(47,158,106,.35);background:#F5FBF8;}
 .vo-hub-card-icon{width:40px;height:40px;border-radius:12px;background:var(--bg);color:var(--ink);display:grid;place-items:center;flex-shrink:0;}
 .vo-hub-card-body{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0;}
 .vo-hub-card-body b{font-size:15px;font-weight:700;}
@@ -1132,9 +1207,10 @@ const CSS = `
 .vo-overview-link{background:none;border:none;font-family:var(--sans);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;padding:8px 4px;min-height:44px;}
 .vo-overview-link:hover{color:var(--pd);}
 .vo-dots{display:flex;gap:6px;}
-.vo-dot{flex:1;max-width:40px;height:4px;border-radius:99px;background:var(--line);}
+.vo-dot{flex:1;max-width:40px;height:4px;border-radius:99px;background:var(--line);transition:background var(--spec-duration-reveal,220ms) var(--spec-ease,ease),opacity var(--spec-duration-reveal,220ms) var(--spec-ease,ease);}
 .vo-dot.done{background:var(--p);opacity:.5;}
 .vo-dot.current{background:var(--p);}
+.vo-cardicon{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:var(--pbg);color:var(--pd);margin-bottom:14px;flex-shrink:0;}
 
 .vo-viewport{flex:1;min-height:0;display:flex;overflow:hidden;padding:0 20px;}
 .vo-card{flex:1;min-height:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;max-width:520px;margin:0 auto;width:100%;overflow-y:auto;padding:16px 0;}
@@ -1154,9 +1230,12 @@ const CSS = `
 .vo-bigfield:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
 .vo-textarea{line-height:1.6;}
 .vo-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
-.vo-chip{font-family:var(--sans);padding:11px 16px;min-height:44px;border-radius:99px;border:1px solid var(--line);background:var(--surf);color:var(--ink);font-size:14px;font-weight:400;cursor:pointer;}
+.vo-chip{font-family:var(--sans);display:inline-flex;align-items:center;gap:6px;padding:11px 16px;min-height:44px;border-radius:99px;border:1px solid var(--line);background:var(--surf);color:var(--ink);font-size:14px;font-weight:400;cursor:pointer;transition:transform var(--spec-duration-fast,150ms) var(--spec-ease,ease),border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .vo-chip:hover{border-color:var(--p);}
-.vo-chip.on{background:var(--pbg);border-color:var(--p);color:var(--pd);font-weight:600;}
+.vo-chip:active{transform:scale(.96);}
+.vo-chip.on{background:var(--pbg);border-color:var(--p);color:var(--pd);font-weight:600;animation:voChipIn var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.vo-chip-check{color:var(--p);flex-shrink:0;}
+@keyframes voChipIn{from{opacity:.4;transform:scale(.92);}to{opacity:1;transform:scale(1);}}
 .vo-addown{display:flex;gap:8px;margin-top:16px;}
 .vo-addown input{flex:1;font-family:var(--sans);padding:12px 14px;min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surf);color:var(--ink);font-size:14px;outline:none;}
 .vo-addown input:focus{border-color:var(--p);}
@@ -1170,6 +1249,30 @@ const CSS = `
 .vo-filebtn:hover{border-color:var(--p);}
 .vo-filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0;}
 .vo-catwrap{width:100%;margin-top:4px;}
+.vo-iconcards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;width:100%;}
+.vo-iconcard{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:16px;min-height:88px;border-radius:14px;border:1px solid var(--line);background:var(--surf);color:var(--ink);font-family:var(--sans);font-size:13.5px;font-weight:600;text-align:left;cursor:pointer;transition:transform var(--spec-duration-fast,150ms) var(--spec-ease,ease),border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.vo-iconcard:hover{border-color:var(--p);}
+.vo-iconcard:active{transform:scale(.97);}
+.vo-iconcard.on{background:var(--pbg);border-color:var(--p);color:var(--pd);animation:voChipIn var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.vo-iconcard-icon{width:36px;height:36px;border-radius:10px;background:var(--bg);color:var(--ink);display:grid;place-items:center;}
+.vo-iconcard.on .vo-iconcard-icon{background:#fff;color:var(--p);}
+.vo-iconcard-label{line-height:1.3;}
+.vo-iconcard-check{position:absolute;top:10px;right:10px;width:18px;height:18px;color:var(--p);display:grid;place-items:center;}
+
+.vo-catpicker{width:100%;}
+.vo-catchips{margin-bottom:4px;}
+.vo-catsearch-row{position:relative;display:flex;align-items:center;margin-top:8px;}
+.vo-catsearch-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted2);pointer-events:none;}
+.vo-catsearch-input{width:100%;font-family:var(--sans);padding:13px 16px 13px 40px;min-height:48px;border-radius:12px;border:1px solid var(--line);background:var(--surf);color:var(--ink);font-size:16px;outline:none;}
+.vo-catsearch-input:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
+.vo-catsuggest{margin-top:8px;}
+.vo-catsuglist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surf);}
+.vo-catsugbtn{width:100%;display:flex;align-items:center;gap:8px;font-family:var(--sans);font-size:14px;color:var(--ink);background:none;border:none;text-align:left;padding:12px 14px;min-height:44px;cursor:pointer;}
+.vo-catsugbtn:hover,.vo-catsugbtn:focus-visible{background:var(--bg);}
+.vo-catsugbtn svg{color:var(--p);flex-shrink:0;}
+.vo-catnoresults{font-size:13.5px;color:var(--muted);padding:10px 2px;margin:0;}
+.vo-catpopular{margin-top:20px;}
+.vo-catpopular-h{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted2);margin:0 0 8px;}
 
 .vo-prooftiles{list-style:none;margin:0 0 8px;padding:0;display:flex;flex-direction:column;gap:8px;width:100%;}
 .vo-prooftile{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--surf);text-decoration:none;color:var(--ink);min-height:48px;}
@@ -1214,6 +1317,7 @@ const CSS = `
 .vo-activate{margin-top:16px;width:100%;}
 .vo-accepted{display:flex;gap:12px;align-items:flex-start;background:#E9F7F0;border:1px solid rgba(47,158,106,.3);border-radius:14px;padding:16px 18px;}
 .vo-accepted p{margin:0 0 4px;font-size:13.5px;color:#1F7A54;line-height:1.5;}
+.vo-previewbtn{margin-top:16px;gap:8px;}
 
 .vo-foot{flex-shrink:0;padding:16px 20px calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:rgba(248,247,251,.92);backdrop-filter:blur(16px);}
 .vo-error{color:#CE4B43;font-size:13px;margin:0 0 10px;text-align:center;}
