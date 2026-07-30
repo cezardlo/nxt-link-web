@@ -39,6 +39,11 @@ async function signOutFailedTermsSession(sb: Awaited<ReturnType<typeof createSer
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const code = url.searchParams.get('code');
+  // Google Identity Services exchanges its signed ID token in the browser,
+  // so there is no PKCE `code` to exchange here. The marker only selects how
+  // we obtain the already-verified Supabase user; every post-auth rule below
+  // remains shared with the hosted OAuth callback.
+  const directGoogle = url.searchParams.get('oauth_direct') === 'google';
   const next = url.searchParams.get('next');
 
   // OAuth click-wrap threading (Continue with Google / LinkedIn / Microsoft,
@@ -60,9 +65,11 @@ export async function GET(req: Request) {
 
   let dest = '/login?confirmed=1';
   try {
-    if (code) {
+    if (code || directGoogle) {
       const sb = await createServerSupabaseClient();
-      const { data, error } = await sb.auth.exchangeCodeForSession(code);
+      const { data, error } = code
+        ? await sb.auth.exchangeCodeForSession(code)
+        : await sb.auth.getUser();
       if (!error && data?.user) {
         let role = String(data.user.user_metadata?.role || 'client');
         let isVendor = false;

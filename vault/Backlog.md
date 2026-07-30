@@ -1,5 +1,12 @@
 # Backlog — what's next / open items
 
+> **2026-07-30: Branded Google chooser is built on the Codex branch, NOT
+> deployed.** Google Identity Services exchanges a nonce-bound Google ID token
+> with Supabase and then uses the existing shared auth callback. Rollout needs
+> `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, `NEXT_PUBLIC_GOOGLE_DIRECT_SIGNIN=1`, preview
+> verification, and Cesar's production approval. Hosted Supabase OAuth remains
+> the rollback while Google branding is under review.
+>
 > **2026-07-20: Full operating blueprint exists.** All 7 departments planned
 > payments, onboarding, ops, contracts, experience, finance, and growth —
 > reconciled in `workplace/plans/MASTER-PLAN.md` (read it first; it links the
