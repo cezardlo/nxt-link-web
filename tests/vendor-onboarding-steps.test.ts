@@ -8,7 +8,7 @@ import {
   TRUST_STEPS,
   AGREEMENT_STEPS,
   stepsForSection,
-  getVisibleCapabilitiesSteps,
+  showServiceAreasQuestion,
   clampStepIndex,
   computeSectionStatus,
   countSectionsDone,
@@ -20,14 +20,23 @@ test('SECTION_ORDER is the four blueprint sections, in order', () => {
   assert.deepEqual(SECTION_ORDER, ['storefront', 'capabilities', 'trust', 'agreement']);
 });
 
-test('Storefront section is name+logo -> tagline -> about -> contact', () => {
-  assert.deepEqual(STOREFRONT_STEPS, ['name_logo', 'tagline', 'about', 'contact']);
+test('Storefront section is name+logo -> location+areas -> tagline+about -> contact (2026-07-30 simplified pass)', () => {
+  assert.deepEqual(STOREFRONT_STEPS, ['name_logo', 'location_areas', 'tagline_about', 'contact']);
+  // The step LIST itself doesn't vary by softwareOnly — only whether the
+  // location card's second ("where do you serve") question renders, which
+  // showServiceAreasQuestion below covers.
   assert.deepEqual(stepsForSection('storefront', { softwareOnly: false }), STOREFRONT_STEPS);
   assert.deepEqual(stepsForSection('storefront', { softwareOnly: true }), STOREFRONT_STEPS);
 });
 
-test('Trust & Proof section covers certifications, case studies, photos, videos, awards', () => {
-  assert.deepEqual(TRUST_STEPS, ['certifications', 'case_studies', 'photos', 'videos', 'awards']);
+test('Capabilities section is industries -> client_size -> categories (service areas moved to the storefront location card)', () => {
+  assert.deepEqual(CAPABILITIES_STEPS, ['industries', 'client_size', 'categories']);
+  assert.deepEqual(stepsForSection('capabilities', { softwareOnly: false }), CAPABILITIES_STEPS);
+  assert.deepEqual(stepsForSection('capabilities', { softwareOnly: true }), CAPABILITIES_STEPS);
+});
+
+test('Trust & Proof section is proof (certs+case studies+photos combined) -> videos -> awards', () => {
+  assert.deepEqual(TRUST_STEPS, ['proof', 'videos', 'awards']);
   assert.deepEqual(stepsForSection('trust', { softwareOnly: false }), TRUST_STEPS);
 });
 
@@ -36,26 +45,14 @@ test('Agreement & Activation section is recap -> terms', () => {
   assert.deepEqual(stepsForSection('agreement', { softwareOnly: false }), AGREEMENT_STEPS);
 });
 
-// --- Capabilities visibility (service_areas skipped for software-only) ----
+// --- Paired location card: the "where do you serve" half is software-only-aware ---
 
-test('getVisibleCapabilitiesSteps returns every step, in order, for a non-software vendor', () => {
-  const steps = getVisibleCapabilitiesSteps({ softwareOnly: false });
-  assert.deepEqual(steps, CAPABILITIES_STEPS);
-  assert.ok(steps.includes('service_areas'));
+test('showServiceAreasQuestion is true for a normal vendor', () => {
+  assert.equal(showServiceAreasQuestion({ softwareOnly: false }), true);
 });
 
-test('getVisibleCapabilitiesSteps drops service_areas (only) for a software-only vendor', () => {
-  const steps = getVisibleCapabilitiesSteps({ softwareOnly: true });
-  assert.equal(steps.includes('service_areas'), false);
-  assert.equal(steps.length, CAPABILITIES_STEPS.length - 1);
-  assert.deepEqual(steps, CAPABILITIES_STEPS.filter((s) => s !== 'service_areas'));
-});
-
-test('stepsForSection mirrors getVisibleCapabilitiesSteps for the capabilities section', () => {
-  assert.deepEqual(
-    stepsForSection('capabilities', { softwareOnly: true }),
-    getVisibleCapabilitiesSteps({ softwareOnly: true }),
-  );
+test('showServiceAreasQuestion is false for a software-only vendor (no physical service region)', () => {
+  assert.equal(showServiceAreasQuestion({ softwareOnly: true }), false);
 });
 
 // --- clampStepIndex ---------------------------------------------------------

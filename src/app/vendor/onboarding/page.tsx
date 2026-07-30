@@ -40,7 +40,7 @@ import CategoryPicker from '@/components/CategoryPicker';
 import LanguageToggle, { useLang } from '@/components/LanguageToggle';
 import {
   SECTION_ORDER, STOREFRONT_STEPS, CAPABILITIES_STEPS, TRUST_STEPS, AGREEMENT_STEPS,
-  stepsForSection, clampStepIndex, computeSectionStatus, countSectionsDone,
+  stepsForSection, clampStepIndex, computeSectionStatus, countSectionsDone, showServiceAreasQuestion,
   type SectionKey, type StepId,
 } from './steps';
 import { useVendorOnboardingProfile, type OnboardingVendor } from './useVendorOnboardingProfile';
@@ -81,9 +81,9 @@ const SECTION_ICON: Record<SectionKey, LucideIcon> = {
   storefront: Building2, capabilities: Boxes, trust: ShieldCheck, agreement: Handshake,
 };
 const STEP_ICON: Partial<Record<StepId, LucideIcon>> = {
-  name_logo: LogoIcon, tagline: Quote, about: FileText, contact: Phone,
-  industries: Factory, client_size: Users, categories: Boxes, service_areas: MapPin,
-  certifications: ShieldCheck, case_studies: FileText, photos: Camera, videos: VideoIcon, awards: Award,
+  name_logo: LogoIcon, location_areas: MapPin, tagline_about: Quote, contact: Phone,
+  industries: Factory, client_size: Users, categories: Boxes,
+  proof: ShieldCheck, videos: VideoIcon, awards: Award,
 };
 
 const TR: Record<string, { en: string; es: string }> = {
@@ -104,7 +104,7 @@ const TR: Record<string, { en: string; es: string }> = {
 
   // Hub
   hub_h: { en: 'Let’s build your storefront', es: 'Construyamos tu tienda' },
-  hub_sub: { en: 'This is what buyers see and what NXT//LINK matches you to. Work through each part whenever you like — nothing is lost.', es: 'Esto es lo que ven los compradores y con lo que NXT//LINK te conecta. Avanza en cada parte cuando quieras — nada se pierde.' },
+  hub_sub: { en: 'This is what buyers see. Nothing you enter here is ever lost.', es: 'Esto es lo que ven los compradores. Nada de lo que ingreses aquí se pierde.' },
   hub_progress: { en: '{n} of 4 sections done', es: '{n} de 4 secciones completas' },
   status_not_started: { en: 'Not started', es: 'No iniciado' },
   status_progress: { en: '{done} of {total} done', es: '{done} de {total} completos' },
@@ -113,7 +113,7 @@ const TR: Record<string, { en: string; es: string }> = {
   strip_summary: { en: '{n} of 4 sections done', es: '{n} de 4 secciones completas' },
 
   sec_storefront_label: { en: 'Storefront', es: 'Tienda' },
-  sec_storefront_blurb: { en: 'Name, logo, tagline, and how buyers reach you', es: 'Nombre, logo, frase y cómo te contactan los compradores' },
+  sec_storefront_blurb: { en: 'Name, logo, location, and how buyers reach you', es: 'Nombre, logo, ubicación y cómo te contactan los compradores' },
   sec_capabilities_label: { en: 'Capabilities', es: 'Capacidades' },
   sec_capabilities_blurb: { en: 'Industries, client sizes, and what you sell', es: 'Industrias, tamaños de clientes y qué vendes' },
   sec_trust_label: { en: 'Trust & Proof', es: 'Confianza y pruebas' },
@@ -128,6 +128,13 @@ const TR: Record<string, { en: string; es: string }> = {
   logo_replace: { en: 'Replace logo', es: 'Reemplazar logo' },
   logo_uploading: { en: 'Uploading…', es: 'Subiendo…' },
   logo_remove: { en: 'Remove', es: 'Quitar' },
+  h_location: { en: 'Where is your business located?', es: '¿Dónde está ubicada tu empresa?' },
+  loc_region_ep: { en: 'El Paso, United States', es: 'El Paso, Estados Unidos' },
+  loc_region_jz: { en: 'Ciudad Juárez, Mexico', es: 'Ciudad Juárez, México' },
+  loc_region_lc: { en: 'Las Cruces, United States', es: 'Las Cruces, Estados Unidos' },
+  loc_region_chi: { en: 'Chihuahua, Mexico', es: 'Chihuahua, México' },
+  loc_other: { en: 'Somewhere else', es: 'Otro lugar' },
+  ph_location_other: { en: 'e.g. "Houston, United States"', es: 'ej. "Houston, Estados Unidos"' },
   h_tagline: { en: 'Sum up your company in one line', es: 'Resume tu empresa en una línea' },
   ph_tagline: { en: 'e.g. "Forklift service across the Borderplex since 2009."', es: 'ej. "Servicio de montacargas en la frontera desde 2009."' },
   h_about: { en: 'What does your company do?', es: '¿Qué hace tu empresa?' },
@@ -135,9 +142,8 @@ const TR: Record<string, { en: string; es: string }> = {
   use_template: { en: 'Use a template', es: 'Usar una plantilla' },
   h_contact: { en: 'How can buyers reach you?', es: '¿Cómo pueden contactarte los compradores?' },
   contact_name_label: { en: 'Contact name', es: 'Nombre de contacto' },
-  website_label: { en: 'Website', es: 'Sitio web' },
+  website_label: { en: 'Website (optional)', es: 'Sitio web (opcional)' },
   phone_label: { en: 'Phone', es: 'Teléfono' },
-  city_label: { en: 'City', es: 'Ciudad' },
 
   // Capabilities cards
   h_industries: { en: 'Which industries do you serve?', es: '¿A qué industrias atiendes?' },
@@ -149,20 +155,20 @@ const TR: Record<string, { en: string; es: string }> = {
   h_service_areas: { en: 'Where do you provide service?', es: '¿Dónde das servicio?' },
 
   // Trust & Proof cards
+  h_proof: { en: 'Show buyers you’re the real deal', es: 'Demuestra que eres de confianza' },
+  sub_proof: { en: 'Certifications, case studies, and photos build trust fast.', es: 'Certificaciones, casos de éxito y fotos generan confianza rápido.' },
+  proof_added: { en: 'Added', es: 'Agregado' },
   h_certifications: { en: 'Certifications', es: 'Certificaciones' },
-  sub_certifications: { en: 'ISO, OSHA, licenses, insurance — shown on your storefront.', es: 'ISO, OSHA, licencias, seguros — se muestran en tu tienda.' },
   certs_empty: { en: 'No certifications yet.', es: 'Aún no hay certificaciones.' },
   certs_cta: { en: 'Add certifications in your portal', es: 'Agrega certificaciones en tu portal' },
   h_case_studies: { en: 'Case studies', es: 'Casos de éxito' },
-  sub_case_studies: { en: 'Show up to 3 real results — the challenge, what you did, the outcome.', es: 'Muestra hasta 3 resultados reales — el reto, lo que hiciste, el resultado.' },
   cases_empty: { en: 'No case studies yet.', es: 'Aún no hay casos de éxito.' },
   cases_cta: { en: 'Add case studies in your portal', es: 'Agrega casos de éxito en tu portal' },
   h_photos: { en: 'Photo gallery', es: 'Galería de fotos' },
-  sub_photos: { en: 'Real photos of your facility or equipment build trust fast.', es: 'Fotos reales de tu instalación o equipo generan confianza rápido.' },
   photos_empty: { en: 'No photos yet.', es: 'Aún no hay fotos.' },
   photos_cta: { en: 'Add photos in your portal', es: 'Agrega fotos en tu portal' },
   h_videos: { en: 'Showcase videos', es: 'Videos de tu trabajo' },
-  sub_videos: { en: 'Paste a YouTube or Vimeo link to show what you do.', es: 'Pega un enlace de YouTube o Vimeo para mostrar tu trabajo.' },
+  sub_videos: { en: 'Paste a YouTube or Vimeo link.', es: 'Pega un enlace de YouTube o Vimeo.' },
   video_title_ph: { en: 'Title (optional)', es: 'Título (opcional)' },
   video_url_ph: { en: 'https://youtube.com/watch?v=…', es: 'https://youtube.com/watch?v=…' },
   video_add: { en: 'Add video', es: 'Agregar video' },
@@ -526,6 +532,7 @@ function SectionFlow({
           {renderCard({
             section: view.section, step: view.stepId, headingId: `vo-h-${view.stepId}`,
             t, tf, lang, vendor, set, toggle, logo, trust, agreementData, Icon,
+            softwareOnly: opts.softwareOnly,
           })}
         </div>
       </div>
@@ -571,6 +578,7 @@ function renderCard(props: {
     agreementBusy: boolean; acceptTerms: () => Promise<boolean>; inReview: boolean;
   };
   Icon?: LucideIcon;
+  softwareOnly: boolean;
 }) {
   const { step, headingId, t, tf, lang, vendor, set, toggle, logo, trust, agreementData } = props;
 
@@ -597,7 +605,20 @@ function renderCard(props: {
         </>
       );
 
-    case 'tagline':
+    case 'location_areas':
+      return (
+        <LocationAreasCard
+          headingId={headingId} t={t} lang={lang}
+          city={vendor.city || ''} onCityChange={(v) => set('city', v)}
+          showAreas={showServiceAreasQuestion({ softwareOnly: props.softwareOnly })}
+          serviceAreas={vendor.service_areas || []}
+          onToggleArea={(v) => toggle(vendor.service_areas || [], v, 'service_areas')}
+        />
+      );
+
+    case 'tagline_about': {
+      const filled = templateFor(lang, vendor);
+      const aboutHeadingId = `${headingId}-2`;
       return (
         <>
           <h2 id={headingId} className="vo-h">{t('h_tagline')}</h2>
@@ -606,16 +627,9 @@ function renderCard(props: {
             value={vendor.tagline || ''} placeholder={t('ph_tagline')}
             onChange={(e) => set('tagline', e.target.value)}
           />
-        </>
-      );
-
-    case 'about': {
-      const filled = templateFor(lang, vendor);
-      return (
-        <>
-          <h2 id={headingId} className="vo-h">{t('h_about')}</h2>
+          <h3 id={aboutHeadingId} className="vo-h2">{t('h_about')}</h3>
           <textarea
-            className="vo-bigfield vo-textarea" aria-labelledby={headingId} rows={5}
+            className="vo-bigfield vo-textarea" aria-labelledby={aboutHeadingId} rows={4}
             value={vendor.description || ''} placeholder={t('ph_about')}
             onChange={(e) => set('description', e.target.value)}
           />
@@ -634,7 +648,6 @@ function renderCard(props: {
             <TextField label={t('contact_name_label')} value={vendor.contact_name || ''} onChange={(v) => set('contact_name', v)} />
             <TextField label={t('website_label')} value={vendor.website || ''} onChange={(v) => set('website', v)} />
             <TextField label={t('phone_label')} value={vendor.phone || ''} onChange={(v) => set('phone', v)} inputMode="tel" />
-            <TextField label={t('city_label')} value={vendor.city || ''} onChange={(v) => set('city', v)} />
           </div>
         </>
       );
@@ -654,6 +667,8 @@ function renderCard(props: {
             <AddYourOwn
               placeholder={t('add_industry_ph')} addLabel={t('add_btn')} existing={vendor.industries || []}
               onAdd={(v) => set('industries', [...(vendor.industries || []), v])}
+              listId="vo-industry-suggestions"
+              suggestions={INDUSTRIES.filter((i) => !(vendor.industries || []).includes(i))}
             />
           </div>
         </>
@@ -680,58 +695,32 @@ function renderCard(props: {
         </>
       );
 
-    case 'service_areas':
-      return (
-        <>
-          <h2 id={headingId} className="vo-h">{t('h_service_areas')}</h2>
-          <div role="group" aria-labelledby={headingId}>
-            <ChipGroup options={AREAS} selected={vendor.service_areas || []} onToggle={(v) => toggle(vendor.service_areas || [], v, 'service_areas')} />
-          </div>
-        </>
-      );
-
     // ---- Trust & Proof --------------------------------------------------
-    case 'certifications':
+    case 'proof':
       return (
         <>
-          <h2 id={headingId} className="vo-h">{t('h_certifications')}</h2>
-          <p className="vo-sub">{t('sub_certifications')}</p>
-          {trust.certifications.length > 0 ? (
-            <ul className="vo-summarylist">
-              {trust.certifications.map((c) => <li key={c.id}>{c.name}{c.issuer ? ` · ${c.issuer}` : ''}</li>)}
-            </ul>
-          ) : <p className="vo-summaryempty">{t('certs_empty')}</p>}
-          <a className="vo-deeplink" href="/vendor/portal">{t('certs_cta')} <ExternalLink size={13} strokeWidth={2} aria-hidden="true" /></a>
-        </>
-      );
-
-    case 'case_studies':
-      return (
-        <>
-          <h2 id={headingId} className="vo-h">{t('h_case_studies')}</h2>
-          <p className="vo-sub">{t('sub_case_studies')}</p>
-          {trust.caseStudies.length > 0 ? (
-            <ul className="vo-summarylist">
-              {trust.caseStudies.map((c) => <li key={c.id}>{c.title}</li>)}
-            </ul>
-          ) : <p className="vo-summaryempty">{t('cases_empty')}</p>}
-          <a className="vo-deeplink" href="/vendor/portal">{t('cases_cta')} <ExternalLink size={13} strokeWidth={2} aria-hidden="true" /></a>
-        </>
-      );
-
-    case 'photos':
-      return (
-        <>
-          <h2 id={headingId} className="vo-h">{t('h_photos')}</h2>
-          <p className="vo-sub">{t('sub_photos')}</p>
-          {trust.photos.length > 0 ? (
-            <div className="vo-photogrid">
-              {trust.photos.map((p) => (
-                <div className="vo-photothumb" key={p.id}>{p.image_url && <img src={p.image_url} alt={p.caption || ''} />}</div>
-              ))}
-            </div>
-          ) : <p className="vo-summaryempty">{t('photos_empty')}</p>}
-          <a className="vo-deeplink" href="/vendor/portal">{t('photos_cta')} <ExternalLink size={13} strokeWidth={2} aria-hidden="true" /></a>
+          <h2 id={headingId} className="vo-h">{t('h_proof')}</h2>
+          <p className="vo-sub">{t('sub_proof')}</p>
+          <ul className="vo-prooftiles" aria-labelledby={headingId}>
+            <li>
+              <ProofTile
+                href="/vendor/portal" Icon={ShieldCheck} label={t('h_certifications')} cta={t('certs_cta')}
+                count={trust.certifications.length} emptyText={t('certs_empty')} addedLabel={t('proof_added')}
+              />
+            </li>
+            <li>
+              <ProofTile
+                href="/vendor/portal" Icon={FileText} label={t('h_case_studies')} cta={t('cases_cta')}
+                count={trust.caseStudies.length} emptyText={t('cases_empty')} addedLabel={t('proof_added')}
+              />
+            </li>
+            <li>
+              <ProofTile
+                href="/vendor/portal" Icon={Camera} label={t('h_photos')} cta={t('photos_cta')}
+                count={trust.photos.length} emptyText={t('photos_empty')} addedLabel={t('proof_added')}
+              />
+            </li>
+          </ul>
         </>
       );
 
@@ -961,7 +950,14 @@ function ChipGroup({ options, selected, onToggle }: { options: string[]; selecte
   );
 }
 
-function AddYourOwn({ placeholder, addLabel, existing, onAdd }: { placeholder: string; addLabel: string; existing: string[]; onAdd: (v: string) => void }) {
+// `suggestions` (+ `listId`) are optional — when passed, they wire up a
+// native <datalist> so typing shows rules-based autocomplete options (e.g.
+// the known industry vocabulary). No AI involved, same static-list pattern
+// as the "Use a template" button. Free typing always still works.
+function AddYourOwn({ placeholder, addLabel, existing, onAdd, suggestions, listId }: {
+  placeholder: string; addLabel: string; existing: string[]; onAdd: (v: string) => void;
+  suggestions?: string[]; listId?: string;
+}) {
   const [v, setV] = useState('');
   const add = () => {
     const val = v.trim();
@@ -971,9 +967,111 @@ function AddYourOwn({ placeholder, addLabel, existing, onAdd }: { placeholder: s
   };
   return (
     <div className="vo-addown">
-      <input value={v} placeholder={placeholder} onChange={(e) => setV(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }} />
+      <input
+        value={v} placeholder={placeholder} list={suggestions ? listId : undefined}
+        onChange={(e) => setV(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
+      />
+      {suggestions && suggestions.length > 0 && (
+        <datalist id={listId}>
+          {suggestions.map((s) => <option key={s} value={s} />)}
+        </datalist>
+      )}
       <button type="button" className="vo-textbtn" onClick={add}>{addLabel}</button>
     </div>
+  );
+}
+
+// Paired card: "where is your business located?" (button-first — tap a
+// common Borderplex region, or "Somewhere else" to reveal free text) plus,
+// for vendors with a physical service area, "where do you provide service?"
+// underneath as the card's second question (2026-07-30 pairing rule: up to
+// two closely related questions may share one card). Buttons store whichever
+// language's label the vendor is currently reading (same as any other free
+// text in this flow — content isn't auto-translated when the UI toggles),
+// and re-match against EITHER language on re-render so a value picked in one
+// language still highlights correctly after a language switch.
+const LOCATION_REGIONS = ['loc_region_ep', 'loc_region_jz', 'loc_region_lc', 'loc_region_chi'] as const;
+
+function LocationAreasCard({ headingId, t, lang, city, onCityChange, showAreas, serviceAreas, onToggleArea }: {
+  headingId: string;
+  t: (k: string) => string;
+  lang: Lang;
+  city: string;
+  onCityChange: (v: string) => void;
+  showAreas: boolean;
+  serviceAreas: string[];
+  onToggleArea: (v: string) => void;
+}) {
+  const trimmed = city.trim().toLowerCase();
+  const matchedKey = LOCATION_REGIONS.find((key) => {
+    const pair = TR[key];
+    return trimmed.length > 0 && (trimmed === pair.en.toLowerCase() || trimmed === pair.es.toLowerCase());
+  });
+  const [otherOpen, setOtherOpen] = useState(!matchedKey && city.trim().length > 0);
+
+  return (
+    <>
+      <h2 id={headingId} className="vo-h">{t('h_location')}</h2>
+      <div className="vo-chips" role="group" aria-labelledby={headingId}>
+        {LOCATION_REGIONS.map((key) => {
+          const label = lang === 'es' ? TR[key].es : TR[key].en;
+          const on = key === matchedKey && !otherOpen;
+          return (
+            <button
+              key={key} type="button" className={'vo-chip' + (on ? ' on' : '')} aria-pressed={on}
+              onClick={() => { onCityChange(label); setOtherOpen(false); }}
+            >
+              {label}
+            </button>
+          );
+        })}
+        <button
+          type="button" className={'vo-chip' + (otherOpen ? ' on' : '')} aria-pressed={otherOpen}
+          onClick={() => { setOtherOpen(true); if (matchedKey) onCityChange(''); }}
+        >
+          {t('loc_other')}
+        </button>
+      </div>
+      {otherOpen && (
+        <input
+          className="vo-bigfield" style={{ marginTop: 12 }} aria-label={t('h_location')} maxLength={160}
+          value={city} placeholder={t('ph_location_other')}
+          onChange={(e) => onCityChange(e.target.value)}
+        />
+      )}
+
+      {showAreas && (
+        <>
+          <h3 id={`${headingId}-2`} className="vo-h2">{t('h_service_areas')}</h3>
+          <div role="group" aria-labelledby={`${headingId}-2`}>
+            <ChipGroup options={AREAS} selected={serviceAreas} onToggle={onToggleArea} />
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+// One Trust & Proof tile: a full-tile link out to the richer portal editor
+// for a proof type this flow doesn't re-implement (file uploads / multi-field
+// forms). The visible label stays short; `cta` (e.g. "Add certifications in
+// your portal") is the link's accessible name so screen-reader users get the
+// full context without a visible second line per tile.
+function ProofTile({ href, Icon, label, cta, count, emptyText, addedLabel }: {
+  href: string; Icon: LucideIcon; label: string; cta: string;
+  count: number; emptyText: string; addedLabel: string;
+}) {
+  return (
+    <a className="vo-prooftile" href={href} aria-label={cta}>
+      <span className="vo-prooftile-icon" aria-hidden="true"><Icon size={18} strokeWidth={1.75} /></span>
+      <span className="vo-prooftile-body">
+        <b>{label}</b>
+        <span className={'vo-prooftile-status' + (count > 0 ? ' done' : '')}>
+          {count > 0 ? `${addedLabel} · ${count}` : emptyText}
+        </span>
+      </span>
+      <ExternalLink size={14} strokeWidth={2} className="vo-prooftile-arrow" aria-hidden="true" />
+    </a>
   );
 }
 
@@ -1045,6 +1143,7 @@ const CSS = `
 @keyframes voInFwd{from{opacity:0;transform:translateX(24px);}to{opacity:1;transform:translateX(0);}}
 @keyframes voInBack{from{opacity:0;transform:translateX(-24px);}to{opacity:1;transform:translateX(0);}}
 .vo-h{font-family:var(--serif);font-size:28px;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin:0 0 8px;}
+.vo-h2{font-family:var(--sans);font-size:15px;font-weight:700;color:var(--ink);margin:28px 0 8px;}
 .vo-sub{font-size:15px;font-weight:400;color:var(--muted);line-height:1.5;margin:0 0 24px;max-width:440px;}
 .vo-fields{display:flex;flex-direction:column;gap:16px;width:100%;margin-top:8px;}
 .vo-field{display:flex;flex-direction:column;gap:8px;font-size:13px;font-weight:600;color:var(--muted);width:100%;}
@@ -1072,6 +1171,15 @@ const CSS = `
 .vo-filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0;}
 .vo-catwrap{width:100%;margin-top:4px;}
 
+.vo-prooftiles{list-style:none;margin:0 0 8px;padding:0;display:flex;flex-direction:column;gap:8px;width:100%;}
+.vo-prooftile{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--surf);text-decoration:none;color:var(--ink);min-height:48px;}
+.vo-prooftile:hover{border-color:var(--p);}
+.vo-prooftile-icon{width:36px;height:36px;border-radius:10px;background:var(--bg);color:var(--ink);display:grid;place-items:center;flex-shrink:0;}
+.vo-prooftile-body{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;}
+.vo-prooftile-body b{font-size:14px;font-weight:600;}
+.vo-prooftile-status{font-size:12.5px;color:var(--muted);}
+.vo-prooftile-status.done{color:var(--green);font-weight:600;}
+.vo-prooftile-arrow{color:var(--muted2);flex-shrink:0;}
 .vo-summarylist{list-style:none;margin:0 0 16px;padding:0;display:flex;flex-direction:column;gap:8px;width:100%;}
 .vo-summarylist li{font-size:14px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surf);}
 .vo-videorow{display:flex;align-items:center;justify-content:space-between;gap:12px;}

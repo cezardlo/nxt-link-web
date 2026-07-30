@@ -13,38 +13,43 @@ export type SectionKey = 'storefront' | 'capabilities' | 'trust' | 'agreement';
 
 export const SECTION_ORDER: SectionKey[] = ['storefront', 'capabilities', 'trust', 'agreement'];
 
-// Section 1 — Storefront: name+logo -> tagline -> about -> contact (blueprint,
-// verbatim grouping).
-export type StorefrontStepId = 'name_logo' | 'tagline' | 'about' | 'contact';
-export const STOREFRONT_STEPS: StorefrontStepId[] = ['name_logo', 'tagline', 'about', 'contact'];
+// Section 1 — Storefront: name+logo -> location+service areas -> tagline+
+// about -> contact. Updated 2026-07-30 (Cesar): a card may pair up to TWO
+// closely related questions instead of forcing a rigid one-question-per-card
+// rule. "Where is your business located?" and "where do you provide
+// service?" naturally belong together (both are "where"), and tagline/about
+// are both short company-description copy asked back to back — so each pair
+// now shares one card. Never more than two questions on a single card.
+export type StorefrontStepId = 'name_logo' | 'location_areas' | 'tagline_about' | 'contact';
+export const STOREFRONT_STEPS: StorefrontStepId[] = ['name_logo', 'location_areas', 'tagline_about', 'contact'];
 
-// Section 2 — Capabilities: industries -> client sizes -> categories ->
-// service areas (blueprint, verbatim grouping — the standalone "who are you
-// looking for" chip picker from Slice S1 is folded out of the counted flow;
-// see task report for why).
-export type CapabilitiesStepId = 'industries' | 'client_size' | 'categories' | 'service_areas';
-export const CAPABILITIES_STEPS: CapabilitiesStepId[] = ['industries', 'client_size', 'categories', 'service_areas'];
+// Section 2 — Capabilities: industries -> client sizes -> categories.
+// "Service areas" moved to the Storefront section's location card (paired
+// with "where is your business located?" — see StorefrontStepId above) as of
+// 2026-07-30, so it no longer lives here.
+export type CapabilitiesStepId = 'industries' | 'client_size' | 'categories';
+export const CAPABILITIES_STEPS: CapabilitiesStepId[] = ['industries', 'client_size', 'categories'];
 
-export interface CapabilitiesVisibleOptions {
-  /** True when every selected category is in the "technology" family — no
-   *  physical install site / service region applies, so we skip that card
-   *  (mirrors src/app/vendor/portal/page.tsx's `softwareOnly` rule). */
-  softwareOnly: boolean;
+/** Whether the paired location card's SECOND question ("where do you provide
+ *  service?") should render. True when every selected category is in the
+ *  "technology" family — no physical install site / service region applies
+ *  (mirrors src/app/vendor/portal/page.tsx's `softwareOnly` rule). Pure —
+ *  same input always produces the same output. This replaces the old
+ *  per-section `getVisibleCapabilitiesSteps` filter now that service areas
+ *  live inside a Storefront card instead of being their own Capabilities
+ *  step. */
+export function showServiceAreasQuestion(opts: { softwareOnly: boolean }): boolean {
+  return !opts.softwareOnly;
 }
 
-/** The ordered list of Capabilities cards a given vendor should see. Pure —
- *  same input always produces the same output. */
-export function getVisibleCapabilitiesSteps(opts: CapabilitiesVisibleOptions): CapabilitiesStepId[] {
-  return CAPABILITIES_STEPS.filter((id) => !(id === 'service_areas' && opts.softwareOnly));
-}
-
-// Section 3 — Trust & Proof: certifications, case studies, photos, videos,
-// awards (task spec, verbatim). Certifications/case studies/photos are
-// portal-only rich editors here (file uploads, multi-field forms) — their
-// cards summarize + deep-link to the portal rather than re-implementing the
-// editor; videos and awards have no file upload, so they stay fully inline.
-export type TrustStepId = 'certifications' | 'case_studies' | 'photos' | 'videos' | 'awards';
-export const TRUST_STEPS: TrustStepId[] = ['certifications', 'case_studies', 'photos', 'videos', 'awards'];
+// Section 3 — Trust & Proof: one combined "proof" card (certifications, case
+// studies, photos — each a summary tile that deep-links to the richer portal
+// editor, since those are file-upload/multi-field editors this flow doesn't
+// re-implement) plus videos and awards, which stay fully inline (no file
+// upload, so no need to leave the flow). Five separate cards collapsed to
+// three on 2026-07-30 per Cesar's "make them simple" directive.
+export type TrustStepId = 'proof' | 'videos' | 'awards';
+export const TRUST_STEPS: TrustStepId[] = ['proof', 'videos', 'awards'];
 
 // Section 4 — Agreement & Activation: a recap card, then the terms table +
 // checkbox + Activate CTA together on one card (task spec).
@@ -57,11 +62,15 @@ export interface VisibleStepsOptions {
   softwareOnly: boolean;
 }
 
-/** The ordered list of cards a given vendor sees inside one section. Pure. */
-export function stepsForSection(section: SectionKey, opts: VisibleStepsOptions): StepId[] {
+/** The ordered list of cards a given vendor sees inside one section. Pure.
+ *  `opts` is currently unused for step-list purposes (softwareOnly only
+ *  affects content WITHIN the storefront location card now — see
+ *  `showServiceAreasQuestion`) but is kept in the signature so every call
+ *  site doesn't have to change if a future section ever needs it again. */
+export function stepsForSection(section: SectionKey, _opts: VisibleStepsOptions): StepId[] {
   switch (section) {
     case 'storefront': return STOREFRONT_STEPS;
-    case 'capabilities': return getVisibleCapabilitiesSteps(opts);
+    case 'capabilities': return CAPABILITIES_STEPS;
     case 'trust': return TRUST_STEPS;
     case 'agreement': return AGREEMENT_STEPS;
     default: return [];
