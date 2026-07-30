@@ -7,6 +7,15 @@
 import { useEffect, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
+import { splitIndustryList } from '@/lib/matching';
+
+// Industry is now saved as up to 3 comma-separated values (2026-07-30 buyer
+// progressive-enrichment card, /buyer — same buyer_profiles.industry column,
+// zero migration). This chip picker was single-select only; treating it as
+// multi-select here too (toggle membership, cap 3) keeps this page and the
+// new card from fighting over the same field's shape — without this, a
+// buyer who picked 3 industries on the dashboard card would see one broken
+// "Manufacturing, Retail, ..." chip here instead of the real ones highlighted.
 
 // Design System v1.0 reskin (Premium Polish Phase 2, 2026-07-23): visual/CSS
 // only — every handler and state above is unchanged.
@@ -150,6 +159,17 @@ export default function BuyerProfilePage() {
   const phone = parsePhone(p.phone || '');
   const emitPhone = (code: string, num: string) => set('phone', num.trim() ? `${code} ${num.trim()}` : '');
 
+  // Up to 3 industries, comma-separated in the same `industry` column the
+  // buyer dashboard's enrichment card also writes (see import comment above).
+  const selectedIndustries = splitIndustryList(p.industry);
+  function toggleIndustry(v: string) {
+    let next: string[];
+    if (selectedIndustries.includes(v)) next = selectedIndustries.filter((x) => x !== v);
+    else if (selectedIndustries.length >= 3) return; // cap 3 — same as the dashboard card
+    else next = [...selectedIndustries, v];
+    set('industry', next.join(', '));
+  }
+
   return (
     <div className={`bp ${ibmPlexSans.variable}`}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
@@ -195,15 +215,15 @@ export default function BuyerProfilePage() {
                   {Array.from(
                     new Map([
                       ...INDUSTRIES.map((i) => [i.en, i] as const),
-                      ...(p.industry && !INDUSTRIES.some((i) => i.en === p.industry) ? [[p.industry, { en: p.industry, es: p.industry }] as const] : []),
+                      ...selectedIndustries.filter((v) => !INDUSTRIES.some((i) => i.en === v)).map((v) => [v, { en: v, es: v }] as const),
                     ]).values()
                   ).map((i) => (
-                    <button key={i.en} type="button" className={'bp-chip' + (p.industry === i.en ? ' on' : '')} onClick={() => set('industry', p.industry === i.en ? '' : i.en)}>{lang === 'es' ? i.es : i.en}</button>
+                    <button key={i.en} type="button" className={'bp-chip' + (selectedIndustries.includes(i.en) ? ' on' : '')} onClick={() => toggleIndustry(i.en)}>{lang === 'es' ? i.es : i.en}</button>
                   ))}
                 </div>
                 <div className="bp-addown">
-                  <input value={customInd} placeholder={t.customIndustryPh} onChange={(e) => setCustomInd(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && customInd.trim()) { set('industry', customInd.trim()); setCustomInd(''); } }} />
-                  <button className="bp-btn sm" type="button" onClick={() => { if (customInd.trim()) { set('industry', customInd.trim()); setCustomInd(''); } }}>{t.set}</button>
+                  <input value={customInd} placeholder={t.customIndustryPh} onChange={(e) => setCustomInd(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && customInd.trim()) { toggleIndustry(customInd.trim()); setCustomInd(''); } }} />
+                  <button className="bp-btn sm" type="button" onClick={() => { if (customInd.trim()) { toggleIndustry(customInd.trim()); setCustomInd(''); } }}>{t.set}</button>
                 </div>
 
                 <div className="bp-lbl" style={{ marginTop: 20 }}>{t.phone}</div>

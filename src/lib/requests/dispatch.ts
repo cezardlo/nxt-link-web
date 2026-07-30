@@ -8,7 +8,7 @@
 // so it can be fire-and-forget from a request-creation path.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { scoreVendors, type MatchableVendor } from '@/lib/matching';
+import { scoreVendors, splitIndustryList, type MatchableVendor } from '@/lib/matching';
 import { notifyVendor } from '@/lib/notify';
 import { isRestricted } from '@/lib/vendor/moderation';
 import { sendMail } from '@/lib/mail';
@@ -133,7 +133,7 @@ export async function dispatchRequestToVendors(
 
     const { data: vendors } = await db
       .from('vendor_profiles')
-      .select('id, company_name, email, categories, service_areas, status, moderation_status, suspended_until')
+      .select('id, company_name, email, categories, service_areas, industries, status, moderation_status, suspended_until')
       .eq('status', 'approved')
       .limit(500);
 
@@ -153,6 +153,56 @@ export async function dispatchRequestToVendors(
         && !isRestricted({ moderation_status: (v.moderation_status as string) || null, suspended_until: (v.suspended_until as string) || null }),
     );
 
+    // Honest matching consumption (2026-07-30 buyer-enrichment slice) — best-
+    // effort, ADDITIVE lookups only. Neither can ever make dispatch itself
+    // fail or change who gets matched today when the enrichment data doesn't
+    // exist: both are wrapped so a lookup error just leaves the corresponding
+    // scoreVendors input undefined, which scores IDENTICALLY to before this
+    // slice (see tests/matching-honest-enrichment.test.ts).
+    let buyerIndustries: string[] | undefined;
+    try {
+      if (request.contact_email) {
+        const { data: buyerProfile } = await db
+          .from('buyer_profiles')
+          .select('industry')
+          .eq('buyer_email', request.contact_email.trim().toLowerCase())
+          .maybeSingle();
+        const parsed = splitIndustryList(buyerProfile?.industry as string | null | undefined);
+        if (parsed.length) buyerIndustries = parsed;
+      }
+    } catch { /* best-effort — a failed lookup scores exactly like no profile */ }
+
+    // requested certifications: only ever read from a caller-populated
+    // structured_specs.certifications (no live RFQ form sets this key yet —
+    // see src/lib/requests/structured.ts header — so this is a forward-
+    // compatible, currently-inert hook, not a fabricated signal).
+    const requestedCertifications = Array.isArray(request.structured_specs?.certifications)
+      ? (request.structured_specs!.certifications as unknown[])
+        .filter((c): c is string => typeof c === 'string' && c.trim().length > 0)
+        .map((c) => c.trim())
+        .slice(0, 20)
+      : undefined;
+
+    // Only query vendor_certifications when a request actually asks for one —
+    // keeps the common (no-certifications-requested) path at zero extra
+    // queries and byte-identical performance/scoring.
+    let certsByVendor: Map<string, string[]> | undefined;
+    if (requestedCertifications?.length) {
+      try {
+        const vendorIds = eligible.map((v) => v.id as string);
+        const { data: certRows } = await db
+          .from('vendor_certifications')
+          .select('vendor_id, name')
+          .in('vendor_id', vendorIds);
+        certsByVendor = new Map();
+        for (const c of certRows || []) {
+          const list = certsByVendor.get(c.vendor_id as string) || [];
+          list.push(c.name as string);
+          certsByVendor.set(c.vendor_id as string, list);
+        }
+      } catch { /* best-effort — no certification data = no boost, never a failure */ }
+    }
+
     const enriched: MatchableVendor[] = eligible.map((v) => ({
       id: v.id as string,
       company_name: (v.company_name as string) || '',
@@ -160,10 +210,17 @@ export async function dispatchRequestToVendors(
       categories: (v.categories as string[]) || [],
       service_areas: (v.service_areas as string[]) || [],
       status: (v.status as string) || null,
+      industries: (v.industries as string[]) || [],
+      certifications: certsByVendor?.get(v.id as string) || [],
     }));
 
     const ranked = scoreVendors(
-      { category: request.category || '', location: request.location || '' },
+      {
+        category: request.category || '',
+        location: request.location || '',
+        buyerIndustries,
+        requestedCertifications,
+      },
       enriched,
     ).filter((v) => v.score >= MIN_SCORE).slice(0, maxVendors);
 
