@@ -5,6 +5,7 @@ import {
   computeRequestActivity,
   deriveRequestStage,
   isRequestStale,
+  isStaleWithNoResponse,
   linkedQuotes,
   STALE_HINT_HOURS,
   type LinkableQuote,
@@ -154,4 +155,24 @@ test('deriveRequestStage: one lead still open keeps the request out of "closed" 
     deriveRequestStage([{ status: 'lost', buyer_decision: 'declined' }, { status: 'viewed' }]),
     'viewed',
   );
+});
+
+// Slice R5 — the stale-request ACTIONABLE nudge is a narrower, more specific
+// condition than the generic RV teaching card: it only fires once real
+// vendors were actually reached (sentTo > 0). A request that's stale but
+// never reached anyone (sentTo === 0, still under internal review) keeps
+// showing the generic teaching card instead — "invite more vendors" would be
+// a lie if none were ever contacted.
+
+test('isStaleWithNoResponse: false when the request isn\'t stale, even if it reached vendors', () => {
+  assert.equal(isStaleWithNoResponse({ sentTo: 3 }, false), false);
+});
+
+test('isStaleWithNoResponse: false when stale but it never reached any vendor (sentTo=0)', () => {
+  assert.equal(isStaleWithNoResponse({ sentTo: 0 }, true), false);
+});
+
+test('isStaleWithNoResponse: true only when BOTH stale and it reached at least one real vendor', () => {
+  assert.equal(isStaleWithNoResponse({ sentTo: 1 }, true), true);
+  assert.equal(isStaleWithNoResponse({ sentTo: 5 }, true), true);
 });
