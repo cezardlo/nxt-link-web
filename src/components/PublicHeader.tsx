@@ -88,8 +88,13 @@ export interface PublicHeaderHandle {
   focusSearch: () => void;
 }
 
-const PublicHeader = forwardRef<PublicHeaderHandle, { lang: Lang; onLangChange: (l: Lang) => void }>(
-  function PublicHeader({ lang, onLangChange }, ref) {
+// `condensed` is for pages whose own content already carries the search bar
+// and join/vendor CTAs full-size (today: the homepage hero + vendor band —
+// Cesar 2026-07-30: header trio next to the hero read as repetitive). It
+// keeps brand/nav/lang/cart/Sign in and drops the duplicates; every other
+// page renders the full header unchanged.
+const PublicHeader = forwardRef<PublicHeaderHandle, { lang: Lang; onLangChange: (l: Lang) => void; condensed?: boolean }>(
+  function PublicHeader({ lang, onLangChange, condensed = false }, ref) {
   const t = T[lang];
   const { count } = useCart();
   const [query, setQuery] = useState('');
@@ -135,27 +140,31 @@ const PublicHeader = forwardRef<PublicHeaderHandle, { lang: Lang; onLangChange: 
           <a href="/#for-vendors">{t.forVendors}</a>
         </nav>
 
-        <form className={`ph-search${searchOpen ? ' open' : ''}`} onSubmit={goSearch} role="search">
-          <SearchIcon />
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t.searchPh}
-            aria-label={t.searchAria}
-          />
-          <button type="submit">{t.searchBtn}</button>
-        </form>
+        {!condensed && (
+          <form className={`ph-search${searchOpen ? ' open' : ''}`} onSubmit={goSearch} role="search">
+            <SearchIcon />
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t.searchPh}
+              aria-label={t.searchAria}
+            />
+            <button type="submit">{t.searchBtn}</button>
+          </form>
+        )}
 
-        <button
-          type="button"
-          className="ph-searchtoggle"
-          aria-label={t.openSearchAria}
-          aria-expanded={searchOpen}
-          onClick={() => setSearchOpen((v) => !v)}
-        >
-          <SearchIcon />
-        </button>
+        {!condensed && (
+          <button
+            type="button"
+            className="ph-searchtoggle"
+            aria-label={t.openSearchAria}
+            aria-expanded={searchOpen}
+            onClick={() => setSearchOpen((v) => !v)}
+          >
+            <SearchIcon />
+          </button>
+        )}
 
         <div className="ph-actions">
           <div className="ph-desktoprow">
@@ -165,9 +174,9 @@ const PublicHeader = forwardRef<PublicHeaderHandle, { lang: Lang; onLangChange: 
               <span>{t.savedForQuote}</span>
               <span className={'ph-quoten' + (count > 0 ? ' has' : '')} aria-hidden="true">{count}</span>
             </Link>
-            <Link className="ph-vendorlink" href="/vendor-signup">{t.becomeVendor}</Link>
+            {!condensed && <Link className="ph-vendorlink" href="/vendor-signup">{t.becomeVendor}</Link>}
             <a className="ph-signin" href="/login">{t.signIn}</a>
-            <a className="ph-joinbtn" href="/signup">{t.join}</a>
+            {!condensed && <a className="ph-joinbtn" href="/signup">{t.join}</a>}
           </div>
 
           <button
@@ -195,9 +204,9 @@ const PublicHeader = forwardRef<PublicHeaderHandle, { lang: Lang; onLangChange: 
             <span className={'ph-quoten' + (count > 0 ? ' has' : '')} aria-hidden="true">{count}</span>
           </Link>
           <LanguageToggle lang={lang} onChange={onLangChange} variant="light" />
-          <Link className="ph-vendorlink" href="/vendor-signup" onClick={() => setMenuOpen(false)}>{t.becomeVendor}</Link>
+          {!condensed && <Link className="ph-vendorlink" href="/vendor-signup" onClick={() => setMenuOpen(false)}>{t.becomeVendor}</Link>}
           <a className="ph-signin" href="/login">{t.signIn}</a>
-          <a className="ph-joinbtn" href="/signup">{t.join}</a>
+          {!condensed && <a className="ph-joinbtn" href="/signup">{t.join}</a>}
         </div>
       )}
     </header>
