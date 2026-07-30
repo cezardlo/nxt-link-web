@@ -99,7 +99,7 @@ export function OfferCard({
   const hasDetails = !!(card.validUntil || card.paymentTerms || card.warranty || card.notes);
 
   return (
-    <div ref={cardRef} className={'ofc-card' + (card.faded ? ' ofc-faded' : '') + ` ofc-${card.status}`}>
+    <div ref={cardRef} className={'ofc-card nxm-in' + (card.faded ? ' ofc-faded' : '') + ` ofc-${card.status}`}>
       <div className="ofc-top">
         <span className="ofc-icon" aria-hidden="true"><FileText size={14} strokeWidth={2} /></span>
         <span className="ofc-label">{labels.offer}{card.revision > 1 ? ` · v${card.revision}` : ''}</span>

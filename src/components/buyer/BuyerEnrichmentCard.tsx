@@ -181,7 +181,7 @@ export default function BuyerEnrichmentCard({ lang, profile, onSaved, onDismiss 
   }
 
   return (
-    <section className="bec" aria-labelledby="bec-title">
+    <section className="bec nxm-in" aria-labelledby="bec-title">
       <style dangerouslySetInnerHTML={{ __html: BUYER_ENRICHMENT_CARD_CSS }} />
       <div className="bec-head">
         <h2 id="bec-title">{t.title}</h2>
@@ -285,7 +285,7 @@ export default function BuyerEnrichmentCard({ lang, profile, onSaved, onDismiss 
 
       {error && <p className="bec-error" role="alert">{t.saveError}</p>}
       <div className="bec-actions">
-        <button type="button" className="bec-save" disabled={saving} onClick={save}>
+        <button type="button" className="bec-save nxm-press" disabled={saving} onClick={save}>
           {saving ? t.saving : justSaved ? (<><Check size={14} strokeWidth={2.75} aria-hidden="true" /> {t.savedFlash}</>) : t.save}
         </button>
         <button type="button" className="bec-later" onClick={onDismiss}>{t.maybeLater}</button>

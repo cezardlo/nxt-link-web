@@ -29,6 +29,7 @@ import {
 import {
   validateQuoteExtras, autoCalcProductTotal, type RequestKind, type QuoteExtras,
 } from '@/lib/requests/structured';
+import { MOTION_CSS, staggerStyle } from '@/components/motion/Motion';
 
 // Design System v1.0 reskin (Premium Polish Phase 2, 2026-07-23): light
 // warm-white + violet, matching the rest of the marketplace. Visual/CSS only
@@ -728,7 +729,7 @@ export default function VendorLeadsPage() {
 
   return (
     <div className={`ld ${ibmPlexSans.variable}`}>
-      <style dangerouslySetInnerHTML={{ __html: CSS + MATCH_REASONS_CSS + EMPTY_ACTION_CSS + OFFER_CARD_CSS + DEAL_TRACKER_CSS + REQUEST_ATTACHMENTS_CSS + '.ld-opencard .mrx-chips{margin-bottom:8px;}' }} />
+      <style dangerouslySetInnerHTML={{ __html: MOTION_CSS + CSS + MATCH_REASONS_CSS + EMPTY_ACTION_CSS + OFFER_CARD_CSS + DEAL_TRACKER_CSS + REQUEST_ATTACHMENTS_CSS + '.ld-opencard .mrx-chips{margin-bottom:8px;}' }} />
       <VendorNav
         active="leads"
         extra={
@@ -740,7 +741,7 @@ export default function VendorLeadsPage() {
       />
       <main className="ld-wrap">
         {notifOpen && (
-          <div className="ld-notifs">
+          <div className="ld-notifs nxm-panel">
             <div className="ld-notifhead"><b>{t.notifications}</b><button onClick={() => setNotifOpen(false)}>{t.close}</button></div>
             {notifs.length === 0 ? <p className="ld-notifempty">{t.notifEmpty}</p> : (
               <ul>
@@ -758,8 +759,8 @@ export default function VendorLeadsPage() {
           <section className="ld-open">
             <h2>{t.openRequests} <small>{t.openRequestsHint}</small></h2>
             <div className="ld-openlist">
-              {openReqs.map((r) => (
-                <div className={'ld-opencard' + (r.relevant ? ' rel' : '')} key={r.id}>
+              {openReqs.map((r, ri) => (
+                <div className={'ld-opencard nxm-in nxm-lift' + (r.relevant ? ' rel' : '')} style={staggerStyle(ri)} key={r.id}>
                   <div className="ld-opentop">
                     {r.relevant && !(r.reasons || []).length && <span className="ld-relbadge">{t.matchesProfile}</span>}
                     <b>{r.category || t.buyerNeed}</b>
@@ -798,8 +799,8 @@ export default function VendorLeadsPage() {
           )
           : (
             <div className="ld-list">
-              {leads.map((l) => (
-                <div className="ld-card" key={l.id}>
+              {leads.map((l, li) => (
+                <div className="ld-card nxm-in nxm-lift" style={staggerStyle(li)} key={l.id}>
                   <div className="ld-top">
                     <span className={'ld-status ' + l.status}>{STATUS_LABEL[l.status] || l.status}</span>
                     <span className="ld-reqtype">{REQ_LABEL[l.answers?.request_type || 'quote'] || l.answers?.request_type}</span>
@@ -1300,9 +1301,13 @@ const CSS = `
 .ld-qsum{display:flex;flex-wrap:wrap;gap:14px;font-size:13.5px;color:var(--spec-ink,#141320);align-items:center;}
 .ld-qsum b{color:var(--spec-ink,#141320);}
 .ld-prot{color:var(--spec-text-2nd,#615F72);font-size:12px;}
-.ld-qopen{margin-top:10px;font-family:inherit;font-size:12.5px;font-weight:600;background:rgba(108,92,224,.1);border:1px solid var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);border-radius:9px;padding:8px 14px;cursor:pointer;}
-.ld-sendofferbtn{display:inline-flex;align-items:center;gap:6px;margin-top:10px;font-family:inherit;font-size:12.5px;font-weight:600;background:rgba(108,92,224,.1);border:1px solid var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);border-radius:9px;padding:8px 14px;cursor:pointer;}
-.ld-qform{display:flex;flex-direction:column;gap:10px;background:var(--spec-surface,#EFEDF5);border:1px solid var(--spec-border,#E2DFEC);border-radius:12px;padding:14px;margin-top:6px;}
+.ld-qopen{margin-top:10px;font-family:inherit;font-size:12.5px;font-weight:600;background:rgba(108,92,224,.1);border:1px solid var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);border-radius:9px;padding:8px 14px;cursor:pointer;transition:transform var(--nxm-duration-press,100ms) var(--nxm-ease,ease);}
+.ld-sendofferbtn{display:inline-flex;align-items:center;gap:6px;margin-top:10px;font-family:inherit;font-size:12.5px;font-weight:600;background:rgba(108,92,224,.1);border:1px solid var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);border-radius:9px;padding:8px 14px;cursor:pointer;transition:transform var(--nxm-duration-press,100ms) var(--nxm-ease,ease);}
+/* Quote/purchase/pilot forms all share .ld-qform — one panel-open animation
+   covers all three conditionally-rendered instances (design-pass vocabulary:
+   panels slide up + fade on open; on phones this reads as a bottom sheet). */
+.ld-qform{display:flex;flex-direction:column;gap:10px;background:var(--spec-surface,#EFEDF5);border:1px solid var(--spec-border,#E2DFEC);border-radius:12px;padding:14px;margin-top:6px;--nxm-panel-rise:16px;animation:nxm-panel-in var(--nxm-duration-panel,260ms) var(--nxm-ease-entrance,ease-out) both;}
+@media(max-width:640px){.ld-qform{--nxm-panel-rise:24px;}}
 .ld-qrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
 @media(max-width:600px){.ld-qrow{grid-template-columns:1fr;}}
 .ld-qform label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--spec-text-2nd,#615F72);}
@@ -1313,11 +1318,12 @@ const CSS = `
 .ld-qcom b{color:var(--spec-violet-deep,#4A3DB0);}
 .ld-qcom small{color:var(--spec-text-2nd,#615F72);}
 .ld-qactions{display:flex;gap:9px;}
-.ld-qsend{font-family:inherit;font-size:13.5px;font-weight:700;background:var(--spec-violet,#6C5CE0);border:none;color:#fff;border-radius:9px;padding:10px 16px;cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.ld-qsend{font-family:inherit;font-size:13.5px;font-weight:700;background:var(--spec-violet,#6C5CE0);border:none;color:#fff;border-radius:9px;padding:10px 16px;cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease),transform var(--nxm-duration-press,100ms) var(--nxm-ease,ease);}
 .ld-qsend:hover{background:var(--spec-violet-deep,#4A3DB0);}
 .ld-qsend:disabled{opacity:.5;cursor:not-allowed;}
-.ld-qcancel{font-family:inherit;font-size:13px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-ink,#141320);border-radius:9px;padding:10px 14px;cursor:pointer;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.ld-qcancel{font-family:inherit;font-size:13px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-ink,#141320);border-radius:9px;padding:10px 14px;cursor:pointer;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),transform var(--nxm-duration-press,100ms) var(--nxm-ease,ease);}
 .ld-qcancel:hover{border-color:#C7C2DE;}
+.ld-qsend:active,.ld-qcancel:active,.ld-qdraft:active,.ld-purbtn:active,.ld-qopen:active,.ld-sendofferbtn:active,.ld-popen:active{transform:scale(var(--nxm-press-scale,.98));}
 /* Slice R3 — opportunity framing (structured facts + honest match chips) */
 .ld-oppfacts{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
 .ld-oppchips{display:flex;flex-wrap:wrap;gap:6px;}
@@ -1333,11 +1339,11 @@ const CSS = `
 .ld-draftok{margin:0;font-size:12.5px;font-weight:600;color:#1F7A54;background:#E9F7F0;border:1px solid rgba(47,158,106,.3);border-radius:9px;padding:8px 12px;}
 .ld-qloading{margin:0;font-size:13px;color:var(--spec-text-2nd,#615F72);}
 .ld-qterms{color:var(--spec-text-2nd,#615F72);font-size:12.5px;}
-.ld-qdraft{font-family:inherit;font-size:13px;font-weight:600;background:#fff;border:1px solid var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);border-radius:9px;padding:10px 14px;cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.ld-qdraft{font-family:inherit;font-size:13px;font-weight:600;background:#fff;border:1px solid var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);border-radius:9px;padding:10px 14px;cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease),transform var(--nxm-duration-press,100ms) var(--nxm-ease,ease);}
 .ld-qdraft:hover{background:rgba(108,92,224,.08);}
 .ld-qdraft:disabled{opacity:.5;cursor:not-allowed;}
 .ld-purchase{margin-top:14px;border-top:1px solid var(--spec-border,#E2DFEC);padding-top:14px;}
-.ld-purbtn{font-family:inherit;font-size:13px;font-weight:700;background:#E9F7F0;border:1px solid rgba(47,158,106,.4);color:#1F7A54;border-radius:10px;padding:10px 16px;cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.ld-purbtn{font-family:inherit;font-size:13px;font-weight:700;background:#E9F7F0;border:1px solid rgba(47,158,106,.4);color:#1F7A54;border-radius:10px;padding:10px 16px;cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease),transform var(--nxm-duration-press,100ms) var(--nxm-ease,ease);}
 .ld-purbtn:hover{background:#DBF1E5;}
 .ld-bill{background:#F3FAF6;border:1px solid rgba(47,158,106,.3);border-radius:12px;padding:13px 15px;}
 .ld-billtop{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
@@ -1368,11 +1374,12 @@ const CSS = `
 .ld-pactions button:hover{border-color:var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);}
 .ld-presults{display:flex;flex-direction:column;gap:9px;margin-top:10px;}
 .ld-presults textarea,.ld-presults select{font-family:inherit;font-size:13.5px;padding:10px 12px;border-radius:9px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-ink,#141320);outline:none;resize:vertical;}
-.ld-popen{align-self:flex-start;font-family:inherit;font-size:12.5px;font-weight:600;background:#fff;border:1px dashed rgba(108,92,224,.45);color:var(--spec-violet-deep,#4A3DB0);border-radius:9px;padding:8px 14px;cursor:pointer;}
+.ld-popen{align-self:flex-start;font-family:inherit;font-size:12.5px;font-weight:600;background:#fff;border:1px dashed rgba(108,92,224,.45);color:var(--spec-violet-deep,#4A3DB0);border-radius:9px;padding:8px 14px;cursor:pointer;transition:transform var(--nxm-duration-press,100ms) var(--nxm-ease,ease);}
 .ld-chat{margin-top:14px;border-top:1px solid var(--spec-border,#E2DFEC);padding-top:14px;}
 .ld-chatopen{position:relative;display:inline-flex;align-items:center;gap:7px;font-family:inherit;font-size:12.5px;font-weight:600;background:#E9F7F0;border:1px solid rgba(47,158,106,.35);color:#1F7A54;border-radius:9px;padding:8px 14px;cursor:pointer;}
 .ld-chatdot{width:8px;height:8px;border-radius:99px;background:var(--spec-error,#CE4B43);box-shadow:0 0 0 2px #fff;}
-.ld-chatbox{background:var(--spec-surface,#EFEDF5);border:1px solid var(--spec-border,#E2DFEC);border-radius:12px;padding:12px;}
+.ld-chatbox{background:var(--spec-surface,#EFEDF5);border:1px solid var(--spec-border,#E2DFEC);border-radius:12px;padding:12px;--nxm-panel-rise:16px;animation:nxm-panel-in var(--nxm-duration-panel,260ms) var(--nxm-ease-entrance,ease-out) both;}
+@media(max-width:640px){.ld-chatbox{--nxm-panel-rise:24px;}}
 .ld-chathead{display:flex;justify-content:space-between;align-items:center;padding:0 2px 8px;font-size:12px;font-weight:700;color:var(--spec-ink,#141320);}
 .ld-live{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;letter-spacing:.04em;color:#1F7A54;text-transform:uppercase;}
 .ld-live i{width:6px;height:6px;border-radius:99px;background:var(--spec-success,#2F9E6A);animation:ld-livepulse 1.8s ease-in-out infinite;}
