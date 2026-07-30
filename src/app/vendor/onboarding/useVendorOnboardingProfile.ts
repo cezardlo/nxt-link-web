@@ -44,10 +44,37 @@ export interface OnboardingVendor {
   moderation_reason?: string | null;
 }
 
-export interface OnboardingCertification { id: string; name: string; issuer: string | null }
+export interface OnboardingCertification {
+  id: string;
+  name: string;
+  issuer: string | null;
+  credential?: string | null;
+  issued_on?: string | null;
+  expires_on?: string | null;
+  image_url?: string | null;
+}
 export interface OnboardingPhoto { id: string; caption: string | null; image_url: string | null }
-export interface OnboardingCaseStudy { id: string; title: string }
+export interface OnboardingCaseStudy {
+  id: string;
+  title: string;
+  challenge?: string | null;
+  solution?: string | null;
+  result?: string | null;
+}
 export interface OnboardingVideo { id: string; title: string | null; url: string; embed_url: string; provider: string }
+export interface CertificationInput {
+  name: string;
+  issuer: string;
+  credential: string;
+  issued_on: string;
+  expires_on: string;
+}
+export interface CaseStudyInput {
+  title: string;
+  challenge: string;
+  solution: string;
+  result: string;
+}
 export interface OnboardingAgreement {
   accepted: boolean;
   summary: string;
@@ -74,6 +101,8 @@ export function useVendorOnboardingProfile() {
   const [photos, setPhotos] = useState<OnboardingPhoto[]>([]);
   const [caseStudies, setCaseStudies] = useState<OnboardingCaseStudy[]>([]);
   const [videos, setVideos] = useState<OnboardingVideo[]>([]);
+  const [proofBusy, setProofBusy] = useState<'certification' | 'case-study' | 'photo' | null>(null);
+  const [proofError, setProofError] = useState('');
   const [videoBusy, setVideoBusy] = useState(false);
   const [listingCount, setListingCount] = useState(0);
 
@@ -180,9 +209,120 @@ export function useVendorOnboardingProfile() {
     await fetch('/api/vendor/logo', { method: 'DELETE' }).catch(() => {});
   }
 
-  // Videos have no file upload (just a pasted link), so — unlike
-  // certifications/case studies/photos — this flow embeds full add/remove
-  // inline instead of deep-linking to the portal.
+  // Trust & Proof uses the same APIs and records as the portal so onboarding
+  // can offer a focused editor without creating a second source of truth.
+  async function addCertification(input: CertificationInput, file: File | null) {
+    setProofBusy('certification');
+    setProofError('');
+    try {
+      const fd = new FormData();
+      Object.entries(input).forEach(([key, value]) => fd.append(key, value));
+      if (file) fd.append('file', file);
+      const res = await fetch('/api/vendor/certifications', { method: 'POST', body: fd });
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (data.ok && data.certification) {
+        setCertifications((items) => [...items, data.certification]);
+        return true;
+      }
+      setProofError(data.message || 'Could not add certification');
+      return false;
+    } catch {
+      setProofError('Could not add certification');
+      return false;
+    } finally {
+      setProofBusy(null);
+    }
+  }
+
+  async function removeCertification(id: string) {
+    setProofError('');
+    try {
+      const res = await fetch(`/api/vendor/certifications?id=${id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (data.ok) setCertifications((items) => items.filter((item) => item.id !== id));
+      else setProofError(data.message || 'Could not remove certification');
+      return !!data.ok;
+    } catch {
+      setProofError('Could not remove certification');
+      return false;
+    }
+  }
+
+  async function addCaseStudy(input: CaseStudyInput) {
+    setProofBusy('case-study');
+    setProofError('');
+    try {
+      const res = await fetch('/api/vendor/case-studies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (data.ok && data.case_study) {
+        setCaseStudies((items) => [...items, data.case_study]);
+        return true;
+      }
+      setProofError(data.message || 'Could not add case study');
+      return false;
+    } catch {
+      setProofError('Could not add case study');
+      return false;
+    } finally {
+      setProofBusy(null);
+    }
+  }
+
+  async function removeCaseStudy(id: string) {
+    setProofError('');
+    try {
+      const res = await fetch(`/api/vendor/case-studies?id=${id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (data.ok) setCaseStudies((items) => items.filter((item) => item.id !== id));
+      else setProofError(data.message || 'Could not remove case study');
+      return !!data.ok;
+    } catch {
+      setProofError('Could not remove case study');
+      return false;
+    }
+  }
+
+  async function addPhoto(caption: string, file: File) {
+    setProofBusy('photo');
+    setProofError('');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('caption', caption);
+      const res = await fetch('/api/vendor/gallery', { method: 'POST', body: fd });
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (data.ok && data.photo) {
+        setPhotos((items) => [...items, data.photo]);
+        return true;
+      }
+      setProofError(data.message || 'Could not add photo');
+      return false;
+    } catch {
+      setProofError('Could not add photo');
+      return false;
+    } finally {
+      setProofBusy(null);
+    }
+  }
+
+  async function removePhoto(id: string) {
+    setProofError('');
+    try {
+      const res = await fetch(`/api/vendor/gallery?id=${id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (data.ok) setPhotos((items) => items.filter((item) => item.id !== id));
+      else setProofError(data.message || 'Could not remove photo');
+      return !!data.ok;
+    } catch {
+      setProofError('Could not remove photo');
+      return false;
+    }
+  }
+
   async function addVideo(title: string, url: string) {
     if (!url.trim()) return false;
     setVideoBusy(true);
@@ -233,9 +373,13 @@ export function useVendorOnboardingProfile() {
     persist, autosaving, savedAt, saveError,
     logoUrl, logoBusy, uploadLogo, removeLogo,
     softwareOnly,
-    certifications, photos, caseStudies, videos, videoBusy, addVideo, removeVideo,
+    certifications, photos, caseStudies, videos,
+    proofBusy, proofError, setProofError,
+    addCertification, removeCertification, addCaseStudy, removeCaseStudy, addPhoto, removePhoto,
+    videoBusy, addVideo, removeVideo,
     listingCount, proofCount,
     agreement, agreementBusy, acceptTerms,
     reload: load,
   };
 }
+
