@@ -14,6 +14,10 @@ import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAct
 import { useChatPolling, resolvePendingMessage, dropPendingMessage, type ChatMessage } from '@/components/marketplace/useChatPolling';
 import { useNotificationPolling } from '@/components/marketplace/useNotificationPolling';
 import { RequestAttachmentUpload, REQUEST_ATTACHMENTS_CSS } from '@/components/marketplace/RequestAttachments';
+import BuyerEnrichmentCard, {
+  BUYER_ENRICHMENT_CARD_CSS, isEnrichmentComplete, isEnrichmentDismissed, dismissEnrichment,
+  type BuyerEnrichmentProfile,
+} from '@/components/buyer/BuyerEnrichmentCard';
 import { MAX_REQUEST_ATTACHMENTS_PER_REQUEST, type RequestAttachment } from '@/lib/requests/attachments';
 import { type CompareTableRow } from '@/components/marketplace/QuoteCompareTable';
 import { QuoteCompareDeck, QUOTE_COMPARE_DECK_CSS, type DeckLabels } from '@/components/marketplace/QuoteCompareDeck';
@@ -339,6 +343,13 @@ export default function BuyerDashboardPage() {
   // to "sign in first," which is misleading — show a distinct retry state.
   const [loadError, setLoadError] = useState(false);
   const [savedCount, setSavedCount] = useState(0);
+  // Buyer progressive-enrichment card (2026-07-30) — the buyer's OWN auth id
+  // (scoped localStorage dismiss key, same pattern as vendor listing autosave)
+  // + their buyer_profiles row (industry/employee_count/city/service_locations,
+  // ALL pre-existing columns — zero migration). null while not yet fetched.
+  const [authId, setAuthId] = useState<string | null>(null);
+  const [buyerProfile, setBuyerProfile] = useState<BuyerEnrichmentProfile | null>(null);
+  const [enrichDismissed, setEnrichDismissed] = useState(false);
   const [reviewOpen, setReviewOpen] = useState<string | null>(null);
   const [rv, setRv] = useState({ rating: 5, title: '', body: '' });
   const [rvBusy, setRvBusy] = useState(false);
@@ -445,6 +456,17 @@ export default function BuyerDashboardPage() {
       if (n?.ok) { setNotifs(n.notifications || []); setNotifUnread(n.unread || 0); }
       const sv = await fetch('/api/buyer/saved').then((r) => r.json()).catch(() => null);
       if (sv?.ok && sv.signed_in) setSavedItems(sv.items || []);
+      // Buyer progressive-enrichment card — best-effort: a failed fetch just
+      // means the card stays hidden until the next load, never a page error.
+      const bp = await fetch('/api/buyer/profile').then((r) => r.json()).catch(() => null);
+      if (bp?.ok && bp.verified && bp.profile) {
+        setBuyerProfile({
+          industry: bp.profile.industry ?? null,
+          employee_count: bp.profile.employee_count ?? null,
+          city: bp.profile.city ?? null,
+          service_locations: bp.profile.service_locations ?? null,
+        });
+      }
     } catch {
       setLoadError(true);
     } finally {
@@ -455,7 +477,16 @@ export default function BuyerDashboardPage() {
   useEffect(() => {
     try { setSavedCount(new Set(JSON.parse(localStorage.getItem('nxt_saved') || '[]')).size); } catch { /* ignore */ }
     const sb = createBrowserSupabaseClient();
-    sb.auth.getSession().then(({ data: s }) => { if (s.session) load(); else setChecking(false); });
+    sb.auth.getSession().then(({ data: s }) => {
+      if (s.session) {
+        const uid = s.session.user?.id || null;
+        setAuthId(uid);
+        try { setEnrichDismissed(isEnrichmentDismissed(uid)); } catch { /* ignore */ }
+        load();
+      } else {
+        setChecking(false);
+      }
+    });
   }, [load]);
 
   useEffect(() => { document.title = t.docTitle; }, [t.docTitle]);
@@ -625,7 +656,7 @@ export default function BuyerDashboardPage() {
 
   return (
     <div className={`by ${ibmPlexSans.variable}`}>
-      <style dangerouslySetInnerHTML={{ __html: CSS + EMPTY_ACTION_CSS + ATTENTION_CSS + FIRSTRUN_CSS + QUOTE_COMPARE_DECK_CSS + OFFER_CARD_CSS + DEAL_TRACKER_CSS + REQUEST_ATTACHMENTS_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: CSS + EMPTY_ACTION_CSS + ATTENTION_CSS + FIRSTRUN_CSS + QUOTE_COMPARE_DECK_CSS + OFFER_CARD_CSS + DEAL_TRACKER_CSS + REQUEST_ATTACHMENTS_CSS + BUYER_ENRICHMENT_CARD_CSS }} />
       <nav className="by-nav">
         <a className="by-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>{t.dashboardTag}</span></a>
         <div className="by-navlinks">
@@ -718,6 +749,20 @@ export default function BuyerDashboardPage() {
                   <div className="by-empty sm">{t.nothingSaved} <a href="/marketplace">{t.browseTheMarketplace}</a> {t.tapSave}</div>
                 )}
               </section>
+            )}
+
+            {/* Buyer progressive-enrichment card (2026-07-30) — only once the
+                buyer has posted/requested SOMETHING (hasActivity), matching
+                the original spec's "after they post a request" trigger, and
+                only until all three questions have an answer or the buyer
+                dismisses it ("Maybe later" persists locally, per-auth-user). */}
+            {hasActivity && buyerProfile && !enrichDismissed && !isEnrichmentComplete(buyerProfile) && (
+              <BuyerEnrichmentCard
+                lang={lang}
+                profile={buyerProfile}
+                onSaved={setBuyerProfile}
+                onDismiss={() => { dismissEnrichment(authId); setEnrichDismissed(true); }}
+              />
             )}
 
             {/* First-run buyer (no request/quote activity yet): one clear choice

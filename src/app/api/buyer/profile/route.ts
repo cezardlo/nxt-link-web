@@ -1,13 +1,21 @@
 // GET   /api/buyer/profile — get (or create) MY buyer profile
 // PATCH /api/buyer/profile — update MY profile (company, name, position,
-//        industry, city, phone). Scoped to the buyer's own verified email.
+//        industry, city, phone, employee_count, service_locations). Scoped
+//        to the buyer's own verified email.
+//
+// employee_count + service_locations (2026-07-30 buyer progressive-
+// enrichment card, workplace/plans/matching-and-onboarding-2026-07-30.md):
+// both columns already existed on buyer_profiles (zero migration) but were
+// never read/written by this route — wiring them in here is the ONE save
+// path for the new card, /buyer/profile, and any future caller alike.
 
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getBuyerSession } from '@/lib/buyer/auth';
 
-const COLS = 'id, buyer_email, company_name, contact_name, position, industry, city, phone, logo_path';
+const COLS = 'id, buyer_email, company_name, contact_name, position, industry, city, phone, logo_path, employee_count, service_locations';
+const MAX_SERVICE_LOCATIONS = 8;
 
 export async function GET() {
   const session = await getBuyerSession();
@@ -41,6 +49,13 @@ export async function PATCH(req: Request) {
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
   const str = (k: string, max = 200) => { if (typeof body[k] === 'string') patch[k] = (body[k] as string).trim().slice(0, max) || null; };
   str('company_name'); str('contact_name'); str('position', 120); str('industry', 120); str('city', 120); str('phone', 60);
+  str('employee_count', 60);
+  if (Array.isArray(body.service_locations)) {
+    patch.service_locations = (body.service_locations as unknown[])
+      .filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
+      .map((v) => v.trim().slice(0, 120))
+      .slice(0, MAX_SERVICE_LOCATIONS);
+  }
 
   const db = getSupabaseClient({ admin: true });
   const { data, error } = await db.from('buyer_profiles')
