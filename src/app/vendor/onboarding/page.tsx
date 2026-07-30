@@ -45,7 +45,15 @@ import {
   stepsForSection, clampStepIndex, computeSectionStatus, countSectionsDone, showServiceAreasQuestion,
   type SectionKey, type StepId,
 } from './steps';
-import { useVendorOnboardingProfile, type OnboardingVendor } from './useVendorOnboardingProfile';
+import {
+  useVendorOnboardingProfile,
+  type OnboardingVendor,
+  type OnboardingCertification,
+  type OnboardingPhoto,
+  type OnboardingCaseStudy,
+  type CertificationInput,
+  type CaseStudyInput,
+} from './useVendorOnboardingProfile';
 
 const ibmPlexSans = IBM_Plex_Sans({
   subsets: ['latin'],
@@ -92,6 +100,30 @@ const CLIENT_SIZE_ICON: Record<string, LucideIcon> = {
 
 type Lang = 'en' | 'es';
 type View = { mode: 'hub' } | { mode: 'section'; section: SectionKey; stepId: StepId };
+type TrustTools = {
+  certifications: OnboardingCertification[];
+  photos: OnboardingPhoto[];
+  caseStudies: OnboardingCaseStudy[];
+  videos: { id: string; title: string | null; url: string }[];
+  proofBusy: 'certification' | 'case-study' | 'photo' | null;
+  proofError: string;
+  setProofError: (message: string) => void;
+  addCertification: (input: CertificationInput, file: File | null) => Promise<boolean>;
+  removeCertification: (id: string) => Promise<boolean>;
+  addCaseStudy: (input: CaseStudyInput) => Promise<boolean>;
+  removeCaseStudy: (id: string) => Promise<boolean>;
+  addPhoto: (caption: string, file: File) => Promise<boolean>;
+  removePhoto: (id: string) => Promise<boolean>;
+  videoBusy: boolean;
+  addVideo: (title: string, url: string) => Promise<boolean>;
+  removeVideo: (id: string) => void;
+};
+const EMPTY_CERTIFICATION_INPUT: CertificationInput = {
+  name: '', issuer: '', credential: '', issued_on: '', expires_on: '',
+};
+const EMPTY_CASE_STUDY_INPUT: CaseStudyInput = {
+  title: '', challenge: '', solution: '', result: '',
+};
 
 // Full (unfiltered) step order per section — used only to find a sane
 // fallback card if the currently-shown one disappears mid-flow (Capabilities
@@ -205,6 +237,49 @@ const TR: Record<string, { en: string; es: string }> = {
   add_award_ph: { en: 'Add an award or recognition…', es: 'Agrega un premio o reconocimiento…' },
   add_btn: { en: 'Add', es: 'Agregar' },
 
+  proof_intro: { en: 'Add at least one strong proof item now. You can add more later.', es: 'Agrega al menos una prueba sólida ahora. Puedes agregar más después.' },
+  proof_error: { en: 'We could not save that item. Check the information and try again.', es: 'No pudimos guardar ese elemento. Revisa la información e inténtalo de nuevo.' },
+  proof_remove: { en: 'Remove', es: 'Quitar' },
+  proof_optional: { en: 'Optional', es: 'Opcional' },
+  proof_required: { en: 'Required', es: 'Obligatorio' },
+  proof_saved: { en: 'Saved to your storefront', es: 'Guardado en tu tienda' },
+  proof_view_document: { en: 'View document', es: 'Ver documento' },
+  cert_desc: { en: 'Show licenses, safety training, quality standards, or manufacturer credentials buyers can verify.', es: 'Muestra licencias, capacitación de seguridad, normas de calidad o credenciales del fabricante que los compradores puedan verificar.' },
+  cert_name: { en: 'Certification name', es: 'Nombre de la certificación' },
+  cert_name_ph: { en: 'e.g. ISO 9001', es: 'ej. ISO 9001' },
+  cert_issuer: { en: 'Issued by', es: 'Emitida por' },
+  cert_issuer_ph: { en: 'e.g. International Organization for Standardization', es: 'ej. Organización Internacional de Normalización' },
+  cert_credential: { en: 'Credential or license number', es: 'Número de credencial o licencia' },
+  cert_issued: { en: 'Issue date', es: 'Fecha de emisión' },
+  cert_expires: { en: 'Expiration date', es: 'Fecha de vencimiento' },
+  cert_document: { en: 'Certificate document', es: 'Documento del certificado' },
+  cert_file_help: { en: 'PNG, JPG, WEBP, or PDF · up to 8 MB', es: 'PNG, JPG, WEBP o PDF · hasta 8 MB' },
+  cert_add: { en: 'Save certification', es: 'Guardar certificación' },
+  cert_limit: { en: '{n} of 12 certifications', es: '{n} de 12 certificaciones' },
+  cert_missing: { en: 'Enter the certification name first.', es: 'Primero ingresa el nombre de la certificación.' },
+  cert_expiry_meta: { en: 'Expires {date}', es: 'Vence {date}' },
+  cases_desc: { en: 'Tell a short buyer story: the problem, what your team did, and the measurable result.', es: 'Cuenta una historia breve para el comprador: el problema, lo que hizo tu equipo y el resultado medible.' },
+  case_title: { en: 'Project title', es: 'Título del proyecto' },
+  case_title_ph: { en: 'e.g. Cut forklift downtime at a distribution center', es: 'ej. Redujimos el tiempo fuera de servicio de montacargas' },
+  case_challenge: { en: 'The buyer’s challenge', es: 'El reto del comprador' },
+  case_challenge_ph: { en: 'What was slowing down or putting the operation at risk?', es: '¿Qué frenaba o ponía en riesgo la operación?' },
+  case_solution: { en: 'What you delivered', es: 'Lo que entregaste' },
+  case_solution_ph: { en: 'Describe the work, product, or approach.', es: 'Describe el trabajo, producto o método.' },
+  case_result: { en: 'Result', es: 'Resultado' },
+  case_result_ph: { en: 'Use a number when possible, such as 18% less downtime.', es: 'Usa una cifra cuando sea posible, como 18% menos tiempo fuera de servicio.' },
+  case_add: { en: 'Save case study', es: 'Guardar caso de éxito' },
+  case_limit: { en: '{n} of 3 case studies', es: '{n} de 3 casos de éxito' },
+  case_missing: { en: 'Give the case study a clear title first.', es: 'Primero dale un título claro al caso de éxito.' },
+  photos_desc: { en: 'Show your team, facility, installed equipment, or completed work. Real photos help buyers know what to expect.', es: 'Muestra tu equipo, instalaciones, equipos instalados o trabajos terminados. Las fotos reales ayudan al comprador a saber qué esperar.' },
+  photo_caption: { en: 'Caption', es: 'Descripción de la foto' },
+  photo_caption_ph: { en: 'e.g. Preventive maintenance at an El Paso warehouse', es: 'ej. Mantenimiento preventivo en un almacén de El Paso' },
+  photo_file: { en: 'Choose a photo', es: 'Elige una foto' },
+  photo_file_help: { en: 'PNG, JPG, or WEBP · up to 8 MB', es: 'PNG, JPG o WEBP · hasta 8 MB' },
+  photo_add: { en: 'Upload photo', es: 'Subir foto' },
+  photo_limit: { en: '{n} of 12 photos', es: '{n} de 12 fotos' },
+  photo_missing: { en: 'Choose a photo first.', es: 'Primero elige una foto.' },
+  proof_saving: { en: 'Saving…', es: 'Guardando…' },
+
   // Agreement & Activation
   h_recap: { en: 'You’re almost there', es: 'Ya casi terminas' },
   sub_recap: { en: 'Here’s what you’ve built so far.', es: 'Esto es lo que has construido hasta ahora.' },
@@ -222,955 +297,7 @@ const TR: Record<string, { en: string; es: string }> = {
   reassure_sub: { en: 'Introduced-customer and protected-period terms may continue as described in the Vendor Agreement.', es: 'Los términos de cliente presentado y del período de protección pueden continuar según se describe en el Acuerdo de Proveedor.' },
   accept_checkbox: { en: 'I accept the NXT//LINK vendor terms', es: 'Acepto los términos de proveedor de NXT//LINK' },
   activate_btn: { en: 'Activate My Storefront', es: 'Activar mi tienda' },
-  activate_error: { en: 'Could not record your acceptance — check your connection and try again.', es: 'No se pudo registrar tu aceptación — revisa tu conexión e intenta de nuevo.' },
-  accepted_h: { en: 'You’re all set!', es: '¡Listo!' },
-  accepted_on: { en: 'NXT//LINK vendor terms accepted on {date}.', es: 'Términos de proveedor de NXT//LINK aceptados el {date}.' },
-  accepted_review: { en: 'A human on our team reviews every new company — your listings go live the moment you’re approved.', es: 'Una persona de nuestro equipo revisa cada empresa nueva — tus publicaciones salen en vivo en cuanto te aprueben.' },
-  accepted_live: { en: 'You can publish listings and receive leads.', es: 'Puedes publicar tus listados y recibir prospectos.' },
-  go_portal: { en: 'Go to my portal', es: 'Ir a mi portal' },
-  preview_storefront: { en: 'Preview storefront', es: 'Ver mi tienda' },
-};
-
-export default function VendorOnboardingPage() {
-  const hook = useVendorOnboardingProfile();
-  const {
-    checking, signedIn, vendor, set, toggle, persist, savedAt, saveError,
-    logoUrl, logoBusy, uploadLogo, removeLogo, softwareOnly,
-    certifications, photos, caseStudies, videos, videoBusy, addVideo, removeVideo,
-    listingCount, proofCount, agreement, agreementBusy, acceptTerms,
-  } = hook;
-  const [lang, switchLang] = useLang('en');
-  const t = (k: string) => (TR[k] ? (lang === 'es' ? TR[k].es : TR[k].en) : k);
-  const tf = (k: string, vals: Record<string, string | number>) => {
-    let s = t(k);
-    for (const [key, v] of Object.entries(vals)) s = s.replace(`{${key}}`, String(v));
-    return s;
-  };
-
-  const [view, setView] = useState<View>({ mode: 'hub' });
-  const [direction, setDirection] = useState<'fwd' | 'back'>('fwd');
-  const [showSaved, setShowSaved] = useState(false);
-
-  useEffect(() => { document.title = t('doc_title'); }, [lang]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const opts = useMemo(() => ({ softwareOnly }), [softwareOnly]);
-
-  // If the currently-shown card disappears mid-flow (a software-only vendor
-  // dropping the "service areas" card), move to the nearest still-visible
-  // card instead of getting stuck — same guard v1 used.
-  useEffect(() => {
-    if (view.mode !== 'section') return;
-    const steps = stepsForSection(view.section, opts);
-    if (steps.includes(view.stepId)) return;
-    const order = FULL_ORDER[view.section];
-    const fromHere = order.slice(order.indexOf(view.stepId));
-    const fallback = fromHere.find((s) => steps.includes(s)) || steps[steps.length - 1];
-    if (fallback) setView({ mode: 'section', section: view.section, stepId: fallback });
-    else setView({ mode: 'hub' });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, opts]);
-
-  useEffect(() => {
-    if (!savedAt) return;
-    setShowSaved(true);
-    const timer = setTimeout(() => setShowSaved(false), 1800);
-    return () => clearTimeout(timer);
-  }, [savedAt]);
-
-  // Suspended/banned vendors get the real explanation on the portal page —
-  // no need to duplicate that gate here.
-  useEffect(() => {
-    if (vendor && (vendor.moderation_status === 'suspended' || vendor.moderation_status === 'banned')) {
-      window.location.href = '/vendor/portal';
-    }
-  }, [vendor]);
-
-  if (checking) {
-    return (
-      <div className={`vo ${ibmPlexSans.variable}`}>
-        <style dangerouslySetInnerHTML={{ __html: CSS }} />
-        <div className="vo-center">{t('loading')}</div>
-      </div>
-    );
-  }
-
-  if (!signedIn) {
-    return (
-      <div className={`vo ${ibmPlexSans.variable}`}>
-        <style dangerouslySetInnerHTML={{ __html: CSS }} />
-        <div className="vo-gate">
-          <h1>{t('signin_h')}</h1>
-          <p>{t('signin_body')}</p>
-          <a className="vo-btn" href="/vendor-login">{t('signin_cta')}</a>
-        </div>
-      </div>
-    );
-  }
-
-  if (!vendor || vendor.moderation_status === 'suspended' || vendor.moderation_status === 'banned') {
-    return (
-      <div className={`vo ${ibmPlexSans.variable}`}>
-        <style dangerouslySetInnerHTML={{ __html: CSS }} />
-        <div className="vo-center">{t('redirecting')}</div>
-      </div>
-    );
-  }
-
-  const status = computeSectionStatus({
-    companyName: vendor.company_name || '',
-    tagline: vendor.tagline || '',
-    description: vendor.description || '',
-    industries: vendor.industries || [],
-    categories: vendor.categories || [],
-    clientSizeCount: (vendor.client_types || []).filter((c) => CLIENT_SIZES.includes(c)).length,
-    proofCount,
-    agreementAccepted: !!agreement?.accepted,
-  });
-  const doneCount = countSectionsDone(status);
-  const inReview = vendor.status !== 'approved';
-
-  function enterSection(section: SectionKey) {
-    const steps = stepsForSection(section, opts);
-    setDirection('fwd');
-    setView({ mode: 'section', section, stepId: steps[0] });
-  }
-  function backToHub() {
-    persist(true);
-    setView({ mode: 'hub' });
-  }
-  function goNext() {
-    if (view.mode !== 'section') return;
-    const steps = stepsForSection(view.section, opts);
-    const i = Math.max(0, steps.indexOf(view.stepId));
-    if (i >= steps.length - 1) { backToHub(); return; }
-    persist(true);
-    setDirection('fwd');
-    setView({ mode: 'section', section: view.section, stepId: steps[clampStepIndex(i + 1, steps.length)] });
-  }
-  function goBack() {
-    if (view.mode !== 'section') return;
-    const steps = stepsForSection(view.section, opts);
-    const i = Math.max(0, steps.indexOf(view.stepId));
-    if (i <= 0) { backToHub(); return; }
-    persist(true);
-    setDirection('back');
-    setView({ mode: 'section', section: view.section, stepId: steps[clampStepIndex(i - 1, steps.length)] });
-  }
-  async function onExit() {
-    await persist(true).catch(() => {});
-    window.location.href = '/vendor/portal';
-  }
-
-  const touchStart = useRef<{ x: number; y: number } | null>(null);
-  function onTouchStart(e: React.TouchEvent) {
-    const el = e.target as HTMLElement;
-    if (el.closest('input,textarea,select,button,[data-no-swipe]')) { touchStart.current = null; return; }
-    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  }
-  function onTouchEnd(e: React.TouchEvent) {
-    const start = touchStart.current;
-    touchStart.current = null;
-    if (!start) return;
-    const dx = e.changedTouches[0].clientX - start.x;
-    const dy = e.changedTouches[0].clientY - start.y;
-    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy)) return;
-    if (dx < 0) goNext(); else goBack();
-  }
-
-  const checklistItems = SECTION_ORDER.map((key) => ({
-    key,
-    label: t(`sec_${key}_label`),
-    done: status[key],
-    active: view.mode === 'section' && view.section === key,
-  }));
-
-  return (
-    <div className={`vo ${ibmPlexSans.variable}`}>
-      <style dangerouslySetInnerHTML={{ __html: CSS }} />
-      <div className="vo-shell">
-        <aside className="vo-sidebar" aria-label={t('checklist_title')}>
-          <div className="vo-sidebar-mark">NXT<span>//</span>LINK</div>
-          <nav aria-label={t('checklist_title')}>
-            <ul className="vo-checklist">
-              {checklistItems.map((it) => (
-                <li key={it.key}>
-                  <button
-                    type="button"
-                    className={'vo-check-item' + (it.done ? ' done' : '') + (it.active ? ' active' : '')}
-                    aria-current={it.active ? 'step' : undefined}
-                    onClick={() => enterSection(it.key)}
-                  >
-                    <span className="vo-check-dot" aria-hidden="true">{it.done && <CheckDraw />}</span>
-                    <span>{it.label}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        </aside>
-
-        <main className="vo-main">
-          <header className="vo-top">
-            <a className="vo-exit" href="/vendor/portal" onClick={(e) => { e.preventDefault(); onExit(); }}>{t('exit')}</a>
-            <LanguageToggle lang={lang} onChange={switchLang} variant="light" />
-          </header>
-
-          <details className="vo-stripmobile">
-            <summary>
-              <span>{tf('strip_summary', { n: doneCount })}</span>
-              <ChevronDown size={16} strokeWidth={2} aria-hidden="true" />
-            </summary>
-            <ul className="vo-checklist">
-              {checklistItems.map((it) => (
-                <li key={it.key}>
-                  <button
-                    type="button"
-                    className={'vo-check-item' + (it.done ? ' done' : '') + (it.active ? ' active' : '')}
-                    onClick={() => enterSection(it.key)}
-                  >
-                    <span className="vo-check-dot" aria-hidden="true">{it.done && <CheckDraw />}</span>
-                    <span>{it.label}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </details>
-
-          {view.mode === 'hub' ? (
-            <div className="vo-hubwrap">
-              <h1 className="vo-hub-h">{t('hub_h')}</h1>
-              <p className="vo-hub-sub">{t('hub_sub')}</p>
-              <p className="vo-hub-progress">{tf('hub_progress', { n: doneCount })}</p>
-              {status.storefront && (
-                <a className="vo-hub-preview" href={`/marketplace/vendor/${vendor.id}`} target="_blank" rel="noreferrer">
-                  <ExternalLink size={14} strokeWidth={1.75} aria-hidden="true" />
-                  {t('preview_storefront')}
-                </a>
-              )}
-              <div className="vo-hub-grid">
-                {SECTION_ORDER.map((key) => {
-                  const Icon = SECTION_ICON[key];
-                  const total = stepsForSection(key, opts).length;
-                  const s = status[key];
-                  return (
-                    <button key={key} type="button" className={'vo-hub-card' + (s ? ' done' : '')} onClick={() => enterSection(key)}>
-                      <span className="vo-hub-card-icon"><Icon size={20} strokeWidth={1.75} aria-hidden="true" /></span>
-                      <span className="vo-hub-card-body">
-                        <b>{t(`sec_${key}_label`)}</b>
-                        <span className="vo-hub-card-blurb">{t(`sec_${key}_blurb`)}</span>
-                        <span className={'vo-hub-card-status' + (s ? ' done' : '')}>
-                          {s ? (<><CheckDraw />{t('status_complete')}</>) : (
-                            key === 'agreement' ? t('status_not_started') : tf('status_progress', { done: 0, total })
-                          )}
-                        </span>
-                      </span>
-                      <ChevronRight size={18} strokeWidth={1.75} className="vo-hub-card-chevron" aria-hidden="true" />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
-            <SectionFlow
-              view={view} opts={opts} lang={lang} t={t} tf={tf}
-              vendor={vendor} set={set} toggle={toggle}
-              logo={{ logoUrl, logoBusy, uploadLogo, removeLogo }}
-              trust={{ certifications, photos, caseStudies, videos, videoBusy, addVideo, removeVideo }}
-              agreementData={{
-                listingCount, proofCount, agreement, agreementBusy, acceptTerms, inReview, vendorId: vendor.id,
-              }}
-              onTouchStart={onTouchStart}
-              onTouchEnd={onTouchEnd}
-              direction={direction}
-              backToOverview={backToHub}
-              onExit={onExit}
-              onGoNext={goNext}
-              onGoBack={goBack}
-              saveError={saveError}
-              showSaved={showSaved}
-              savedLabel={t('saved')}
-            />
-          )}
-        </main>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// One section's card-flow: header (Overview link + progress dots), the
-// current card, and the footer (Back / Saved flash / Next-or-Done).
-function SectionFlow({
-  view, opts, lang, t, tf, vendor, set, toggle, logo, trust, agreementData,
-  onTouchStart, onTouchEnd, direction, backToOverview, onGoNext, onGoBack,
-  saveError, showSaved, savedLabel,
-}: {
-  view: Extract<View, { mode: 'section' }>;
-  opts: { softwareOnly: boolean };
-  lang: Lang;
-  t: (k: string) => string;
-  tf: (k: string, vals: Record<string, string | number>) => string;
-  vendor: OnboardingVendor;
-  set: <K extends keyof OnboardingVendor>(k: K, v: OnboardingVendor[K]) => void;
-  toggle: (list: string[], v: string, key: 'categories' | 'service_areas' | 'industries' | 'client_types') => void;
-  logo: { logoUrl: string | null; logoBusy: boolean; uploadLogo: (f: File) => void; removeLogo: () => void };
-  trust: {
-    certifications: { id: string; name: string; issuer: string | null }[];
-    photos: { id: string; caption: string | null; image_url: string | null }[];
-    caseStudies: { id: string; title: string }[];
-    videos: { id: string; title: string | null; url: string }[];
-    videoBusy: boolean;
-    addVideo: (title: string, url: string) => Promise<boolean>;
-    removeVideo: (id: string) => void;
-  };
-  agreementData: {
-    listingCount: number; proofCount: number;
-    agreement: { accepted: boolean; accepted_at: string | null } | null;
-    agreementBusy: boolean; acceptTerms: () => Promise<boolean>; inReview: boolean; vendorId: string;
-  };
-  onTouchStart: (e: React.TouchEvent) => void;
-  onTouchEnd: (e: React.TouchEvent) => void;
-  direction: 'fwd' | 'back';
-  backToOverview: () => void;
-  onExit: () => void;
-  onGoNext: () => void;
-  onGoBack: () => void;
-  saveError: boolean;
-  showSaved: boolean;
-  savedLabel: string;
-}) {
-  const steps = stepsForSection(view.section, opts);
-  const index = Math.max(0, steps.indexOf(view.stepId));
-  const isLast = index === steps.length - 1;
-  const isTermsCard = view.section === 'agreement' && view.stepId === 'terms';
-  const accepted = !!agreementData.agreement?.accepted;
-  const Icon = STEP_ICON[view.stepId];
-
-  return (
-    <>
-      <div className="vo-sectionhead">
-        <button type="button" className="vo-overview-link" onClick={backToOverview}>
-          &larr; {t('overview')}
-        </button>
-        <div className="vo-dots" role="progressbar" aria-valuemin={1} aria-valuemax={steps.length} aria-valuenow={index + 1}
-          aria-label={tf('step_of', { n: index + 1, total: steps.length })}>
-          {steps.map((s, i) => (
-            <span key={s} className={'vo-dot' + (i < index ? ' done' : i === index ? ' current' : '')} />
-          ))}
-        </div>
-      </div>
-
-      <div className="vo-viewport" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-        <div key={view.stepId} className={'vo-card ' + (direction === 'fwd' ? 'vo-in-fwd' : 'vo-in-back')}>
-          {Icon && <span className="vo-cardicon" aria-hidden="true"><Icon size={20} strokeWidth={1.75} /></span>}
-          {renderCard({
-            section: view.section, step: view.stepId, headingId: `vo-h-${view.stepId}`,
-            t, tf, lang, vendor, set, toggle, logo, trust, agreementData, Icon,
-            softwareOnly: opts.softwareOnly,
-          })}
-        </div>
-      </div>
-
-      <footer className="vo-foot">
-        {saveError && <p className="vo-error">{t('save_error')}</p>}
-        <div className="vo-ctarow">
-          <button type="button" className="vo-back" onClick={onGoBack}>{t('back')}</button>
-          <span className={'vo-savedflash' + (showSaved ? ' show' : '')} aria-live="polite">
-            {showSaved && <><Check size={13} strokeWidth={2.5} aria-hidden="true" />{savedLabel}</>}
-          </span>
-          {isTermsCard ? (
-            accepted && <button type="button" className="vo-btn" onClick={backToOverview}>{t('done')}</button>
-          ) : (
-            <button type="button" className="vo-btn" onClick={onGoNext}>{isLast ? t('done') : t('next')}</button>
-          )}
-        </div>
-      </footer>
-    </>
-  );
-}
-
-// ---------------------------------------------------------------------------
-function renderCard(props: {
-  section: SectionKey; step: StepId; headingId: string;
-  t: (k: string) => string; tf: (k: string, vals: Record<string, string | number>) => string;
-  lang: Lang; vendor: OnboardingVendor;
-  set: <K extends keyof OnboardingVendor>(k: K, v: OnboardingVendor[K]) => void;
-  toggle: (list: string[], v: string, key: 'categories' | 'service_areas' | 'industries' | 'client_types') => void;
-  logo: { logoUrl: string | null; logoBusy: boolean; uploadLogo: (f: File) => void; removeLogo: () => void };
-  trust: {
-    certifications: { id: string; name: string; issuer: string | null }[];
-    photos: { id: string; caption: string | null; image_url: string | null }[];
-    caseStudies: { id: string; title: string }[];
-    videos: { id: string; title: string | null; url: string }[];
-    videoBusy: boolean;
-    addVideo: (title: string, url: string) => Promise<boolean>;
-    removeVideo: (id: string) => void;
-  };
-  agreementData: {
-    listingCount: number; proofCount: number;
-    agreement: { accepted: boolean; accepted_at: string | null } | null;
-    agreementBusy: boolean; acceptTerms: () => Promise<boolean>; inReview: boolean; vendorId: string;
-  };
-  Icon?: LucideIcon;
-  softwareOnly: boolean;
-}) {
-  const { step, headingId, t, tf, lang, vendor, set, toggle, logo, trust, agreementData } = props;
-
-  switch (step) {
-    // ---- Storefront -------------------------------------------------
-    case 'name_logo':
-      return (
-        <>
-          <h2 id={headingId} className="vo-h">{t('h_name_logo')}</h2>
-          <div className="vo-logobox">
-            {logo.logoUrl ? <img src={logo.logoUrl} alt="" /> : <LogoIcon size={26} strokeWidth={1.5} aria-hidden="true" />}
-          </div>
-          <label className="vo-filebtn">
-            {logo.logoBusy ? t('logo_uploading') : logo.logoUrl ? t('logo_replace') : t('logo_upload')}
-            <input
-              type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" disabled={logo.logoBusy}
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) logo.uploadLogo(f); e.target.value = ''; }}
-            />
-          </label>
-          {logo.logoUrl && <button type="button" className="vo-textbtn" onClick={logo.removeLogo}>{t('logo_remove')}</button>}
-          <div className="vo-fields" style={{ marginTop: 20 }}>
-            <TextField label={t('company_label')} value={vendor.company_name || ''} onChange={(v) => set('company_name', v)} />
-          </div>
-        </>
-      );
-
-    case 'location_areas':
-      return (
-        <LocationAreasCard
-          headingId={headingId} t={t} lang={lang}
-          city={vendor.city || ''} onCityChange={(v) => set('city', v)}
-          showAreas={showServiceAreasQuestion({ softwareOnly: props.softwareOnly })}
-          serviceAreas={vendor.service_areas || []}
-          onToggleArea={(v) => toggle(vendor.service_areas || [], v, 'service_areas')}
-        />
-      );
-
-    case 'tagline_about': {
-      const filled = templateFor(lang, vendor);
-      const aboutHeadingId = `${headingId}-2`;
-      return (
-        <>
-          <h2 id={headingId} className="vo-h">{t('h_tagline')}</h2>
-          <input
-            className="vo-bigfield" aria-labelledby={headingId} maxLength={160}
-            value={vendor.tagline || ''} placeholder={t('ph_tagline')}
-            onChange={(e) => set('tagline', e.target.value)}
-          />
-          <h3 id={aboutHeadingId} className="vo-h2">{t('h_about')}</h3>
-          <textarea
-            className="vo-bigfield vo-textarea" aria-labelledby={aboutHeadingId} rows={4}
-            value={vendor.description || ''} placeholder={t('ph_about')}
-            onChange={(e) => set('description', e.target.value)}
-          />
-          <button type="button" className="vo-textbtn" style={{ marginTop: 12 }} onClick={() => set('description', filled)}>
-            {t('use_template')}
-          </button>
-        </>
-      );
-    }
-
-    case 'contact':
-      return (
-        <>
-          <h2 id={headingId} className="vo-h">{t('h_contact')}</h2>
-          <div className="vo-fields">
-            <TextField label={t('contact_name_label')} value={vendor.contact_name || ''} onChange={(v) => set('contact_name', v)} />
-            <TextField label={t('website_label')} value={vendor.website || ''} onChange={(v) => set('website', v)} />
-            <TextField label={t('phone_label')} value={vendor.phone || ''} onChange={(v) => set('phone', v)} inputMode="tel" />
-          </div>
-        </>
-      );
-
-    // ---- Capabilities -------------------------------------------------
-    case 'industries':
-      return (
-        <>
-          <h2 id={headingId} className="vo-h">{t('h_industries')}</h2>
-          <p className="vo-sub">{t('sub_industries')}</p>
-          <div role="group" aria-labelledby={headingId}>
-            <ChipGroup
-              options={Array.from(new Set([...INDUSTRIES, ...(vendor.industries || [])]))}
-              selected={vendor.industries || []}
-              onToggle={(v) => toggle(vendor.industries || [], v, 'industries')}
-              icons={INDUSTRY_ICON}
-            />
-            <AddYourOwn
-              placeholder={t('add_industry_ph')} addLabel={t('add_btn')} existing={vendor.industries || []}
-              onAdd={(v) => set('industries', [...(vendor.industries || []), v])}
-              listId="vo-industry-suggestions"
-              suggestions={INDUSTRIES.filter((i) => !(vendor.industries || []).includes(i))}
-            />
-          </div>
-        </>
-      );
-
-    case 'client_size':
-      return (
-        <>
-          <h2 id={headingId} className="vo-h">{t('h_client_size')}</h2>
-          <div role="group" aria-labelledby={headingId}>
-            <IconCardGroup options={CLIENT_SIZES} selected={vendor.client_types || []} onToggle={(v) => toggle(vendor.client_types || [], v, 'client_types')} icons={CLIENT_SIZE_ICON} />
-          </div>
-        </>
-      );
-
-    case 'categories':
-      return (
-        <>
-          <h2 id={headingId} className="vo-h">{t('h_categories')}</h2>
-          <p className="vo-sub">{t('sub_categories')}</p>
-          <div data-no-swipe className="vo-catwrap">
-            <CategoryChipPicker selected={vendor.categories || []} onToggle={(v) => toggle(vendor.categories || [], v, 'categories')} lang={lang} />
-          </div>
-        </>
-      );
-
-    // ---- Trust & Proof --------------------------------------------------
-    case 'proof':
-      return (
-        <>
-          <h2 id={headingId} className="vo-h">{t('h_proof')}</h2>
-          <p className="vo-sub">{t('sub_proof')}</p>
-          <ul className="vo-prooftiles" aria-labelledby={headingId}>
-            <li>
-              <ProofTile
-                href="/vendor/portal" Icon={ShieldCheck} label={t('h_certifications')} cta={t('certs_cta')}
-                count={trust.certifications.length} emptyText={t('certs_empty')} addedLabel={t('proof_added')}
-              />
-            </li>
-            <li>
-              <ProofTile
-                href="/vendor/portal" Icon={FileText} label={t('h_case_studies')} cta={t('cases_cta')}
-                count={trust.caseStudies.length} emptyText={t('cases_empty')} addedLabel={t('proof_added')}
-              />
-            </li>
-            <li>
-              <ProofTile
-                href="/vendor/portal" Icon={Camera} label={t('h_photos')} cta={t('photos_cta')}
-                count={trust.photos.length} emptyText={t('photos_empty')} addedLabel={t('proof_added')}
-              />
-            </li>
-          </ul>
-        </>
-      );
-
-    case 'videos':
-      return <VideosCard t={t} videos={trust.videos} videoBusy={trust.videoBusy} addVideo={trust.addVideo} removeVideo={trust.removeVideo} headingId={headingId} />;
-
-    case 'awards':
-      return (
-        <>
-          <h2 id={headingId} className="vo-h">{t('h_awards')}</h2>
-          <p className="vo-sub">{t('sub_awards')}</p>
-          {(vendor.achievements || []).length > 0 && (
-            <div className="vo-chips">
-              {(vendor.achievements || []).map((a) => (
-                <button key={a} type="button" className="vo-chip on" onClick={() => set('achievements', (vendor.achievements || []).filter((x) => x !== a))}>
-                  {a}<X size={12} strokeWidth={2} aria-hidden="true" />
-                </button>
-              ))}
-            </div>
-          )}
-          <AddYourOwn
-            placeholder={t('add_award_ph')} addLabel={t('add_btn')} existing={vendor.achievements || []}
-            onAdd={(v) => set('achievements', [...(vendor.achievements || []), v])}
-          />
-        </>
-      );
-
-    // ---- Agreement & Activation -----------------------------------------
-    case 'recap': {
-      const categoriesCount = (vendor.categories || []).length;
-      return (
-        <>
-          <h2 id={headingId} className="vo-h">{t('h_recap')}</h2>
-          <p className="vo-sub">{t('sub_recap')}</p>
-          <div className="vo-statrow">
-            <StatTile value={agreementData.listingCount} label={t('stat_listings')} />
-            <StatTile value={categoriesCount} label={t('stat_categories')} />
-            <StatTile value={agreementData.proofCount} label={t('stat_proof')} />
-          </div>
-        </>
-      );
-    }
-
-    case 'terms':
-      return <TermsCard t={t} tf={tf} headingId={headingId} agreementData={agreementData} />;
-
-    default:
-      return null;
-  }
-}
-
-function templateFor(lang: Lang, vendor: OnboardingVendor): string {
-  const company = (vendor.company_name || '').trim() || (lang === 'es' ? '[Empresa]' : '[Company]');
-  const industry = (vendor.industries || [])[0] || (lang === 'es' ? '[industria]' : '[industry]');
-  const region = (vendor.city || '').trim() || (lang === 'es' ? 'el Borderplex' : 'the Borderplex');
-  const service = (vendor.categories || [])[0] || (lang === 'es' ? '[servicio]' : '[service]');
-  return lang === 'es'
-    ? `${company} ofrece ${service} para ${industry} en ${region}. Con [X] años de experiencia…`
-    : `${company} provides ${service} for ${industry} in ${region}. With [X] years of experience…`;
-}
-
-function VideosCard({ t, videos, videoBusy, addVideo, removeVideo, headingId }: {
-  t: (k: string) => string;
-  videos: { id: string; title: string | null; url: string }[];
-  videoBusy: boolean;
-  addVideo: (title: string, url: string) => Promise<boolean>;
-  removeVideo: (id: string) => void;
-  headingId: string;
-}) {
-  const [title, setTitle] = useState('');
-  const [url, setUrl] = useState('');
-  const submit = async () => {
-    if (!url.trim()) return;
-    const ok = await addVideo(title, url);
-    if (ok) { setTitle(''); setUrl(''); }
-  };
-  return (
-    <>
-      <h2 id={headingId} className="vo-h">{t('h_videos')}</h2>
-      <p className="vo-sub">{t('sub_videos')}</p>
-      <div className="vo-videoform">
-        <label className="sr-only" htmlFor="vo-video-title">{t('video_title_ph')}</label>
-        <input id="vo-video-title" placeholder={t('video_title_ph')} value={title} onChange={(e) => setTitle(e.target.value)} />
-        <label className="sr-only" htmlFor="vo-video-url">{t('video_url_ph')}</label>
-        <input id="vo-video-url" placeholder={t('video_url_ph')} value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} />
-        <button type="button" className="vo-textbtn" disabled={videoBusy} onClick={submit}>{t('video_add')}</button>
-      </div>
-      {videos.length > 0 ? (
-        <ul className="vo-summarylist">
-          {videos.map((v) => (
-            <li key={v.id} className="vo-videorow">
-              <a href={v.url} target="_blank" rel="noreferrer">{v.title || v.url}</a>
-              <button type="button" className="vo-textbtn sm" onClick={() => removeVideo(v.id)}>{t('video_remove')}</button>
-            </li>
-          ))}
-        </ul>
-      ) : <p className="vo-summaryempty">{t('videos_empty')}</p>}
-    </>
-  );
-}
-
-function TermsCard({ t, tf, headingId, agreementData }: {
-  t: (k: string) => string;
-  tf: (k: string, vals: Record<string, string | number>) => string;
-  headingId: string;
-  agreementData: {
-    agreement: { accepted: boolean; accepted_at: string | null; summary?: string; terms?: { title: string; body: string }[] } | null;
-    agreementBusy: boolean; acceptTerms: () => Promise<boolean>; inReview: boolean; vendorId: string;
-  };
-}) {
-  const [checked, setChecked] = useState(false);
-  const [error, setError] = useState(false);
-  const { agreement, agreementBusy, acceptTerms, inReview, vendorId } = agreementData;
-
-  const rows = useMemo(() => {
-    const terms = agreement?.terms || [];
-    const map: { title: string; rowKey: string }[] = [
-      { title: 'Commission on NXT//LINK deals', rowKey: 'terms_row_pay' },
-      { title: 'Protected period', rowKey: 'terms_row_protected' },
-      { title: 'No going around the platform', rowKey: 'terms_row_stay' },
-      { title: 'Accurate listings', rowKey: 'terms_row_accurate' },
-    ];
-    return map
-      .map((m) => {
-        const term = terms.find((x) => x.title === m.title);
-        return term ? { label: t(m.rowKey), body: term.body } : null;
-      })
-      .filter((r): r is { label: string; body: string } => !!r);
-  }, [agreement, t]);
-
-  if (agreement?.accepted) {
-    return (
-      <>
-        <h2 id={headingId} className="vo-h">{t('accepted_h')}</h2>
-        <div className="vo-accepted">
-          <span className="vo-check-dot lg" aria-hidden="true"><CheckDraw /></span>
-          <div>
-            {agreement.accepted_at && <p>{tf('accepted_on', { date: new Date(agreement.accepted_at).toLocaleDateString() })}</p>}
-            <p>{inReview ? t('accepted_review') : t('accepted_live')}</p>
-          </div>
-        </div>
-        <a className="vo-btn vo-previewbtn" href={`/marketplace/vendor/${vendorId}`} target="_blank" rel="noreferrer">
-          <ExternalLink size={15} strokeWidth={1.75} aria-hidden="true" />
-          {t('preview_storefront')}
-        </a>
-      </>
-    );
-  }
-
-  async function onActivate() {
-    setError(false);
-    const ok = await acceptTerms();
-    if (!ok) setError(true);
-  }
-
-  return (
-    <>
-      <h2 id={headingId} className="vo-h">{t('h_terms')}</h2>
-      <div className="vo-table-wrap">
-        <table className="vo-table">
-          <tbody>
-            {rows.length > 0 ? rows.map((r) => (
-              <tr key={r.label}>
-                <th scope="row">{r.label}</th>
-                <td>{r.body}</td>
-              </tr>
-            )) : (
-              <tr><td colSpan={2}>{t('loading')}</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-      <p className="vo-terms-disclaimer">
-        {t('terms_disclaimer')} <a href="/terms" target="_blank" rel="noreferrer">{t('terms_full_link')}</a>
-      </p>
-      <p className="vo-reassure-main">{t('reassure_main')}</p>
-      <p className="vo-reassure-sub">{t('reassure_sub')}</p>
-      <label className="vo-checkboxrow">
-        <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} />
-        <span>{t('accept_checkbox')}</span>
-      </label>
-      {error && <p className="vo-error">{t('activate_error')}</p>}
-      <button type="button" className="vo-btn vo-activate" disabled={!checked || agreementBusy} onClick={onActivate}>
-        {t('activate_btn')}
-      </button>
-    </>
-  );
-}
-
-function StatTile({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="vo-stat">
-      <span className="vo-stat-value">{value}</span>
-      <span className="vo-stat-label">{label}</span>
-    </div>
-  );
-}
-
-// A small self-drawing checkmark for "done" states — reduced-motion safe via
-// the global `@media (prefers-reduced-motion: reduce)` rule in globals.css,
-// which collapses every animation/transition duration app-wide (including
-// this one) to near-zero.
-function CheckDraw() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="vo-checkdraw" />
-    </svg>
-  );
-}
-
-function TextField({ label, value, onChange, inputMode }: {
-  label: string; value: string; onChange: (v: string) => void; inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
-}) {
-  return (
-    <label className="vo-field">
-      <span>{label}</span>
-      <input value={value} inputMode={inputMode} onChange={(e) => onChange(e.target.value)} />
-    </label>
-  );
-}
-
-function ChipGroup({ options, selected, onToggle, icons }: {
-  options: string[]; selected: string[]; onToggle: (v: string) => void; icons?: Record<string, LucideIcon>;
-}) {
-  return (
-    <div className="vo-chips">
-      {options.map((o) => {
-        const on = selected.includes(o);
-        const Icon = icons?.[o];
-        return (
-          <button key={o} type="button" className={'vo-chip' + (on ? ' on' : '')} aria-pressed={on} onClick={() => onToggle(o)}>
-            {Icon && <Icon size={15} strokeWidth={1.75} aria-hidden="true" />}
-            <span>{o}</span>
-            {on && <Check size={13} strokeWidth={2.5} className="vo-chip-check" aria-hidden="true" />}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-// Client-size / company-scale picker as icon cards (bigger tap targets, a
-// building-scale icon per option) instead of plain text chips — the same
-// selected-state contract (violet fill + check) as ChipGroup, just a
-// roomier layout for a 4-option single-purpose card.
-function IconCardGroup({ options, selected, onToggle, icons }: {
-  options: string[]; selected: string[]; onToggle: (v: string) => void; icons: Record<string, LucideIcon>;
-}) {
-  return (
-    <div className="vo-iconcards">
-      {options.map((o) => {
-        const on = selected.includes(o);
-        const Icon = icons[o];
-        return (
-          <button key={o} type="button" className={'vo-iconcard' + (on ? ' on' : '')} aria-pressed={on} onClick={() => onToggle(o)}>
-            {Icon && <span className="vo-iconcard-icon"><Icon size={22} strokeWidth={1.75} aria-hidden="true" /></span>}
-            <span className="vo-iconcard-label">{o}</span>
-            {on && <span className="vo-iconcard-check" aria-hidden="true"><Check size={13} strokeWidth={2.5} /></span>}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-// `suggestions` (+ `listId`) are optional — when passed, they wire up a
-// native <datalist> so typing shows rules-based autocomplete options (e.g.
-// the known industry vocabulary). No AI involved, same static-list pattern
-// as the "Use a template" button. Free typing always still works.
-function AddYourOwn({ placeholder, addLabel, existing, onAdd, suggestions, listId }: {
-  placeholder: string; addLabel: string; existing: string[]; onAdd: (v: string) => void;
-  suggestions?: string[]; listId?: string;
-}) {
-  const [v, setV] = useState('');
-  const add = () => {
-    const val = v.trim();
-    if (!val) return;
-    if (!existing.some((x) => x.toLowerCase() === val.toLowerCase())) onAdd(val);
-    setV('');
-  };
-  return (
-    <div className="vo-addown">
-      <input
-        value={v} placeholder={placeholder} list={suggestions ? listId : undefined}
-        onChange={(e) => setV(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
-      />
-      {suggestions && suggestions.length > 0 && (
-        <datalist id={listId}>
-          {suggestions.map((s) => <option key={s} value={s} />)}
-        </datalist>
-      )}
-      <button type="button" className="vo-textbtn" onClick={add}>{addLabel}</button>
-    </div>
-  );
-}
-
-// Paired card: "where is your business located?" (button-first — tap a
-// common Borderplex region, or "Somewhere else" to reveal free text) plus,
-// for vendors with a physical service area, "where do you provide service?"
-// underneath as the card's second question (2026-07-30 pairing rule: up to
-// two closely related questions may share one card). Buttons store whichever
-// language's label the vendor is currently reading (same as any other free
-// text in this flow — content isn't auto-translated when the UI toggles),
-// and re-match against EITHER language on re-render so a value picked in one
-// language still highlights correctly after a language switch.
-const LOCATION_REGIONS = ['loc_region_ep', 'loc_region_jz', 'loc_region_lc', 'loc_region_chi'] as const;
-
-function LocationAreasCard({ headingId, t, lang, city, onCityChange, showAreas, serviceAreas, onToggleArea }: {
-  headingId: string;
-  t: (k: string) => string;
-  lang: Lang;
-  city: string;
-  onCityChange: (v: string) => void;
-  showAreas: boolean;
-  serviceAreas: string[];
-  onToggleArea: (v: string) => void;
-}) {
-  const trimmed = city.trim().toLowerCase();
-  const matchedKey = LOCATION_REGIONS.find((key) => {
-    const pair = TR[key];
-    return trimmed.length > 0 && (trimmed === pair.en.toLowerCase() || trimmed === pair.es.toLowerCase());
-  });
-  const [otherOpen, setOtherOpen] = useState(!matchedKey && city.trim().length > 0);
-
-  return (
-    <>
-      <h2 id={headingId} className="vo-h">{t('h_location')}</h2>
-      <div className="vo-chips" role="group" aria-labelledby={headingId}>
-        {LOCATION_REGIONS.map((key) => {
-          const label = lang === 'es' ? TR[key].es : TR[key].en;
-          const on = key === matchedKey && !otherOpen;
-          return (
-            <button
-              key={key} type="button" className={'vo-chip' + (on ? ' on' : '')} aria-pressed={on}
-              onClick={() => { onCityChange(label); setOtherOpen(false); }}
-            >
-              <span>{label}</span>
-              {on && <Check size={13} strokeWidth={2.5} className="vo-chip-check" aria-hidden="true" />}
-            </button>
-          );
-        })}
-        <button
-          type="button" className={'vo-chip' + (otherOpen ? ' on' : '')} aria-pressed={otherOpen}
-          onClick={() => { setOtherOpen(true); if (matchedKey) onCityChange(''); }}
-        >
-          <span>{t('loc_other')}</span>
-          {otherOpen && <Check size={13} strokeWidth={2.5} className="vo-chip-check" aria-hidden="true" />}
-        </button>
-      </div>
-      {otherOpen && (
-        <input
-          className="vo-bigfield" style={{ marginTop: 12 }} aria-label={t('h_location')} maxLength={160}
-          value={city} placeholder={t('ph_location_other')}
-          onChange={(e) => onCityChange(e.target.value)}
-        />
-      )}
-
-      {showAreas && (
-        <>
-          <h3 id={`${headingId}-2`} className="vo-h2">{t('h_service_areas')}</h3>
-          <div role="group" aria-labelledby={`${headingId}-2`}>
-            <ChipGroup options={AREAS} selected={serviceAreas} onToggle={onToggleArea} />
-          </div>
-        </>
-      )}
-    </>
-  );
-}
-
-// One Trust & Proof tile: a full-tile link out to the richer portal editor
-// for a proof type this flow doesn't re-implement (file uploads / multi-field
-// forms). The visible label stays short; `cta` (e.g. "Add certifications in
-// your portal") is the link's accessible name so screen-reader users get the
-// full context without a visible second line per tile.
-function ProofTile({ href, Icon, label, cta, count, emptyText, addedLabel }: {
-  href: string; Icon: LucideIcon; label: string; cta: string;
-  count: number; emptyText: string; addedLabel: string;
-}) {
-  return (
-    <a className="vo-prooftile" href={href} aria-label={cta}>
-      <span className="vo-prooftile-icon" aria-hidden="true"><Icon size={18} strokeWidth={1.75} /></span>
-      <span className="vo-prooftile-body">
-        <b>{label}</b>
-        <span className={'vo-prooftile-status' + (count > 0 ? ' done' : '')}>
-          {count > 0 ? `${addedLabel} · ${count}` : emptyText}
-        </span>
-      </span>
-      <ExternalLink size={14} strokeWidth={2} className="vo-prooftile-arrow" aria-hidden="true" />
-    </a>
-  );
-}
-
-const CSS = `
-.vo{--bg:#F8F7FB;--surf:#fff;--ink:#141320;--muted:#615F72;--muted2:#8A87A0;--line:#E2DFEC;--p:#6C5CE0;--pd:#4A3DB0;--pbg:rgba(108,92,224,.1);--green:#2F9E6A;--sans:var(--font-ibm-plex-sans-vo2),'IBM Plex Sans',system-ui,sans-serif;--serif:var(--font-space-grotesk),'Space Grotesk',Georgia,serif;--shadow:0 4px 12px rgba(124,58,237,.08);
-  height:100dvh;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden;}
-.vo *{box-sizing:border-box;}
-.vo a:focus-visible,.vo button:focus-visible,.vo input:focus-visible,.vo textarea:focus-visible{outline:2px solid var(--p);outline-offset:2px;}
-.vo .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
-.vo-center{flex:1;display:grid;place-items:center;color:var(--muted);font-size:14px;}
-.vo-gate{max-width:400px;margin:auto;text-align:center;background:var(--surf);border:1px solid var(--line);border-radius:20px;padding:32px;box-shadow:var(--shadow);}
-.vo-gate h1{font-family:var(--serif);font-size:22px;font-weight:700;margin:0 0 8px;}
-.vo-gate p{color:var(--muted);font-size:14px;line-height:1.6;margin:0 0 20px;}
-
-.vo-shell{flex:1;min-height:0;display:flex;}
-.vo-sidebar{display:none;width:240px;flex-shrink:0;flex-direction:column;gap:20px;padding:24px 20px;border-right:1px solid var(--line);background:var(--surf);overflow-y:auto;}
-.vo-sidebar-mark{font-family:var(--serif);font-weight:700;font-size:15px;letter-spacing:-.01em;}
-.vo-sidebar-mark span{color:var(--p);}
-.vo-checklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;}
-.vo-check-item{width:100%;display:flex;align-items:center;gap:10px;background:none;border:none;text-align:left;font-family:var(--sans);font-size:14px;font-weight:600;color:var(--muted);padding:10px 8px;border-radius:10px;cursor:pointer;min-height:44px;}
-.vo-check-item:hover{background:var(--bg);}
-.vo-check-item.active{color:var(--pd);background:var(--pbg);}
-.vo-check-item.done{color:var(--ink);}
-.vo-check-dot{width:20px;height:20px;flex-shrink:0;border-radius:50%;border:1.5px solid #C7C2DE;display:grid;place-items:center;color:#fff;}
-.vo-check-item.done .vo-check-dot{background:var(--green);border-color:transparent;}
-.vo-check-dot.lg{width:28px;height:28px;}
+  activate_error: { en:…13216 tokens truncated…ot.lg{width:28px;height:28px;}
 .vo-checkdraw{stroke-dasharray:20;stroke-dashoffset:20;animation:vo-draw 420ms ease-out forwards;}
 @keyframes vo-draw{to{stroke-dashoffset:0;}}
 
@@ -1214,6 +341,7 @@ const CSS = `
 
 .vo-viewport{flex:1;min-height:0;display:flex;overflow:hidden;padding:0 20px;}
 .vo-card{flex:1;min-height:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;max-width:520px;margin:0 auto;width:100%;overflow-y:auto;padding:16px 0;}
+.vo-card:has(.vo-proofeditor){justify-content:flex-start;}
 .vo-in-fwd{animation:voInFwd 200ms cubic-bezier(0,0,.2,1);}
 .vo-in-back{animation:voInBack 200ms cubic-bezier(0,0,.2,1);}
 @keyframes voInFwd{from{opacity:0;transform:translateX(24px);}to{opacity:1;transform:translateX(0);}}
@@ -1274,15 +402,45 @@ const CSS = `
 .vo-catpopular{margin-top:20px;}
 .vo-catpopular-h{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted2);margin:0 0 8px;}
 
-.vo-prooftiles{list-style:none;margin:0 0 8px;padding:0;display:flex;flex-direction:column;gap:8px;width:100%;}
-.vo-prooftile{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--surf);text-decoration:none;color:var(--ink);min-height:48px;}
-.vo-prooftile:hover{border-color:var(--p);}
-.vo-prooftile-icon{width:36px;height:36px;border-radius:10px;background:var(--bg);color:var(--ink);display:grid;place-items:center;flex-shrink:0;}
-.vo-prooftile-body{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;}
-.vo-prooftile-body b{font-size:14px;font-weight:600;}
-.vo-prooftile-status{font-size:12.5px;color:var(--muted);}
-.vo-prooftile-status.done{color:var(--green);font-weight:600;}
-.vo-prooftile-arrow{color:var(--muted2);flex-shrink:0;}
+.vo-proofeditor{width:100%;display:flex;flex-direction:column;gap:10px;padding-bottom:8px;}
+.vo-proof-intro{font-size:13.5px;color:var(--muted);line-height:1.5;margin:-10px 0 2px;}
+.vo-prooferror{font-size:13px;color:#9E302B;background:#FBEDEC;border:1px solid rgba(206,75,67,.25);padding:10px 12px;border-radius:10px;margin:0;}
+.vo-proofgroup{width:100%;border:1px solid var(--line);border-radius:14px;background:var(--surf);overflow:hidden;}
+.vo-proofgroup summary{list-style:none;display:grid;grid-template-columns:40px minmax(0,1fr) auto auto;align-items:center;gap:12px;padding:15px;cursor:pointer;min-height:76px;transition:background 140ms ease,border-color 140ms ease;}
+.vo-proofgroup summary::-webkit-details-marker{display:none;}
+.vo-proofgroup summary:hover{background:var(--bg);}
+.vo-proofgroup[open] summary{border-bottom:1px solid var(--line);background:var(--bg);}
+.vo-proofgroup-icon{width:40px;height:40px;border-radius:11px;background:var(--pbg);color:var(--pd);display:grid;place-items:center;}
+.vo-proofgroup-copy{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.vo-proofgroup-copy b{font-size:14px;font-weight:700;}
+.vo-proofgroup-copy span{font-size:12.5px;line-height:1.4;color:var(--muted);max-width:390px;}
+.vo-proofgroup-count{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;}
+.vo-proofgroup-chevron{color:var(--muted2);transition:transform 200ms cubic-bezier(.2,.8,.2,1);}
+.vo-proofgroup[open] .vo-proofgroup-chevron{transform:rotate(180deg);}
+.vo-proofgroup-content{padding:16px;display:flex;flex-direction:column;gap:16px;}
+.vo-proofrecords,.vo-proofphotos{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
+.vo-proofrecords li{display:flex;align-items:flex-start;gap:10px;padding:11px 12px;border-radius:10px;background:var(--bg);}
+.vo-proofrecord-mark{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#E9F7F0;color:var(--green);flex-shrink:0;}
+.vo-proofrecord-copy{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
+.vo-proofrecord-copy b{font-size:13.5px;}
+.vo-proofrecord-copy span{font-size:12px;line-height:1.45;color:var(--muted);overflow:hidden;text-overflow:ellipsis;}
+.vo-proofrecord-copy a{font-size:12px;font-weight:600;color:var(--pd);margin-top:2px;}
+.vo-remove{background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:12px;font-weight:600;padding:6px;border-radius:8px;cursor:pointer;flex-shrink:0;}
+.vo-remove:hover{color:#9E302B;background:#FBEDEC;}
+.vo-proof-form{display:flex;flex-direction:column;gap:13px;padding-top:15px;border-top:1px solid var(--line);}
+.vo-proof-formhead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;}
+.vo-proof-formhead b{font-size:14px;}
+.vo-proof-formhead span{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;}
+.vo-proof-form textarea{font-family:var(--sans);padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surf);color:var(--ink);font-size:14px;line-height:1.5;resize:vertical;outline:none;}
+.vo-proof-form textarea:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
+.vo-proof-two{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.vo-proof-file{display:flex;flex-direction:column;gap:7px;font-size:13px;font-weight:600;color:var(--muted);}
+.vo-proof-file input{font-family:var(--sans);font-size:13px;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:9px;background:var(--surf);}
+.vo-proof-file input::file-selector-button{font-family:var(--sans);font-weight:600;color:var(--pd);background:var(--pbg);border:0;border-radius:8px;padding:8px 10px;margin-right:10px;cursor:pointer;}
+.vo-proof-file small{font-size:11.5px;font-weight:400;color:var(--muted2);}
+.vo-proofphotos li{display:grid;grid-template-columns:56px minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px;border-radius:10px;background:var(--bg);font-size:12.5px;color:var(--muted);}
+.vo-proofphoto{width:56px;aspect-ratio:1;border-radius:9px;overflow:hidden;background:var(--surf);display:grid;place-items:center;color:var(--muted2);}
+.vo-proofphoto img{width:100%;height:100%;object-fit:cover;}
 .vo-summarylist{list-style:none;margin:0 0 16px;padding:0;display:flex;flex-direction:column;gap:8px;width:100%;}
 .vo-summarylist li{font-size:14px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surf);}
 .vo-videorow{display:flex;align-items:center;justify-content:space-between;gap:12px;}
@@ -1333,5 +491,6 @@ const CSS = `
 .vo-btn:disabled{opacity:.45;cursor:default;}
 
 @media(min-width:900px){.vo-sidebar{display:flex;}.vo-stripmobile{display:none;}}
-@media(max-width:480px){.vo-h{font-size:24px;}.vo-hub-h{font-size:24px;}.vo-hub-grid{grid-template-columns:1fr;}.vo-top{padding:14px 16px;}.vo-sectionhead{padding:0 16px 8px;}.vo-viewport{padding:0 16px;}.vo-foot{padding:14px 16px calc(14px + env(safe-area-inset-bottom));}.vo-hubwrap{padding:8px 16px 24px;}.vo-photogrid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:480px){.vo-h{font-size:24px;}.vo-hub-h{font-size:24px;}.vo-hub-grid{grid-template-columns:1fr;}.vo-top{padding:14px 16px;}.vo-sectionhead{padding:0 16px 8px;}.vo-viewport{padding:0 16px;}.vo-foot{padding:14px 16px calc(14px + env(safe-area-inset-bottom));}.vo-hubwrap{padding:8px 16px 24px;}.vo-photogrid{grid-template-columns:repeat(3,1fr);}.vo-proofgroup summary{grid-template-columns:36px minmax(0,1fr) auto;padding:13px;}.vo-proofgroup-icon{width:36px;height:36px;}.vo-proofgroup-count{display:none;}.vo-proofgroup-copy span{font-size:12px;}.vo-proofgroup-content{padding:13px;}.vo-proof-two{grid-template-columns:1fr;}.vo-proofphotos li{grid-template-columns:48px minmax(0,1fr) auto;}.vo-proofphoto{width:48px;}}
 `;
+
