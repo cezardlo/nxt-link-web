@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { IBM_Plex_Sans } from 'next/font/google';
-import { MapPin, ShieldCheck, Award, Play, Check } from 'lucide-react';
+import { MapPin, ShieldCheck, Award, Play, Check, UserPlus } from 'lucide-react';
 import AddToCartButton from '@/components/cart/AddToCartButton';
 import { useLang, type Lang } from '@/components/LanguageToggle';
 import PublicHeader from '@/components/PublicHeader';
@@ -164,6 +164,7 @@ const T: Record<Lang, Record<string, string>> = {
     terms: 'Terms',
     privacy: 'Privacy',
     storefront: 'View storefront →',
+    inviteVendor: 'Invite to quote →',
     reportThanks: 'Thanks — our team will review this listing.',
     reportLink: 'Something wrong with this listing? Report it',
     reportTitle: 'Report this listing',
@@ -282,6 +283,7 @@ const T: Record<Lang, Record<string, string>> = {
     terms: 'Términos',
     privacy: 'Privacidad',
     storefront: 'Ver perfil del proveedor →',
+    inviteVendor: 'Invitar a cotizar →',
     reportThanks: 'Gracias — nuestro equipo revisará esta publicación.',
     reportLink: '¿Algo incorrecto en esta publicación? Repórtalo',
     reportTitle: 'Reportar esta publicación',
@@ -728,6 +730,21 @@ export default function ListingDetailPage() {
                 </div>
               )}
               <Link className="dt-storelink" href={`/marketplace/vendor/${s(L.vendor_id)}`}>{t.storefront}</Link>
+              {/* Slice R1b (2026-07-30) — "invite specific vendors" send
+                  mode: distinct from the quote form below (tied to THIS one
+                  listing), this reuses the existing /intake +
+                  /api/platform/requests pipeline to send an explicit,
+                  buyer-chosen invitation to THIS vendor (no parallel request
+                  path — see /intake's ?invite=1 handling). */}
+              {d.vendor && (
+                <Link
+                  className="dt-invitelink"
+                  href={`/intake?vendor=${encodeURIComponent(d.vendor.company_name)}&vendor_id=${encodeURIComponent(s(L.vendor_id))}&invite=1`}
+                >
+                  <UserPlus size={12} strokeWidth={1.75} aria-hidden="true" />
+                  {t.inviteVendor}
+                </Link>
+              )}
             </div>
           )}
 
@@ -1022,6 +1039,9 @@ a.dt-signin:active{transform:scale(.98);transition:transform .1s ease;}
 .dt-suppchip{font-size:11.5px;font-weight:600;color:var(--spec-violet-deep);background:rgba(108,92,224,.08);padding:3px 9px;border-radius:6px;}
 .dt-suppchip.dim{color:var(--spec-text-2nd);background:var(--spec-surface);}
 .dt-storelink{display:inline-block;margin-top:12px;color:var(--spec-violet-deep);font-size:13px;font-weight:700;text-decoration:none;transition:color var(--spec-duration-fast) var(--spec-ease);}
+.dt-invitelink{display:flex;align-items:center;gap:5px;margin-top:8px;color:var(--spec-text-2nd);font-size:12px;font-weight:600;text-decoration:none;transition:color var(--spec-duration-fast) var(--spec-ease);}
+.dt-invitelink:hover{color:var(--spec-violet-deep);}
+.dt-invitelink:focus-visible{outline:2px solid var(--spec-violet);outline-offset:2px;border-radius:4px;}
 .dt-storelink:hover{color:var(--spec-violet);}
 /* Honest "protection" strip (§5) — no escrow/guarantee language, just three
    already-true, already-published facts. Neutral card, not a hard-sell box. */

@@ -9,7 +9,7 @@ import { IBM_Plex_Sans } from 'next/font/google';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
 import VendorNav from '@/components/VendorNav';
-import { Megaphone, MessageCircle, Inbox, Eye, Reply, Trophy, XCircle, Paperclip, Download, X, Send, type LucideIcon } from 'lucide-react';
+import { Megaphone, MessageCircle, Inbox, Eye, Reply, Trophy, XCircle, Paperclip, Download, X, Send, UserPlus, type LucideIcon } from 'lucide-react';
 import { MatchReasons, MATCH_REASONS_CSS } from '@/components/marketplace/MatchReasons';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
 import { calculateFee } from '@/lib/fees/engine';
@@ -66,6 +66,12 @@ interface Lead {
   delivery_location?: string | null; preferred_timeline?: string | null;
   structured_specs?: Record<string, unknown> | null;
   match_reasons?: string[];
+  // Slice R1b (2026-07-30) — true when the BUYER hand-picked this vendor
+  // (send-mode B, "invite specific vendors") rather than the auto-match
+  // ranking. GET /api/vendor/leads always returns match_reasons: [] for these
+  // — never a fabricated score — so the client supplies the one honest reason
+  // itself: "Invited by the buyer".
+  invited?: boolean;
 }
 
 // Slice R3 — the structured quote template. One flat form covers the COMMON
@@ -186,6 +192,7 @@ const T: Record<Lang, Record<string, string>> = {
     // Opportunity framing (the vendor lead card's "matched opportunity" facts)
     kindProduct: 'Product', kindService: 'Service', kindTechnology: 'Technology',
     qtyLabel: 'Qty', quoteByLabel: 'Quote by',
+    directInvite: 'Direct invite', invitedByBuyer: 'Invited by the buyer',
     finalAmount: 'Final purchase amount (USD)', poNumber: 'PO number', poPh: 'Buyer’s PO #',
     invoiceNum: 'Your invoice #', invoicePh: 'Your invoice to the buyer',
     commissionOnAmount: 'NXT//LINK commission on this amount:', commissionBilled: '— billed to you with 30-day terms.',
@@ -264,6 +271,7 @@ const T: Record<Lang, Record<string, string>> = {
     // Contexto de la oportunidad (tarjeta de lead del vendedor)
     kindProduct: 'Producto', kindService: 'Servicio', kindTechnology: 'Tecnología',
     qtyLabel: 'Cant.', quoteByLabel: 'Cotizar antes del',
+    directInvite: 'Invitación directa', invitedByBuyer: 'Invitado por el comprador',
     finalAmount: 'Monto final de la compra (USD)', poNumber: 'Número de orden de compra', poPh: 'Orden de compra del comprador',
     invoiceNum: 'Tu número de factura', invoicePh: 'Tu factura al comprador',
     commissionOnAmount: 'Comisión NXT//LINK sobre este monto:', commissionBilled: '— facturado a ti con términos de 30 días.',
@@ -321,12 +329,19 @@ function OpportunityFacts({ lead, t, lang }: { lead: Lead; t: Record<string, str
   const quoteDeadlineRaw = typeof specs.quote_deadline === 'string' ? specs.quote_deadline : null;
   const quoteDeadline = quoteDeadlineRaw ? (() => { try { return new Date(quoteDeadlineRaw).toLocaleDateString(lang === 'es' ? 'es-MX' : 'en-US'); } catch { return null; } })() : null;
   const reasons = lead.match_reasons || [];
+  const invited = Boolean(lead.invited);
   const hasFacts = Boolean(lead.request_kind || lead.quantity != null || lead.delivery_location || lead.preferred_timeline || quoteDeadline);
-  if (!hasFacts && reasons.length === 0) return null;
+  if (!hasFacts && reasons.length === 0 && !invited) return null;
   return (
     <div className="ld-oppfacts">
-      {hasFacts && (
+      {(hasFacts || invited) && (
         <div className="ld-oppchips">
+          {invited && (
+            <span className="ld-oppchip ld-oppinvite">
+              <UserPlus size={11} strokeWidth={2} aria-hidden="true" />
+              {t.directInvite}
+            </span>
+          )}
           {lead.request_kind && <span className="ld-oppchip ld-oppkind">{KIND_LABEL[lead.request_kind] || lead.request_kind}</span>}
           {lead.quantity != null && <span className="ld-oppchip">{t.qtyLabel} {lead.quantity}{qtyUnit ? ` ${qtyUnit}` : ''}</span>}
           {lead.delivery_location && <span className="ld-oppchip">{lead.delivery_location}</span>}
@@ -334,7 +349,11 @@ function OpportunityFacts({ lead, t, lang }: { lead: Lead; t: Record<string, str
           {quoteDeadline && <span className="ld-oppchip ld-oppdeadline">{t.quoteByLabel} {quoteDeadline}</span>}
         </div>
       )}
-      {reasons.length > 0 && <MatchReasons reasons={reasons} compact />}
+      {/* Honest match reason: an invited lead was never scored, so it gets
+          the ONE true reason ("Invited by the buyer") instead of the
+          real-overlap chips scoreVendors computes for auto-matched leads —
+          never both, never a fabricated score for a manual pick. */}
+      {invited ? <MatchReasons reasons={[t.invitedByBuyer]} compact /> : reasons.length > 0 && <MatchReasons reasons={reasons} compact />}
     </div>
   );
 }
@@ -1278,6 +1297,7 @@ const CSS = `
 .ld-oppchip{font-size:12px;font-weight:600;color:var(--spec-text-2nd,#615F72);background:var(--spec-surface,#EFEDF5);border:1px solid var(--spec-border,#E2DFEC);border-radius:99px;padding:4px 11px;white-space:nowrap;}
 .ld-oppkind{color:var(--spec-ink,#141320);text-transform:capitalize;}
 .ld-oppdeadline{color:#8A5D14;background:#FBF3E7;border-color:rgba(198,138,40,.35);}
+.ld-oppinvite{display:inline-flex;align-items:center;gap:4px;color:#fff;background:var(--spec-violet,#6C5CE0);border-color:var(--spec-violet,#6C5CE0);}
 /* Slice R3 — the structured quote template's per-kind extras + save-draft/revise/error affordances */
 .ld-qextras{display:flex;flex-direction:column;gap:10px;padding-top:2px;}
 .ld-autohint{margin:-2px 0 0;font-size:11.5px;color:var(--spec-text-2nd,#615F72);}
