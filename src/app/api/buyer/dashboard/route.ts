@@ -51,7 +51,7 @@ export async function GET() {
   // activity" signal for the buyer's own request card — no schema change.
   const { data: quotes } = await db
     .from('quote_requests')
-    .select('id, public_ref, kind, product_id, service_id, vendor_id, company, message, status, created_at, updated_at, quote_amount, quote_currency, quote_message, quote_timeline, quote_valid_until, quoted_at, buyer_decision, answers')
+    .select('id, public_ref, kind, product_id, service_id, vendor_id, company, message, status, created_at, updated_at, quote_amount, quote_currency, quote_message, quote_timeline, quote_valid_until, quoted_at, buyer_decision, answers, quote_payment_terms, quote_warranty')
     .ilike('email', emailMatch)
     .order('created_at', { ascending: false })
     .limit(100);

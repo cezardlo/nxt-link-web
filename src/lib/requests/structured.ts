@@ -173,6 +173,31 @@ export interface TechnologyQuoteExtras {
 }
 export type QuoteExtras = Partial<ProductQuoteExtras & ServiceQuoteExtras & TechnologyQuoteExtras>;
 
+/** Vendor quote TEMPLATE — live auto-calculated total (Slice R3,
+ * workplace/plans/rfq-seamless-build-2026-07-29.md: "total price auto-calc
+ * from unit + add-ons + shipping when applicable, editable"). Only 'product'
+ * has a per-unit breakdown to calculate FROM (unit_price × quantity +
+ * shipping_cost — installation/training are included/extra/not_available
+ * enums with no separate cost field in this slice, so they never enter the
+ * sum). Services/technology have no unit price to derive a total from — the
+ * vendor types the total directly there, so this returns null for any other
+ * kind or when unit_price itself is unset. Pure + dependency-free so the
+ * SAME function drives both the live client-side preview and its test
+ * (tests/rfq-quote-template.test.ts) — no separate "mirror" to drift. */
+export function autoCalcProductTotal(
+  extras: { unit_price: number | null | undefined; shipping_cost?: number | null | undefined },
+  quantity: number | null | undefined,
+): number | null {
+  const unitPrice = extras.unit_price;
+  if (unitPrice == null || !Number.isFinite(unitPrice) || unitPrice < 0) return null;
+  const qty = quantity != null && Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
+  const shipping = extras.shipping_cost != null && Number.isFinite(extras.shipping_cost) && extras.shipping_cost > 0
+    ? extras.shipping_cost : 0;
+  // Round to cents — floating point (e.g. 19.99 * 3) otherwise leaks a third
+  // decimal into the input the vendor sees.
+  return Math.round((unitPrice * qty + shipping) * 100) / 100;
+}
+
 const INSTALLATION_VALUES = ['included', 'extra', 'not_available'];
 const TRAINING_VALUES = ['included', 'extra'];
 const LICENSE_MODEL_VALUES = ['subscription', 'perpetual', 'tiered'];

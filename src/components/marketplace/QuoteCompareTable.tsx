@@ -27,6 +27,13 @@ export interface CompareTableRow {
   validUntil?: string | null;
   /** NXT//LINK fee if this quote is won. Omit to hide the fee column entirely. */
   feeAmount?: number | null;
+  /** Slice R3 — additive compare-table rows (trivially additive per the
+   * binding spec: the full card-deck redesign is R4, out of scope here).
+   * Both are display-only strings the vendor typed; omit/leave null on a row
+   * to leave that cell as "—" for it, and the COLUMN itself only renders at
+   * all when at least one row in the table actually has a value. */
+  paymentTerms?: string | null;
+  warranty?: string | null;
   status: CompareStatus;
   ref?: string | null;
 }
@@ -38,6 +45,8 @@ export interface CompareLabels {
   timeline: string;
   validUntil: string;
   feeIfWon: string;
+  paymentTerms: string;
+  warranty: string;
   status: string;
   lowest: string;
   awaiting: string;
@@ -59,6 +68,8 @@ export const DEFAULT_COMPARE_LABELS: CompareLabels = {
   timeline: 'Timeline',
   validUntil: 'Valid until',
   feeIfWon: 'Fee if won',
+  paymentTerms: 'Payment terms',
+  warranty: 'Warranty',
   status: 'Status',
   lowest: 'Lowest',
   awaiting: 'Awaiting',
@@ -112,6 +123,11 @@ export function QuoteCompareTable({
   const maxDays = dayVals.length ? Math.max(...dayVals) : 0;
   const minDays = dayVals.length ? Math.min(...dayVals) : 0;
   const showFee = rows.some((q) => q.feeAmount != null);
+  // Slice R3: additive columns — only take up table width when at least one
+  // competing quote actually has the data (old quotes pre-dating these
+  // columns stay exactly as compact as they always were).
+  const showPaymentTerms = rows.some((q) => q.paymentTerms);
+  const showWarranty = rows.some((q) => q.warranty);
 
   const statusLabel = (s: CompareStatus) => (s === 'accepted' ? labels.accepted : s === 'received' ? labels.received : labels.awaiting);
 
@@ -134,6 +150,8 @@ export function QuoteCompareTable({
               <th>{labels.quote}</th>
               <th>{labels.timeline}</th>
               <th>{labels.validUntil}</th>
+              {showPaymentTerms && <th>{labels.paymentTerms}</th>}
+              {showWarranty && <th>{labels.warranty}</th>}
               {showFee && <th>{labels.feeIfWon}</th>}
               <th>{labels.status}</th>
             </tr>
@@ -164,6 +182,8 @@ export function QuoteCompareTable({
                     )}
                   </td>
                   <td>{q.validUntil ? fmtDate(q.validUntil) : '—'}</td>
+                  {showPaymentTerms && <td className="qct-terms">{q.paymentTerms || '—'}</td>}
+                  {showWarranty && <td className="qct-terms">{q.warranty || '—'}</td>}
                   {showFee && <td className="qct-fee">{q.feeAmount != null ? money(q.feeAmount) : '—'}</td>}
                   <td><span className={`qct-stat ${q.status}`}>{statusLabel(q.status)}</span></td>
                 </tr>
@@ -199,6 +219,7 @@ export const QUOTE_COMPARE_TABLE_CSS = `
 .qct-bar i{display:block;height:100%;border-radius:99px;background:#6C5CE0;transition:width .3s ease;}
 .qct-bar i.best{background:#3B6EA5;}
 .qct-fee{color:var(--spec-violet-deep,#4A3DB0);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.qct-terms{color:var(--spec-ink,#141320);font-size:12.5px;max-width:180px;}
 .qct-wait{color:var(--spec-text-2nd,#615F72);font-weight:600;}
 .qct-lowest{display:inline-block;margin-left:7px;font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:99px;background:#E9F7F0;color:#1F7A54;vertical-align:middle;}
 .qct-stat{font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;white-space:nowrap;}
