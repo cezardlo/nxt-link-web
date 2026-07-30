@@ -12,9 +12,15 @@ import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle'
 import { PackageSearch, Inbox, Lightbulb, MessageCircle, Paperclip, Download, X, Store, Eye } from 'lucide-react';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
 import { useChatPolling, resolvePendingMessage, dropPendingMessage, type ChatMessage } from '@/components/marketplace/useChatPolling';
-import { QuoteCompareTable, QUOTE_COMPARE_TABLE_CSS, type CompareLabels, type CompareTableRow } from '@/components/marketplace/QuoteCompareTable';
+import { type CompareTableRow } from '@/components/marketplace/QuoteCompareTable';
+import { QuoteCompareDeck, QUOTE_COMPARE_DECK_CSS, type DeckLabels } from '@/components/marketplace/QuoteCompareDeck';
+import { OfferCard, OFFER_CARD_CSS, type OfferCardLabels, OFFER_CARD_LABELS_ES, DEFAULT_OFFER_CARD_LABELS } from '@/components/marketplace/OfferCard';
+import { DealTracker, DEAL_TRACKER_CSS, type DealTrackerLabels, DEAL_TRACKER_LABELS_ES, DEFAULT_DEAL_TRACKER_LABELS } from '@/components/marketplace/DealTracker';
 import { groupQuotesForCompare, describeAcceptedDeal } from '@/lib/buyer/compare';
 import { computeRequestActivity, isRequestStale, linkedQuotes, deriveRequestStage, type RequestStage } from '@/lib/buyer/requestStats';
+import { buildOfferTimeline, offerRevisionsForThread, type OfferRevisionInput, type LegacyOfferSource } from '@/lib/messages/offerTimeline';
+import { buildThreadTimeline, latestOffer } from '@/lib/messages/threadTimeline';
+import { deriveDealMilestone } from '@/lib/messages/dealTracker';
 import {
   ALLOWED_ATTACHMENT_EXTENSIONS, MAX_ATTACHMENTS_PER_MESSAGE, formatFileSize,
   validateAttachmentBatch,
@@ -131,6 +137,8 @@ const T: Record<Lang, Record<string, string>> = {
     cmpNote: 'Lowest price isn’t always the best value — weigh timeline and fit. Contact details stay hidden until you accept.',
     cmpFor: 'Comparing quotes for the same request',
     cmpPaymentTerms: 'Payment terms', cmpWarranty: 'Warranty',
+    // R4 comparison card deck (design addendum #1)
+    cmpDiffOnly: 'Show differences only', cmpCardsView: 'Cards', cmpTableView: 'Table', cmpBestValue: 'Best value',
     // Post-accept "what happens next" (FIX 2)
     dealInProgress: 'Deal in progress', connectedWith: 'You’re connected with',
     nextContactUnlocked: 'Contact details are now unlocked in your chat — you can share your phone and email with the vendor.',
@@ -218,6 +226,7 @@ const T: Record<Lang, Record<string, string>> = {
     cmpNote: 'El precio más bajo no siempre es la mejor opción — considera el tiempo y la compatibilidad. Los datos de contacto quedan ocultos hasta que aceptas.',
     cmpFor: 'Comparando cotizaciones de la misma solicitud',
     cmpPaymentTerms: 'Términos de pago', cmpWarranty: 'Garantía',
+    cmpDiffOnly: 'Mostrar solo diferencias', cmpCardsView: 'Tarjetas', cmpTableView: 'Tabla', cmpBestValue: 'Mejor valor',
     // Qué sigue después de aceptar (FIX 2)
     dealInProgress: 'Trato en progreso', connectedWith: 'Estás conectado con',
     nextContactUnlocked: 'Los datos de contacto ya están desbloqueados en tu chat — puedes compartir tu teléfono y correo con el proveedor.',
@@ -312,9 +321,38 @@ export default function BuyerDashboardPage() {
   const attachInputRef = useRef<HTMLInputElement>(null);
   const chatListRef = useRef<HTMLDivElement>(null);
   useEffect(() => { chatListRef.current?.scrollTo({ top: chatListRef.current.scrollHeight }); }, [chatMsgs, chatFor]);
+  // R4 offer-in-chat + pinned deal tracker — the open thread's proposal
+  // revision history + real "has the buyer seen it" / commission signal,
+  // both returned inline by GET /api/buyer/messages alongside the messages
+  // it already fetched (src/app/api/buyer/messages/route.ts). Refreshed on
+  // open AND on every chat poll tick (see useChatPolling's onData below) so
+  // a revision the vendor just sent shows up without a page reload.
+  const [offerProposals, setOfferProposals] = useState<OfferRevisionInput[]>([]);
+  const [offerCtx, setOfferCtx] = useState<{
+    buyerDecision: string | null;
+    buyerHasSeenOffer: boolean;
+    commission: { invoice_number?: string | null; status?: string | null } | null;
+    legacy: LegacyOfferSource;
+  } | null>(null);
+  const offerCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  function applyOfferData(data: Record<string, unknown>) {
+    const proposals = (data.proposals as OfferRevisionInput[] | undefined) || [];
+    setOfferProposals(proposals);
+    const offer = data.offer as {
+      buyer_decision: string | null; buyer_has_seen_offer: boolean;
+      commission: { invoice_number?: string | null; status?: string | null } | null;
+      legacy: LegacyOfferSource;
+    } | null;
+    if (offer) {
+      setOfferCtx({
+        buyerDecision: offer.buyer_decision, buyerHasSeenOffer: offer.buyer_has_seen_offer,
+        commission: offer.commission, legacy: offer.legacy,
+      });
+    }
+  }
   // Auto-refresh the open thread only — polls the existing GET /messages
   // endpoint (no Supabase browser-realtime; that needs new RLS, out of scope).
-  useChatPolling(chatFor, '/api/buyer/messages', setChatMsgs);
+  useChatPolling(chatFor, '/api/buyer/messages', setChatMsgs, 4000, applyOfferData);
   const [savedItems, setSavedItems] = useState<Array<{ listing_id: string; kind: string; name: string | null }>>([]);
   const [notifs, setNotifs] = useState<Array<{ id: string; title: string; read_at: string | null; created_at: string; type?: string; quote_request_id?: string | null }>>([]);
   const [notifUnread, setNotifUnread] = useState(0);
@@ -413,13 +451,23 @@ export default function BuyerDashboardPage() {
   }
   async function openChat(id: string) {
     setChatFor(id); setChatMsgs([]); setChatInput(''); setAttachFiles([]); setAttachError(null);
+    setOfferProposals([]); setOfferCtx(null);
     // Clear the local unread hint for this thread right away — the server
     // side "all read" only happens via the bell (no per-thread mark-read
     // endpoint), so this is a same-session visual clear, not persisted.
     setNotifs((ns) => ns.map((n) => (n.quote_request_id === id && n.type === 'message' && !n.read_at ? { ...n, read_at: new Date().toISOString() } : n)));
     const res = await fetch(`/api/buyer/messages?quote_request_id=${id}`);
     const data = await res.json();
-    if (data.ok) setChatMsgs(data.messages || []);
+    if (data.ok) { setChatMsgs(data.messages || []); applyOfferData(data); }
+  }
+  // R4 — jump the (internally-scrolling) chat list to the latest offer card,
+  // reduced-motion safe. Used by both the pinned DealTracker and the "See
+  // the offer" hint when accept/decline moved into the in-chat card.
+  function jumpToLatestOffer(id: string) {
+    const el = offerCardRefs.current[id];
+    if (!el) return;
+    const reduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
   }
   function attachErrorText(code?: string, fallback?: string): string {
     return (code && (t as Record<string, string>)[code]) || fallback || t.attachSendError;
@@ -513,17 +561,20 @@ export default function BuyerDashboardPage() {
   const hasActivity = requests.length > 0 || quotes.length > 0;
   // Localized column labels for the shared comparison table (no fee column on
   // the buyer dashboard — feeIfWon is unused here).
-  const cmpLabels: CompareLabels = {
+  const cmpLabels: DeckLabels = {
     title: t.cmpTitle, vendor: t.cmpVendor, quote: t.cmpQuote, timeline: t.cmpTimeline,
     validUntil: t.cmpValidUntil, feeIfWon: '', paymentTerms: t.cmpPaymentTerms, warranty: t.cmpWarranty,
     status: t.cmpStatus, lowest: t.cmpLowest,
     awaiting: t.cmpAwaiting, received: t.cmpReceived, accepted: t.cmpAccepted, sort: t.cmpSort,
     priceAsc: t.cmpPriceAsc, priceDesc: t.cmpPriceDesc, az: t.cmpAz, note: t.cmpNote,
+    showDifferencesOnly: t.cmpDiffOnly, cardsView: t.cmpCardsView, tableView: t.cmpTableView, bestValue: t.cmpBestValue,
   };
+  const offerLabels: OfferCardLabels = lang === 'es' ? OFFER_CARD_LABELS_ES : DEFAULT_OFFER_CARD_LABELS;
+  const trackerLabels: DealTrackerLabels = lang === 'es' ? DEAL_TRACKER_LABELS_ES : DEFAULT_DEAL_TRACKER_LABELS;
 
   return (
     <div className={`by ${ibmPlexSans.variable}`}>
-      <style dangerouslySetInnerHTML={{ __html: CSS + EMPTY_ACTION_CSS + ATTENTION_CSS + FIRSTRUN_CSS + QUOTE_COMPARE_TABLE_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: CSS + EMPTY_ACTION_CSS + ATTENTION_CSS + FIRSTRUN_CSS + QUOTE_COMPARE_DECK_CSS + OFFER_CARD_CSS + DEAL_TRACKER_CSS }} />
       <nav className="by-nav">
         <a className="by-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>{t.dashboardTag}</span></a>
         <div className="by-navlinks">
@@ -691,7 +742,7 @@ export default function BuyerDashboardPage() {
                 {compareGroups.map((g) => (
                   <div className="by-cmpgroup" key={g.key}>
                     <div className="by-cmpcaption">{t.cmpFor}{g.sourceRequest ? ` · ${g.sourceRequest}` : ''}</div>
-                    <QuoteCompareTable
+                    <QuoteCompareDeck
                       labels={cmpLabels}
                       locale={dateLocale}
                       rows={g.quotes.map((q): CompareTableRow => ({
@@ -706,6 +757,16 @@ export default function BuyerDashboardPage() {
                         status: q.buyer_decision === 'accepted' ? 'accepted' : q.quote_amount != null ? 'received' : 'awaiting',
                         ref: q.public_ref,
                       }))}
+                      renderActions={(row) => {
+                        const q = g.quotes.find((qq) => qq.id === row.id);
+                        if (!q || q.buyer_decision || q.quote_amount == null) return null;
+                        return (
+                          <>
+                            <button className="by-accept" disabled={decidingId === q.id} onClick={() => decide(q.id, 'accepted')}>{decidingId === q.id ? t.saving : `${t.accept} ${money(q.quote_amount, q.quote_currency)}`}</button>
+                            <button className="by-decline" disabled={decidingId === q.id} onClick={() => decide(q.id, 'declined')}>{t.decline}</button>
+                          </>
+                        );
+                      }}
                     />
                   </div>
                 ))}
@@ -748,20 +809,68 @@ export default function BuyerDashboardPage() {
                       )}
                       {/* Message the vendor — inside NXT//LINK */}
                       <div className="by-chat">
-                        {chatFor === q.id ? (
+                        {chatFor === q.id ? (() => {
+                          // R4 offer-in-chat + pinned deal tracker — merge
+                          // this thread's structured proposal history (or the
+                          // legacy single-quote fallback for pre-R3 leads)
+                          // with the plain chat messages into one
+                          // chronological timeline. See
+                          // src/lib/messages/offerTimeline.ts /
+                          // threadTimeline.ts / dealTracker.ts for the pure
+                          // derivation logic (fully unit-tested).
+                          const legacySource: LegacyOfferSource = offerCtx?.legacy || {
+                            id: q.id, quote_amount: q.quote_amount ?? null, quote_currency: q.quote_currency ?? null,
+                            quote_timeline: q.quote_timeline ?? null, quote_valid_until: q.quote_valid_until ?? null,
+                            quote_payment_terms: q.quote_payment_terms ?? null, quote_warranty: q.quote_warranty ?? null,
+                            quote_message: q.quote_message ?? null, quoted_at: q.quoted_at ?? null, created_at: q.created_at,
+                          };
+                          const buyerDecision = offerCtx?.buyerDecision ?? q.buyer_decision ?? null;
+                          const offerCards = buildOfferTimeline(
+                            offerRevisionsForThread(offerProposals, legacySource),
+                            { buyerDecision, buyerHasSeenOffer: offerCtx?.buyerHasSeenOffer ?? false },
+                          );
+                          const timeline = buildThreadTimeline(chatMsgs, offerCards);
+                          const latest = latestOffer(offerCards);
+                          const milestone = deriveDealMilestone({
+                            quoteAmount: latest?.total ?? null, hasRevision: offerCards.length > 1,
+                            buyerDecision, commission: offerCtx?.commission ?? null,
+                          });
+                          return (
                           <div className="by-chatbox">
                             <div className="by-chathead">
                               <span>{t.messageVendor}</span>
                               <span className="by-live" aria-hidden="true"><i />{t.live}</span>
                             </div>
+                            <DealTracker
+                              milestone={milestone}
+                              currentPrice={latest?.total ?? null}
+                              currentCurrency={latest?.currency}
+                              locale={dateLocale}
+                              labels={trackerLabels}
+                              onJumpToOffer={() => latest && jumpToLatestOffer(latest.id)}
+                            />
                             <div className="by-chatlist" ref={chatListRef}>
-                              {chatMsgs.length === 0 && <div className="by-chatempty">{t.noMessagesVendor}</div>}
-                              {chatMsgs.map((m) => (
-                                <div key={m.id} className={'by-bubble ' + (m.sender === 'buyer' ? 'me' : 'them') + (m.pending ? ' pending' : '')}>
-                                  {m.body && <div>{m.body}</div>}
-                                  {(m.attachments || []).length > 0 && (
+                              {timeline.length === 0 && <div className="by-chatempty">{t.noMessagesVendor}</div>}
+                              {timeline.map((item) => item.kind === 'offer' ? (
+                                <OfferCard
+                                  key={`offer-${item.offer.id}`}
+                                  card={item.offer}
+                                  labels={offerLabels}
+                                  locale={dateLocale}
+                                  cardRef={(el) => { offerCardRefs.current[item.offer.id] = el; }}
+                                  actions={item.offer.isLatest && !buyerDecision && item.offer.total != null ? (
+                                    <>
+                                      <button className="by-accept" disabled={decidingId === q.id} onClick={() => decide(q.id, 'accepted')}>{decidingId === q.id ? t.saving : `${t.accept} ${money(item.offer.total, item.offer.currency)}`}</button>
+                                      <button className="by-decline" disabled={decidingId === q.id} onClick={() => decide(q.id, 'declined')}>{t.decline}</button>
+                                    </>
+                                  ) : undefined}
+                                />
+                              ) : (
+                                <div key={item.message.id} className={'by-bubble ' + (item.message.sender === 'buyer' ? 'me' : 'them') + (item.message.pending ? ' pending' : '')}>
+                                  {item.message.body && <div>{item.message.body}</div>}
+                                  {(item.message.attachments || []).length > 0 && (
                                     <div className="by-attachlist">
-                                      {(m.attachments || []).map((a) => (
+                                      {(item.message.attachments || []).map((a) => (
                                         a.url ? (
                                           <a key={a.id} className="by-attachitem" href={a.url} target="_blank" rel="noreferrer" title={t.downloadFile}>
                                             <Paperclip size={11} strokeWidth={2} aria-hidden="true" />
@@ -779,7 +888,7 @@ export default function BuyerDashboardPage() {
                                       ))}
                                     </div>
                                   )}
-                                  <small>{m.pending ? t.sendingMsg : new Date(m.created_at).toLocaleString(dateLocale)}</small>
+                                  <small>{item.message.pending ? t.sendingMsg : new Date(item.message.created_at).toLocaleString(dateLocale)}</small>
                                 </div>
                               ))}
                             </div>
@@ -813,7 +922,8 @@ export default function BuyerDashboardPage() {
                             {q.buyer_decision !== 'accepted' && <p className="by-attachhint by-attachwarn">{t.attachContentsWarning}</p>}
                             {q.buyer_decision !== 'accepted' && <p className="by-guardnote">{t.guardChat}</p>}
                           </div>
-                        ) : (
+                          );
+                        })() : (
                           <button className="by-chatopen" onClick={() => openChat(q.id)}>
                             <MessageCircle size={14} strokeWidth={2} aria-hidden="true" />
                             {t.messageVendor}

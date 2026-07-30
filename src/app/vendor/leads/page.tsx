@@ -9,11 +9,16 @@ import { IBM_Plex_Sans } from 'next/font/google';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
 import VendorNav from '@/components/VendorNav';
-import { Megaphone, MessageCircle, Inbox, Eye, Reply, Trophy, XCircle, Paperclip, Download, X, type LucideIcon } from 'lucide-react';
+import { Megaphone, MessageCircle, Inbox, Eye, Reply, Trophy, XCircle, Paperclip, Download, X, Send, type LucideIcon } from 'lucide-react';
 import { MatchReasons, MATCH_REASONS_CSS } from '@/components/marketplace/MatchReasons';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
 import { calculateFee } from '@/lib/fees/engine';
 import { useChatPolling, resolvePendingMessage, dropPendingMessage, type ChatMessage } from '@/components/marketplace/useChatPolling';
+import { OfferCard, OFFER_CARD_CSS, type OfferCardLabels, OFFER_CARD_LABELS_ES, DEFAULT_OFFER_CARD_LABELS } from '@/components/marketplace/OfferCard';
+import { DealTracker, DEAL_TRACKER_CSS, type DealTrackerLabels, DEAL_TRACKER_LABELS_ES, DEFAULT_DEAL_TRACKER_LABELS } from '@/components/marketplace/DealTracker';
+import { buildOfferTimeline, offerRevisionsForThread, type OfferRevisionInput, type LegacyOfferSource } from '@/lib/messages/offerTimeline';
+import { buildThreadTimeline, latestOffer } from '@/lib/messages/threadTimeline';
+import { deriveDealMilestone } from '@/lib/messages/dealTracker';
 import {
   ALLOWED_ATTACHMENT_EXTENSIONS, MAX_ATTACHMENTS_PER_MESSAGE, formatFileSize,
   validateAttachmentBatch,
@@ -385,9 +390,39 @@ export default function VendorLeadsPage() {
   const attachInputRef = useRef<HTMLInputElement>(null);
   const chatListRef = useRef<HTMLDivElement>(null);
   useEffect(() => { chatListRef.current?.scrollTo({ top: chatListRef.current.scrollHeight }); }, [chatMsgs, chatFor]);
+  // R4 offer-in-chat + pinned deal tracker — MY proposal revision history for
+  // the open thread + whether the buyer has read the "you got a quote"
+  // notification, both returned inline by GET /api/vendor/messages
+  // (src/app/api/vendor/messages/route.ts). buyer_decision/quote_amount/
+  // commission for milestone derivation already live on the lead itself
+  // (GET /api/vendor/leads) — no need to duplicate those here.
+  const [offerProposals, setOfferProposals] = useState<OfferRevisionInput[]>([]);
+  const [buyerHasSeenOffer, setBuyerHasSeenOffer] = useState(false);
+  const offerCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const quoteSectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  function applyOfferData(data: Record<string, unknown>) {
+    setOfferProposals((data.proposals as OfferRevisionInput[] | undefined) || []);
+    setBuyerHasSeenOffer(!!data.buyer_has_seen_offer);
+  }
   // Auto-refresh the open thread only — polls the existing GET /messages
   // endpoint (no Supabase browser-realtime; that needs new RLS, out of scope).
-  useChatPolling(chatFor, '/api/vendor/messages', setChatMsgs);
+  useChatPolling(chatFor, '/api/vendor/messages', setChatMsgs, 4000, applyOfferData);
+  function jumpToLatestOffer(id: string) {
+    const el = offerCardRefs.current[id];
+    if (!el) return;
+    const reduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
+  }
+  // "Send offer" in the chat composer — opens/links the EXISTING R3 quote
+  // template (openQuoteForm, defined below) rather than duplicating a second
+  // form inside the thread, then scrolls to it (reduced-motion safe).
+  function sendOfferFromChat(l: Lead) {
+    openQuoteForm(l);
+    const el = quoteSectionRefs.current[l.id];
+    if (!el) return;
+    const reduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+  }
   const [notifs, setNotifs] = useState<Array<{ id: string; title: string; read_at: string | null; created_at: string; type?: string; quote_request_id?: string | null }>>([]);
   const [notifUnread, setNotifUnread] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -570,13 +605,14 @@ export default function VendorLeadsPage() {
 
   async function openChat(leadId: string) {
     setChatFor(leadId); setChatMsgs([]); setChatInput(''); setAttachFiles([]); setAttachError(null);
+    setOfferProposals([]); setBuyerHasSeenOffer(false);
     // Clear the local unread hint for this thread right away — the server
     // side "all read" only happens via the bell (no per-thread mark-read
     // endpoint), so this is a same-session visual clear, not persisted.
     setNotifs((ns) => ns.map((n) => (n.quote_request_id === leadId && n.type === 'message' && !n.read_at ? { ...n, read_at: new Date().toISOString() } : n)));
     const res = await fetch(`/api/vendor/messages?quote_request_id=${leadId}`);
     const data = await res.json();
-    if (data.ok) setChatMsgs(data.messages || []);
+    if (data.ok) { setChatMsgs(data.messages || []); applyOfferData(data); }
   }
   function attachErrorText(code?: string, fallback?: string): string {
     return (code && (t as Record<string, string>)[code]) || fallback || t.attachSendError;
@@ -654,9 +690,12 @@ export default function VendorLeadsPage() {
     setAttachBusy(false);
   }
 
+  const offerLabels: OfferCardLabels = lang === 'es' ? OFFER_CARD_LABELS_ES : DEFAULT_OFFER_CARD_LABELS;
+  const trackerLabels: DealTrackerLabels = lang === 'es' ? DEAL_TRACKER_LABELS_ES : DEFAULT_DEAL_TRACKER_LABELS;
+
   return (
     <div className={`ld ${ibmPlexSans.variable}`}>
-      <style dangerouslySetInnerHTML={{ __html: CSS + MATCH_REASONS_CSS + EMPTY_ACTION_CSS + '.ld-opencard .mrx-chips{margin-bottom:8px;}' }} />
+      <style dangerouslySetInnerHTML={{ __html: CSS + MATCH_REASONS_CSS + EMPTY_ACTION_CSS + OFFER_CARD_CSS + DEAL_TRACKER_CSS + '.ld-opencard .mrx-chips{margin-bottom:8px;}' }} />
       <VendorNav
         active="leads"
         extra={
@@ -790,7 +829,7 @@ export default function VendorLeadsPage() {
                   )}
 
                   {/* Quote answer + commission — the deal stays inside NXT//LINK */}
-                  <div className="ld-quote">
+                  <div className="ld-quote" ref={(el) => { quoteSectionRefs.current[l.id] = el; }}>
                     {l.buyer_decision && <div className={'ld-decision ' + l.buyer_decision}>{l.buyer_decision === 'accepted' ? t.buyerAccepted : t.buyerDeclined}</div>}
                     {l.quote_amount != null && openQuote !== l.id && (
                       <div className="ld-qsum">
@@ -998,20 +1037,58 @@ export default function VendorLeadsPage() {
 
                   {/* Buyer <-> vendor messages, inside NXT//LINK */}
                   <div className="ld-chat">
-                    {chatFor === l.id ? (
+                    {chatFor === l.id ? (() => {
+                      // R4 offer-in-chat + pinned deal tracker — see the
+                      // matching block in src/app/buyer/page.tsx for the full
+                      // rationale; this mirrors it using the lead object's
+                      // own quote_amount/buyer_decision/commission (already
+                      // fetched by GET /api/vendor/leads) instead of a second
+                      // "offer" payload, since the vendor already has them.
+                      const legacySource: LegacyOfferSource = {
+                        id: l.id, quote_amount: l.quote_amount ?? null, quote_currency: l.quote_currency ?? null,
+                        quote_timeline: l.quote_timeline ?? null, quote_valid_until: l.quote_valid_until ?? null,
+                        quote_payment_terms: l.quote_payment_terms ?? null, quote_warranty: l.quote_warranty ?? null,
+                        quote_message: l.quote_message ?? null, quoted_at: l.quoted_at ?? null, created_at: l.created_at,
+                      };
+                      const offerCards = buildOfferTimeline(
+                        offerRevisionsForThread(offerProposals, legacySource),
+                        { buyerDecision: l.buyer_decision ?? null, buyerHasSeenOffer },
+                      );
+                      const timeline = buildThreadTimeline(chatMsgs, offerCards);
+                      const latest = latestOffer(offerCards);
+                      const milestone = deriveDealMilestone({
+                        quoteAmount: latest?.total ?? null, hasRevision: offerCards.length > 1,
+                        buyerDecision: l.buyer_decision ?? null,
+                        commission: l.commission ? { invoice_number: l.commission.invoice_number, status: l.commission.status } : null,
+                      });
+                      return (
                       <div className="ld-chatbox">
                         <div className="ld-chathead">
                           <span>{t.messages}</span>
                           <span className="ld-live" aria-hidden="true"><i />{t.live}</span>
                         </div>
+                        <DealTracker
+                          milestone={milestone}
+                          currentPrice={latest?.total ?? null}
+                          currentCurrency={latest?.currency}
+                          labels={trackerLabels}
+                          onJumpToOffer={() => latest && jumpToLatestOffer(latest.id)}
+                        />
                         <div className="ld-chatlist" ref={chatListRef} aria-live="polite" aria-atomic="false" aria-relevant="additions">
-                          {chatMsgs.length === 0 && <div className="ld-chatempty">{t.noMessages}</div>}
-                          {chatMsgs.map((m) => (
-                            <div key={m.id} className={'ld-bubble ' + (m.sender === 'vendor' ? 'me' : 'them') + (m.pending ? ' pending' : '')}>
-                              {m.body && <div>{m.body}</div>}
-                              {(m.attachments || []).length > 0 && (
+                          {timeline.length === 0 && <div className="ld-chatempty">{t.noMessages}</div>}
+                          {timeline.map((item) => item.kind === 'offer' ? (
+                            <OfferCard
+                              key={`offer-${item.offer.id}`}
+                              card={item.offer}
+                              labels={offerLabels}
+                              cardRef={(el) => { offerCardRefs.current[item.offer.id] = el; }}
+                            />
+                          ) : (
+                            <div key={item.message.id} className={'ld-bubble ' + (item.message.sender === 'vendor' ? 'me' : 'them') + (item.message.pending ? ' pending' : '')}>
+                              {item.message.body && <div>{item.message.body}</div>}
+                              {(item.message.attachments || []).length > 0 && (
                                 <div className="ld-attachlist">
-                                  {(m.attachments || []).map((a) => (
+                                  {(item.message.attachments || []).map((a) => (
                                     a.url ? (
                                       <a key={a.id} className="ld-attachitem" href={a.url} target="_blank" rel="noreferrer" title={t.downloadFile}>
                                         <Paperclip size={11} strokeWidth={2} aria-hidden="true" />
@@ -1029,10 +1106,16 @@ export default function VendorLeadsPage() {
                                   ))}
                                 </div>
                               )}
-                              <small>{m.pending ? t.sendingMsg : new Date(m.created_at).toLocaleString()}</small>
+                              <small>{item.message.pending ? t.sendingMsg : new Date(item.message.created_at).toLocaleString()}</small>
                             </div>
                           ))}
                         </div>
+                        {(l.quote_amount == null || canReviseQuote(l)) && (
+                          <button type="button" className="ld-sendofferbtn" onClick={() => sendOfferFromChat(l)}>
+                            <Send size={13} strokeWidth={2} aria-hidden="true" />
+                            {l.quote_amount != null ? t.updateQuote : t.sendQuoteBtn}
+                          </button>
+                        )}
                         {attachFiles.length > 0 && (
                           <div className="ld-attachchips">
                             {attachFiles.map((f, i) => (
@@ -1063,7 +1146,8 @@ export default function VendorLeadsPage() {
                         {l.buyer_decision !== 'accepted' && <p className="ld-attachhint ld-attachwarn">{t.attachContentsWarning}</p>}
                         {l.buyer_decision !== 'accepted' && <p className="ld-guardnote">{t.guardNote}</p>}
                       </div>
-                    ) : (
+                      );
+                    })() : (
                       <button className="ld-chatopen" onClick={() => openChat(l.id)}>
                         <MessageCircle size={14} strokeWidth={2} aria-hidden="true" />
                         {t.messages}
@@ -1171,6 +1255,7 @@ const CSS = `
 .ld-qsum b{color:var(--spec-ink,#141320);}
 .ld-prot{color:var(--spec-text-2nd,#615F72);font-size:12px;}
 .ld-qopen{margin-top:10px;font-family:inherit;font-size:12.5px;font-weight:600;background:rgba(108,92,224,.1);border:1px solid var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);border-radius:9px;padding:8px 14px;cursor:pointer;}
+.ld-sendofferbtn{display:inline-flex;align-items:center;gap:6px;margin-top:10px;font-family:inherit;font-size:12.5px;font-weight:600;background:rgba(108,92,224,.1);border:1px solid var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);border-radius:9px;padding:8px 14px;cursor:pointer;}
 .ld-qform{display:flex;flex-direction:column;gap:10px;background:var(--spec-surface,#EFEDF5);border:1px solid var(--spec-border,#E2DFEC);border-radius:12px;padding:14px;margin-top:6px;}
 .ld-qrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
 @media(max-width:600px){.ld-qrow{grid-template-columns:1fr;}}

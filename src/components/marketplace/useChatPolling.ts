@@ -58,14 +58,22 @@ export function dropPendingMessage(list: ChatMessage[], tempId: string): ChatMes
  *   the next tick once the tab is visible again.
  * - Exactly one interval at a time: tracked in a ref, cleared on thread
  *   change, close (threadId -> null), and unmount.
+ *
+ * `onData` (R4, optional) fires with the full parsed response on every
+ * successful tick — lets a caller keep OTHER thread-scoped state fresh (e.g.
+ * the offer-in-chat proposal history / DealTracker milestone) off the SAME
+ * poll, instead of running a second interval.
  */
 export function useChatPolling(
   threadId: string | null,
   endpoint: string,
   setMessages: Dispatch<SetStateAction<ChatMessage[]>>,
   intervalMs = 4000,
+  onData?: (data: Record<string, unknown>) => void,
 ) {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const onDataRef = useRef(onData);
+  onDataRef.current = onData;
 
   useEffect(() => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
@@ -76,7 +84,10 @@ export function useChatPolling(
       try {
         const res = await fetch(`${endpoint}?quote_request_id=${threadId}`);
         const data = await res.json();
-        if (data?.ok) setMessages((prev) => mergeChatThread(prev, data.messages || []));
+        if (data?.ok) {
+          setMessages((prev) => mergeChatThread(prev, data.messages || []));
+          onDataRef.current?.(data);
+        }
       } catch {
         // Transient network hiccup — the next tick retries; no need to surface an error for a background refresh.
       }
@@ -87,5 +98,7 @@ export function useChatPolling(
     };
     // setMessages (a useState setter) is stable across renders, so this effect
     // correctly restarts only when the open thread or endpoint changes.
+    // onData is read via a ref so passing a fresh inline closure each render
+    // never restarts the interval.
   }, [threadId, endpoint, setMessages, intervalMs]);
 }
