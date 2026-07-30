@@ -560,7 +560,7 @@ export default function VendorStorefrontPage() {
             )}
 
             {d.certifications.length > 0 && (
-              <div className="vs-card" id="certifications"><h2>{t.certifications}</h2>{d.certifications.map((c) => <div key={c.id} className="vs-cert"><span className="vs-certi"><ShieldCheck size={15} strokeWidth={1.75} aria-hidden="true" /></span>{c.name}{c.issuer ? ` · ${c.issuer}` : ''}</div>)}</div>
+              <div className="vs-card"><h2>{t.certifications}</h2>{d.certifications.map((c) => <div key={c.id} className="vs-cert"><span className="vs-certi"><ShieldCheck size={15} strokeWidth={1.75} aria-hidden="true" /></span>{c.name}{c.issuer ? ` · ${c.issuer}` : ''}</div>)}</div>
             )}
 
             {d.team.length > 0 && (
@@ -719,10 +719,6 @@ const CSS = `
 .vs-coverage{display:flex;flex-direction:column;gap:7px;font-size:13px;color:var(--spec-ink);}
 .vs-coverage div{display:flex;align-items:center;gap:8px;}
 .vs-dot{width:7px;height:7px;border-radius:50%;background:var(--spec-success);}
-/* Deep-link target for the listing-detail supplier trust card's "N
-   certifications" link (#certifications) — same offset as .vs-grid section
-   so the sticky header never covers the heading it jumps to. */
-#certifications{scroll-margin-top:130px;}
 .vs-cert{display:flex;align-items:center;gap:9px;font-size:13px;padding:7px 0;color:var(--spec-ink);}
 .vs-certi{flex-shrink:0;}
 .vs-team{display:flex;flex-direction:column;gap:13px;}
