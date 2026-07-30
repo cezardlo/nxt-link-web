@@ -10,6 +10,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { IBM_Plex_Sans } from 'next/font/google';
+import { BadgeCheck } from 'lucide-react';
 import { levelAtLeast } from '@/components/marketplace/TrustBadges';
 import AddToCartButton from '@/components/cart/AddToCartButton';
 import { useLang, type Lang } from '@/components/LanguageToggle';
@@ -854,13 +855,17 @@ function ListingCard({ c, lang, saved, inCompare, onSave, onCompare }: { c: Card
         {/* No repeat of "Product"/"Service" here — the kind badge right below
             already says it (fix for cards without a photo showing it twice). */}
         {c.image_url ? <img src={c.image_url} alt={c.name} loading="lazy" /> : <div className="mk-noimg">NXT//LINK</div>}
+        {/* Verified signal promoted to a small corner chip on the photo
+            (photo-forward polish, 2026-07-30) — same condition/text/title as
+            before, just repositioned off the badge row so the image carries
+            the one primary trust signal at a glance. */}
+        {levelAtLeast(c.vendor_verification_level, 'identity_verified')
+          ? <span className="mk-verifiedchip" title={es ? 'La identidad del dueño de este proveedor fue verificada por NXT//LINK' : "This vendor's owner identity was verified by NXT//LINK"}><BadgeCheck size={12} aria-hidden="true" />{es ? 'Identidad verificada' : 'Verified identity'}</span>
+          : c.vendor_verified && <span className="mk-verifiedchip" title={es ? 'El negocio de este proveedor fue revisado y aprobado por NXT//LINK' : "This vendor's business was reviewed and approved by NXT//LINK"}><BadgeCheck size={12} aria-hidden="true" />{es ? 'Verificado' : 'Verified'}</span>}
       </Link>
       <div className="mk-card-body">
         <div className="mk-kindrow">
           <span className={'mk-kind ' + c.kind}>{es ? KIND_LABEL_ES[c.kind] : c.kind}</span>
-          {levelAtLeast(c.vendor_verification_level, 'identity_verified')
-            ? <span className="mk-badge trust" title={es ? 'La identidad del dueño de este proveedor fue verificada por NXT//LINK' : "This vendor's owner identity was verified by NXT//LINK"}>{es ? 'Identidad verificada' : 'Verified identity'}</span>
-            : c.vendor_verified && <span className="mk-badge trust" title={es ? 'El negocio de este proveedor fue revisado y aprobado por NXT//LINK' : "This vendor's business was reviewed and approved by NXT//LINK"}>{es ? 'Verificado' : 'Verified'}</span>}
           {levelAtLeast(c.vendor_verification_level, 'insurance_reviewed') && <span className="mk-badge trust" title={es ? 'Comprobante de seguro registrado con NXT//LINK' : 'Proof of insurance on file with NXT//LINK'}>{es ? 'Asegurado' : 'Insured'}</span>}
           {levelAtLeast(c.vendor_verification_level, 'certifications_reviewed') && <span className="mk-badge cert" title={es ? 'Certificaciones de la industria revisadas por NXT//LINK' : 'Industry certifications reviewed by NXT//LINK'}>{es ? 'Certificado' : 'Certified'}</span>}
           {c.pilot?.available && <span className="mk-badge" title={es ? 'Puedes probarlo antes de comprar (piloto/demo disponible)' : 'You can test this before buying (pilot/demo available)'}>{es ? 'Piloto' : 'Pilot'}</span>}
@@ -879,11 +884,19 @@ function ListingCard({ c, lang, saved, inCompare, onSave, onCompare }: { c: Card
             <span className="mk-rating">★ {c.vendor_rating.toFixed(1)} <small>({c.vendor_review_count})</small></span>
           )}
         </div>
+        {/* Price promoted to its own bold line (photo-forward polish,
+            2026-07-30) — same data/fromPrice() logic as before, just given
+            visual weight of its own instead of sharing the small meta row
+            with lead-time/response. Mono per the design system's own rule
+            ("IBM Plex Mono for anything a person will compare or quote:
+            money"). */}
+        {(c.pricing?.range || c.pricing?.model || c.pricing_model) && (
+          <div className="mk-price">{c.pricing?.range ? fromPrice(c.pricing.range) : (c.pricing?.model || c.pricing_model)}</div>
+        )}
         {c.best_for.length > 0 && <div className="mk-tags">{c.best_for.slice(0, 3).map((t) => <span key={t}>{t}</span>)}</div>}
         <div className="mk-meta">
           {c.kind === 'product' && c.lead_time && <span>{es ? 'Tiempo de entrega' : 'Lead time'}: {c.lead_time}</span>}
           {c.kind === 'service' && c.response_time && <span>{es ? 'Respuesta' : 'Response'}: {c.response_time}</span>}
-          {(c.pricing?.range || c.pricing?.model || c.pricing_model) && <span>{c.pricing?.range ? fromPrice(c.pricing.range) : (c.pricing?.model || c.pricing_model)}</span>}
         </div>
         <div className="mk-actions">
           <button className={'mk-mini' + (saved ? ' on' : '')} onClick={onSave}>{saved ? (es ? 'Guardado' : 'Saved') : (es ? 'Guardar' : 'Save')}</button>
@@ -1168,10 +1181,21 @@ const CSS = `
 .mk-cnames b{color:var(--spec-violet-deep);}
 .mk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px;}
 .mk-card{background:#fff;border:1px solid var(--spec-border);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;transition:border-color var(--spec-duration-fast) var(--spec-ease),transform var(--spec-duration-fast) var(--spec-ease),box-shadow var(--spec-duration-fast) var(--spec-ease);}
+/* Hover lift per the motion vocabulary (translateY(-2px) + soft shadow —
+   already this shape, kept as-is) extended with a quiet photo zoom so the
+   card reads as photo-forward on interaction, not just on the border. */
 .mk-card:hover{border-color:var(--spec-violet);transform:translateY(-2px);box-shadow:0 16px 32px -18px rgba(20,19,32,.22);}
-.mk-card-img{display:block;height:150px;background:var(--spec-surface);}
-.mk-card-img img{width:100%;height:100%;object-fit:cover;}
+.mk-card:hover .mk-card-img img{transform:scale(1.035);}
+/* Photo-forward polish (2026-07-30): taller, edge-to-edge image area (was
+   150px) so the photo carries the card, same object-fit:cover crop. */
+.mk-card-img{position:relative;display:block;height:184px;background:var(--spec-surface);overflow:hidden;}
+.mk-card-img img{width:100%;height:100%;object-fit:cover;transition:transform var(--spec-duration-fast) var(--spec-ease);}
 .mk-noimg{height:100%;display:grid;place-items:center;color:var(--spec-text-2nd);font-size:13px;letter-spacing:.15em;text-transform:uppercase;}
+/* Verified signal as a small corner chip on the photo (moved out of the
+   badge row) — solid near-opaque surface so it stays legible over any
+   photo, small enough to stay a quiet trust cue, not a banner. */
+.mk-verifiedchip{position:absolute;top:10px;right:10px;display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:99px;background:rgba(255,255,255,.96);color:#1F7A54;font-size:10.5px;font-weight:700;box-shadow:0 2px 8px rgba(20,19,32,.18);}
+.mk-verifiedchip svg{flex-shrink:0;}
 .mk-card-body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:7px;flex:1;}
 .mk-kindrow{display:flex;flex-wrap:wrap;gap:6px;}
 .mk-kind{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:99px;}
@@ -1190,6 +1214,10 @@ const CSS = `
 .mk-vlink:hover{color:var(--spec-violet-deep);text-decoration:underline;}
 .mk-rating{margin-left:8px;color:#8A5D14;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums;}
 .mk-rating small{color:var(--spec-text-2nd);font-weight:400;}
+/* Bolder, standalone price line (photo-forward polish, 2026-07-30) — mono
+   per the design system's own rule for anything a person compares/quotes
+   ("From $X · final in quote" text is unchanged, fromPrice() untouched). */
+.mk-price{font-family:var(--font-ibm-plex-mono);font-size:16.5px;font-weight:700;color:var(--spec-ink);letter-spacing:-.01em;}
 .mk-tags{display:flex;flex-wrap:wrap;gap:5px;}
 .mk-tags span{font-size:11px;color:var(--spec-violet-deep);background:rgba(108,92,224,.08);padding:3px 8px;border-radius:6px;}
 .mk-meta{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--spec-text-2nd);margin-top:auto;padding-top:4px;font-variant-numeric:tabular-nums;}
@@ -1201,7 +1229,7 @@ const CSS = `
 .mk-quote:hover{background:var(--spec-violet-deep);}
 a.mk-quote:active{transform:scale(.98);transition:transform .1s ease;}
 .mk-skeletons{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px;}
-.mk-skel{height:290px;border-radius:16px;background:linear-gradient(100deg,#EFEDF5 30%,#E4E1EF 50%,#EFEDF5 70%);background-size:200% 100%;animation:mkpulse 1.3s ease-in-out infinite;}
+.mk-skel{height:320px;border-radius:16px;background:linear-gradient(100deg,#EFEDF5 30%,#E4E1EF 50%,#EFEDF5 70%);background-size:200% 100%;animation:mkpulse 1.3s ease-in-out infinite;}
 @keyframes mkpulse{0%{background-position:100% 0;}100%{background-position:-100% 0;}}
 @media (prefers-reduced-motion:reduce){.mk-skel{animation:none;}}
 .mk-empty{text-align:center;color:var(--spec-text-2nd);padding:50px 0;}

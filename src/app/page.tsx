@@ -461,6 +461,17 @@ export default function Home() {
                 <Link key={value} href={`/marketplace?q=${encodeURIComponent(value)}`}>{label}</Link>
               ))}
             </div>
+
+            {/* Inline steps teaser (2026-07-30 light-hero pass) — reuses the
+                How-it-works step TITLES verbatim (t.step1Title/2/3 — same
+                dict entries the full section below renders, no new copy).
+                A quiet one-line preview under the search; the full section
+                with descriptions stays at #how-it-works, unchanged. */}
+            <ol className="hp-herosteps" aria-label={t.howHeading}>
+              <li className="hp-herostep"><span className="hp-herostepnum" aria-hidden="true">1</span>{t.step1Title}</li>
+              <li className="hp-herostep"><span className="hp-herostepnum" aria-hidden="true">2</span>{t.step2Title}</li>
+              <li className="hp-herostep"><span className="hp-herostepnum" aria-hidden="true">3</span>{t.step3Title}</li>
+            </ol>
           </div>
 
           {/* Join card — replaced the old "tell vendors what you need" RFQ
@@ -700,24 +711,26 @@ const CSS = `
 .hp-sronly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 .hp a:focus-visible,.hp button:focus-visible,.hp input:focus-visible{outline:3px solid rgba(108,92,224,.38);outline-offset:3px;}
 
-/* Hero */
-.hp-hero{position:relative;overflow:hidden;background:var(--spec-ink);}
+/* Hero — soft violet-gradient backdrop with a floating white card
+   (2026-07-30 light restyle, per workplace/design/references/
+   landing-soft-gradient-hero-2026-07-30.webp — layout/feel reference only,
+   never its brand/copy/blue palette). Structure and every string are
+   UNCHANGED from the approved dark-hero pass; only the visual treatment
+   moved from a dark ink band to this light system. Built entirely from
+   existing --spec-* tokens — no new colors introduced. */
+.hp-hero{position:relative;overflow:hidden;padding:44px 22px 52px;background:linear-gradient(135deg,var(--spec-violet-bg) 0%,var(--spec-surface) 55%,var(--spec-warm-white) 100%);}
 .hp-herobg{position:absolute;inset:0;background:
-  repeating-linear-gradient(118deg,transparent 0 26px,rgba(169,157,242,.07) 26px 29px),
-  linear-gradient(rgba(169,157,242,.05) 1px,transparent 1px),
-  linear-gradient(90deg,rgba(169,157,242,.05) 1px,transparent 1px),
-  radial-gradient(760px 440px at 88% -12%,rgba(108,92,224,.38),transparent 60%);
-  background-size:auto,64px 64px,64px 64px,auto;
-  mask-image:linear-gradient(180deg,rgba(0,0,0,.9),rgba(0,0,0,.5));
+  radial-gradient(680px 420px at 88% -10%,rgba(169,157,242,.32),transparent 62%),
+  radial-gradient(520px 360px at 4% 105%,rgba(108,92,224,.14),transparent 65%);
   pointer-events:none;}
-.hp-heroin{position:relative;max-width:1200px;margin:0 auto;padding:56px 22px 60px;display:grid;grid-template-columns:1.2fr .8fr;gap:48px;align-items:center;}
+.hp-heroin{position:relative;max-width:1160px;margin:0 auto;padding:clamp(28px,4vw,48px);display:grid;grid-template-columns:1.2fr .8fr;gap:48px;align-items:center;background:#fff;border-radius:var(--spec-radius-lg);box-shadow:0 4px 12px rgba(108,92,224,.08),0 30px 60px -32px rgba(20,19,32,.14);}
 .hp-herocol{min-width:0;}
-.hp-eyebrow{display:block;font-family:var(--font-ibm-plex-mono);font-size:12px;font-weight:600;letter-spacing:var(--spec-tracking-eyebrow);text-transform:uppercase;color:var(--spec-lilac);}
-.hp-hero h1{color:#F8F7FB;font-size:clamp(30px,4.6vw,52px);font-weight:700;letter-spacing:-.03em;line-height:1.04;margin:14px 0 14px;max-width:18ch;text-wrap:balance;}
-.hp-herobody{max-width:56ch;margin:0;color:rgba(255,255,255,.78);font-size:15.5px;line-height:1.65;}
+.hp-eyebrow{display:block;font-family:var(--font-ibm-plex-mono);font-size:12px;font-weight:600;letter-spacing:var(--spec-tracking-eyebrow);text-transform:uppercase;color:var(--spec-violet-deep);}
+.hp-hero h1{color:var(--spec-ink);font-size:clamp(30px,4.6vw,52px);font-weight:700;letter-spacing:-.03em;line-height:1.04;margin:14px 0 14px;max-width:18ch;text-wrap:balance;}
+.hp-herobody{max-width:56ch;margin:0;color:var(--spec-text-2nd);font-size:15.5px;line-height:1.65;}
 
-.hp-searchform{min-height:60px;max-width:640px;margin-top:26px;padding:6px 6px 6px 18px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;border:2px solid #fff;border-radius:var(--spec-radius-lg);background:#fff;box-shadow:0 24px 56px -26px rgba(0,0,0,.75);}
-.hp-searchform:focus-within{border-color:var(--spec-lilac);box-shadow:0 0 0 4px rgba(169,157,242,.18),0 24px 56px -26px rgba(0,0,0,.75);}
+.hp-searchform{min-height:60px;max-width:640px;margin-top:26px;padding:6px 6px 6px 18px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;border:1.5px solid var(--spec-border);border-radius:var(--spec-radius-lg);background:var(--spec-surface);box-shadow:0 1px 2px rgba(20,19,32,.04);transition:border-color var(--spec-duration-fast) var(--spec-ease),background var(--spec-duration-fast) var(--spec-ease),box-shadow var(--spec-duration-fast) var(--spec-ease);}
+.hp-searchform:focus-within{border-color:var(--spec-violet);background:#fff;box-shadow:0 0 0 4px rgba(108,92,224,.14);}
 .hp-searchform>svg{color:var(--spec-violet);}
 .hp-searchform input{width:100%;min-width:0;height:44px;padding:0;border:0;outline:0;color:var(--spec-ink);background:transparent;font-family:inherit;font-size:14.5px;}
 .hp-searchform input::placeholder{color:var(--spec-text-2nd);}
@@ -725,11 +738,32 @@ const CSS = `
 .hp-searchform button:hover{background:var(--spec-violet-deep);}
 
 .hp-quicksearches{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:14px;max-width:640px;}
-.hp-quicksearches>span{color:rgba(255,255,255,.6);font-size:11.5px;font-weight:600;}
-.hp-quicksearches a{padding:7px 12px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);border-radius:999px;font-size:12px;font-weight:600;color:#fff;transition:background var(--spec-duration-fast) var(--spec-ease),border-color var(--spec-duration-fast) var(--spec-ease);}
-.hp-quicksearches a:hover{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.5);}
+.hp-quicksearches>span{color:var(--spec-text-2nd);font-size:11.5px;font-weight:600;}
+.hp-quicksearches a{padding:7px 12px;background:var(--spec-surface);border:1px solid var(--spec-border);border-radius:999px;font-size:12px;font-weight:600;color:var(--spec-ink);transition:background var(--spec-duration-fast) var(--spec-ease),border-color var(--spec-duration-fast) var(--spec-ease),color var(--spec-duration-fast) var(--spec-ease);}
+.hp-quicksearches a:hover{background:var(--spec-violet-bg);border-color:var(--spec-violet);color:var(--spec-violet-deep);}
 
-.hp-requestcard{padding:28px;border:1px solid rgba(255,255,255,.75);border-radius:var(--spec-radius-lg);color:var(--spec-ink);background:rgba(255,255,255,.97);box-shadow:0 30px 70px -30px rgba(0,0,0,.7);}
+/* Inline steps strip — a quiet, single-line teaser reusing the How-it-works
+   step TITLES verbatim (see JSX above); the full section with descriptions
+   stays below at #how-it-works, unchanged. Semantic <ol>/<li>; the chevron
+   between steps is a decorative CSS ::after (empty content — nothing for a
+   screen reader to announce), so numbering + text are the only real content. */
+.hp-herosteps{display:flex;flex-wrap:wrap;align-items:center;margin:18px 0 0;padding:14px 0 0;border-top:1px solid var(--spec-border);list-style:none;}
+.hp-herostep{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--spec-text-2nd);white-space:nowrap;}
+.hp-herostep:not(:last-child){margin-right:16px;}
+.hp-herostep:not(:last-child)::after{content:'';display:inline-block;width:6px;height:6px;margin-left:16px;border-top:1.5px solid var(--spec-border-strong);border-right:1.5px solid var(--spec-border-strong);transform:rotate(45deg);}
+.hp-herostepnum{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;flex-shrink:0;border-radius:50%;background:var(--spec-violet-bg);color:var(--spec-violet-deep);font-family:var(--font-ibm-plex-mono);font-size:10.5px;font-weight:700;}
+@media(max-width:520px){
+  .hp-herostep:not(:last-child)::after{display:none;}
+  .hp-herostep:not(:last-child){margin-right:0;}
+  .hp-herosteps{gap:8px 14px;}
+}
+
+/* Join card — now a plain column inside the outer white hero card (a bordered
+   white card nested in another white card would read as cards-in-cards), so
+   its own background/border/shadow are gone; a hairline divider (left on
+   desktop, top once the grid stacks) marks it off instead. Interior text
+   tokens are untouched — they were already tuned for a white surface. */
+.hp-requestcard{padding:0 0 0 40px;border-left:1px solid var(--spec-border);color:var(--spec-ink);background:none;box-shadow:none;}
 .hp-requesteyebrow{display:block;font-family:var(--font-ibm-plex-mono);font-size:11px;font-weight:600;letter-spacing:var(--spec-tracking-eyebrow);text-transform:uppercase;color:var(--spec-violet-deep);}
 .hp-requestcard h2{margin:10px 0 10px;font-size:var(--spec-text-h3);line-height:1.12;letter-spacing:var(--spec-tracking-heading);text-wrap:balance;}
 .hp-requestcard>p{margin:0;color:var(--spec-text-2nd);font-size:13.5px;line-height:1.6;}
@@ -743,7 +777,9 @@ const CSS = `
 .hp-requestcard small a:hover{color:var(--spec-violet);}
 
 @media(max-width:900px){
-  .hp-heroin{grid-template-columns:1fr;padding:40px 20px 40px;gap:30px;}
+  .hp-hero{padding:32px 16px 40px;}
+  .hp-heroin{grid-template-columns:1fr;padding:28px 22px;gap:26px;}
+  .hp-requestcard{padding:22px 0 0;border-left:none;border-top:1px solid var(--spec-border);}
 }
 @media(max-width:520px){
   .hp-searchform{grid-template-columns:auto minmax(0,1fr);padding:14px;}
