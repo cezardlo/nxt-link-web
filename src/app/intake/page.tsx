@@ -64,6 +64,10 @@ type IntakeResponse = IntakeResponseMore | IntakeResponseDone;
 interface SubmitResponse {
   ok: boolean;
   public_ref: string;
+  // Slice R1b (2026-07-30) — how many vendors actually received this
+  // request via each send mode (auto-match vs buyer-invited).
+  dispatched?: number;
+  invited?: number;
 }
 
 interface Answer {
@@ -88,6 +92,16 @@ type Phase = 'intro' | 'asking' | 'summary' | 'submitted';
 function IntakeInner() {
   const sp = useSearchParams();
   const vendorHint = sp.get('vendor') || '';
+  // Slice R1b (2026-07-30) — "invite specific vendors" send mode. A buyer
+  // storefront/listing CTA links here with ?vendor_id=&invite=1 (see
+  // marketplace/vendor/[id] and marketplace/[kind]/[id]); the vendor_id-only
+  // hint (no ?invite=1) is the OLDER, unchanged behavior — a soft text
+  // mention, still auto-matched normally. Only the explicit invite=1 flag
+  // changes the send mode.
+  const vendorId = sp.get('vendor_id') || '';
+  const inviteMode = Boolean(vendorId) && sp.get('invite') === '1';
+  const [alsoAutoMatch, setAlsoAutoMatch] = useState(false);
+  const [invitedCount, setInvitedCount] = useState(0);
   // Shared `nxt_lang` preference (same mechanism as the header on every other
   // anonymous-buyer page) — a buyer who switched to ES on the homepage lands
   // here already in ES, instead of this page's language resetting to EN.
@@ -263,12 +277,20 @@ function IntakeInner() {
           contact: { name: contactName.trim(), email: contactEmail.trim() },
           locale,
           vendor_scope: 'both',
+          // Slice R1b — only present at all when the buyer arrived via an
+          // explicit "Invite to quote" CTA; otherwise identical to every
+          // existing caller (default send_mode 'auto_match', unchanged).
+          ...(inviteMode ? {
+            invite_vendor_ids: [vendorId],
+            send_mode: alsoAutoMatch ? 'both' : 'invite',
+          } : {}),
         }),
       });
       if (res.status === 401) { setNeedsSignin(true); return; }
       const data = (await res.json()) as SubmitResponse;
       if (!data.ok) throw new Error('not ok');
       setPublicRef(data.public_ref);
+      setInvitedCount(data.invited || 0);
       setPhase('submitted');
     } catch {
       setError(tr(
@@ -281,10 +303,22 @@ function IntakeInner() {
   }
 
   // ---- Render helpers ----
-  const guardrail = tr(
-    'Drafts are AI-assisted. A human at NXT//LINK reviews every request. Vendor names are never shown here.',
-    'Los borradores son asistidos por AI. Un humano de NXT//LINK revisa cada solicitud. Los nombres de proveedores nunca se muestran aquí.'
-  );
+  // Slice R1b copy fix: this line used to unconditionally claim "vendor names
+  // are never shown here" — already inaccurate whenever a vendor hint banner
+  // was showing (the pre-existing vendorHint feature), and more visibly so
+  // now that invite mode names the vendor in the banner, the checkbox, and
+  // the confirmation. Drop that clause whenever a vendor name is actually on
+  // screen; keep it for the ordinary (no vendor hint) case. Flagged for
+  // Cesar's copy sign-off like every other new/changed string in this slice.
+  const guardrail = vendorHint
+    ? tr(
+        'Drafts are AI-assisted. A human at NXT//LINK reviews every request.',
+        'Los borradores son asistidos por AI. Un humano de NXT//LINK revisa cada solicitud.'
+      )
+    : tr(
+        'Drafts are AI-assisted. A human at NXT//LINK reviews every request. Vendor names are never shown here.',
+        'Los borradores son asistidos por AI. Un humano de NXT//LINK revisa cada solicitud. Los nombres de proveedores nunca se muestran aquí.'
+      );
 
   return (
     <div className={`iq ${ibmPlexSans.variable}`}>
@@ -312,10 +346,15 @@ function IntakeInner() {
           <p className="iq-sub">{isEs ? ASSISTANT.subtitle_es : ASSISTANT.subtitle}</p>
           {vendorHint && phase !== 'submitted' && (
             <div className="iq-hint">
-              {tr(
-                `Continuing from ${vendorHint}'s profile — we'll match you with vendors including them.`,
-                `Continuando desde el perfil de ${vendorHint} — te conectaremos con proveedores, incluyéndolos a ellos.`
-              )}
+              {inviteMode
+                ? tr(
+                    `You're inviting ${vendorHint} to quote on this request — it will be sent to them directly.`,
+                    `Estás invitando a ${vendorHint} a cotizar esta solicitud — se le enviará directamente.`
+                  )
+                : tr(
+                    `Continuing from ${vendorHint}'s profile — we'll match you with vendors including them.`,
+                    `Continuando desde el perfil de ${vendorHint} — te conectaremos con proveedores, incluyéndolos a ellos.`
+                  )}
             </div>
           )}
         </div>
@@ -329,6 +368,15 @@ function IntakeInner() {
               {tr('Your reference:', 'Tu referencia:')}{' '}
               <span className="iq-refval">{publicRef}</span>
             </p>
+            {/* Slice R1b — honest confirmation of what actually happened:
+                invitedCount comes straight from the server (0 if the chosen
+                vendor couldn't be reached and the request fell back to
+                auto-match instead — never claimed as sent when it wasn't). */}
+            {inviteMode && invitedCount > 0 && (
+              <p className="iq-invitedline">
+                {tr(`Invited: ${vendorHint || 'the vendor you chose'}`, `Invitado: ${vendorHint || 'el proveedor que elegiste'}`)}
+              </p>
+            )}
             {/* "How it works" transparency timeline — an easy question ("what
                 happens next?") converts better than a vague promise. */}
             <div className="iq-timeline">
@@ -529,6 +577,23 @@ function IntakeInner() {
               </div>
             )}
 
+            {/* Slice R1b — invite mode: this request is being sent ONLY to
+                the invited vendor (no auto-match blast) unless the buyer
+                explicitly opts in here. */}
+            {inviteMode && (
+              <label className="iq-invitecheck">
+                <input
+                  type="checkbox"
+                  checked={alsoAutoMatch}
+                  onChange={(e) => setAlsoAutoMatch(e.target.checked)}
+                />
+                {tr(
+                  `Also match me with other vendors automatically (in addition to ${vendorHint || 'this vendor'})`,
+                  `También conéctame con otros proveedores automáticamente (además de ${vendorHint || 'este proveedor'})`
+                )}
+              </label>
+            )}
+
             {error && <p className="iq-error">{error}</p>}
             {needsSignin && (
               <p className="iq-error">
@@ -665,6 +730,10 @@ const IQ_CSS = `
 
 .iq-refline{color:var(--spec-text-2nd,#615F72);font-size:16px;margin-bottom:8px;}
 .iq-refval{color:var(--spec-violet,#6C5CE0);font-weight:700;}
+.iq-invitedline{color:var(--spec-violet-deep,#4A3DB0);font-size:13px;font-weight:600;margin:-4px 0 12px;}
+
+.iq-invitecheck{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;color:var(--spec-text-2nd,#615F72);line-height:1.5;margin-top:14px;cursor:pointer;}
+.iq-invitecheck input{margin-top:2px;accent-color:var(--spec-violet,#6C5CE0);}
 
 .iq-timeline{max-width:460px;margin:18px auto 0;text-align:left;display:flex;flex-direction:column;gap:12px;}
 .iq-timeline-row{display:flex;gap:12px;align-items:flex-start;}
