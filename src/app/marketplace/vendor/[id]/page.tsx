@@ -82,6 +82,7 @@ interface Vendor {
   rating: number | null; review_count: number; deals_closed: number;
 }
 interface Storefront {
+  preview?: boolean;
   vendor: Vendor;
   listings: ListingCard[];
   case_studies: Array<{ id: string; title: string; challenge: string | null; solution: string | null; result: string | null }>;
@@ -102,6 +103,7 @@ const T: Record<Lang, Record<string, string>> = {
     marketplace: 'Marketplace',
     editProfile: 'Edit my profile',
     ownerViewing: 'You’re viewing your storefront exactly as buyers see it.',
+    previewBanner: 'Preview — this is how buyers will see your storefront. It’s not visible to buyers until you’re approved.',
     backToEditing: '← Back to editing',
     notFound: 'Vendor not found.',
     backToMarketplace: 'Back to marketplace',
@@ -183,6 +185,7 @@ const T: Record<Lang, Record<string, string>> = {
     marketplace: 'Marketplace',
     editProfile: 'Editar mi perfil',
     ownerViewing: 'Estás viendo tu perfil exactamente como lo ven los compradores.',
+    previewBanner: 'Vista previa — así verán tu tienda los compradores. No será visible para compradores hasta que seas aprobado.',
     backToEditing: '← Volver a editar',
     notFound: 'Proveedor no encontrado.',
     backToMarketplace: 'Volver al marketplace',
@@ -391,10 +394,14 @@ export default function VendorStorefrontPage() {
         {isOwner && <Link className="vs-pill on" href="/vendor/portal">{t.editProfile}</Link>}
       </div>
 
-      {isOwner && (
+      {/* d.preview (server-decided, fail-closed — see decideStorefrontPreview)
+          covers a pending/suspended vendor previewing their own not-yet-live
+          storefront, or an admin checking it; isOwner alone (no preview flag)
+          is the ordinary case of an approved vendor viewing their live page. */}
+      {(d.preview || isOwner) && (
         <div className="vs-ownerbar">
-          <span><Eye size={14} strokeWidth={1.75} aria-hidden="true" /> {t.ownerViewing}</span>
-          <Link href="/vendor/portal">{t.backToEditing}</Link>
+          <span><Eye size={14} strokeWidth={1.75} aria-hidden="true" /> {d.preview ? t.previewBanner : t.ownerViewing}</span>
+          {isOwner && <Link href="/vendor/portal">{t.backToEditing}</Link>}
         </div>
       )}
 
