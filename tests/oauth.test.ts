@@ -7,6 +7,7 @@ import {
   computeOAuthFlags,
   AZURE_SCOPES,
 } from '@/lib/auth/oauth';
+import { buildGoogleDirectCallback } from '@/lib/auth/google-identity';
 
 const ORIGIN = 'https://nxt-link-web.vercel.app';
 
@@ -87,4 +88,26 @@ test('buildOAuthSignInOptions: linkedin_oidc gets no scopes override', () => {
   const opts = buildOAuthSignInOptions('linkedin_oidc', `${ORIGIN}/auth/callback`);
   assert.equal(opts.redirectTo, `${ORIGIN}/auth/callback`);
   assert.equal('scopes' in opts, false);
+});
+
+test('buildGoogleDirectCallback preserves onboarding context and marks the direct path', () => {
+  const redirect = buildOAuthRedirectTo({
+    origin: ORIGIN,
+    from: '/join/invite-token',
+    next: '/vendor/portal?welcome=1',
+    lane: 'invite',
+    locale: 'es',
+    inviteToken: 'invite-token',
+    companyName: 'Acme Logistics',
+    categories: ['Forklifts', 'Repair'],
+  });
+
+  const direct = new URL(buildGoogleDirectCallback(redirect));
+  assert.equal(direct.origin, ORIGIN);
+  assert.equal(direct.pathname, '/auth/callback');
+  assert.equal(direct.searchParams.get('oauth_direct'), 'google');
+  assert.equal(direct.searchParams.get('oauth_lane'), 'invite');
+  assert.equal(direct.searchParams.get('oauth_invite'), 'invite-token');
+  assert.equal(direct.searchParams.get('oauth_company'), 'Acme Logistics');
+  assert.equal(direct.searchParams.get('oauth_categories'), 'Forklifts|Repair');
 });

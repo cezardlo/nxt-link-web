@@ -1,7 +1,8 @@
 # Map — where things live
 
 **Stack:** Next.js 14 (App Router) + TypeScript + Supabase (Postgres, Auth,
-Storage, RLS) + `@supabase/ssr`. Live Supabase project: `yvykselwehxjwsqercjg`.
+Storage, RLS) + `@supabase/ssr`. Live Supabase project: `dwotpviynxkbvyxambdy`
+(`nxtlink-production`).
 
 ## Live marketplace surfaces (the real product)
 - `/marketplace` — public browse + search + autocomplete + faceted filters
