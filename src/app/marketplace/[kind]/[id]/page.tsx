@@ -9,10 +9,12 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { IBM_Plex_Sans } from 'next/font/google';
+import { MapPin, ShieldCheck, Award, Play, Check } from 'lucide-react';
 import AddToCartButton from '@/components/cart/AddToCartButton';
 import { useLang, type Lang } from '@/components/LanguageToggle';
 import PublicHeader from '@/components/PublicHeader';
 import { pilotEntriesOf, customFieldsOf } from '@/lib/marketplace/types';
+import { parseVideoUrl } from '@/lib/vendor/video';
 
 const ibmPlexSans = IBM_Plex_Sans({
   subsets: ['latin'],
@@ -27,7 +29,17 @@ interface Detail {
   images: Array<{ path: string; url: string | null }>;
   documents: Array<{ id: string; file_name: string; title: string | null; ai_summary: string | null; url: string | null }>;
   case_studies: Array<{ id: string; title: string; challenge: string | null; solution: string | null; results: string[] | null }>;
-  vendor: { company_name: string; city: string | null; website: string | null; description: string | null; rating?: number | null; review_count?: number } | null;
+  vendor: {
+    company_name: string; city: string | null; website: string | null; description: string | null;
+    rating?: number | null; review_count?: number;
+    // Supplier trust card fields (listing-detail Alibaba-anatomy pass,
+    // 2026-07-30) — additive-only API fields, all optional/back-compat.
+    verification_level?: string | null; year_founded?: number | null;
+    service_areas?: string[]; certification_count?: number;
+  } | null;
+  // Vendor showcase videos (vendor_videos table) — same shape the vendor
+  // portal's video manager already renders (provider 'other' = link-only).
+  videos?: Array<{ id: string; title: string | null; embed_url: string; provider: string }>;
   reviews?: Array<{ rating: number; title: string | null; body: string | null; created_at: string }>;
   related: { same_vendor: Array<{ id: string; kind: string; name: string; category: string }>; same_category: Array<{ id: string; kind: string; name: string; category: string }> };
 }
@@ -42,6 +54,11 @@ const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object'
 // labels/headings/cta/placeholder come from the T table below (bilingual).
 const REQUEST_KEYS = ['quote', 'contact_sales', 'demo', 'pilot', 'question'] as const;
 type RequestKey = (typeof REQUEST_KEYS)[number];
+// Alibaba's dual-CTA prominence (Request Quote / Message vendor = "Send
+// inquiry" / "Chat now") — same 5 request types, same submit handler, just
+// visually promoted so the two headline actions read as primary buttons and
+// the rest as secondary options. Function is unchanged (2026-07-30).
+const PRIMARY_KEYS: readonly RequestKey[] = ['quote', 'question'];
 
 // Stable error codes from /api/marketplace/request's single-listing branch,
 // mapped to bilingual copy (same pattern as /cart's bundle-branch mapping).
@@ -159,7 +176,29 @@ const T: Record<Lang, Record<string, string>> = {
     reportEmailPh: 'Your email (optional)',
     sendReport: 'Send report',
     cancel: 'Cancel',
-    mobileCtaSuffix: '— through NXT//LINK',
+    // Supplier trust card (2026-07-30, Alibaba anatomy pass §1) — only real,
+    // already-fetched vendor facts. No response-time/on-time/reorder metrics:
+    // not honestly computable yet, so they don't appear (never a placeholder).
+    verifiedByNxt: 'Verified by NXT//LINK',
+    verifiedByNxtTitle: 'Verified Vendors are reviewed and approved by the NXT//LINK team before they go live.',
+    founded: 'Founded',
+    certification: 'certification',
+    certifications: 'certifications',
+    // Gallery Photos|Video tabs (§2) — only rendered when a video exists.
+    galleryPhotos: 'Photos',
+    galleryVideo: 'Video',
+    mediaTabsAria: 'Photos or video',
+    // Pricing tab honest disclaimer (§4) — shown only where a price is shown.
+    priceDisclaimer: 'Final pricing is confirmed in your quote.',
+    // Honest "protection" trust strip (§5) — NXT//LINK equivalent of Trade
+    // Assurance: no money-back/escrow claims, only what's already true and
+    // already published elsewhere on the site (vendor review gate, reviews
+    // policy, deal tracking). See t.reviewsHint / homepage verifiedExplain /
+    // storefront protectedIntro for the source phrasing this reuses.
+    protectKicker: 'On NXT//LINK',
+    protectLine1: 'Every vendor is human-reviewed and approved',
+    protectLine2: 'Reviews come only from completed deals',
+    protectLine3: 'Quotes, chat, and deals tracked on NXT//LINK',
     errTooFast: 'Form submitted too quickly — please try again',
     errListingIdRequired: 'listing_id is required',
     errCompanyRequired: 'Company is required',
@@ -255,7 +294,19 @@ const T: Record<Lang, Record<string, string>> = {
     reportEmailPh: 'Tu correo (opcional)',
     sendReport: 'Enviar reporte',
     cancel: 'Cancelar',
-    mobileCtaSuffix: '— a través de NXT//LINK',
+    verifiedByNxt: 'Verificado por NXT//LINK',
+    verifiedByNxtTitle: 'Los proveedores verificados son revisados y aprobados por el equipo de NXT//LINK antes de publicarse.',
+    founded: 'Fundada',
+    certification: 'certificación',
+    certifications: 'certificaciones',
+    galleryPhotos: 'Fotos',
+    galleryVideo: 'Video',
+    mediaTabsAria: 'Fotos o video',
+    priceDisclaimer: 'El precio final se confirma en tu cotización.',
+    protectKicker: 'En NXT//LINK',
+    protectLine1: 'Cada proveedor es revisado y aprobado por un humano',
+    protectLine2: 'Las reseñas provienen solo de tratos completados',
+    protectLine3: 'Cotizaciones, chats y tratos, todo registrado en NXT//LINK',
     errTooFast: 'Formulario enviado demasiado rápido — inténtalo de nuevo',
     errListingIdRequired: 'Se requiere listing_id',
     errCompanyRequired: 'La empresa es obligatoria',
@@ -283,6 +334,9 @@ export default function ListingDetailPage() {
   const [authNext, setAuthNext] = useState('/marketplace');
   const [tab, setTab] = useState('overview');
   const [imgIdx, setImgIdx] = useState(0);
+  // Gallery Photos|Video tabs (Alibaba anatomy pass, 2026-07-30).
+  const [mediaTab, setMediaTab] = useState<'photos' | 'video'>('photos');
+  const [vidIdx, setVidIdx] = useState(0);
 
   // Quote form
   const [company, setCompany] = useState('');
@@ -386,7 +440,23 @@ export default function ListingDetailPage() {
   const pilot = obj(L.pilot); const impl = obj(L.implementation); const ws = obj(L.warranty_support);
   const pricing = obj(L.pricing); const fit = obj(L.fit); const roi = obj(L.roi);
   const specs = obj(L.specs);
+  // specs values are already non-empty at write time (cleanBlock's 'obj'
+  // reader drops blank label/value pairs — src/lib/marketplace/types.ts) —
+  // this filter is defensive only, for any pre-existing row saved before
+  // that validation shipped. "Never empty rows" (Alibaba anatomy §3).
+  const specEntries = Object.entries(specs).filter(([k, v]) => k.trim() && String(v ?? '').trim());
   const kindLabel = (k: string) => (k === 'service' ? t.kindService : t.kindProduct);
+
+  // Gallery video tab (§2): combine the listing's own video_urls (raw URLs,
+  // parsed client-side — same parser the vendor portal's video form uses)
+  // with the vendor's showcase videos (vendor_videos, already embed-ready).
+  // Listing-specific videos come first — most relevant to what's on screen.
+  const listingVideos = arr(L.video_urls)
+    .map((u) => parseVideoUrl(u))
+    .filter((p): p is NonNullable<typeof p> => p !== null)
+    .map((p) => ({ embed_url: p.embedUrl, provider: p.provider as string, title: null as string | null }));
+  const vendorVideos = (d.videos || []).map((v) => ({ embed_url: v.embed_url, provider: v.provider, title: v.title }));
+  const allVideos = [...listingVideos, ...vendorVideos].slice(0, 6);
 
   const TABS: Array<[string, string, boolean]> = [
     ['overview', t.tabOverview, true],
@@ -402,6 +472,10 @@ export default function ListingDetailPage() {
 
   const related = [...d.related.same_vendor, ...d.related.same_category];
   const a = actionsT[requestType];
+  // Supplier trust card values (§1) — plain locals so the JSX below never
+  // needs non-null assertions on the optional API fields.
+  const suppCertCount = d.vendor?.certification_count ?? 0;
+  const suppAreas = d.vendor?.service_areas || [];
 
   return (
     <div className={`dt ${ibmPlexSans.variable}`}>
@@ -426,7 +500,34 @@ export default function ListingDetailPage() {
       <div className="dt-wrap">
         <div className="dt-main">
           <div className="dt-gallery">
-            {d.images.length > 0 ? (
+            {/* Photos|Video tabs (Alibaba anatomy §2) — only rendered when a
+                video actually exists, never as an empty state. */}
+            {allVideos.length > 0 && (
+              <div className="dt-mediatabs" role="tablist" aria-label={t.mediaTabsAria}>
+                <button type="button" role="tab" aria-selected={mediaTab === 'photos'} className={mediaTab === 'photos' ? 'on' : ''} onClick={() => setMediaTab('photos')}>{t.galleryPhotos}</button>
+                <button type="button" role="tab" aria-selected={mediaTab === 'video'} className={mediaTab === 'video' ? 'on' : ''} onClick={() => setMediaTab('video')}>{t.galleryVideo}</button>
+              </div>
+            )}
+            {mediaTab === 'video' && allVideos.length > 0 ? (
+              <>
+                <div className="dt-video">
+                  {allVideos[vidIdx].provider === 'other' ? (
+                    <a className="dt-videolink" href={allVideos[vidIdx].embed_url} target="_blank" rel="noreferrer">{allVideos[vidIdx].title || allVideos[vidIdx].embed_url}</a>
+                  ) : (
+                    <iframe src={allVideos[vidIdx].embed_url} title={allVideos[vidIdx].title || s(L.name)} allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
+                  )}
+                </div>
+                {allVideos.length > 1 && (
+                  <div className="dt-thumbs">
+                    {allVideos.map((v, i) => (
+                      <button key={i} className={i === vidIdx ? 'on' : ''} onClick={() => setVidIdx(i)} aria-label={`Video ${i + 1}`}>
+                        <span className="dt-vidthumb"><Play size={16} strokeWidth={2} aria-hidden="true" /></span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : d.images.length > 0 ? (
               <>
                 <div className="dt-img">{d.images[imgIdx]?.url && <img src={d.images[imgIdx].url!} alt={s(L.name)} />}</div>
                 {d.images.length > 1 && (
@@ -474,9 +575,11 @@ export default function ListingDetailPage() {
               </>
             )}
             {tab === 'specs' && (
-              <table className="dt-specs"><tbody>
-                {Object.entries(specs).map(([k, v]) => <tr key={k}><td>{k}</td><td>{String(v)}</td></tr>)}
-              </tbody></table>
+              <div className="dt-specswrap">
+                <table className="dt-specs"><tbody>
+                  {specEntries.map(([k, v]) => <tr key={k}><td>{k}</td><td>{String(v)}</td></tr>)}
+                </tbody></table>
+              </div>
             )}
             {tab === 'process' && (
               <ol className="dt-process">{arr(L.process).map((p, i) => <li key={i}>{p}</li>)}</ol>
@@ -528,6 +631,7 @@ export default function ListingDetailPage() {
                 {(pricing.buy || pricing.rent || pricing.lease) ? <Item k={t.itemOptions} v={['buy', 'rent', 'lease'].filter((o) => pricing[o]).join(' · ')} /> : null}
                 <Item k={t.itemNotes} v={s(pricing.notes)} />
                 {customFieldsOf(pricing).map((c, i) => <Item key={`c${i}`} k={c.label} v={c.value} />)}
+                {s(pricing.range) && <p className="dt-hint">{t.priceDisclaimer}</p>}
                 {!s(pricing.range) && <p className="dt-hint">{t.pricingHint}</p>}
               </dl>
             )}
@@ -591,6 +695,42 @@ export default function ListingDetailPage() {
         </div>
 
         <aside className="dt-side" id="quote">
+          {/* Supplier trust card (Alibaba anatomy §1) — sells the vendor,
+              above the fold, right beside the gallery/CTA column. Only real,
+              already-approved facts: every listing here belongs to an
+              approved vendor (the API 404s otherwise), so "Verified by
+              NXT//LINK" is unconditional. No response-time/on-time/reorder
+              metrics — not honestly computable yet (2026-07-30 rule). */}
+          {d.vendor && (
+            <div className="dt-supplier">
+              <Link className="dt-suppname" href={`/marketplace/vendor/${s(L.vendor_id)}`}>{d.vendor.company_name}</Link>
+              {(d.vendor.city || d.vendor.year_founded) && (
+                <div className="dt-suppmeta">
+                  {d.vendor.city && <span><MapPin size={13} strokeWidth={1.75} aria-hidden="true" />{d.vendor.city}</span>}
+                  {d.vendor.year_founded && <span>{t.founded} {d.vendor.year_founded}</span>}
+                </div>
+              )}
+              <div className="dt-suppbadges">
+                <span className="dt-suppverified" title={t.verifiedByNxtTitle}><ShieldCheck size={12} strokeWidth={1.75} aria-hidden="true" />{t.verifiedByNxt}</span>
+                {suppCertCount > 0 && (
+                  <Link className="dt-suppcert" href={`/marketplace/vendor/${s(L.vendor_id)}#certifications`}>
+                    <Award size={12} strokeWidth={1.75} aria-hidden="true" />{suppCertCount} {suppCertCount === 1 ? t.certification : t.certifications}
+                  </Link>
+                )}
+              </div>
+              {suppAreas.length > 0 && (
+                <div className="dt-suppareas">
+                  <span className="dt-supplabel">{t.rowServiceAreas}</span>
+                  <div className="dt-suppchips">
+                    {suppAreas.slice(0, 4).map((ar) => <span key={ar} className="dt-suppchip">{ar}</span>)}
+                    {suppAreas.length > 4 && <span className="dt-suppchip dim">+{suppAreas.length - 4}</span>}
+                  </div>
+                </div>
+              )}
+              <Link className="dt-storelink" href={`/marketplace/vendor/${s(L.vendor_id)}`}>{t.storefront}</Link>
+            </div>
+          )}
+
           <div className="dt-quote">
             <div className="dt-thru">{t.through}<span>{'//'}</span>LINK</div>
             <div className="dt-cartrow">
@@ -603,13 +743,20 @@ export default function ListingDetailPage() {
             </div>
             <h3>{a.heading}</h3>
             <div className="dt-actions" role="tablist" aria-label={t.requestTypeAria}>
+              {/* Dual-CTA prominence (§6): Request Quote + Ask a Question
+                  ("Message vendor") are the two Alibaba-style primary
+                  buttons — same tablist, same handler, just re-ordered and
+                  styled bigger via CSS so they read as the headline actions
+                  above the fold; the other 3 request types stay as smaller
+                  secondary options. Function is 100% unchanged. */}
               {REQUEST_KEYS.map((key) => (
                 <button
                   key={key}
                   type="button"
                   role="tab"
                   aria-selected={requestType === key}
-                  className={requestType === key ? 'on' : ''}
+                  className={(PRIMARY_KEYS.includes(key) ? 'pri ' : '') + (requestType === key ? 'on' : '')}
+                  style={{ order: PRIMARY_KEYS.includes(key) ? PRIMARY_KEYS.indexOf(key) : PRIMARY_KEYS.length + REQUEST_KEYS.indexOf(key) }}
                   onClick={() => { setRequestType(key); setSentRef(''); setFormMsg(''); }}
                 >
                   {actionsT[key].label}
@@ -633,13 +780,19 @@ export default function ListingDetailPage() {
               </form>
             )}
           </div>
-          {d.vendor && (
-            <div className="dt-vendorcard">
-              <h4>{d.vendor.company_name}</h4>
-              {d.vendor.description && <p>{d.vendor.description.slice(0, 300)}</p>}
-              <Link className="dt-storelink" href={`/marketplace/vendor/${s(L.vendor_id)}`}>{t.storefront}</Link>
-            </div>
-          )}
+          {/* Honest "protection" strip (§5) — our equivalent of Alibaba's
+              Trade Assurance block, minus every claim we can't back: no
+              money-back promise, no escrow, no guarantees. Three lines,
+              all already true and already published elsewhere on the site
+              (see the t.protectLine* definitions above for source copy). */}
+          <div className="dt-protect">
+            <span className="dt-protectkicker">{t.protectKicker}</span>
+            <ul>
+              <li><Check size={13} strokeWidth={2} aria-hidden="true" />{t.protectLine1}</li>
+              <li><Check size={13} strokeWidth={2} aria-hidden="true" />{t.protectLine2}</li>
+              <li><Check size={13} strokeWidth={2} aria-hidden="true" />{t.protectLine3}</li>
+            </ul>
+          </div>
 
           <div className="dt-report">
             {repDone ? (
@@ -668,10 +821,14 @@ export default function ListingDetailPage() {
         </aside>
       </div>
 
-      {/* Mobile: sticky request bar so the action is always reachable */}
+      {/* Mobile: sticky dual-CTA bar so both primary actions are always
+          thumb-reachable (§6) — tapping either pre-selects that request
+          type and scrolls to the (now visually primary) button in the
+          quote card, ready to fill in. Function unchanged: same setRequestType. */}
       {!sentRef && (
         <div className="dt-mobilecta">
-          <a href="#quote">{a.label} {t.mobileCtaSuffix}</a>
+          <button type="button" className="ghost" onClick={() => { setRequestType('question'); document.getElementById('quote')?.scrollIntoView({ behavior: 'smooth' }); }}>{actionsT.question.label}</button>
+          <button type="button" className="pri" onClick={() => { setRequestType('quote'); document.getElementById('quote')?.scrollIntoView({ behavior: 'smooth' }); }}>{actionsT.quote.label}</button>
         </div>
       )}
     </div>
@@ -710,22 +867,43 @@ a.dt-signin:active{transform:scale(.98);transition:transform .1s ease;}
 .dt-navr{display:flex;align-items:center;gap:10px;}
 .dt-share{font-family:inherit;font-size:12.5px;font-weight:600;background:none;border:1px solid var(--spec-border);color:var(--spec-text-2nd);border-radius:9px;padding:7px 13px;cursor:pointer;transition:border-color var(--spec-duration-fast) var(--spec-ease),color var(--spec-duration-fast) var(--spec-ease);}
 .dt-share:hover{border-color:var(--spec-violet);color:var(--spec-violet-deep);}
-.dt-mobilecta{display:none;position:fixed;bottom:0;left:0;right:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:rgba(255,255,255,.96);backdrop-filter:blur(16px);border-top:1px solid var(--spec-border);z-index:30;}
-.dt-mobilecta a{display:block;text-align:center;background:var(--spec-violet);color:#fff;font-weight:700;font-size:14.5px;padding:13px;border-radius:12px;text-decoration:none;transition:background var(--spec-duration-fast) var(--spec-ease);}
-.dt-mobilecta a:active{transform:scale(.98);transition:transform .1s ease;}
-@media(max-width:900px){.dt-mobilecta{display:block;}.dt-wrap{padding-bottom:150px;}}
+/* Dual-CTA mobile bar (Alibaba anatomy §6) — two thumb-reachable buttons
+   instead of one, mirroring "Send inquiry" + "Chat now" prominence. */
+.dt-mobilecta{display:none;position:fixed;bottom:0;left:0;right:0;gap:8px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:rgba(255,255,255,.96);backdrop-filter:blur(16px);border-top:1px solid var(--spec-border);z-index:30;}
+.dt-mobilecta button{flex:1;font-family:inherit;text-align:center;font-weight:700;font-size:14px;padding:13px 8px;border-radius:12px;border:1.5px solid var(--spec-violet);cursor:pointer;transition:background var(--spec-duration-fast) var(--spec-ease);}
+.dt-mobilecta button.pri{background:var(--spec-violet);color:#fff;}
+.dt-mobilecta button.pri:active{background:var(--spec-violet-deep);transform:scale(.98);transition:transform .1s ease;}
+.dt-mobilecta button.ghost{background:#fff;color:var(--spec-violet-deep);}
+.dt-mobilecta button.ghost:active{background:rgba(108,92,224,.08);transform:scale(.98);transition:transform .1s ease;}
+@media(max-width:900px){.dt-mobilecta{display:flex;}.dt-wrap{padding-bottom:150px;}}
 .dt-kind{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:99px;}
 .dt-kind.product{background:rgba(108,92,224,.14);color:var(--spec-violet-deep);}
 .dt-kind.service{background:rgba(47,158,106,.14);color:#1F7A54;}
-.dt-wrap{max-width:1080px;margin:0 auto;padding:28px 20px 100px;display:grid;grid-template-columns:1fr 340px;gap:26px;}
+/* align-items:start (2026-07-30 fix): without it, CSS Grid stretches
+   .dt-side to match .dt-main's much taller height, so .dt-quote's sticky
+   pinned box stays overlapping the page for the whole scroll range — and
+   because position:sticky always paints ABOVE static siblings regardless of
+   DOM order, it silently hid .dt-protect/.dt-report (and .dt-vendorcard
+   before it) behind itself. This makes .dt-side size to its own content, the
+   standard fix for a sticky element followed by more content in the same column. */
+.dt-wrap{max-width:1080px;margin:0 auto;padding:28px 20px 100px;display:grid;grid-template-columns:1fr 340px;gap:26px;align-items:start;}
 @media(max-width:900px){.dt-wrap{grid-template-columns:1fr;}}
+/* Gallery Photos|Video tabs (Alibaba anatomy §2) — small segmented control,
+   same visual language as .dt-tabs but scoped to the media area only. */
+.dt-mediatabs{display:flex;gap:4px;margin-bottom:10px;}
+.dt-mediatabs button{font-family:inherit;font-size:12.5px;font-weight:700;padding:6px 14px;border-radius:99px;border:1px solid var(--spec-border);background:#fff;color:var(--spec-text-2nd);cursor:pointer;transition:all .12s;}
+.dt-mediatabs button.on{background:rgba(108,92,224,.14);border-color:var(--spec-violet);color:var(--spec-violet-deep);}
 .dt-img{height:320px;border-radius:16px;overflow:hidden;background:#fff;border:1px solid var(--spec-border);}
 .dt-img img{width:100%;height:100%;object-fit:cover;}
 .dt-noimg{display:grid;place-items:center;color:var(--spec-text-2nd);letter-spacing:.15em;text-transform:uppercase;font-size:14px;}
+.dt-video{height:320px;border-radius:16px;overflow:hidden;background:var(--spec-ink);}
+.dt-video iframe{width:100%;height:100%;border:none;}
+.dt-videolink{display:flex;align-items:center;justify-content:center;height:100%;padding:24px;text-align:center;color:#fff;font-size:13.5px;font-weight:600;word-break:break-all;}
 .dt-thumbs{display:flex;gap:8px;margin-top:10px;}
 .dt-thumbs button{width:64px;height:48px;border-radius:8px;overflow:hidden;border:1.5px solid var(--spec-border);background:#fff;cursor:pointer;padding:0;}
 .dt-thumbs button.on{border-color:var(--spec-violet);}
 .dt-thumbs img{width:100%;height:100%;object-fit:cover;}
+.dt-vidthumb{display:grid;place-items:center;width:100%;height:100%;background:var(--spec-ink);color:#fff;}
 .dt-head h1{font-size:clamp(22px,3.4vw,32px);font-weight:800;letter-spacing:-.02em;margin-top:20px;color:var(--spec-ink);text-wrap:balance;}
 .dt-sub{color:var(--spec-text-2nd);font-size:14px;margin-top:6px;}
 .dt-badges{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px;}
@@ -750,9 +928,13 @@ a.dt-signin:active{transform:scale(.98);transition:transform .1s ease;}
 .dt-row{display:flex;gap:14px;margin-bottom:12px;align-items:baseline;}
 .dt-row>span{font-size:12px;color:var(--spec-text-2nd);min-width:110px;}
 .dt-row em{font-style:normal;font-size:12.5px;color:var(--spec-violet-deep);background:rgba(108,92,224,.08);padding:3px 9px;border-radius:6px;margin:0 5px 5px 0;display:inline-block;}
-.dt-specs{width:100%;border-collapse:collapse;font-size:14px;}
+/* Key-attributes table (Alibaba anatomy §3) — scrolls its own axis on
+   narrow screens instead of the whole page (mobile-friendly per spec). */
+.dt-specswrap{overflow-x:auto;}
+.dt-specs{width:100%;min-width:320px;border-collapse:collapse;font-size:14px;}
 .dt-specs td{padding:9px 12px;border-bottom:1px solid var(--spec-border);color:var(--spec-ink);}
 .dt-specs td:first-child{color:var(--spec-text-2nd);width:40%;}
+.dt-specs tr:nth-child(even) td{background:var(--spec-surface);}
 .dt-process{padding-left:20px;display:flex;flex-direction:column;gap:10px;font-size:14.5px;color:var(--spec-ink);line-height:1.5;}
 .dt-kv{margin:0;}
 .dt-item{display:flex;gap:14px;padding:9px 0;border-bottom:1px solid var(--spec-border);}
@@ -790,6 +972,13 @@ a.dt-signin:active{transform:scale(.98);transition:transform .1s ease;}
 .dt-actions button{font-family:inherit;font-size:12.5px;font-weight:600;padding:7px 11px;border-radius:9px;border:1px solid var(--spec-border);background:none;color:var(--spec-text-2nd);cursor:pointer;transition:all .12s;}
 .dt-actions button:hover{border-color:var(--spec-violet);color:var(--spec-violet-deep);}
 .dt-actions button.on{background:rgba(108,92,224,.14);border-color:var(--spec-violet);color:var(--spec-violet-deep);}
+/* Dual-CTA prominence (§6) — Request Quote + Ask a Question read as the two
+   headline buttons (Alibaba's "Send inquiry" + "Chat now"); the rest stay
+   small secondary pills. Same buttons, same handler — CSS-only promotion. */
+.dt-actions button.pri{flex:1 1 calc(50% - 3px);padding:11px 10px;font-size:13.5px;font-weight:700;border-radius:10px;border:1.5px solid var(--spec-violet);color:var(--spec-violet-deep);text-align:center;}
+.dt-actions button.pri:hover{background:rgba(108,92,224,.08);}
+.dt-actions button.pri.on{background:var(--spec-violet);color:#fff;}
+.dt-actions button.pri.on:hover{background:var(--spec-violet-deep);}
 /* Success-green text needs a slightly darker shade than the --spec-success
    swatch to clear 4.5:1 on a light surface (the raw token measures ~3.4:1
    here — one of the audited contrast failures this reskin fixes); same hue
@@ -805,12 +994,43 @@ a.dt-signin:active{transform:scale(.98);transition:transform .1s ease;}
 .dt-quote button:disabled{opacity:.6;}
 .dt-sent{margin-top:14px;background:rgba(47,158,106,.1);border:1px solid rgba(47,158,106,.3);color:#1F7A54;border-radius:12px;padding:14px;font-size:13.5px;line-height:1.6;}
 .dt-err{color:var(--spec-error);font-size:13px;}
-.dt-vendorcard{background:#fff;border:1px solid var(--spec-border);border-radius:16px;padding:18px;}
-.dt-vendorcard h4{font-size:15px;margin-bottom:8px;color:var(--spec-ink);}
-.dt-vendorcard p{font-size:13px;color:var(--spec-text-2nd);line-height:1.6;}
-.dt-storelink{display:inline-block;margin-top:10px;color:var(--spec-violet-deep);font-size:13px;font-weight:700;text-decoration:none;transition:color var(--spec-duration-fast) var(--spec-ease);}
+/* Supplier trust card (Alibaba anatomy §1) — compact, fact-only, above the
+   fold beside the gallery. One violet accent (the verified badge + links). */
+/* position:relative + z-index:1 on every .dt-side sibling of the sticky
+   .dt-quote (2026-07-30 belt-and-suspenders fix, alongside .dt-wrap's
+   align-items:start above): position:sticky always paints ABOVE plain
+   static-flow siblings within the same stacking context, regardless of DOM
+   order — confirmed live via elementFromPoint() at .dt-protect's own
+   screen center returning the sticky card's .dt-safenote underneath it. A
+   positioned box with no offset keeps normal-flow layout unchanged; it only
+   moves these into the same positioned-paint tier as .dt-quote, where DOM
+   order (these come after) decides the stacking — so they're guaranteed to
+   paint on top, in front of the pinned card, at every scroll position. */
+.dt-supplier{position:relative;z-index:1;background:#fff;border:1px solid var(--spec-border);border-radius:16px;padding:18px;}
+.dt-suppname{display:block;font-family:var(--font-space-grotesk),'Space Grotesk',system-ui,sans-serif;font-size:16px;font-weight:800;color:var(--spec-ink);text-decoration:none;letter-spacing:-.01em;}
+.dt-suppname:hover{color:var(--spec-violet-deep);}
+.dt-suppmeta{display:flex;flex-wrap:wrap;gap:12px;margin-top:7px;font-size:12.5px;color:var(--spec-text-2nd);}
+.dt-suppmeta span{display:inline-flex;align-items:center;gap:5px;}
+.dt-suppbadges{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px;}
+.dt-suppverified,.dt-suppcert{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:5px 10px;border-radius:99px;}
+.dt-suppverified{background:rgba(62,111,208,.12);color:#3E6FD0;}
+.dt-suppcert{background:rgba(108,92,224,.1);color:var(--spec-violet-deep);text-decoration:none;transition:background var(--spec-duration-fast) var(--spec-ease);}
+.dt-suppcert:hover{background:rgba(108,92,224,.18);}
+.dt-suppareas{margin-top:12px;}
+.dt-supplabel{display:block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--spec-text-2nd);margin-bottom:6px;}
+.dt-suppchips{display:flex;flex-wrap:wrap;gap:5px;}
+.dt-suppchip{font-size:11.5px;font-weight:600;color:var(--spec-violet-deep);background:rgba(108,92,224,.08);padding:3px 9px;border-radius:6px;}
+.dt-suppchip.dim{color:var(--spec-text-2nd);background:var(--spec-surface);}
+.dt-storelink{display:inline-block;margin-top:12px;color:var(--spec-violet-deep);font-size:13px;font-weight:700;text-decoration:none;transition:color var(--spec-duration-fast) var(--spec-ease);}
 .dt-storelink:hover{color:var(--spec-violet);}
-.dt-report{text-align:center;}
+/* Honest "protection" strip (§5) — no escrow/guarantee language, just three
+   already-true, already-published facts. Neutral card, not a hard-sell box. */
+.dt-protect{position:relative;z-index:1;background:#fff;border:1px solid var(--spec-border);border-radius:16px;padding:16px 18px;}
+.dt-protectkicker{display:block;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--spec-text-2nd);margin-bottom:10px;}
+.dt-protect ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px;}
+.dt-protect li{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;color:var(--spec-ink);line-height:1.45;}
+.dt-protect li svg{flex-shrink:0;margin-top:1px;color:var(--spec-violet-deep);}
+.dt-report{position:relative;z-index:1;text-align:center;}
 .dt-report p{color:var(--spec-text-2nd);font-size:13px;}
 .dt-replink{background:none;border:none;color:var(--spec-text-2nd);font:inherit;font-size:12.5px;cursor:pointer;text-decoration:underline;transition:color var(--spec-duration-fast) var(--spec-ease);}
 .dt-replink:hover{color:var(--spec-ink);}

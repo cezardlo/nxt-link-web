@@ -35,19 +35,25 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   // read-side check (isRestricted), same as the marketplace browse route —
   // no write-on-read here.
   const { data: vendor } = await db.from('vendor_profiles')
-    .select('id, company_name, city, website, description, status, moderation_status, suspended_until')
+    .select('id, company_name, city, website, description, status, moderation_status, suspended_until, verification_level, year_founded, service_areas')
     .eq('id', row.vendor_id).maybeSingle();
   if (vendor && ((vendor.status as string) !== 'approved' || isRestricted({ moderation_status: (vendor.moderation_status as string) || null, suspended_until: (vendor.suspended_until as string) || null }))) {
     return NextResponse.json({ ok: false, message: 'Listing not found' }, { status: 404 });
   }
 
-  const [{ data: docs }, { data: cases }, { data: sameVendorP }, { data: sameVendorS }, { data: sameCat }, { data: reviewRows }] = await Promise.all([
+  // Supplier trust card (listing-detail-page, 2026-07-30 Alibaba-anatomy
+  // pass): certification count + showcase videos are vendor-level facts, so
+  // they're fetched alongside the existing per-listing queries below — same
+  // admin client, same Promise.all batch, no new round trip pattern.
+  const [{ data: docs }, { data: cases }, { data: sameVendorP }, { data: sameVendorS }, { data: sameCat }, { data: reviewRows }, { count: certCount }, { data: videoRows }] = await Promise.all([
     db.from('listing_documents').select('id, file_name, title, doc_type, ai_summary, size_bytes, storage_path').eq(fk, id).order('uploaded_at', { ascending: false }).limit(12),
     db.from('case_studies').select('id, title, challenge, solution, results').eq(fk, id).eq('status', 'published').limit(6),
     db.from('marketplace_products').select('id, name, category, overview').eq('vendor_id', row.vendor_id).eq('status', 'published').neq('id', id).limit(4),
     db.from('marketplace_services').select('id, name, category, overview').eq('vendor_id', row.vendor_id).eq('status', 'published').neq('id', id).limit(4),
     db.from(tableFor(kind)).select('id, name, category, overview, vendor_id').eq('status', 'published').ilike('category', row.category || '').neq('id', id).limit(4),
     db.from('reviews').select('rating, title, body, created_at').eq('vendor_id', row.vendor_id).eq('status', 'published').order('created_at', { ascending: false }).limit(100),
+    db.from('vendor_certifications').select('id', { count: 'exact', head: true }).eq('vendor_id', row.vendor_id),
+    db.from('vendor_videos').select('id, title, embed_url, provider').eq('vendor_id', row.vendor_id).order('created_at', { ascending: false }).limit(4),
   ]);
 
   const revs = reviewRows || [];
@@ -70,7 +76,15 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     images: images.filter((i) => i.url),
     documents,
     case_studies: cases || [],
-    vendor: vendor ? { company_name: vendor.company_name, city: vendor.city, website: vendor.website, description: vendor.description, rating, review_count: reviewCount } : null,
+    vendor: vendor ? {
+      company_name: vendor.company_name, city: vendor.city, website: vendor.website, description: vendor.description,
+      rating, review_count: reviewCount,
+      verification_level: (vendor.verification_level as string) || null,
+      year_founded: (vendor.year_founded as number) || null,
+      service_areas: (vendor.service_areas as string[]) || [],
+      certification_count: certCount || 0,
+    } : null,
+    videos: videoRows || [],
     reviews: revs.slice(0, 8),
     related: {
       same_vendor: [
