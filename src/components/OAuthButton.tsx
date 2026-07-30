@@ -20,8 +20,14 @@
 // the caller should check for that param on mount and surface it as its
 // normal bilingual error. This is identical for all three providers.
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
+import {
+  buildGoogleDirectCallback,
+  createGoogleNonce,
+  loadGoogleIdentity,
+  type GoogleCredentialResponse,
+} from '@/lib/auth/google-identity';
 import {
   isOAuthEnabled,
   OAUTH_LABEL,
@@ -60,6 +66,108 @@ export default function OAuthButton({
   provider, lang, next, from, disabled, lane, inviteToken, companyName, categories, onError, className, bilingualErrors,
 }: OAuthButtonProps) {
   const [busy, setBusy] = useState(false);
+  const [googleReady, setGoogleReady] = useState(false);
+  const [googleFailed, setGoogleFailed] = useState(false);
+  const googleHost = useRef<HTMLDivElement>(null);
+  const directGoogle = provider === 'google'
+    && isOAuthEnabled(provider)
+    && process.env.NEXT_PUBLIC_GOOGLE_DIRECT_SIGNIN === '1'
+    && Boolean(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID)
+    && !googleFailed;
+
+  const unavailable = () => {
+    onError(bilingualErrors ? bilingualCopy(OAUTH_UNAVAILABLE_MSG[provider]) : OAUTH_UNAVAILABLE_MSG[provider][lang]);
+  };
+
+  // Google requires its official rendered button; there is intentionally no
+  // supported API for opening the chooser from a custom button. The callback
+  // exchanges Google's signed ID token for the same Supabase cookie session
+  // the rest of the app already uses, then enters the shared server callback.
+  useEffect(() => {
+    if (!directGoogle || disabled || !googleHost.current) {
+      setGoogleReady(false);
+      return;
+    }
+
+    let active = true;
+    const host = googleHost.current;
+    host.replaceChildren();
+
+    async function mountGoogleButton() {
+      try {
+        const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+        if (!clientId) throw new Error('Missing Google client ID.');
+        const [google, noncePair] = await Promise.all([loadGoogleIdentity(), createGoogleNonce()]);
+        if (!active) return;
+
+        google.accounts.id.initialize({
+          client_id: clientId,
+          nonce: noncePair.hashedNonce,
+          ux_mode: 'popup',
+          callback: async (response: GoogleCredentialResponse) => {
+            if (!active || !response.credential) {
+              if (active) unavailable();
+              return;
+            }
+            setBusy(true);
+            try {
+              const redirectTo = buildOAuthRedirectTo({
+                origin: window.location.origin,
+                next,
+                from,
+                lane,
+                locale: lang,
+                inviteToken,
+                companyName,
+                categories,
+              });
+              const sb = createBrowserSupabaseClient();
+              const { error } = await sb.auth.signInWithIdToken({
+                provider: 'google',
+                token: response.credential,
+                nonce: noncePair.nonce,
+              });
+              if (error) throw error;
+              window.location.assign(buildGoogleDirectCallback(redirectTo));
+            } catch {
+              unavailable();
+              setBusy(false);
+            }
+          },
+        });
+
+        const width = Math.min(400, Math.max(200, Math.floor(host.getBoundingClientRect().width || 320)));
+        google.accounts.id.renderButton(host, {
+          type: 'standard',
+          theme: 'outline',
+          size: 'large',
+          text: 'continue_with',
+          shape: 'rectangular',
+          logo_alignment: 'left',
+          width,
+          locale: lang,
+        });
+        setGoogleReady(true);
+      } catch {
+        if (active) {
+          setGoogleReady(false);
+          // Keep sign-in available if GIS is blocked or fails to load: this
+          // remounts the existing hosted Supabase OAuth button as rollback.
+          setGoogleFailed(true);
+        }
+      }
+    }
+
+    void mountGoogleButton();
+    return () => {
+      active = false;
+      host.replaceChildren();
+    };
+    // Primitive category signature avoids remounting because an array literal
+    // received a new identity while preserving the callback's exact values.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [directGoogle, disabled, next, from, lane, lang, inviteToken, companyName, categories?.join('|')]);
+
   if (!isOAuthEnabled(provider)) return null;
 
   async function go() {
@@ -75,17 +183,34 @@ export default function OAuthButton({
         options: buildOAuthSignInOptions(provider, redirectTo),
       });
       if (error) {
-        onError(bilingualErrors ? bilingualCopy(OAUTH_UNAVAILABLE_MSG[provider]) : OAUTH_UNAVAILABLE_MSG[provider][lang]);
+        unavailable();
         setBusy(false);
       }
       // else: the browser is already navigating to the provider — nothing else to do.
     } catch {
-      onError(bilingualErrors ? bilingualCopy(OAUTH_UNAVAILABLE_MSG[provider]) : OAUTH_UNAVAILABLE_MSG[provider][lang]);
+      unavailable();
       setBusy(false);
     }
   }
 
   const label = busy ? OAUTH_LABEL_BUSY[lang] : OAUTH_LABEL[provider][lang];
+  if (directGoogle && !disabled) {
+    return (
+      <div
+        className={className}
+        aria-busy={!googleReady || busy}
+        style={{ padding: 0, border: 0, background: 'transparent', overflow: 'hidden' }}
+      >
+        <div ref={googleHost} style={{ display: busy ? 'none' : 'flex', width: '100%', justifyContent: 'center' }} />
+        {(!googleReady || busy) && (
+          <span role="status" style={{ display: 'flex', minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+            {OAUTH_LABEL_BUSY[lang]}
+          </span>
+        )}
+      </div>
+    );
+  }
+
   return (
     <button type="button" className={className} disabled={disabled || busy} onClick={go} aria-label={label}>
       <OAuthMark provider={provider} />

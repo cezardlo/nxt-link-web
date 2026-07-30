@@ -90,11 +90,11 @@ const nextConfig = {
       "base-uri 'self'",
       "object-src 'none'",
       "frame-ancestors 'none'",
-      "script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com https://accounts.google.com/gsi/client",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data: https://fonts.gstatic.com",
-      `connect-src 'self' https://${SUPABASE_HOST} wss://${SUPABASE_HOST} https://va.vercel-scripts.com`,
+      `connect-src 'self' https://${SUPABASE_HOST} wss://${SUPABASE_HOST} https://va.vercel-scripts.com https://accounts.google.com/gsi/`,
       `frame-src 'self' https://www.youtube.com https://player.vimeo.com https://accounts.google.com https://*.linkedin.com https://login.microsoftonline.com https://${SUPABASE_HOST}`,
       `form-action 'self' https://accounts.google.com https://*.linkedin.com https://login.microsoftonline.com https://${SUPABASE_HOST}`,
       "worker-src 'self' blob:",
@@ -107,6 +107,9 @@ const nextConfig = {
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          // Required by Google Identity Services when the browser is not yet
+          // using FedCM; keeps popup-to-opener communication working.
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
           // camera=(self) — the AI listing editor (vendor/listings) lets a
           // vendor capture a product photo directly via
           // <input capture="environment">; same-origin only. Everything
