@@ -1,11 +1,20 @@
 'use client';
 
 // Vendor Seller Central: create/edit product & service listings with
-// structured fields, AI fill from a document or pasted text, image upload,
-// and draft→publish control. Everything is scoped to the signed-in vendor.
+// structured fields, image upload, and draft→publish control. Everything is
+// scoped to the signed-in vendor.
+//
+// Split-view product manager (2026-07-30): the list (left) and the editor
+// (right) render side by side on desktop; on mobile the editor opens as a
+// full-screen sheet. This is a RE-LAYOUT of the presentation only — every
+// field, handler, API call, and the localStorage autosave keys are the exact
+// same ones the form-first version used. See workplace/design/references/
+// listings-manager-splitview-2026-07-30.webp for the layout inspiration
+// (styling is NXT//LINK's own violet system, not the reference's blue).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
+import { Search, Plus, ArrowLeft, ExternalLink, Package, Wrench, ImageOff, Check } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import { scoreListing } from '@/lib/marketplace/completeness';
 import { pilotEntriesOf, customFieldsOf, type PilotEntry, type CustomField } from '@/lib/marketplace/types';
@@ -196,6 +205,20 @@ const T: Record<Lang, Record<string, string>> = {
     previewEmptyNote: 'empty — will not display',
     stDraft: 'Draft', stPublished: 'Published', stNeedsReview: 'Needs review', stReady: 'Ready', stUnpublished: 'Unpublished',
     kindProduct: 'product', kindService: 'service',
+    // Split-view manager (2026-07-30) — new strings for the list/editor rebuild.
+    searchPh: 'Search by name or category…', searchLabel: 'Search listings',
+    filterLabel: 'Filter listings', filterAll: 'All', filterLive: 'Live', filterDrafts: 'Drafts',
+    newListing: '+ New listing',
+    noMatches: 'No listings match your search or filters.',
+    emptyTitle: 'No listings yet',
+    emptyBody: 'Create your first product or service listing so buyers can find you.',
+    chooseKindTitle: 'What are you listing?',
+    pickListingHint: 'Select a listing on the left to edit it, or create a new one.',
+    tagsAudienceSummary: 'Tags & audience',
+    specsLogisticsSummary: 'Specs & lead time',
+    serviceDetailsSummary: 'Service details',
+    photosSectionLabel: 'Photos',
+    draftSavedLocally: 'Draft saved',
   },
   es: {
     loading: 'Cargando…', signInTitle: 'Inicia sesión para administrar tus publicaciones', goToSignIn: 'Ir a iniciar sesión →',
@@ -269,6 +292,20 @@ const T: Record<Lang, Record<string, string>> = {
     previewEmptyNote: 'vacío — no se mostrará',
     stDraft: 'Borrador', stPublished: 'Publicado', stNeedsReview: 'Necesita revisión', stReady: 'Listo', stUnpublished: 'Sin publicar',
     kindProduct: 'producto', kindService: 'servicio',
+    // Split-view manager (2026-07-30) — new strings for the list/editor rebuild.
+    searchPh: 'Buscar por nombre o categoría…', searchLabel: 'Buscar publicaciones',
+    filterLabel: 'Filtrar publicaciones', filterAll: 'Todo', filterLive: 'En vivo', filterDrafts: 'Borradores',
+    newListing: '+ Nueva publicación',
+    noMatches: 'Ninguna publicación coincide con tu búsqueda o filtros.',
+    emptyTitle: 'Aún no tienes publicaciones',
+    emptyBody: 'Crea tu primera publicación de producto o servicio para que los compradores puedan encontrarte.',
+    chooseKindTitle: '¿Qué vas a publicar?',
+    pickListingHint: 'Selecciona una publicación a la izquierda para editarla, o crea una nueva.',
+    tagsAudienceSummary: 'Etiquetas y audiencia',
+    specsLogisticsSummary: 'Especificaciones y plazo de entrega',
+    serviceDetailsSummary: 'Detalles del servicio',
+    photosSectionLabel: 'Fotos',
+    draftSavedLocally: 'Borrador guardado',
   },
 };
 
@@ -384,6 +421,14 @@ export default function VendorListingsPage() {
   const [emailVerified, setEmailVerified] = useState(true);
   const [extras, setExtras] = useState<{ documents: Array<{ id: string; title: string | null; file_name: string }>; case_studies: Array<{ id: string; title: string }> } | null>(null);
 
+  // Split-view manager (2026-07-30): left-list search + filter chips, and the
+  // "which kind am I creating" prompt shown in the right panel before a brand
+  // new listing has a kind (and therefore an editor) yet. Purely client-side
+  // presentation state — none of it is sent to the server or persisted.
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<'all' | 'product' | 'service' | 'live' | 'draft'>('all');
+  const [newKindPrompt, setNewKindPrompt] = useState(false);
+
   function openReview(kind: Kind, listing: Listing) {
     setReviewFor({ kind, listing }); setAccOk(false); setPubErr(''); setExtras(null);
     fetch(`/api/vendor/listings/extras?kind=${kind}&id=${listing.id}`)
@@ -425,6 +470,7 @@ export default function VendorListingsPage() {
   // Debounced (~1s) autosave of the open editor's form into localStorage.
   // Paused while a resume offer is unanswered so it never overwrites the
   // stashed draft with the blank/loaded form before the vendor decides.
+  const [autosaveFlash, setAutosaveFlash] = useState(false);
   useEffect(() => {
     if (!editing || resumeOffer || !authId) return;
     const key = autosaveKey(authId, editing.kind, editing.id);
@@ -432,11 +478,20 @@ export default function VendorListingsPage() {
       try {
         if (isAutosaveWorthKeeping(f as unknown as Record<string, unknown>)) {
           window.localStorage.setItem(key, serializeAutosave(f));
+          // UI Standards Addendum (2026-07-30) §2: visible "Saved" flash on
+          // autosave. Purely a presentation add-on — the write above, its
+          // key, and its timing are exactly what they were before.
+          setAutosaveFlash(true);
         }
       } catch { /* storage full/blocked (e.g. private browsing) — best effort only */ }
     }, 1000);
     return () => clearTimeout(timer);
   }, [f, editing, authId, resumeOffer]);
+  useEffect(() => {
+    if (!autosaveFlash) return;
+    const timer = setTimeout(() => setAutosaveFlash(false), 1800);
+    return () => clearTimeout(timer);
+  }, [autosaveFlash]);
 
   // Suggested chips for Category / Industries come from REAL data: the
   // canonical taxonomy (same source as the public marketplace's category
@@ -468,6 +523,36 @@ export default function VendorListingsPage() {
     const mine = [...products, ...services].flatMap((l) => l.use_cases || []);
     return Array.from(new Set(mine)).sort((a, b) => a.localeCompare(b));
   }, [products, services]);
+
+  // Split-view left list: products + services merged into one scannable list.
+  // `products`/`services` themselves are untouched (still the two arrays the
+  // save/reorder/publish logic reads and writes) — this just tags each row
+  // with its kind for combined display, search, and filter-chip purposes.
+  const allRows = useMemo(
+    () => [
+      ...products.map((l) => ({ ...l, kind: 'product' as Kind })),
+      ...services.map((l) => ({ ...l, kind: 'service' as Kind })),
+    ],
+    [products, services],
+  );
+  const filteredRows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return allRows.filter((l) => {
+      if (filter === 'product' && l.kind !== 'product') return false;
+      if (filter === 'service' && l.kind !== 'service') return false;
+      if (filter === 'live' && l.status !== 'published') return false;
+      if (filter === 'draft' && l.status === 'published') return false;
+      if (q && !(l.name.toLowerCase().includes(q) || (l.category || '').toLowerCase().includes(q))) return false;
+      return true;
+    });
+  }, [allRows, filter, query]);
+  // Reorder (move up/down) is always relative to a row's OWN kind array
+  // (products or services) — that's the array whose order actually persists
+  // via sort_order — never the combined/filtered display list.
+  function kindIndexOf(kind: Kind, id: string) {
+    return (kind === 'product' ? products : services).findIndex((x) => x.id === id);
+  }
+  const currentListing = editing?.id ? allRows.find((l) => l.id === editing.id) || null : null;
 
   // Checks localStorage for a stashed draft matching this exact editor slot
   // (vendor + kind + listing id/'new') and, if one is worth keeping, offers
@@ -504,8 +589,8 @@ export default function VendorListingsPage() {
     setResumeOffer(null);
   }
 
-  function openNew(kind: Kind) { setEditing({ kind, id: null }); setF(EMPTY); setDocId(null); setAiSummary(''); setPasteText(''); setShowPaste(false); setMsg(''); checkResumeOffer(kind, null); }
-  function openEdit(kind: Kind, l: Listing) { setEditing({ kind, id: l.id }); setF(fromListing(l)); setDocId(null); setAiSummary(''); setPasteText(''); setShowPaste(false); setMsg(''); checkResumeOffer(kind, l.id); }
+  function openNew(kind: Kind) { setNewKindPrompt(false); setEditing({ kind, id: null }); setF(EMPTY); setDocId(null); setAiSummary(''); setPasteText(''); setShowPaste(false); setMsg(''); checkResumeOffer(kind, null); }
+  function openEdit(kind: Kind, l: Listing) { setNewKindPrompt(false); setEditing({ kind, id: l.id }); setF(fromListing(l)); setDocId(null); setAiSummary(''); setPasteText(''); setShowPaste(false); setMsg(''); checkResumeOffer(kind, l.id); }
 
   function mergeDraft(draft: Record<string, unknown>) {
     const d = draft as Partial<Listing> & Record<string, unknown>;
@@ -609,6 +694,10 @@ export default function VendorListingsPage() {
   async function archive(kind: Kind, id: string) {
     if (!confirm(t.archiveConfirm)) return;
     await fetch(`/api/vendor/listings?kind=${kind}&id=${id}`, { method: 'DELETE' });
+    // If the archived listing was open in the split-view editor, close the
+    // panel too — it no longer exists to edit. (Split-view manager, 2026-07-30;
+    // the archive call itself is unchanged.)
+    setEditing((cur) => (cur && cur.id === id ? null : cur));
     load();
   }
   // Reorder within a kind (up/down — reliable on mobile, unlike drag). Persists
@@ -696,158 +785,255 @@ export default function VendorListingsPage() {
       )}
       {msg && <div className="sc-msg">{msg}</div>}
 
-      {!editing && (
-        <>
-          {([['product', t.products, products], ['service', t.services, services]] as Array<[Kind, string, Listing[]]>).map(([kind, label, rows]) => (
-            <section className="sc-card" key={kind}>
-              <div className="sc-cardhead">
-                <div className="sc-lbl">{label} ({rows.length})</div>
-                <button className="sc-btn sm" onClick={() => openNew(kind)}>{kind === 'product' ? t.newProduct : t.newService}</button>
-              </div>
-              {rows.length === 0 ? <p className="sc-hint">{kind === 'product' ? t.noProductsYet : t.noServicesYet}</p> : (
-                <ul className="sc-list">
-                  {rows.map((l, i) => {
-                    const score = scoreListing(kind, l as unknown as Record<string, unknown>, lang);
-                    return (
-                    <li key={l.id}>
-                      <div className="sc-rowtop">
-                        {rows.length > 1 && (
-                          <span className="sc-reorder">
-                            <button aria-label={t.moveUp} disabled={i === 0} onClick={() => move(kind, i, 'up')}>▲</button>
-                            <button aria-label={t.moveDown} disabled={i === rows.length - 1} onClick={() => move(kind, i, 'down')}>▼</button>
-                          </span>
-                        )}
-                        <span className={'sc-status ' + l.status}>{STATUS_LABEL[l.status] || l.status}</span>
-                        <b>{l.name}</b>
-                        <small>{l.category || t.noCategory}</small>
-                        <span className="sc-spacer" />
-                        {l.status === 'published' && <a href={`/marketplace/${kind}/${l.id}`} target="_blank" rel="noreferrer">{t.viewLive}</a>}
-                        <button onClick={() => openEdit(kind, l)}>{t.edit}</button>
-                        {l.status === 'published'
-                          ? <button onClick={() => setStatus(kind, l.id, 'unpublished')}>{t.unpublish}</button>
-                          : <button className="sc-pub" onClick={() => openReview(kind, l)}>{t.reviewPublish}</button>}
-                        <button className="sc-del" onClick={() => archive(kind, l.id)}>{t.archive}</button>
-                      </div>
-                      {/* Completeness meter — complete listings rank higher & win more quotes */}
-                      <div className="sc-meter" title={score.missing.join(' · ')}>
-                        <div className="sc-meterbar"><div className={'sc-meterfill' + (score.percent >= 80 ? ' good' : score.percent >= 50 ? ' mid' : ' low')} style={{ width: `${score.percent}%` }} /></div>
-                        <span className="sc-meterpct">{score.percent}{t.completeSuffix}</span>
-                        {score.missing.length > 0 && score.percent < 100 && (
-                          <span className="sc-meterhint">{t.nextPrefix} {score.missing.slice(0, 2).join(' · ')}</span>
-                        )}
-                      </div>
-                    </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </section>
-          ))}
-        </>
-      )}
-
-      {editing && (
-        <section className="sc-card">
-          <div className="sc-cardhead">
-            <div className="sc-lbl">{editing.id ? (editing.kind === 'product' ? t.formEditProduct : t.formEditService) : (editing.kind === 'product' ? t.formNewProduct : t.formNewService)}</div>
-            <button className="sc-link" onClick={() => { setEditing(null); setMsg(''); }}>{t.backToListings}</button>
+      <div className="sc-split">
+        <div className="sc-listcol">
+          <div className="sc-listtoolbar">
+            <label className="sc-search">
+              <Search size={16} aria-hidden="true" />
+              <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.searchPh} aria-label={t.searchLabel} />
+            </label>
+            <button type="button" className="sc-btn" onClick={() => { setEditing(null); setNewKindPrompt(true); }}>
+              <Plus size={16} /> {t.newListing}
+            </button>
           </div>
-
-          {resumeOffer && (
-            <div className="sc-resume">
-              <span>{t.resumeTitle}</span>
-              <div className="sc-resume-actions">
-                <button type="button" className="sc-btn sm" onClick={applyResumeOffer}>{t.resumeRestore}</button>
-                <button type="button" className="sc-btn sm ghost" onClick={discardResumeOffer}>{t.resumeDiscard}</button>
-              </div>
-            </div>
-          )}
-
-          <div className="sc-grid">
-            {Field('name', editing.kind === 'product' ? t.nameLabelProduct : t.nameLabelService)}
-            {Chip(t.categoryLabel, f.category ? [f.category] : [], (next) => setF({ ...f, category: next[next.length - 1] || '' }), {
-              suggestions: suggestedCategories, max: 1,
-              placeholder: t.categoryHint,
-            })}
-          </div>
-          {Field('overview', t.descriptionLabel, t.descriptionPh, 4)}
-          <div className="sc-grid">
-            {Chip(t.bestForLabel, f.best_for, (next) => setF({ ...f, best_for: next }), {
-              suggestions: suggestedBestFor, max: 10, placeholder: t.chipHint,
-            })}
-            {Chip(t.industriesLabel, f.industries, (next) => setF({ ...f, industries: next }), {
-              suggestions: suggestedIndustries, max: 15, placeholder: t.chipHint,
-            })}
-          </div>
-
-          {editing.kind === 'product' ? (
-            <>
-              <div className="sc-grid">
-                {Chip(t.useCasesLabel, f.use_cases, (next) => setF({ ...f, use_cases: next }), {
-                  suggestions: suggestedUseCases, max: 12, placeholder: t.chipHint,
-                })}
-                {Field('lead_time', t.leadTimeLabel, t.leadTimePh)}
-              </div>
-              {Field('specs', t.specsLabel, t.specsPh, 4)}
-              <div className="sc-cbrow"><span className="sc-lblsm">{t.availabilityLabel}</span>{C('buy', t.buy)}{C('rent', t.rent)}{C('lease', t.lease)}</div>
-            </>
-          ) : (
-            <>
-              <div className="sc-grid">
-                {Field('service_areas', t.serviceAreasLabel, t.serviceAreasPh)}
-                {Field('response_time', t.responseTimeLabel, t.responseTimePh)}
-              </div>
-              {Field('process', t.processLabel, t.processPh, 4)}
-              <div className="sc-grid">
-                {Field('certifications', t.certificationsLabel)}
-                {Field('pricing_model', t.pricingModelLabel, t.pricingModelPh)}
-              </div>
-              <div className="sc-cbrow">{C('emergency_available', t.emergencyLabel)}</div>
-            </>
-          )}
-
-          <details className="sc-block"><summary>{t.pilotDemoSummary}</summary>
-            <div className="sc-cbrow">{C('pilot_available', t.pilotAvailableLabel)}</div>
-            {f.pilots.map((p, i) => (
-              <div className="sc-pilot-entry" key={i}>
-                <div className="sc-grid3">
-                  <label className="sc-field"><span>{t.durationLabel}</span><input placeholder={t.durationPh} value={p.duration} onChange={(e) => updatePilot(i, 'duration', e.target.value)} /></label>
-                  <label className="sc-field"><span>{t.costLabel}</span><input placeholder={t.costPh} value={p.cost} onChange={(e) => updatePilot(i, 'cost', e.target.value)} /></label>
-                  <label className="sc-field"><span>{t.scopeLabel}</span><input placeholder={t.scopePh} value={p.scope} onChange={(e) => updatePilot(i, 'scope', e.target.value)} /></label>
-                </div>
-                <button type="button" className="sc-link" onClick={() => removePilot(i)}>{t.remove}</button>
-              </div>
+          <div className="sc-filterchips" role="group" aria-label={t.filterLabel}>
+            {([
+              ['all', t.filterAll], ['product', t.products], ['service', t.services], ['live', t.filterLive], ['draft', t.filterDrafts],
+            ] as Array<[typeof filter, string]>).map(([key, label]) => (
+              <button key={key} type="button" className={'sc-chip' + (filter === key ? ' active' : '')} aria-pressed={filter === key} onClick={() => setFilter(key)}>
+                {/* Selected state is never color-only (UI Standards Addendum §3) — the check mark is the non-color cue. */}
+                {filter === key && <Check size={13} />}
+                {label}
+              </button>
             ))}
-            <button type="button" className="sc-btn sm ghost" disabled={f.pilots.length >= PILOT_MAX} onClick={addPilot}>{t.addAnotherPilot}</button>
-          </details>
-          <details className="sc-block"><summary>{t.implementationSummary}</summary>
-            <div className="sc-grid3">{Field('impl_requirements', t.implRequirementsLabel, t.implRequirementsPh)}{Field('impl_timeline', t.implTimelineLabel, t.implTimelinePh)}{Field('impl_training', t.implTrainingLabel, t.implTrainingPh)}</div>
-            {CustomFields('impl_custom')}
-          </details>
-          <details className="sc-block"><summary>{t.warrantySummary}</summary>
-            <div className="sc-grid3">{Field('ws_warranty', t.wsWarrantyLabel, t.wsWarrantyPh)}{Field('ws_channels', t.wsChannelsLabel, t.wsChannelsPh)}{Field('ws_sla', t.wsSlaLabel, t.wsSlaPh)}</div>
-            {CustomFields('ws_custom')}
-          </details>
-          <details className="sc-block"><summary>{t.pricingSummary}</summary>
-            <div className="sc-grid3">{Field('pr_model', t.prModelLabel, t.prModelPh)}{Field('pr_range', t.prRangeLabel, t.prRangePh)}{Field('pr_notes', t.prNotesLabel, t.prNotesPh)}</div>
-            {CustomFields('pr_custom')}
-          </details>
+          </div>
 
-          {editing.id && (
-            <div className="sc-photos">
-              <span className="sc-lblsm">{t.photosLabel}</span>
-              <label className="sc-btn sm ghost">{t.addPhoto}
-                <input type="file" accept="image/png,image/jpeg,image/webp" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadImage(file); e.target.value = ''; }} />
-              </label>
+          {allRows.length === 0 ? (
+            <div className="sc-emptystate">
+              <span className="sc-emptyicon"><Package size={22} /></span>
+              <b>{t.emptyTitle}</b>
+              <p>{t.emptyBody}</p>
+              <button type="button" className="sc-btn" onClick={() => { setEditing(null); setNewKindPrompt(true); }}>{t.newListing}</button>
+            </div>
+          ) : filteredRows.length === 0 ? (
+            <p className="sc-hint sc-nomatch">{t.noMatches}</p>
+          ) : (
+            <ul className="sc-list">
+              {filteredRows.map((l, rowIndex) => {
+                const score = scoreListing(l.kind, l as unknown as Record<string, unknown>, lang);
+                const kindArr = l.kind === 'product' ? products : services;
+                const idx = kindIndexOf(l.kind, l.id);
+                const img = (l.image_paths || [])[0];
+                const isActive = editing?.id === l.id;
+                // Entrance stagger (UI Standards Addendum §4): capped so a long
+                // list doesn't leave the last rows waiting to fade in.
+                const rowStyle = { animationDelay: `${Math.min(rowIndex, 10) * 35}ms` };
+                return (
+                  <li key={l.id} className={'sc-row' + (isActive ? ' is-active' : '')} style={rowStyle}>
+                    <div className="sc-rowtop">
+                      {kindArr.length > 1 && (
+                        <span className="sc-reorder">
+                          <button type="button" aria-label={t.moveUp} disabled={idx === 0} onClick={(e) => { e.stopPropagation(); move(l.kind, idx, 'up'); }}>▲</button>
+                          <button type="button" aria-label={t.moveDown} disabled={idx === kindArr.length - 1} onClick={(e) => { e.stopPropagation(); move(l.kind, idx, 'down'); }}>▼</button>
+                        </span>
+                      )}
+                      <button type="button" className="sc-rowmain" onClick={() => openEdit(l.kind, l)} aria-current={isActive || undefined}>
+                        <span className={'sc-thumb ' + l.kind}>
+                          {img && /^https?:/.test(img) ? <img src={img} alt="" /> : (l.kind === 'product' ? <Package size={18} /> : <Wrench size={18} />)}
+                        </span>
+                        <span className="sc-rowtext">
+                          <span className="sc-rowname">{l.name}</span>
+                          <span className="sc-rowmeta">{(l.category || t.noCategory)} · {KIND_LABEL[l.kind]}</span>
+                        </span>
+                        <span className={'sc-status ' + l.status}>{STATUS_LABEL[l.status] || l.status}</span>
+                      </button>
+                      {l.status === 'published' && (
+                        <a className="sc-rowlive" href={`/marketplace/${l.kind}/${l.id}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} aria-label={t.viewLive} title={t.viewLive}>
+                          <ExternalLink size={15} />
+                        </a>
+                      )}
+                    </div>
+                    {/* Completeness meter — complete listings rank higher & win more quotes */}
+                    <div className="sc-meter" title={score.missing.join(' · ')}>
+                      <div className="sc-meterbar"><div className={'sc-meterfill' + (score.percent >= 80 ? ' good' : score.percent >= 50 ? ' mid' : ' low')} style={{ width: `${score.percent}%` }} /></div>
+                      <span className="sc-meterpct">{score.percent}{t.completeSuffix}</span>
+                      {score.missing.length > 0 && score.percent < 100 && (
+                        <span className="sc-meterhint">{t.nextPrefix} {score.missing.slice(0, 2).join(' · ')}</span>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        <div className={'sc-editcol' + ((editing || newKindPrompt) ? ' is-open' : '')}>
+          {newKindPrompt && !editing && (
+            <div className="sc-kindpick">
+              <div className="sc-edithead">
+                <button type="button" className="sc-backbtn" onClick={() => setNewKindPrompt(false)}><ArrowLeft size={18} /> {t.backToListings}</button>
+              </div>
+              <div className="sc-kindpickbody">
+                <b>{t.chooseKindTitle}</b>
+                <div className="sc-kindopts">
+                  <button type="button" className="sc-kindopt" onClick={() => openNew('product')}><Package size={22} /><span>{t.newProduct}</span></button>
+                  <button type="button" className="sc-kindopt" onClick={() => openNew('service')}><Wrench size={22} /><span>{t.newService}</span></button>
+                </div>
+              </div>
             </div>
           )}
 
-          <div className="sc-actions">
-            <button className="sc-btn ghost" disabled={saving} onClick={() => save()}>{saving ? t.saving : t.saveDraft}</button>
-            <button className="sc-btn" disabled={saving} onClick={reviewAndPublish}>{saving ? t.saving : t.reviewPublish}</button>
-          </div>
-        </section>
-      )}
+          {!editing && !newKindPrompt && (
+            <div className="sc-editplaceholder">
+              <span className="sc-emptyicon"><ImageOff size={20} /></span>
+              <p>{t.pickListingHint}</p>
+            </div>
+          )}
+
+          {editing && (
+            <>
+              <div className="sc-edithead">
+                <button type="button" className="sc-backbtn" onClick={() => { setEditing(null); setMsg(''); }}><ArrowLeft size={18} /> {t.backToListings}</button>
+                <div className="sc-editheadmain">
+                  <span className="sc-lbl">{editing.id ? (editing.kind === 'product' ? t.formEditProduct : t.formEditService) : (editing.kind === 'product' ? t.formNewProduct : t.formNewService)}</span>
+                  {currentListing && <span className={'sc-status ' + currentListing.status}>{STATUS_LABEL[currentListing.status] || currentListing.status}</span>}
+                </div>
+                {currentListing && (
+                  <div className="sc-editheadactions">
+                    {currentListing.status === 'published' && (
+                      <a className="sc-link" href={`/marketplace/${editing.kind}/${editing.id}`} target="_blank" rel="noreferrer"><ExternalLink size={13} /> {t.viewLive}</a>
+                    )}
+                    {currentListing.status === 'published' && (
+                      <button type="button" className="sc-link" onClick={() => setStatus(editing.kind, editing.id as string, 'unpublished')}>{t.unpublish}</button>
+                    )}
+                    <button type="button" className="sc-link sc-danger" onClick={() => archive(editing.kind, editing.id as string)}>{t.archive}</button>
+                  </div>
+                )}
+              </div>
+
+              <div className="sc-editbody">
+                {resumeOffer && (
+                  <div className="sc-resume">
+                    <span>{t.resumeTitle}</span>
+                    <div className="sc-resume-actions">
+                      <button type="button" className="sc-btn sm" onClick={applyResumeOffer}>{t.resumeRestore}</button>
+                      <button type="button" className="sc-btn sm ghost" onClick={discardResumeOffer}>{t.resumeDiscard}</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Photos strip — top of the panel, like the reference layout.
+                    Existing photos (read-only display; removal is out of scope
+                    for this re-layout) plus the same upload control as before,
+                    still gated on the listing having an id (save first). */}
+                <div className="sc-photostrip">
+                  <span className="sc-lblsm">{t.photosSectionLabel}</span>
+                  <div className="sc-photostripimgs">
+                    {editing.id ? (
+                      <>
+                        {(currentListing?.image_paths || []).filter((p) => /^https?:/.test(p)).map((p, i) => (
+                          <span className="sc-photothumb" key={i}><img src={p} alt="" /></span>
+                        ))}
+                        <label className="sc-photoadd" title={t.addPhoto}>
+                          <Plus size={18} />
+                          <input type="file" accept="image/png,image/jpeg,image/webp" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadImage(file); e.target.value = ''; }} aria-label={t.addPhoto} />
+                        </label>
+                      </>
+                    ) : (
+                      <span className="sc-photoplaceholder">{t.saveListingFirst}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="sc-grid">
+                  {Field('name', editing.kind === 'product' ? t.nameLabelProduct : t.nameLabelService)}
+                  {Chip(t.categoryLabel, f.category ? [f.category] : [], (next) => setF({ ...f, category: next[next.length - 1] || '' }), {
+                    suggestions: suggestedCategories, max: 1,
+                    placeholder: t.categoryHint,
+                  })}
+                </div>
+                {Field('overview', t.descriptionLabel, t.descriptionPh, 4)}
+
+                {/* Pricing stays always-visible (with name/description/category) —
+                    the rest of the fields live in collapsible groups below. */}
+                <div className="sc-block sc-pricingblock">
+                  <span className="sc-blocklabel">{t.pricingSummary}</span>
+                  {editing.kind === 'product' ? (
+                    <div className="sc-cbrow"><span className="sc-lblsm">{t.availabilityLabel}</span>{C('buy', t.buy)}{C('rent', t.rent)}{C('lease', t.lease)}</div>
+                  ) : (
+                    <>
+                      {Field('pricing_model', t.pricingModelLabel, t.pricingModelPh)}
+                      <div className="sc-cbrow">{C('emergency_available', t.emergencyLabel)}</div>
+                    </>
+                  )}
+                  <div className="sc-grid3">{Field('pr_model', t.prModelLabel, t.prModelPh)}{Field('pr_range', t.prRangeLabel, t.prRangePh)}{Field('pr_notes', t.prNotesLabel, t.prNotesPh)}</div>
+                  {CustomFields('pr_custom')}
+                </div>
+
+                <details className="sc-block"><summary>{t.tagsAudienceSummary}</summary>
+                  <div className="sc-grid">
+                    {Chip(t.bestForLabel, f.best_for, (next) => setF({ ...f, best_for: next }), {
+                      suggestions: suggestedBestFor, max: 10, placeholder: t.chipHint,
+                    })}
+                    {Chip(t.industriesLabel, f.industries, (next) => setF({ ...f, industries: next }), {
+                      suggestions: suggestedIndustries, max: 15, placeholder: t.chipHint,
+                    })}
+                  </div>
+                  {editing.kind === 'product' && Chip(t.useCasesLabel, f.use_cases, (next) => setF({ ...f, use_cases: next }), {
+                    suggestions: suggestedUseCases, max: 12, placeholder: t.chipHint,
+                  })}
+                </details>
+
+                {editing.kind === 'product' ? (
+                  <details className="sc-block"><summary>{t.specsLogisticsSummary}</summary>
+                    {Field('specs', t.specsLabel, t.specsPh, 4)}
+                    {Field('lead_time', t.leadTimeLabel, t.leadTimePh)}
+                  </details>
+                ) : (
+                  <details className="sc-block"><summary>{t.serviceDetailsSummary}</summary>
+                    <div className="sc-grid">
+                      {Field('service_areas', t.serviceAreasLabel, t.serviceAreasPh)}
+                      {Field('response_time', t.responseTimeLabel, t.responseTimePh)}
+                    </div>
+                    {Field('process', t.processLabel, t.processPh, 4)}
+                    {Field('certifications', t.certificationsLabel)}
+                  </details>
+                )}
+
+                <details className="sc-block"><summary>{t.pilotDemoSummary}</summary>
+                  <div className="sc-cbrow">{C('pilot_available', t.pilotAvailableLabel)}</div>
+                  {f.pilots.map((p, i) => (
+                    <div className="sc-pilot-entry" key={i}>
+                      <div className="sc-grid3">
+                        <label className="sc-field"><span>{t.durationLabel}</span><input placeholder={t.durationPh} value={p.duration} onChange={(e) => updatePilot(i, 'duration', e.target.value)} /></label>
+                        <label className="sc-field"><span>{t.costLabel}</span><input placeholder={t.costPh} value={p.cost} onChange={(e) => updatePilot(i, 'cost', e.target.value)} /></label>
+                        <label className="sc-field"><span>{t.scopeLabel}</span><input placeholder={t.scopePh} value={p.scope} onChange={(e) => updatePilot(i, 'scope', e.target.value)} /></label>
+                      </div>
+                      <button type="button" className="sc-link" onClick={() => removePilot(i)}>{t.remove}</button>
+                    </div>
+                  ))}
+                  <button type="button" className="sc-btn sm ghost" disabled={f.pilots.length >= PILOT_MAX} onClick={addPilot}>{t.addAnotherPilot}</button>
+                </details>
+                <details className="sc-block"><summary>{t.implementationSummary}</summary>
+                  <div className="sc-grid3">{Field('impl_requirements', t.implRequirementsLabel, t.implRequirementsPh)}{Field('impl_timeline', t.implTimelineLabel, t.implTimelinePh)}{Field('impl_training', t.implTrainingLabel, t.implTrainingPh)}</div>
+                  {CustomFields('impl_custom')}
+                </details>
+                <details className="sc-block"><summary>{t.warrantySummary}</summary>
+                  <div className="sc-grid3">{Field('ws_warranty', t.wsWarrantyLabel, t.wsWarrantyPh)}{Field('ws_channels', t.wsChannelsLabel, t.wsChannelsPh)}{Field('ws_sla', t.wsSlaLabel, t.wsSlaPh)}</div>
+                  {CustomFields('ws_custom')}
+                </details>
+              </div>
+
+              <div className="sc-savebar">
+                {autosaveFlash && <span className="sc-autosaveflash" role="status">{t.draftSavedLocally}</span>}
+                <button className="sc-btn ghost" disabled={saving} onClick={() => save()}>{saving ? t.saving : t.saveDraft}</button>
+                <button className="sc-btn" disabled={saving} onClick={reviewAndPublish}>{saving ? t.saving : t.reviewPublish}</button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
 
       {reviewFor && (
         <div className="sc-modal" role="dialog" aria-modal="true" aria-labelledby="sc-modal-title" onClick={() => setReviewFor(null)}>
@@ -949,7 +1135,7 @@ const CSS = `
 .sc-brand{display:flex;align-items:baseline;gap:10px;color:var(--spec-ink,#141320);text-decoration:none;}
 .sc-brand b{font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-size:17px;font-weight:700;}.sc-brand i{color:var(--spec-violet,#6C5CE0);font-style:normal;}
 .sc-brand span{color:var(--spec-text-2nd,#615F72);font-size:13px;}
-.sc-wrap{max-width:860px;margin:0 auto;padding:36px 20px 100px;}
+.sc-wrap{max-width:1180px;margin:0 auto;padding:36px 20px 100px;}
 .sc-empty{text-align:center;color:var(--spec-text-2nd,#615F72);padding:80px 0;}
 .sc-gate{max-width:420px;margin:14vh auto;text-align:center;background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:20px;padding:36px;}
 .sc-gate h1{font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-size:20px;margin-bottom:18px;}
@@ -989,11 +1175,11 @@ const CSS = `
 .sc-list button.sc-pub{border-color:rgba(47,158,106,.4);color:#1F7A54;}
 .sc-list button.sc-del{color:var(--spec-text-2nd,#615F72);}
 .sc-list button.sc-del:hover{color:var(--spec-error,#CE4B43);border-color:rgba(206,75,67,.4);}
-.sc-status{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:99px;}
-.sc-status.published{background:#E9F7F0;color:#1F7A54;}
-.sc-status.draft{background:#FBF3E7;color:var(--spec-warning,#C68A28);}
-.sc-status.needs_review{background:#FDEEE3;color:#B5651D;}
-.sc-status.ready{background:#E7F0FD;color:#3E6FD0;}
+.sc-status{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:99px;white-space:nowrap;flex-shrink:0;}
+.sc-status.published{background:var(--spec-success-bg,#E7F5EE);color:var(--spec-success,#2F9E6A);}
+.sc-status.draft{background:var(--spec-warning-bg,#FBF2E1);color:var(--spec-warning,#C68A28);}
+.sc-status.needs_review{background:var(--spec-warning-bg,#FBF2E1);color:#B5651D;}
+.sc-status.ready{background:var(--spec-info-bg,#E9EFFB);color:var(--spec-info,#3E6FD0);}
 .sc-status.unpublished{background:var(--spec-surface,#EFEDF5);color:var(--spec-text-2nd,#615F72);}
 .sc-btn{font-family:inherit;font-size:14px;font-weight:700;padding:12px 20px;border-radius:10px;border:none;background:var(--spec-violet,#6C5CE0);color:#fff;cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .sc-btn:hover{background:var(--spec-violet-deep,#4A3DB0);}.sc-btn:disabled{opacity:.55;}
@@ -1036,7 +1222,7 @@ const CSS = `
 .sc-photos{display:flex;align-items:center;gap:12px;margin:16px 0;}
 .sc-actions{display:flex;gap:12px;margin-top:20px;}
 .sc-warn{background:#FBF3E7;border:1px solid #EFD9AE;color:#8A5D14;padding:11px 15px;border-radius:12px;font-size:13.5px;margin-bottom:16px;line-height:1.5;}
-.sc-modal{position:fixed;inset:0;background:rgba(20,19,32,.55);display:grid;place-items:center;z-index:40;padding:20px;}
+.sc-modal{position:fixed;inset:0;background:rgba(20,19,32,.55);display:grid;place-items:center;z-index:60;padding:20px;}
 .sc-modal-in{background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:18px;max-width:560px;width:100%;max-height:85vh;overflow:auto;padding:24px;box-shadow:0 20px 60px rgba(20,19,32,.25);}
 .sc-prev-card{display:flex;gap:14px;background:var(--spec-surface,#EFEDF5);border:1px solid var(--spec-border,#E2DFEC);border-radius:13px;padding:12px;margin:14px 0;}
 .sc-prev-img{width:110px;height:74px;border-radius:9px;overflow:hidden;background:#E2DFEC;display:grid;place-items:center;color:#8A87A0;font-size:11px;flex-shrink:0;}
@@ -1051,4 +1237,94 @@ const CSS = `
 .sc-prev-list li i{color:#8A87A0;font-style:italic;}
 .sc-acc{margin:14px 0 4px;font-size:13.5px;line-height:1.5;align-items:flex-start;}
 .sc-acc input{margin-top:3px;}
+
+/* Split-view product manager (2026-07-30) — list column + pinned editor
+   column. Layout/workflow only; every field/handler above is unchanged. */
+.sc-split{display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:22px;align-items:start;}
+.sc-listcol{min-width:0;}
+.sc-listtoolbar{display:flex;gap:12px;align-items:center;margin-bottom:12px;}
+.sc-search{display:flex;align-items:center;gap:8px;flex:1;min-width:0;background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:10px;padding:0 12px;height:42px;color:var(--spec-text-2nd,#615F72);transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),box-shadow var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.sc-search:focus-within{border-color:var(--spec-violet,#6C5CE0);box-shadow:0 0 0 3px rgba(108,92,224,.12);}
+.sc-search input{flex:1;min-width:0;border:none;outline:none;background:transparent;font:inherit;font-size:14px;color:var(--spec-ink,#141320);height:100%;}
+.sc-filterchips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.sc-chip{display:inline-flex;align-items:center;gap:5px;min-height:38px;font-family:inherit;font-size:12.5px;font-weight:600;padding:9px 15px;border-radius:99px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-text-2nd,#615F72);cursor:pointer;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),color var(--spec-duration-fast,150ms) var(--spec-ease,ease),background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.sc-chip:hover{border-color:var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);}
+.sc-chip.active{background:var(--spec-violet,#6C5CE0);border-color:var(--spec-violet,#6C5CE0);color:#fff;}
+.sc-nomatch{padding:20px 4px;text-align:center;}
+.sc-emptystate{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:44px 24px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:16px;}
+.sc-emptyicon{width:44px;height:44px;border-radius:12px;background:var(--spec-violet-bg,#EDEAFB);color:var(--spec-violet-deep,#4A3DB0);display:grid;place-items:center;flex-shrink:0;}
+.sc-emptystate b{font-size:16px;color:var(--spec-ink,#141320);}
+.sc-emptystate p{margin:0;font-size:13.5px;color:var(--spec-text-2nd,#615F72);max-width:280px;}
+.sc-row{position:relative;transition:transform var(--spec-duration-fast,150ms) var(--spec-ease,ease),box-shadow var(--spec-duration-fast,150ms) var(--spec-ease,ease),border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.sc-row.is-active{border-color:var(--spec-violet,#6C5CE0);box-shadow:0 0 0 1px var(--spec-violet,#6C5CE0);background:#fff;}
+.sc-rowmain{display:flex;align-items:center;gap:12px;flex:1;min-width:0;background:none;border:none;padding:4px;text-align:left;cursor:pointer;border-radius:8px;font-family:inherit;color:inherit;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.sc-rowmain:hover{background:rgba(108,92,224,.06);}
+.sc-thumb{width:40px;height:40px;border-radius:9px;overflow:hidden;flex-shrink:0;display:grid;place-items:center;background:var(--spec-violet-bg,#EDEAFB);color:var(--spec-violet-deep,#4A3DB0);}
+.sc-thumb.service{background:var(--spec-info-bg,#E9EFFB);color:var(--spec-info,#3E6FD0);}
+.sc-thumb img{width:100%;height:100%;object-fit:cover;}
+.sc-rowtext{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
+.sc-rowname{font-size:14.5px;font-weight:700;color:var(--spec-ink,#141320);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sc-rowmeta{font-size:12px;color:var(--spec-text-2nd,#615F72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sc-rowlive{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;color:var(--spec-violet-deep,#4A3DB0);flex-shrink:0;}
+.sc-rowlive:hover{background:rgba(108,92,224,.08);}
+.sc-editcol{background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:18px;position:sticky;top:104px;max-height:calc(100vh - 124px);display:flex;flex-direction:column;overflow:hidden;}
+.sc-kindpick{display:flex;flex-direction:column;flex:1;min-height:0;}
+.sc-editplaceholder,.sc-kindpickbody{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px;flex:1;padding:40px 28px;color:var(--spec-text-2nd,#615F72);}
+.sc-editplaceholder p{margin:0;font-size:14px;max-width:260px;}
+.sc-kindpickbody b{font-size:16px;color:var(--spec-ink,#141320);}
+.sc-kindopts{display:flex;gap:14px;margin-top:4px;flex-wrap:wrap;justify-content:center;}
+.sc-kindopt{display:flex;flex-direction:column;align-items:center;gap:8px;font-family:inherit;font-size:13.5px;font-weight:600;padding:20px 26px;border-radius:14px;border:1.5px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-violet-deep,#4A3DB0);cursor:pointer;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.sc-kindopt:hover{border-color:var(--spec-violet,#6C5CE0);background:rgba(108,92,224,.05);}
+.sc-edithead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--spec-border,#E2DFEC);}
+.sc-backbtn{display:inline-flex;align-items:center;gap:6px;font-family:inherit;background:none;border:none;color:var(--spec-violet-deep,#4A3DB0);font-size:13px;font-weight:600;cursor:pointer;padding:4px 2px;}
+.sc-backbtn:hover{color:var(--spec-violet,#6C5CE0);}
+.sc-editheadmain{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
+.sc-editheadmain .sc-lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sc-editheadactions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:12.5px;}
+.sc-editheadactions a{display:inline-flex;align-items:center;gap:4px;}
+.sc-danger{color:var(--spec-text-2nd,#615F72);}
+.sc-danger:hover{color:var(--spec-error,#CE4B43);}
+.sc-editbody{padding:18px;overflow-y:auto;flex:1;min-height:0;}
+.sc-savebar{display:flex;gap:12px;padding:14px 18px;border-top:1px solid var(--spec-border,#E2DFEC);background:#fff;}
+.sc-savebar .sc-btn{flex:1;}
+.sc-photostrip{margin-bottom:16px;}
+.sc-photostripimgs{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;}
+.sc-photothumb{width:64px;height:64px;border-radius:10px;overflow:hidden;border:1px solid var(--spec-border,#E2DFEC);flex-shrink:0;}
+.sc-photothumb img{width:100%;height:100%;object-fit:cover;}
+.sc-photoadd{width:64px;height:64px;border-radius:10px;border:1.5px dashed rgba(108,92,224,.4);display:grid;place-items:center;color:var(--spec-violet,#6C5CE0);cursor:pointer;background:rgba(108,92,224,.04);flex-shrink:0;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.sc-photoadd:hover{background:rgba(108,92,224,.09);}
+.sc-photoplaceholder{display:inline-block;font-size:13px;color:var(--spec-text-2nd,#615F72);padding:14px 16px;border:1px dashed var(--spec-border,#E2DFEC);border-radius:10px;background:var(--spec-surface,#EFEDF5);}
+.sc-blocklabel{display:block;font-size:13.5px;font-weight:600;color:var(--spec-ink,#141320);margin-bottom:4px;}
+@media(max-width:1020px){.sc-split{grid-template-columns:minmax(240px,320px) 1fr;}}
+@media(max-width:768px){
+  .sc-wrap{padding-left:16px;padding-right:16px;}
+  .sc-split{display:block;}
+  .sc-editcol{position:fixed;inset:0;z-index:50;border-radius:0;border:none;max-height:none;transform:translateX(100%);transition:transform var(--spec-duration-reveal,220ms) var(--spec-ease,ease);}
+  .sc-editcol.is-open{transform:translateX(0);}
+  .sc-editcol:not(.is-open){visibility:hidden;}
+  .sc-savebar{padding-bottom:calc(14px + env(safe-area-inset-bottom));}
+}
+
+/* Motion (UI Standards Addendum §4) — restrained, local to this page. Fade+
+   translateY entrances with a short stagger in the list, -2px hover lift,
+   press scale(.98) on the new tappable rows/chips/cards, and the
+   review-before-publish overlay gets a slide-up+fade entrance with a
+   fading backdrop. Everything collapses to instant/opacity-only under
+   prefers-reduced-motion, per the same rule. */
+@keyframes sc-fade-up{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+@keyframes sc-modal-backdrop-in{from{opacity:0;}to{opacity:1;}}
+@keyframes sc-modal-in{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+.sc-list li{animation:sc-fade-up 280ms var(--spec-ease,ease-out) backwards;}
+.sc-row:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(20,19,32,.08);}
+.sc-row.is-active:hover{transform:none;}
+.sc-chip:active,.sc-kindopt:active,.sc-rowmain:active{transform:scale(.98);transition:transform 100ms ease;}
+.sc-autosaveflash{align-self:center;font-size:12.5px;color:var(--spec-success,#2F9E6A);animation:sc-fade-up 200ms var(--spec-ease,ease-out);margin-right:auto;}
+.sc-modal{animation:sc-modal-backdrop-in 200ms var(--spec-ease,ease-out);}
+.sc-modal-in{animation:sc-modal-in 280ms var(--spec-ease,ease-out);}
+@media(prefers-reduced-motion:reduce){
+  .sc-editcol{transition:none;}
+  .sc-list li,.sc-modal,.sc-modal-in{animation:none;}
+  .sc-row:hover,.sc-chip:active,.sc-kindopt:active,.sc-rowmain:active{transform:none;}
+  .sc-autosaveflash{animation:none;}
+}
 `;
