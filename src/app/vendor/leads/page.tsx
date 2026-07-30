@@ -9,11 +9,14 @@ import { IBM_Plex_Sans } from 'next/font/google';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
 import VendorNav from '@/components/VendorNav';
-import { Megaphone, MessageCircle, Inbox, Eye, Reply, Trophy, XCircle, Paperclip, Download, X, Send, UserPlus, type LucideIcon } from 'lucide-react';
+import { Megaphone, MessageCircle, Inbox, Eye, Reply, Trophy, XCircle, Paperclip, Download, X, Send, UserPlus, Bell, type LucideIcon } from 'lucide-react';
 import { MatchReasons, MATCH_REASONS_CSS } from '@/components/marketplace/MatchReasons';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
 import { calculateFee } from '@/lib/fees/engine';
 import { useChatPolling, resolvePendingMessage, dropPendingMessage, type ChatMessage } from '@/components/marketplace/useChatPolling';
+import { useNotificationPolling } from '@/components/marketplace/useNotificationPolling';
+import { RequestAttachmentsList, REQUEST_ATTACHMENTS_CSS } from '@/components/marketplace/RequestAttachments';
+import type { RequestAttachment } from '@/lib/requests/attachments';
 import { OfferCard, OFFER_CARD_CSS, type OfferCardLabels, OFFER_CARD_LABELS_ES, DEFAULT_OFFER_CARD_LABELS } from '@/components/marketplace/OfferCard';
 import { DealTracker, DEAL_TRACKER_CSS, type DealTrackerLabels, DEAL_TRACKER_LABELS_ES, DEFAULT_DEAL_TRACKER_LABELS } from '@/components/marketplace/DealTracker';
 import { buildOfferTimeline, offerRevisionsForThread, type OfferRevisionInput, type LegacyOfferSource } from '@/lib/messages/offerTimeline';
@@ -72,6 +75,7 @@ interface Lead {
   // — never a fabricated score — so the client supplies the one honest reason
   // itself: "Invited by the buyer".
   invited?: boolean;
+  attachments?: RequestAttachment[];
 }
 
 // Slice R3 — the structured quote template. One flat form covers the COMMON
@@ -221,6 +225,8 @@ const T: Record<Lang, Record<string, string>> = {
     file_too_large: 'That file is too large — max 10 MB per file.',
     file_type_not_allowed: 'That file type isn’t supported. Allowed: PDF, PNG, JPG, WEBP, XLSX, CSV, DWG, DXF.',
     attachSendError: 'Could not send the attachment — please try again.',
+    // Request attachments (Slice R5) — read-only here; buyers upload from /buyer.
+    reqAttachHeading: 'Attachments from the buyer', reqAttachEmpty: 'No files attached.',
     mark: 'Mark',
     reqQuote: 'Quote', reqSales: 'Sales', reqDemo: 'Demo', reqPilot: 'Pilot', reqQuestion: 'Question',
     stNew: 'new', stViewed: 'viewed', stResponded: 'responded', stWon: 'won', stLost: 'lost',
@@ -300,6 +306,7 @@ const T: Record<Lang, Record<string, string>> = {
     file_too_large: 'Ese archivo es demasiado grande — máximo 10 MB por archivo.',
     file_type_not_allowed: 'Ese tipo de archivo no es compatible. Permitidos: PDF, PNG, JPG, WEBP, XLSX, CSV, DWG, DXF.',
     attachSendError: 'No se pudo enviar el archivo adjunto — inténtalo de nuevo.',
+    reqAttachHeading: 'Adjuntos del comprador', reqAttachEmpty: 'Sin archivos adjuntos.',
     mark: 'Marcar',
     reqQuote: 'Cotización', reqSales: 'Ventas', reqDemo: 'Demo', reqPilot: 'Piloto', reqQuestion: 'Pregunta',
     stNew: 'nuevo', stViewed: 'visto', stResponded: 'respondido', stWon: 'ganado', stLost: 'perdido',
@@ -445,6 +452,13 @@ export default function VendorLeadsPage() {
   const [notifs, setNotifs] = useState<Array<{ id: string; title: string; read_at: string | null; created_at: string; type?: string; quote_request_id?: string | null }>>([]);
   const [notifUnread, setNotifUnread] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
+  // Slice R5 — keep the unread badge fresh without an aggressive page-wide
+  // poll: light 30s tick, only while signed in, paused on a hidden tab, same
+  // discipline as useChatPolling (see useNotificationPolling.ts).
+  useNotificationPolling(!checking && signedIn, '/api/vendor/notifications', ({ notifications, unread }) => {
+    setNotifs(notifications as typeof notifs);
+    setNotifUnread(unread);
+  });
   // Cheap unread-chat hint: reuses the notifications already fetched on load
   // (no extra API call) — a lead has an unread message if there's an unread
   // 'message' notification pointing at it.
@@ -714,12 +728,12 @@ export default function VendorLeadsPage() {
 
   return (
     <div className={`ld ${ibmPlexSans.variable}`}>
-      <style dangerouslySetInnerHTML={{ __html: CSS + MATCH_REASONS_CSS + EMPTY_ACTION_CSS + OFFER_CARD_CSS + DEAL_TRACKER_CSS + '.ld-opencard .mrx-chips{margin-bottom:8px;}' }} />
+      <style dangerouslySetInnerHTML={{ __html: CSS + MATCH_REASONS_CSS + EMPTY_ACTION_CSS + OFFER_CARD_CSS + DEAL_TRACKER_CSS + REQUEST_ATTACHMENTS_CSS + '.ld-opencard .mrx-chips{margin-bottom:8px;}' }} />
       <VendorNav
         active="leads"
         extra={
           <>
-            <button className="ld-bell" onClick={toggleNotifs} aria-label={t.notifications}>{t.alerts}{notifUnread > 0 && <span className="ld-belldot">{notifUnread}</span>}</button>
+            <button className="ld-bell" onClick={toggleNotifs} aria-label={t.notifications}><Bell size={13} strokeWidth={2} aria-hidden="true" /> {t.alerts}{notifUnread > 0 && <span className="ld-belldot">{notifUnread}</span>}</button>
             <LanguageToggle lang={lang} onChange={setLang} variant="light" />
           </>
         }
@@ -830,6 +844,18 @@ export default function VendorLeadsPage() {
                     )}
                   </div>
                   {l.message && <p className="ld-msg">{l.message}</p>}
+
+                  {/* Request attachments (Slice R5) — read-only; the buyer
+                      uploads them from /buyer. Same authz as the lead
+                      itself (this route already scopes to vendor_id=mine);
+                      file names are pre-accept masked server-side, same as
+                      the buyer message above. */}
+                  {(l.attachments || []).length > 0 && (
+                    <RequestAttachmentsList
+                      attachments={l.attachments || []}
+                      labels={{ heading: t.reqAttachHeading, empty: t.reqAttachEmpty, download: t.downloadFile }}
+                    />
+                  )}
 
                   {/* Buyer profile card — revealed after acceptance */}
                   {l.buyer_profile && (
@@ -1206,7 +1232,8 @@ const CSS = `
 .ld-brand span{color:var(--spec-text-2nd,#615F72);font-size:13px;}
 .ld-link{color:var(--spec-violet-deep,#4A3DB0);font-size:13.5px;font-weight:600;text-decoration:none;}
 .ld-navr{display:flex;align-items:center;gap:14px;}
-.ld-bell{position:relative;font-family:inherit;font-size:13px;font-weight:600;color:var(--spec-violet-deep,#4A3DB0);background:rgba(108,92,224,.08);border:1px solid rgba(108,92,224,.3);border-radius:99px;padding:7px 14px;cursor:pointer;}
+.ld-bell{position:relative;display:inline-flex;align-items:center;gap:5px;font-family:inherit;font-size:13px;font-weight:600;color:var(--spec-violet-deep,#4A3DB0);background:rgba(108,92,224,.08);border:1px solid rgba(108,92,224,.3);border-radius:99px;padding:7px 14px;cursor:pointer;}
+.ld-bell svg{flex-shrink:0;}
 .ld-belldot{margin-left:7px;background:var(--spec-error,#CE4B43);color:#fff;font-size:11px;font-weight:800;border-radius:99px;padding:1px 7px;}
 .ld-notifs{background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:14px;padding:16px 18px;margin:0 0 18px;box-shadow:0 8px 24px rgba(20,19,32,.08);}
 .ld-notifhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}

@@ -12,6 +12,7 @@ import { AUTO_VIEWABLE_STATUSES, canAutoMarkViewed } from '@/lib/vendor/leadStat
 import { AUTO_VIEWABLE_INVITATION_STATUSES, canMarkInvitationViewed } from '@/lib/requests/invitations';
 import { stripBlindBudgetFields } from '@/lib/requests/vendor-view';
 import { scoreVendors, type MatchableVendor } from '@/lib/matching';
+import { loadRequestAttachments } from '@/lib/requests/attachmentsServer';
 
 const STATUSES = ['new', 'viewed', 'responded', 'won', 'lost', 'spam'];
 
@@ -146,6 +147,13 @@ export async function GET() {
     arr.push(p); pilotsByQr.set(p.quote_request_id as string, arr);
   }
 
+  // Request attachments (Slice R5) — read-only here (buyers upload, vendors
+  // only see/download). Same pre-accept name-masking as buyer free text
+  // (message/bundle notes) above: a file name is just as much an
+  // anti-circumvention leak vector as body text.
+  const revealedIds = new Set(rows.filter((l) => l.buyer_decision === 'accepted').map((l) => l.id as string));
+  const attachmentsByQr = await loadRequestAttachments(db, ids, { maskNamesFor: (qrId) => !revealedIds.has(qrId) });
+
   // Opportunity framing (Slice R3): honest "why this matches you" chips —
   // REAL overlap only, nothing invented, no response-time claims (real-
   // computed-stats rule). Only leads that came from an OPEN request (auto-
@@ -232,6 +240,7 @@ export async function GET() {
         listing_name: names.get((l.product_id || l.service_id) as string) || null,
         commission,
         pilots: pilotsByQr.get(l.id) || [],
+        attachments: attachmentsByQr[l.id as string] || [],
         match_reasons: invited ? [] : (sourceRef ? matchReasonsByRef.get(sourceRef) || [] : []),
         invited,
       };

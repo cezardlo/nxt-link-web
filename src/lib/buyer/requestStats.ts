@@ -79,6 +79,23 @@ export function isRequestStale(
   return nowMs - created >= STALE_HINT_HOURS * 3600_000;
 }
 
+// --- Stale-request ACTIONABLE nudge (Slice R5) ------------------------------
+// Distinct from the generic "no quotes yet" teaching empty-state (RV): the
+// teaching card fires for ANY stale request, including one that hasn't even
+// reached a vendor yet (sentTo === 0, still under internal review). The R5
+// nudge is the more SPECIFIC, actionable signal — real vendors were actually
+// reached and none has quoted after the stale window — so it carries a
+// concrete next step (browse the marketplace for more vendors) instead of
+// just calibrating expectations. Pure display-time derivation, same
+// STALE_HINT_HOURS threshold, no cron, no new notification row, no invented
+// SLA — "keep it simple" per the R5 spec.
+export function isStaleWithNoResponse(
+  activity: Pick<RequestActivity, 'sentTo'>,
+  stale: boolean,
+): boolean {
+  return stale && activity.sentTo > 0;
+}
+
 // --- Status pill (Slice RV, item 4) -----------------------------------------
 // A discrete, calm pipeline pill for a buyer's ORIGINAL request card — derived
 // purely from the statuses/decisions already on its linked quote_requests
