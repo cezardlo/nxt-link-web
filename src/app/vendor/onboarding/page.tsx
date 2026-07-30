@@ -1,61 +1,91 @@
 'use client';
 
-// Vendor onboarding — Uber-driver-signup-style card flow (Slice S1, the
-// SHELL). Presents the EXISTING vendor profile fields (src/app/vendor/portal
-// /page.tsx) as a full-screen, one-concept-per-card guided flow instead of
-// the "monster page" of scrolling sections. This is a NEW, parallel route —
-// the portal page is untouched and still fully functional; Cesar reviews
-// this on his phone before it replaces anything.
+// Vendor onboarding — v2 "hub + four focused sections" card flow.
 //
-// Scope (see workplace/plans/vendor-onboarding-uber-flow-2026-07-29.md, S1):
-// - No new data. Every field here already exists on vendor_profiles and is
-//   saved through the SAME /api/vendor/profile PATCH the portal uses (see
-//   useVendorOnboardingProfile.ts for why that's a mirrored copy, not an
-//   import, of the portal's persist()/autosave logic).
-// - No AI in the flow (guardrail) — the portal's "Write it for me" AI
-//   description button is deliberately NOT reproduced here.
-// - CategoryPicker is embedded exactly as-is (S3 will redo category search;
-//   this slice must not touch that shared component).
-// - The checklist / ProfileStrengthMeter / AI chat do not appear here
-//   (progressive disclosure) — the closing card just links back to the
-//   portal for now (S5 will replace that with the real "you're online"
-//   dashboard).
+// Replaces the v1 single 12-card line (Slice S1) per Cesar's explicit
+// rejection of that look ("content floats left in a huge empty white void;
+// tiny disconnected Save & exit; lonely Next button; the single card line
+// feels endless") and CESAR'S PORTAL REDESIGN BLUEPRINT (workplace/plans/
+// vendor-onboarding-uber-flow-2026-07-29.md).
+//
+// Structure: an entry hub (welcome + 4 section tiles, each showing its own
+// completion state) + a persistent calm checklist (sidebar on desktop,
+// collapsible strip on mobile — plain items, green check when done, violet
+// highlight on the active one; no % ring, no lock icons, no "unlocks" copy).
+// Each of the first 3 sections opens its own short card-flow. Section 4
+// (Agreement & Activation) recaps what was built, then presents the vendor
+// terms as a scannable table + a single checkbox + the Activate CTA.
+//
+// Data + reuse contract (unchanged from Slice S1):
+// - No new data. Every field already exists on vendor_profiles / vendor_*
+//   tables and is saved through the SAME endpoints the portal page
+//   (src/app/vendor/portal/page.tsx) uses — see useVendorOnboardingProfile.ts.
+// - No AI in the flow (guardrail) — "Use a template" inserts a static string,
+//   no API call.
+// - CategoryPicker is embedded exactly as-is (a future slice reworks its
+//   search/chip UI; this rebuild must not touch that shared component).
+// - The vendor-agreement click-wrap is recorded through the SAME endpoint
+//   the portal's "I accept the NXT//LINK vendor terms" button already calls
+//   (POST /api/vendor/agreement) — this flow never invents a second legal
+//   record, only a friendlier presentation of the same one.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
 import {
-  Image as LogoIcon, Building2, Phone, Quote, FileText, Factory, Users, Target,
-  Boxes, MapPin, Award, PartyPopper, Check, X, type LucideIcon,
+  Image as LogoIcon, Building2, Phone, Quote, FileText, Factory, Users,
+  Boxes, MapPin, Award, Check, X, ShieldCheck, Camera, Video as VideoIcon,
+  Handshake, ChevronRight, ChevronDown, ExternalLink, type LucideIcon,
 } from 'lucide-react';
 import CategoryPicker from '@/components/CategoryPicker';
 import LanguageToggle, { useLang } from '@/components/LanguageToggle';
-import { ALL_STEPS, clampStepIndex, getVisibleContentSteps, getVisibleSteps, type StepId } from './steps';
+import {
+  SECTION_ORDER, STOREFRONT_STEPS, CAPABILITIES_STEPS, TRUST_STEPS, AGREEMENT_STEPS,
+  stepsForSection, clampStepIndex, computeSectionStatus, countSectionsDone,
+  type SectionKey, type StepId,
+} from './steps';
 import { useVendorOnboardingProfile, type OnboardingVendor } from './useVendorOnboardingProfile';
 
 const ibmPlexSans = IBM_Plex_Sans({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
-  variable: '--font-ibm-plex-sans-vob',
+  variable: '--font-ibm-plex-sans-vo2',
   display: 'swap',
 });
 
 // Mirrors the taxonomy lists in src/app/vendor/portal/page.tsx (not exported
-// there, and that page stays untouched for this slice — see file header).
+// there, and that page stays untouched — see file header).
 const AREAS = ['El Paso', 'Juárez', 'New Mexico', 'West Texas', 'Cross-border', 'National'];
 const INDUSTRIES = [
   'Warehousing & 3PL', 'Manufacturing', 'Retail & E-commerce', 'Food & Beverage', 'Automotive',
   'Cold Chain', 'Import / Export & Customs', 'Construction', 'Distribution Centers',
   'Pharma & Healthcare', 'Aerospace & Defense', 'General Industrial',
 ];
-const CLIENT_TYPES = [
-  'Small warehouses (<50k sqft)', 'Mid-size warehouses', 'Large distribution centers',
-  'Manufacturers', '3PL providers', 'Retailers', 'Cross-border operations', 'Startups',
-];
 const CLIENT_SIZES = [
   'Small businesses (1–50 people)', 'Mid-size companies (51–500)', 'Large companies (500+)', 'Enterprise / Fortune 500',
 ];
 
 type Lang = 'en' | 'es';
+type View = { mode: 'hub' } | { mode: 'section'; section: SectionKey; stepId: StepId };
+
+// Full (unfiltered) step order per section — used only to find a sane
+// fallback card if the currently-shown one disappears mid-flow (Capabilities
+// dropping "service_areas" for a software-only vendor).
+const FULL_ORDER: Record<SectionKey, StepId[]> = {
+  storefront: STOREFRONT_STEPS,
+  capabilities: CAPABILITIES_STEPS,
+  trust: TRUST_STEPS,
+  agreement: AGREEMENT_STEPS,
+};
+
+const SECTION_ICON: Record<SectionKey, LucideIcon> = {
+  storefront: Building2, capabilities: Boxes, trust: ShieldCheck, agreement: Handshake,
+};
+const STEP_ICON: Partial<Record<StepId, LucideIcon>> = {
+  name_logo: LogoIcon, tagline: Quote, about: FileText, contact: Phone,
+  industries: Factory, client_size: Users, categories: Boxes, service_areas: MapPin,
+  certifications: ShieldCheck, case_studies: FileText, photos: Camera, videos: VideoIcon, awards: Award,
+};
+
 const TR: Record<string, { en: string; es: string }> = {
   doc_title: { en: 'Set up your storefront — NXT//LINK', es: 'Configura tu tienda — NXT//LINK' },
   loading: { en: 'Loading…', es: 'Cargando…' },
@@ -66,87 +96,146 @@ const TR: Record<string, { en: string; es: string }> = {
   exit: { en: 'Save & exit', es: 'Guardar y salir' },
   back: { en: 'Back', es: 'Atrás' },
   next: { en: 'Next', es: 'Siguiente' },
+  done: { en: 'Done', es: 'Listo' },
+  overview: { en: 'Overview', es: 'Resumen' },
   saved: { en: 'Saved', es: 'Guardado' },
   save_error: { en: 'Could not save — check your connection.', es: 'No se pudo guardar — revisa tu conexión.' },
   step_of: { en: 'Step {n} of {total}', es: 'Paso {n} de {total}' },
 
-  h_logo: { en: 'Add your logo', es: 'Agrega tu logo' },
-  sub_logo: { en: 'Buyers trust a real logo. You can add this anytime.', es: 'Los compradores confían más con un logo real. Puedes agregarlo cuando quieras.' },
+  // Hub
+  hub_h: { en: 'Let’s build your storefront', es: 'Construyamos tu tienda' },
+  hub_sub: { en: 'This is what buyers see and what NXT//LINK matches you to. Work through each part whenever you like — nothing is lost.', es: 'Esto es lo que ven los compradores y con lo que NXT//LINK te conecta. Avanza en cada parte cuando quieras — nada se pierde.' },
+  hub_progress: { en: '{n} of 4 sections done', es: '{n} de 4 secciones completas' },
+  status_not_started: { en: 'Not started', es: 'No iniciado' },
+  status_progress: { en: '{done} of {total} done', es: '{done} de {total} completos' },
+  status_complete: { en: 'Complete', es: 'Completo' },
+  checklist_title: { en: 'Your progress', es: 'Tu progreso' },
+  strip_summary: { en: '{n} of 4 sections done', es: '{n} de 4 secciones completas' },
+
+  sec_storefront_label: { en: 'Storefront', es: 'Tienda' },
+  sec_storefront_blurb: { en: 'Name, logo, tagline, and how buyers reach you', es: 'Nombre, logo, frase y cómo te contactan los compradores' },
+  sec_capabilities_label: { en: 'Capabilities', es: 'Capacidades' },
+  sec_capabilities_blurb: { en: 'Industries, client sizes, and what you sell', es: 'Industrias, tamaños de clientes y qué vendes' },
+  sec_trust_label: { en: 'Trust & Proof', es: 'Confianza y pruebas' },
+  sec_trust_blurb: { en: 'Certifications, case studies, photos, and more', es: 'Certificaciones, casos de éxito, fotos y más' },
+  sec_agreement_label: { en: 'Agreement & Activation', es: 'Acuerdo y activación' },
+  sec_agreement_blurb: { en: 'Review the terms and activate your storefront', es: 'Revisa los términos y activa tu tienda' },
+
+  // Storefront cards
+  h_name_logo: { en: 'What’s your company called?', es: '¿Cómo se llama tu empresa?' },
+  company_label: { en: 'Company name', es: 'Nombre de la empresa' },
   logo_upload: { en: 'Upload logo', es: 'Subir logo' },
   logo_replace: { en: 'Replace logo', es: 'Reemplazar logo' },
   logo_uploading: { en: 'Uploading…', es: 'Subiendo…' },
   logo_remove: { en: 'Remove', es: 'Quitar' },
-
-  h_identity: { en: 'Tell us about your company', es: 'Cuéntanos sobre tu empresa' },
-  company_label: { en: 'Company name', es: 'Nombre de la empresa' },
-  contact_label: { en: 'Contact name', es: 'Nombre de contacto' },
-
-  h_reach: { en: 'How can buyers reach you?', es: '¿Cómo pueden contactarte los compradores?' },
+  h_tagline: { en: 'Sum up your company in one line', es: 'Resume tu empresa en una línea' },
+  ph_tagline: { en: 'e.g. "Forklift service across the Borderplex since 2009."', es: 'ej. "Servicio de montacargas en la frontera desde 2009."' },
+  h_about: { en: 'What does your company do?', es: '¿Qué hace tu empresa?' },
+  ph_about: { en: 'e.g. "We sell, rent, and repair forklifts in El Paso and Juárez."', es: 'ej. "Vendemos, rentamos y reparamos montacargas en El Paso y Juárez."' },
+  use_template: { en: 'Use a template', es: 'Usar una plantilla' },
+  h_contact: { en: 'How can buyers reach you?', es: '¿Cómo pueden contactarte los compradores?' },
+  contact_name_label: { en: 'Contact name', es: 'Nombre de contacto' },
   website_label: { en: 'Website', es: 'Sitio web' },
   phone_label: { en: 'Phone', es: 'Teléfono' },
   city_label: { en: 'City', es: 'Ciudad' },
 
-  h_tagline: { en: 'Sum up your company in one line', es: 'Resume tu empresa en una línea' },
-  ph_tagline: { en: 'e.g. "Forklift service across the Borderplex since 2009."', es: 'ej. "Servicio de montacargas en la frontera desde 2009."' },
-
-  h_description: { en: 'What does your company do?', es: '¿Qué hace tu empresa?' },
-  ph_description: { en: 'e.g. "We sell, rent, and repair forklifts in El Paso and Juárez."', es: 'ej. "Vendemos, rentamos y reparamos montacargas en El Paso y Juárez."' },
-
+  // Capabilities cards
   h_industries: { en: 'Which industries do you serve?', es: '¿A qué industrias atiendes?' },
   sub_industries: { en: 'Pick every one that fits — buyers filter by this.', es: 'Elige todas las que apliquen — los compradores filtran por esto.' },
   add_industry_ph: { en: 'Add another industry…', es: 'Agrega otra industria…' },
-
   h_client_size: { en: 'What size companies do you serve?', es: '¿De qué tamaño son las empresas que atiendes?' },
-
-  h_client_types: { en: 'Who are you looking for?', es: '¿A qué clientes buscas?' },
-
   h_categories: { en: 'What do you sell?', es: '¿Qué vendes?' },
   sub_categories: { en: 'Search or browse — pick everything that applies.', es: 'Busca o explora — elige todo lo que aplique.' },
-
   h_service_areas: { en: 'Where do you provide service?', es: '¿Dónde das servicio?' },
 
+  // Trust & Proof cards
+  h_certifications: { en: 'Certifications', es: 'Certificaciones' },
+  sub_certifications: { en: 'ISO, OSHA, licenses, insurance — shown on your storefront.', es: 'ISO, OSHA, licencias, seguros — se muestran en tu tienda.' },
+  certs_empty: { en: 'No certifications yet.', es: 'Aún no hay certificaciones.' },
+  certs_cta: { en: 'Add certifications in your portal', es: 'Agrega certificaciones en tu portal' },
+  h_case_studies: { en: 'Case studies', es: 'Casos de éxito' },
+  sub_case_studies: { en: 'Show up to 3 real results — the challenge, what you did, the outcome.', es: 'Muestra hasta 3 resultados reales — el reto, lo que hiciste, el resultado.' },
+  cases_empty: { en: 'No case studies yet.', es: 'Aún no hay casos de éxito.' },
+  cases_cta: { en: 'Add case studies in your portal', es: 'Agrega casos de éxito en tu portal' },
+  h_photos: { en: 'Photo gallery', es: 'Galería de fotos' },
+  sub_photos: { en: 'Real photos of your facility or equipment build trust fast.', es: 'Fotos reales de tu instalación o equipo generan confianza rápido.' },
+  photos_empty: { en: 'No photos yet.', es: 'Aún no hay fotos.' },
+  photos_cta: { en: 'Add photos in your portal', es: 'Agrega fotos en tu portal' },
+  h_videos: { en: 'Showcase videos', es: 'Videos de tu trabajo' },
+  sub_videos: { en: 'Paste a YouTube or Vimeo link to show what you do.', es: 'Pega un enlace de YouTube o Vimeo para mostrar tu trabajo.' },
+  video_title_ph: { en: 'Title (optional)', es: 'Título (opcional)' },
+  video_url_ph: { en: 'https://youtube.com/watch?v=…', es: 'https://youtube.com/watch?v=…' },
+  video_add: { en: 'Add video', es: 'Agregar video' },
+  video_remove: { en: 'Remove', es: 'Quitar' },
+  videos_empty: { en: 'No videos yet.', es: 'Aún no hay videos.' },
   h_awards: { en: 'Any awards or certifications to highlight?', es: '¿Algún premio o certificación que destacar?' },
   sub_awards: { en: 'Optional — you can add this anytime.', es: 'Opcional — puedes agregarlo cuando quieras.' },
   add_award_ph: { en: 'Add an award or recognition…', es: 'Agrega un premio o reconocimiento…' },
   add_btn: { en: 'Add', es: 'Agregar' },
 
-  h_summary: { en: 'You’re all set for now', es: 'Por ahora, listo' },
-  sub_summary: { en: 'Your changes are saved. Keep building your storefront — add photos, certifications, and more from your portal.', es: 'Tus cambios están guardados. Sigue construyendo tu tienda — agrega fotos, certificaciones y más desde tu portal.' },
-  summary_cta: { en: 'Go to my portal', es: 'Ir a mi portal' },
-};
-
-const ICONS: Record<StepId, LucideIcon> = {
-  logo: LogoIcon, identity: Building2, reach: Phone, tagline: Quote, description: FileText,
-  industries: Factory, client_size: Users, client_types: Target, categories: Boxes,
-  service_areas: MapPin, awards: Award, summary: PartyPopper,
+  // Agreement & Activation
+  h_recap: { en: 'You’re almost there', es: 'Ya casi terminas' },
+  sub_recap: { en: 'Here’s what you’ve built so far.', es: 'Esto es lo que has construido hasta ahora.' },
+  stat_listings: { en: 'Listings', es: 'Publicaciones' },
+  stat_categories: { en: 'Categories selected', es: 'Categorías seleccionadas' },
+  stat_proof: { en: 'Proof items', es: 'Elementos de prueba' },
+  h_terms: { en: 'Review the vendor terms', es: 'Revisa los términos de proveedor' },
+  terms_row_pay: { en: 'What you pay', es: 'Lo que pagas' },
+  terms_row_protected: { en: 'Protected period', es: 'Período protegido' },
+  terms_row_stay: { en: 'Stay on platform', es: 'Permanece en la plataforma' },
+  terms_row_accurate: { en: 'Accurate listings', es: 'Publicaciones precisas' },
+  terms_disclaimer: { en: 'Plain-language business terms, not final legal wording — a lawyer reviews the full agreement before real commerce.', es: 'Términos de negocio en lenguaje sencillo, no es el texto legal final — un abogado revisa el acuerdo completo antes del comercio real.' },
+  terms_full_link: { en: 'Read the full terms', es: 'Leer los términos completos' },
+  reassure_main: { en: 'No subscription or monthly commitment. You only pay when a qualifying deal is completed.', es: 'Sin suscripción ni compromiso mensual. Solo pagas cuando se completa un trato que califica.' },
+  reassure_sub: { en: 'Introduced-customer and protected-period terms may continue as described in the Vendor Agreement.', es: 'Los términos de cliente presentado y del período de protección pueden continuar según se describe en el Acuerdo de Proveedor.' },
+  accept_checkbox: { en: 'I accept the NXT//LINK vendor terms', es: 'Acepto los términos de proveedor de NXT//LINK' },
+  activate_btn: { en: 'Activate My Storefront', es: 'Activar mi tienda' },
+  activate_error: { en: 'Could not record your acceptance — check your connection and try again.', es: 'No se pudo registrar tu aceptación — revisa tu conexión e intenta de nuevo.' },
+  accepted_h: { en: 'You’re all set!', es: '¡Listo!' },
+  accepted_on: { en: 'NXT//LINK vendor terms accepted on {date}.', es: 'Términos de proveedor de NXT//LINK aceptados el {date}.' },
+  accepted_review: { en: 'A human on our team reviews every new company — your listings go live the moment you’re approved.', es: 'Una persona de nuestro equipo revisa cada empresa nueva — tus publicaciones salen en vivo en cuanto te aprueben.' },
+  accepted_live: { en: 'You can publish listings and receive leads.', es: 'Puedes publicar tus listados y recibir prospectos.' },
+  go_portal: { en: 'Go to my portal', es: 'Ir a mi portal' },
 };
 
 export default function VendorOnboardingPage() {
+  const hook = useVendorOnboardingProfile();
   const {
-    checking, signedIn, vendor, set, toggle, persist, autosaving, savedAt, saveError,
+    checking, signedIn, vendor, set, toggle, persist, savedAt, saveError,
     logoUrl, logoBusy, uploadLogo, removeLogo, softwareOnly,
-  } = useVendorOnboardingProfile();
+    certifications, photos, caseStudies, videos, videoBusy, addVideo, removeVideo,
+    listingCount, proofCount, agreement, agreementBusy, acceptTerms,
+  } = hook;
   const [lang, switchLang] = useLang('en');
   const t = (k: string) => (TR[k] ? (lang === 'es' ? TR[k].es : TR[k].en) : k);
+  const tf = (k: string, vals: Record<string, string | number>) => {
+    let s = t(k);
+    for (const [key, v] of Object.entries(vals)) s = s.replace(`{${key}}`, String(v));
+    return s;
+  };
 
-  const [stepId, setStepId] = useState<StepId>('logo');
+  const [view, setView] = useState<View>({ mode: 'hub' });
   const [direction, setDirection] = useState<'fwd' | 'back'>('fwd');
   const [showSaved, setShowSaved] = useState(false);
 
   useEffect(() => { document.title = t('doc_title'); }, [lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const steps = useMemo(() => getVisibleSteps({ softwareOnly }), [softwareOnly]);
-  const contentSteps = useMemo(() => getVisibleContentSteps({ softwareOnly }), [softwareOnly]);
+  const opts = useMemo(() => ({ softwareOnly }), [softwareOnly]);
 
-  // If the current card disappears mid-flow (e.g. the vendor picks an
-  // all-software category set, dropping the "service areas" card), move
-  // forward to the next still-visible card instead of getting stuck.
+  // If the currently-shown card disappears mid-flow (a software-only vendor
+  // dropping the "service areas" card), move to the nearest still-visible
+  // card instead of getting stuck — same guard v1 used.
   useEffect(() => {
-    if (steps.includes(stepId)) return;
-    const fromHere = ALL_STEPS.slice(ALL_STEPS.indexOf(stepId));
-    const fallback = fromHere.find((s) => steps.includes(s)) || steps[steps.length - 1] || 'summary';
-    setStepId(fallback);
-  }, [steps, stepId]);
+    if (view.mode !== 'section') return;
+    const steps = stepsForSection(view.section, opts);
+    if (steps.includes(view.stepId)) return;
+    const order = FULL_ORDER[view.section];
+    const fromHere = order.slice(order.indexOf(view.stepId));
+    const fallback = fromHere.find((s) => steps.includes(s)) || steps[steps.length - 1];
+    if (fallback) setView({ mode: 'section', section: view.section, stepId: fallback });
+    else setView({ mode: 'hub' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, opts]);
 
   useEffect(() => {
     if (!savedAt) return;
@@ -163,19 +252,76 @@ export default function VendorOnboardingPage() {
     }
   }, [vendor]);
 
-  const index = Math.max(0, steps.indexOf(stepId));
-  const dotIndex = contentSteps.indexOf(stepId);
+  if (checking) {
+    return (
+      <div className={`vo ${ibmPlexSans.variable}`}>
+        <style dangerouslySetInnerHTML={{ __html: CSS }} />
+        <div className="vo-center">{t('loading')}</div>
+      </div>
+    );
+  }
 
-  function goTo(next: StepId, dir: 'fwd' | 'back') {
-    persist(true); // don't wait on the 1200ms debounce right before navigating away from a field
-    setDirection(dir);
-    setStepId(next);
+  if (!signedIn) {
+    return (
+      <div className={`vo ${ibmPlexSans.variable}`}>
+        <style dangerouslySetInnerHTML={{ __html: CSS }} />
+        <div className="vo-gate">
+          <h1>{t('signin_h')}</h1>
+          <p>{t('signin_body')}</p>
+          <a className="vo-btn" href="/vendor-login">{t('signin_cta')}</a>
+        </div>
+      </div>
+    );
+  }
+
+  if (!vendor || vendor.moderation_status === 'suspended' || vendor.moderation_status === 'banned') {
+    return (
+      <div className={`vo ${ibmPlexSans.variable}`}>
+        <style dangerouslySetInnerHTML={{ __html: CSS }} />
+        <div className="vo-center">{t('redirecting')}</div>
+      </div>
+    );
+  }
+
+  const status = computeSectionStatus({
+    companyName: vendor.company_name || '',
+    tagline: vendor.tagline || '',
+    description: vendor.description || '',
+    industries: vendor.industries || [],
+    categories: vendor.categories || [],
+    clientSizeCount: (vendor.client_types || []).filter((c) => CLIENT_SIZES.includes(c)).length,
+    proofCount,
+    agreementAccepted: !!agreement?.accepted,
+  });
+  const doneCount = countSectionsDone(status);
+  const inReview = vendor.status !== 'approved';
+
+  function enterSection(section: SectionKey) {
+    const steps = stepsForSection(section, opts);
+    setDirection('fwd');
+    setView({ mode: 'section', section, stepId: steps[0] });
+  }
+  function backToHub() {
+    persist(true);
+    setView({ mode: 'hub' });
   }
   function goNext() {
-    goTo(steps[clampStepIndex(index + 1, steps.length)], 'fwd');
+    if (view.mode !== 'section') return;
+    const steps = stepsForSection(view.section, opts);
+    const i = Math.max(0, steps.indexOf(view.stepId));
+    if (i >= steps.length - 1) { backToHub(); return; }
+    persist(true);
+    setDirection('fwd');
+    setView({ mode: 'section', section: view.section, stepId: steps[clampStepIndex(i + 1, steps.length)] });
   }
   function goBack() {
-    goTo(steps[clampStepIndex(index - 1, steps.length)], 'back');
+    if (view.mode !== 'section') return;
+    const steps = stepsForSection(view.section, opts);
+    const i = Math.max(0, steps.indexOf(view.stepId));
+    if (i <= 0) { backToHub(); return; }
+    persist(true);
+    setDirection('back');
+    setView({ mode: 'section', section: view.section, stepId: steps[clampStepIndex(i - 1, steps.length)] });
   }
   async function onExit() {
     await persist(true).catch(() => {});
@@ -194,137 +340,259 @@ export default function VendorOnboardingPage() {
     if (!start) return;
     const dx = e.changedTouches[0].clientX - start.x;
     const dy = e.changedTouches[0].clientY - start.y;
-    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy)) return; // too small, or mostly vertical scroll
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy)) return;
     if (dx < 0) goNext(); else goBack();
   }
 
-  if (checking) {
-    return (
-      <div className={`vob ${ibmPlexSans.variable}`}>
-        <style dangerouslySetInnerHTML={{ __html: CSS }} />
-        <div className="vob-center">{t('loading')}</div>
-      </div>
-    );
-  }
-
-  if (!signedIn) {
-    return (
-      <div className={`vob ${ibmPlexSans.variable}`}>
-        <style dangerouslySetInnerHTML={{ __html: CSS }} />
-        <div className="vob-gate">
-          <h1>{t('signin_h')}</h1>
-          <p>{t('signin_body')}</p>
-          <a className="vob-btn" href="/vendor-login">{t('signin_cta')}</a>
-        </div>
-      </div>
-    );
-  }
-
-  if (!vendor || vendor.moderation_status === 'suspended' || vendor.moderation_status === 'banned') {
-    return (
-      <div className={`vob ${ibmPlexSans.variable}`}>
-        <style dangerouslySetInnerHTML={{ __html: CSS }} />
-        <div className="vob-center">{t('redirecting')}</div>
-      </div>
-    );
-  }
-
-  const Icon = ICONS[stepId];
-  const headingId = `vob-h-${stepId}`;
+  const checklistItems = SECTION_ORDER.map((key) => ({
+    key,
+    label: t(`sec_${key}_label`),
+    done: status[key],
+    active: view.mode === 'section' && view.section === key,
+  }));
 
   return (
-    <div className={`vob ${ibmPlexSans.variable}`}>
+    <div className={`vo ${ibmPlexSans.variable}`}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
-      <header className="vob-top">
-        <a className="vob-exit" href="/vendor/portal" onClick={(e) => { e.preventDefault(); onExit(); }}>{t('exit')}</a>
-        <LanguageToggle lang={lang} onChange={switchLang} variant="light" />
-      </header>
+      <div className="vo-shell">
+        <aside className="vo-sidebar" aria-label={t('checklist_title')}>
+          <div className="vo-sidebar-mark">NXT<span>//</span>LINK</div>
+          <nav aria-label={t('checklist_title')}>
+            <ul className="vo-checklist">
+              {checklistItems.map((it) => (
+                <li key={it.key}>
+                  <button
+                    type="button"
+                    className={'vo-check-item' + (it.done ? ' done' : '') + (it.active ? ' active' : '')}
+                    aria-current={it.active ? 'step' : undefined}
+                    onClick={() => enterSection(it.key)}
+                  >
+                    <span className="vo-check-dot" aria-hidden="true">{it.done && <CheckDraw />}</span>
+                    <span>{it.label}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </aside>
 
-      {stepId !== 'summary' && (
-        <div
-          className="vob-dots" role="progressbar" aria-valuemin={1} aria-valuemax={contentSteps.length}
-          aria-valuenow={Math.min(dotIndex + 1, contentSteps.length)}
-          aria-label={t('step_of').replace('{n}', String(dotIndex + 1)).replace('{total}', String(contentSteps.length))}
-        >
-          {contentSteps.map((s, i) => (
-            <span key={s} className={'vob-dot' + (i < dotIndex ? ' done' : i === dotIndex ? ' current' : '')} />
-          ))}
-        </div>
-      )}
+        <main className="vo-main">
+          <header className="vo-top">
+            <a className="vo-exit" href="/vendor/portal" onClick={(e) => { e.preventDefault(); onExit(); }}>{t('exit')}</a>
+            <LanguageToggle lang={lang} onChange={switchLang} variant="light" />
+          </header>
 
-      <div className="vob-viewport" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-        <div key={stepId} className={'vob-card ' + (direction === 'fwd' ? 'vob-in-fwd' : 'vob-in-back')}>
-          <div className="vob-icon"><Icon size={22} strokeWidth={1.75} aria-hidden="true" /></div>
-          {renderCard(stepId, headingId, t, lang, vendor, set, toggle, {
-            logoUrl, logoBusy, uploadLogo, removeLogo,
-          })}
-        </div>
-      </div>
+          <details className="vo-stripmobile">
+            <summary>
+              <span>{tf('strip_summary', { n: doneCount })}</span>
+              <ChevronDown size={16} strokeWidth={2} aria-hidden="true" />
+            </summary>
+            <ul className="vo-checklist">
+              {checklistItems.map((it) => (
+                <li key={it.key}>
+                  <button
+                    type="button"
+                    className={'vo-check-item' + (it.done ? ' done' : '') + (it.active ? ' active' : '')}
+                    onClick={() => enterSection(it.key)}
+                  >
+                    <span className="vo-check-dot" aria-hidden="true">{it.done && <CheckDraw />}</span>
+                    <span>{it.label}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </details>
 
-      <footer className="vob-foot">
-        {saveError && <p className="vob-error">{t('save_error')}</p>}
-        <div className="vob-ctarow">
-          <button type="button" className="vob-back" onClick={goBack} disabled={index === 0}>{t('back')}</button>
-          <span className={'vob-savedflash' + (showSaved ? ' show' : '')} aria-live="polite">
-            {showSaved && <><Check size={13} strokeWidth={2.5} aria-hidden="true" />{t('saved')}</>}
-          </span>
-          {stepId === 'summary' ? (
-            <a className="vob-btn" href="/vendor/portal">{t('summary_cta')}</a>
+          {view.mode === 'hub' ? (
+            <div className="vo-hubwrap">
+              <h1 className="vo-hub-h">{t('hub_h')}</h1>
+              <p className="vo-hub-sub">{t('hub_sub')}</p>
+              <p className="vo-hub-progress">{tf('hub_progress', { n: doneCount })}</p>
+              <div className="vo-hub-grid">
+                {SECTION_ORDER.map((key) => {
+                  const Icon = SECTION_ICON[key];
+                  const total = stepsForSection(key, opts).length;
+                  const s = status[key];
+                  return (
+                    <button key={key} type="button" className={'vo-hub-card' + (s ? ' done' : '')} onClick={() => enterSection(key)}>
+                      <span className="vo-hub-card-icon"><Icon size={20} strokeWidth={1.75} aria-hidden="true" /></span>
+                      <span className="vo-hub-card-body">
+                        <b>{t(`sec_${key}_label`)}</b>
+                        <span className="vo-hub-card-blurb">{t(`sec_${key}_blurb`)}</span>
+                        <span className={'vo-hub-card-status' + (s ? ' done' : '')}>
+                          {s ? (<><Check size={13} strokeWidth={2.5} aria-hidden="true" />{t('status_complete')}</>) : (
+                            key === 'agreement' ? t('status_not_started') : tf('status_progress', { done: 0, total })
+                          )}
+                        </span>
+                      </span>
+                      <ChevronRight size={18} strokeWidth={1.75} className="vo-hub-card-chevron" aria-hidden="true" />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           ) : (
-            <button type="button" className="vob-btn" onClick={goNext}>{t('next')}</button>
+            <SectionFlow
+              view={view} opts={opts} lang={lang} t={t} tf={tf}
+              vendor={vendor} set={set} toggle={toggle}
+              logo={{ logoUrl, logoBusy, uploadLogo, removeLogo }}
+              trust={{ certifications, photos, caseStudies, videos, videoBusy, addVideo, removeVideo }}
+              agreementData={{
+                listingCount, proofCount, agreement, agreementBusy, acceptTerms, inReview,
+              }}
+              onTouchStart={onTouchStart}
+              onTouchEnd={onTouchEnd}
+              direction={direction}
+              backToOverview={backToHub}
+              onExit={onExit}
+              onGoNext={goNext}
+              onGoBack={goBack}
+              saveError={saveError}
+              showSaved={showSaved}
+              savedLabel={t('saved')}
+            />
           )}
-        </div>
-      </footer>
+        </main>
+      </div>
     </div>
   );
 }
 
-// One switch, one place that knows which existing field(s) each card wraps.
-function renderCard(
-  step: StepId, headingId: string, t: (k: string) => string, lang: Lang,
-  vendor: OnboardingVendor, set: <K extends keyof OnboardingVendor>(k: K, v: OnboardingVendor[K]) => void,
-  toggle: (list: string[], v: string, key: 'categories' | 'service_areas' | 'industries' | 'client_types') => void,
-  logo: { logoUrl: string | null; logoBusy: boolean; uploadLogo: (f: File) => void; removeLogo: () => void },
-) {
+// ---------------------------------------------------------------------------
+// One section's card-flow: header (Overview link + progress dots), the
+// current card, and the footer (Back / Saved flash / Next-or-Done).
+function SectionFlow({
+  view, opts, lang, t, tf, vendor, set, toggle, logo, trust, agreementData,
+  onTouchStart, onTouchEnd, direction, backToOverview, onGoNext, onGoBack,
+  saveError, showSaved, savedLabel,
+}: {
+  view: Extract<View, { mode: 'section' }>;
+  opts: { softwareOnly: boolean };
+  lang: Lang;
+  t: (k: string) => string;
+  tf: (k: string, vals: Record<string, string | number>) => string;
+  vendor: OnboardingVendor;
+  set: <K extends keyof OnboardingVendor>(k: K, v: OnboardingVendor[K]) => void;
+  toggle: (list: string[], v: string, key: 'categories' | 'service_areas' | 'industries' | 'client_types') => void;
+  logo: { logoUrl: string | null; logoBusy: boolean; uploadLogo: (f: File) => void; removeLogo: () => void };
+  trust: {
+    certifications: { id: string; name: string; issuer: string | null }[];
+    photos: { id: string; caption: string | null; image_url: string | null }[];
+    caseStudies: { id: string; title: string }[];
+    videos: { id: string; title: string | null; url: string }[];
+    videoBusy: boolean;
+    addVideo: (title: string, url: string) => Promise<boolean>;
+    removeVideo: (id: string) => void;
+  };
+  agreementData: {
+    listingCount: number; proofCount: number;
+    agreement: { accepted: boolean; accepted_at: string | null } | null;
+    agreementBusy: boolean; acceptTerms: () => Promise<boolean>; inReview: boolean;
+  };
+  onTouchStart: (e: React.TouchEvent) => void;
+  onTouchEnd: (e: React.TouchEvent) => void;
+  direction: 'fwd' | 'back';
+  backToOverview: () => void;
+  onExit: () => void;
+  onGoNext: () => void;
+  onGoBack: () => void;
+  saveError: boolean;
+  showSaved: boolean;
+  savedLabel: string;
+}) {
+  const steps = stepsForSection(view.section, opts);
+  const index = Math.max(0, steps.indexOf(view.stepId));
+  const isLast = index === steps.length - 1;
+  const isTermsCard = view.section === 'agreement' && view.stepId === 'terms';
+  const accepted = !!agreementData.agreement?.accepted;
+  const Icon = STEP_ICON[view.stepId];
+
+  return (
+    <>
+      <div className="vo-sectionhead">
+        <button type="button" className="vo-overview-link" onClick={backToOverview}>
+          &larr; {t('overview')}
+        </button>
+        <div className="vo-dots" role="progressbar" aria-valuemin={1} aria-valuemax={steps.length} aria-valuenow={index + 1}
+          aria-label={tf('step_of', { n: index + 1, total: steps.length })}>
+          {steps.map((s, i) => (
+            <span key={s} className={'vo-dot' + (i < index ? ' done' : i === index ? ' current' : '')} />
+          ))}
+        </div>
+      </div>
+
+      <div className="vo-viewport" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        <div key={view.stepId} className={'vo-card ' + (direction === 'fwd' ? 'vo-in-fwd' : 'vo-in-back')}>
+          {renderCard({
+            section: view.section, step: view.stepId, headingId: `vo-h-${view.stepId}`,
+            t, tf, lang, vendor, set, toggle, logo, trust, agreementData, Icon,
+          })}
+        </div>
+      </div>
+
+      <footer className="vo-foot">
+        {saveError && <p className="vo-error">{t('save_error')}</p>}
+        <div className="vo-ctarow">
+          <button type="button" className="vo-back" onClick={onGoBack}>{t('back')}</button>
+          <span className={'vo-savedflash' + (showSaved ? ' show' : '')} aria-live="polite">
+            {showSaved && <><Check size={13} strokeWidth={2.5} aria-hidden="true" />{savedLabel}</>}
+          </span>
+          {isTermsCard ? (
+            accepted && <button type="button" className="vo-btn" onClick={backToOverview}>{t('done')}</button>
+          ) : (
+            <button type="button" className="vo-btn" onClick={onGoNext}>{isLast ? t('done') : t('next')}</button>
+          )}
+        </div>
+      </footer>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+function renderCard(props: {
+  section: SectionKey; step: StepId; headingId: string;
+  t: (k: string) => string; tf: (k: string, vals: Record<string, string | number>) => string;
+  lang: Lang; vendor: OnboardingVendor;
+  set: <K extends keyof OnboardingVendor>(k: K, v: OnboardingVendor[K]) => void;
+  toggle: (list: string[], v: string, key: 'categories' | 'service_areas' | 'industries' | 'client_types') => void;
+  logo: { logoUrl: string | null; logoBusy: boolean; uploadLogo: (f: File) => void; removeLogo: () => void };
+  trust: {
+    certifications: { id: string; name: string; issuer: string | null }[];
+    photos: { id: string; caption: string | null; image_url: string | null }[];
+    caseStudies: { id: string; title: string }[];
+    videos: { id: string; title: string | null; url: string }[];
+    videoBusy: boolean;
+    addVideo: (title: string, url: string) => Promise<boolean>;
+    removeVideo: (id: string) => void;
+  };
+  agreementData: {
+    listingCount: number; proofCount: number;
+    agreement: { accepted: boolean; accepted_at: string | null } | null;
+    agreementBusy: boolean; acceptTerms: () => Promise<boolean>; inReview: boolean;
+  };
+  Icon?: LucideIcon;
+}) {
+  const { step, headingId, t, tf, lang, vendor, set, toggle, logo, trust, agreementData } = props;
+
   switch (step) {
-    case 'logo':
+    // ---- Storefront -------------------------------------------------
+    case 'name_logo':
       return (
         <>
-          <h2 id={headingId} className="vob-h">{t('h_logo')}</h2>
-          <p className="vob-sub">{t('sub_logo')}</p>
-          <div className="vob-logobox">
-            {logo.logoUrl ? <img src={logo.logoUrl} alt="" /> : <LogoIcon size={28} strokeWidth={1.5} aria-hidden="true" />}
+          <h2 id={headingId} className="vo-h">{t('h_name_logo')}</h2>
+          <div className="vo-logobox">
+            {logo.logoUrl ? <img src={logo.logoUrl} alt="" /> : <LogoIcon size={26} strokeWidth={1.5} aria-hidden="true" />}
           </div>
-          <label className="vob-filebtn">
+          <label className="vo-filebtn">
             {logo.logoBusy ? t('logo_uploading') : logo.logoUrl ? t('logo_replace') : t('logo_upload')}
             <input
               type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" disabled={logo.logoBusy}
               onChange={(e) => { const f = e.target.files?.[0]; if (f) logo.uploadLogo(f); e.target.value = ''; }}
             />
           </label>
-          {logo.logoUrl && <button type="button" className="vob-textbtn" onClick={logo.removeLogo}>{t('logo_remove')}</button>}
-        </>
-      );
-
-    case 'identity':
-      return (
-        <>
-          <h2 id={headingId} className="vob-h">{t('h_identity')}</h2>
-          <div className="vob-fields">
+          {logo.logoUrl && <button type="button" className="vo-textbtn" onClick={logo.removeLogo}>{t('logo_remove')}</button>}
+          <div className="vo-fields" style={{ marginTop: 20 }}>
             <TextField label={t('company_label')} value={vendor.company_name || ''} onChange={(v) => set('company_name', v)} />
-            <TextField label={t('contact_label')} value={vendor.contact_name || ''} onChange={(v) => set('contact_name', v)} />
-          </div>
-        </>
-      );
-
-    case 'reach':
-      return (
-        <>
-          <h2 id={headingId} className="vob-h">{t('h_reach')}</h2>
-          <div className="vob-fields">
-            <TextField label={t('website_label')} value={vendor.website || ''} onChange={(v) => set('website', v)} />
-            <TextField label={t('phone_label')} value={vendor.phone || ''} onChange={(v) => set('phone', v)} inputMode="tel" />
-            <TextField label={t('city_label')} value={vendor.city || ''} onChange={(v) => set('city', v)} />
           </div>
         </>
       );
@@ -332,32 +600,51 @@ function renderCard(
     case 'tagline':
       return (
         <>
-          <h2 id={headingId} className="vob-h">{t('h_tagline')}</h2>
+          <h2 id={headingId} className="vo-h">{t('h_tagline')}</h2>
           <input
-            className="vob-bigfield" aria-labelledby={headingId} maxLength={160}
+            className="vo-bigfield" aria-labelledby={headingId} maxLength={160}
             value={vendor.tagline || ''} placeholder={t('ph_tagline')}
             onChange={(e) => set('tagline', e.target.value)}
           />
         </>
       );
 
-    case 'description':
+    case 'about': {
+      const filled = templateFor(lang, vendor);
       return (
         <>
-          <h2 id={headingId} className="vob-h">{t('h_description')}</h2>
+          <h2 id={headingId} className="vo-h">{t('h_about')}</h2>
           <textarea
-            className="vob-bigfield vob-textarea" aria-labelledby={headingId} rows={5}
-            value={vendor.description || ''} placeholder={t('ph_description')}
+            className="vo-bigfield vo-textarea" aria-labelledby={headingId} rows={5}
+            value={vendor.description || ''} placeholder={t('ph_about')}
             onChange={(e) => set('description', e.target.value)}
           />
+          <button type="button" className="vo-textbtn" style={{ marginTop: 12 }} onClick={() => set('description', filled)}>
+            {t('use_template')}
+          </button>
+        </>
+      );
+    }
+
+    case 'contact':
+      return (
+        <>
+          <h2 id={headingId} className="vo-h">{t('h_contact')}</h2>
+          <div className="vo-fields">
+            <TextField label={t('contact_name_label')} value={vendor.contact_name || ''} onChange={(v) => set('contact_name', v)} />
+            <TextField label={t('website_label')} value={vendor.website || ''} onChange={(v) => set('website', v)} />
+            <TextField label={t('phone_label')} value={vendor.phone || ''} onChange={(v) => set('phone', v)} inputMode="tel" />
+            <TextField label={t('city_label')} value={vendor.city || ''} onChange={(v) => set('city', v)} />
+          </div>
         </>
       );
 
+    // ---- Capabilities -------------------------------------------------
     case 'industries':
       return (
         <>
-          <h2 id={headingId} className="vob-h">{t('h_industries')}</h2>
-          <p className="vob-sub">{t('sub_industries')}</p>
+          <h2 id={headingId} className="vo-h">{t('h_industries')}</h2>
+          <p className="vo-sub">{t('sub_industries')}</p>
           <div role="group" aria-labelledby={headingId}>
             <ChipGroup
               options={Array.from(new Set([...INDUSTRIES, ...(vendor.industries || [])]))}
@@ -375,23 +662,9 @@ function renderCard(
     case 'client_size':
       return (
         <>
-          <h2 id={headingId} className="vob-h">{t('h_client_size')}</h2>
+          <h2 id={headingId} className="vo-h">{t('h_client_size')}</h2>
           <div role="group" aria-labelledby={headingId}>
             <ChipGroup options={CLIENT_SIZES} selected={vendor.client_types || []} onToggle={(v) => toggle(vendor.client_types || [], v, 'client_types')} />
-          </div>
-        </>
-      );
-
-    case 'client_types':
-      return (
-        <>
-          <h2 id={headingId} className="vob-h">{t('h_client_types')}</h2>
-          <div role="group" aria-labelledby={headingId}>
-            <ChipGroup
-              options={Array.from(new Set([...CLIENT_TYPES, ...((vendor.client_types || []).filter((v) => !CLIENT_SIZES.includes(v)))]))}
-              selected={vendor.client_types || []}
-              onToggle={(v) => toggle(vendor.client_types || [], v, 'client_types')}
-            />
           </div>
         </>
       );
@@ -399,9 +672,9 @@ function renderCard(
     case 'categories':
       return (
         <>
-          <h2 id={headingId} className="vob-h">{t('h_categories')}</h2>
-          <p className="vob-sub">{t('sub_categories')}</p>
-          <div data-no-swipe className="vob-catwrap">
+          <h2 id={headingId} className="vo-h">{t('h_categories')}</h2>
+          <p className="vo-sub">{t('sub_categories')}</p>
+          <div data-no-swipe className="vo-catwrap">
             <CategoryPicker selected={vendor.categories || []} onToggle={(v) => toggle(vendor.categories || [], v, 'categories')} lang={lang} />
           </div>
         </>
@@ -410,22 +683,70 @@ function renderCard(
     case 'service_areas':
       return (
         <>
-          <h2 id={headingId} className="vob-h">{t('h_service_areas')}</h2>
+          <h2 id={headingId} className="vo-h">{t('h_service_areas')}</h2>
           <div role="group" aria-labelledby={headingId}>
             <ChipGroup options={AREAS} selected={vendor.service_areas || []} onToggle={(v) => toggle(vendor.service_areas || [], v, 'service_areas')} />
           </div>
         </>
       );
 
+    // ---- Trust & Proof --------------------------------------------------
+    case 'certifications':
+      return (
+        <>
+          <h2 id={headingId} className="vo-h">{t('h_certifications')}</h2>
+          <p className="vo-sub">{t('sub_certifications')}</p>
+          {trust.certifications.length > 0 ? (
+            <ul className="vo-summarylist">
+              {trust.certifications.map((c) => <li key={c.id}>{c.name}{c.issuer ? ` · ${c.issuer}` : ''}</li>)}
+            </ul>
+          ) : <p className="vo-summaryempty">{t('certs_empty')}</p>}
+          <a className="vo-deeplink" href="/vendor/portal">{t('certs_cta')} <ExternalLink size={13} strokeWidth={2} aria-hidden="true" /></a>
+        </>
+      );
+
+    case 'case_studies':
+      return (
+        <>
+          <h2 id={headingId} className="vo-h">{t('h_case_studies')}</h2>
+          <p className="vo-sub">{t('sub_case_studies')}</p>
+          {trust.caseStudies.length > 0 ? (
+            <ul className="vo-summarylist">
+              {trust.caseStudies.map((c) => <li key={c.id}>{c.title}</li>)}
+            </ul>
+          ) : <p className="vo-summaryempty">{t('cases_empty')}</p>}
+          <a className="vo-deeplink" href="/vendor/portal">{t('cases_cta')} <ExternalLink size={13} strokeWidth={2} aria-hidden="true" /></a>
+        </>
+      );
+
+    case 'photos':
+      return (
+        <>
+          <h2 id={headingId} className="vo-h">{t('h_photos')}</h2>
+          <p className="vo-sub">{t('sub_photos')}</p>
+          {trust.photos.length > 0 ? (
+            <div className="vo-photogrid">
+              {trust.photos.map((p) => (
+                <div className="vo-photothumb" key={p.id}>{p.image_url && <img src={p.image_url} alt={p.caption || ''} />}</div>
+              ))}
+            </div>
+          ) : <p className="vo-summaryempty">{t('photos_empty')}</p>}
+          <a className="vo-deeplink" href="/vendor/portal">{t('photos_cta')} <ExternalLink size={13} strokeWidth={2} aria-hidden="true" /></a>
+        </>
+      );
+
+    case 'videos':
+      return <VideosCard t={t} videos={trust.videos} videoBusy={trust.videoBusy} addVideo={trust.addVideo} removeVideo={trust.removeVideo} headingId={headingId} />;
+
     case 'awards':
       return (
         <>
-          <h2 id={headingId} className="vob-h">{t('h_awards')}</h2>
-          <p className="vob-sub">{t('sub_awards')}</p>
+          <h2 id={headingId} className="vo-h">{t('h_awards')}</h2>
+          <p className="vo-sub">{t('sub_awards')}</p>
           {(vendor.achievements || []).length > 0 && (
-            <div className="vob-chips">
+            <div className="vo-chips">
               {(vendor.achievements || []).map((a) => (
-                <button key={a} type="button" className="vob-chip on" onClick={() => set('achievements', (vendor.achievements || []).filter((x) => x !== a))}>
+                <button key={a} type="button" className="vo-chip on" onClick={() => set('achievements', (vendor.achievements || []).filter((x) => x !== a))}>
                   {a}<X size={12} strokeWidth={2} aria-hidden="true" />
                 </button>
               ))}
@@ -438,24 +759,190 @@ function renderCard(
         </>
       );
 
-    case 'summary':
+    // ---- Agreement & Activation -----------------------------------------
+    case 'recap': {
+      const categoriesCount = (vendor.categories || []).length;
       return (
         <>
-          <h2 id={headingId} className="vob-h">{t('h_summary')}</h2>
-          <p className="vob-sub">{t('sub_summary')}</p>
+          <h2 id={headingId} className="vo-h">{t('h_recap')}</h2>
+          <p className="vo-sub">{t('sub_recap')}</p>
+          <div className="vo-statrow">
+            <StatTile value={agreementData.listingCount} label={t('stat_listings')} />
+            <StatTile value={categoriesCount} label={t('stat_categories')} />
+            <StatTile value={agreementData.proofCount} label={t('stat_proof')} />
+          </div>
         </>
       );
+    }
+
+    case 'terms':
+      return <TermsCard t={t} tf={tf} headingId={headingId} agreementData={agreementData} />;
 
     default:
       return null;
   }
 }
 
+function templateFor(lang: Lang, vendor: OnboardingVendor): string {
+  const company = (vendor.company_name || '').trim() || (lang === 'es' ? '[Empresa]' : '[Company]');
+  const industry = (vendor.industries || [])[0] || (lang === 'es' ? '[industria]' : '[industry]');
+  const region = (vendor.city || '').trim() || (lang === 'es' ? 'el Borderplex' : 'the Borderplex');
+  const service = (vendor.categories || [])[0] || (lang === 'es' ? '[servicio]' : '[service]');
+  return lang === 'es'
+    ? `${company} ofrece ${service} para ${industry} en ${region}. Con [X] años de experiencia…`
+    : `${company} provides ${service} for ${industry} in ${region}. With [X] years of experience…`;
+}
+
+function VideosCard({ t, videos, videoBusy, addVideo, removeVideo, headingId }: {
+  t: (k: string) => string;
+  videos: { id: string; title: string | null; url: string }[];
+  videoBusy: boolean;
+  addVideo: (title: string, url: string) => Promise<boolean>;
+  removeVideo: (id: string) => void;
+  headingId: string;
+}) {
+  const [title, setTitle] = useState('');
+  const [url, setUrl] = useState('');
+  const submit = async () => {
+    if (!url.trim()) return;
+    const ok = await addVideo(title, url);
+    if (ok) { setTitle(''); setUrl(''); }
+  };
+  return (
+    <>
+      <h2 id={headingId} className="vo-h">{t('h_videos')}</h2>
+      <p className="vo-sub">{t('sub_videos')}</p>
+      <div className="vo-videoform">
+        <label className="sr-only" htmlFor="vo-video-title">{t('video_title_ph')}</label>
+        <input id="vo-video-title" placeholder={t('video_title_ph')} value={title} onChange={(e) => setTitle(e.target.value)} />
+        <label className="sr-only" htmlFor="vo-video-url">{t('video_url_ph')}</label>
+        <input id="vo-video-url" placeholder={t('video_url_ph')} value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} />
+        <button type="button" className="vo-textbtn" disabled={videoBusy} onClick={submit}>{t('video_add')}</button>
+      </div>
+      {videos.length > 0 ? (
+        <ul className="vo-summarylist">
+          {videos.map((v) => (
+            <li key={v.id} className="vo-videorow">
+              <a href={v.url} target="_blank" rel="noreferrer">{v.title || v.url}</a>
+              <button type="button" className="vo-textbtn sm" onClick={() => removeVideo(v.id)}>{t('video_remove')}</button>
+            </li>
+          ))}
+        </ul>
+      ) : <p className="vo-summaryempty">{t('videos_empty')}</p>}
+    </>
+  );
+}
+
+function TermsCard({ t, tf, headingId, agreementData }: {
+  t: (k: string) => string;
+  tf: (k: string, vals: Record<string, string | number>) => string;
+  headingId: string;
+  agreementData: {
+    agreement: { accepted: boolean; accepted_at: string | null; summary?: string; terms?: { title: string; body: string }[] } | null;
+    agreementBusy: boolean; acceptTerms: () => Promise<boolean>; inReview: boolean;
+  };
+}) {
+  const [checked, setChecked] = useState(false);
+  const [error, setError] = useState(false);
+  const { agreement, agreementBusy, acceptTerms, inReview } = agreementData;
+
+  const rows = useMemo(() => {
+    const terms = agreement?.terms || [];
+    const map: { title: string; rowKey: string }[] = [
+      { title: 'Commission on NXT//LINK deals', rowKey: 'terms_row_pay' },
+      { title: 'Protected period', rowKey: 'terms_row_protected' },
+      { title: 'No going around the platform', rowKey: 'terms_row_stay' },
+      { title: 'Accurate listings', rowKey: 'terms_row_accurate' },
+    ];
+    return map
+      .map((m) => {
+        const term = terms.find((x) => x.title === m.title);
+        return term ? { label: t(m.rowKey), body: term.body } : null;
+      })
+      .filter((r): r is { label: string; body: string } => !!r);
+  }, [agreement, t]);
+
+  if (agreement?.accepted) {
+    return (
+      <>
+        <h2 id={headingId} className="vo-h">{t('accepted_h')}</h2>
+        <div className="vo-accepted">
+          <span className="vo-check-dot lg" aria-hidden="true"><CheckDraw /></span>
+          <div>
+            {agreement.accepted_at && <p>{tf('accepted_on', { date: new Date(agreement.accepted_at).toLocaleDateString() })}</p>}
+            <p>{inReview ? t('accepted_review') : t('accepted_live')}</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  async function onActivate() {
+    setError(false);
+    const ok = await acceptTerms();
+    if (!ok) setError(true);
+  }
+
+  return (
+    <>
+      <h2 id={headingId} className="vo-h">{t('h_terms')}</h2>
+      <div className="vo-table-wrap">
+        <table className="vo-table">
+          <tbody>
+            {rows.length > 0 ? rows.map((r) => (
+              <tr key={r.label}>
+                <th scope="row">{r.label}</th>
+                <td>{r.body}</td>
+              </tr>
+            )) : (
+              <tr><td colSpan={2}>{t('loading')}</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      <p className="vo-terms-disclaimer">
+        {t('terms_disclaimer')} <a href="/terms" target="_blank" rel="noreferrer">{t('terms_full_link')}</a>
+      </p>
+      <p className="vo-reassure-main">{t('reassure_main')}</p>
+      <p className="vo-reassure-sub">{t('reassure_sub')}</p>
+      <label className="vo-checkboxrow">
+        <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} />
+        <span>{t('accept_checkbox')}</span>
+      </label>
+      {error && <p className="vo-error">{t('activate_error')}</p>}
+      <button type="button" className="vo-btn vo-activate" disabled={!checked || agreementBusy} onClick={onActivate}>
+        {t('activate_btn')}
+      </button>
+    </>
+  );
+}
+
+function StatTile({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="vo-stat">
+      <span className="vo-stat-value">{value}</span>
+      <span className="vo-stat-label">{label}</span>
+    </div>
+  );
+}
+
+// A small self-drawing checkmark for "done" states — reduced-motion safe via
+// the global `@media (prefers-reduced-motion: reduce)` rule in globals.css,
+// which collapses every animation/transition duration app-wide (including
+// this one) to near-zero.
+function CheckDraw() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="vo-checkdraw" />
+    </svg>
+  );
+}
+
 function TextField({ label, value, onChange, inputMode }: {
   label: string; value: string; onChange: (v: string) => void; inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
 }) {
   return (
-    <label className="vob-field">
+    <label className="vo-field">
       <span>{label}</span>
       <input value={value} inputMode={inputMode} onChange={(e) => onChange(e.target.value)} />
     </label>
@@ -464,9 +951,9 @@ function TextField({ label, value, onChange, inputMode }: {
 
 function ChipGroup({ options, selected, onToggle }: { options: string[]; selected: string[]; onToggle: (v: string) => void }) {
   return (
-    <div className="vob-chips">
+    <div className="vo-chips">
       {options.map((o) => (
-        <button key={o} type="button" className={'vob-chip' + (selected.includes(o) ? ' on' : '')} aria-pressed={selected.includes(o)} onClick={() => onToggle(o)}>
+        <button key={o} type="button" className={'vo-chip' + (selected.includes(o) ? ' on' : '')} aria-pressed={selected.includes(o)} onClick={() => onToggle(o)}>
           {o}
         </button>
       ))}
@@ -483,71 +970,155 @@ function AddYourOwn({ placeholder, addLabel, existing, onAdd }: { placeholder: s
     setV('');
   };
   return (
-    <div className="vob-addown">
+    <div className="vo-addown">
       <input value={v} placeholder={placeholder} onChange={(e) => setV(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }} />
-      <button type="button" className="vob-textbtn" onClick={add}>{addLabel}</button>
+      <button type="button" className="vo-textbtn" onClick={add}>{addLabel}</button>
     </div>
   );
 }
 
 const CSS = `
-.vob{--bg:#F8F7FB;--surf:#fff;--ink:#141320;--muted:#615F72;--muted2:#8A87A0;--line:#E2DFEC;--p:#6C5CE0;--pd:#4A3DB0;--pbg:rgba(108,92,224,.1);--green:#2F9E6A;--sans:var(--font-ibm-plex-sans-vob),'IBM Plex Sans',system-ui,sans-serif;--serif:var(--font-space-grotesk),'Space Grotesk',Georgia,serif;--shadow:0 4px 12px rgba(124,58,237,.08);
+.vo{--bg:#F8F7FB;--surf:#fff;--ink:#141320;--muted:#615F72;--muted2:#8A87A0;--line:#E2DFEC;--p:#6C5CE0;--pd:#4A3DB0;--pbg:rgba(108,92,224,.1);--green:#2F9E6A;--sans:var(--font-ibm-plex-sans-vo2),'IBM Plex Sans',system-ui,sans-serif;--serif:var(--font-space-grotesk),'Space Grotesk',Georgia,serif;--shadow:0 4px 12px rgba(124,58,237,.08);
   height:100dvh;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden;}
-.vob *{box-sizing:border-box;}
-.vob a:focus-visible,.vob button:focus-visible,.vob input:focus-visible,.vob textarea:focus-visible{outline:2px solid var(--p);outline-offset:2px;}
-.vob-center{flex:1;display:grid;place-items:center;color:var(--muted);font-size:14px;}
-.vob-gate{max-width:400px;margin:auto;text-align:center;background:var(--surf);border:1px solid var(--line);border-radius:20px;padding:32px;box-shadow:var(--shadow);}
-.vob-gate h1{font-family:var(--serif);font-size:22px;font-weight:700;margin:0 0 8px;}
-.vob-gate p{color:var(--muted);font-size:14px;line-height:1.6;margin:0 0 20px;}
-.vob-top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;flex-shrink:0;}
-.vob-exit{font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;padding:8px;border-radius:8px;}
-.vob-exit:hover{color:var(--ink);}
-.vob-dots{display:flex;gap:6px;padding:0 20px 8px;flex-shrink:0;}
-.vob-dot{flex:1;max-width:40px;height:4px;border-radius:99px;background:var(--line);}
-.vob-dot.done{background:var(--p);opacity:.5;}
-.vob-dot.current{background:var(--p);}
-.vob-viewport{flex:1;min-height:0;display:flex;overflow:hidden;padding:0 20px;}
-.vob-card{flex:1;min-height:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;max-width:520px;margin:0 auto;width:100%;overflow-y:auto;padding:16px 0;}
-.vob-in-fwd{animation:vobInFwd 200ms cubic-bezier(0,0,.2,1);}
-.vob-in-back{animation:vobInBack 200ms cubic-bezier(0,0,.2,1);}
-@keyframes vobInFwd{from{opacity:0;transform:translateX(24px);}to{opacity:1;transform:translateX(0);}}
-@keyframes vobInBack{from{opacity:0;transform:translateX(-24px);}to{opacity:1;transform:translateX(0);}}
-.vob-icon{width:52px;height:52px;border-radius:16px;background:var(--pbg);color:var(--p);display:grid;place-items:center;margin-bottom:24px;flex-shrink:0;}
-.vob-h{font-family:var(--serif);font-size:28px;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin:0 0 8px;}
-.vob-sub{font-size:15px;font-weight:400;color:var(--muted);line-height:1.5;margin:0 0 24px;max-width:440px;}
-.vob-fields{display:flex;flex-direction:column;gap:16px;width:100%;margin-top:8px;}
-.vob-field{display:flex;flex-direction:column;gap:8px;font-size:13px;font-weight:600;color:var(--muted);width:100%;}
-.vob-field input{font-family:var(--sans);padding:14px 16px;border-radius:12px;border:1px solid var(--line);background:var(--surf);color:var(--ink);font-size:16px;font-weight:400;outline:none;min-height:48px;width:100%;}
-.vob-field input:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
-.vob-bigfield{font-family:var(--sans);width:100%;padding:16px;border-radius:12px;border:1px solid var(--line);background:var(--surf);color:var(--ink);font-size:16px;font-weight:400;outline:none;margin-top:8px;resize:none;}
-.vob-bigfield::placeholder{color:var(--muted2);}
-.vob-bigfield:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
-.vob-textarea{line-height:1.6;}
-.vob-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
-.vob-chip{font-family:var(--sans);padding:11px 16px;min-height:44px;border-radius:99px;border:1px solid var(--line);background:var(--surf);color:var(--ink);font-size:14px;font-weight:400;cursor:pointer;}
-.vob-chip:hover{border-color:var(--p);}
-.vob-chip.on{background:var(--pbg);border-color:var(--p);color:var(--pd);font-weight:600;}
-.vob-addown{display:flex;gap:8px;margin-top:16px;}
-.vob-addown input{flex:1;font-family:var(--sans);padding:12px 14px;min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surf);color:var(--ink);font-size:14px;outline:none;}
-.vob-addown input:focus{border-color:var(--p);}
-.vob-textbtn{font-family:var(--sans);background:none;border:1px solid var(--line);color:var(--pd);font-size:13px;font-weight:600;padding:11px 16px;min-height:44px;border-radius:10px;cursor:pointer;}
-.vob-textbtn:hover{border-color:var(--p);background:var(--pbg);}
-.vob-logobox{width:96px;height:96px;border-radius:20px;border:1px solid var(--line);background:var(--surf);display:grid;place-items:center;overflow:hidden;color:var(--muted2);margin-bottom:20px;}
-.vob-logobox img{width:100%;height:100%;object-fit:contain;}
-.vob-filebtn{position:relative;overflow:hidden;display:inline-block;font-family:var(--sans);background:var(--surf);border:1px solid var(--line);color:var(--ink);font-size:14px;font-weight:600;padding:12px 20px;min-height:48px;border-radius:12px;cursor:pointer;margin-bottom:10px;}
-.vob-filebtn:hover{border-color:var(--p);}
-.vob-filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0;}
-.vob-catwrap{width:100%;margin-top:4px;}
-.vob-foot{flex-shrink:0;padding:16px 20px calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:rgba(248,247,251,.92);backdrop-filter:blur(16px);}
-.vob-error{color:#CE4B43;font-size:13px;margin:0 0 10px;text-align:center;}
-.vob-ctarow{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:520px;margin:0 auto;}
-.vob-back{font-family:var(--sans);background:none;border:none;color:var(--muted);font-size:14px;font-weight:600;padding:14px 12px;min-height:48px;border-radius:10px;cursor:pointer;}
-.vob-back:hover:not(:disabled){color:var(--ink);}
-.vob-back:disabled{opacity:0;pointer-events:none;}
-.vob-savedflash{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;color:var(--green);opacity:0;transition:opacity 200ms ease-out;flex-shrink:0;}
-.vob-savedflash.show{opacity:1;}
-.vob-btn{font-family:var(--sans);border:none;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;border-radius:12px;padding:14px 28px;min-height:48px;min-width:112px;background:var(--p);color:#fff;box-shadow:var(--shadow);transition:background 150ms ease;}
-.vob-btn:hover{background:var(--pd);}
-.vob-btn:active{transform:scale(.98);}
-@media(max-width:480px){.vob-h{font-size:24px;}.vob-top{padding:14px 16px;}.vob-dots{padding:0 16px 8px;}.vob-viewport{padding:0 16px;}.vob-foot{padding:14px 16px calc(14px + env(safe-area-inset-bottom));}}
+.vo *{box-sizing:border-box;}
+.vo a:focus-visible,.vo button:focus-visible,.vo input:focus-visible,.vo textarea:focus-visible{outline:2px solid var(--p);outline-offset:2px;}
+.vo .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+.vo-center{flex:1;display:grid;place-items:center;color:var(--muted);font-size:14px;}
+.vo-gate{max-width:400px;margin:auto;text-align:center;background:var(--surf);border:1px solid var(--line);border-radius:20px;padding:32px;box-shadow:var(--shadow);}
+.vo-gate h1{font-family:var(--serif);font-size:22px;font-weight:700;margin:0 0 8px;}
+.vo-gate p{color:var(--muted);font-size:14px;line-height:1.6;margin:0 0 20px;}
+
+.vo-shell{flex:1;min-height:0;display:flex;}
+.vo-sidebar{display:none;width:240px;flex-shrink:0;flex-direction:column;gap:20px;padding:24px 20px;border-right:1px solid var(--line);background:var(--surf);overflow-y:auto;}
+.vo-sidebar-mark{font-family:var(--serif);font-weight:700;font-size:15px;letter-spacing:-.01em;}
+.vo-sidebar-mark span{color:var(--p);}
+.vo-checklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;}
+.vo-check-item{width:100%;display:flex;align-items:center;gap:10px;background:none;border:none;text-align:left;font-family:var(--sans);font-size:14px;font-weight:600;color:var(--muted);padding:10px 8px;border-radius:10px;cursor:pointer;min-height:44px;}
+.vo-check-item:hover{background:var(--bg);}
+.vo-check-item.active{color:var(--pd);background:var(--pbg);}
+.vo-check-item.done{color:var(--ink);}
+.vo-check-dot{width:20px;height:20px;flex-shrink:0;border-radius:50%;border:1.5px solid #C7C2DE;display:grid;place-items:center;color:#fff;}
+.vo-check-item.done .vo-check-dot{background:var(--green);border-color:transparent;}
+.vo-check-dot.lg{width:28px;height:28px;}
+.vo-checkdraw{stroke-dasharray:20;stroke-dashoffset:20;animation:vo-draw 420ms ease-out forwards;}
+@keyframes vo-draw{to{stroke-dashoffset:0;}}
+
+.vo-stripmobile{display:block;border-bottom:1px solid var(--line);background:var(--surf);flex-shrink:0;}
+.vo-stripmobile summary{list-style:none;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer;min-height:44px;}
+.vo-stripmobile summary::-webkit-details-marker{display:none;}
+.vo-stripmobile[open] summary{color:var(--ink);}
+.vo-stripmobile .vo-checklist{padding:0 12px 12px;}
+
+.vo-main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;}
+.vo-top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;flex-shrink:0;}
+.vo-exit{font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;padding:8px;border-radius:8px;}
+.vo-exit:hover{color:var(--ink);}
+
+.vo-hubwrap{flex:1;overflow-y:auto;padding:8px 24px 32px;max-width:680px;margin:0 auto;width:100%;}
+.vo-hub-h{font-family:var(--serif);font-size:28px;font-weight:700;letter-spacing:-.02em;margin:8px 0 8px;}
+.vo-hub-sub{font-size:15px;color:var(--muted);line-height:1.5;margin:0 0 16px;max-width:520px;}
+.vo-hub-progress{font-size:13px;font-weight:600;color:var(--pd);margin:0 0 20px;}
+.vo-hub-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.vo-hub-card{display:flex;align-items:flex-start;gap:12px;text-align:left;background:var(--surf);border:1px solid var(--line);border-radius:16px;padding:20px;cursor:pointer;box-shadow:var(--shadow);transition:transform 150ms ease,box-shadow 150ms ease;}
+.vo-hub-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(124,58,237,.1);}
+.vo-hub-card.done{border-color:rgba(47,158,106,.35);}
+.vo-hub-card-icon{width:40px;height:40px;border-radius:12px;background:var(--bg);color:var(--ink);display:grid;place-items:center;flex-shrink:0;}
+.vo-hub-card-body{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0;}
+.vo-hub-card-body b{font-size:15px;font-weight:700;}
+.vo-hub-card-blurb{font-size:12.5px;color:var(--muted);line-height:1.4;}
+.vo-hub-card-status{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--muted2);margin-top:4px;}
+.vo-hub-card-status.done{color:var(--green);}
+.vo-hub-card-chevron{color:var(--muted2);flex-shrink:0;margin-top:2px;}
+
+.vo-sectionhead{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 20px 8px;flex-shrink:0;flex-wrap:wrap;}
+.vo-overview-link{background:none;border:none;font-family:var(--sans);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;padding:8px 4px;min-height:44px;}
+.vo-overview-link:hover{color:var(--pd);}
+.vo-dots{display:flex;gap:6px;}
+.vo-dot{flex:1;max-width:40px;height:4px;border-radius:99px;background:var(--line);}
+.vo-dot.done{background:var(--p);opacity:.5;}
+.vo-dot.current{background:var(--p);}
+
+.vo-viewport{flex:1;min-height:0;display:flex;overflow:hidden;padding:0 20px;}
+.vo-card{flex:1;min-height:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;max-width:520px;margin:0 auto;width:100%;overflow-y:auto;padding:16px 0;}
+.vo-in-fwd{animation:voInFwd 200ms cubic-bezier(0,0,.2,1);}
+.vo-in-back{animation:voInBack 200ms cubic-bezier(0,0,.2,1);}
+@keyframes voInFwd{from{opacity:0;transform:translateX(24px);}to{opacity:1;transform:translateX(0);}}
+@keyframes voInBack{from{opacity:0;transform:translateX(-24px);}to{opacity:1;transform:translateX(0);}}
+.vo-h{font-family:var(--serif);font-size:28px;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin:0 0 8px;}
+.vo-sub{font-size:15px;font-weight:400;color:var(--muted);line-height:1.5;margin:0 0 24px;max-width:440px;}
+.vo-fields{display:flex;flex-direction:column;gap:16px;width:100%;margin-top:8px;}
+.vo-field{display:flex;flex-direction:column;gap:8px;font-size:13px;font-weight:600;color:var(--muted);width:100%;}
+.vo-field input{font-family:var(--sans);padding:14px 16px;border-radius:12px;border:1px solid var(--line);background:var(--surf);color:var(--ink);font-size:16px;font-weight:400;outline:none;min-height:48px;width:100%;}
+.vo-field input:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
+.vo-bigfield{font-family:var(--sans);width:100%;padding:16px;border-radius:12px;border:1px solid var(--line);background:var(--surf);color:var(--ink);font-size:16px;font-weight:400;outline:none;margin-top:8px;resize:none;}
+.vo-bigfield::placeholder{color:var(--muted2);}
+.vo-bigfield:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
+.vo-textarea{line-height:1.6;}
+.vo-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+.vo-chip{font-family:var(--sans);padding:11px 16px;min-height:44px;border-radius:99px;border:1px solid var(--line);background:var(--surf);color:var(--ink);font-size:14px;font-weight:400;cursor:pointer;}
+.vo-chip:hover{border-color:var(--p);}
+.vo-chip.on{background:var(--pbg);border-color:var(--p);color:var(--pd);font-weight:600;}
+.vo-addown{display:flex;gap:8px;margin-top:16px;}
+.vo-addown input{flex:1;font-family:var(--sans);padding:12px 14px;min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surf);color:var(--ink);font-size:14px;outline:none;}
+.vo-addown input:focus{border-color:var(--p);}
+.vo-textbtn{font-family:var(--sans);background:none;border:1px solid var(--line);color:var(--pd);font-size:13px;font-weight:600;padding:11px 16px;min-height:44px;border-radius:10px;cursor:pointer;}
+.vo-textbtn:hover{border-color:var(--p);background:var(--pbg);}
+.vo-textbtn.sm{padding:6px 12px;min-height:32px;font-size:12px;}
+.vo-textbtn:disabled{opacity:.5;cursor:default;}
+.vo-logobox{width:96px;height:96px;border-radius:20px;border:1px solid var(--line);background:var(--surf);display:grid;place-items:center;overflow:hidden;color:var(--muted2);margin-bottom:20px;}
+.vo-logobox img{width:100%;height:100%;object-fit:contain;}
+.vo-filebtn{position:relative;overflow:hidden;display:inline-block;font-family:var(--sans);background:var(--surf);border:1px solid var(--line);color:var(--ink);font-size:14px;font-weight:600;padding:12px 20px;min-height:48px;border-radius:12px;cursor:pointer;margin-bottom:10px;}
+.vo-filebtn:hover{border-color:var(--p);}
+.vo-filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0;}
+.vo-catwrap{width:100%;margin-top:4px;}
+
+.vo-summarylist{list-style:none;margin:0 0 16px;padding:0;display:flex;flex-direction:column;gap:8px;width:100%;}
+.vo-summarylist li{font-size:14px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surf);}
+.vo-videorow{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.vo-videorow a{color:var(--ink);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.vo-videorow a:hover{color:var(--pd);}
+.vo-summaryempty{font-size:14px;color:var(--muted);margin:0 0 16px;}
+.vo-deeplink{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;color:var(--pd);text-decoration:none;padding:4px 0;min-height:44px;}
+.vo-deeplink:hover{color:var(--p);}
+.vo-photogrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;margin-bottom:16px;}
+.vo-photothumb{aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--bg);border:1px solid var(--line);}
+.vo-photothumb img{width:100%;height:100%;object-fit:cover;}
+.vo-videoform{display:flex;flex-direction:column;gap:8px;width:100%;margin-bottom:16px;}
+.vo-videoform input{font-family:var(--sans);padding:12px 14px;min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surf);color:var(--ink);font-size:14px;outline:none;}
+.vo-videoform input:focus{border-color:var(--p);}
+
+.vo-statrow{display:flex;gap:24px;flex-wrap:wrap;margin-top:8px;}
+.vo-stat{display:flex;flex-direction:column;gap:2px;}
+.vo-stat-value{font-family:var(--serif);font-size:32px;font-weight:700;color:var(--ink);line-height:1;}
+.vo-stat-label{font-size:12.5px;color:var(--muted);font-weight:500;}
+
+.vo-table-wrap{width:100%;overflow-x:auto;border:1px solid var(--line);border-radius:14px;margin-bottom:16px;}
+.vo-table{width:100%;border-collapse:collapse;font-size:13.5px;}
+.vo-table tr+tr th,.vo-table tr+tr td{border-top:1px solid var(--line);}
+.vo-table th{text-align:left;font-weight:700;color:var(--ink);padding:14px 16px;white-space:nowrap;vertical-align:top;width:38%;background:var(--bg);}
+.vo-table td{padding:14px 16px;color:var(--muted);line-height:1.55;vertical-align:top;}
+.vo-terms-disclaimer{font-size:12px;color:var(--muted2);line-height:1.6;margin:0 0 20px;}
+.vo-terms-disclaimer a{color:var(--pd);}
+.vo-reassure-main{font-size:14px;font-weight:600;color:var(--ink);margin:0 0 4px;}
+.vo-reassure-sub{font-size:12.5px;color:var(--muted);margin:0 0 20px;line-height:1.5;}
+.vo-checkboxrow{display:flex;align-items:flex-start;gap:10px;font-size:14px;font-weight:600;color:var(--ink);padding:8px 0;cursor:pointer;min-height:44px;}
+.vo-checkboxrow input{width:20px;height:20px;flex-shrink:0;margin-top:1px;accent-color:var(--p);}
+.vo-activate{margin-top:16px;width:100%;}
+.vo-accepted{display:flex;gap:12px;align-items:flex-start;background:#E9F7F0;border:1px solid rgba(47,158,106,.3);border-radius:14px;padding:16px 18px;}
+.vo-accepted p{margin:0 0 4px;font-size:13.5px;color:#1F7A54;line-height:1.5;}
+
+.vo-foot{flex-shrink:0;padding:16px 20px calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:rgba(248,247,251,.92);backdrop-filter:blur(16px);}
+.vo-error{color:#CE4B43;font-size:13px;margin:0 0 10px;text-align:center;}
+.vo-ctarow{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:520px;margin:0 auto;}
+.vo-back{font-family:var(--sans);background:none;border:none;color:var(--muted);font-size:14px;font-weight:600;padding:14px 12px;min-height:48px;border-radius:10px;cursor:pointer;}
+.vo-back:hover{color:var(--ink);}
+.vo-savedflash{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;color:var(--green);opacity:0;transition:opacity 200ms ease-out;flex-shrink:0;}
+.vo-savedflash.show{opacity:1;}
+.vo-btn{font-family:var(--sans);border:none;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;border-radius:12px;padding:14px 28px;min-height:48px;min-width:112px;background:var(--p);color:#fff;box-shadow:var(--shadow);transition:background 150ms ease;}
+.vo-btn:hover{background:var(--pd);}
+.vo-btn:active{transform:scale(.98);}
+.vo-btn:disabled{opacity:.45;cursor:default;}
+
+@media(min-width:900px){.vo-sidebar{display:flex;}.vo-stripmobile{display:none;}}
+@media(max-width:480px){.vo-h{font-size:24px;}.vo-hub-h{font-size:24px;}.vo-hub-grid{grid-template-columns:1fr;}.vo-top{padding:14px 16px;}.vo-sectionhead{padding:0 16px 8px;}.vo-viewport{padding:0 16px;}.vo-foot{padding:14px 16px calc(14px + env(safe-area-inset-bottom));}.vo-hubwrap{padding:8px 16px 24px;}.vo-photogrid{grid-template-columns:repeat(3,1fr);}}
 `;
