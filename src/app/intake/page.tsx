@@ -231,6 +231,40 @@ function IntakeInner() {
     }
   }
 
+  // Step back ONE question (Cesar 2026-07-31: "give me an option to go back —
+  // they can go back"). The engine is deterministic over the answers array, so
+  // undo = drop the last answer, prune the transcript's trailing
+  // [user answer, assistant question(s)] bubbles, prefill the input with the
+  // old answer for editing, and re-ask. From the FIRST question, back returns
+  // to the intro with the original description prefilled.
+  async function handleGoBack() {
+    if (loading || phase !== 'asking') return;
+    if (answers.length === 0) {
+      setCurrentQuestion(null);
+      setProgress('');
+      setInput(initialText);
+      setMessages((m) => {
+        const next = [...m];
+        while (next.length && next[next.length - 1].role === 'assistant') next.pop();
+        if (next.length && next[next.length - 1].role === 'user') next.pop();
+        return next;
+      });
+      setPhase('intro');
+      return;
+    }
+    const last = answers[answers.length - 1];
+    const prevAnswers = answers.slice(0, -1);
+    setAnswers(prevAnswers);
+    setMessages((m) => {
+      const next = [...m];
+      while (next.length && next[next.length - 1].role === 'assistant') next.pop();
+      if (next.length && next[next.length - 1].role === 'user') next.pop();
+      return next;
+    });
+    setInput(last?.a || '');
+    await callIntake(initialText, prevAnswers);
+  }
+
   function handleEditAnswers() {
     // Simple approach: restart the conversation so the client can redo.
     setAnswers([]);
@@ -481,14 +515,24 @@ function IntakeInner() {
                 the wrong thing and their wording didn't trip the automatic
                 correction. */}
             {phase === 'asking' && (
-              <button
-                type="button"
-                onClick={handleEditAnswers}
-                disabled={loading}
-                className="iq-restart"
-              >
-                {tr("That's not it — start over", 'Eso no es — empezar de nuevo')}
-              </button>
+              <div className="iq-flowctl">
+                <button
+                  type="button"
+                  onClick={handleGoBack}
+                  disabled={loading}
+                  className="iq-restart"
+                >
+                  ← {tr('Go back', 'Regresar')}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleEditAnswers}
+                  disabled={loading}
+                  className="iq-restart"
+                >
+                  {tr("That's not it — start over", 'Eso no es — empezar de nuevo')}
+                </button>
+              </div>
             )}
           </div>
         )}
@@ -785,6 +829,7 @@ const IQ_CSS = `
 .iq-sendbtn:hover{background:var(--spec-violet-deep,#4A3DB0);}
 .iq-sendbtn:disabled{background:var(--spec-border,#E2DFEC);color:var(--spec-text-2nd,#615F72);cursor:not-allowed;}
 
+.iq-flowctl{display:flex;gap:18px;align-items:center;flex-wrap:wrap;}
 .iq-restart{margin-top:12px;background:transparent;border:none;padding:0;color:var(--spec-text-2nd,#615F72);font-size:13px;text-decoration:underline;cursor:pointer;transition:color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .iq-restart:hover{color:var(--spec-violet-deep,#4A3DB0);}
 .iq-restart:disabled{cursor:not-allowed;}
