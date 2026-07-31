@@ -1,6 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { IBM_Plex_Sans } from 'next/font/google';
+import { Building2, User, Mail, Phone, Check, ArrowLeft, ImagePlus, ImageUp, type LucideIcon } from 'lucide-react';
+import { MOTION_CSS, staggerStyle } from '@/components/motion/Motion';
 
 // Public, low-friction vendor intake form. No login required to submit.
 // Posts multipart/form-data (text fields + optional logo + up to 3 product
@@ -10,6 +13,17 @@ import { useEffect, useRef, useState } from 'react';
 // "finish your review application" card) get the form PRE-FILLED from their
 // vendor profile — company, contact, email, phone, what they said they
 // supply (fast-signup brief §4: never ask for the same data twice).
+//
+// Design System v1.0 reskin (2026-07-30 polish pass): this page (and its
+// siblings /apply/login, /apply/status) were stranded on an old off-brand
+// dark theme — "Outfit"/"Instrument Serif" fonts, #0A0A0F background, purple
+// #7C5CFC accent — that predates the light warm-white + violet #6C5CE0
+// system every other public/auth screen already uses. This is a visual-only
+// reskin: every field, validator, fetch call, and the multipart submit body
+// below are BYTE-IDENTICAL to before. Only the `Field` component gained an
+// optional `icon` prop (new, additive) so the four identifying fields
+// (company/contact/email/phone) can carry an inline Lucide icon per the
+// design addendum — no field was added, removed, or renamed.
 
 const CATEGORIES = [
   'TMS',
@@ -61,6 +75,13 @@ const TARGET_CUSTOMER_TYPES = [
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const MAX_PRODUCT_IMAGES = 3;
+
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-ibm-plex-sans-apply',
+  display: 'swap',
+});
 
 interface SubmitResponse {
   ok: boolean;
@@ -260,7 +281,7 @@ export default function ApplyPage() {
   }
 
   return (
-    <div className="ap-root">
+    <div className={`ap-root ${ibmPlexSans.variable}`}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <TopNav />
 
@@ -269,7 +290,7 @@ export default function ApplyPage() {
           <ConfirmationCard publicRef={result.publicRef} />
         ) : (
           <>
-            <header className="ap-hero">
+            <header className="ap-hero nxm-in">
               <p className="ap-eyebrow">Vendor application</p>
               <h1>
                 Tell us what you <em>solve</em>.
@@ -280,10 +301,10 @@ export default function ApplyPage() {
               </p>
             </header>
 
-            <form className="ap-card" onSubmit={handleSubmit} noValidate>
+            <form className="ap-card nxm-in" style={staggerStyle(1)} onSubmit={handleSubmit} noValidate>
               {prefilled && (
                 <p className="ap-prefill">
-                  ✓ Pre-filled from your account — check it and submit. <i>Prellenado desde tu cuenta — revísalo y envíalo.</i>
+                  <Check size={15} strokeWidth={2.5} aria-hidden="true" /> Pre-filled from your account — check it and submit. <i>Prellenado desde tu cuenta — revísalo y envíalo.</i>
                 </p>
               )}
               <input
@@ -297,7 +318,7 @@ export default function ApplyPage() {
                 style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }}
               />
               <div className="ap-grid">
-                <Field label="Company name" required>
+                <Field label="Company name" required icon={Building2}>
                   <input
                     type="text"
                     value={companyName}
@@ -307,7 +328,7 @@ export default function ApplyPage() {
                   />
                 </Field>
 
-                <Field label="Contact name">
+                <Field label="Contact name" icon={User}>
                   <input
                     type="text"
                     value={contactName}
@@ -316,7 +337,7 @@ export default function ApplyPage() {
                   />
                 </Field>
 
-                <Field label="Email" required error={emailTouched && !emailValid ? 'Enter a valid email address.' : undefined}>
+                <Field label="Email" required icon={Mail} error={emailTouched && !emailValid ? 'Enter a valid email address.' : undefined}>
                   <input
                     type="email"
                     value={email}
@@ -328,7 +349,7 @@ export default function ApplyPage() {
                   />
                 </Field>
 
-                <Field label="Phone">
+                <Field label="Phone" icon={Phone}>
                   <input
                     type="tel"
                     value={phone}
@@ -418,8 +439,10 @@ export default function ApplyPage() {
                       key={t}
                       type="button"
                       className={`ap-chip ${offeringTypes.includes(t) ? 'ap-chip-on' : ''}`}
+                      aria-pressed={offeringTypes.includes(t)}
                       onClick={() => toggle(offeringTypes, t, setOfferingTypes)}
                     >
+                      {offeringTypes.includes(t) && <Check size={13} strokeWidth={3} aria-hidden="true" />}
                       {t}
                     </button>
                   ))}
@@ -433,8 +456,10 @@ export default function ApplyPage() {
                       key={s}
                       type="button"
                       className={`ap-chip ${stages.includes(s) ? 'ap-chip-on' : ''}`}
+                      aria-pressed={stages.includes(s)}
                       onClick={() => toggle(stages, s, setStages)}
                     >
+                      {stages.includes(s) && <Check size={13} strokeWidth={3} aria-hidden="true" />}
                       {s}
                     </button>
                   ))}
@@ -504,7 +529,7 @@ export default function ApplyPage() {
                       accept="image/png,image/jpeg,image/webp"
                       onChange={handleLogoChange}
                     />
-                    Choose logo
+                    <ImageUp size={15} strokeWidth={1.75} aria-hidden="true" /> Choose logo
                   </label>
                   {logo && (
                     <div className="ap-thumbrow">
@@ -528,7 +553,7 @@ export default function ApplyPage() {
                       disabled={images.length >= MAX_PRODUCT_IMAGES}
                       onChange={handleImagesChange}
                     />
-                    Choose images
+                    <ImagePlus size={15} strokeWidth={1.75} aria-hidden="true" /> Choose images
                   </label>
                   {images.length > 0 && (
                     <div className="ap-thumbrow">
@@ -564,9 +589,9 @@ export default function ApplyPage() {
                 </span>
               </label>
 
-              {error && <p className="ap-error">{error}</p>}
+              {error && <p className="ap-error" role="alert" aria-live="polite">{error}</p>}
 
-              <button type="submit" className="ap-submit" disabled={submitting}>
+              <button type="submit" className="ap-submit nxm-press" disabled={submitting}>
                 {submitting ? 'Submitting…' : 'Submit application'}
               </button>
 
@@ -587,6 +612,7 @@ function Field({
   hint,
   error,
   full,
+  icon: Icon,
   children,
 }: {
   label: string;
@@ -594,16 +620,22 @@ function Field({
   hint?: string;
   error?: string;
   full?: boolean;
+  icon?: LucideIcon;
   children: React.ReactNode;
 }) {
   return (
-    <div className={`ap-field ${full ? 'ap-field-full' : ''}`}>
+    <div className={`ap-field ${full ? 'ap-field-full' : ''} ${error ? 'ap-field-error' : ''}`}>
       <label>
         {label}
         {required && <span className="ap-req">*</span>}
         {hint && <span className="ap-hint">{hint}</span>}
       </label>
-      {children}
+      {Icon ? (
+        <div className="ap-inputicon-wrap">
+          <span className="ap-fieldicon" aria-hidden="true"><Icon size={16} strokeWidth={1.75} /></span>
+          {children}
+        </div>
+      ) : children}
       {error && <p className="ap-fielderror">{error}</p>}
     </div>
   );
@@ -613,7 +645,6 @@ function TopNav() {
   return (
     <nav className="ap-nav">
       <a className="ap-brand" href="/">
-        <span className="ap-mk">N</span>
         <b>
           NXT<i>{'//'}</i>LINK
         </b>
@@ -627,8 +658,8 @@ function TopNav() {
 
 function ConfirmationCard({ publicRef }: { publicRef: string }) {
   return (
-    <div className="ap-card ap-confirm">
-      <div className="ap-check">✓</div>
+    <div className="ap-card ap-confirm nxm-in">
+      <div className="ap-check"><Check size={26} strokeWidth={2.5} aria-hidden="true" /></div>
       <h2>Application received</h2>
       <p className="ap-refline">
         Your reference: <b>{publicRef}</b>
@@ -640,99 +671,104 @@ function ConfirmationCard({ publicRef }: { publicRef: string }) {
       <div className="ap-upsell">
         <p className="ap-upsell-title">Want to check status or update your application later?</p>
         <p className="ap-upsell-sub">Create an account to sign back in anytime — completely optional.</p>
-        <a className="ap-upsell-btn" href="/apply/login">
+        <a className="ap-upsell-btn nxm-press" href="/apply/login">
           Create account / sign in
         </a>
       </div>
 
       <a className="ap-back" href="/">
-        ← Back to NXT//LINK
+        <ArrowLeft size={14} strokeWidth={1.75} aria-hidden="true" /> Back to NXT//LINK
       </a>
     </div>
   );
 }
 
-const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap');
-.ap-root{--bg:#0A0A0F;--bg2:#111118;--surf:rgba(255,255,255,.04);--surf2:rgba(255,255,255,.07);--ink:#F0F0F5;--ink2:#C0C0D0;--muted:#8080A0;--muted2:#505068;--line:rgba(255,255,255,.08);--p:#7C5CFC;--p2:#A78BFA;--p3:#C4B5FD;--pbg:rgba(124,92,252,.12);--pd:#6344DF;--green:#34D399;--red:#F87171;--sans:'Outfit',system-ui,sans-serif;--serif:'Instrument Serif',Georgia,serif;
-  min-height:100vh;background:var(--bg);color:var(--ink);font-family:var(--sans);
-}
+const CSS = MOTION_CSS + `
+.ap-root{min-height:100vh;background:var(--spec-warm-white,#F8F7FB);color:var(--spec-ink,#141320);font-family:var(--font-ibm-plex-sans-apply),'IBM Plex Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;}
 .ap-root *{box-sizing:border-box;}
+.ap-root h1,.ap-root h2{font-family:var(--font-space-grotesk),'Space Grotesk',system-ui,sans-serif;}
+.ap-root a:focus-visible,.ap-root button:focus-visible,.ap-root input:focus-visible,.ap-root select:focus-visible,.ap-root textarea:focus-visible{outline:2px solid var(--spec-violet,#6C5CE0);outline-offset:2px;}
 .ap-nav{display:flex;align-items:center;justify-content:space-between;padding:20px 28px;max-width:920px;margin:0 auto;}
-.ap-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);}
-.ap-mk{width:30px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--p),var(--pd));display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-style:italic;font-size:19px;color:#fff;flex-shrink:0;}
-.ap-brand b{font-weight:700;font-size:17px;letter-spacing:-.01em;}
-.ap-brand i{color:var(--p2);font-style:normal;}
-.ap-signin{color:var(--muted);font-size:13.5px;text-decoration:none;font-weight:500;}
-.ap-signin:hover{color:var(--ink2);}
+.ap-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--spec-ink,#141320);}
+.ap-brand b{font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-weight:700;font-size:17px;letter-spacing:-.01em;}
+.ap-brand i{color:var(--spec-violet,#6C5CE0);font-style:normal;}
+.ap-signin{color:var(--spec-text-2nd,#615F72);font-size:13.5px;text-decoration:none;font-weight:600;}
+.ap-signin:hover{color:var(--spec-violet-deep,#4A3DB0);}
 .ap-main{max-width:720px;margin:0 auto;padding:24px 20px 80px;}
 .ap-hero{text-align:center;padding:36px 8px 30px;}
-.ap-eyebrow{color:var(--p3);font-size:12.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;margin:0 0 14px;}
-.ap-hero h1{font-size:38px;font-weight:700;letter-spacing:-.02em;line-height:1.15;margin:0 0 14px;}
-.ap-hero h1 em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--p3);}
-.ap-sub{color:var(--ink2);font-size:16px;line-height:1.6;max-width:480px;margin:0 auto;}
-.ap-card{background:var(--surf);border:1px solid var(--line);border-radius:20px;backdrop-filter:blur(12px);box-shadow:0 24px 80px rgba(0,0,0,.4);padding:32px;}
+.ap-eyebrow{color:var(--spec-violet-deep,#4A3DB0);font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin:0 0 14px;}
+.ap-hero h1{font-size:38px;font-weight:700;letter-spacing:-.02em;line-height:1.15;margin:0 0 14px;color:var(--spec-ink,#141320);}
+.ap-hero h1 em{font-style:normal;color:var(--spec-violet,#6C5CE0);}
+.ap-sub{color:var(--spec-text-2nd,#615F72);font-size:16px;line-height:1.6;max-width:480px;margin:0 auto;}
+.ap-card{background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:20px;box-shadow:0 8px 30px rgba(74,61,176,.08);padding:32px;}
 .ap-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;}
 .ap-field{display:flex;flex-direction:column;gap:8px;}
 .ap-field-full{grid-column:1/-1;}
-.ap-field label{font-size:13px;font-weight:600;color:var(--ink2);display:flex;align-items:center;gap:6px;}
-.ap-req{color:var(--p2);}
-.ap-hint{color:var(--muted);font-weight:400;font-size:12px;}
+.ap-field label{font-size:13px;font-weight:600;color:var(--spec-text-2nd,#615F72);display:flex;align-items:center;gap:6px;}
+.ap-req{color:var(--spec-violet,#6C5CE0);}
+.ap-hint{color:#8A87A0;font-weight:400;font-size:12px;}
 .ap-field input[type="text"],.ap-field input[type="email"],.ap-field input[type="tel"],.ap-field select,.ap-field textarea{
-  width:100%;background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:12px 14px;color:var(--ink);font-size:14.5px;font-family:var(--sans);outline:none;transition:border-color .15s,box-shadow .15s;
+  width:100%;background:var(--spec-warm-white,#F8F7FB);border:1px solid var(--spec-border,#E2DFEC);border-radius:11px;padding:12px 14px;color:var(--spec-ink,#141320);font-size:14.5px;font-family:inherit;outline:none;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),box-shadow var(--spec-duration-fast,150ms) var(--spec-ease,ease),background var(--spec-duration-fast,150ms) var(--spec-ease,ease);
 }
+.ap-field input::placeholder,.ap-field textarea::placeholder{color:#8A87A0;}
 .ap-field textarea{resize:vertical;line-height:1.5;}
-.ap-field input:focus,.ap-field select:focus,.ap-field textarea:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
-.ap-field input.ap-invalid{border-color:var(--red);}
+.ap-field input:hover,.ap-field select:hover,.ap-field textarea:hover{border-color:#C7C2DE;}
+.ap-field input:focus,.ap-field select:focus,.ap-field textarea:focus{border-color:var(--spec-violet,#6C5CE0);background:#fff;box-shadow:0 0 0 3px rgba(108,92,224,.12);}
+.ap-field input.ap-invalid{border-color:var(--spec-error,#CE4B43);}
+.ap-field-error input,.ap-field-error select{border-color:var(--spec-error,#CE4B43);}
+.ap-inputicon-wrap{position:relative;}
+.ap-fieldicon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#8A87A0;display:flex;pointer-events:none;}
+.ap-inputicon-wrap input{padding-left:38px !important;}
 .ap-mt{margin-top:8px;}
 .ap-chips{display:flex;flex-wrap:wrap;gap:8px;}
-.ap-chip{font-family:var(--sans);background:var(--surf2);border:1px solid var(--line);color:var(--ink2);border-radius:99px;padding:8px 15px;font-size:13px;font-weight:500;cursor:pointer;transition:border-color .15s,background .15s,color .15s;}
-.ap-chip:hover{border-color:var(--p);color:var(--ink);}
-.ap-chip-on{background:var(--pbg);border-color:var(--p);color:var(--p3);}
-.ap-chip-custom:hover{border-color:var(--red);color:var(--red);}
+.ap-chip{display:inline-flex;align-items:center;gap:6px;font-family:inherit;background:#fff;border:1.5px solid var(--spec-border,#E2DFEC);color:var(--spec-text-2nd,#615F72);border-radius:99px;padding:8px 15px;font-size:13px;font-weight:600;cursor:pointer;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),background var(--spec-duration-fast,150ms) var(--spec-ease,ease),color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.ap-chip:hover{border-color:var(--spec-lilac,#A99DF2);color:var(--spec-ink,#141320);}
+.ap-chip:focus-visible{outline:2px solid var(--spec-violet,#6C5CE0);outline-offset:2px;}
+.ap-chip-on{background:var(--spec-violet-bg,#F3F1FD);border-color:var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);}
+.ap-chip-custom:hover{border-color:var(--spec-error,#CE4B43);color:var(--spec-error,#CE4B43);}
 .ap-addstage{display:flex;gap:8px;margin-top:10px;}
-.ap-addstage input{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 13px;color:var(--ink);font-size:13.5px;font-family:var(--sans);outline:none;}
-.ap-addstage input:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
-.ap-addbtn{background:var(--surf2);border:1px solid var(--line);color:var(--ink2);border-radius:10px;padding:0 18px;font-size:13.5px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:border-color .15s;}
-.ap-addbtn:hover{border-color:var(--p);color:var(--ink);}
-.ap-fielderror{color:var(--red);font-size:12.5px;margin:0;}
-.ap-error{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--red);border-radius:11px;padding:12px 14px;font-size:14px;margin:4px 0 18px;}
-.ap-prefill{background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);color:var(--green);border-radius:11px;padding:11px 14px;font-size:13px;margin:0 0 18px;line-height:1.5;}
-.ap-prefill i{color:var(--muted);font-style:normal;}
+.ap-addstage input{flex:1;background:var(--spec-warm-white,#F8F7FB);border:1px solid var(--spec-border,#E2DFEC);border-radius:10px;padding:10px 13px;color:var(--spec-ink,#141320);font-size:13.5px;font-family:inherit;outline:none;}
+.ap-addstage input:focus{border-color:var(--spec-violet,#6C5CE0);background:#fff;box-shadow:0 0 0 3px rgba(108,92,224,.12);}
+.ap-addbtn{background:#fff;border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-text-2nd,#615F72);border-radius:10px;padding:0 18px;font-size:13.5px;font-weight:600;font-family:inherit;cursor:pointer;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.ap-addbtn:hover{border-color:var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);}
+.ap-fielderror{color:var(--spec-error,#CE4B43);font-size:12.5px;margin:0;}
+.ap-error{background:var(--spec-error-bg,#FDF2F2);border:1px solid #F3C9C9;color:#B04A4A;border-radius:11px;padding:12px 14px;font-size:14px;margin:4px 0 18px;}
+.ap-prefill{display:flex;align-items:center;gap:8px;background:var(--spec-success-bg,#E9F7F0);border:1px solid rgba(47,158,106,.3);color:#1F7A54;border-radius:11px;padding:11px 14px;font-size:13px;margin:0 0 18px;line-height:1.5;}
+.ap-prefill i{color:#8A87A0;font-style:normal;}
 .ap-agree{display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin:6px 0 16px;}
-.ap-agree input{width:16px;height:16px;margin-top:2px;flex-shrink:0;accent-color:var(--p);cursor:pointer;}
-.ap-agree input:focus-visible{outline:2px solid var(--p);outline-offset:2px;}
-.ap-agree span{color:var(--muted);font-size:12.5px;line-height:1.55;}
-.ap-agree span a{color:var(--p3);}
-.ap-agree span i{color:var(--muted2);font-style:normal;}
-.ap-filebtn{display:inline-flex;align-items:center;gap:8px;background:var(--surf2);border:1px solid var(--line);border-radius:10px;padding:10px 16px;font-size:13.5px;font-weight:600;color:var(--ink2);cursor:pointer;width:fit-content;transition:border-color .15s;}
-.ap-filebtn:hover{border-color:var(--p);color:var(--ink);}
+.ap-agree input{width:16px;height:16px;margin-top:2px;flex-shrink:0;accent-color:var(--spec-violet,#6C5CE0);cursor:pointer;}
+.ap-agree input:focus-visible{outline:2px solid var(--spec-violet,#6C5CE0);outline-offset:2px;}
+.ap-agree span{color:#8A87A0;font-size:12.5px;line-height:1.55;}
+.ap-agree span a{color:var(--spec-violet-deep,#4A3DB0);}
+.ap-agree span i{color:#A5A3B5;font-style:normal;}
+.ap-filebtn{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:10px;padding:10px 16px;font-size:13.5px;font-weight:600;color:var(--spec-text-2nd,#615F72);cursor:pointer;width:fit-content;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.ap-filebtn:hover{border-color:var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);}
 .ap-filebtn.ap-disabled{opacity:.5;cursor:not-allowed;}
 .ap-filebtn input{display:none;}
 .ap-thumbrow{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
-.ap-thumb{position:relative;width:64px;height:64px;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:var(--bg2);}
+.ap-thumb{position:relative;width:64px;height:64px;border-radius:10px;overflow:hidden;border:1px solid var(--spec-border,#E2DFEC);background:var(--spec-warm-white,#F8F7FB);}
 .ap-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
-.ap-thumbx{position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:rgba(10,10,15,.8);border:none;color:#fff;font-size:13px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-.ap-thumbx:hover{background:var(--red);}
-.ap-submit{width:100%;padding:15px;background:var(--p);color:#fff;border:none;border-radius:12px;font-size:15.5px;font-weight:700;font-family:var(--sans);cursor:pointer;box-shadow:0 8px 28px rgba(124,92,252,.35);transition:background .15s,transform .1s;margin-top:4px;}
-.ap-submit:hover:not(:disabled){background:var(--pd);}
+.ap-thumbx{position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:rgba(20,19,32,.72);border:none;color:#fff;font-size:13px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.ap-thumbx:hover{background:var(--spec-error,#CE4B43);}
+.ap-submit{width:100%;padding:15px;min-height:50px;background:var(--spec-violet,#6C5CE0);color:#fff;border:none;border-radius:12px;font-size:15.5px;font-weight:700;font-family:inherit;cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);margin-top:4px;}
+.ap-submit:hover:not(:disabled){background:var(--spec-violet-deep,#4A3DB0);}
 .ap-submit:disabled{opacity:.6;cursor:wait;}
-.ap-signin-hint{text-align:center;color:var(--muted);font-size:13.5px;margin:16px 0 0;}
-.ap-signin-hint a{color:var(--p3);text-decoration:none;font-weight:600;}
+.ap-signin-hint{text-align:center;color:#8A87A0;font-size:13.5px;margin:16px 0 0;}
+.ap-signin-hint a{color:var(--spec-violet-deep,#4A3DB0);text-decoration:none;font-weight:600;}
 .ap-signin-hint a:hover{text-decoration:underline;}
 .ap-confirm{text-align:center;padding:44px 32px;}
-.ap-check{width:60px;height:60px;border-radius:50%;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:var(--green);font-size:26px;display:flex;align-items:center;justify-content:center;margin:0 auto 22px;}
-.ap-confirm h2{font-size:26px;font-weight:700;margin:0 0 12px;letter-spacing:-.01em;}
-.ap-refline{color:var(--ink2);font-size:16px;margin:0 0 10px;}
-.ap-refline b{color:var(--p3);font-family:var(--serif);font-style:italic;font-size:19px;font-weight:400;}
-.ap-confirmsub{color:var(--muted);font-size:14.5px;line-height:1.6;max-width:420px;margin:0 auto 28px;}
-.ap-upsell{background:var(--surf2);border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:26px;}
-.ap-upsell-title{font-size:15px;font-weight:600;color:var(--ink);margin:0 0 6px;}
-.ap-upsell-sub{font-size:13.5px;color:var(--muted);margin:0 0 16px;}
-.ap-upsell-btn{display:inline-block;background:var(--surf);border:1px solid var(--line);color:var(--ink);padding:10px 20px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;transition:border-color .15s;}
-.ap-upsell-btn:hover{border-color:var(--p);color:var(--p3);}
-.ap-back{color:var(--muted);font-size:13.5px;text-decoration:none;}
-.ap-back:hover{color:var(--ink2);}
+.ap-check{width:60px;height:60px;border-radius:50%;background:var(--spec-success-bg,#E9F7F0);color:#1F7A54;display:flex;align-items:center;justify-content:center;margin:0 auto 22px;}
+.ap-confirm h2{font-size:26px;font-weight:700;margin:0 0 12px;letter-spacing:-.01em;color:var(--spec-ink,#141320);}
+.ap-refline{color:var(--spec-text-2nd,#615F72);font-size:16px;margin:0 0 10px;}
+.ap-refline b{color:var(--spec-violet-deep,#4A3DB0);font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-size:17px;font-weight:700;}
+.ap-confirmsub{color:#8A87A0;font-size:14.5px;line-height:1.6;max-width:420px;margin:0 auto 28px;}
+.ap-upsell{background:var(--spec-warm-white,#F8F7FB);border:1px solid var(--spec-border,#E2DFEC);border-radius:16px;padding:22px;margin-bottom:26px;}
+.ap-upsell-title{font-size:15px;font-weight:600;color:var(--spec-ink,#141320);margin:0 0 6px;}
+.ap-upsell-sub{font-size:13.5px;color:#8A87A0;margin:0 0 16px;}
+.ap-upsell-btn{display:inline-block;background:#fff;border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-ink,#141320);padding:10px 20px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.ap-upsell-btn:hover{border-color:var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);}
+.ap-back{display:inline-flex;align-items:center;gap:6px;color:#8A87A0;font-size:13.5px;text-decoration:none;}
+.ap-back:hover{color:var(--spec-text-2nd,#615F72);}
 @media(max-width:640px){
   .ap-grid{grid-template-columns:1fr;}
   .ap-hero h1{font-size:30px;}

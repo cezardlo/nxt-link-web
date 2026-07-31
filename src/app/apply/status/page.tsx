@@ -5,10 +5,27 @@
 // a brand-new, standalone flow — unrelated to the older /vendor-signup,
 // /vendor-login, /vendor/portal system (which uses a different table,
 // vendor_profiles) — do not merge with that flow.
+//
+// Design System v1.0 reskin (2026-07-30 polish pass): matches the same fix
+// applied to /apply and /apply/login — was on the off-brand dark "Outfit"
+// theme (#0A0A0F bg, #7C5CFC purple), now light warm-white + brand violet.
+// Visual/CSS only: every fetch call, save handler, and field is unchanged.
+// StatusBadge additionally gained a per-status icon (Clock/CheckCircle2/
+// XCircle) so status is never color-only, per the UI standards addendum.
 
 import { useEffect, useRef, useState } from 'react';
+import { IBM_Plex_Sans } from 'next/font/google';
+import { Building2, User, Phone, Clock, CheckCircle2, XCircle, ImageUp, ImagePlus, LogOut, type LucideIcon } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import { clearLocalCart } from '@/components/cart/useCart';
+import { MOTION_CSS, staggerStyle } from '@/components/motion/Motion';
+
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-ibm-plex-sans-applystatus',
+  display: 'swap',
+});
 
 const CATEGORIES = [
   'TMS',
@@ -153,7 +170,7 @@ export default function ApplyStatusPage() {
   }
 
   return (
-    <div className="ays-root">
+    <div className={`ays-root ${ibmPlexSans.variable}`}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <TopNav status={application?.status} onSignOut={authState === 'signed-in' ? handleSignOut : undefined} />
 
@@ -182,10 +199,10 @@ export default function ApplyStatusPage() {
 
 function SignInGate() {
   return (
-    <div className="ays-card ays-gate">
+    <div className="ays-card ays-gate nxm-in">
       <h1>Sign in to view your status</h1>
       <p className="ays-sub">Sign in to check your application status and make changes.</p>
-      <a className="ays-btn" href="/apply/login">
+      <a className="ays-btn nxm-press" href="/apply/login">
         Sign in
       </a>
     </div>
@@ -194,10 +211,10 @@ function SignInGate() {
 
 function EmptyState() {
   return (
-    <div className="ays-card ays-gate">
+    <div className="ays-card ays-gate nxm-in">
       <h1>You haven&apos;t applied yet</h1>
       <p className="ays-sub">Submit a quick application to get started — it only takes a couple of minutes.</p>
-      <a className="ays-btn" href="/apply">
+      <a className="ays-btn nxm-press" href="/apply">
         Apply now
       </a>
     </div>
@@ -207,14 +224,19 @@ function EmptyState() {
 function StatusBadge({ status }: { status: Status }) {
   const label = status === 'pending' ? 'Pending review' : status === 'approved' ? 'Approved' : 'Rejected';
   const cls = status === 'pending' ? 'ays-badge-pending' : status === 'approved' ? 'ays-badge-approved' : 'ays-badge-rejected';
-  return <span className={`ays-badge ${cls}`}>{label}</span>;
+  const Icon = status === 'pending' ? Clock : status === 'approved' ? CheckCircle2 : XCircle;
+  return (
+    <span className={`ays-badge ${cls}`}>
+      <Icon size={13} strokeWidth={2.25} aria-hidden="true" />
+      {label}
+    </span>
+  );
 }
 
 function TopNav({ status, onSignOut }: { status?: Status; onSignOut?: () => void }) {
   return (
     <nav className="ays-nav">
       <a className="ays-brand" href="/">
-        <span className="ays-mk">N</span>
         <b>
           NXT<i>{'//'}</i>LINK
         </b>
@@ -223,7 +245,7 @@ function TopNav({ status, onSignOut }: { status?: Status; onSignOut?: () => void
         {status && <StatusBadge status={status} />}
         {onSignOut && (
           <button type="button" className="ays-signout" onClick={onSignOut}>
-            Sign out
+            <LogOut size={14} strokeWidth={1.75} aria-hidden="true" /> Sign out
           </button>
         )}
       </div>
@@ -421,18 +443,18 @@ function ApplicationPanel({
 
   return (
     <>
-      <header className="ays-hero">
+      <header className="ays-hero nxm-in">
         <h1>{application.company_name || 'Your application'}</h1>
         <p className="ays-ref">
           Reference: <b>{application.public_ref}</b>
         </p>
       </header>
 
-      <div className="ays-card">
+      <div className="ays-card nxm-in" style={staggerStyle(1)}>
         <h2 className="ays-sectiontitle">Company details</h2>
         <form onSubmit={handleSave}>
           <div className="ays-grid">
-            <Field label="Company name">
+            <Field label="Company name" icon={Building2}>
               <input
                 type="text"
                 value={fields.company_name}
@@ -440,7 +462,7 @@ function ApplicationPanel({
               />
             </Field>
 
-            <Field label="Contact name">
+            <Field label="Contact name" icon={User}>
               <input
                 type="text"
                 value={fields.contact_name}
@@ -452,7 +474,7 @@ function ApplicationPanel({
               <input type="email" value={application.email} disabled />
             </Field>
 
-            <Field label="Phone">
+            <Field label="Phone" icon={Phone}>
               <input type="tel" value={fields.phone} onChange={(e) => setField('phone', e.target.value)} />
             </Field>
 
@@ -526,6 +548,7 @@ function ApplicationPanel({
                   key={t}
                   type="button"
                   className={`ays-chip ${fields.offering_types.includes(t) ? 'ays-chip-on' : ''}`}
+                  aria-pressed={fields.offering_types.includes(t)}
                   onClick={() => toggleOffering(t)}
                 >
                   {t}
@@ -541,6 +564,7 @@ function ApplicationPanel({
                   key={s}
                   type="button"
                   className={`ays-chip ${fields.supply_chain_stages.includes(s) ? 'ays-chip-on' : ''}`}
+                  aria-pressed={fields.supply_chain_stages.includes(s)}
                   onClick={() => toggleStage(s)}
                 >
                   {s}
@@ -601,16 +625,16 @@ function ApplicationPanel({
             )}
           </Field>
 
-          {saveError && <p className="ays-error">{saveError}</p>}
-          {saveNotice && <p className="ays-notice">{saveNotice}</p>}
+          {saveError && <p className="ays-error" role="alert" aria-live="polite">{saveError}</p>}
+          {saveNotice && <p className="ays-notice" role="status">{saveNotice}</p>}
 
-          <button type="submit" className="ays-btn ays-savebtn" disabled={saving}>
+          <button type="submit" className="ays-btn ays-savebtn nxm-press" disabled={saving}>
             {saving ? 'Saving…' : 'Save changes'}
           </button>
         </form>
       </div>
 
-      <div className="ays-card">
+      <div className="ays-card nxm-in" style={staggerStyle(2)}>
         <h2 className="ays-sectiontitle">Logo</h2>
         <div className="ays-logorow">
           <div className="ays-logobox">
@@ -624,13 +648,13 @@ function ApplicationPanel({
               disabled={logoBusy}
               onChange={handleLogoChange}
             />
-            {logoBusy ? 'Uploading…' : 'Replace logo'}
+            <ImageUp size={15} strokeWidth={1.75} aria-hidden="true" /> {logoBusy ? 'Uploading…' : 'Replace logo'}
           </label>
         </div>
-        {logoError && <p className="ays-error">{logoError}</p>}
+        {logoError && <p className="ays-error" role="alert">{logoError}</p>}
       </div>
 
-      <div className="ays-card">
+      <div className="ays-card nxm-in" style={staggerStyle(3)}>
         <h2 className="ays-sectiontitle">Product images</h2>
         <div className="ays-thumbrow">
           {imageUrls.map((url, idx) => (
@@ -657,10 +681,10 @@ function ApplicationPanel({
               disabled={imageBusy}
               onChange={handleAddImage}
             />
-            {imageBusy ? 'Uploading…' : 'Add image'}
+            <ImagePlus size={15} strokeWidth={1.75} aria-hidden="true" /> {imageBusy ? 'Uploading…' : 'Add image'}
           </label>
         )}
-        {imageError && <p className="ays-error">{imageError}</p>}
+        {imageError && <p className="ays-error" role="alert">{imageError}</p>}
       </div>
     </>
   );
@@ -669,89 +693,98 @@ function ApplicationPanel({
 function Field({
   label,
   full,
+  icon: Icon,
   children,
 }: {
   label: string;
   full?: boolean;
+  icon?: LucideIcon;
   children: React.ReactNode;
 }) {
   return (
     <div className={`ays-field ${full ? 'ays-field-full' : ''}`}>
       <label>{label}</label>
-      {children}
+      {Icon ? (
+        <div className="ays-inputicon-wrap">
+          <span className="ays-fieldicon" aria-hidden="true"><Icon size={16} strokeWidth={1.75} /></span>
+          {children}
+        </div>
+      ) : children}
     </div>
   );
 }
 
-const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap');
-.ays-root{--bg:#0A0A0F;--bg2:#111118;--surf:rgba(255,255,255,.04);--surf2:rgba(255,255,255,.07);--ink:#F0F0F5;--ink2:#C0C0D0;--muted:#8080A0;--muted2:#505068;--line:rgba(255,255,255,.08);--p:#7C5CFC;--p2:#A78BFA;--p3:#C4B5FD;--pbg:rgba(124,92,252,.12);--pd:#6344DF;--green:#34D399;--red:#F87171;--sans:'Outfit',system-ui,sans-serif;--serif:'Instrument Serif',Georgia,serif;
-  min-height:100vh;background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;
-}
+const CSS = MOTION_CSS + `
+.ays-root{min-height:100vh;background:var(--spec-warm-white,#F8F7FB);color:var(--spec-ink,#141320);font-family:var(--font-ibm-plex-sans-applystatus),'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;}
 .ays-root *{box-sizing:border-box;}
+.ays-root h1,.ays-root h2{font-family:var(--font-space-grotesk),'Space Grotesk',system-ui,sans-serif;}
+.ays-root a:focus-visible,.ays-root button:focus-visible,.ays-root input:focus-visible,.ays-root select:focus-visible,.ays-root textarea:focus-visible{outline:2px solid var(--spec-violet,#6C5CE0);outline-offset:2px;}
 .ays-nav{display:flex;align-items:center;justify-content:space-between;padding:20px 28px;max-width:920px;margin:0 auto;}
-.ays-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);}
-.ays-mk{width:30px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--p),var(--pd));display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-style:italic;font-size:19px;color:#fff;flex-shrink:0;}
-.ays-brand b{font-weight:700;font-size:17px;letter-spacing:-.01em;}
-.ays-brand i{color:var(--p2);font-style:normal;}
+.ays-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--spec-ink,#141320);}
+.ays-brand b{font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-weight:700;font-size:17px;letter-spacing:-.01em;}
+.ays-brand i{color:var(--spec-violet,#6C5CE0);font-style:normal;}
 .ays-navright{display:flex;align-items:center;gap:14px;}
-.ays-signout{background:var(--surf);border:1px solid var(--line);color:var(--ink2);border-radius:10px;padding:8px 14px;font:600 13px 'Outfit';cursor:pointer;transition:border-color .15s,color .15s;}
-.ays-signout:hover{border-color:var(--p);color:var(--ink);}
-.ays-badge{display:inline-flex;align-items:center;padding:6px 12px;border-radius:999px;font:600 12.5px 'Outfit';letter-spacing:.01em;}
-.ays-badge-pending{background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3);color:#FBBF24;}
-.ays-badge-approved{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:var(--green);}
-.ays-badge-rejected{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--muted);}
+.ays-signout{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-text-2nd,#615F72);border-radius:10px;padding:8px 14px;font:600 13px inherit;cursor:pointer;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.ays-signout:hover{border-color:var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);}
+.ays-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font:600 12.5px inherit;letter-spacing:.01em;}
+.ays-badge-pending{background:var(--spec-warning-bg,#FBF3E7);border:1px solid #EFD9AE;color:#8A5D14;}
+.ays-badge-approved{background:var(--spec-success-bg,#E9F7F0);border:1px solid rgba(47,158,106,.3);color:#1F7A54;}
+.ays-badge-rejected{background:var(--spec-error-bg,#FDF2F2);border:1px solid #F3C9C9;color:#B04A4A;}
 .ays-main{max-width:720px;margin:0 auto;padding:24px 20px 80px;}
-.ays-loading{text-align:center;color:var(--muted);padding:80px 20px;font-size:15px;}
+.ays-loading{text-align:center;color:#8A87A0;padding:80px 20px;font-size:15px;}
 .ays-hero{text-align:center;padding:20px 8px 30px;}
-.ays-hero h1{font-size:32px;font-weight:700;letter-spacing:-.02em;margin:0 0 10px;}
-.ays-ref{color:var(--ink2);font-size:14.5px;margin:0;}
-.ays-ref b{color:var(--p3);font-family:var(--serif);font-style:italic;font-weight:400;font-size:16px;}
-.ays-card{background:var(--surf);border:1px solid var(--line);border-radius:20px;backdrop-filter:blur(12px);box-shadow:0 24px 80px rgba(0,0,0,.4);padding:30px 32px;margin-bottom:24px;}
+.ays-hero h1{font-size:32px;font-weight:700;letter-spacing:-.02em;margin:0 0 10px;color:var(--spec-ink,#141320);}
+.ays-ref{color:var(--spec-text-2nd,#615F72);font-size:14.5px;margin:0;}
+.ays-ref b{color:var(--spec-violet-deep,#4A3DB0);font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-weight:700;font-size:15px;}
+.ays-card{background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:20px;box-shadow:0 8px 30px rgba(74,61,176,.08);padding:30px 32px;margin-bottom:24px;}
 .ays-gate{text-align:center;padding:52px 34px;max-width:440px;margin:8vh auto 0;}
-.ays-gate h1{font-size:26px;font-weight:700;margin:0 0 12px;letter-spacing:-.01em;}
-.ays-sub{color:var(--ink2);font-size:14.5px;line-height:1.6;margin:0 0 26px;}
-.ays-sectiontitle{font-size:16px;font-weight:700;margin:0 0 20px;letter-spacing:-.01em;}
+.ays-gate h1{font-size:26px;font-weight:700;margin:0 0 12px;letter-spacing:-.01em;color:var(--spec-ink,#141320);}
+.ays-sub{color:var(--spec-text-2nd,#615F72);font-size:14.5px;line-height:1.6;margin:0 0 26px;}
+.ays-sectiontitle{font-size:16px;font-weight:700;margin:0 0 20px;letter-spacing:-.01em;color:var(--spec-ink,#141320);}
 .ays-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;}
 .ays-field{display:flex;flex-direction:column;gap:8px;}
 .ays-field-full{grid-column:1/-1;margin-bottom:18px;}
-.ays-field label{font-size:13px;font-weight:600;color:var(--ink2);}
+.ays-field label{font-size:13px;font-weight:600;color:var(--spec-text-2nd,#615F72);}
 .ays-field input,.ays-field select,.ays-field textarea{
-  width:100%;background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:12px 14px;color:var(--ink);font-size:14.5px;font-family:var(--sans);outline:none;transition:border-color .15s,box-shadow .15s;
+  width:100%;background:var(--spec-warm-white,#F8F7FB);border:1px solid var(--spec-border,#E2DFEC);border-radius:11px;padding:12px 14px;color:var(--spec-ink,#141320);font-size:14.5px;font-family:inherit;outline:none;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),box-shadow var(--spec-duration-fast,150ms) var(--spec-ease,ease),background var(--spec-duration-fast,150ms) var(--spec-ease,ease);
 }
 .ays-field input:disabled{opacity:.55;cursor:not-allowed;}
 .ays-mt{margin-top:8px;}
 .ays-field textarea{resize:vertical;line-height:1.5;}
-.ays-field input:focus,.ays-field select:focus,.ays-field textarea:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
+.ays-field input:hover,.ays-field select:hover,.ays-field textarea:hover{border-color:#C7C2DE;}
+.ays-field input:focus,.ays-field select:focus,.ays-field textarea:focus{border-color:var(--spec-violet,#6C5CE0);background:#fff;box-shadow:0 0 0 3px rgba(108,92,224,.12);}
+.ays-inputicon-wrap{position:relative;}
+.ays-fieldicon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#8A87A0;display:flex;pointer-events:none;}
+.ays-inputicon-wrap input{padding-left:38px !important;}
 .ays-chips{display:flex;flex-wrap:wrap;gap:8px;}
-.ays-chip{font-family:var(--sans);background:var(--surf2);border:1px solid var(--line);color:var(--ink2);border-radius:99px;padding:8px 15px;font-size:13px;font-weight:500;cursor:pointer;transition:border-color .15s,background .15s,color .15s;}
-.ays-chip:hover{border-color:var(--p);color:var(--ink);}
-.ays-chip-on{background:var(--pbg);border-color:var(--p);color:var(--p3);}
-.ays-chip-custom:hover{border-color:var(--red);color:var(--red);}
+.ays-chip{font-family:inherit;background:#fff;border:1.5px solid var(--spec-border,#E2DFEC);color:var(--spec-text-2nd,#615F72);border-radius:99px;padding:8px 15px;font-size:13px;font-weight:600;cursor:pointer;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),background var(--spec-duration-fast,150ms) var(--spec-ease,ease),color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.ays-chip:hover{border-color:var(--spec-lilac,#A99DF2);color:var(--spec-ink,#141320);}
+.ays-chip-on{background:var(--spec-violet-bg,#F3F1FD);border-color:var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);}
+.ays-chip-custom:hover{border-color:var(--spec-error,#CE4B43);color:var(--spec-error,#CE4B43);}
 .ays-addstage{display:flex;gap:8px;margin-top:10px;}
-.ays-addstage input{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 13px;color:var(--ink);font-size:13.5px;font-family:var(--sans);outline:none;}
-.ays-addstage input:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
-.ays-addbtn{background:var(--surf2);border:1px solid var(--line);color:var(--ink2);border-radius:10px;padding:0 18px;font-size:13.5px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:border-color .15s;}
-.ays-addbtn:hover{border-color:var(--p);color:var(--ink);}
-.ays-error{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--red);border-radius:11px;padding:12px 14px;font-size:14px;margin:4px 0 18px;}
-.ays-notice{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:var(--green);border-radius:11px;padding:12px 14px;font-size:14px;margin:4px 0 18px;}
-.ays-btn{display:inline-flex;align-items:center;justify-content:center;background:var(--p);color:#fff;border:none;border-radius:12px;padding:13px 22px;font:600 15px 'Outfit';cursor:pointer;text-decoration:none;box-shadow:0 8px 24px rgba(124,92,252,.35);transition:background .15s;}
-.ays-btn:hover:not(:disabled){background:var(--pd);}
+.ays-addstage input{flex:1;background:var(--spec-warm-white,#F8F7FB);border:1px solid var(--spec-border,#E2DFEC);border-radius:10px;padding:10px 13px;color:var(--spec-ink,#141320);font-size:13.5px;font-family:inherit;outline:none;}
+.ays-addstage input:focus{border-color:var(--spec-violet,#6C5CE0);background:#fff;box-shadow:0 0 0 3px rgba(108,92,224,.12);}
+.ays-addbtn{background:#fff;border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-text-2nd,#615F72);border-radius:10px;padding:0 18px;font-size:13.5px;font-weight:600;font-family:inherit;cursor:pointer;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.ays-addbtn:hover{border-color:var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);}
+.ays-error{background:var(--spec-error-bg,#FDF2F2);border:1px solid #F3C9C9;color:#B04A4A;border-radius:11px;padding:12px 14px;font-size:14px;margin:4px 0 18px;}
+.ays-notice{background:var(--spec-success-bg,#E9F7F0);border:1px solid rgba(47,158,106,.3);color:#1F7A54;border-radius:11px;padding:12px 14px;font-size:14px;margin:4px 0 18px;}
+.ays-btn{display:inline-flex;align-items:center;justify-content:center;background:var(--spec-violet,#6C5CE0);color:#fff;border:none;border-radius:12px;padding:13px 22px;min-height:48px;font:700 15px inherit;cursor:pointer;text-decoration:none;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.ays-btn:hover:not(:disabled){background:var(--spec-violet-deep,#4A3DB0);}
 .ays-btn:disabled{opacity:.6;cursor:not-allowed;}
 .ays-savebtn{width:100%;margin-top:4px;}
 .ays-logorow{display:flex;align-items:center;gap:20px;}
-.ays-logobox{width:72px;height:72px;border-radius:14px;overflow:hidden;background:var(--bg2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ays-logobox{width:72px;height:72px;border-radius:14px;overflow:hidden;background:var(--spec-warm-white,#F8F7FB);border:1px solid var(--spec-border,#E2DFEC);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .ays-logobox img{width:100%;height:100%;object-fit:cover;display:block;}
-.ays-logoph{color:var(--muted2);font-size:11px;text-align:center;padding:4px;}
-.ays-filebtn{display:inline-flex;align-items:center;gap:8px;background:var(--surf2);border:1px solid var(--line);border-radius:10px;padding:10px 16px;font-size:13.5px;font-weight:600;color:var(--ink2);cursor:pointer;width:fit-content;transition:border-color .15s;}
-.ays-filebtn:hover{border-color:var(--p);color:var(--ink);}
+.ays-logoph{color:#A5A3B5;font-size:11px;text-align:center;padding:4px;}
+.ays-filebtn{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:10px;padding:10px 16px;font-size:13.5px;font-weight:600;color:var(--spec-text-2nd,#615F72);cursor:pointer;width:fit-content;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.ays-filebtn:hover{border-color:var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);}
 .ays-filebtn.ays-disabled{opacity:.5;cursor:not-allowed;}
 .ays-filebtn input{display:none;}
 .ays-thumbrow{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
-.ays-thumb{position:relative;width:80px;height:80px;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--bg2);}
+.ays-thumb{position:relative;width:80px;height:80px;border-radius:12px;overflow:hidden;border:1px solid var(--spec-border,#E2DFEC);background:var(--spec-warm-white,#F8F7FB);}
 .ays-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
-.ays-thumbx{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(10,10,15,.8);border:none;color:#fff;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-.ays-thumbx:hover:not(:disabled){background:var(--red);}
+.ays-thumbx{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(20,19,32,.72);border:none;color:#fff;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.ays-thumbx:hover:not(:disabled){background:var(--spec-error,#CE4B43);}
 .ays-thumbx:disabled{opacity:.5;cursor:not-allowed;}
 .ays-errorcard{padding:32px;}
 @media(max-width:640px){
