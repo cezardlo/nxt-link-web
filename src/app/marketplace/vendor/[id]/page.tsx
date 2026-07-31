@@ -19,7 +19,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { IBM_Plex_Sans } from 'next/font/google';
 import {
-  MapPin, Globe, Zap, Eye, ShieldCheck, Check, BadgeCheck, Calendar, Languages, Star, Images, Video, UserPlus,
+  MapPin, Globe, Zap, Eye, ShieldCheck, Check, BadgeCheck, Calendar, Languages, Star, Images, Video, UserPlus, X,
   type LucideIcon,
 } from 'lucide-react';
 import { levelAtLeast } from '@/components/marketplace/TrustBadges';
@@ -301,6 +301,18 @@ export default function VendorStorefrontPage() {
   const [d, setD] = useState<Storefront | null>(null);
   const [missing, setMissing] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
+  // Owner-preview notice dismissal (Cesar 2026-07-30: the banner "is in the
+  // way" when checking how the page reads to a client — one tap hides it for
+  // the session so the owner sees the PURE buyer view; refreshing a new
+  // session brings it back, so the preview state is never silently forgotten).
+  const [barHidden, setBarHidden] = useState(false);
+  useEffect(() => {
+    try { if (sessionStorage.getItem('vs_ownerbar_hidden') === '1') setBarHidden(true); } catch { /* private mode */ }
+  }, []);
+  const hideOwnerBar = () => {
+    setBarHidden(true);
+    try { sessionStorage.setItem('vs_ownerbar_hidden', '1'); } catch { /* private mode */ }
+  };
   const [sort, setSort] = useState<'name' | 'price_asc' | 'price_desc'>('name');
   const [pfilter, setPfilter] = useState<'all' | 'product' | 'service'>('all');
   const [mediaTab, setMediaTab] = useState<'photos' | 'videos'>('photos');
@@ -473,10 +485,13 @@ export default function VendorStorefrontPage() {
           covers a pending/suspended vendor previewing their own not-yet-live
           storefront, or an admin checking it; isOwner alone (no preview flag)
           is the ordinary case of an approved vendor viewing their live page. */}
-      {(d.preview || isOwner) && (
+      {(d.preview || isOwner) && !barHidden && (
         <div className="vs-ownerbar">
           <span><Eye size={14} strokeWidth={1.75} aria-hidden="true" /> {d.preview ? t.previewBanner : t.ownerViewing}</span>
           {isOwner && <Link href="/vendor/portal">{t.backToEditing}</Link>}
+          <button type="button" className="vs-ownerbar-x" aria-label={lang === 'es' ? 'Ocultar aviso de vista previa' : 'Hide preview notice'} onClick={hideOwnerBar}>
+            <X size={14} strokeWidth={2} aria-hidden="true" />
+          </button>
         </div>
       )}
 
@@ -786,6 +801,10 @@ const CSS = `
 .vs-ownerbar span{display:inline-flex;align-items:center;gap:6px;}
 .vs-ownerbar a{color:var(--spec-ink);font-weight:700;text-decoration:none;}
 .vs-ownerbar a:hover{text-decoration:underline;}
+.vs-ownerbar-x{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:0;border-radius:8px;background:transparent;color:var(--spec-violet-deep);cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.vs-ownerbar-x:hover{background:rgba(108,92,224,.16);}
+.vs-ownerbar-x:focus-visible{outline:2px solid var(--spec-violet);outline-offset:2px;}
+.vs-ownerbar-x:active{transform:scale(.94);}
 .vs-banner{height:190px;background-color:var(--spec-ink);background-size:cover;background-position:center;background-image:radial-gradient(600px 300px at 80% 0%,rgba(108,92,224,.55),transparent 60%),radial-gradient(500px 300px at 10% 120%,rgba(47,158,106,.32),transparent 55%),linear-gradient(120deg,#1c1832,#101a29);}
 .vs-wrap{max-width:1120px;margin:0 auto;padding:0 20px;}
 .vs-head{position:relative;margin-top:-52px;}
