@@ -25,11 +25,13 @@
 
 import { useEffect, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
+import { Building2, Mail } from 'lucide-react';
 import LanguageToggle, { useLang } from '@/components/LanguageToggle';
 import SupplyChips from '@/components/SupplyChips';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
 import OAuthButton from '@/components/OAuthButton';
 import { GOOGLE_TERMS_ERROR_MSG, ANY_OAUTH_ENABLED } from '@/lib/auth/oauth';
+import { MOTION_CSS } from '@/components/motion/Motion';
 
 // Design System v1.0 brand-font fix (2026-07-28, design batch 1): this page
 // never loaded the site's brand fonts and fell back to system-ui — same
@@ -190,7 +192,7 @@ export default function VendorQuickSignupPage() {
         <LanguageToggle lang={lang} onChange={switchLang} variant="light" />
       </div>
 
-      <div className="qs-card">
+      <div className="qs-card nxm-in">
         {sentTo ? (
           <>
             <div className="qs-sentmark" aria-hidden="true">✓</div>
@@ -253,20 +255,26 @@ export default function VendorQuickSignupPage() {
             <form onSubmit={submit} noValidate>
               <label className="qs-field">
                 <span>{t.companyLabel}</span>
-                <input
-                  type="text" value={company} maxLength={120} placeholder={t.companyPh}
-                  onChange={(e) => { setCompany(e.target.value); setErr(''); }}
-                  autoComplete="organization" required
-                />
+                <div className="qs-inputicon-wrap">
+                  <span className="qs-fieldicon" aria-hidden="true"><Building2 size={16} strokeWidth={1.75} /></span>
+                  <input
+                    type="text" value={company} maxLength={120} placeholder={t.companyPh}
+                    onChange={(e) => { setCompany(e.target.value); setErr(''); }}
+                    autoComplete="organization" required
+                  />
+                </div>
               </label>
 
               <label className="qs-field">
                 <span>{t.emailLabel}</span>
-                <input
-                  type="email" value={email}
-                  onChange={(e) => { setEmail(e.target.value); setErr(''); }}
-                  autoComplete="email" inputMode="email" required
-                />
+                <div className="qs-inputicon-wrap">
+                  <span className="qs-fieldicon" aria-hidden="true"><Mail size={16} strokeWidth={1.75} /></span>
+                  <input
+                    type="email" value={email}
+                    onChange={(e) => { setEmail(e.target.value); setErr(''); }}
+                    autoComplete="email" inputMode="email" required
+                  />
+                </div>
               </label>
 
               <div className="qs-supply">
@@ -282,7 +290,7 @@ export default function VendorQuickSignupPage() {
               {!ANY_OAUTH_ENABLED && agreeCheckbox}
 
               {err && <div className="qs-err" role="alert">{err}</div>}
-              <button type="submit" className="qs-cta" disabled={busy}>
+              <button type="submit" className="qs-cta nxm-press" disabled={busy}>
                 {busy ? t.ctaBusy : t.cta}
               </button>
               <p className="qs-under">{t.under}</p>
@@ -297,7 +305,7 @@ export default function VendorQuickSignupPage() {
   );
 }
 
-const CSS = `
+const CSS = MOTION_CSS + `
 .qs{min-height:100vh;background:var(--spec-warm-white,#F8F7FB);color:var(--spec-ink,#141320);font-family:var(--font-ibm-plex-sans-vendorsignup),'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;display:flex;flex-direction:column;align-items:center;padding:22px 16px 48px;-webkit-font-smoothing:antialiased;}
 .qs *{box-sizing:border-box;}
 .qs h1{font-family:var(--font-space-grotesk),'Space Grotesk',system-ui,sans-serif;}
@@ -314,9 +322,13 @@ const CSS = `
 .qs-bullets li b{color:var(--spec-ink,#141320);}
 .qs-field{display:block;margin:14px 0 2px;}
 .qs-field span{display:block;font-size:12.5px;font-weight:600;color:var(--spec-text-2nd,#615F72);margin-bottom:6px;}
-.qs-field input{width:100%;min-height:48px;font-family:inherit;font-size:15px;padding:12px 14px;border-radius:12px;border:1px solid var(--spec-border,#E2DFEC);background:var(--spec-warm-white,#F8F7FB);color:var(--spec-ink,#141320);outline:none;}
-.qs-field input:focus{border-color:var(--spec-violet,#6C5CE0);background:#fff;}
+.qs-field input{width:100%;min-height:48px;font-family:inherit;font-size:15px;padding:12px 14px;border-radius:12px;border:1px solid var(--spec-border,#E2DFEC);background:var(--spec-warm-white,#F8F7FB);color:var(--spec-ink,#141320);outline:none;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),box-shadow var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.qs-field input:hover{border-color:#C7C2DE;}
+.qs-field input:focus{border-color:var(--spec-violet,#6C5CE0);background:#fff;box-shadow:0 0 0 3px rgba(108,92,224,.12);}
 .qs-field input::placeholder{color:#A5A3B5;}
+.qs-inputicon-wrap{position:relative;}
+.qs-fieldicon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#8A87A0;display:flex;pointer-events:none;z-index:1;}
+.qs-inputicon-wrap input{padding-left:40px !important;}
 .qs-supply{margin:16px 0 2px;}
 .qs-supplylbl{display:block;font-size:12.5px;font-weight:600;color:var(--spec-text-2nd,#615F72);}
 .qs-supplyhint{display:block;font-size:12px;color:#8A87A0;margin:2px 0 8px;}

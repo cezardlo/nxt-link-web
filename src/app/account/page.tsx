@@ -6,11 +6,13 @@
 
 import { useEffect, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
+import { Lock, Mail, ShieldAlert, LogOut } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import { clearLocalCart } from '@/components/cart/useCart';
 import { useLang, type Lang } from '@/components/LanguageToggle';
 import LanguageToggle from '@/components/LanguageToggle';
 import { isConfirmationValid } from '@/lib/account/deletion-rules';
+import { MOTION_CSS, staggerStyle } from '@/components/motion/Motion';
 
 // Design System v1.0 reskin (2026-07-23): light warm-white + violet, matching
 // the rest of the signed-in experience (/buyer, /buyer/profile, /cart).
@@ -205,46 +207,55 @@ export default function AccountPage() {
           <>
             <h1>{t.title}</h1>
 
-            <section className="ac-card">
+            <section className="ac-card nxm-in">
               <div className="ac-lbl">{t.who}</div>
               <div className="ac-row"><span>{t.email}</span><b>{email}</b>{verified ? <em className="ok">{t.verified}</em> : <em className="warn">{t.notVerified}</em>}</div>
               <div className="ac-row"><span>{t.accountType}</span><b className="ac-role">{roleLabel}</b></div>
             </section>
 
-            <section className="ac-card">
+            <section className="ac-card nxm-in" style={staggerStyle(1)}>
               <div className="ac-lbl">{t.changePw}</div>
               <form onSubmit={changePassword}>
-                <input type="password" placeholder={t.newPw} value={pw1} onChange={(e) => setPw1(e.target.value)} minLength={8} required autoComplete="new-password" />
-                <input type="password" placeholder={t.repeatPw} value={pw2} onChange={(e) => setPw2(e.target.value)} minLength={8} required autoComplete="new-password" />
-                {pwMsg && <div className={pwOk ? 'ac-ok' : 'ac-err'}>{pwMsg}</div>}
-                <button className="ac-btn" type="submit" disabled={pwBusy}>{pwBusy ? t.saving : t.updatePw}</button>
+                <div className="ac-inputicon-wrap">
+                  <span className="ac-fieldicon" aria-hidden="true"><Lock size={15} strokeWidth={1.75} /></span>
+                  <input type="password" placeholder={t.newPw} value={pw1} onChange={(e) => setPw1(e.target.value)} minLength={8} required autoComplete="new-password" />
+                </div>
+                <div className="ac-inputicon-wrap">
+                  <span className="ac-fieldicon" aria-hidden="true"><Lock size={15} strokeWidth={1.75} /></span>
+                  <input type="password" placeholder={t.repeatPw} value={pw2} onChange={(e) => setPw2(e.target.value)} minLength={8} required autoComplete="new-password" />
+                </div>
+                {pwMsg && <div className={pwOk ? 'ac-ok' : 'ac-err'} role={pwOk ? 'status' : 'alert'}>{pwMsg}</div>}
+                <button className="ac-btn nxm-press" type="submit" disabled={pwBusy}>{pwBusy ? t.saving : t.updatePw}</button>
               </form>
             </section>
 
-            <section className="ac-card">
+            <section className="ac-card nxm-in" style={staggerStyle(2)}>
               <div className="ac-lbl">{t.changeEmail}</div>
               <p className="ac-hint">{t.emailHint}</p>
               <form onSubmit={changeEmail}>
-                <input type="email" placeholder={t.newEmail} value={newEmail} onChange={(e) => setNewEmail(e.target.value)} required autoComplete="email" />
-                {emMsg && <div className={emOk ? 'ac-ok' : 'ac-err'}>{emMsg}</div>}
-                <button className="ac-btn" type="submit" disabled={emBusy}>{emBusy ? t.sending : t.changeEmailBtn}</button>
+                <div className="ac-inputicon-wrap">
+                  <span className="ac-fieldicon" aria-hidden="true"><Mail size={15} strokeWidth={1.75} /></span>
+                  <input type="email" placeholder={t.newEmail} value={newEmail} onChange={(e) => setNewEmail(e.target.value)} required autoComplete="email" />
+                </div>
+                {emMsg && <div className={emOk ? 'ac-ok' : 'ac-err'} role={emOk ? 'status' : 'alert'}>{emMsg}</div>}
+                <button className="ac-btn nxm-press" type="submit" disabled={emBusy}>{emBusy ? t.sending : t.changeEmailBtn}</button>
               </form>
             </section>
 
-            <section className="ac-card">
+            <section className="ac-card nxm-in" style={staggerStyle(3)}>
               <div className="ac-lbl">{t.session}</div>
-              <button className="ac-out" onClick={signOut}>{t.signOut}</button>
+              <button className="ac-out nxm-press" onClick={signOut}><LogOut size={14} strokeWidth={1.75} aria-hidden="true" /> {t.signOut}</button>
             </section>
 
             {/* Danger zone — only for self-serve accounts; admins are blocked
                 server-side too. */}
             {!isAdmin && (
-              <section className="ac-danger">
-                <div className="ac-lbl ac-dlbl">{t.dangerZone}</div>
+              <section className="ac-danger nxm-in" style={staggerStyle(4)}>
+                <div className="ac-lbl ac-dlbl"><ShieldAlert size={13} strokeWidth={2} aria-hidden="true" /> {t.dangerZone}</div>
                 <h2 className="ac-dh">{t.deleteTitle}</h2>
                 <p className="ac-dbody">{t.deleteBody}</p>
                 {!dangerOpen ? (
-                  <button className="ac-del" onClick={() => { setDangerOpen(true); setDelErr(''); }}>{t.deleteBtn}</button>
+                  <button className="ac-del nxm-press" onClick={() => { setDangerOpen(true); setDelErr(''); }}>{t.deleteBtn}</button>
                 ) : (
                   <form className="ac-delform" onSubmit={deleteAccount}>
                     <input
@@ -267,10 +278,10 @@ export default function AccountPage() {
                         aria-label={t.confirmPwPrompt}
                       />
                     )}
-                    {delErr && <div className="ac-err">{delErr}</div>}
+                    {delErr && <div className="ac-err" role="alert">{delErr}</div>}
                     <div className="ac-delrow">
                       <button type="button" className="ac-cancel" onClick={() => { setDangerOpen(false); setDelConfirm(''); setDelPw(''); setDelErr(''); }}>{t.cancel}</button>
-                      <button type="submit" className="ac-delgo" disabled={!canDelete || delBusy}>{delBusy ? t.deleting : t.confirmDeleteBtn}</button>
+                      <button type="submit" className="ac-delgo nxm-press" disabled={!canDelete || delBusy}>{delBusy ? t.deleting : t.confirmDeleteBtn}</button>
                     </div>
                   </form>
                 )}
@@ -283,7 +294,7 @@ export default function AccountPage() {
   );
 }
 
-const CSS = `
+const CSS = MOTION_CSS + `
 .ac{min-height:100vh;background:var(--spec-warm-white,#F8F7FB);color:var(--spec-ink,#141320);font-family:var(--font-ibm-plex-sans-account),'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;}
 .ac *{box-sizing:border-box;}
 .ac a:focus-visible,.ac button:focus-visible,.ac input:focus-visible{outline:2px solid var(--spec-violet,#6C5CE0);outline-offset:2px;}
@@ -300,7 +311,7 @@ const CSS = `
 .ac-empty{text-align:center;color:var(--spec-text-2nd,#615F72);padding:70px 0;}
 .ac-empty a{color:var(--spec-violet-deep,#4A3DB0);}
 .ac-card{background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:16px;padding:22px;margin-bottom:16px;}
-.ac-lbl{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--spec-violet-deep,#4A3DB0);margin-bottom:14px;}
+.ac-lbl{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--spec-violet-deep,#4A3DB0);margin-bottom:14px;}
 .ac-row{display:flex;align-items:center;gap:12px;font-size:14px;margin-bottom:10px;flex-wrap:wrap;}
 .ac-row span{color:var(--spec-text-2nd,#615F72);min-width:110px;font-size:13px;}
 .ac-role{text-transform:capitalize;}
@@ -309,18 +320,22 @@ const CSS = `
 .ac-row em.warn{background:#FBF3E7;color:#8A5D14;}
 .ac-hint{color:var(--spec-text-2nd,#615F72);font-size:13px;line-height:1.5;margin:0 0 12px;}
 .ac-card form{display:flex;flex-direction:column;gap:10px;}
-.ac-card input{font-family:inherit;font-size:14.5px;padding:12px 14px;border-radius:12px;border:1px solid var(--spec-border,#E2DFEC);background:var(--spec-warm-white,#F8F7FB);color:var(--spec-ink,#141320);outline:none;}
+.ac-card input{width:100%;font-family:inherit;font-size:14.5px;padding:12px 14px;border-radius:12px;border:1px solid var(--spec-border,#E2DFEC);background:var(--spec-warm-white,#F8F7FB);color:var(--spec-ink,#141320);outline:none;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),box-shadow var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .ac-card input::placeholder{color:#8A87A0;}
+.ac-card input:hover{border-color:#C7C2DE;}
 .ac-card input:focus{border-color:var(--spec-violet,#6C5CE0);background:#fff;box-shadow:0 0 0 3px rgba(108,92,224,.12);}
-.ac-btn{font-family:inherit;font-size:14px;font-weight:700;padding:12px;border-radius:var(--spec-radius-btn,10px);border:none;background:var(--spec-violet,#6C5CE0);color:#fff;cursor:pointer;align-self:flex-start;padding-left:20px;padding-right:20px;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.ac-inputicon-wrap{position:relative;}
+.ac-fieldicon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#8A87A0;display:flex;pointer-events:none;z-index:1;}
+.ac-inputicon-wrap input{padding-left:38px !important;}
+.ac-btn{display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:14px;font-weight:700;padding:12px;border-radius:var(--spec-radius-btn,10px);border:none;background:var(--spec-violet,#6C5CE0);color:#fff;cursor:pointer;align-self:flex-start;padding-left:20px;padding-right:20px;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .ac-btn:hover{background:var(--spec-violet-deep,#4A3DB0);}
 .ac-btn:disabled{opacity:.6;cursor:wait;}
-.ac-ok{color:var(--spec-success,#2F9E6A);font-size:13px;}
-.ac-err{color:var(--spec-error,#CE4B43);font-size:13px;}
-.ac-out{font-family:inherit;font-size:14px;font-weight:600;padding:11px 18px;border-radius:10px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-ink,#141320);cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease),border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.ac-ok{background:var(--spec-success-bg,#E9F7F0);color:#1F7A54;font-size:13px;padding:9px 12px;border-radius:9px;}
+.ac-err{background:var(--spec-error-bg,#FDF2F2);color:var(--spec-error,#CE4B43);font-size:13px;padding:9px 12px;border-radius:9px;}
+.ac-out{display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:14px;font-weight:600;padding:11px 18px;border-radius:10px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-ink,#141320);cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease),border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .ac-out:hover{background:var(--spec-warm-white,#F8F7FB);border-color:#C7C2DE;}
 /* Danger zone — visually separated, red-tinted (still clearly destructive on the light background) */
-.ac-danger{background:#FDF2F2;border:1px solid rgba(206,75,67,.35);border-radius:16px;padding:22px;margin-top:34px;}
+.ac-danger{background:var(--spec-error-bg,#FDF2F2);border:1px solid rgba(206,75,67,.35);border-radius:16px;padding:22px;margin-top:34px;}
 .ac-dlbl{color:var(--spec-error,#CE4B43);}
 .ac-dh{font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-size:17px;font-weight:700;margin:0 0 8px;color:var(--spec-error,#CE4B43);}
 .ac-dbody{color:var(--spec-text-2nd,#615F72);font-size:13.5px;line-height:1.55;margin:0 0 16px;}

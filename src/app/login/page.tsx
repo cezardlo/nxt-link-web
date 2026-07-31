@@ -17,13 +17,14 @@
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { IBM_Plex_Sans } from 'next/font/google';
-import { Mail } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import { safeRelativePath } from '@/lib/auth/oauth';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
 import OAuthButton from '@/components/OAuthButton';
 import { bilingualCopy, OAUTH_CONTINUE_AGREES_MSG, ANY_OAUTH_ENABLED } from '@/lib/auth/oauth';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
+import { MOTION_CSS } from '@/components/motion/Motion';
 
 // Design System v1.0 reskin (2026-07-23): light warm-white + violet, matching
 // /signup and /vendor-signup. Visual/CSS only — every handler, state, and
@@ -180,7 +181,7 @@ function LoginInner() {
         <a className="li-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b></a>
         <LanguageToggle lang={lang} onChange={setLang} variant="light" />
       </div>
-      <div className="li-card">
+      <div className="li-card nxm-in">
         <h1>{t.signIn}</h1>
         {confirmed && <div className="li-ok">{t.emailConfirmed}</div>}
 
@@ -218,10 +219,13 @@ function LoginInner() {
               bilingualErrors
             />
             {ANY_OAUTH_ENABLED && <p className="li-googlenote">{bilingualCopy(OAUTH_CONTINUE_AGREES_MSG, lang)}</p>}
-            <button type="button" className="li-magic" onClick={magicLink} disabled={magicBusy}>
+            <button type="button" className="li-magic nxm-press" onClick={magicLink} disabled={magicBusy}>
               <Mail size={16} strokeWidth={1.75} aria-hidden="true" /> {magicBusy ? t.sendingLink : t.emailMeLink}
             </button>
-            <input type="email" placeholder={t.emailPh} value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" style={{ marginTop: 2 }} />
+            <div className="li-field" style={{ marginTop: 2 }}>
+              <span className="li-fieldicon" aria-hidden="true"><Mail size={15} strokeWidth={1.75} /></span>
+              <input type="email" placeholder={t.emailPh} value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+            </div>
             {err && !usePassword && <div className="li-err">{err}</div>}
             <button type="button" className="li-usepw" onClick={() => setUsePassword((v) => !v)}>{usePassword ? t.hidePwSignIn : t.preferPassword}</button>
           </>
@@ -229,24 +233,25 @@ function LoginInner() {
 
         {usePassword && !magicSent && <form onSubmit={submit}>
           <div className="li-pwrow">
+            <span className="li-fieldicon" aria-hidden="true"><Lock size={15} strokeWidth={1.75} /></span>
             <input type={showPw ? 'text' : 'password'} placeholder={t.passwordPh} value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
             <button type="button" className="li-pwtoggle" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? t.hide : t.show}>{showPw ? t.hide : t.show}</button>
           </div>
-          {err && <div className="li-err">{err}</div>}
+          {err && <div className="li-err" role="alert" aria-live="polite">{err}</div>}
           {needsVerify && (
             <div className="li-warn">
               {t.notVerified}
               {resent ? t.sentAgain : <>{t.or}<button type="button" onClick={resend}>{t.resendIt}</button>.</>}
             </div>
           )}
-          <button className="li-btn" type="submit" disabled={busy}>{busy ? t.signingIn : t.signIn}</button>
+          <button className="li-btn nxm-press" type="submit" disabled={busy}>{busy ? t.signingIn : t.signIn}</button>
           <a className="li-forgot" href="/forgot-password">{t.forgotPassword}</a>
         </form>}
         {DEMO_LOGIN_ENABLED && <div className="li-demo">
           <div className="li-demolabel">{t.justExploring}</div>
           <div className="li-demorow">
-            <button type="button" className="li-demobtn" disabled={!!demoBusy} onClick={() => demoLogin('buyer')}>{demoBusy === 'buyer' ? t.entering : t.demoBuyer}</button>
-            <button type="button" className="li-demobtn" disabled={!!demoBusy} onClick={() => demoLogin('vendor')}>{demoBusy === 'vendor' ? t.entering : t.demoVendor}</button>
+            <button type="button" className="li-demobtn nxm-press" disabled={!!demoBusy} onClick={() => demoLogin('buyer')}>{demoBusy === 'buyer' ? t.entering : t.demoBuyer}</button>
+            <button type="button" className="li-demobtn nxm-press" disabled={!!demoBusy} onClick={() => demoLogin('vendor')}>{demoBusy === 'vendor' ? t.entering : t.demoVendor}</button>
           </div>
         </div>}
         <a className="li-link" href="/signup">{t.newHere}</a>
@@ -259,7 +264,7 @@ export default function LoginPage() {
   return <Suspense fallback={null}><LoginInner /></Suspense>;
 }
 
-const CSS = `
+const CSS = MOTION_CSS + `
 .li{min-height:100vh;background:var(--spec-warm-white,#F8F7FB);color:var(--spec-ink,#141320);font-family:var(--font-ibm-plex-sans-login),'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;display:flex;flex-direction:column;align-items:center;padding:40px 20px;-webkit-font-smoothing:antialiased;}
 .li *{box-sizing:border-box;}
 .li a:focus-visible,.li button:focus-visible,.li input:focus-visible{outline:2px solid var(--spec-violet,#6C5CE0);outline-offset:2px;}
@@ -270,9 +275,13 @@ const CSS = `
 .li-card{width:100%;max-width:400px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:16px;padding:30px;box-shadow:0 8px 30px rgba(74,61,176,.08);}
 .li-card h1{font-family:var(--font-space-grotesk),'Space Grotesk',system-ui,sans-serif;font-size:23px;font-weight:700;letter-spacing:-.01em;margin-bottom:16px;color:var(--spec-ink,#141320);}
 .li-card form{display:flex;flex-direction:column;gap:11px;}
-.li-card input{font-family:inherit;font-size:14.5px;padding:12px 14px;border-radius:12px;border:1px solid var(--spec-border,#E2DFEC);background:var(--spec-warm-white,#F8F7FB);color:var(--spec-ink,#141320);outline:none;}
+.li-card input{font-family:inherit;font-size:14.5px;padding:12px 14px;border-radius:12px;border:1px solid var(--spec-border,#E2DFEC);background:var(--spec-warm-white,#F8F7FB);color:var(--spec-ink,#141320);outline:none;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),box-shadow var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .li-card input::placeholder{color:#8A87A0;}
+.li-card input:hover{border-color:#C7C2DE;}
 .li-card input:focus{border-color:var(--spec-violet,#6C5CE0);background:#fff;box-shadow:0 0 0 3px rgba(108,92,224,.12);}
+.li-field{position:relative;}
+.li-fieldicon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#8A87A0;display:flex;pointer-events:none;z-index:1;}
+.li-field input{padding-left:38px !important;}
 .li-btn{font-family:inherit;font-size:15px;font-weight:700;padding:13px;min-height:48px;border-radius:10px;border:none;background:var(--spec-violet,#6C5CE0);color:#fff;cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .li-btn:hover{background:var(--spec-violet-deep,#4A3DB0);}.li-btn:disabled{opacity:.6;cursor:wait;}
 .li-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;font-family:inherit;font-size:14.5px;font-weight:600;padding:12px;min-height:48px;border-radius:12px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-ink,#141320);cursor:pointer;margin-bottom:10px;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease),border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
@@ -287,7 +296,7 @@ const CSS = `
 .li-warn{background:#FBF3E7;border:1px solid #EFD9AE;color:#8A5D14;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.5;}
 .li-warn button{background:none;border:none;color:#8A5D14;text-decoration:underline;cursor:pointer;font:inherit;padding:0;}
 .li-pwrow{position:relative;display:flex;}
-.li-pwrow input{flex:1;padding-right:62px !important;}
+.li-pwrow input{flex:1;padding-left:38px !important;padding-right:62px !important;}
 .li-pwtoggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:#706D88;font:600 12px inherit;cursor:pointer;padding:6px;transition:color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .li-pwtoggle:hover{color:var(--spec-violet-deep,#4A3DB0);}
 .li-forgot{color:#706D88;font-size:12.5px;text-decoration:none;text-align:right;margin-top:-3px;transition:color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}

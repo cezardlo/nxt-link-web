@@ -9,8 +9,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
 import Link from 'next/link';
+import { Building2, User, Mail, Phone, Check } from 'lucide-react';
 import { useCart, type CartItem } from '@/components/cart/useCart';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
+import { MOTION_CSS, staggerStyle } from '@/components/motion/Motion';
 
 // Design System v1.0 reskin (Premium Polish Phase 2, 2026-07-23): visual/CSS
 // only — every handler and state above is unchanged.
@@ -218,7 +220,8 @@ export default function CartPage() {
 
       <main className="qc-wrap">
         {sent ? (
-          <div className="qc-sent">
+          <div className="qc-sent nxm-in">
+            <div className="qc-sentmark" aria-hidden="true"><Check size={20} strokeWidth={3} /></div>
             <b>{t.sentTitle}</b>
             <ul>
               {sent.map((r) => (
@@ -231,8 +234,8 @@ export default function CartPage() {
             {sentSkipped && <p className="qc-skipnote">{t.skipped}</p>}
             <p>{t.sentBody}</p>
             <div className="qc-sentactions">
-              <Link className="qc-primary" href="/buyer">{t.dashboard}</Link>
-              <Link className="qc-secondary" href="/marketplace">{t.browse}</Link>
+              <Link className="qc-primary nxm-press" href="/buyer">{t.dashboard}</Link>
+              <Link className="qc-secondary nxm-press" href="/marketplace">{t.browse}</Link>
             </div>
           </div>
         ) : (
@@ -243,10 +246,10 @@ export default function CartPage() {
             {!mounted ? (
               <div className="qc-empty">{t.loading}</div>
             ) : items.length === 0 ? (
-              <div className="qc-empty big">
+              <div className="qc-empty big nxm-in">
                 <b>{t.emptyTitle}</b>
                 <p>{t.emptyHint}</p>
-                <Link className="qc-primary" href="/marketplace">{t.browse}</Link>
+                <Link className="qc-primary nxm-press" href="/marketplace">{t.browse}</Link>
               </div>
             ) : (
               <>
@@ -255,7 +258,7 @@ export default function CartPage() {
                 )}
 
                 {groups.map((g, gi) => (
-                  <section className="qc-group" key={gi}>
+                  <section className="qc-group nxm-in" style={staggerStyle(gi)} key={gi}>
                     <h2>{t.requestTo} <b>{g.vendor_name || t.vendorFallback}</b> <small>{nItems(g.items.length)}</small></h2>
                     {g.items.map((it) => (
                       <div className="qc-item" key={it.id}>
@@ -291,14 +294,34 @@ export default function CartPage() {
                   <h2>{t.yourDetails}</h2>
                   <input type="text" name="website_url" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }} />
                   <div className="qc-formgrid">
-                    <label>{t.company}<input value={company} onChange={(e) => setCompany(e.target.value)} required /></label>
-                    <label>{t.yourName}<input value={contact} onChange={(e) => setContact(e.target.value)} /></label>
-                    <label>{t.email}<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>
-                    <label>{t.phone}<input value={phone} onChange={(e) => setPhone(e.target.value)} /></label>
+                    <label>{t.company}
+                      <div className="qc-inputicon-wrap">
+                        <span className="qc-fieldicon" aria-hidden="true"><Building2 size={15} strokeWidth={1.75} /></span>
+                        <input value={company} onChange={(e) => setCompany(e.target.value)} required />
+                      </div>
+                    </label>
+                    <label>{t.yourName}
+                      <div className="qc-inputicon-wrap">
+                        <span className="qc-fieldicon" aria-hidden="true"><User size={15} strokeWidth={1.75} /></span>
+                        <input value={contact} onChange={(e) => setContact(e.target.value)} />
+                      </div>
+                    </label>
+                    <label>{t.email}
+                      <div className="qc-inputicon-wrap">
+                        <span className="qc-fieldicon" aria-hidden="true"><Mail size={15} strokeWidth={1.75} /></span>
+                        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                      </div>
+                    </label>
+                    <label>{t.phone}
+                      <div className="qc-inputicon-wrap">
+                        <span className="qc-fieldicon" aria-hidden="true"><Phone size={15} strokeWidth={1.75} /></span>
+                        <input value={phone} onChange={(e) => setPhone(e.target.value)} />
+                      </div>
+                    </label>
                   </div>
                   <textarea rows={4} value={message} placeholder={t.messagePh} aria-label={t.messagePh} onChange={(e) => setMessage(e.target.value)} />
                   {formMsg && <div className="qc-err" role="alert">{formMsg}</div>}
-                  <button type="submit" className="qc-primary qc-submit" disabled={sending}>
+                  <button type="submit" className="qc-primary qc-submit nxm-press" disabled={sending}>
                     {sending ? t.sending : groups.length > 1 ? t.sendMulti.replace('{n}', String(groups.length)) : t.send}
                   </button>
                   <p className="qc-safenote">{t.safety}</p>
@@ -313,7 +336,7 @@ export default function CartPage() {
   );
 }
 
-const CSS = `
+const CSS = MOTION_CSS + `
 .qc{min-height:100vh;background:var(--spec-warm-white,#F8F7FB);color:var(--spec-ink,#141320);font-family:var(--font-ibm-plex-sans-cart),'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
 .qc *{box-sizing:border-box;}
 .qc a:focus-visible,.qc button:focus-visible,.qc input:focus-visible,.qc textarea:focus-visible{outline:2px solid var(--spec-violet,#6C5CE0);outline-offset:2px;}
@@ -362,8 +385,12 @@ const CSS = `
 .qc-formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 @media(max-width:600px){.qc-formgrid{grid-template-columns:1fr;}}
 .qc-form label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--spec-text-2nd,#615F72);font-weight:600;}
-.qc-form input,.qc-form textarea{font-family:inherit;font-size:14px;padding:11px 13px;border-radius:10px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-ink,#141320);outline:none;resize:vertical;}
+.qc-form input,.qc-form textarea{width:100%;font-family:inherit;font-size:14px;padding:11px 13px;border-radius:10px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-ink,#141320);outline:none;resize:vertical;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),box-shadow var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.qc-form input:hover,.qc-form textarea:hover{border-color:#C7C2DE;}
 .qc-form input:focus,.qc-form textarea:focus{border-color:var(--spec-violet,#6C5CE0);box-shadow:0 0 0 3px rgba(108,92,224,.12);}
+.qc-inputicon-wrap{position:relative;}
+.qc-fieldicon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#8A87A0;display:flex;pointer-events:none;z-index:1;}
+.qc-inputicon-wrap input{padding-left:36px !important;}
 .qc-err{color:var(--spec-error,#CE4B43);font-size:13px;}
 .qc-primary{display:inline-block;font-family:inherit;font-size:14.5px;font-weight:700;padding:13px 22px;border-radius:10px;border:none;background:var(--spec-violet,#6C5CE0);color:#fff;cursor:pointer;text-decoration:none;text-align:center;}
 .qc-primary:hover{background:var(--spec-violet-deep,#4A3DB0);}
@@ -375,6 +402,7 @@ const CSS = `
 .qc-disclosure{margin:0;font-size:11.5px;line-height:1.5;color:#706D88;}
 .qc-disclosure a{color:var(--spec-text-2nd,#615F72);}
 .qc-sent{background:#F3FAF6;border:1px solid rgba(47,158,106,.3);border-radius:18px;padding:26px 24px;}
+.qc-sentmark{width:40px;height:40px;border-radius:12px;background:var(--spec-success-bg,#E9F7F0);color:#1F7A54;display:grid;place-items:center;margin-bottom:12px;}
 .qc-sent>b{font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-size:19px;color:#1F7A54;}
 .qc-sent ul{list-style:none;margin:16px 0;padding:0;display:flex;flex-direction:column;gap:10px;}
 .qc-sent li{display:flex;flex-direction:column;gap:3px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:12px;padding:12px 15px;font-size:13.5px;color:var(--spec-ink,#141320);}

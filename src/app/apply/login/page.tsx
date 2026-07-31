@@ -4,9 +4,26 @@
 // application (private intake system). This is unrelated to the older
 // /vendor-signup, /vendor-login, /vendor/portal system (vendor_profiles
 // table) — do not merge with that flow.
+//
+// Design System v1.0 reskin (2026-07-30 polish pass): was on the same
+// off-brand dark "Outfit"/Instrument Serif theme as /apply and /apply/status
+// (#0A0A0F bg, #7C5CFC purple) — matches nothing else in the app. Rebuilt
+// light warm-white + brand violet with the site's real fonts, matching
+// /login and /signup's CSS-in-JS pattern. Visual/CSS only — every handler,
+// state, and the mode/agree/signup logic below are byte-identical.
 
 import { useState } from 'react';
+import { IBM_Plex_Sans } from 'next/font/google';
+import { Mail, Lock } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
+import { MOTION_CSS } from '@/components/motion/Motion';
+
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-ibm-plex-sans-applylogin',
+  display: 'swap',
+});
 
 type Mode = 'signin' | 'signup';
 
@@ -63,18 +80,17 @@ export default function ApplyLoginPage() {
   }
 
   return (
-    <div className="axl-root">
+    <div className={`axl-root ${ibmPlexSans.variable}`}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
       <header className="axl-nav">
         <a href="/" className="axl-brand">
-          <span className="axl-mk"><span className="axl-n">N</span></span>
           <b>NXT<i>{'//'}</i>LINK</b>
         </a>
       </header>
 
       <main className="axl-wrap">
-        <div className="axl-card">
+        <div className="axl-card nxm-in">
           <h1>{mode === 'signin' ? 'Sign in' : 'Create your account'}</h1>
           <p className="axl-sub">
             {mode === 'signin'
@@ -82,34 +98,40 @@ export default function ApplyLoginPage() {
               : 'Create an account so you can check and update your application later.'}
           </p>
 
-          {notice && <div className="axl-notice">{notice}</div>}
-          {error && <div className="axl-error">{error}</div>}
+          {notice && <div className="axl-notice" role="status">{notice}</div>}
+          {error && <div className="axl-error" role="alert" aria-live="polite">{error}</div>}
 
           <form onSubmit={handleSubmit}>
             <label className="axl-label" htmlFor="axl-email">Email</label>
-            <input
-              id="axl-email"
-              className="axl-input"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@company.com"
-            />
+            <div className="axl-field">
+              <span className="axl-fieldicon" aria-hidden="true"><Mail size={16} strokeWidth={1.75} /></span>
+              <input
+                id="axl-email"
+                className="axl-input"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@company.com"
+              />
+            </div>
 
             <label className="axl-label" htmlFor="axl-password">Password</label>
-            <input
-              id="axl-password"
-              className="axl-input"
-              type="password"
-              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-              required
-              minLength={mode === 'signup' ? 8 : 6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-            />
+            <div className="axl-field">
+              <span className="axl-fieldicon" aria-hidden="true"><Lock size={16} strokeWidth={1.75} /></span>
+              <input
+                id="axl-password"
+                className="axl-input"
+                type="password"
+                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                required
+                minLength={mode === 'signup' ? 8 : 6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
 
             {mode === 'signup' && (
               <label className="axl-agree">
@@ -123,7 +145,7 @@ export default function ApplyLoginPage() {
               </label>
             )}
 
-            <button className="axl-btn" type="submit" disabled={busy}>
+            <button className="axl-btn nxm-press" type="submit" disabled={busy}>
               {busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}
             </button>
           </form>
@@ -155,38 +177,38 @@ export default function ApplyLoginPage() {
   );
 }
 
-const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap');
-.axl-root{--bg:#0A0A0F;--bg2:#111118;--surf:rgba(255,255,255,.04);--surf2:rgba(255,255,255,.07);--ink:#F0F0F5;--ink2:#C0C0D0;--muted:#8080A0;--muted2:#505068;--line:rgba(255,255,255,.08);--p:#7C5CFC;--p2:#A78BFA;--p3:#C4B5FD;--pbg:rgba(124,92,252,.12);--pd:#6344DF;--green:#34D399;--red:#F87171;
-  min-height:100vh;background:var(--bg);color:var(--ink);font-family:'Outfit',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;}
+const CSS = MOTION_CSS + `
+.axl-root{min-height:100vh;background:var(--spec-warm-white,#F8F7FB);color:var(--spec-ink,#141320);font-family:var(--font-ibm-plex-sans-applylogin),'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;}
 .axl-root *{box-sizing:border-box;}
+.axl-root a:focus-visible,.axl-root button:focus-visible,.axl-root input:focus-visible{outline:2px solid var(--spec-violet,#6C5CE0);outline-offset:2px;}
 .axl-nav{display:flex;align-items:center;padding:22px 32px;}
-.axl-brand{display:flex;align-items:center;gap:10px;font:700 17px/1 'Outfit';color:var(--ink);text-decoration:none;}
-.axl-brand b{font-weight:700;letter-spacing:.01em;}
-.axl-brand i{color:var(--p2);font-style:normal;}
-.axl-mk{width:30px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--p),var(--pd));display:grid;place-items:center;box-shadow:0 8px 24px rgba(124,92,252,.35);flex-shrink:0;}
-.axl-n{font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-size:19px;line-height:1;color:#fff;}
+.axl-brand{display:flex;align-items:center;gap:10px;color:var(--spec-ink,#141320);text-decoration:none;}
+.axl-brand b{font-family:var(--font-space-grotesk),'Space Grotesk',system-ui,sans-serif;font-size:17px;font-weight:700;letter-spacing:-.01em;}
+.axl-brand i{color:var(--spec-violet,#6C5CE0);font-style:normal;}
 .axl-wrap{display:flex;justify-content:center;padding:6vh 20px 10vh;}
-.axl-card{width:100%;max-width:420px;background:var(--surf);border:1px solid var(--line);border-radius:22px;padding:38px 34px;backdrop-filter:blur(12px);box-shadow:0 24px 80px rgba(0,0,0,.4);}
-.axl-card h1{font:700 26px/1.2 'Outfit';margin:0 0 8px;color:var(--ink);}
-.axl-sub{font:400 14px/1.5 'Outfit';color:var(--ink2);margin:0 0 24px;}
-.axl-notice{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:var(--green);font:500 13px/1.5 'Outfit';padding:12px 14px;border-radius:12px;margin-bottom:18px;}
-.axl-error{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--red);font:500 13px/1.5 'Outfit';padding:12px 14px;border-radius:12px;margin-bottom:18px;}
-.axl-label{display:block;font:600 12px/1 'Outfit';color:var(--muted);letter-spacing:.02em;margin:0 0 8px;}
-.axl-input{width:100%;padding:12px 14px;background:var(--bg);border:1px solid var(--line);border-radius:11px;color:var(--ink);font:400 15px 'Outfit';outline:none;margin-bottom:18px;transition:border-color .15s,box-shadow .15s;}
-.axl-input:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--pbg);}
-.axl-input::placeholder{color:var(--muted2);}
+.axl-card{width:100%;max-width:420px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:16px;padding:32px;box-shadow:0 8px 30px rgba(74,61,176,.08);}
+.axl-card h1{font-family:var(--font-space-grotesk),'Space Grotesk',system-ui,sans-serif;font-size:24px;font-weight:700;letter-spacing:-.01em;margin:0 0 8px;color:var(--spec-ink,#141320);}
+.axl-sub{color:var(--spec-text-2nd,#615F72);font-size:14px;line-height:1.5;margin:0 0 22px;}
+.axl-notice{background:#E9F7F0;border:1px solid rgba(47,158,106,.3);color:#1F7A54;font-size:13px;line-height:1.5;padding:12px 14px;border-radius:12px;margin-bottom:16px;}
+.axl-error{background:#FDF2F2;border:1px solid #F3C9C9;color:#B04A4A;font-size:13px;line-height:1.5;padding:12px 14px;border-radius:12px;margin-bottom:16px;}
+.axl-label{display:block;font-size:12px;font-weight:700;color:var(--spec-text-2nd,#615F72);letter-spacing:.02em;margin:0 0 6px;}
+.axl-field{position:relative;margin-bottom:16px;}
+.axl-fieldicon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#8A87A0;display:flex;pointer-events:none;}
+.axl-input{width:100%;padding:12px 14px 12px 40px;background:var(--spec-warm-white,#F8F7FB);border:1px solid var(--spec-border,#E2DFEC);border-radius:12px;color:var(--spec-ink,#141320);font:400 14.5px/1.4 inherit;outline:none;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),box-shadow var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.axl-input:hover{border-color:#C7C2DE;}
+.axl-input:focus{border-color:var(--spec-violet,#6C5CE0);background:#fff;box-shadow:0 0 0 3px rgba(108,92,224,.12);}
+.axl-input::placeholder{color:#8A87A0;}
 .axl-agree{display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin:0 0 18px;}
-.axl-agree input{width:16px;height:16px;margin-top:2px;flex-shrink:0;accent-color:var(--p);cursor:pointer;}
-.axl-agree input:focus-visible{outline:2px solid var(--p);outline-offset:2px;}
-.axl-agree span{color:var(--muted);font:400 12.5px/1.55 'Outfit';}
-.axl-agree span a{color:var(--p3);}
-.axl-agree span i{color:var(--muted2);font-style:normal;}
-.axl-btn{width:100%;padding:13px 18px;background:var(--p);color:#fff;border:none;border-radius:12px;font:600 15px 'Outfit';cursor:pointer;box-shadow:0 8px 24px rgba(124,92,252,.35);transition:background .15s;}
-.axl-btn:hover:not(:disabled){background:var(--pd);}
+.axl-agree input{width:16px;height:16px;margin-top:2px;flex-shrink:0;accent-color:var(--spec-violet,#6C5CE0);cursor:pointer;}
+.axl-agree input:focus-visible{outline:2px solid var(--spec-violet,#6C5CE0);outline-offset:2px;}
+.axl-agree span{color:var(--spec-text-2nd,#615F72);font-size:12.5px;line-height:1.55;}
+.axl-agree span a{color:var(--spec-violet-deep,#4A3DB0);}
+.axl-agree span i{color:#8A87A0;font-style:normal;}
+.axl-btn{width:100%;padding:13px 18px;min-height:48px;background:var(--spec-violet,#6C5CE0);color:#fff;border:none;border-radius:10px;font:700 15px inherit;cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.axl-btn:hover:not(:disabled){background:var(--spec-violet-deep,#4A3DB0);}
 .axl-btn:disabled{opacity:.6;cursor:not-allowed;}
-.axl-switch{text-align:center;font:400 13px/1.5 'Outfit';color:var(--ink2);margin-top:20px;}
-.axl-link{background:none;border:none;color:var(--p3);font:600 13px 'Outfit';cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;}
-.axl-alt{text-align:center;font:400 13px/1.5 'Outfit';color:var(--muted);margin-top:14px;padding-top:14px;border-top:1px solid var(--line);}
-.axl-alt a{color:var(--ink2);text-decoration:underline;text-underline-offset:2px;}
+.axl-switch{text-align:center;font-size:13px;line-height:1.5;color:var(--spec-text-2nd,#615F72);margin-top:20px;}
+.axl-link{background:none;border:none;color:var(--spec-violet-deep,#4A3DB0);font:600 13px inherit;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;}
+.axl-alt{text-align:center;font-size:13px;line-height:1.5;color:#8A87A0;margin-top:14px;padding-top:14px;border-top:1px solid var(--spec-border,#E2DFEC);}
+.axl-alt a{color:var(--spec-text-2nd,#615F72);text-decoration:underline;text-underline-offset:2px;}
 `;

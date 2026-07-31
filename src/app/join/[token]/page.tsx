@@ -28,11 +28,29 @@
 // provider — see src/lib/auth/oauth.ts and src/app/auth/callback/route.ts.
 
 import { useCallback, useEffect, useState } from 'react';
+import { IBM_Plex_Sans } from 'next/font/google';
+import { Building2, Mail } from 'lucide-react';
 import LanguageToggle, { readStoredLang } from '@/components/LanguageToggle';
 import SupplyChips from '@/components/SupplyChips';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
 import OAuthButton from '@/components/OAuthButton';
 import { GOOGLE_TERMS_ERROR_MSG, ANY_OAUTH_ENABLED } from '@/lib/auth/oauth';
+import { MOTION_CSS } from '@/components/motion/Motion';
+
+// Design System v1.0 polish (2026-07-30): this screen was already spec-native
+// on colour (hardcoded hex matching the token table exactly) but never loaded
+// the brand fonts — it fell back to plain system-ui, unlike every sibling
+// funnel screen (/login, /signup, /vendor-signup). Now loads the same IBM
+// Plex Sans instance those pages use; Space Grotesk needs no separate load
+// (already on <body> globally via src/app/layout.tsx). Also adds field icons
+// + shared entrance/press motion. Visual/CSS only — invite loading, the
+// magic-link send, and the OAuth wiring below are unchanged.
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-ibm-plex-sans-join',
+  display: 'swap',
+});
 
 interface InviteView {
   contact_name: string | null;
@@ -216,14 +234,14 @@ export default function JoinPage({ params }: { params: { token: string } }) {
   const supplyValues = [...cats, ...(otherCat.trim() ? [otherCat.trim()] : [])];
 
   return (
-    <div className="jn">
+    <div className={`jn ${ibmPlexSans.variable}`}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div className="jn-top">
         <a className="jn-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b></a>
         <LanguageToggle lang={lang} onChange={switchLang} variant="light" />
       </div>
 
-      <div className="jn-card">
+      <div className="jn-card nxm-in">
         {loading ? (
           <p className="jn-muted">{t.loading}</p>
         ) : dead ? (
@@ -296,13 +314,19 @@ export default function JoinPage({ params }: { params: { token: string } }) {
 
             <label className="jn-field">
               <span>{t.companyLabel}</span>
-              <input type="text" value={company} maxLength={120} onChange={(e) => setCompany(e.target.value)} autoComplete="organization" />
+              <div className="jn-inputicon-wrap">
+                <span className="jn-fieldicon" aria-hidden="true"><Building2 size={16} strokeWidth={1.75} /></span>
+                <input type="text" value={company} maxLength={120} onChange={(e) => setCompany(e.target.value)} autoComplete="organization" />
+              </div>
             </label>
 
             {!invite?.has_email && (
               <label className="jn-field">
                 <span>{t.emailLabel}</span>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" inputMode="email" />
+                <div className="jn-inputicon-wrap">
+                  <span className="jn-fieldicon" aria-hidden="true"><Mail size={16} strokeWidth={1.75} /></span>
+                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" inputMode="email" />
+                </div>
               </label>
             )}
 
@@ -320,8 +344,8 @@ export default function JoinPage({ params }: { params: { token: string } }) {
 
             {!ANY_OAUTH_ENABLED && agreeCheckbox}
 
-            {err && <div className="jn-err">{err}</div>}
-            <button type="button" className="jn-cta" onClick={send} disabled={busy}>
+            {err && <div className="jn-err" role="alert">{err}</div>}
+            <button type="button" className="jn-cta nxm-press" onClick={send} disabled={busy}>
               {busy ? t.ctaBusy : t.cta}
             </button>
             <p className="jn-under">{t.under}</p>
@@ -337,9 +361,11 @@ export default function JoinPage({ params }: { params: { token: string } }) {
   );
 }
 
-const CSS = `
-.jn{min-height:100vh;background:#F8F7FB;color:#141320;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;display:flex;flex-direction:column;align-items:center;padding:22px 16px 48px;-webkit-font-smoothing:antialiased;}
+const CSS = MOTION_CSS + `
+.jn{min-height:100vh;background:#F8F7FB;color:#141320;font-family:var(--font-ibm-plex-sans-join),'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;display:flex;flex-direction:column;align-items:center;padding:22px 16px 48px;-webkit-font-smoothing:antialiased;}
 .jn *{box-sizing:border-box;}
+.jn h1{font-family:var(--font-space-grotesk),'Space Grotesk',system-ui,sans-serif;}
+.jn a:focus-visible,.jn button:focus-visible,.jn input:focus-visible{outline:2px solid #6C5CE0;outline-offset:2px;}
 .jn-top{width:100%;max-width:460px;display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
 .jn-brand{color:#141320;text-decoration:none;}
 .jn-brand b{font-size:17px;letter-spacing:1.5px;}
@@ -356,8 +382,12 @@ const CSS = `
 .jn-bullets li b{color:#141320;}
 .jn-field{display:block;margin:14px 0 2px;}
 .jn-field span{display:block;font-size:12.5px;font-weight:600;color:#615F72;margin-bottom:6px;}
-.jn-field input{width:100%;min-height:48px;font-family:inherit;font-size:15px;padding:12px 14px;border-radius:12px;border:1px solid #E2DFEC;background:#F8F7FB;color:#141320;outline:none;}
-.jn-field input:focus{border-color:#6C5CE0;background:#fff;}
+.jn-field input{width:100%;min-height:48px;font-family:inherit;font-size:15px;padding:12px 14px;border-radius:12px;border:1px solid #E2DFEC;background:#F8F7FB;color:#141320;outline:none;transition:border-color 150ms ease,box-shadow 150ms ease;}
+.jn-field input:hover{border-color:#C7C2DE;}
+.jn-field input:focus{border-color:#6C5CE0;background:#fff;box-shadow:0 0 0 3px rgba(108,92,224,.12);}
+.jn-inputicon-wrap{position:relative;}
+.jn-fieldicon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#8A87A0;display:flex;pointer-events:none;z-index:1;}
+.jn-inputicon-wrap input{padding-left:40px !important;}
 .jn-err{background:#FDF2F2;border:1px solid #F3C9C9;color:#B04A4A;font-size:13px;border-radius:10px;padding:10px 12px;margin-top:12px;}
 .jn-agree{display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin-top:14px;}
 .jn-agree input{width:18px;height:18px;margin-top:1px;flex-shrink:0;accent-color:#6C5CE0;cursor:pointer;}

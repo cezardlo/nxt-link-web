@@ -59,11 +59,12 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { IBM_Plex_Sans } from 'next/font/google';
-import { Check, RefreshCw } from 'lucide-react';
+import { Check, RefreshCw, Mail, Lock } from 'lucide-react';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
 import OAuthButton from '@/components/OAuthButton';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
 import { GOOGLE_TERMS_ERROR_MSG, bilingualCopy, ANY_OAUTH_ENABLED } from '@/lib/auth/oauth';
+import { MOTION_CSS } from '@/components/motion/Motion';
 
 // Design System v1.0 reskin (2026-07-23): light warm-white + violet, matching
 // /vendor-signup and the rest of the funnel. Visual/CSS only — every handler,
@@ -209,7 +210,7 @@ export default function SignupPage() {
       </header>
 
       <section className="su-layout">
-        <div className="su-card">
+        <div className="su-card nxm-in">
           {sent ? (
             <div className="su-sent">
               <div className="su-success"><Check aria-hidden="true" /></div>
@@ -265,17 +266,21 @@ export default function SignupPage() {
 
               <form onSubmit={submit}>
                 <label className="su-field"><span>{t.email}</span>
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" autoFocus />
+                  <div className="su-inputicon-wrap">
+                    <span className="su-fieldicon" aria-hidden="true"><Mail size={15} strokeWidth={1.75} /></span>
+                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" autoFocus />
+                  </div>
                 </label>
                 <label className="su-field"><span>{t.password}</span>
                   <div className="su-pwrow">
+                    <span className="su-fieldicon" aria-hidden="true"><Lock size={15} strokeWidth={1.75} /></span>
                     <input type={showPw ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" />
                     <button type="button" className="su-pwtoggle" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? t.hide : t.show}>{showPw ? t.hide : t.show}</button>
                   </div>
                 </label>
                 {!ANY_OAUTH_ENABLED && agreeCheckbox}
                 {err && <div className="su-err" role="alert" aria-live="polite">{err}</div>}
-                <button className="su-btn" type="submit" disabled={busy}>{busy ? t.creating : t.create}</button>
+                <button className="su-btn nxm-press" type="submit" disabled={busy}>{busy ? t.creating : t.create}</button>
               </form>
 
               <p className="su-signin">{t.signInLead} <Link href="/login">{t.signIn}</Link></p>
@@ -298,7 +303,7 @@ export default function SignupPage() {
   );
 }
 
-const CSS = `
+const CSS = MOTION_CSS + `
 .su{min-height:100vh;background:var(--spec-warm-white,#F8F7FB);color:var(--spec-ink,#141320);font-family:var(--font-ibm-plex-sans-signup),'IBM Plex Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;padding:26px 22px 48px;-webkit-font-smoothing:antialiased;}
 .su *{box-sizing:border-box;}
 .su h1,.su h2{font-family:var(--font-space-grotesk),'Space Grotesk',system-ui,sans-serif;}
@@ -322,8 +327,12 @@ const CSS = `
 
 .su-card form{display:flex;flex-direction:column;gap:14px;}
 .su-field span{display:block;color:var(--spec-text-2nd,#615F72);font-size:12px;font-weight:700;margin:0 0 6px;}
-.su-field input{width:100%;height:44px;border:1px solid var(--spec-border,#E2DFEC);border-radius:10px;background:var(--spec-warm-white,#F8F7FB);color:var(--spec-ink,#141320);font:14px inherit;padding:0 13px;outline:none;}
+.su-field input{width:100%;height:44px;border:1px solid var(--spec-border,#E2DFEC);border-radius:10px;background:var(--spec-warm-white,#F8F7FB);color:var(--spec-ink,#141320);font:14px inherit;padding:0 13px;outline:none;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),box-shadow var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.su-field input:hover{border-color:#C7C2DE;}
 .su-field input:focus{border-color:var(--spec-violet,#6C5CE0);background:#fff;box-shadow:0 0 0 3px rgba(108,92,224,.12);}
+.su-inputicon-wrap{position:relative;}
+.su-fieldicon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#8A87A0;display:flex;pointer-events:none;z-index:1;}
+.su-inputicon-wrap input,.su-pwrow input{padding-left:38px !important;}
 .su-pwrow{position:relative;}
 .su-pwrow input{padding-right:66px !important;}
 .su-pwtoggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--spec-text-2nd,#615F72);font:650 12px inherit;cursor:pointer;padding:8px;}
