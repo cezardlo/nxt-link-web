@@ -6,8 +6,10 @@
 
 import { useEffect, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
+import { Check } from 'lucide-react';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
 import { splitIndustryList } from '@/lib/matching';
+import { MOTION_CSS } from '@/components/motion/Motion';
 
 // Industry is now saved as up to 3 comma-separated values (2026-07-30 buyer
 // progressive-enrichment card, /buyer — same buyer_profiles.industry column,
@@ -172,7 +174,7 @@ export default function BuyerProfilePage() {
 
   return (
     <div className={`bp ${ibmPlexSans.variable}`}>
-      <style dangerouslySetInnerHTML={{ __html: CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: MOTION_CSS + CSS }} />
       <nav className="bp-nav">
         <a className="bp-brand" href="/"><b>NXT<i>{'//'}</i>LINK</b><span>{t.myProfile}</span></a>
         <div className="bp-navr">
@@ -190,7 +192,7 @@ export default function BuyerProfilePage() {
               <p className="bp-sub">{t.sub}</p>
               {msg && <div className={msg === t.saved ? 'bp-ok' : 'bp-err'}>{msg}</div>}
 
-              <section className="bp-card">
+              <section className="bp-card nxm-in">
                 <div className="bp-lbl">{t.logoLabel}</div>
                 <div className="bp-logo">
                   <div className="bp-logobox">{logoUrl ? <img src={logoUrl} alt={t.companyName} /> : <span>Logo</span>}</div>
@@ -217,9 +219,15 @@ export default function BuyerProfilePage() {
                       ...INDUSTRIES.map((i) => [i.en, i] as const),
                       ...selectedIndustries.filter((v) => !INDUSTRIES.some((i) => i.en === v)).map((v) => [v, { en: v, es: v }] as const),
                     ]).values()
-                  ).map((i) => (
-                    <button key={i.en} type="button" className={'bp-chip' + (selectedIndustries.includes(i.en) ? ' on' : '')} onClick={() => toggleIndustry(i.en)}>{lang === 'es' ? i.es : i.en}</button>
-                  ))}
+                  ).map((i) => {
+                    const on = selectedIndustries.includes(i.en);
+                    return (
+                    <button key={i.en} type="button" className={'bp-chip' + (on ? ' on' : '')} onClick={() => toggleIndustry(i.en)}>
+                      {on && <Check size={12} strokeWidth={2.5} aria-hidden="true" />}
+                      {lang === 'es' ? i.es : i.en}
+                    </button>
+                    );
+                  })}
                 </div>
                 <div className="bp-addown">
                   <input value={customInd} placeholder={t.customIndustryPh} onChange={(e) => setCustomInd(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && customInd.trim()) { toggleIndustry(customInd.trim()); setCustomInd(''); } }} />
@@ -278,7 +286,7 @@ const CSS = `
 .bp-grid input,.bp-addown input,.bp-phone input,.bp-phone select{font-family:inherit;font-size:14.5px;padding:11px 13px;border-radius:11px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-ink,#141320);outline:none;width:100%;}
 .bp-grid input:focus,.bp-addown input:focus,.bp-phone input:focus{border-color:var(--spec-violet,#6C5CE0);box-shadow:0 0 0 3px rgba(108,92,224,.12);}
 .bp-chips{display:flex;flex-wrap:wrap;gap:8px;}
-.bp-chip{font-family:inherit;font-size:12.5px;font-weight:500;padding:8px 13px;border-radius:99px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-ink,#141320);cursor:pointer;}
+.bp-chip{display:inline-flex;align-items:center;gap:5px;font-family:inherit;font-size:12.5px;font-weight:500;padding:8px 13px;border-radius:99px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-ink,#141320);cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease),border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .bp-chip:hover{border-color:var(--spec-violet,#6C5CE0);}
 .bp-chip.on{background:rgba(108,92,224,.1);border-color:var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);}
 .bp-addown{display:flex;gap:9px;margin-top:11px;}

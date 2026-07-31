@@ -9,8 +9,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
+import { FileEdit, Send, RefreshCw, CheckCircle2, Clock, type LucideIcon } from 'lucide-react';
 import VendorNav from '@/components/VendorNav';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
+import { MOTION_CSS, staggerStyle } from '@/components/motion/Motion';
 
 // Design System v1.0 reskin (Premium Polish Phase 2, 2026-07-23): visual/CSS
 // only — every handler and state above is unchanged.
@@ -112,6 +114,10 @@ export default function VendorProposalsPage() {
   const [lang, setLang] = useLang(); // stored `nxt_lang` — shared across marketplace pages
   const t = T[lang];
   const STATUS_LABEL: Record<string, string> = { draft: t.stDraft, submitted: t.stSubmitted, revised: t.stRevised, final: t.stFinal };
+  // Icons+colors sweep (2026-07-30) — visual only, the status VALUES are
+  // untouched. Same vocabulary spirit as vendor/leads' STATUS_ICON: one
+  // lucide icon per proposal status.
+  const STATUS_ICON: Record<string, LucideIcon> = { draft: FileEdit, submitted: Send, revised: RefreshCw, final: CheckCircle2 };
   const [loading, setLoading] = useState(true);
   const [signedIn, setSignedIn] = useState(true);
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -202,7 +208,7 @@ export default function VendorProposalsPage() {
 
   return (
     <div className={`vp ${ibmPlexSans.variable}`}>
-      <style dangerouslySetInnerHTML={{ __html: CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: MOTION_CSS + CSS }} />
       <VendorNav active="quotes" extra={<LanguageToggle lang={lang} onChange={setLang} variant="light" />} />
 
       <div className="vp-wrap">
@@ -220,13 +226,15 @@ export default function VendorProposalsPage() {
             {/* Lead picker */}
             <aside className="vp-leads">
               <div className="vp-leadhead">{t.openLeadsHead} ({leads.length})</div>
-              {leads.map((l) => (
-                <button key={l.id} className={`vp-lead ${sel?.id === l.id ? 'on' : ''}`} onClick={() => pickLead(l)}>
+              {leads.map((l, li) => (
+                <button key={l.id} className={`vp-lead nxm-in nxm-lift ${sel?.id === l.id ? 'on' : ''}`} style={staggerStyle(li)} onClick={() => pickLead(l)}>
                   <div className="vp-leadname">{l.listing_name || (l.kind === 'service' ? t.serviceRequest : t.productRequest)}</div>
                   <div className="vp-leadmeta">{l.company || l.contact_name || t.buyerFallback} · {fmtDate(l.created_at)}</div>
                   <div className="vp-leadrow">
                     <span className="vp-ref">{l.public_ref}</span>
-                    {l.quote_amount ? <span className="vp-quoted">{t.quoted} {money(l.quote_amount)}</span> : <span className="vp-await">{t.awaitingQuote}</span>}
+                    {l.quote_amount
+                      ? <span className="vp-quoted"><CheckCircle2 size={11} strokeWidth={2.25} aria-hidden="true" />{t.quoted} {money(l.quote_amount)}</span>
+                      : <span className="vp-await"><Clock size={11} strokeWidth={2.25} aria-hidden="true" />{t.awaitingQuote}</span>}
                   </div>
                 </button>
               ))}
@@ -305,14 +313,17 @@ export default function VendorProposalsPage() {
                     <>
                       <div className="vp-sec">{t.history}</div>
                       <div className="vp-hist">
-                        {history.map((p) => (
-                          <div key={p.id} className="vp-histrow">
-                            <span className={`vp-hstat ${p.status}`}>{STATUS_LABEL[p.status] || p.status}</span>
+                        {history.map((p, pi) => {
+                          const SIcon = STATUS_ICON[p.status];
+                          return (
+                          <div key={p.id} className="vp-histrow nxm-in" style={staggerStyle(pi)}>
+                            <span className={`vp-hstat ${p.status}`}>{SIcon && <SIcon size={11} strokeWidth={2.25} aria-hidden="true" />}{STATUS_LABEL[p.status] || p.status}</span>
                             <span>{t.revSent} {p.revision}</span>
                             <span>{money(p.total || 0)}</span>
                             <span className="vp-hdate">{p.submitted_at ? fmtDate(p.submitted_at) : t.draftStatus}</span>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </>
                   )}
@@ -351,8 +362,8 @@ const CSS = `
 .vp-leadmeta{font-size:11px;color:var(--spec-text-2nd,#615F72);margin-top:3px;}
 .vp-leadrow{display:flex;justify-content:space-between;align-items:center;margin-top:7px;gap:6px;}
 .vp-ref{font-size:10.5px;color:#706D88;font-variant-numeric:tabular-nums;}
-.vp-quoted{font-size:10.5px;font-weight:700;color:var(--spec-success,#2F9E6A);}
-.vp-await{font-size:10.5px;font-weight:700;color:var(--spec-warning,#C68A28);}
+.vp-quoted{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:700;color:var(--spec-success,#2F9E6A);}
+.vp-await{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:700;color:var(--spec-warning,#C68A28);}
 .vp-main{background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:15px;padding:20px;}
 .vp-selhead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;border-bottom:1px solid var(--spec-border,#E2DFEC);padding-bottom:14px;}
 .vp-selname{font-size:16px;font-weight:800;}
@@ -393,9 +404,12 @@ const CSS = `
 .vp-msg.err{background:#FBECEA;color:var(--spec-error,#CE4B43);}
 .vp-hist{display:flex;flex-direction:column;gap:6px;}
 .vp-histrow{display:flex;align-items:center;gap:14px;font-size:12.5px;color:var(--spec-text-2nd,#615F72);background:var(--spec-surface,#EFEDF5);border-radius:9px;padding:9px 12px;font-variant-numeric:tabular-nums;}
-.vp-hstat{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:3px 8px;border-radius:99px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-text-2nd,#615F72);}
-.vp-hstat.submitted{background:#E9F7F0;border-color:transparent;color:#1F7A54;}
-.vp-hstat.draft{background:#FBF3E7;border-color:transparent;color:var(--spec-warning,#C68A28);}
-.vp-hstat.revised{background:rgba(108,92,224,.1);border-color:transparent;color:var(--spec-violet-deep,#4A3DB0);}
+.vp-hstat{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:3px 8px;border-radius:99px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-text-2nd,#615F72);}
+/* Verified 7/30 tint/text pairs (icons+colors sweep) — warning=draft (in
+   progress), violet=submitted/revised (sent), success=final (accepted). */
+.vp-hstat.submitted{background:#EDEAFB;border-color:transparent;color:#4A3DB0;}
+.vp-hstat.draft{background:#FBF2E1;border-color:transparent;color:#8C5A15;}
+.vp-hstat.revised{background:#EDEAFB;border-color:transparent;color:#4A3DB0;}
+.vp-hstat.final{background:#E7F5EE;border-color:transparent;color:#1F7A54;}
 .vp-hdate{margin-left:auto;color:#8A87A0;}
 `;

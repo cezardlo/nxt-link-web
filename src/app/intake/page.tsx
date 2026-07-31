@@ -3,9 +3,11 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { IBM_Plex_Sans } from 'next/font/google';
+import { ClipboardCheck, Inbox, Scale } from 'lucide-react';
 import { ASSISTANT } from '@/lib/assistant/branding';
 import { useLang } from '@/components/LanguageToggle';
 import PublicHeader from '@/components/PublicHeader';
+import { MOTION_CSS, staggerStyle } from '@/components/motion/Motion';
 
 const ibmPlexSans = IBM_Plex_Sans({
   subsets: ['latin'],
@@ -330,7 +332,7 @@ function IntakeInner() {
           hover/active/focus-visible polish called out in the CSS below.
           Zero state-machine, question-logic, validation, or submit/dispatch
           code touched — only the JSX style attribute → className mapping. */}
-      <style dangerouslySetInnerHTML={{ __html: IQ_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: MOTION_CSS + IQ_CSS }} />
 
       {/* ONE shared public header (Flow Blueprint 2026-07-22 §4, Slice 2) —
           replaces this page's old header-less/custom EN|ES-only nav. Bound
@@ -361,8 +363,12 @@ function IntakeInner() {
 
         {/* Submitted success card */}
         {phase === 'submitted' && (
-          <div className="iq-card iq-card--success">
-            <div className="iq-checkicon">✓</div>
+          <div className="iq-card iq-card--success nxm-in">
+            <div className="iq-checkicon">
+              <svg width="28" height="28" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="iq-checkdraw" />
+              </svg>
+            </div>
             <h2 className="iq-successh2">{tr('Request received', 'Solicitud recibida')}</h2>
             <p className="iq-refline">
               {tr('Your reference:', 'Tu referencia:')}{' '}
@@ -380,12 +386,13 @@ function IntakeInner() {
             {/* "How it works" transparency timeline — an easy question ("what
                 happens next?") converts better than a vague promise. */}
             <div className="iq-timeline">
-              {[
-                [tr('Today', 'Hoy'), tr('A human at NXT//LINK reviews your request — nothing is shared before that.', 'Un humano de NXT//LINK revisa tu solicitud — nada se comparte antes de eso.')],
-                [tr('Next', 'Después'), tr('Matched vendors reply with quotes inside NXT//LINK. We notify you as they arrive.', 'Los proveedores compatibles responden con cotizaciones dentro de NXT//LINK. Te avisamos cuando lleguen.')],
-                [tr('Then', 'Luego'), tr('You compare and decide. Posting is free — no commitment until you accept a quote.', 'Comparas y decides. Publicar es gratis — sin compromiso hasta que aceptes una cotización.')],
-              ].map(([step, text], i) => (
-                <div key={i} className="iq-timeline-row">
+              {([
+                { step: tr('Today', 'Hoy'), text: tr('A human at NXT//LINK reviews your request — nothing is shared before that.', 'Un humano de NXT//LINK revisa tu solicitud — nada se comparte antes de eso.'), Icon: ClipboardCheck },
+                { step: tr('Next', 'Después'), text: tr('Matched vendors reply with quotes inside NXT//LINK. We notify you as they arrive.', 'Los proveedores compatibles responden con cotizaciones dentro de NXT//LINK. Te avisamos cuando lleguen.'), Icon: Inbox },
+                { step: tr('Then', 'Luego'), text: tr('You compare and decide. Posting is free — no commitment until you accept a quote.', 'Comparas y decides. Publicar es gratis — sin compromiso hasta que aceptes una cotización.'), Icon: Scale },
+              ] as const).map(({ step, text, Icon }, i) => (
+                <div key={i} className="iq-timeline-row nxm-in" style={staggerStyle(i)}>
+                  <span className="iq-timeline-icon" aria-hidden="true"><Icon size={15} strokeWidth={1.75} /></span>
                   <span className="iq-timeline-step">{step}</span>
                   <span className="iq-timeline-text">{text}</span>
                 </div>
@@ -403,7 +410,7 @@ function IntakeInner() {
             {/* Messages */}
             <div className="iq-messages">
               {phase === 'intro' && messages.length === 0 && (
-                <div className="iq-bubble iq-bubble--assistant">
+                <div className="iq-bubble iq-bubble--assistant nxm-in">
                   {tr(
                     "Hi! I'm here to help you describe what you need. Tell me in your own words — what are you looking for?",
                     'Hola! Estoy aquí para ayudarte a describir lo que necesitas. Cuéntame en tus propias palabras — ¿qué buscas?'
@@ -414,7 +421,7 @@ function IntakeInner() {
               {messages.map((m, i) => (
                 <div
                   key={i}
-                  className={`iq-bubble ${m.role === 'user' ? 'iq-bubble--user' : 'iq-bubble--assistant'}`}
+                  className={`iq-bubble nxm-in ${m.role === 'user' ? 'iq-bubble--user' : 'iq-bubble--assistant'}`}
                 >
                   {m.text}
                 </div>
@@ -488,7 +495,7 @@ function IntakeInner() {
 
         {/* Request Summary card */}
         {phase === 'summary' && summary && (
-          <div className="iq-card iq-card--summary">
+          <div className="iq-card iq-card--summary nxm-in">
             <h2 className="iq-summaryh2">{tr('Request Summary', 'Resumen de Solicitud')}</h2>
 
             <SummaryFields summary={summary} isEs={isEs} />
@@ -725,6 +732,11 @@ const IQ_CSS = `
 .iq-card--summary{padding:28px;}
 
 .iq-checkicon{width:64px;height:64px;border-radius:50%;background:#EDF7F1;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:28px;color:var(--spec-success,#2F9E6A);}
+/* Self-drawing checkmark — same stroke-dasharray/dashoffset technique as
+   vendor/onboarding's CheckDraw and AcceptCelebration's acx-draw (each page
+   keeps a local copy, namespaced, rather than a shared import). */
+.iq-checkdraw{stroke-dasharray:20;stroke-dashoffset:20;animation:iq-draw 480ms 200ms var(--nxm-ease-entrance,ease-out) forwards;}
+@keyframes iq-draw{to{stroke-dashoffset:0;}}
 .iq-successh2{font-size:var(--spec-text-h3);font-weight:800;letter-spacing:var(--spec-tracking-heading);margin-bottom:12px;font-family:var(--font-space-grotesk),"Space Grotesk",system-ui,sans-serif;}
 .iq-summaryh2{font-size:var(--spec-text-h3);font-weight:800;letter-spacing:var(--spec-tracking-heading);margin-bottom:18px;font-family:var(--font-space-grotesk),"Space Grotesk",system-ui,sans-serif;}
 
@@ -737,7 +749,8 @@ const IQ_CSS = `
 
 .iq-timeline{max-width:460px;margin:18px auto 0;text-align:left;display:flex;flex-direction:column;gap:12px;}
 .iq-timeline-row{display:flex;gap:12px;align-items:flex-start;}
-.iq-timeline-step{flex:none;min-width:64px;font-size:var(--spec-text-caption);font-weight:800;letter-spacing:var(--spec-tracking-eyebrow);text-transform:uppercase;color:var(--spec-violet,#6C5CE0);padding-top:2px;}
+.iq-timeline-icon{flex:none;width:26px;height:26px;border-radius:8px;background:rgba(108,92,224,.1);color:var(--spec-violet-deep,#4A3DB0);display:flex;align-items:center;justify-content:center;margin-top:1px;}
+.iq-timeline-step{flex:none;min-width:56px;font-size:var(--spec-text-caption);font-weight:800;letter-spacing:var(--spec-tracking-eyebrow);text-transform:uppercase;color:var(--spec-violet,#6C5CE0);padding-top:2px;}
 .iq-timeline-text{color:var(--spec-text-2nd,#615F72);font-size:14px;line-height:1.55;}
 
 /* Back-to-home CTA is an <a>, not a <button>, so it doesn't get the global

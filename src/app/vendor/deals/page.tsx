@@ -14,8 +14,10 @@
 
 import { useEffect, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
+import { Clock, Trophy, Send, CheckCircle2, FileText, BadgeCheck, AlertTriangle, AlertCircle, Gift, XCircle, type LucideIcon } from 'lucide-react';
 import VendorNav from '@/components/VendorNav';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
+import { MOTION_CSS, staggerStyle } from '@/components/motion/Motion';
 
 // Design System v1.0 reskin (Premium Polish Phase 2, 2026-07-23): visual/CSS
 // only — every handler and state above is unchanged.
@@ -82,6 +84,14 @@ export default function VendorDealsPage() {
     reserved: t.stReserved, won: t.stWon, payment_reported: t.stPaymentReported, payment_confirmed: t.stPaymentConfirmed,
     invoiced: t.stInvoiced, paid: t.stPaid, overdue: t.stOverdue, disputed: t.stDisputed, credited: t.stCredited, cancelled: t.stCancelled,
   };
+  // Icons+colors sweep (2026-07-30) — visual only, the status VALUES are
+  // untouched. Same vocabulary spirit as vendor/leads' STATUS_ICON, extended
+  // to this page's 10 pipeline statuses.
+  const STATUS_ICON: Record<string, LucideIcon> = {
+    reserved: Clock, won: Trophy, payment_reported: Send, payment_confirmed: CheckCircle2,
+    invoiced: FileText, paid: BadgeCheck, overdue: AlertTriangle, disputed: AlertCircle,
+    credited: Gift, cancelled: XCircle,
+  };
 
   const [loading, setLoading] = useState(true);
   const [signedIn, setSignedIn] = useState(true);
@@ -108,7 +118,7 @@ export default function VendorDealsPage() {
 
   return (
     <div className={`vd ${ibmPlexSans.variable}`}>
-      <style dangerouslySetInnerHTML={{ __html: CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: MOTION_CSS + CSS }} />
       <VendorNav active="deals" extra={<LanguageToggle lang={lang} onChange={setLang} variant="light" />} />
 
       <div className="vd-wrap">
@@ -149,11 +159,13 @@ export default function VendorDealsPage() {
               <div className="vd-empty">{t.emptyDeals}</div>
             ) : (
               <div className="vd-list">
-                {deals.map((d) => (
-                  <div key={d.id} className="vd-card">
+                {deals.map((d, di) => {
+                  const SIcon = STATUS_ICON[d.status];
+                  return (
+                  <div key={d.id} className="vd-card nxm-in nxm-lift" style={staggerStyle(di)}>
                     <div className="vd-cardtop">
                       <div><b>{d.buyer_company || t.buyerFallback}</b>{d.opportunity_ref && <span className="vd-ref">{d.opportunity_ref}</span>}</div>
-                      <span className={`vd-badge s-${d.status}`}>{STATUS_LABEL[d.status] || d.status}</span>
+                      <span className={`vd-badge s-${d.status}`}>{SIcon && <SIcon size={11} strokeWidth={2.25} aria-hidden="true" />}{STATUS_LABEL[d.status] || d.status}</span>
                     </div>
                     {d.description && <div className="vd-desc">{d.description}</div>}
                     <div className="vd-row">
@@ -163,7 +175,8 @@ export default function VendorDealsPage() {
                       {d.invoice_ref && <div><span>{t.invoiceLabel}</span><b>{d.invoice_ref}</b></div>}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </>
@@ -202,10 +215,19 @@ const CSS = `
 .vd-cardtop{display:flex;justify-content:space-between;align-items:center;gap:10px;}
 .vd-cardtop b{font-size:15px;}
 .vd-ref{margin-left:8px;font-size:11.5px;color:var(--spec-text-2nd,#615F72);font-variant-numeric:tabular-nums;}
-.vd-badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;background:var(--spec-surface,#EFEDF5);color:var(--spec-ink,#141320);white-space:nowrap;}
-.vd-badge.s-paid{background:#E9F7F0;color:#1F7A54;}
-.vd-badge.s-invoiced,.vd-badge.s-payment_confirmed{background:rgba(108,92,224,.1);color:var(--spec-violet-deep,#4A3DB0);}
-.vd-badge.s-overdue,.vd-badge.s-disputed{background:#FBECEA;color:var(--spec-error,#CE4B43);}
+.vd-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;background:var(--spec-surface,#EFEDF5);color:var(--spec-ink,#141320);white-space:nowrap;}
+/* Verified 7/30 tint/text pairs (icons+colors sweep) across the 10 pipeline
+   statuses — icon differentiates same-tone statuses so color is never the
+   only signal (reserved=info, won=active, payment_reported=warning,
+   payment_confirmed/invoiced=violet, paid/credited=success, overdue/
+   disputed=error, cancelled=neutral default above). */
+.vd-badge.s-reserved{background:#E9EFFB;color:#2F5AA8;}
+.vd-badge.s-won{background:#E2F5F2;color:#0A6F62;}
+.vd-badge.s-payment_reported{background:#FBF2E1;color:#8C5A15;}
+.vd-badge.s-paid{background:#E7F5EE;color:#1F7A54;}
+.vd-badge.s-credited{background:#E7F5EE;color:#1F7A54;}
+.vd-badge.s-invoiced,.vd-badge.s-payment_confirmed{background:#EDEAFB;color:#4A3DB0;}
+.vd-badge.s-overdue,.vd-badge.s-disputed{background:#FBECEB;color:#A83E36;}
 .vd-desc{font-size:13px;color:var(--spec-text-2nd,#615F72);margin-top:8px;line-height:1.5;}
 .vd-row{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:12px;padding-top:12px;border-top:1px solid var(--spec-border,#E2DFEC);}
 .vd-row>div{display:flex;flex-direction:column;gap:2px;}

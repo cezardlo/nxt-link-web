@@ -9,8 +9,14 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
+import {
+  ClipboardList, CheckCircle2, Search, Send, Inbox, Scale, HelpCircle,
+  UserCheck, Wrench, Trophy, Archive, FolderOpen, type LucideIcon,
+} from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
+import { MOTION_CSS, staggerStyle } from '@/components/motion/Motion';
+import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
 
 // Design System v1.0 reskin (Premium Polish Phase 2, 2026-07-23): visual/CSS
 // only — every handler and state above is unchanged.
@@ -53,6 +59,15 @@ const STAGE_LABEL_ES: Record<string, string> = {
   completed: 'Completado', archived: 'Archivado',
 };
 const PRIORITY_KEY: Record<string, string> = { high: 'priHigh', urgent: 'priUrgent', low: 'priLow', medium: 'priMedium' };
+// Icons+colors sweep (2026-07-30) — visual only, the stage VALUES are
+// untouched. One lucide icon per project stage, same vocabulary spirit as
+// vendor/leads' STATUS_ICON.
+const STAGE_ICON: Record<string, LucideIcon> = {
+  organizing: ClipboardList, requirements_ready: CheckCircle2, matching: Search,
+  vendors_invited: Send, collecting_quotes: Inbox, comparing: Scale,
+  decision: HelpCircle, vendor_selected: UserCheck, implementation: Wrench,
+  completed: Trophy, archived: Archive,
+};
 const STAGE_PCT: Record<string, number> = {
   organizing: 15, requirements_ready: 25, matching: 35, vendors_invited: 45, collecting_quotes: 60,
   comparing: 70, decision: 80, vendor_selected: 88, implementation: 95, completed: 100, archived: 100,
@@ -195,7 +210,7 @@ export default function ProjectsPage() {
 
   return (
     <div className={`pw ${ibmPlexSans.variable}`}>
-      <style dangerouslySetInnerHTML={{ __html: CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: MOTION_CSS + CSS + EMPTY_ACTION_CSS }} />
       <nav className="pw-nav">
         <a className="pw-brand" href="/"><b>NXT<i>//</i>LINK</b><span>{t.workspace}</span></a>
         <div className="pw-navr">
@@ -212,7 +227,7 @@ export default function ProjectsPage() {
         </header>
 
         {/* Conversational starter */}
-        <section className="pw-starter">
+        <section className="pw-starter nxm-in">
           {!draft ? (
             <>
               <label className="pw-q">{t.startQ}</label>
@@ -278,13 +293,15 @@ export default function ProjectsPage() {
             {checking ? (
               <div className="pw-empty">{t.loading}</div>
             ) : projects.length === 0 ? (
-              <div className="pw-empty">{t.noProjectsYet}</div>
+              <EmptyAction icon={<FolderOpen size={20} strokeWidth={1.75} aria-hidden="true" />} title={t.noProjectsYet} />
             ) : (
               <div className="pw-grid">
-                {projects.map((p) => (
-                  <a key={p.id} className="pw-card" href={`/projects/${p.id}`}>
+                {projects.map((p, pi) => {
+                  const SIcon = STAGE_ICON[p.stage];
+                  return (
+                  <a key={p.id} className="pw-card nxm-in" style={staggerStyle(pi)} href={`/projects/${p.id}`}>
                     <div className="pw-cardtop">
-                      <span className={`pw-stage s-${p.stage}`}>{(lang === 'es' ? STAGE_LABEL_ES[p.stage] : STAGE_LABEL[p.stage]) || p.stage}</span>
+                      <span className={`pw-stage s-${p.stage}`}>{SIcon && <SIcon size={11} strokeWidth={2.25} aria-hidden="true" />}{(lang === 'es' ? STAGE_LABEL_ES[p.stage] : STAGE_LABEL[p.stage]) || p.stage}</span>
                       {p.priority !== 'medium' && <span className={`pw-pri ${p.priority}`}>{lang === 'es' ? (t[PRIORITY_KEY[p.priority]] || p.priority) : p.priority}</span>}
                     </div>
                     <div className="pw-cardname">{p.name}</div>
@@ -293,7 +310,8 @@ export default function ProjectsPage() {
                     {p.next_action && <div className="pw-next"><b>{t.next}</b> {p.next_action}</div>}
                     <div className="pw-cardfoot">{t.updated} {fmtDate(p.updated_at, lang)}</div>
                   </a>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
@@ -346,9 +364,9 @@ const CSS = `
 .pw-card{display:block;background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:15px;padding:16px;text-decoration:none;color:var(--spec-ink,#141320);transition:border-color .15s,transform .15s,box-shadow .15s;}
 .pw-card:hover{border-color:var(--spec-violet,#6C5CE0);transform:translateY(-2px);box-shadow:0 8px 20px rgba(20,19,32,.08);}
 .pw-cardtop{display:flex;justify-content:space-between;align-items:center;gap:8px;}
-.pw-stage{font-size:11px;font-weight:700;padding:4px 9px;border-radius:99px;background:rgba(108,92,224,.1);color:var(--spec-violet-deep,#4A3DB0);}
-.pw-stage.s-completed{background:#E9F7F0;color:#1F7A54;}
-.pw-stage.s-decision{background:#FBF3E7;color:var(--spec-warning,#C68A28);}
+.pw-stage{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:4px 9px;border-radius:99px;background:rgba(108,92,224,.1);color:var(--spec-violet-deep,#4A3DB0);}
+.pw-stage.s-completed{background:#E7F5EE;color:#1F7A54;}
+.pw-stage.s-decision{background:#FBF2E1;color:#8C5A15;}
 .pw-pri{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:3px 8px;border-radius:99px;}
 .pw-pri.high{background:#FDEEE3;color:#B5651D;}
 .pw-pri.urgent{background:#FBECEA;color:var(--spec-error,#CE4B43);}
