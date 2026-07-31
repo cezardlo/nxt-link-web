@@ -14,12 +14,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
-import { Search, Plus, ArrowLeft, ExternalLink, Package, Wrench, ImageOff, Check, FileText, CheckCircle2, AlertCircle, Eye, EyeOff, type LucideIcon } from 'lucide-react';
+import {
+  Search, Plus, ArrowLeft, ExternalLink, Package, Wrench, ImageOff, Check,
+  Tag, FileText, Pen, CalendarClock, RefreshCw, ImagePlus,
+  CheckCircle2, AlertCircle, Eye, EyeOff, type LucideIcon,
+} from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import { scoreListing } from '@/lib/marketplace/completeness';
 import { pilotEntriesOf, customFieldsOf, type PilotEntry, type CustomField } from '@/lib/marketplace/types';
 import { autosaveKey, serializeAutosave, parseAutosave, isAutosaveWorthKeeping, mergeWithDefaults, sanitizeRestoredListingArrays } from '@/lib/vendor/listing-autosave';
 import ChipTagInput from '@/components/marketplace/ChipTagInput';
+import CategoryChipPicker from '@/components/vendor/CategoryChipPicker';
 import VendorNav from '@/components/VendorNav';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
 
@@ -72,7 +77,14 @@ interface Listing {
 // sections (see toBody/fromListing for the JSONB shape + back-compat read).
 interface Form {
   name: string; category: string; overview: string; best_for: string[]; industries: string[];
-  use_cases: string[]; specs: string; buy: boolean; rent: boolean; lease: boolean; lead_time: string;
+  use_cases: string[]; specs: string; buy: boolean; rent: boolean; lease: boolean;
+  // `quote` (2026-07-30, listing wizard v1): the server's availability enum
+  // already accepts 'buy'|'rent'|'lease'|'quote' (see normalizeListingInput
+  // in src/lib/marketplace/types.ts) -- no old UI ever set it, the wizard's
+  // "Request a quote" pricing card is the first writer. Existing edit panel
+  // never renders a control for this field, so old-panel behavior/output is
+  // unchanged (quote always stays false there).
+  quote: boolean; lead_time: string;
   service_areas: string; response_time: string; process: string; certifications: string;
   pricing_model: string; emergency_available: boolean;
   pilot_available: boolean; pilots: PilotEntry[];
@@ -82,7 +94,7 @@ interface Form {
 }
 const EMPTY: Form = {
   name: '', category: '', overview: '', best_for: [], industries: [],
-  use_cases: [], specs: '', buy: false, rent: false, lease: false, lead_time: '',
+  use_cases: [], specs: '', buy: false, rent: false, lease: false, quote: false, lead_time: '',
   service_areas: '', response_time: '', process: '', certifications: '',
   pricing_model: '', emergency_available: false,
   pilot_available: false, pilots: [],
@@ -219,6 +231,45 @@ const T: Record<Lang, Record<string, string>> = {
     serviceDetailsSummary: 'Service details',
     photosSectionLabel: 'Photos',
     draftSavedLocally: 'Draft saved',
+    // Listing-creation wizard v1 (2026-07-30) — new strings for the 3-step +
+    // review "+ New listing" flow. All flagged in the delivery report.
+    wizStepPrefix: 'Step', wizStepOfSuffix: 'of 4',
+    wizDotCategory: 'Category', wizDotDetails: 'Details', wizDotPricing: 'Pricing', wizDotReview: 'Review',
+    wizBack: 'Back',
+    wizCreatingDraft: 'Setting up your draft…',
+    wizStep1Title: 'What category is this?',
+    wizStep1Why: 'Buyers filter by category to find you.',
+    wizPickCategoryToContinue: 'Pick a category to continue.',
+    wizChooseCategory: 'Choose category',
+    wizStep2Title: 'Add photos & details',
+    wizPhotosHint: 'Drag photos here or tap to upload — listings with photos get more quotes.',
+    wizShortDescLabel: 'Short description *',
+    wizShortDescPh: 'One or two sentences buyers see first.',
+    wizShortDescHint: 'Buyers scan this first — aim for under ~200 characters.',
+    wizCharsCounted: 'characters',
+    wizFillRequiredToContinue: 'Add a name and short description to continue.',
+    wizAddDetails: 'Add details',
+    wizStep3Title: 'How do you want to sell this?',
+    wizStep3Why: 'This sets the price line buyers see and which fields you fill in.',
+    wizAvailabilityLabel: 'Availability',
+    wizInStock: 'In stock',
+    wizMadeToOrder: 'Made to order',
+    wizAvailableForService: 'Available for service',
+    wizCardFixed: 'Fixed price',
+    wizCardQuote: 'Request a quote',
+    wizCardRentLease: 'Rent or lease',
+    wizCardSubscription: 'Subscription',
+    wizPriceLabel: 'Price', wizPricePh: 'e.g. $1,200 or $15k–$40k',
+    wizRateLabel: 'Rate', wizRatePh: 'e.g. $500/week',
+    wizWhatBuyersKnowLabel: 'What buyers should know (optional)',
+    wizWhatBuyersKnowPh: 'Financing, minimum order, typical turnaround…',
+    wizRentAvailable: 'Available to rent', wizLeaseAvailable: 'Available to lease',
+    wizRentLeaseServiceNote: "Rent/lease isn't tracked for services yet — this just labels your pricing model.",
+    wizSubscriptionNote: 'Billing cycle and recurring price aren\'t set up yet — this just tags the listing as a subscription for now.',
+    wizChoosePricingToContinue: 'Pick how you sell this to continue.',
+    wizSetPricing: 'Set pricing',
+    wizPreviewTitle: 'Preview',
+    wizPreviewNoCategory: 'No category yet',
   },
   es: {
     loading: 'Cargando…', signInTitle: 'Inicia sesión para administrar tus publicaciones', goToSignIn: 'Ir a iniciar sesión →',
@@ -306,6 +357,45 @@ const T: Record<Lang, Record<string, string>> = {
     serviceDetailsSummary: 'Detalles del servicio',
     photosSectionLabel: 'Fotos',
     draftSavedLocally: 'Borrador guardado',
+    // Listing-creation wizard v1 (2026-07-30) — new strings for the 3-step +
+    // review "+ New listing" flow. All flagged in the delivery report.
+    wizStepPrefix: 'Paso', wizStepOfSuffix: 'de 4',
+    wizDotCategory: 'Categoría', wizDotDetails: 'Detalles', wizDotPricing: 'Precio', wizDotReview: 'Revisar',
+    wizBack: 'Atrás',
+    wizCreatingDraft: 'Preparando tu borrador…',
+    wizStep1Title: '¿Qué categoría es esta?',
+    wizStep1Why: 'Los compradores filtran por categoría para encontrarte.',
+    wizPickCategoryToContinue: 'Elige una categoría para continuar.',
+    wizChooseCategory: 'Elegir categoría',
+    wizStep2Title: 'Agrega fotos y detalles',
+    wizPhotosHint: 'Arrastra fotos aquí o toca para subir — las publicaciones con fotos reciben más cotizaciones.',
+    wizShortDescLabel: 'Descripción breve *',
+    wizShortDescPh: 'Una o dos oraciones que los compradores ven primero.',
+    wizShortDescHint: 'Los compradores leen esto primero — procura menos de ~200 caracteres.',
+    wizCharsCounted: 'caracteres',
+    wizFillRequiredToContinue: 'Agrega un nombre y una descripción breve para continuar.',
+    wizAddDetails: 'Agregar detalles',
+    wizStep3Title: '¿Cómo quieres vender esto?',
+    wizStep3Why: 'Esto define el precio que ven los compradores y qué campos llenas.',
+    wizAvailabilityLabel: 'Disponibilidad',
+    wizInStock: 'En existencia',
+    wizMadeToOrder: 'Sobre pedido',
+    wizAvailableForService: 'Disponible para servicio',
+    wizCardFixed: 'Precio fijo',
+    wizCardQuote: 'Solicitar cotización',
+    wizCardRentLease: 'Rentar o arrendar',
+    wizCardSubscription: 'Suscripción',
+    wizPriceLabel: 'Precio', wizPricePh: 'ej. $1,200 o $15,000–$40,000',
+    wizRateLabel: 'Tarifa', wizRatePh: 'ej. $500/semana',
+    wizWhatBuyersKnowLabel: 'Lo que deben saber los compradores (opcional)',
+    wizWhatBuyersKnowPh: 'Financiamiento, pedido mínimo, tiempo típico…',
+    wizRentAvailable: 'Disponible para rentar', wizLeaseAvailable: 'Disponible para arrendar',
+    wizRentLeaseServiceNote: 'Rentar/arrendar aún no aplica a servicios — esto solo etiqueta tu modelo de precios.',
+    wizSubscriptionNote: 'El ciclo de facturación y el precio recurrente aún no están configurados — por ahora solo se etiqueta como suscripción.',
+    wizChoosePricingToContinue: 'Elige cómo vendes esto para continuar.',
+    wizSetPricing: 'Configurar precio',
+    wizPreviewTitle: 'Vista previa',
+    wizPreviewNoCategory: 'Aún sin categoría',
   },
 };
 
@@ -355,7 +445,7 @@ function toBody(kind: Kind, f: Form): Record<string, unknown> {
     },
   };
   if (kind === 'product') {
-    return { ...base, use_cases: f.use_cases, specs: specsObj, availability: ['buy', 'rent', 'lease'].filter((o) => f[o as 'buy']), lead_time: f.lead_time };
+    return { ...base, use_cases: f.use_cases, specs: specsObj, availability: ['buy', 'rent', 'lease', 'quote'].filter((o) => f[o as 'buy']), lead_time: f.lead_time };
   }
   return { ...base, service_areas: csv(f.service_areas), response_time: f.response_time, process: lines(f.process), certifications: csv(f.certifications), pricing_model: f.pricing_model, emergency_available: f.emergency_available };
 }
@@ -368,6 +458,7 @@ function fromListing(l: Listing): Form {
     use_cases: l.use_cases || [],
     specs: l.specs ? Object.entries(l.specs).map(([k, v]) => `${k}: ${v}`).join('\n') : '',
     buy: !!l.availability?.includes('buy'), rent: !!l.availability?.includes('rent'), lease: !!l.availability?.includes('lease'),
+    quote: !!l.availability?.includes('quote'),
     lead_time: l.lead_time || '',
     service_areas: join(l.service_areas), response_time: l.response_time || '',
     process: joinL(l.process), certifications: join(l.certifications),
@@ -431,6 +522,19 @@ export default function VendorListingsPage() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'product' | 'service' | 'live' | 'draft'>('all');
   const [newKindPrompt, setNewKindPrompt] = useState(false);
+
+  // Listing-creation wizard v1 (2026-07-30): "+ New listing" opens this
+  // 3-step + review flow instead of the full form below. `wizardStep` is
+  // null whenever the wizard isn't active (nothing open, or an EXISTING
+  // listing opened via openEdit — that path renders the unchanged full form
+  // further down, gated on `!wizardStep`). `pricingChoice` is UI-only state
+  // (which of the 4 "how do you want to sell this" cards is selected) — it
+  // never gets persisted directly; Step 3 translates it into the existing
+  // pricing.model / availability / pricing_model fields on save.
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 3 | 4 | null>(null);
+  const [pricingChoice, setPricingChoice] = useState<'fixed' | 'quote' | 'rent_lease' | 'subscription' | null>(null);
+  const [wizAvailability, setWizAvailability] = useState<'in_stock' | 'made_to_order'>('in_stock');
+  const [wizBusy, setWizBusy] = useState(false);
 
   function openReview(kind: Kind, listing: Listing) {
     setReviewFor({ kind, listing }); setAccOk(false); setPubErr(''); setExtras(null);
@@ -502,13 +606,33 @@ export default function VendorListingsPage() {
   // listings — never a hardcoded list, and typing a custom value is always
   // allowed on top of these.
   const [taxonomy, setTaxonomy] = useState<{ categories: string[]; industries: string[] } | null>(null);
+  // Raw departments (2026-07-30, listing wizard v1) — same response as the
+  // flattened `taxonomy` fetch above, just also keeping the department/family
+  // structure so the wizard's category step can show a breadcrumb ("Material
+  // Handling › Forklifts") for the selected category. Zero extra requests.
+  type CatDept = { fg: string; label_en: string; label_es: string; items: Array<{ label_en?: string; label_es?: string; family?: string }> };
+  const [catDepartments, setCatDepartments] = useState<CatDept[]>([]);
   useEffect(() => {
     fetch('/api/marketplace/categories').then((r) => r.json()).then((d) => {
       if (!d?.ok) return;
       const categories: string[] = (d.departments || []).flatMap((dep: { items?: Array<{ label_en?: string }> }) => (dep.items || []).map((it) => it.label_en || '')).filter(Boolean);
       setTaxonomy({ categories, industries: d.industries || [] });
+      setCatDepartments(d.departments || []);
     }).catch(() => {});
   }, []);
+  // Breadcrumb for the wizard's selected category: "Department › Family",
+  // falling back gracefully piece by piece when the taxonomy doesn't carry
+  // that much structure for a given item (e.g. no family on the row).
+  const categoryBreadcrumb = useCallback((label: string, lang2: Lang): string => {
+    for (const dep of catDepartments) {
+      const item = dep.items.find((it) => it.label_en === label);
+      if (!item) continue;
+      const depLabel = lang2 === 'es' ? dep.label_es : dep.label_en;
+      const family = item.family && item.family !== label ? item.family : '';
+      return family ? `${depLabel} › ${family}` : depLabel;
+    }
+    return '';
+  }, [catDepartments]);
 
   const suggestedCategories = useMemo(() => {
     const mine = [...products, ...services].map((l) => l.category).filter(Boolean) as string[];
@@ -593,7 +717,72 @@ export default function VendorListingsPage() {
   }
 
   function openNew(kind: Kind) { setNewKindPrompt(false); setEditing({ kind, id: null }); setF(EMPTY); setDocId(null); setAiSummary(''); setPasteText(''); setShowPaste(false); setMsg(''); checkResumeOffer(kind, null); }
-  function openEdit(kind: Kind, l: Listing) { setNewKindPrompt(false); setEditing({ kind, id: l.id }); setF(fromListing(l)); setDocId(null); setAiSummary(''); setPasteText(''); setShowPaste(false); setMsg(''); checkResumeOffer(kind, l.id); }
+  function openEdit(kind: Kind, l: Listing) { setNewKindPrompt(false); setWizardStep(null); setEditing({ kind, id: l.id }); setF(fromListing(l)); setDocId(null); setAiSummary(''); setPasteText(''); setShowPaste(false); setMsg(''); checkResumeOffer(kind, l.id); }
+
+  // Listing-creation wizard v1 (2026-07-30): what the "+ New product" /
+  // "+ New service" buttons call now, instead of openNew() directly. Reuses
+  // openNew for all the existing reset/resume-offer plumbing, then layers
+  // the wizard's own step/pricing-choice state on top.
+  function openWizard(kind: Kind) {
+    openNew(kind);
+    setWizardStep(1);
+    setPricingChoice(null);
+    setWizAvailability('in_stock');
+  }
+  function wizExit() { setEditing(null); setWizardStep(null); setMsg(''); }
+  function wizBackStep() {
+    if (wizardStep === 1 || wizardStep === null) { wizExit(); setNewKindPrompt(true); return; }
+    if (wizardStep === 4) setReviewFor(null);
+    setWizardStep((wizardStep - 1) as 1 | 2 | 3);
+  }
+  // Step 1 → 2: category is picked, but nothing is saved to the server yet
+  // (no id => photo upload, which needs one, isn't possible). Silently
+  // create the draft here using the category as a placeholder name — the
+  // vendor's own selection, never invented text — so Step 2's photo zone is
+  // usable immediately. The Title field in Step 2 pre-fills with the same
+  // value and the vendor is expected to overwrite it with the real name.
+  async function wizContinueFromCategory() {
+    if (!f.category || !editing) return;
+    if (editing.id) { setWizardStep(2); return; }
+    setWizBusy(true);
+    const placeholderName = f.name.trim() || f.category;
+    const saved = await save({ name: placeholderName });
+    setWizBusy(false);
+    if (!saved) return;
+    setF((prev) => ({ ...prev, name: placeholderName }));
+    setWizardStep(2);
+  }
+  async function wizContinueFromDetails() {
+    if (!f.name.trim() || !f.overview.trim() || !editing) return;
+    setWizBusy(true);
+    const saved = await save();
+    setWizBusy(false);
+    if (saved) setWizardStep(3);
+  }
+  // Step 3 → 4: translate the selected pricing card into the existing
+  // pricing.model / availability / pricing_model fields (never a new
+  // column), save, then reuse the EXACT existing review-before-publish
+  // state (reviewFor/accOk/pubBusy/pubErr/publishNow) the old panel already
+  // uses — Step 4 just renders it inline instead of as a modal.
+  async function wizContinueFromPricing() {
+    if (!pricingChoice || !editing) return;
+    const cardLabel = {
+      fixed: t.wizCardFixed, quote: t.wizCardQuote, rent_lease: t.wizCardRentLease, subscription: t.wizCardSubscription,
+    }[pricingChoice];
+    const overrides: Partial<Form> = { pr_model: cardLabel };
+    if (editing.kind === 'product') {
+      overrides.buy = pricingChoice === 'fixed';
+      overrides.quote = pricingChoice === 'quote';
+      overrides.rent = pricingChoice === 'rent_lease' ? f.rent : false;
+      overrides.lease = pricingChoice === 'rent_lease' ? f.lease : false;
+    } else {
+      overrides.pricing_model = cardLabel;
+    }
+    setWizBusy(true);
+    const saved = await save(overrides);
+    setWizBusy(false);
+    if (saved && editing) { setF((prev) => ({ ...prev, ...overrides })); openReview(editing.kind, saved); setWizardStep(4); }
+  }
 
   function mergeDraft(draft: Record<string, unknown>) {
     const d = draft as Partial<Listing> & Record<string, unknown>;
@@ -644,11 +833,20 @@ export default function VendorListingsPage() {
   // the /api/vendor/listings/extract endpoint and mergeDraft/resize helpers
   // remain server/dormant-side in case the assist returns later.
 
-  async function save(): Promise<Listing | null> {
+  // `overrides` (2026-07-30, listing wizard v1): lets a caller save a form
+  // value that hasn't landed in `f` state yet in THIS tick (React state
+  // updates are async, so `setF(...)` immediately followed by `save()` in
+  // the same handler would otherwise read the stale `f` via closure). Used
+  // once — the wizard's Step 1→2 transition, which needs to create the
+  // draft (to get an id for photo upload) using a placeholder name before
+  // the vendor has typed a real one. Every existing call site keeps calling
+  // save() with no args, so behavior there is byte-identical.
+  async function save(overrides?: Partial<Form>): Promise<Listing | null> {
     if (!editing) return null;
-    if (!f.name.trim()) { setMsg(t.giveNameFirst); return null; }
+    const ff = overrides ? { ...f, ...overrides } : f;
+    if (!ff.name.trim()) { setMsg(t.giveNameFirst); return null; }
     setSaving(true); setMsg('');
-    const body: Record<string, unknown> = { ...toBody(editing.kind, f), kind: editing.kind };
+    const body: Record<string, unknown> = { ...toBody(editing.kind, ff), kind: editing.kind };
     if (editing.id) body.id = editing.id;
     else { body.ai_extracted = Boolean(docId); if (docId) body.attach_document_id = docId; }
     const res = await fetch('/api/vendor/listings', {
@@ -685,7 +883,7 @@ export default function VendorListingsPage() {
     const data = await res.json();
     setPubBusy(false);
     if (!data.ok) { setPubErr(data.message || t.couldNotPublish); return; }
-    setReviewFor(null); setAccOk(false); setEditing(null);
+    setReviewFor(null); setAccOk(false); setEditing(null); setWizardStep(null);
     setMsg(t.publishedMsg);
     load();
   }
@@ -882,8 +1080,8 @@ export default function VendorListingsPage() {
               <div className="sc-kindpickbody">
                 <b>{t.chooseKindTitle}</b>
                 <div className="sc-kindopts">
-                  <button type="button" className="sc-kindopt" onClick={() => openNew('product')}><Package size={22} /><span>{t.newProduct}</span></button>
-                  <button type="button" className="sc-kindopt" onClick={() => openNew('service')}><Wrench size={22} /><span>{t.newService}</span></button>
+                  <button type="button" className="sc-kindopt" onClick={() => openWizard('product')}><Package size={22} /><span>{t.newProduct}</span></button>
+                  <button type="button" className="sc-kindopt" onClick={() => openWizard('service')}><Wrench size={22} /><span>{t.newService}</span></button>
                 </div>
               </div>
             </div>
@@ -896,7 +1094,213 @@ export default function VendorListingsPage() {
             </div>
           )}
 
-          {editing && (
+          {/* Listing-creation wizard v1 (2026-07-30): what "+ New listing" opens
+              now. Separate render path from the untouched full-form editor
+              below (`!wizardStep`) — an EXISTING listing (openEdit) always
+              clears wizardStep, so editing one always renders the old panel. */}
+          {editing && wizardStep && (
+            <div className="sc-wiz">
+              <div className="sc-edithead">
+                <button type="button" className="sc-backbtn" onClick={wizBackStep}><ArrowLeft size={18} /> {t.wizBack}</button>
+                <div className="sc-editheadmain">
+                  <span className="sc-lbl">{editing.kind === 'product' ? t.formNewProduct : t.formNewService}</span>
+                </div>
+              </div>
+
+              <div className="sc-wizdots" role="group" aria-label={`${t.wizStepPrefix} ${wizardStep} ${t.wizStepOfSuffix}`}>
+                {([t.wizDotCategory, t.wizDotDetails, t.wizDotPricing, t.wizDotReview]).map((label, i) => (
+                  <span key={label} className={'sc-wizdot' + (wizardStep === i + 1 ? ' active' : '') + (wizardStep > i + 1 ? ' done' : '')} aria-current={wizardStep === i + 1 ? 'step' : undefined}>
+                    <span className="sc-wizdotmark" aria-hidden="true">{wizardStep > i + 1 ? <Check size={11} strokeWidth={2.5} /> : null}</span>
+                    <span className="sc-wizdotlabel">{label}</span>
+                  </span>
+                ))}
+              </div>
+
+              <div className="sc-editbody">
+                <div className="sc-wizstep" key={wizardStep}>
+                  {wizardStep === 1 && (
+                    <>
+                      <h2 className="sc-wiztitle">{t.wizStep1Title}</h2>
+                      <p className="sc-wizwhy">{t.wizStep1Why}</p>
+                      <CategoryChipPicker
+                        selected={f.category ? [f.category] : []}
+                        onToggle={(label) => setF((prev) => ({ ...prev, category: prev.category === label ? '' : label }))}
+                        lang={lang}
+                      />
+                      {f.category && categoryBreadcrumb(f.category, lang) && (
+                        <p className="sc-wizbreadcrumb">{categoryBreadcrumb(f.category, lang)}</p>
+                      )}
+                      {!f.category && <p className="sc-wizhint">{t.wizPickCategoryToContinue}</p>}
+                    </>
+                  )}
+
+                  {wizardStep === 2 && (
+                    <>
+                      <h2 className="sc-wiztitle">{t.wizStep2Title}</h2>
+
+                      <div
+                        className="sc-wizphotozone"
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          Array.from(e.dataTransfer.files || [])
+                            .filter((file) => file.type.startsWith('image/'))
+                            .forEach((file) => uploadImage(file));
+                        }}
+                      >
+                        <span className="sc-lblsm">{t.photosSectionLabel}</span>
+                        <p className="sc-wizhint">{t.wizPhotosHint}</p>
+                        <div className="sc-photostripimgs">
+                          {(currentListing?.image_paths || []).filter((p) => /^https?:/.test(p)).map((p, i) => (
+                            <span className="sc-photothumb" key={i}><img src={p} alt="" /></span>
+                          ))}
+                          <label className="sc-photoadd" title={t.addPhoto}>
+                            <ImagePlus size={18} />
+                            <input type="file" accept="image/png,image/jpeg,image/webp" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadImage(file); e.target.value = ''; }} aria-label={t.addPhoto} />
+                          </label>
+                        </div>
+                      </div>
+
+                      {Field('name', editing.kind === 'product' ? t.nameLabelProduct : t.nameLabelService)}
+
+                      <label className="sc-field">
+                        <span>{t.wizShortDescLabel}</span>
+                        <textarea rows={3} placeholder={t.wizShortDescPh} value={f.overview} onChange={(e) => setF({ ...f, overview: e.target.value })} />
+                      </label>
+                      <p className="sc-wizcharcount">{f.overview.length} {t.wizCharsCounted}</p>
+                      <p className="sc-wizhint">{t.wizShortDescHint}</p>
+
+                      {editing.kind === 'product' && Field('specs', t.specsLabel, t.specsPh, 4)}
+                    </>
+                  )}
+
+                  {wizardStep === 3 && (
+                    <>
+                      {editing.kind === 'product' ? (
+                        <div className="sc-wizavail">
+                          <span className="sc-lblsm">{t.wizAvailabilityLabel}</span>
+                          <div className="sc-wizavailtoggle" role="radiogroup" aria-label={t.wizAvailabilityLabel}>
+                            <button type="button" role="radio" aria-checked={wizAvailability === 'in_stock'} className={'sc-wizavailbtn' + (wizAvailability === 'in_stock' ? ' active' : '')} onClick={() => { setWizAvailability('in_stock'); setF((p) => ({ ...p, lead_time: '' })); }}>
+                              {wizAvailability === 'in_stock' && <Check size={13} strokeWidth={2.5} />} {t.wizInStock}
+                            </button>
+                            <button type="button" role="radio" aria-checked={wizAvailability === 'made_to_order'} className={'sc-wizavailbtn' + (wizAvailability === 'made_to_order' ? ' active' : '')} onClick={() => setWizAvailability('made_to_order')}>
+                              {wizAvailability === 'made_to_order' && <Check size={13} strokeWidth={2.5} />} {t.wizMadeToOrder}
+                            </button>
+                          </div>
+                          {wizAvailability === 'made_to_order' && Field('lead_time', t.leadTimeLabel, t.leadTimePh)}
+                        </div>
+                      ) : (
+                        <div className="sc-wizavail">
+                          <span className="sc-lblsm">{t.wizAvailabilityLabel}</span>
+                          <p className="sc-wizstatic">{t.wizAvailableForService}</p>
+                        </div>
+                      )}
+
+                      <h2 className="sc-wiztitle">{t.wizStep3Title}</h2>
+                      <p className="sc-wizwhy">{t.wizStep3Why}</p>
+
+                      <div className="sc-wizcards" role="group" aria-label={t.wizStep3Title}>
+                        <button type="button" className={'sc-wizcard' + (pricingChoice === 'fixed' ? ' on' : '')} aria-pressed={pricingChoice === 'fixed'} onClick={() => setPricingChoice('fixed')}>
+                          <span className="sc-wizcardicon"><Tag size={20} strokeWidth={1.75} /></span>
+                          <span>{t.wizCardFixed}</span>
+                          {pricingChoice === 'fixed' && <span className="sc-wizcardcheck"><Check size={14} strokeWidth={2.5} /></span>}
+                        </button>
+                        <button type="button" className={'sc-wizcard' + (pricingChoice === 'quote' ? ' on' : '')} aria-pressed={pricingChoice === 'quote'} onClick={() => setPricingChoice('quote')}>
+                          <span className="sc-wizcardicon sc-wizcardicon-pair"><FileText size={20} strokeWidth={1.75} /><Pen size={12} strokeWidth={2.25} className="sc-wizcardicon2" /></span>
+                          <span>{t.wizCardQuote}</span>
+                          {pricingChoice === 'quote' && <span className="sc-wizcardcheck"><Check size={14} strokeWidth={2.5} /></span>}
+                        </button>
+                        <button type="button" className={'sc-wizcard' + (pricingChoice === 'rent_lease' ? ' on' : '')} aria-pressed={pricingChoice === 'rent_lease'} onClick={() => setPricingChoice('rent_lease')}>
+                          <span className="sc-wizcardicon"><CalendarClock size={20} strokeWidth={1.75} /></span>
+                          <span>{t.wizCardRentLease}</span>
+                          {pricingChoice === 'rent_lease' && <span className="sc-wizcardcheck"><Check size={14} strokeWidth={2.5} /></span>}
+                        </button>
+                        <button type="button" className={'sc-wizcard' + (pricingChoice === 'subscription' ? ' on' : '')} aria-pressed={pricingChoice === 'subscription'} onClick={() => setPricingChoice('subscription')}>
+                          <span className="sc-wizcardicon"><RefreshCw size={20} strokeWidth={1.75} /></span>
+                          <span>{t.wizCardSubscription}</span>
+                          {pricingChoice === 'subscription' && <span className="sc-wizcardcheck"><Check size={14} strokeWidth={2.5} /></span>}
+                        </button>
+                      </div>
+
+                      {pricingChoice === 'fixed' && (
+                        <div className="sc-wizdynamic">{Field('pr_range', t.wizPriceLabel, t.wizPricePh)}</div>
+                      )}
+                      {pricingChoice === 'quote' && (
+                        <div className="sc-wizdynamic">
+                          <label className="sc-field"><span>{t.wizWhatBuyersKnowLabel}</span><textarea rows={3} placeholder={t.wizWhatBuyersKnowPh} value={f.pr_notes} onChange={(e) => setF({ ...f, pr_notes: e.target.value })} /></label>
+                        </div>
+                      )}
+                      {pricingChoice === 'rent_lease' && (
+                        <div className="sc-wizdynamic">
+                          {editing.kind === 'product' ? (
+                            <div className="sc-cbrow">
+                              <label className="sc-cb"><input type="checkbox" checked={f.rent} onChange={(e) => setF({ ...f, rent: e.target.checked })} /> {t.wizRentAvailable}</label>
+                              <label className="sc-cb"><input type="checkbox" checked={f.lease} onChange={(e) => setF({ ...f, lease: e.target.checked })} /> {t.wizLeaseAvailable}</label>
+                            </div>
+                          ) : (
+                            <p className="sc-wizhint">{t.wizRentLeaseServiceNote}</p>
+                          )}
+                          {Field('pr_range', t.wizRateLabel, t.wizRatePh)}
+                        </div>
+                      )}
+                      {pricingChoice === 'subscription' && (
+                        <p className="sc-wizhint">{t.wizSubscriptionNote}</p>
+                      )}
+                      {!pricingChoice && <p className="sc-wizhint">{t.wizChoosePricingToContinue}</p>}
+                    </>
+                  )}
+
+                  {wizardStep === 4 && (
+                    <>
+                      <h2 className="sc-wiztitle">{t.reviewBeforePublishing}</h2>
+                      <p className="sc-hint">{t.reviewHint}</p>
+                      {!emailVerified && <div className="sc-warn">{t.emailWarn}</div>}
+
+                      <div className="sc-prev-card sc-wiz-previewcard">
+                        {(() => {
+                          const l = currentListing;
+                          const img = (l?.image_paths || [])[0];
+                          const priceLine = pricingChoice === 'quote' ? t.requestQuoteFallback
+                            : pricingChoice === 'subscription' ? t.wizCardSubscription
+                            : (f.pr_range || (pricingChoice === 'rent_lease' ? t.wizCardRentLease : t.requestQuoteFallback));
+                          return (
+                            <>
+                              <div className="sc-prev-img">{img && /^https?:/.test(img) ? <img src={img} alt="" /> : <span>{img ? t.photoAttached : t.noPhoto}</span>}</div>
+                              <div className="sc-prev-body">
+                                <b>{l?.name || f.name}</b>
+                                <small>{l?.category || f.category || t.wizPreviewNoCategory} · {editing.kind === 'product' ? t.kindProduct : t.kindService}</small>
+                                <em>{priceLine}</em>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+
+                      <label className="sc-cb sc-acc">
+                        <input type="checkbox" checked={accOk} onChange={(e) => setAccOk(e.target.checked)} />
+                        {t.accuracyConfirm}
+                      </label>
+                      {pubErr && <div className="sc-warn">{pubErr}</div>}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="sc-savebar">
+                {autosaveFlash && <span className="sc-autosaveflash" role="status">{t.draftSavedLocally}</span>}
+                {wizardStep >= 2 && (
+                  <button type="button" className="sc-btn ghost" disabled={saving} onClick={() => save()}>{saving ? t.saving : t.saveDraft}</button>
+                )}
+                {wizardStep === 1 && <button type="button" className="sc-btn" disabled={!f.category || wizBusy} onClick={wizContinueFromCategory}>{wizBusy ? t.wizCreatingDraft : t.wizChooseCategory}</button>}
+                {wizardStep === 2 && <button type="button" className="sc-btn" disabled={!f.name.trim() || !f.overview.trim() || wizBusy} onClick={wizContinueFromDetails}>{wizBusy ? t.saving : t.wizAddDetails}</button>}
+                {wizardStep === 3 && <button type="button" className="sc-btn" disabled={!pricingChoice || wizBusy} onClick={wizContinueFromPricing}>{wizBusy ? t.saving : t.wizSetPricing}</button>}
+                {wizardStep === 4 && <button type="button" className="sc-btn" disabled={!accOk || pubBusy} onClick={publishNow}>{pubBusy ? t.publishing : t.publishToMarketplace}</button>}
+              </div>
+              {wizardStep === 2 && (!f.name.trim() || !f.overview.trim()) && <p className="sc-wizfootnote">{t.wizFillRequiredToContinue}</p>}
+            </div>
+          )}
+
+          {editing && !wizardStep && (
             <>
               <div className="sc-edithead">
                 <button type="button" className="sc-backbtn" onClick={() => { setEditing(null); setMsg(''); }}><ArrowLeft size={18} /> {t.backToListings}</button>
@@ -1336,5 +1740,93 @@ const CSS = `
   .sc-list li,.sc-modal,.sc-modal-in{animation:none;}
   .sc-row:hover,.sc-chip:active,.sc-kindopt:active,.sc-rowmain:active{transform:none;}
   .sc-autosaveflash{animation:none;}
+}
+
+/* Listing-creation wizard v1 (2026-07-30) — "+ New listing" now opens this
+   category/details/pricing/review flow instead of the full form directly.
+   Reuses .sc-edithead/.sc-editbody/.sc-savebar/.sc-field/.sc-cb/.sc-btn/
+   .sc-prev-card chrome from the editor above; only new step content and
+   controls are styled here.
+
+   CategoryChipPicker (src/components/vendor/CategoryChipPicker.tsx, shared
+   with vendor onboarding) renders its own vo-cat*/vo-chip* classnames with
+   no styles of its own — this page has no other stylesheet reaching it, so
+   those are styled below using this page's own --spec-* tokens (NOT the
+   onboarding page's --p/--line/--surf aliases — same colors, same values,
+   just this page's existing token names). */
+.vo-catpicker{width:100%;}
+.vo-catchips{margin-bottom:4px;}
+.vo-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+.vo-chip{font-family:inherit;display:inline-flex;align-items:center;gap:6px;padding:11px 16px;min-height:44px;border-radius:99px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-ink,#141320);font-size:14px;font-weight:400;cursor:pointer;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.vo-chip:hover{border-color:var(--spec-violet,#6C5CE0);}
+.vo-chip:active{transform:scale(.96);transition:transform 100ms ease;}
+.vo-chip.on{background:rgba(108,92,224,.1);border-color:var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);font-weight:600;}
+.vo-catsearch-row{position:relative;display:flex;align-items:center;margin-top:8px;}
+.vo-catsearch-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#8A87A0;pointer-events:none;}
+.vo-catsearch-input{width:100%;box-sizing:border-box;font-family:inherit;padding:13px 16px 13px 40px;min-height:48px;border-radius:12px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-ink,#141320);font-size:15px;outline:none;}
+.vo-catsearch-input:focus{border-color:var(--spec-violet,#6C5CE0);box-shadow:0 0 0 3px rgba(108,92,224,.12);}
+.vo-catsuggest{margin-top:8px;}
+.vo-catsuglist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;border:1px solid var(--spec-border,#E2DFEC);border-radius:12px;overflow:hidden;background:#fff;}
+.vo-catsugbtn{width:100%;display:flex;align-items:center;gap:8px;font-family:inherit;font-size:14px;color:var(--spec-ink,#141320);background:none;border:none;text-align:left;padding:12px 14px;min-height:44px;cursor:pointer;}
+.vo-catsugbtn:hover{background:var(--spec-surface,#EFEDF5);}
+.vo-catsugbtn svg{color:var(--spec-violet,#6C5CE0);flex-shrink:0;}
+.vo-catnoresults{font-size:13.5px;color:var(--spec-text-2nd,#615F72);padding:10px 2px;margin:0;}
+.vo-catpopular{margin-top:20px;}
+.vo-catpopular-h{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#8A87A0;margin:0 0 8px;}
+
+.sc-wiz{display:flex;flex-direction:column;flex:1;min-height:0;}
+.sc-wizdots{display:flex;align-items:center;gap:6px;padding:12px 18px 0;flex-wrap:wrap;}
+.sc-wizdot{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--spec-text-2nd,#615F72);}
+.sc-wizdot:not(:last-child)::after{content:'';width:16px;height:1px;background:var(--spec-border,#E2DFEC);margin:0 2px;}
+.sc-wizdotmark{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--spec-border,#E2DFEC);display:grid;place-items:center;flex-shrink:0;color:#fff;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease),border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.sc-wizdot.active .sc-wizdotmark,.sc-wizdot.done .sc-wizdotmark{border-color:var(--spec-violet,#6C5CE0);background:var(--spec-violet,#6C5CE0);}
+.sc-wizdot.active .sc-wizdotmark::before{content:'';width:6px;height:6px;border-radius:50%;background:#fff;}
+.sc-wizdot.active .sc-wizdotlabel{color:var(--spec-violet-deep,#4A3DB0);}
+.sc-wizdotlabel{white-space:nowrap;}
+@media(max-width:560px){.sc-wizdotlabel{display:none;}.sc-wizdot:not(:last-child)::after{width:10px;}}
+
+.sc-wizstep{animation:sc-fade-up 280ms var(--spec-ease,ease-out);}
+.sc-wiztitle{font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-size:19px;font-weight:700;margin:4px 0 4px;color:var(--spec-ink,#141320);}
+.sc-wizwhy{font-size:13px;color:var(--spec-text-2nd,#615F72);margin:0 0 16px;}
+.sc-wizhint{font-size:12.5px;color:var(--spec-text-2nd,#615F72);margin:8px 0 0;}
+.sc-wizfootnote{font-size:12.5px;color:var(--spec-text-2nd,#615F72);margin:8px 18px 0;text-align:right;}
+.sc-wizbreadcrumb{font-size:12px;color:var(--spec-violet-deep,#4A3DB0);margin:10px 0 0;}
+.sc-wizcharcount{font-size:11.5px;color:var(--spec-text-2nd,#615F72);margin:4px 0 0;text-align:right;}
+.sc-wizstatic{font-size:13.5px;color:var(--spec-ink,#141320);margin:6px 0 0;}
+
+.sc-wizphotozone{border:1.5px dashed rgba(108,92,224,.4);border-radius:14px;padding:16px;margin-bottom:18px;background:rgba(108,92,224,.03);}
+
+.sc-wizavail{margin-bottom:20px;}
+.sc-wizavailtoggle{display:inline-flex;gap:8px;margin-top:8px;flex-wrap:wrap;}
+.sc-wizavailbtn{display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:13px;font-weight:600;min-height:40px;padding:8px 16px;border-radius:99px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-text-2nd,#615F72);cursor:pointer;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),background var(--spec-duration-fast,150ms) var(--spec-ease,ease),color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.sc-wizavailbtn:hover{border-color:var(--spec-violet,#6C5CE0);}
+.sc-wizavailbtn.active{background:var(--spec-violet,#6C5CE0);border-color:var(--spec-violet,#6C5CE0);color:#fff;}
+
+.sc-wizcards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:6px;}
+@media(max-width:480px){.sc-wizcards{grid-template-columns:1fr;}}
+.sc-wizcard{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-height:44px;padding:16px;border-radius:14px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-ink,#141320);font-family:inherit;font-size:13.5px;font-weight:600;text-align:left;cursor:pointer;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.sc-wizcard:hover{border-color:var(--spec-violet,#6C5CE0);}
+.sc-wizcard:active{transform:scale(.98);transition:transform 100ms ease;}
+.sc-wizcard.on{background:rgba(108,92,224,.08);border-color:var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);}
+.sc-wizcardicon{width:36px;height:36px;border-radius:10px;background:var(--spec-surface,#EFEDF5);color:var(--spec-ink,#141320);display:grid;place-items:center;position:relative;}
+.sc-wizcard.on .sc-wizcardicon{background:#fff;color:var(--spec-violet,#6C5CE0);}
+.sc-wizcardicon2{position:absolute;bottom:-3px;right:-4px;background:#fff;border-radius:4px;color:inherit;}
+.sc-wizcardcheck{position:absolute;top:10px;right:10px;width:18px;height:18px;color:var(--spec-violet,#6C5CE0);display:grid;place-items:center;}
+.sc-wizdynamic{margin-top:14px;padding-top:14px;border-top:1px dashed var(--spec-border,#E2DFEC);}
+
+.sc-wiz-previewcard em{font-style:normal;font-size:13.5px;font-weight:700;color:var(--spec-violet-deep,#4A3DB0);margin-top:4px;}
+
+/* Wizard footer has 3 buttons (Back to listings is in the header instead;
+   this is Save draft + the step's primary action) on steps 2-4, one more
+   than the old panel's savebar ever has — at phone widths give it a second
+   row instead of squeezing three equal-flex buttons into 2-line labels. */
+@media(max-width:480px){
+  .sc-wiz .sc-savebar{flex-wrap:wrap;}
+  .sc-wiz .sc-savebar .sc-btn{flex:1 1 auto;min-width:112px;}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .sc-wizstep{animation:none;}
+  .vo-chip:active,.sc-wizcard:active{transform:none;}
 }
 `;

@@ -38,7 +38,7 @@ import {
   UtensilsCrossed, Car, Snowflake, ArrowLeftRight, HardHat, Truck, Pill, Plane,
   Wrench, Home, Landmark, type LucideIcon,
 } from 'lucide-react';
-import CategoryChipPicker from './CategoryChipPicker';
+import CategoryChipPicker from '@/components/vendor/CategoryChipPicker';
 import LanguageToggle, { useLang } from '@/components/LanguageToggle';
 import {
   SECTION_ORDER, STOREFRONT_STEPS, CAPABILITIES_STEPS, TRUST_STEPS, AGREEMENT_STEPS,
