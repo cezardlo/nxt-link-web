@@ -27,6 +27,7 @@ import { OfferCard, OFFER_CARD_CSS, type OfferCardLabels, OFFER_CARD_LABELS_ES, 
 import { DealTracker, DEAL_TRACKER_CSS, type DealTrackerLabels, DEAL_TRACKER_LABELS_ES, DEFAULT_DEAL_TRACKER_LABELS } from '@/components/marketplace/DealTracker';
 import { groupQuotesForCompare, describeAcceptedDeal } from '@/lib/buyer/compare';
 import { computeRequestActivity, isRequestStale, isStaleWithNoResponse, linkedQuotes, deriveRequestStage, type RequestStage } from '@/lib/buyer/requestStats';
+import { getGreetingPeriod, firstNameOf, type GreetingPeriod } from '@/lib/greeting';
 import { buildOfferTimeline, offerRevisionsForThread, type OfferRevisionInput, type LegacyOfferSource } from '@/lib/messages/offerTimeline';
 import { buildThreadTimeline, latestOffer } from '@/lib/messages/threadTimeline';
 import { deriveDealMilestone } from '@/lib/messages/dealTracker';
@@ -79,11 +80,25 @@ const money = (n: number, currency?: string | null) => {
   }
 };
 
+// Maps a GreetingPeriod (src/lib/greeting.ts) to this page's T dict key —
+// shared shape with /vendor/leads's identical helper, kept page-local since
+// each page's T type is its own Record<Lang, Record<string, string>>.
+function greetKeyFor(period: GreetingPeriod): 'greetMorning' | 'greetAfternoon' | 'greetEvening' {
+  return period === 'morning' ? 'greetMorning' : period === 'afternoon' ? 'greetAfternoon' : 'greetEvening';
+}
+
 const T: Record<Lang, Record<string, string>> = {
   en: {
     dashboardTag: 'Dashboard', alerts: 'Alerts', refresh: 'Refresh',
     browseMarketplace: 'Browse marketplace', describeNeed: 'Describe a need', myProfile: 'My profile', account: 'Account',
     yourDashboard: 'Your dashboard', signedInAs: 'Signed in as',
+    // Warm greeting (dashboard warm pass, 2026-07-30) — time-of-day from the
+    // client clock + first name from the buyer's OWN profile (already
+    // returned by GET /api/buyer/profile, just not read into state before
+    // now — zero API change). No name known yet/ever → plain fallback, never
+    // a placeholder like "Buyer".
+    greetMorning: 'Good morning, {name}', greetAfternoon: 'Good afternoon, {name}', greetEvening: 'Good evening, {name}',
+    welcomeBack: 'Welcome back',
     notifications: 'Notifications', close: 'Close', notifEmpty: 'Nothing yet — you’ll see quotes, messages, and pilot updates here.',
     loading: 'Loading…', signInFirst: 'Sign in to see your requests —', goToSignIn: 'go to sign in',
     loadError: "Couldn't load your dashboard — check your connection and try again.", retry: 'Try again',
@@ -91,6 +106,11 @@ const T: Record<Lang, Record<string, string>> = {
     needsAttention: 'Needs attention', reviewNow: 'Review now →',
     quoteAwaiting: 'quote', quotesAwaiting: 'quotes', awaitingDecision: 'awaiting your decision',
     expiringWithin: 'expiring within 3 days',
+    // Needs-attention list items (dashboard warm pass) — unread-notifications
+    // line. The quotes-awaiting-decision line reuses quoteAwaiting/
+    // quotesAwaiting/awaitingDecision above; the stale-request line reuses
+    // staleNudgeTitle/staleNudgeCta below — no new copy needed for those two.
+    unreadNotif: 'unread notification', unreadNotifs: 'unread notifications',
     savedListings: 'Saved listings', browseMore: 'Browse more',
     savedOnDevice: 'saved on this device', viewInMarketplace: '→ view in marketplace (sign-in saves them to your account)',
     nothingSaved: 'Nothing saved yet.', browseTheMarketplace: 'Browse the marketplace', tapSave: 'and tap Save on listings you like.',
@@ -198,6 +218,8 @@ const T: Record<Lang, Record<string, string>> = {
     dashboardTag: 'Panel', alerts: 'Alertas', refresh: 'Actualizar',
     browseMarketplace: 'Explorar marketplace', describeNeed: 'Describir una necesidad', myProfile: 'Mi perfil', account: 'Cuenta',
     yourDashboard: 'Tu panel', signedInAs: 'Sesión iniciada como',
+    greetMorning: 'Buenos días, {name}', greetAfternoon: 'Buenas tardes, {name}', greetEvening: 'Buenas noches, {name}',
+    welcomeBack: 'Bienvenido de nuevo',
     notifications: 'Notificaciones', close: 'Cerrar', notifEmpty: 'Nada por aquí todavía — verás cotizaciones, mensajes y actualizaciones de pilotos aquí.',
     loading: 'Cargando…', signInFirst: 'Inicia sesión para ver tus solicitudes —', goToSignIn: 'ir a iniciar sesión',
     loadError: 'No se pudo cargar tu panel — revisa tu conexión e inténtalo de nuevo.', retry: 'Intentar de nuevo',
@@ -205,6 +227,7 @@ const T: Record<Lang, Record<string, string>> = {
     needsAttention: 'Necesita atención', reviewNow: 'Revisar ahora →',
     quoteAwaiting: 'cotización', quotesAwaiting: 'cotizaciones', awaitingDecision: 'esperando tu decisión',
     expiringWithin: 'vencen en 3 días',
+    unreadNotif: 'notificación sin leer', unreadNotifs: 'notificaciones sin leer',
     savedListings: 'Publicaciones guardadas', browseMore: 'Ver más',
     savedOnDevice: 'guardado(s) en este dispositivo', viewInMarketplace: '→ ver en el marketplace (inicia sesión para guardarlos en tu cuenta)',
     nothingSaved: 'Aún no has guardado nada.', browseTheMarketplace: 'Explora el marketplace', tapSave: 'y toca Guardar en las publicaciones que te gusten.',
@@ -375,6 +398,14 @@ export default function BuyerDashboardPage() {
   const [authId, setAuthId] = useState<string | null>(null);
   const [buyerProfile, setBuyerProfile] = useState<BuyerEnrichmentProfile | null>(null);
   const [enrichDismissed, setEnrichDismissed] = useState(false);
+  // Warm greeting name (dashboard warm pass, 2026-07-30) — first token of the
+  // buyer's OWN contact_name, read from the SAME GET /api/buyer/profile
+  // response `load()` already fetches for BuyerEnrichmentCard below (that
+  // response already includes contact_name; only buyerProfile's four
+  // enrichment fields were being read out of it before now — zero API
+  // change). Starts null so the greeting renders the "Welcome back" fallback
+  // on first paint (matches SSR) and only upgrades once this resolves.
+  const [buyerName, setBuyerName] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState<string | null>(null);
   const [rv, setRv] = useState({ rating: 5, title: '', body: '' });
   const [rvBusy, setRvBusy] = useState(false);
@@ -495,6 +526,7 @@ export default function BuyerDashboardPage() {
           city: bp.profile.city ?? null,
           service_locations: bp.profile.service_locations ?? null,
         });
+        setBuyerName(firstNameOf(bp.profile.contact_name ?? null));
       }
     } catch {
       setLoadError(true);
@@ -707,7 +739,15 @@ export default function BuyerDashboardPage() {
       </nav>
 
       <main className="by-wrap">
-        <h1>{t.yourDashboard}</h1>
+        {/* Warm greeting (dashboard warm pass) — "Welcome back" until
+            buyerName resolves (never blocks render), then upgrades in place
+            to the time-of-day greeting. Same element/font-size throughout so
+            there's no layout shift on upgrade. */}
+        <h1 className="by-greet">
+          {buyerName
+            ? t[greetKeyFor(getGreetingPeriod())].replace('{name}', buyerName)
+            : t.welcomeBack}
+        </h1>
         {data.email && <p className="by-sub">{t.signedInAs} {data.email}</p>}
 
         {notifOpen && (
@@ -747,7 +787,17 @@ export default function BuyerDashboardPage() {
           </div>
         ) : (
           <>
-            {/* Needs attention — surface only the immediate actions (spec §05 / Upwork pattern) */}
+            {/* Needs attention — surface only the immediate actions (spec §05 /
+                Upwork pattern). Dashboard warm pass (2026-07-30): now a
+                compact LIST of every real signal already on this page —
+                quotes awaiting decision (original derivation, unchanged),
+                stale requests with zero vendor response (reuses
+                isRequestStale/isStaleWithNoResponse from requestStats.ts —
+                the SAME functions the per-request card below calls, not a
+                second copy of that math — plus the exact staleNudgeTitle/
+                staleNudgeCta copy the per-card nudge already uses), and the
+                unread-notifications count already tracked in notifUnread.
+                Renders nothing (no empty shell) when none apply. */}
             {(() => {
               const toReview = quotes.filter((q) => q.quote_amount != null && !q.buyer_decision);
               const expiring = toReview.filter((q) => {
@@ -755,12 +805,34 @@ export default function BuyerDashboardPage() {
                 const days = (new Date(q.quote_valid_until).getTime() - Date.now()) / 86400000;
                 return days >= 0 && days <= 3;
               });
-              if (toReview.length === 0) return null;
+              const staleCount = requests.filter((r) => {
+                const activity = computeRequestActivity(r, quotes);
+                return isStaleWithNoResponse(activity, isRequestStale(r, activity));
+              }).length;
+              if (toReview.length === 0 && staleCount === 0 && notifUnread === 0) return null;
               return (
-                <div className="by-attn">
+                <div className="by-attn nxm-in">
                   <b>{t.needsAttention}</b>
-                  <span>{toReview.length} {toReview.length === 1 ? t.quoteAwaiting : t.quotesAwaiting} {t.awaitingDecision}{expiring.length > 0 ? ` · ${expiring.length} ${t.expiringWithin}` : ''}</span>
-                  <a href="#quotes">{t.reviewNow}</a>
+                  <ul className="by-attnlist">
+                    {toReview.length > 0 && (
+                      <li>
+                        <span>{toReview.length} {toReview.length === 1 ? t.quoteAwaiting : t.quotesAwaiting} {t.awaitingDecision}{expiring.length > 0 ? ` · ${expiring.length} ${t.expiringWithin}` : ''}</span>
+                        <a href="#quotes">{t.reviewNow}</a>
+                      </li>
+                    )}
+                    {staleCount > 0 && (
+                      <li>
+                        <span>{t.staleNudgeTitle}</span>
+                        <a href="/marketplace">{t.staleNudgeCta}</a>
+                      </li>
+                    )}
+                    {notifUnread > 0 && (
+                      <li>
+                        <span>{notifUnread} {notifUnread === 1 ? t.unreadNotif : t.unreadNotifs}</span>
+                        <button type="button" onClick={() => toggleNotifs()}>{t.reviewNow}</button>
+                      </li>
+                    )}
+                  </ul>
                 </div>
               );
             })()}
@@ -1281,10 +1353,13 @@ const FIRSTRUN_CSS = `
 `;
 
 const ATTENTION_CSS = `
-.by-attn{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 6px;padding:12px 16px;border-radius:12px;background:#FBF3E7;border:1px solid #EFD9AE;}
-.by-attn b{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--spec-warning,#C68A28);}
-.by-attn span{font-size:13.5px;color:var(--spec-ink,#141320);}
-.by-attn a{margin-left:auto;font-size:13px;font-weight:700;color:#8A5D14;text-decoration:none;}
+.by-attn{margin:14px 0 6px;padding:14px 16px;border-radius:12px;background:#FBF3E7;border:1px solid #EFD9AE;}
+.by-attn b{display:block;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--spec-warning,#C68A28);margin-bottom:8px;}
+.by-attnlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
+.by-attnlist li{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.by-attnlist span{font-size:13.5px;color:var(--spec-ink,#141320);}
+.by-attnlist a,.by-attnlist button{font-family:inherit;background:none;border:none;padding:0;margin:0;font-size:13px;font-weight:700;color:#8A5D14;text-decoration:none;cursor:pointer;white-space:nowrap;}
+.by-attnlist a:hover,.by-attnlist button:hover{text-decoration:underline;}
 `;
 
 const CSS = `
@@ -1300,6 +1375,7 @@ const CSS = `
 .by-link:hover{color:var(--spec-violet,#6C5CE0);}
 .by-wrap{max-width:760px;margin:0 auto;padding:36px 20px 100px;}
 .by-wrap h1{font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-size:28px;font-weight:700;letter-spacing:-.01em;}
+.by-greet{line-height:1.2;min-height:1.2em;}
 .by-sub{color:var(--spec-text-2nd,#615F72);font-size:14px;margin:6px 0 8px;}
 .by-empty{text-align:center;color:var(--spec-text-2nd,#615F72);padding:60px 0;line-height:1.7;}
 .by-empty.sm{padding:26px 0;font-size:14px;}

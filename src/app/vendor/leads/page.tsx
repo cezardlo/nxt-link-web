@@ -29,7 +29,8 @@ import {
 import {
   validateQuoteExtras, autoCalcProductTotal, type RequestKind, type QuoteExtras,
 } from '@/lib/requests/structured';
-import { MOTION_CSS, staggerStyle } from '@/components/motion/Motion';
+import { MOTION_CSS, staggerStyle, prefersReducedMotion } from '@/components/motion/Motion';
+import { getGreetingPeriod, type GreetingPeriod } from '@/lib/greeting';
 
 // Design System v1.0 reskin (Premium Polish Phase 2, 2026-07-23): light
 // warm-white + violet, matching the rest of the marketplace. Visual/CSS only
@@ -155,14 +156,39 @@ function amountLooksOffFromQuote(entered: number, quoted: number | null | undefi
   return Math.abs(entered - quoted) / quoted > 0.5;
 }
 
+// Maps a GreetingPeriod (src/lib/greeting.ts) to this page's T dict key —
+// same shape as /buyer's identical helper, kept page-local since each page's
+// T type is its own Record<Lang, Record<string, string>>.
+function greetKeyFor(period: GreetingPeriod): 'greetMorning' | 'greetAfternoon' | 'greetEvening' {
+  return period === 'morning' ? 'greetMorning' : period === 'afternoon' ? 'greetAfternoon' : 'greetEvening';
+}
+
 const T: Record<Lang, Record<string, string>> = {
   en: {
     leadsTag: 'Leads', alerts: 'Alerts', profile: 'Profile', yourListings: 'Your listings',
+    // Warm greeting (dashboard warm pass, 2026-07-30) — same time-of-day
+    // mechanism as /buyer. No vendor company_name/contact_name is returned
+    // by any endpoint this page fetches today, so vendorName is always null
+    // for now and this always shows the plain fallback — never a fabricated
+    // name. Wire a real name in the moment the API exposes one.
+    greetMorning: 'Good morning, {name}', greetAfternoon: 'Good afternoon, {name}', greetEvening: 'Good evening, {name}',
+    welcomeBack: 'Welcome back',
+    // "Your next best action" card — ONE honest next step, derived from real
+    // lead state only (see newLeadsCount/unquotedLeads below). Hidden
+    // entirely when nothing is actionable.
+    nextActionLabel: 'Your next best action',
+    nextActionRespondOne: 'Respond to 1 new lead', nextActionRespond: 'Respond to {n} new leads',
+    nextActionRespondCta: 'View leads',
+    nextActionQuote: 'Send your quote',
     notifications: 'Notifications', close: 'Close', notifEmpty: 'Nothing yet — new leads, messages, and buyer decisions show here.',
     openRequests: 'Open buyer requests', openRequestsHint: 'respond and it becomes a lead — buyer contact stays hidden until they accept your quote',
     matchesProfile: 'Matches your profile', buyerNeed: 'Buyer need', urgency: 'Urgency', budget: 'Budget',
     responded: '✓ Responded — see your leads below', respondQuote: 'Respond with a quote', creatingLead: 'Creating lead…',
-    leadsInbox: 'Leads inbox', newBadge: 'new', subtitle: 'Buyers who requested a quote or service from your listings. Respond inside NXT//LINK.',
+    // Leads-list heading reframe (dashboard warm pass) — honest because every
+    // lead here reached this vendor because of what they sell: auto-matched
+    // by category/service-area overlap, a direct buyer invite, or a buyer
+    // choosing this vendor's own listing. newBadge/subtitle unchanged.
+    leadsInbox: 'Opportunities that fit your business', newBadge: 'new', subtitle: 'Buyers who requested a quote or service from your listings. Respond inside NXT//LINK.',
     loading: 'Loading…', signInFirst: 'Sign in first —', goToSignIn: 'go to sign in',
     emptyTitle: 'No leads yet', emptyHint: 'Buyers find you through your listings — publish products and services so requests land here.',
     manageListings: 'Manage your listings', completeProfile: 'Complete your profile',
@@ -239,11 +265,17 @@ const T: Record<Lang, Record<string, string>> = {
   },
   es: {
     leadsTag: 'Leads', alerts: 'Alertas', profile: 'Perfil', yourListings: 'Tus publicaciones',
+    greetMorning: 'Buenos días, {name}', greetAfternoon: 'Buenas tardes, {name}', greetEvening: 'Buenas noches, {name}',
+    welcomeBack: 'Bienvenido de nuevo',
+    nextActionLabel: 'Tu siguiente mejor paso',
+    nextActionRespondOne: 'Responde a 1 lead nuevo', nextActionRespond: 'Responde a {n} leads nuevos',
+    nextActionRespondCta: 'Ver leads',
+    nextActionQuote: 'Envía tu cotización',
     notifications: 'Notificaciones', close: 'Cerrar', notifEmpty: 'Nada por aquí todavía — nuevos leads, mensajes y decisiones del comprador aparecerán aquí.',
     openRequests: 'Solicitudes abiertas de compradores', openRequestsHint: 'responde y se convierte en un lead — el contacto del comprador se mantiene oculto hasta que acepte tu cotización',
     matchesProfile: 'Coincide con tu perfil', buyerNeed: 'Necesidad del comprador', urgency: 'Urgencia', budget: 'Presupuesto',
     responded: '✓ Respondido — ve tus leads abajo', respondQuote: 'Responder con una cotización', creatingLead: 'Creando lead…',
-    leadsInbox: 'Bandeja de leads', newBadge: 'nuevos', subtitle: 'Compradores que solicitaron una cotización o servicio de tus publicaciones. Responde dentro de NXT//LINK.',
+    leadsInbox: 'Oportunidades que encajan con tu negocio', newBadge: 'nuevos', subtitle: 'Compradores que solicitaron una cotización o servicio de tus publicaciones. Responde dentro de NXT//LINK.',
     loading: 'Cargando…', signInFirst: 'Inicia sesión primero —', goToSignIn: 'ir a iniciar sesión',
     emptyTitle: 'Aún no hay leads', emptyHint: 'Los compradores te encuentran a través de tus publicaciones — publica productos y servicios para que lleguen solicitudes aquí.',
     manageListings: 'Administrar tus publicaciones', completeProfile: 'Completar tu perfil',
@@ -389,6 +421,13 @@ export default function VendorLeadsPage() {
   const PILOT_KIND_LABEL: Record<string, string> = { demo: t.pkDemo, pilot: t.pkPilot, site_visit: t.pkSiteVisit };
   const PILOT_STATUS_LABEL: Record<string, string> = { proposed: t.psProposed, scheduled: t.psScheduled, in_progress: t.psInProgress, completed: t.psCompleted, cancelled: t.psCancelled };
   const PILOT_OUTCOME_LABEL: Record<string, string> = { passed: t.poPassed, failed: t.poFailed, inconclusive: t.poInconclusive };
+  // Warm greeting name (dashboard warm pass, 2026-07-30): no vendor
+  // company_name/contact_name is returned by ANY endpoint this page fetches
+  // (/api/vendor/leads, /api/vendor/notifications, /api/vendor/open-requests)
+  // — adding one would be an API response change, out of scope for this
+  // zero-API-change pass. Always falls back to the plain "Welcome back"
+  // greeting for now; wire this to a real name the moment the API exposes one.
+  const vendorName: string | null = null;
 
   const [checking, setChecking] = useState(true);
   const [signedIn, setSignedIn] = useState(false);
@@ -739,6 +778,33 @@ export default function VendorLeadsPage() {
   const offerLabels: OfferCardLabels = lang === 'es' ? OFFER_CARD_LABELS_ES : DEFAULT_OFFER_CARD_LABELS;
   const trackerLabels: DealTrackerLabels = lang === 'es' ? DEAL_TRACKER_LABELS_ES : DEFAULT_DEAL_TRACKER_LABELS;
 
+  // "Your next best action" (dashboard warm pass, 2026-07-30) — real state
+  // priority only, no invented metrics: unviewed leads first (same
+  // `status === 'new'` derivation the leads-inbox badge below already uses —
+  // one shared value, not a second copy of that filter), else the oldest
+  // lead still waiting on a quote (no quote_amount yet, not closed), else
+  // nothing actionable and the card is omitted entirely.
+  const newLeadsCount = leads.filter((l) => l.status === 'new').length;
+  const unquotedLeads = leads.filter((l) => l.quote_amount == null && l.status !== 'won' && l.status !== 'lost' && l.status !== 'spam');
+  const oldestUnquoted = unquotedLeads.length
+    ? [...unquotedLeads].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0]
+    : null;
+  const nextAction = newLeadsCount > 0
+    ? {
+        text: newLeadsCount === 1 ? t.nextActionRespondOne : t.nextActionRespond.replace('{n}', String(newLeadsCount)),
+        cta: t.nextActionRespondCta,
+        onClick: () => {
+          document.getElementById('ld-leadslist')?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+        },
+      }
+    : oldestUnquoted
+    ? {
+        text: t.nextActionQuote,
+        cta: t.sendQuoteBtn,
+        onClick: () => sendOfferFromChat(oldestUnquoted),
+      }
+    : null;
+
   return (
     <div className={`ld ${ibmPlexSans.variable}`}>
       <style dangerouslySetInnerHTML={{ __html: MOTION_CSS + CSS + MATCH_REASONS_CSS + EMPTY_ACTION_CSS + OFFER_CARD_CSS + DEAL_TRACKER_CSS + REQUEST_ATTACHMENTS_CSS + '.ld-opencard .mrx-chips{margin-bottom:8px;}' }} />
@@ -752,6 +818,25 @@ export default function VendorLeadsPage() {
         }
       />
       <main className="ld-wrap">
+        {/* Warm greeting (dashboard warm pass) — "Welcome back" until/unless a
+            real vendor name is ever available (see vendorName above), never
+            blocking render; same element/font-size so there's no layout
+            shift if that ever changes. */}
+        <h1 className="ld-greet">
+          {vendorName
+            ? t[greetKeyFor(getGreetingPeriod())].replace('{name}', vendorName)
+            : t.welcomeBack}
+        </h1>
+        {/* "Your next best action" — one honest next step from real lead
+            state (see nextAction above); omitted entirely when nothing is
+            actionable, never an empty shell. */}
+        {nextAction && (
+          <div className="ld-nextaction nxm-in">
+            <span className="ld-natag">{t.nextActionLabel}</span>
+            <p>{nextAction.text}</p>
+            <button type="button" className="ld-nabtn nxm-press" onClick={nextAction.onClick}>{nextAction.cta}</button>
+          </div>
+        )}
         {notifOpen && (
           <div className="ld-notifs nxm-panel">
             <div className="ld-notifhead"><b>{t.notifications}</b><button onClick={() => setNotifOpen(false)}>{t.close}</button></div>
@@ -799,7 +884,7 @@ export default function VendorLeadsPage() {
           </section>
         )}
 
-        <h1>{t.leadsInbox} {leads.filter((l) => l.status === 'new').length > 0 && <span className="ld-newcnt">{leads.filter((l) => l.status === 'new').length} {t.newBadge}</span>}</h1>
+        <h1>{t.leadsInbox} {newLeadsCount > 0 && <span className="ld-newcnt">{newLeadsCount} {t.newBadge}</span>}</h1>
         <p className="ld-sub">{t.subtitle}</p>
         {checking ? <div className="ld-empty">{t.loading}</div>
           : !signedIn ? <div className="ld-empty">{t.signInFirst} <a href="/vendor-login">{t.goToSignIn}</a></div>
@@ -815,7 +900,7 @@ export default function VendorLeadsPage() {
             />
           )
           : (
-            <div className="ld-list">
+            <div className="ld-list" id="ld-leadslist">
               {leads.map((l, li) => (
                 <div className="ld-card nxm-in nxm-lift" style={staggerStyle(li)} key={l.id}>
                   <div className="ld-top">
@@ -1273,6 +1358,13 @@ const CSS = `
 .ld-wrap{max-width:760px;margin:0 auto;padding:36px 20px 100px;}
 .ld-wrap h1{font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-size:28px;font-weight:700;letter-spacing:-.01em;}
 .ld-newcnt{font-size:12px;font-weight:700;color:var(--spec-violet-deep,#4A3DB0);background:rgba(108,92,224,.1);border-radius:99px;padding:4px 12px;vertical-align:6px;margin-left:8px;}
+.ld-greet{font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-size:24px;font-weight:700;letter-spacing:-.01em;line-height:1.2;min-height:1.2em;margin:0 0 4px;}
+.ld-nextaction{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin:0 0 22px;padding:16px 18px;border-radius:14px;background:rgba(108,92,224,.06);border:1px solid rgba(108,92,224,.25);}
+.ld-natag{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--spec-violet-deep,#4A3DB0);}
+.ld-nextaction p{margin:0;font-size:15px;font-weight:600;color:var(--spec-ink,#141320);}
+.ld-nabtn{font-family:inherit;font-size:13.5px;font-weight:700;color:#fff;background:var(--spec-violet,#6C5CE0);border:none;border-radius:9px;padding:9px 16px;cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.ld-nabtn:hover{background:var(--spec-violet-deep,#4A3DB0);}
+.ld-nabtn:disabled{opacity:.6;cursor:not-allowed;}
 .ld-open{margin-bottom:28px;}
 .ld-open h2{font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-size:17px;font-weight:700;letter-spacing:-.01em;}
 .ld-open h2 small{display:block;color:var(--spec-text-2nd,#615F72);font-size:12.5px;font-weight:400;font-family:var(--font-ibm-plex-sans-leads),'IBM Plex Sans',sans-serif;margin-top:5px;line-height:1.5;}
