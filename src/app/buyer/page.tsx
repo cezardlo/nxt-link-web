@@ -9,7 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
-import { PackageSearch, Inbox, Lightbulb, MessageCircle, Paperclip, Download, X, Store, Eye, Bell, Send, Reply, CheckCircle2, XCircle, FileText, CalendarClock, type LucideIcon } from 'lucide-react';
+import { PackageSearch, Inbox, Lightbulb, MessageCircle, Paperclip, Download, X, Store, Eye, Bell, Send, Reply, CheckCircle2, XCircle, FileText, CalendarClock, ClipboardList, type LucideIcon } from 'lucide-react';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
 import { useChatPolling, resolvePendingMessage, dropPendingMessage, type ChatMessage } from '@/components/marketplace/useChatPolling';
 import { useNotificationPolling } from '@/components/marketplace/useNotificationPolling';
@@ -218,6 +218,12 @@ const T: Record<Lang, Record<string, string>> = {
     firstRunCard2Title: 'I need help figuring out what I need — let suppliers propose solutions',
     firstRunCard2Hint: 'Describe your problem once — NXT//LINK matches vendors and they quote you.',
     firstRunBrowseLink: 'Just browsing? Explore categories',
+    // Post a need (Slice R2b, 2026-07-30) — buyer dashboard first-run card,
+    // links to the new /buyer/post-need wizard (product/service/technology
+    // + "Not sure").
+    postNeedTitle: 'Post a need', postNeedHint: 'Describe what you need once — verified vendors get notified and send you quotes.',
+    postNeedCta: 'Post a need',
+    yourRequestsPostNeed: 'Post a need',
     startSellTitle: 'Want to sell on NXT//LINK?',
     startSellHint: 'Set up your company storefront with a short application. Our team reviews and approves every vendor.',
     startSellCta: 'Start selling',
@@ -334,6 +340,9 @@ const T: Record<Lang, Record<string, string>> = {
     firstRunCard2Title: 'Necesito ayuda para saber qué necesito — que los proveedores propongan soluciones',
     firstRunCard2Hint: 'Describe tu problema una vez — NXT//LINK conecta proveedores y ellos te cotizan.',
     firstRunBrowseLink: '¿Solo estás explorando? Explora las categorías',
+    postNeedTitle: 'Publica una necesidad', postNeedHint: 'Describe lo que necesitas una vez — proveedores verificados serán notificados y te enviarán cotizaciones.',
+    postNeedCta: 'Publicar una necesidad',
+    yourRequestsPostNeed: 'Publicar una necesidad',
     startSellTitle: '¿Quieres vender en NXT//LINK?',
     startSellHint: 'Crea el escaparate de tu empresa con una solicitud breve. Nuestro equipo revisa y aprueba a cada proveedor.',
     startSellCta: 'Empezar a vender',
@@ -917,7 +926,16 @@ export default function BuyerDashboardPage() {
               <>
             {/* NXT-assisted intake requests */}
             <section className="by-sec">
-              <div className="by-sechead"><h2>{t.yourRequests} {requests.length > 0 && <small className="by-cnt">{requests.length}</small>}</h2><a className="by-link" href="/intake">{t.newRequest}</a></div>
+              <div className="by-sechead">
+                <h2>{t.yourRequests} {requests.length > 0 && <small className="by-cnt">{requests.length}</small>}</h2>
+                <div className="by-sechead-actions">
+                  {/* Post a need (Slice R2b) — compact link for returning
+                      buyers, alongside the existing intake shortcut. Small
+                      mount point only: no change to quote/compare rendering. */}
+                  <a className="by-link by-link-postneed" href="/buyer/post-need">{t.yourRequestsPostNeed}</a>
+                  <a className="by-link" href="/intake">{t.newRequest}</a>
+                </div>
+              </div>
               {requests.length === 0 ? (
                 <EmptyAction size="sm" icon={<Inbox strokeWidth={1.75} />} title={t.noRequestsYet} hint={t.noRequestsHint} actionLabel={t.describeWhatYouNeed} actionHref="/intake" />
               ) : (
@@ -1360,7 +1378,19 @@ function FirstRunPrompt({ t }: { t: Record<string, string> }) {
           <p>{t.firstRunCard1Hint}</p>
           <span className="by-frcta">{t.firstRunCard1Cta} →</span>
         </a>
-        <a href="/apply" className="by-frcard nxm-in" style={staggerStyle(1)}>
+        {/* Post a need (Slice R2b, 2026-07-30) — the adaptive per-kind buyer
+            request wizard at /buyer/post-need. This is the ONLY live entry
+            point for a technology request end to end (workplace/audit/
+            flow-readiness-2026-07-30.md); sits between "search the
+            marketplace" and "start selling" (Hick's law: specific-ask vs.
+            open-ended-ask together, selling kept as its own lane). */}
+        <a href="/buyer/post-need" className="by-frcard nxm-in" style={staggerStyle(1)}>
+          <span className="by-fricon"><ClipboardList size={18} strokeWidth={1.75} /></span>
+          <b>{t.postNeedTitle}</b>
+          <p>{t.postNeedHint}</p>
+          <span className="by-frcta">{t.postNeedCta} →</span>
+        </a>
+        <a href="/apply" className="by-frcard nxm-in" style={staggerStyle(2)}>
           <span className="by-fricon"><Store size={18} strokeWidth={1.75} /></span>
           <b>{t.startSellTitle}</b>
           <p>{t.startSellHint}</p>
@@ -1374,8 +1404,9 @@ function FirstRunPrompt({ t }: { t: Record<string, string> }) {
 const FIRSTRUN_CSS = `
 .by-firstrun{margin:24px 0 8px;text-align:center;}
 .by-firstrun h2{font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-size:21px;font-weight:700;letter-spacing:-.01em;margin:0 0 20px;color:var(--spec-ink,#141320);}
-.by-frcards{display:grid;grid-template-columns:1fr 1fr;gap:14px;text-align:left;}
-@media(max-width:620px){.by-frcards{grid-template-columns:1fr;}}
+.by-frcards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;text-align:left;}
+@media(max-width:760px){.by-frcards{grid-template-columns:1fr 1fr;}}
+@media(max-width:460px){.by-frcards{grid-template-columns:1fr;}}
 .by-frcard{display:flex;flex-direction:column;gap:7px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:16px;padding:20px;color:var(--spec-ink,#141320);text-decoration:none;transition:border-color .15s,transform .15s,box-shadow .15s;}
 .by-frcard:hover{border-color:var(--spec-violet,#6C5CE0);transform:translateY(-2px);box-shadow:0 8px 20px rgba(20,19,32,.08);}
 .by-fricon{width:36px;height:36px;border-radius:10px;background:rgba(108,92,224,.1);color:var(--spec-violet-deep,#4A3DB0);display:grid;place-items:center;margin-bottom:2px;}
@@ -1407,6 +1438,7 @@ const CSS = `
 .by-navlinks{display:flex;gap:18px;align-items:center;}
 .by-link{color:var(--spec-violet-deep,#4A3DB0);font-size:13.5px;font-weight:600;text-decoration:none;white-space:nowrap;}
 .by-link:hover{color:var(--spec-violet,#6C5CE0);}
+.by-sechead-actions{display:flex;align-items:baseline;gap:16px;}
 .by-wrap{max-width:760px;margin:0 auto;padding:36px 20px 100px;}
 .by-wrap h1{font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-size:28px;font-weight:700;letter-spacing:-.01em;}
 .by-greet{line-height:1.2;min-height:1.2em;}

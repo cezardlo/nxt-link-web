@@ -27,6 +27,14 @@ these three are under-planned — scope them after Wave 2:
   needs; the seed of the future CRM-lite tier (see finance plan §4).
 
 ## Ready when user says go
+- ~~**RFQ Slice R2b — buyer "Post a Need" wizard (product/service/technology + Not sure)**~~ —
+  **SHIPPED 2026-07-30**: new route `/buyer/post-need`, 4-step wizard (type → describe → kind-
+  adaptive key details → review & send), posts to the existing `POST /api/platform/requests`
+  (zero API changes). Closes the flow-readiness audit's headline gap
+  (`workplace/audit/flow-readiness-2026-07-30.md`): `request_kind='technology'` had no live buyer-
+  facing entry point anywhere on the site — this is now the ONLY UI path that can set it. Blind
+  budget (technology only, optional) rides in R1's `budget_min`/`budget_max`, never shared with
+  vendors. Entry points: buyer dashboard first-run 3rd card + a compact link near "Your requests".
 - ~~**One signup system + legal click-wrap (Wave 1)**~~ — **SHIPPED 2026-07-20**:
   all account doors merged into one system (shared `ensureVendorProfile()` in
   `src/lib/vendor/profile.ts`; organic /signup vendors now route into /apply
