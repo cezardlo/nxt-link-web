@@ -15,6 +15,11 @@ import { levelAtLeast } from '@/components/marketplace/TrustBadges';
 import AddToCartButton from '@/components/cart/AddToCartButton';
 import { useLang, type Lang } from '@/components/LanguageToggle';
 import PublicHeader from '@/components/PublicHeader';
+// CompareModal-only addition (polish pass 2026-07-30): the shared motion
+// vocabulary for its open-transition (nxm-backdrop/nxm-panel) — reused, not
+// forked, same as every other page in this sweep. Nothing else in this file
+// changed.
+import { MOTION_CSS } from '@/components/motion/Motion';
 
 // Design System v1.0 body font (Space Grotesk for headings is already
 // loaded app-wide in layout.tsx) — scoped to this page only, matching the
@@ -582,7 +587,7 @@ export default function MarketplacePage() {
 
   return (
     <div className={`mk ${ibmPlexSans.variable}`}>
-      <style dangerouslySetInnerHTML={{ __html: CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: MOTION_CSS + CSS }} />
       {/* ONE shared public header (Flow Blueprint 2026-07-22 §4, Slice 2) —
           replaces this page's old dark `mk-nav`. "Saved"/"My dashboard"/
           "For vendors" are page-specific utility links (not part of the
@@ -1068,13 +1073,13 @@ function CompareModal({ cards, lang, onClose }: { cards: Card[]; lang: Lang; onC
   ];
   return (
     <div
-      className="mk-modal"
+      className="mk-modal nxm-backdrop"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={es ? `Comparar ${cards.length} publicaciones` : `Compare ${cards.length} listings`}
     >
-      <div className="mk-modal-in" onClick={(e) => e.stopPropagation()}>
+      <div className="mk-modal-in nxm-panel" onClick={(e) => e.stopPropagation()}>
         <div className="mk-modal-head"><b>{es ? `Comparar ${cards.length} publicaciones` : `Compare ${cards.length} listings`}</b><button ref={closeRef} onClick={onClose}>{es ? 'Cerrar' : 'Close'}</button></div>
         <div className="mk-ctable-wrap">
           <table className="mk-ctable">

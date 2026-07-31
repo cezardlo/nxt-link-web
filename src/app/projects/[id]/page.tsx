@@ -8,9 +8,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { IBM_Plex_Sans } from 'next/font/google';
+import {
+  ClipboardList, CheckCircle2, Search, Send, Inbox, Scale, HelpCircle,
+  UserCheck, Wrench, Trophy, Archive, Users, ClipboardCheck, Truck, FileText,
+  Clock, XCircle, SkipForward, Star, type LucideIcon,
+} from 'lucide-react';
 import { StageTracker, STAGE_TRACKER_CSS } from '@/components/marketplace/StageTracker';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
 import { QuoteCompareTable, QUOTE_COMPARE_TABLE_CSS, type CompareTableRow } from '@/components/marketplace/QuoteCompareTable';
+import { MOTION_CSS, staggerStyle } from '@/components/motion/Motion';
 
 // Design System v1.0 reskin (Premium Polish Phase 2, 2026-07-23): visual/CSS
 // only — every handler and state above is unchanged. The soft-blue best-value
@@ -56,6 +62,20 @@ const MILESTONE_LABEL: Record<string, string> = { purchase_order: 'Purchase orde
 const fmtDate = (s: string) => { try { return new Date(s).toLocaleDateString(); } catch { return ''; } };
 const fmtDT = (s: string) => { try { return new Date(s).toLocaleString(); } catch { return ''; } };
 const money = (n: number, c = 'USD') => n.toLocaleString('en-US', { style: 'currency', currency: c || 'USD', maximumFractionDigits: 0 });
+
+// Icons+colors sweep (2026-07-30) — visual only, every status VALUE below is
+// untouched. Same vocabulary as /projects' STAGE_ICON (kept as a sibling map
+// here rather than a shared import, matching this file's existing pattern of
+// its own STAGE_LABEL sibling copy).
+const STAGE_ICON: Record<string, LucideIcon> = {
+  organizing: ClipboardList, requirements_ready: CheckCircle2, matching: Search,
+  vendors_invited: Send, collecting_quotes: Inbox, comparing: Scale,
+  decision: HelpCircle, vendor_selected: UserCheck, implementation: Wrench,
+  completed: Trophy, archived: Archive,
+};
+const VSRC_ICON: Record<string, LucideIcon> = { invited: Send, recommended: Star };
+const QSTAT_ICON: Record<string, LucideIcon> = { accepted: CheckCircle2, quoted: FileText, await: Clock };
+const APPROVAL_ICON: Record<string, LucideIcon> = { approved: CheckCircle2, rejected: XCircle, skipped: SkipForward };
 
 export default function ProjectWorkspacePage() {
   const params = useParams<{ id: string }>();
@@ -126,7 +146,7 @@ export default function ProjectWorkspacePage() {
 
   return (
     <div className={`pd ${ibmPlexSans.variable}`}>
-      <style dangerouslySetInnerHTML={{ __html: CSS + STAGE_TRACKER_CSS + EMPTY_ACTION_CSS + QUOTE_COMPARE_TABLE_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: MOTION_CSS + CSS + STAGE_TRACKER_CSS + EMPTY_ACTION_CSS + QUOTE_COMPARE_TABLE_CSS }} />
       <nav className="pd-nav">
         <a className="pd-brand" href="/projects"><b>NXT<i>//</i>LINK</b><span>Workspace</span></a>
         <a className="pd-pill" href="/projects">← All projects</a>
@@ -136,7 +156,9 @@ export default function ProjectWorkspacePage() {
         {/* Header */}
         <header className="pd-head">
           <div className="pd-htop">
-            <span className={`pd-stage s-${project.stage}`}>{STAGE_LABEL[project.stage] || project.stage}</span>
+            {(() => { const SIcon = STAGE_ICON[project.stage]; return (
+              <span className={`pd-stage s-${project.stage}`}>{SIcon && <SIcon size={12} strokeWidth={2.25} aria-hidden="true" />}{STAGE_LABEL[project.stage] || project.stage}</span>
+            ); })()}
             {project.opportunity_ref && <span className="pd-ref">{project.opportunity_ref}</span>}
           </div>
           <h1>{project.name}</h1>
@@ -208,10 +230,15 @@ export default function ProjectWorkspacePage() {
             <div className="pd-sec">
               <div className="pd-sechead">Next steps {openTasks.length > 0 && <span className="pd-count">{openTasks.length} open</span>}</div>
               <div className="pd-tasks">
-                {tasks.map((t) => (
-                  <div key={t.id} className={`pd-task ${t.status === 'done' ? 'done' : ''}`}>
-                    <button className="pd-check" onClick={() => addItem({ kind: 'task_status', task_id: t.id, status: t.status === 'done' ? 'open' : 'done' })}>
-                      {t.status === 'done' ? '✓' : ''}
+                {tasks.map((t, ti) => (
+                  <div key={t.id} className={`pd-task nxm-in ${t.status === 'done' ? 'done' : ''}`} style={staggerStyle(ti)}>
+                    <button
+                      className="pd-check"
+                      aria-label={t.status === 'done' ? `Mark "${t.title}" as open` : `Mark "${t.title}" as done`}
+                      aria-pressed={t.status === 'done'}
+                      onClick={() => addItem({ kind: 'task_status', task_id: t.id, status: t.status === 'done' ? 'open' : 'done' })}
+                    >
+                      {t.status === 'done' && <CheckCircle2 size={13} strokeWidth={2.5} aria-hidden="true" />}
                     </button>
                     <div className="pd-tasktext"><span>{t.title}</span>{t.due_date && <small>due {fmtDate(t.due_date)}</small>}</div>
                   </div>
@@ -243,20 +270,25 @@ export default function ProjectWorkspacePage() {
         {tab === 'vendors' && (
           <div className="pd-panel">
             {vendors.length === 0 ? (
-              <div className="pd-empty">
-                No vendors shortlisted yet.
-                <a className="pd-btn" href="/marketplace">Browse the marketplace →</a>
-              </div>
+              <EmptyAction
+                icon={<Users size={20} strokeWidth={1.75} aria-hidden="true" />}
+                title="No vendors shortlisted yet"
+                actionLabel="Browse the marketplace"
+                actionHref="/marketplace"
+              />
             ) : (
               <div className="pd-vgrid">
-                {vendors.map((v) => (
-                  <div key={v.id} className="pd-vcard">
-                    <div className="pd-vtop"><span className={`pd-vsrc ${v.source}`}>{v.source}</span><span className="pd-vstatus">{v.status}</span></div>
+                {vendors.map((v, vi) => {
+                  const VIcon = VSRC_ICON[v.source];
+                  return (
+                  <div key={v.id} className="pd-vcard nxm-in" style={staggerStyle(vi)}>
+                    <div className="pd-vtop"><span className={`pd-vsrc ${v.source}`}>{VIcon && <VIcon size={10} strokeWidth={2.25} aria-hidden="true" />}{v.source}</span><span className="pd-vstatus">{v.status}</span></div>
                     <div className="pd-vname">{v.listing_kind ? v.listing_kind : 'Vendor'} · {v.listing_id ? v.listing_id.slice(0, 8) : v.vendor_id?.slice(0, 8)}</div>
-                    {v.fit_note && <div className="pd-fit">✓ {v.fit_note}</div>}
+                    {v.fit_note && <div className="pd-fit"><CheckCircle2 size={12} strokeWidth={2.25} aria-hidden="true" /> {v.fit_note}</div>}
                     {v.private_note && <div className="pd-pnote">{v.private_note}</div>}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
             <p className="pd-hint">Add vendors from the <a href="/marketplace">Marketplace</a> — open a listing and “Save to project”. Inviting a vendor creates a quote request linked to this project.</p>
@@ -268,6 +300,7 @@ export default function ProjectWorkspacePage() {
           <div className="pd-panel">
             {quotes.length === 0 ? (
               <EmptyAction
+                icon={<Inbox size={20} strokeWidth={1.75} aria-hidden="true" />}
                 title="No quotes yet"
                 hint="Invite vendors from your shortlist and their proposals land here — with versions and expiry."
                 actionLabel="Invite vendors"
@@ -295,11 +328,15 @@ export default function ProjectWorkspacePage() {
                 />
               )}
               <div className="pd-quotes">
-                {quotes.map((q) => (
-                  <div key={q.id} className="pd-quote">
+                {quotes.map((q, qi) => {
+                  const qstat = q.buyer_decision === 'accepted' ? 'accepted' : q.quote_amount ? 'quoted' : 'await';
+                  const QIcon = QSTAT_ICON[qstat];
+                  return (
+                  <div key={q.id} className="pd-quote nxm-in" style={staggerStyle(qi)}>
                     <div className="pd-qtop">
                       <div><b>{q.company || 'Vendor'}</b><span className="pd-ref">{q.opportunity_ref || q.public_ref}</span></div>
-                      <span className={`pd-qstat ${q.buyer_decision === 'accepted' ? 'accepted' : q.quote_amount ? 'quoted' : 'await'}`}>
+                      <span className={`pd-qstat ${qstat}`}>
+                        {QIcon && <QIcon size={11} strokeWidth={2.25} aria-hidden="true" />}
                         {q.buyer_decision === 'accepted' ? 'Accepted' : q.quote_amount ? 'Quote received' : 'Awaiting quote'}
                       </span>
                     </div>
@@ -313,7 +350,8 @@ export default function ProjectWorkspacePage() {
                       <div className="pd-comm">NXT//LINK fee if won: {money(q.commission.commission_amount)} ({((q.commission.effective_rate || 0) * 100).toFixed(1)}%) · {q.commission.status}</div>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
               </>
             )}
@@ -324,11 +362,17 @@ export default function ProjectWorkspacePage() {
         {tab === 'approvals' && (
           <div className="pd-panel">
             {approvals.length === 0 ? (
-              <div className="pd-empty">No approvals requested yet. Add the sign-offs your purchase needs — budget, safety, engineering, final decision.</div>
+              <EmptyAction
+                icon={<ClipboardCheck size={20} strokeWidth={1.75} aria-hidden="true" />}
+                title="No approvals requested yet"
+                hint="Add the sign-offs your purchase needs — budget, safety, engineering, final decision."
+              />
             ) : (
               <div className="pd-apps">
-                {approvals.map((a) => (
-                  <div key={a.id} className={`pd-app ${a.status}`}>
+                {approvals.map((a, ai) => {
+                  const AIcon = APPROVAL_ICON[a.status];
+                  return (
+                  <div key={a.id} className={`pd-app ${a.status} nxm-in`} style={staggerStyle(ai)}>
                     <div className="pd-appmain">
                       <div className="pd-appname">{APPROVAL_LABEL[a.kind] || a.kind}</div>
                       <div className="pd-appmeta">{a.approver_name ? `${a.approver_name} · ` : ''}{a.status}{a.due_date ? ` · due ${fmtDate(a.due_date)}` : ''}{a.decided_at ? ` · ${fmtDate(a.decided_at)}` : ''}</div>
@@ -338,9 +382,10 @@ export default function ProjectWorkspacePage() {
                         <button className="pd-ok" onClick={() => addItem({ kind: 'approval_decision', approval_id: a.id, status: 'approved' })}>Approve</button>
                         <button className="pd-no" onClick={() => addItem({ kind: 'approval_decision', approval_id: a.id, status: 'rejected' })}>Reject</button>
                       </div>
-                    ) : <span className={`pd-appbadge ${a.status}`}>{a.status}</span>}
+                    ) : <span className={`pd-appbadge ${a.status}`}>{AIcon && <AIcon size={11} strokeWidth={2.25} aria-hidden="true" />}{a.status}</span>}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
             <div className="pd-addrow">
@@ -356,12 +401,23 @@ export default function ProjectWorkspacePage() {
         {tab === 'delivery' && (
           <div className="pd-panel">
             {milestones.length === 0 ? (
-              <div className="pd-empty">Track the after-sale steps here once a vendor is selected: PO, delivery, installation, training, testing, acceptance, warranty.</div>
+              <EmptyAction
+                icon={<Truck size={20} strokeWidth={1.75} aria-hidden="true" />}
+                title="No delivery steps yet"
+                hint="Track the after-sale steps here once a vendor is selected: PO, delivery, installation, training, testing, acceptance, warranty."
+              />
             ) : (
               <div className="pd-tasks">
-                {milestones.map((m) => (
-                  <div key={m.id} className={`pd-task ${m.status === 'done' ? 'done' : ''}`}>
-                    <button className="pd-check" onClick={() => addItem({ kind: 'milestone_status', milestone_id: m.id, status: m.status === 'done' ? 'pending' : 'done' })}>{m.status === 'done' ? '✓' : ''}</button>
+                {milestones.map((m, mi) => (
+                  <div key={m.id} className={`pd-task nxm-in ${m.status === 'done' ? 'done' : ''}`} style={staggerStyle(mi)}>
+                    <button
+                      className="pd-check"
+                      aria-label={m.status === 'done' ? `Mark "${MILESTONE_LABEL[m.kind] || m.kind}" as pending` : `Mark "${MILESTONE_LABEL[m.kind] || m.kind}" as done`}
+                      aria-pressed={m.status === 'done'}
+                      onClick={() => addItem({ kind: 'milestone_status', milestone_id: m.id, status: m.status === 'done' ? 'pending' : 'done' })}
+                    >
+                      {m.status === 'done' && <CheckCircle2 size={13} strokeWidth={2.5} aria-hidden="true" />}
+                    </button>
                     <div className="pd-tasktext"><span>{MILESTONE_LABEL[m.kind] || m.kind}{m.title ? ` — ${m.title}` : ''}</span>
                       <small>{m.status}{m.due_date ? ` · due ${fmtDate(m.due_date)}` : ''}</small></div>
                   </div>
@@ -380,10 +436,16 @@ export default function ProjectWorkspacePage() {
         {/* DOCUMENTS */}
         {tab === 'documents' && (
           <div className="pd-panel">
-            {docs.length === 0 ? <div className="pd-empty">No documents yet. Add quotes, drawings, contracts, or warranties so nothing lives in email.</div> : (
+            {docs.length === 0 ? (
+              <EmptyAction
+                icon={<FileText size={20} strokeWidth={1.75} aria-hidden="true" />}
+                title="No documents yet"
+                hint="Add quotes, drawings, contracts, or warranties so nothing lives in email."
+              />
+            ) : (
               <div className="pd-docs">
-                {docs.map((d) => (
-                  <div key={d.id} className="pd-doc">
+                {docs.map((d, di) => (
+                  <div key={d.id} className="pd-doc nxm-in" style={staggerStyle(di)}>
                     <span className="pd-dkind">{d.kind.replace(/_/g, ' ')}</span>
                     <div className="pd-dtitle">{d.external_url ? <a href={d.external_url} target="_blank" rel="noopener noreferrer">{d.title}</a> : d.title}</div>
                     <small>{fmtDate(d.created_at)}</small>
@@ -403,8 +465,8 @@ export default function ProjectWorkspacePage() {
         {tab === 'history' && (
           <div className="pd-panel">
             <div className="pd-timeline">
-              {events.map((e) => (
-                <div key={e.id} className="pd-ev">
+              {events.map((e, ei) => (
+                <div key={e.id} className="pd-ev nxm-in" style={staggerStyle(ei)}>
                   <div className="pd-evdot" />
                   <div className="pd-evbody">
                     <div className="pd-evtitle">{EVENT_LABEL[e.event] || e.event}</div>
@@ -482,17 +544,15 @@ const CSS = `
 .pd-decision{background:var(--spec-surface,#EFEDF5);border:1px solid var(--spec-border,#E2DFEC);border-radius:10px;padding:11px 13px;margin-bottom:8px;}
 .pd-decision b{font-size:13.5px;}.pd-decision p{margin:5px 0 0;font-size:12.5px;color:var(--spec-text-2nd,#615F72);line-height:1.5;}
 .pd-decision small{display:block;margin-top:6px;font-size:11px;color:#8A87A0;}
-.pd-empty{text-align:center;color:var(--spec-text-2nd,#615F72);font-size:14px;padding:34px 0;display:flex;flex-direction:column;gap:14px;align-items:center;}
-.pd-btn{font-size:13px;font-weight:700;padding:11px 18px;border-radius:10px;background:var(--spec-violet,#6C5CE0);color:#fff;text-decoration:none;}
 .pd-vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
 .pd-vcard{background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:12px;padding:13px;}
 .pd-vtop{display:flex;justify-content:space-between;align-items:center;}
-.pd-vsrc{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:3px 8px;border-radius:99px;background:var(--spec-surface,#EFEDF5);color:var(--spec-text-2nd,#615F72);}
-.pd-vsrc.invited{background:rgba(108,92,224,.1);color:var(--spec-violet-deep,#4A3DB0);}
-.pd-vsrc.recommended{background:#E9F7F0;color:#1F7A54;}
+.pd-vsrc{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:3px 8px;border-radius:99px;background:var(--spec-surface,#EFEDF5);color:var(--spec-text-2nd,#615F72);}
+.pd-vsrc.invited{background:#EDEAFB;color:#4A3DB0;}
+.pd-vsrc.recommended{background:#E7F5EE;color:#1F7A54;}
 .pd-vstatus{font-size:11px;color:var(--spec-text-2nd,#615F72);text-transform:capitalize;}
 .pd-vname{font-size:13.5px;font-weight:700;margin-top:9px;text-transform:capitalize;}
-.pd-fit{font-size:12px;color:var(--spec-success,#2F9E6A);margin-top:7px;line-height:1.4;}
+.pd-fit{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--spec-success,#2F9E6A);margin-top:7px;line-height:1.4;}
 .pd-pnote{font-size:12px;color:var(--spec-text-2nd,#615F72);margin-top:6px;line-height:1.4;}
 .pd-hint{font-size:12.5px;color:var(--spec-text-2nd,#615F72);margin-top:16px;line-height:1.6;}
 .pd-hint a{color:var(--spec-violet-deep,#4A3DB0);}
@@ -536,10 +596,10 @@ const CSS = `
 .pd-qtop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
 .pd-qtop b{font-size:14px;}
 .pd-qtop .pd-ref{margin-left:8px;font-size:11px;color:var(--spec-text-2nd,#615F72);}
-.pd-qstat{font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;white-space:nowrap;}
-.pd-qstat.accepted{background:#E9F7F0;color:#1F7A54;}
-.pd-qstat.quoted{background:rgba(108,92,224,.1);color:var(--spec-violet-deep,#4A3DB0);}
-.pd-qstat.await{background:#FBF3E7;color:var(--spec-warning,#C68A28);}
+.pd-qstat{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;white-space:nowrap;}
+.pd-qstat.accepted{background:#E7F5EE;color:#1F7A54;}
+.pd-qstat.quoted{background:#EDEAFB;color:#4A3DB0;}
+.pd-qstat.await{background:#FBF2E1;color:#8C5A15;}
 .pd-qamt{font-size:17px;font-weight:800;margin-top:9px;font-variant-numeric:tabular-nums;}
 .pd-qamt small{font-size:12px;font-weight:500;color:var(--spec-text-2nd,#615F72);}
 .pd-comm{font-size:12px;color:var(--spec-violet-deep,#4A3DB0);background:rgba(108,92,224,.06);border-radius:8px;padding:8px 10px;margin-top:9px;}
@@ -553,9 +613,9 @@ const CSS = `
 .pd-ok,.pd-no{font-family:inherit;font-size:12px;font-weight:700;padding:7px 13px;border-radius:8px;border:none;cursor:pointer;}
 .pd-ok{background:#E9F7F0;color:#1F7A54;}
 .pd-no{background:#FBECEA;color:var(--spec-error,#CE4B43);}
-.pd-appbadge{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:4px 10px;border-radius:99px;}
-.pd-appbadge.approved{background:#E9F7F0;color:#1F7A54;}
-.pd-appbadge.rejected{background:#FBECEA;color:var(--spec-error,#CE4B43);}
+.pd-appbadge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:4px 10px;border-radius:99px;}
+.pd-appbadge.approved{background:#E7F5EE;color:#1F7A54;}
+.pd-appbadge.rejected{background:#FBECEB;color:#A83E36;}
 .pd-appbadge.skipped{background:var(--spec-surface,#EFEDF5);color:var(--spec-text-2nd,#615F72);}
 .pd-selectfull{flex:1;font-family:inherit;font-size:13px;padding:10px 12px;border-radius:10px;border:1px solid var(--spec-border,#E2DFEC);background:#fff;color:var(--spec-ink,#141320);cursor:pointer;outline:none;}
 `;
