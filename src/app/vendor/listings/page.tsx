@@ -1770,6 +1770,8 @@ const CSS = `
 .vo-catsugbtn{width:100%;display:flex;align-items:center;gap:8px;font-family:inherit;font-size:14px;color:var(--spec-ink,#141320);background:none;border:none;text-align:left;padding:12px 14px;min-height:44px;cursor:pointer;}
 .vo-catsugbtn:hover{background:var(--spec-surface,#EFEDF5);}
 .vo-catsugbtn svg{color:var(--spec-violet,#6C5CE0);flex-shrink:0;}
+.vo-catsugbtn.vo-catcustom{color:var(--spec-violet-deep,#4A3DB0);font-weight:600;border-top:1px solid var(--spec-border,#E2DFEC);}
+.vo-catsugbtn.vo-catcustom-standalone{border:1px dashed var(--spec-border,#E2DFEC);border-radius:12px;margin-top:6px;background:#fff;}
 .vo-catnoresults{font-size:13.5px;color:var(--spec-text-2nd,#615F72);padding:10px 2px;margin:0;}
 .vo-catpopular{margin-top:20px;}
 .vo-catpopular-h{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#8A87A0;margin:0 0 8px;}

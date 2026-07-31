@@ -1,8 +1,14 @@
 // GET    /api/vendor/certifications — MY certifications
 // POST   /api/vendor/certifications (multipart: name, issuer?, credential?,
-//        issued_on?, expires_on?, file?) — add one (max 12), optional proof image
+//        issued_on?, expires_on?, file?) — add one (max 50), optional proof image
 // DELETE /api/vendor/certifications?id= — remove mine
 // Evidence-backed certifications shown on the public storefront.
+//
+// Cap raised 12 -> 50 (2026-07-30, Cesar: "allow them to add multiple
+// certifications ... as much as they want"). Not literally uncapped — this
+// is a service-role write path (arbitrary file uploads), so a generous
+// safety ceiling stays: 50 feels unlimited to a real vendor while still
+// bounding storage/payload abuse.
 
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
@@ -10,7 +16,7 @@ import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getVendorSession, getOrCreateVendorProfile } from '@/lib/vendor/auth';
 
 const BUCKET = 'vendor-logos';
-const MAX = 12;
+const MAX = 50;
 const MAX_BYTES = 8 * 1024 * 1024;
 const ALLOWED = ['image/png', 'image/jpeg', 'image/webp', 'application/pdf'];
 const COLS = 'id, name, issuer, credential, issued_on, expires_on, image_path, sort_order, created_at';

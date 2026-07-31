@@ -99,11 +99,22 @@ export interface SectionCompletionInput {
   clientSizeCount: number;
   proofCount: number; // certifications + case studies + photos + videos + awards
   agreementAccepted: boolean;
+  // Service areas (2026-07-30, fix #4: "service areas too hidden"). It lives
+  // inside the Storefront section's paired location card, but was never
+  // wired into completion — a vendor could tick "storefront done" while
+  // sitting at ZERO service areas, which silently excludes them from every
+  // auto-matched lead (dispatch filters on service-area overlap). Required
+  // for storefront completion UNLESS the vendor is software-only, mirroring
+  // showServiceAreasQuestion below (a software vendor legitimately has no
+  // physical service region and keeps the existing skip).
+  serviceAreas: string[];
+  softwareOnly: boolean;
 }
 
 export function computeSectionStatus(input: SectionCompletionInput): Record<SectionKey, boolean> {
+  const hasServiceAreas = input.softwareOnly || input.serviceAreas.length > 0;
   return {
-    storefront: input.companyName.trim().length > 0 && input.tagline.trim().length > 0 && input.description.trim().length > 0,
+    storefront: input.companyName.trim().length > 0 && input.tagline.trim().length > 0 && input.description.trim().length > 0 && hasServiceAreas,
     capabilities: input.industries.length > 0 && input.categories.length > 0,
     trust: input.proofCount > 0,
     agreement: input.agreementAccepted,

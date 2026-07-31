@@ -75,7 +75,12 @@ const baseInput = {
   companyName: '', tagline: '', description: '',
   industries: [] as string[], categories: [] as string[],
   clientSizeCount: 0, proofCount: 0, agreementAccepted: false,
+  serviceAreas: [] as string[], softwareOnly: false,
 };
+// Every "storefront should be true" assertion below needs a service area (or
+// softwareOnly) on top of the three text fields, since fix #4 folded service
+// areas into storefront completion — see the dedicated tests further down.
+const filledText = { companyName: 'Acme', tagline: 'We do things', description: 'Longer about text.' };
 
 test('a brand-new vendor has no sections done', () => {
   const status = computeSectionStatus(baseInput);
@@ -83,18 +88,46 @@ test('a brand-new vendor has no sections done', () => {
   assert.equal(countSectionsDone(status), 0);
 });
 
-test('storefront is done only once name, tagline, and about are all filled', () => {
+test('storefront is done only once name, tagline, and about are all filled (plus a service area — see fix #4 tests below)', () => {
   assert.equal(computeSectionStatus({ ...baseInput, companyName: 'Acme' }).storefront, false);
   assert.equal(computeSectionStatus({ ...baseInput, companyName: 'Acme', tagline: 'We do things' }).storefront, false);
   assert.equal(
-    computeSectionStatus({ ...baseInput, companyName: 'Acme', tagline: 'We do things', description: 'Longer about text.' }).storefront,
+    computeSectionStatus({ ...baseInput, ...filledText, serviceAreas: ['El Paso'] }).storefront,
     true,
   );
   // Whitespace-only values don't count as filled.
   assert.equal(
-    computeSectionStatus({ ...baseInput, companyName: '  ', tagline: 'x', description: 'x' }).storefront,
+    computeSectionStatus({ ...baseInput, companyName: '  ', tagline: 'x', description: 'x', serviceAreas: ['El Paso'] }).storefront,
     false,
   );
+});
+
+// --- Service areas gate storefront completion (2026-07-30, fix #4) --------
+// "Service areas too hidden" — a vendor could finish the Storefront section
+// with zero service areas and never know their profile would get no
+// auto-matched leads (dispatch filters on service-area overlap). Folding
+// this into computeSectionStatus makes the calm checklist show the gap.
+
+test('storefront is NOT done with zero service areas, even with every text field filled', () => {
+  assert.equal(computeSectionStatus({ ...baseInput, ...filledText }).storefront, false);
+});
+
+test('storefront IS done once at least one service area is picked', () => {
+  assert.equal(computeSectionStatus({ ...baseInput, ...filledText, serviceAreas: ['El Paso'] }).storefront, true);
+});
+
+test('a software-only vendor does not need a service area — the skip still legitimately applies', () => {
+  assert.equal(
+    computeSectionStatus({ ...baseInput, ...filledText, serviceAreas: [], softwareOnly: true }).storefront,
+    true,
+  );
+});
+
+test('the zero-service-area warning does not fire for software-only vendors even mid-typing (partial text)', () => {
+  // A software vendor with the text fields still empty is correctly "not
+  // done" for the TEXT reason, not the area reason — softwareOnly alone
+  // never fakes completion.
+  assert.equal(computeSectionStatus({ ...baseInput, softwareOnly: true }).storefront, false);
 });
 
 test('capabilities is done once at least one industry and one category are picked', () => {
@@ -121,6 +154,7 @@ test('countSectionsDone counts every true flag', () => {
     companyName: 'Acme', tagline: 'We do things', description: 'Longer about text.',
     industries: ['Manufacturing'], categories: ['Forklifts'], clientSizeCount: 1,
     proofCount: 2, agreementAccepted: true,
+    serviceAreas: ['El Paso'], softwareOnly: false,
   });
   assert.deepEqual(status, { storefront: true, capabilities: true, trust: true, agreement: true });
   assert.equal(countSectionsDone(status), 4);

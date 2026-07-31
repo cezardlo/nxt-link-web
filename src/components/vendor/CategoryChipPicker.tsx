@@ -84,11 +84,35 @@ export default function CategoryChipPicker({
   const noResults = lang === 'es' ? 'Sin coincidencias — intenta otra palabra.' : 'No matches — try another word.';
   const popularLabel = lang === 'es' ? 'Populares' : 'Popular';
   const loadingLabel = lang === 'es' ? 'Cargando categorías…' : 'Loading categories…';
+  // "Add your own" (2026-07-30, per ui-standards addendum: "Custom entries
+  // allowed without polluting the canonical taxonomy — store as custom,
+  // don't invent new canonical values."). The typed text becomes a plain
+  // string appended to the SAME `categories` string[] field as every
+  // canonical pick (value() already stores label_en, a plain string) — no
+  // schema change, no new API, canonical vocabulary untouched. Marketplace
+  // facets just count strings in this array, so an unrecognized one is
+  // tolerated exactly like any other (verified 2026-07-30: no call site
+  // assumes categories only contains known vocabulary).
+  const addCustomLabel = lang === 'es' ? (query: string) => `Agregar "${query}" — agrega la tuya` : (query: string) => `Add "${query}" — add your own`;
 
   function pick(it: CategoryItem) {
     onToggle(value(it));
     setQuery('');
   }
+
+  function addCustom() {
+    const custom = query.trim().slice(0, 60);
+    if (!custom) return;
+    if (!selected.some((s) => s.toLowerCase() === custom.toLowerCase())) onToggle(custom);
+    setQuery('');
+  }
+
+  // Suppressed when the typed text exactly matches a canonical suggestion
+  // already offered above — no redundant "add your own" next to the same
+  // value under its real taxonomy entry.
+  const canAddCustom = q.length > 0
+    && !selected.some((s) => s.toLowerCase() === q)
+    && !suggestions.some((it) => value(it).toLowerCase() === q || it.label_es.toLowerCase() === q);
 
   return (
     <div className="vo-catpicker">
@@ -124,9 +148,25 @@ export default function CategoryChipPicker({
                   </button>
                 </li>
               ))}
+              {loaded && canAddCustom && (
+                <li>
+                  <button type="button" className="vo-catsugbtn vo-catcustom" onClick={addCustom}>
+                    <Plus size={13} strokeWidth={2} aria-hidden="true" />
+                    {addCustomLabel(query.trim())}
+                  </button>
+                </li>
+              )}
             </ul>
           ) : (
-            <p className="vo-catnoresults">{loaded ? noResults : loadingLabel}</p>
+            <>
+              <p className="vo-catnoresults">{loaded ? noResults : loadingLabel}</p>
+              {loaded && canAddCustom && (
+                <button type="button" className="vo-catsugbtn vo-catcustom vo-catcustom-standalone" onClick={addCustom}>
+                  <Plus size={13} strokeWidth={2} aria-hidden="true" />
+                  {addCustomLabel(query.trim())}
+                </button>
+              )}
+            </>
           )}
         </div>
       )}

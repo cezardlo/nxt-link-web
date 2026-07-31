@@ -85,3 +85,48 @@ test('empty-string ids never falsely match each other', () => {
     'not_found',
   );
 });
+
+// Combined identity (2026-07-30 fix #1): Cesar's real state is BOTH an admin
+// AND, via a test vendor profile, the auth_id owner of a vendor row. Prove
+// the isAdmin fast path wins regardless of how the ownership fields line up
+// — including the exact combination that used to dead-end: isAdminRequest()
+// resolving false (see tests/platform-role.test.ts for THAT root cause) left
+// only the ownership fallback, which fails whenever the previewed vendor's
+// auth_id is null (never claimed) or belongs to someone else. Once isAdmin is
+// correctly computed, none of that matters — these tests pin the CALLER
+// (decideStorefrontPreview) side of the contract: admin always wins.
+test('admin who also owns this exact vendor (auth_id matches) gets preview', () => {
+  assert.equal(
+    decideStorefrontPreview({
+      isAdmin: true,
+      callerAuthId: 'auth-cesar',
+      vendorId: 'vendor-roberto',
+      vendorAuthId: 'auth-cesar',
+    }),
+    'preview',
+  );
+});
+
+test('admin previewing a vendor row that was never claimed (auth_id null) still gets preview', () => {
+  assert.equal(
+    decideStorefrontPreview({
+      isAdmin: true,
+      callerAuthId: 'auth-cesar',
+      vendorId: 'vendor-roberto',
+      vendorAuthId: null,
+    }),
+    'preview',
+  );
+});
+
+test('admin previewing a vendor owned by someone else entirely still gets preview', () => {
+  assert.equal(
+    decideStorefrontPreview({
+      isAdmin: true,
+      callerAuthId: 'auth-cesar',
+      vendorId: 'vendor-1',
+      vendorAuthId: 'auth-someone-else',
+    }),
+    'preview',
+  );
+});
