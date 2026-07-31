@@ -13,7 +13,8 @@
 // unaffected; nothing here reveals contact details pre- or post-accept.
 
 import { useMemo, useState } from 'react';
-import { bestValueQuoteId, parseTimelineDays } from '@/lib/buyer/compare';
+import { bestValueQuoteId, parseTimelineDays, lowestNumericFieldId } from '@/lib/buyer/compare';
+import type { QuoteExtras, ProductQuoteExtras, TechnologyQuoteExtras } from '@/lib/requests/structured';
 
 export type CompareStatus = 'accepted' | 'received' | 'awaiting';
 export type CompareSort = 'price_asc' | 'price_desc' | 'name';
@@ -36,6 +37,59 @@ export interface CompareTableRow {
   warranty?: string | null;
   status: CompareStatus;
   ref?: string | null;
+  /** Slice R6 (flow-readiness fix) — the vendor's per-kind structured quote
+   * extras (quote_requests.quote_extras / quote_proposals.quote_extras).
+   * Field names never collide across product/service/technology (see
+   * src/lib/requests/structured.ts), so a row can just carry the whole
+   * union and every cell below is independently data-gated on its own key —
+   * no need to also thread the opportunity's request_kind through here. */
+  extras?: QuoteExtras | null;
+}
+
+export interface CompareExtrasLabels {
+  unitPrice: string; shippingCost: string;
+  installation: string; installationIncluded: string; installationExtra: string; installationNone: string;
+  training: string; trainingIncluded: string; trainingExtra: string;
+  scopeSummary: string; duration: string; teamSize: string; emergencyResponse: string;
+  licenseModel: string; licenseSubscription: string; licensePerpetual: string; licenseTiered: string;
+  implementationCost: string; annualSupport: string; slaSummary: string; pricingDetails: string;
+}
+
+// English defaults mirror the EXACT vendor-side wording (src/app/vendor/leads/page.tsx's
+// T dict) so a buyer comparing quotes reads the same terms the vendor filled in.
+export const DEFAULT_COMPARE_EXTRAS_LABELS: CompareExtrasLabels = {
+  unitPrice: 'Unit price', shippingCost: 'Shipping cost',
+  installation: 'Installation', installationIncluded: 'Included', installationExtra: 'Extra cost', installationNone: 'Not available',
+  training: 'Training', trainingIncluded: 'Included', trainingExtra: 'Extra cost',
+  scopeSummary: 'Scope summary (included / excluded)', duration: 'Duration', teamSize: 'Team size',
+  emergencyResponse: 'Emergency response time (if applicable)',
+  licenseModel: 'License model', licenseSubscription: 'Subscription', licensePerpetual: 'Perpetual', licenseTiered: 'Tiered',
+  implementationCost: 'Implementation cost', annualSupport: 'Annual support / maintenance fee',
+  slaSummary: 'SLA summary', pricingDetails: 'Pricing details',
+};
+
+/** Shared enum→label mapping for the vendor's installation choice — used by
+ * the table, the card deck, and the offer-in-chat card so all three render
+ * the identical word for the identical stored value. Returns null for an
+ * unset/unknown value (caller renders "—" or omits the row, never a guess). */
+export function installationValueLabel(v: ProductQuoteExtras['installation'] | null | undefined, l: CompareExtrasLabels): string | null {
+  if (v === 'included') return l.installationIncluded;
+  if (v === 'extra') return l.installationExtra;
+  if (v === 'not_available') return l.installationNone;
+  return null;
+}
+
+export function trainingValueLabel(v: ProductQuoteExtras['training'] | null | undefined, l: CompareExtrasLabels): string | null {
+  if (v === 'included') return l.trainingIncluded;
+  if (v === 'extra') return l.trainingExtra;
+  return null;
+}
+
+export function licenseModelValueLabel(v: TechnologyQuoteExtras['license_model'] | null | undefined, l: CompareExtrasLabels): string | null {
+  if (v === 'subscription') return l.licenseSubscription;
+  if (v === 'perpetual') return l.licensePerpetual;
+  if (v === 'tiered') return l.licenseTiered;
+  return null;
 }
 
 export interface CompareLabels {
@@ -57,6 +111,7 @@ export interface CompareLabels {
   priceDesc: string;
   az: string;
   note: string;
+  extras: CompareExtrasLabels;
 }
 
 // Defaults reproduce the Deal Room's original English copy so /projects/[id]
@@ -80,6 +135,7 @@ export const DEFAULT_COMPARE_LABELS: CompareLabels = {
   priceDesc: 'Price ↓',
   az: 'A–Z',
   note: 'Lowest price isn’t always the best value — weigh timeline, warranty, and fit. The NXT//LINK fee is shown so you see your all-in cost.',
+  extras: DEFAULT_COMPARE_EXTRAS_LABELS,
 };
 
 function money(amount: number, currency?: string | null): string {
@@ -128,6 +184,33 @@ export function QuoteCompareTable({
   // columns stay exactly as compact as they always were).
   const showPaymentTerms = rows.some((q) => q.paymentTerms);
   const showWarranty = rows.some((q) => q.warranty);
+  // Slice R6 (flow-readiness fix) — the vendor's per-kind quote extras.
+  // Same "only take up width when at least one competing quote has it"
+  // pattern as payment terms/warranty above; a real request only ever
+  // produces ONE kind's fields, so in practice 3-4 of these show at once,
+  // never all thirteen together.
+  const showUnitPrice = rows.some((q) => q.extras?.unit_price != null);
+  const showShippingCost = rows.some((q) => q.extras?.shipping_cost != null);
+  const showInstallation = rows.some((q) => q.extras?.installation);
+  const showTraining = rows.some((q) => q.extras?.training);
+  const showScopeSummary = rows.some((q) => q.extras?.scope_summary);
+  const showDuration = rows.some((q) => q.extras?.duration);
+  const showTeamSize = rows.some((q) => q.extras?.team_size != null);
+  const showEmergencyResponse = rows.some((q) => q.extras?.emergency_response);
+  const showLicenseModel = rows.some((q) => q.extras?.license_model);
+  const showImplementationCost = rows.some((q) => q.extras?.implementation_cost != null);
+  const showAnnualSupport = rows.some((q) => q.extras?.annual_support != null);
+  const showSlaSummary = rows.some((q) => q.extras?.sla_summary);
+  const showPricingDetails = rows.some((q) => q.extras?.pricing_details);
+  // Best-value tagging is ONLY extended to numeric fields where "lower is
+  // better" is objectively true (mirrors the price column) — never to a
+  // categorical enum (installation/training/license model) or free text
+  // (scope/duration/emergency response/SLA/pricing details), which are the
+  // vendor's own subjective description with no honest way to rank.
+  const bestUnitPriceId = lowestNumericFieldId(rows.map((r) => ({ id: r.id, value: r.extras?.unit_price })));
+  const bestShippingCostId = lowestNumericFieldId(rows.map((r) => ({ id: r.id, value: r.extras?.shipping_cost })));
+  const bestImplementationCostId = lowestNumericFieldId(rows.map((r) => ({ id: r.id, value: r.extras?.implementation_cost })));
+  const bestAnnualSupportId = lowestNumericFieldId(rows.map((r) => ({ id: r.id, value: r.extras?.annual_support })));
 
   const statusLabel = (s: CompareStatus) => (s === 'accepted' ? labels.accepted : s === 'received' ? labels.received : labels.awaiting);
 
@@ -150,6 +233,19 @@ export function QuoteCompareTable({
               <th>{labels.quote}</th>
               <th>{labels.timeline}</th>
               <th>{labels.validUntil}</th>
+              {showUnitPrice && <th>{labels.extras.unitPrice}</th>}
+              {showShippingCost && <th>{labels.extras.shippingCost}</th>}
+              {showInstallation && <th>{labels.extras.installation}</th>}
+              {showTraining && <th>{labels.extras.training}</th>}
+              {showScopeSummary && <th>{labels.extras.scopeSummary}</th>}
+              {showDuration && <th>{labels.extras.duration}</th>}
+              {showTeamSize && <th>{labels.extras.teamSize}</th>}
+              {showEmergencyResponse && <th>{labels.extras.emergencyResponse}</th>}
+              {showLicenseModel && <th>{labels.extras.licenseModel}</th>}
+              {showImplementationCost && <th>{labels.extras.implementationCost}</th>}
+              {showAnnualSupport && <th>{labels.extras.annualSupport}</th>}
+              {showSlaSummary && <th>{labels.extras.slaSummary}</th>}
+              {showPricingDetails && <th>{labels.extras.pricingDetails}</th>}
               {showPaymentTerms && <th>{labels.paymentTerms}</th>}
               {showWarranty && <th>{labels.warranty}</th>}
               {showFee && <th>{labels.feeIfWon}</th>}
@@ -182,6 +278,43 @@ export function QuoteCompareTable({
                     )}
                   </td>
                   <td>{q.validUntil ? fmtDate(q.validUntil) : '—'}</td>
+                  {showUnitPrice && (
+                    <td className="qct-terms">
+                      {q.extras?.unit_price != null ? (
+                        <>{money(q.extras.unit_price, q.currency)}{q.id === bestUnitPriceId && <span className="qct-lowest">{labels.lowest}</span>}</>
+                      ) : '—'}
+                    </td>
+                  )}
+                  {showShippingCost && (
+                    <td className="qct-terms">
+                      {q.extras?.shipping_cost != null ? (
+                        <>{money(q.extras.shipping_cost, q.currency)}{q.id === bestShippingCostId && <span className="qct-lowest">{labels.lowest}</span>}</>
+                      ) : '—'}
+                    </td>
+                  )}
+                  {showInstallation && <td className="qct-terms">{installationValueLabel(q.extras?.installation, labels.extras) || '—'}</td>}
+                  {showTraining && <td className="qct-terms">{trainingValueLabel(q.extras?.training, labels.extras) || '—'}</td>}
+                  {showScopeSummary && <td className="qct-terms">{q.extras?.scope_summary || '—'}</td>}
+                  {showDuration && <td className="qct-terms">{q.extras?.duration || '—'}</td>}
+                  {showTeamSize && <td className="qct-terms">{q.extras?.team_size != null ? q.extras.team_size : '—'}</td>}
+                  {showEmergencyResponse && <td className="qct-terms">{q.extras?.emergency_response || '—'}</td>}
+                  {showLicenseModel && <td className="qct-terms">{licenseModelValueLabel(q.extras?.license_model, labels.extras) || '—'}</td>}
+                  {showImplementationCost && (
+                    <td className="qct-terms">
+                      {q.extras?.implementation_cost != null ? (
+                        <>{money(q.extras.implementation_cost, q.currency)}{q.id === bestImplementationCostId && <span className="qct-lowest">{labels.lowest}</span>}</>
+                      ) : '—'}
+                    </td>
+                  )}
+                  {showAnnualSupport && (
+                    <td className="qct-terms">
+                      {q.extras?.annual_support != null ? (
+                        <>{money(q.extras.annual_support, q.currency)}{q.id === bestAnnualSupportId && <span className="qct-lowest">{labels.lowest}</span>}</>
+                      ) : '—'}
+                    </td>
+                  )}
+                  {showSlaSummary && <td className="qct-terms">{q.extras?.sla_summary || '—'}</td>}
+                  {showPricingDetails && <td className="qct-terms">{q.extras?.pricing_details || '—'}</td>}
                   {showPaymentTerms && <td className="qct-terms">{q.paymentTerms || '—'}</td>}
                   {showWarranty && <td className="qct-terms">{q.warranty || '—'}</td>}
                   {showFee && <td className="qct-fee">{q.feeAmount != null ? money(q.feeAmount) : '—'}</td>}

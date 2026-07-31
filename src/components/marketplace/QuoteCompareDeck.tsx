@@ -12,7 +12,11 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutGrid, Rows3 } from 'lucide-react';
-import { QuoteCompareTable, QUOTE_COMPARE_TABLE_CSS, type CompareLabels, type CompareTableRow, type CompareStatus } from './QuoteCompareTable';
+import {
+  QuoteCompareTable, QUOTE_COMPARE_TABLE_CSS, DEFAULT_COMPARE_EXTRAS_LABELS,
+  installationValueLabel, trainingValueLabel, licenseModelValueLabel,
+  type CompareLabels, type CompareTableRow, type CompareStatus,
+} from './QuoteCompareTable';
 import { bestValueByMetric, identicalMetrics, shouldShowMetric, type CompareMetricKey } from '@/lib/buyer/compareDeck';
 import { CountUp, staggerStyle } from '@/components/motion/Motion';
 
@@ -29,6 +33,7 @@ export const DEFAULT_DECK_LABELS: DeckLabels = {
   awaiting: 'Awaiting', received: 'Received', accepted: 'Accepted', sort: 'Sort', priceAsc: 'Price ↑', priceDesc: 'Price ↓',
   az: 'A–Z', note: 'Lowest price isn’t always the best value — weigh timeline, warranty, and fit.',
   showDifferencesOnly: 'Show differences only', cardsView: 'Cards', tableView: 'Table', bestValue: 'Best value',
+  extras: DEFAULT_COMPARE_EXTRAS_LABELS,
 };
 
 function money(amount: number, currency?: string | null, locale?: string): string {
@@ -61,7 +66,7 @@ export function QuoteCompareDeck({
   const scrollRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Array<HTMLDivElement | null>>([]);
 
-  const best = useMemo(() => bestValueByMetric(rows.map((r) => ({ id: r.id, amount: r.amount, timeline: r.timeline }))), [rows]);
+  const best = useMemo(() => bestValueByMetric(rows.map((r) => ({ id: r.id, amount: r.amount, timeline: r.timeline, extras: r.extras }))), [rows]);
   const identical = useMemo(() => identicalMetrics(rows), [rows]);
   const show = (key: CompareMetricKey) => shouldShowMetric(key, identical, diffOnly);
 
@@ -162,6 +167,51 @@ export function QuoteCompareDeck({
                   {show('warranty') && r.warranty && (
                     <div className="qcd-row"><span>{labels.warranty}</span><b>{r.warranty}</b></div>
                   )}
+
+                  {/* Slice R6 (flow-readiness fix) — per-kind quote extras.
+                      Same show()/data-gating as payment terms/warranty above;
+                      a "Best value" badge only ever appears on the numeric
+                      money fields where lower is objectively better. */}
+                  {show('unitPrice') && r.extras?.unit_price != null && (
+                    <div className="qcd-row"><span>{labels.extras.unitPrice}</span><b>{money(r.extras.unit_price, r.currency, locale)}{r.id === best.unitPriceId && <span className="qcd-badge qcd-badge-sm">{labels.bestValue}</span>}</b></div>
+                  )}
+                  {show('shippingCost') && r.extras?.shipping_cost != null && (
+                    <div className="qcd-row"><span>{labels.extras.shippingCost}</span><b>{money(r.extras.shipping_cost, r.currency, locale)}{r.id === best.shippingCostId && <span className="qcd-badge qcd-badge-sm">{labels.bestValue}</span>}</b></div>
+                  )}
+                  {show('installation') && r.extras?.installation && (
+                    <div className="qcd-row"><span>{labels.extras.installation}</span><b>{installationValueLabel(r.extras.installation, labels.extras)}</b></div>
+                  )}
+                  {show('training') && r.extras?.training && (
+                    <div className="qcd-row"><span>{labels.extras.training}</span><b>{trainingValueLabel(r.extras.training, labels.extras)}</b></div>
+                  )}
+                  {show('scopeSummary') && r.extras?.scope_summary && (
+                    <div className="qcd-row"><span>{labels.extras.scopeSummary}</span><b>{r.extras.scope_summary}</b></div>
+                  )}
+                  {show('duration') && r.extras?.duration && (
+                    <div className="qcd-row"><span>{labels.extras.duration}</span><b>{r.extras.duration}</b></div>
+                  )}
+                  {show('teamSize') && r.extras?.team_size != null && (
+                    <div className="qcd-row"><span>{labels.extras.teamSize}</span><b>{r.extras.team_size}</b></div>
+                  )}
+                  {show('emergencyResponse') && r.extras?.emergency_response && (
+                    <div className="qcd-row"><span>{labels.extras.emergencyResponse}</span><b>{r.extras.emergency_response}</b></div>
+                  )}
+                  {show('licenseModel') && r.extras?.license_model && (
+                    <div className="qcd-row"><span>{labels.extras.licenseModel}</span><b>{licenseModelValueLabel(r.extras.license_model, labels.extras)}</b></div>
+                  )}
+                  {show('implementationCost') && r.extras?.implementation_cost != null && (
+                    <div className="qcd-row"><span>{labels.extras.implementationCost}</span><b>{money(r.extras.implementation_cost, r.currency, locale)}{r.id === best.implementationCostId && <span className="qcd-badge qcd-badge-sm">{labels.bestValue}</span>}</b></div>
+                  )}
+                  {show('annualSupport') && r.extras?.annual_support != null && (
+                    <div className="qcd-row"><span>{labels.extras.annualSupport}</span><b>{money(r.extras.annual_support, r.currency, locale)}{r.id === best.annualSupportId && <span className="qcd-badge qcd-badge-sm">{labels.bestValue}</span>}</b></div>
+                  )}
+                  {show('slaSummary') && r.extras?.sla_summary && (
+                    <div className="qcd-row"><span>{labels.extras.slaSummary}</span><b>{r.extras.sla_summary}</b></div>
+                  )}
+                  {show('pricingDetails') && r.extras?.pricing_details && (
+                    <div className="qcd-row"><span>{labels.extras.pricingDetails}</span><b>{r.extras.pricing_details}</b></div>
+                  )}
+
                   {r.feeAmount != null && (
                     <div className="qcd-row qcd-fee"><span>{labels.feeIfWon}</span><b>{money(r.feeAmount, undefined, locale)}</b></div>
                   )}

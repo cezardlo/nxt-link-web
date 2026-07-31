@@ -50,9 +50,20 @@ export async function GET() {
   // (vendor/quote, vendor/proposals, vendor/leads PATCH, and now the auto-
   // 'viewed' write below) already stamps it, so it's a reliable "last
   // activity" signal for the buyer's own request card — no schema change.
+  // quote_extras + request_kind added (flow-readiness fix, 2026-07-30): the
+  // buyer dashboard is the ONLY place a buyer can see the vendor's per-kind
+  // structured quote fields (unit price/installation/shipping for a product
+  // ask, scope/duration/team/emergency-response for a service ask,
+  // license-model/implementation-cost/annual-support/SLA for a technology
+  // ask) — before this, they were collected (R3) but never selected here, so
+  // the compare table/deck/offer card had nothing to render. Both are plain
+  // vendor-typed quote data (same trust level as quote_payment_terms/
+  // quote_warranty, already selected below) — never contact info, never the
+  // buyer's own blind budget_min/budget_max (which this route has never
+  // selected and still doesn't).
   const { data: quotes } = await db
     .from('quote_requests')
-    .select('id, public_ref, kind, product_id, service_id, vendor_id, company, message, status, created_at, updated_at, quote_amount, quote_currency, quote_message, quote_timeline, quote_valid_until, quoted_at, buyer_decision, answers, quote_payment_terms, quote_warranty')
+    .select('id, public_ref, kind, request_kind, product_id, service_id, vendor_id, company, message, status, created_at, updated_at, quote_amount, quote_currency, quote_message, quote_timeline, quote_valid_until, quoted_at, buyer_decision, answers, quote_payment_terms, quote_warranty, quote_extras')
     .ilike('email', emailMatch)
     .order('created_at', { ascending: false })
     .limit(100);

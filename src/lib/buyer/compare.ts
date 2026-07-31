@@ -84,6 +84,24 @@ export function bestValueQuoteId(quotes: ComparableQuote[]): string | null {
 }
 
 /**
+ * The id of the row with the LOWEST value for a given optional numeric field
+ * (e.g. a vendor-typed shipping cost or implementation cost) — same
+ * "objectively lower is better" rule as bestValueQuoteId, generalized so both
+ * the compare table and the compare deck can share one implementation for
+ * every per-kind numeric quote extra. Rows missing the field are ignored;
+ * ties resolve to the first in input order; returns null when nobody set it.
+ */
+export function lowestNumericFieldId(rows: Array<{ id: string; value: number | null | undefined }>): string | null {
+  let bestId: string | null = null;
+  let bestVal = Number.POSITIVE_INFINITY;
+  for (const r of rows) {
+    if (r.value == null || !Number.isFinite(r.value)) continue;
+    if (r.value < bestVal) { bestVal = r.value; bestId = r.id; }
+  }
+  return bestId;
+}
+
+/**
  * Parse a free-text lead time ("2 weeks", "6 wks", "10 days", "3 months") into
  * days so a comparison can draw a length-proportional bar. Returns null when
  * unparseable (the UI then simply omits the bar).

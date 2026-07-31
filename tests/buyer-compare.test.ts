@@ -5,6 +5,7 @@ import {
   bestValueQuoteId,
   describeAcceptedDeal,
   groupQuotesForCompare,
+  lowestNumericFieldId,
   needKey,
   parseTimelineDays,
 } from '@/lib/buyer/compare';
@@ -136,4 +137,27 @@ test('describeAcceptedDeal returns the agreed terms + connected/unlocked once ac
 test('describeAcceptedDeal returns null for undecided and declined quotes (no unlock leak)', () => {
   assert.equal(describeAcceptedDeal({ buyer_decision: null, quote_amount: 4200 }), null);
   assert.equal(describeAcceptedDeal({ buyer_decision: 'declined', quote_amount: 4200 }), null);
+});
+
+// Slice R6 (flow-readiness fix, 2026-07-30) — generalized "lowest wins" for
+// any per-kind numeric quote extra (shipping cost, implementation cost,
+// annual support, unit price), shared by both QuoteCompareTable's own
+// best-tag column logic and compareDeck.ts's bestValueByMetric.
+
+test('lowestNumericFieldId picks the lowest value, same rule as bestValueQuoteId', () => {
+  assert.equal(
+    lowestNumericFieldId([{ id: 'a', value: 50 }, { id: 'b', value: 20 }, { id: 'c', value: 35 }]),
+    'b',
+  );
+});
+
+test('lowestNumericFieldId ignores rows missing the field and resolves ties to the first', () => {
+  assert.equal(
+    lowestNumericFieldId([{ id: 'a', value: null }, { id: 'b', value: 20 }, { id: 'c', value: 20 }]),
+    'b',
+  );
+});
+
+test('lowestNumericFieldId returns null when nobody set the field', () => {
+  assert.equal(lowestNumericFieldId([{ id: 'a', value: null }, { id: 'b', value: undefined }]), null);
 });

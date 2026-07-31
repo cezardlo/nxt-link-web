@@ -68,8 +68,13 @@ export async function GET(req: Request) {
   // FIX I-2: attachment file NAMES get the same pre-acceptance masking as
   // message bodies — mirrors the exact `buyer_decision !== 'accepted'` check
   // the POST handlers use for text.
+  // quote_extras added (flow-readiness fix, 2026-07-30) — carried into
+  // `legacy` below so the offer-in-chat card (OfferCard.tsx) can render a
+  // pre-R3 (or flat-endpoint) quote's per-kind extras exactly like a real
+  // quote_proposals revision does. Same trust level as the payment-terms/
+  // warranty mirror fields already selected here; never budget.
   const { data: opp } = await db.from('quote_requests')
-    .select('buyer_decision, quote_amount, quote_currency, quote_timeline, quote_valid_until, quote_payment_terms, quote_warranty, quote_message, quoted_at, created_at')
+    .select('buyer_decision, quote_amount, quote_currency, quote_timeline, quote_valid_until, quote_payment_terms, quote_warranty, quote_message, quoted_at, created_at, quote_extras')
     .eq('id', qrId).maybeSingle();
   const maskNames = opp?.buyer_decision !== 'accepted';
   const attachmentsByMessage = await loadMessageAttachments(db, messages.map((m) => m.id as string), { maskNames });
@@ -83,7 +88,7 @@ export async function GET(req: Request) {
   // 'message'). See src/lib/messages/offerTimeline.ts for how these combine.
   const [{ data: proposals }, { data: quoteNotifs }, { data: commission }] = await Promise.all([
     db.from('quote_proposals')
-      .select('id, revision, status, total, currency, lead_time, valid_until, payment_terms, warranty, notes, submitted_at, created_at')
+      .select('id, revision, status, total, currency, lead_time, valid_until, payment_terms, warranty, notes, submitted_at, created_at, quote_extras')
       .eq('quote_request_id', qrId).order('revision', { ascending: true }).limit(50),
     db.from('notifications').select('read_at').eq('quote_request_id', qrId).eq('recipient', 'buyer').eq('type', 'quote').limit(20),
     db.from('commissions').select('invoice_number, status').eq('quote_request_id', qrId).maybeSingle(),
@@ -110,6 +115,7 @@ export async function GET(req: Request) {
             quote_message: opp.quote_message ?? null,
             quoted_at: opp.quoted_at ?? null,
             created_at: opp.created_at,
+            quote_extras: opp.quote_extras ?? null,
           },
         }
       : null,

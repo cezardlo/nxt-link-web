@@ -45,6 +45,29 @@ test('stripBlindBudgetFields: a row with no budget fields at all (old-shape row)
   assert.deepEqual(out, row);
 });
 
+// Slice R6 (flow-readiness fix, 2026-07-30) — the buyer dashboard now also
+// selects quote_extras/request_kind (src/app/api/buyer/dashboard/route.ts,
+// src/app/api/buyer/messages/route.ts) so the buyer can finally see the
+// vendor's per-kind quote fields. Neither route calls stripBlindBudgetFields
+// (the BUYER legitimately sees their own request — this invariant is about
+// hiding budget FROM VENDORS, src/app/api/vendor/leads/route.ts), but a
+// vendor-facing route selecting the SAME quote_extras/request_kind columns
+// for its own purposes (R3, unrelated to this fix) must still have its
+// budget stripped exactly as before — proving the new columns never became
+// an accidental side door for budget to ride along on the same row.
+
+test('stripBlindBudgetFields: quote_extras and request_kind pass through UNTOUCHED while budget_min/budget_max are still stripped', () => {
+  const row = {
+    id: 'qr-3', request_kind: 'technology', quote_extras: { license_model: 'subscription', implementation_cost: 5000 },
+    budget_min: 10000, budget_max: 50000,
+  };
+  const out = stripBlindBudgetFields(row);
+  assert.equal('budget_min' in out, false);
+  assert.equal('budget_max' in out, false);
+  assert.equal(out.request_kind, 'technology');
+  assert.deepEqual(out.quote_extras, { license_model: 'subscription', implementation_cost: 5000 });
+});
+
 test('shouldShareClientRequestBudget: defaults to hidden — false/null/absent all hide the legacy budget_range', () => {
   assert.equal(shouldShareClientRequestBudget({ share_budget: false }), false);
   assert.equal(shouldShareClientRequestBudget({ share_budget: null }), false);
