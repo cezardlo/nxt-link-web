@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { IBM_Plex_Sans } from 'next/font/google';
-import { BadgeCheck } from 'lucide-react';
+import { BadgeCheck, Zap, MapPin, PlayCircle, Timer, type LucideIcon } from 'lucide-react';
 import { levelAtLeast } from '@/components/marketplace/TrustBadges';
 import AddToCartButton from '@/components/cart/AddToCartButton';
 import { useLang, type Lang } from '@/components/LanguageToggle';
@@ -743,17 +743,17 @@ export default function MarketplacePage() {
             />
             {facets.verifiedN > 0 && (
               <div className="mk-facet">
-                <FacetCheck label={lang === 'es' ? 'Proveedor verificado' : 'Verified vendor'} checked={fVerified} onChange={setFVerified} count={facets.verifiedN} />
+                <FacetCheck label={lang === 'es' ? 'Proveedor verificado' : 'Verified vendor'} checked={fVerified} onChange={setFVerified} count={facets.verifiedN} icon={BadgeCheck} />
               </div>
             )}
 
             {(facets.pilotN > 0 || facets.emergencyN > 0 || facets.localN > 0 || facets.fastN > 0) && (
               <div className="mk-facet">
                 <div className="mk-facetlabel">{lang === 'es' ? 'Mostrar solo' : 'Show only'}</div>
-                {facets.pilotN > 0 && <FacetCheck label={lang === 'es' ? 'Piloto / demo disponible' : 'Pilot / demo available'} checked={fPilot} onChange={setFPilot} count={facets.pilotN} />}
-                {facets.localN > 0 && <FacetCheck label={lang === 'es' ? 'Soporte local' : 'Local support'} checked={fLocal} onChange={setFLocal} count={facets.localN} />}
-                {facets.fastN > 0 && <FacetCheck label={lang === 'es' ? 'Respuesta rápida' : 'Fast response / lead time'} checked={fFast} onChange={setFFast} count={facets.fastN} />}
-                {facets.emergencyN > 0 && <FacetCheck label={lang === 'es' ? 'Emergencia 24/7' : '24/7 emergency'} checked={fEmergency} onChange={setFEmergency} count={facets.emergencyN} />}
+                {facets.pilotN > 0 && <FacetCheck label={lang === 'es' ? 'Piloto / demo disponible' : 'Pilot / demo available'} checked={fPilot} onChange={setFPilot} count={facets.pilotN} icon={PlayCircle} />}
+                {facets.localN > 0 && <FacetCheck label={lang === 'es' ? 'Soporte local' : 'Local support'} checked={fLocal} onChange={setFLocal} count={facets.localN} icon={MapPin} />}
+                {facets.fastN > 0 && <FacetCheck label={lang === 'es' ? 'Respuesta rápida' : 'Fast response / lead time'} checked={fFast} onChange={setFFast} count={facets.fastN} icon={Timer} />}
+                {facets.emergencyN > 0 && <FacetCheck label={lang === 'es' ? 'Emergencia 24/7' : '24/7 emergency'} checked={fEmergency} onChange={setFEmergency} count={facets.emergencyN} icon={Zap} />}
               </div>
             )}
             <p className="mk-railnote">{lang === 'es' ? 'Los filtros reflejan lo que los proveedores realmente publicaron. Las opciones sin datos se ocultan.' : 'Filters reflect what vendors actually listed. Options with no data are hidden.'}</p>
@@ -916,10 +916,11 @@ function ListingCard({ c, lang, saved, inCompare, onSave, onCompare }: { c: Card
 // Amazon-style facet count: value + how many results have it, e.g. "Automation & Robotics (5)".
 type FacetOption = [value: string, count: number];
 
-function FacetCheck({ label, checked, onChange, count }: { label: string; checked: boolean; onChange: (v: boolean) => void; count?: number }) {
+function FacetCheck({ label, checked, onChange, count, icon: IconComp }: { label: string; checked: boolean; onChange: (v: boolean) => void; count?: number; icon?: LucideIcon }) {
   return (
-    <label className="mk-facetcheck">
+    <label className={'mk-facetcheck' + (checked ? ' on' : '')}>
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      {IconComp && <IconComp size={14} strokeWidth={1.75} className="mk-facetcheck-icon" aria-hidden="true" />}
       <span>{label}</span>
       {typeof count === 'number' && <span className="mk-facetcount">({count})</span>}
     </label>
@@ -939,7 +940,7 @@ function FacetCheckGroup({ label, options, values, onToggle, labelFor }: { label
       <div className="mk-facetlabel">{label}</div>
       <div className="mk-facetgroup">
         {options.map(([o, n]) => (
-          <label key={o} className="mk-facetcheck">
+          <label key={o} className={'mk-facetcheck' + (values.includes(o) ? ' on' : '')}>
             <input type="checkbox" checked={values.includes(o)} onChange={() => onToggle(o)} />
             <span>{labelFor ? labelFor(o) : o}</span>
             <span className="mk-facetcount">({n})</span>
@@ -1158,9 +1159,14 @@ const CSS = `
 .mk-facetlabel{font-size:12px;font-weight:600;letter-spacing:var(--spec-tracking-eyebrow);text-transform:uppercase;color:var(--spec-text-2nd);}
 .mk-facet select{font-family:inherit;font-size:13.5px;padding:10px 11px;border-radius:10px;border:1px solid var(--spec-border);background:var(--spec-warm-white);color:var(--spec-ink);outline:none;}
 .mk-facet select:focus{border-color:var(--spec-violet);}
-.mk-facetcheck{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--spec-ink);cursor:pointer;padding:3px 0;}
+.mk-facetcheck{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--spec-ink);cursor:pointer;padding:5px 8px;margin:0 -8px;border-radius:8px;border:1px solid transparent;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease),border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.mk-facetcheck:hover{background:var(--spec-warm-white,#F8F7FB);}
+.mk-facetcheck.on{background:var(--spec-violet-bg,#EDEAFB);border-color:var(--spec-violet,#6C5CE0);}
 .mk-facetcheck input{accent-color:var(--spec-violet);width:15px;height:15px;flex-shrink:0;}
+.mk-facetcheck-icon{color:var(--spec-text-2nd);flex-shrink:0;}
+.mk-facetcheck.on .mk-facetcheck-icon{color:var(--spec-violet-deep,#4A3DB0);}
 .mk-facetcheck span:first-of-type{flex:1;}
+.mk-facetcheck.on span:first-of-type{color:var(--spec-violet-deep,#4A3DB0);font-weight:600;}
 .mk-facetcount{color:var(--spec-text-2nd);font-size:12px;font-weight:400;flex-shrink:0;}
 .mk-facetgroup{display:flex;flex-direction:column;max-height:196px;overflow-y:auto;padding-right:2px;}
 .mk-railnote{font-size:11.5px;color:var(--spec-text-2nd);line-height:1.5;margin:2px 0 0;}

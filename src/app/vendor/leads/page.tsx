@@ -9,7 +9,7 @@ import { IBM_Plex_Sans } from 'next/font/google';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
 import VendorNav from '@/components/VendorNav';
-import { Megaphone, MessageCircle, Inbox, Eye, Reply, Trophy, XCircle, Paperclip, Download, X, Send, UserPlus, Bell, type LucideIcon } from 'lucide-react';
+import { Megaphone, MessageCircle, Inbox, Eye, Reply, Trophy, XCircle, CheckCircle2, Paperclip, Download, X, Send, UserPlus, Bell, type LucideIcon } from 'lucide-react';
 import { MatchReasons, MATCH_REASONS_CSS } from '@/components/marketplace/MatchReasons';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
 import { calculateFee } from '@/lib/fees/engine';
@@ -374,6 +374,18 @@ export default function VendorLeadsPage() {
   // Color-coded by meaning (Design System v1.0 palette) + a small icon per
   // status — visual only, the status VALUES themselves are untouched.
   const STATUS_ICON: Record<string, LucideIcon> = { new: Inbox, viewed: Eye, responded: Reply, won: Trophy, lost: XCircle };
+  // Icons+colors sweep (2026-07-30) — per-type icon in a small tinted circle
+  // for the notifications dropdown. Real recipient='vendor' notification
+  // types only (src/lib/notify.ts callers): new_lead, message, decision.
+  // 'decision' covers BOTH buyer-accepted and buyer-declined (same `type`
+  // string, only the title text differs) — a single neutral tone is used
+  // rather than parsing n.title, which would be fragile/out of scope here.
+  const NOTIF_TYPE: Record<string, { icon: LucideIcon; tone: string }> = {
+    new_lead: { icon: Inbox, tone: 'violet' },
+    message: { icon: MessageCircle, tone: 'info' },
+    decision: { icon: CheckCircle2, tone: 'success' },
+  };
+  const DEFAULT_NOTIF_TYPE = { icon: Bell, tone: 'violet' } as const;
   const PILOT_KIND_LABEL: Record<string, string> = { demo: t.pkDemo, pilot: t.pkPilot, site_visit: t.pkSiteVisit };
   const PILOT_STATUS_LABEL: Record<string, string> = { proposed: t.psProposed, scheduled: t.psScheduled, in_progress: t.psInProgress, completed: t.psCompleted, cancelled: t.psCancelled };
   const PILOT_OUTCOME_LABEL: Record<string, string> = { passed: t.poPassed, failed: t.poFailed, inconclusive: t.poInconclusive };
@@ -745,12 +757,17 @@ export default function VendorLeadsPage() {
             <div className="ld-notifhead"><b>{t.notifications}</b><button onClick={() => setNotifOpen(false)}>{t.close}</button></div>
             {notifs.length === 0 ? <p className="ld-notifempty">{t.notifEmpty}</p> : (
               <ul>
-                {notifs.map((n) => (
-                  <li key={n.id} className={n.read_at ? '' : 'unread'}>
-                    <span>{n.title}</span>
-                    <small>{new Date(n.created_at).toLocaleDateString()}</small>
-                  </li>
-                ))}
+                {notifs.map((n) => {
+                  const nt = (n.type && NOTIF_TYPE[n.type]) || DEFAULT_NOTIF_TYPE;
+                  const NIcon = nt.icon;
+                  return (
+                    <li key={n.id} className={n.read_at ? '' : 'unread'}>
+                      <span className={'ld-notifdot t-' + nt.tone} aria-hidden="true"><NIcon size={12} strokeWidth={2.25} /></span>
+                      <span className="ld-notiftext">{n.title}</span>
+                      <small>{new Date(n.created_at).toLocaleDateString()}</small>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
@@ -802,7 +819,9 @@ export default function VendorLeadsPage() {
               {leads.map((l, li) => (
                 <div className="ld-card nxm-in nxm-lift" style={staggerStyle(li)} key={l.id}>
                   <div className="ld-top">
-                    <span className={'ld-status ' + l.status}>{STATUS_LABEL[l.status] || l.status}</span>
+                    {(() => { const SIcon = STATUS_ICON[l.status]; return (
+                      <span className={'ld-status ' + l.status}>{SIcon && <SIcon size={11} strokeWidth={2.25} aria-hidden="true" />}{STATUS_LABEL[l.status] || l.status}</span>
+                    ); })()}
                     <span className="ld-reqtype">{REQ_LABEL[l.answers?.request_type || 'quote'] || l.answers?.request_type}</span>
                     <b>{l.company}</b>
                     <small>{l.listing_name ? `→ ${l.listing_name}` : ''} · {new Date(l.created_at).toLocaleDateString()}</small>
@@ -1242,9 +1261,15 @@ const CSS = `
 .ld-notifhead button{background:none;border:none;color:var(--spec-text-2nd,#615F72);font:inherit;font-size:12.5px;cursor:pointer;}
 .ld-notifempty{color:var(--spec-text-2nd,#615F72);font-size:13.5px;margin:4px 0;}
 .ld-notifs ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;max-height:280px;overflow-y:auto;}
-.ld-notifs li{display:flex;justify-content:space-between;gap:12px;padding:9px 10px;border-radius:9px;font-size:13.5px;color:var(--spec-ink,#141320);}
+.ld-notifs li{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;font-size:13.5px;color:var(--spec-ink,#141320);}
 .ld-notifs li.unread{background:rgba(108,92,224,.06);font-weight:600;}
 .ld-notifs li small{color:var(--spec-text-2nd,#615F72);white-space:nowrap;}
+.ld-notiftext{flex:1;min-width:0;}
+.ld-notifdot{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;flex-shrink:0;}
+.ld-notifdot.t-violet{background:var(--spec-violet-bg,#EDEAFB);color:var(--spec-violet-deep,#4A3DB0);}
+.ld-notifdot.t-info{background:var(--spec-info-bg,#E9EFFB);color:#2F5AA8;}
+.ld-notifdot.t-success{background:var(--spec-success-bg,#E7F5EE);color:#1F7A54;}
+.ld-notifdot.t-warning{background:var(--spec-warning-bg,#FBF2E1);color:#8C5A15;}
 .ld-wrap{max-width:760px;margin:0 auto;padding:36px 20px 100px;}
 .ld-wrap h1{font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-size:28px;font-weight:700;letter-spacing:-.01em;}
 .ld-newcnt{font-size:12px;font-weight:700;color:var(--spec-violet-deep,#4A3DB0);background:rgba(108,92,224,.1);border-radius:99px;padding:4px 12px;vertical-align:6px;margin-left:8px;}
@@ -1270,13 +1295,13 @@ const CSS = `
 .ld-top b{font-size:15.5px;}
 .ld-top small{color:var(--spec-text-2nd,#615F72);}
 .ld-ref{margin-left:auto;color:#706D88;font-size:12px;}
-.ld-status{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:99px;background:var(--spec-surface,#EFEDF5);color:var(--spec-ink,#141320);}
+.ld-status{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:99px;background:var(--spec-surface,#EFEDF5);color:var(--spec-ink,#141320);transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .ld-reqtype{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:99px;background:#E9F7F0;color:#1F7A54;}
 .ld-status.new{background:rgba(108,92,224,.1);color:var(--spec-violet-deep,#4A3DB0);}
 .ld-status.viewed{background:var(--spec-surface,#EFEDF5);color:var(--spec-slate,#3B3A4A);}
 .ld-status.responded{background:rgba(62,111,208,.1);color:#2F5AA8;}
 .ld-status.won{background:#E9F7F0;color:#1F7A54;}
-.ld-status.lost{background:#FBECEA;color:var(--spec-error,#CE4B43);}
+.ld-status.lost{background:#FBECEA;color:#A83E36;} /* darkened from --spec-error for AA (4.5:1+) on tint bg */
 .ld-bundle{margin-top:12px;background:rgba(108,92,224,.05);border:1px solid rgba(108,92,224,.22);border-radius:12px;padding:12px 14px;}
 .ld-bundle b{font-size:12.5px;color:var(--spec-violet-deep,#4A3DB0);}
 .ld-bundle ul{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:5px;}

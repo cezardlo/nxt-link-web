@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
-import { Search, Plus, ArrowLeft, ExternalLink, Package, Wrench, ImageOff, Check } from 'lucide-react';
+import { Search, Plus, ArrowLeft, ExternalLink, Package, Wrench, ImageOff, Check, FileText, CheckCircle2, AlertCircle, Eye, EyeOff, type LucideIcon } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import { scoreListing } from '@/lib/marketplace/completeness';
 import { pilotEntriesOf, customFieldsOf, type PilotEntry, type CustomField } from '@/lib/marketplace/types';
@@ -389,6 +389,9 @@ export default function VendorListingsPage() {
   const [lang, setLang] = useLang(); // stored `nxt_lang` — shared across marketplace pages
   const t = T[lang];
   const STATUS_LABEL: Record<string, string> = { draft: t.stDraft, published: t.stPublished, needs_review: t.stNeedsReview, ready: t.stReady, unpublished: t.stUnpublished };
+  // Icons+colors sweep (2026-07-30) — small icon inside the existing
+  // .sc-status pill (visual only, same 5 statuses/classes as before).
+  const STATUS_ICON: Record<string, LucideIcon> = { draft: FileText, published: CheckCircle2, needs_review: AlertCircle, ready: Eye, unpublished: EyeOff };
   const [checking, setChecking] = useState(true);
   const [signedIn, setSignedIn] = useState(false);
   const [products, setProducts] = useState<Listing[]>([]);
@@ -845,7 +848,9 @@ export default function VendorListingsPage() {
                           <span className="sc-rowname">{l.name}</span>
                           <span className="sc-rowmeta">{(l.category || t.noCategory)} · {KIND_LABEL[l.kind]}</span>
                         </span>
-                        <span className={'sc-status ' + l.status}>{STATUS_LABEL[l.status] || l.status}</span>
+                        {(() => { const SIcon = STATUS_ICON[l.status]; return (
+                          <span className={'sc-status ' + l.status}>{SIcon && <SIcon size={11} strokeWidth={2.25} aria-hidden="true" />}{STATUS_LABEL[l.status] || l.status}</span>
+                        ); })()}
                       </button>
                       {l.status === 'published' && (
                         <a className="sc-rowlive" href={`/marketplace/${l.kind}/${l.id}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} aria-label={t.viewLive} title={t.viewLive}>
@@ -897,7 +902,9 @@ export default function VendorListingsPage() {
                 <button type="button" className="sc-backbtn" onClick={() => { setEditing(null); setMsg(''); }}><ArrowLeft size={18} /> {t.backToListings}</button>
                 <div className="sc-editheadmain">
                   <span className="sc-lbl">{editing.id ? (editing.kind === 'product' ? t.formEditProduct : t.formEditService) : (editing.kind === 'product' ? t.formNewProduct : t.formNewService)}</span>
-                  {currentListing && <span className={'sc-status ' + currentListing.status}>{STATUS_LABEL[currentListing.status] || currentListing.status}</span>}
+                  {currentListing && (() => { const SIcon = STATUS_ICON[currentListing.status]; return (
+                    <span className={'sc-status ' + currentListing.status}>{SIcon && <SIcon size={11} strokeWidth={2.25} aria-hidden="true" />}{STATUS_LABEL[currentListing.status] || currentListing.status}</span>
+                  ); })()}
                 </div>
                 {currentListing && (
                   <div className="sc-editheadactions">
@@ -1175,11 +1182,14 @@ const CSS = `
 .sc-list button.sc-pub{border-color:rgba(47,158,106,.4);color:#1F7A54;}
 .sc-list button.sc-del{color:var(--spec-text-2nd,#615F72);}
 .sc-list button.sc-del:hover{color:var(--spec-error,#CE4B43);border-color:rgba(206,75,67,.4);}
-.sc-status{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:99px;white-space:nowrap;flex-shrink:0;}
-.sc-status.published{background:var(--spec-success-bg,#E7F5EE);color:var(--spec-success,#2F9E6A);}
-.sc-status.draft{background:var(--spec-warning-bg,#FBF2E1);color:var(--spec-warning,#C68A28);}
-.sc-status.needs_review{background:var(--spec-warning-bg,#FBF2E1);color:#B5651D;}
-.sc-status.ready{background:var(--spec-info-bg,#E9EFFB);color:var(--spec-info,#3E6FD0);}
+.sc-status{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:99px;white-space:nowrap;flex-shrink:0;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+/* Text colors below are darkened from the raw --spec-* tokens where the raw
+   token fails AA on the tint background (verified computationally, 2026-07-30
+   icons+colors sweep) — see the sweep report for the 6 tinted-pill ratios. */
+.sc-status.published{background:var(--spec-success-bg,#E7F5EE);color:#1F7A54;}
+.sc-status.draft{background:var(--spec-warning-bg,#FBF2E1);color:#8C5A15;}
+.sc-status.needs_review{background:var(--spec-warning-bg,#FBF2E1);color:#8C5A15;}
+.sc-status.ready{background:var(--spec-info-bg,#E9EFFB);color:#2F5AA8;}
 .sc-status.unpublished{background:var(--spec-surface,#EFEDF5);color:var(--spec-text-2nd,#615F72);}
 .sc-btn{font-family:inherit;font-size:14px;font-weight:700;padding:12px 20px;border-radius:10px;border:none;background:var(--spec-violet,#6C5CE0);color:#fff;cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .sc-btn:hover{background:var(--spec-violet-deep,#4A3DB0);}.sc-btn:disabled{opacity:.55;}

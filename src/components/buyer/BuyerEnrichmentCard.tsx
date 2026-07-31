@@ -295,7 +295,10 @@ export default function BuyerEnrichmentCard({ lang, profile, onSaved, onDismiss 
 }
 
 export const BUYER_ENRICHMENT_CARD_CSS = `
-.bec{background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:16px;padding:24px;margin:20px 0;box-shadow:0 4px 12px rgba(124,58,237,.08);}
+/* Icons+colors sweep (2026-07-30, §5.4) — pale-violet container: a light
+   wash derived from --spec-violet (the shadow tint was also corrected from a
+   stray non-token hex to the real brand violet, rgb(108,92,224)). */
+.bec{background:rgba(108,92,224,.05);border:1px solid rgba(108,92,224,.18);border-radius:var(--spec-radius-md,12px);padding:24px;margin:20px 0;box-shadow:0 4px 12px rgba(108,92,224,.08);}
 .bec-head h2{font-family:var(--font-space-grotesk),'Space Grotesk',sans-serif;font-size:18px;font-weight:700;letter-spacing:-.01em;margin:0 0 6px;color:var(--spec-ink,#141320);}
 .bec-head p{margin:0 0 20px;font-size:13px;font-weight:500;line-height:1.55;color:var(--spec-text-2nd,#615F72);}
 .bec-q{margin-bottom:20px;}
