@@ -57,10 +57,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const [{ data: products }, { data: services }, { data: cases }, { data: videos }, { data: reviews }, { data: certRows }, { data: galleryRows }, { data: team }, { count: dealsClosed }] = await Promise.all([
     db.from('marketplace_products').select(`${CARD}, lead_time`).eq('vendor_id', id).eq('status', 'published').order('sort_order', { ascending: true, nullsFirst: false }).order('published_at', { ascending: false }).limit(24),
     db.from('marketplace_services').select(`${CARD}, service_areas, response_time, emergency_available, pricing_model`).eq('vendor_id', id).eq('status', 'published').order('sort_order', { ascending: true, nullsFirst: false }).order('published_at', { ascending: false }).limit(24),
-    db.from('vendor_case_studies').select('id, title, challenge, solution, result').eq('vendor_id', id).order('sort_order').limit(3),
+    db.from('vendor_case_studies').select('id, title, challenge, solution, result').eq('vendor_id', id).order('sort_order').limit(50),
     db.from('vendor_videos').select('id, title, embed_url, provider, url').eq('vendor_id', id).order('created_at', { ascending: false }).limit(4),
     db.from('reviews').select('rating, title, body, created_at').eq('vendor_id', id).eq('status', 'published').order('created_at', { ascending: false }).limit(50),
-    db.from('vendor_certifications').select('id, name, issuer, credential, issued_on, expires_on, image_path').eq('vendor_id', id).order('sort_order').limit(12),
+    db.from('vendor_certifications').select('id, name, issuer, credential, issued_on, expires_on, image_path').eq('vendor_id', id).order('sort_order').limit(50),
     db.from('vendor_gallery').select('id, image_path, caption').eq('vendor_id', id).order('sort_order').limit(12),
     db.from('vendor_team').select('id, name, position, expertise, languages, service_region').eq('vendor_id', id).order('sort_order').limit(8),
     db.from('commissions').select('id', { count: 'exact', head: true }).eq('vendor_id', id).in('status', ['won', 'paid']),

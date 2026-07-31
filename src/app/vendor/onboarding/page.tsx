@@ -36,7 +36,7 @@ import {
   Boxes, MapPin, Award, Check, X, ShieldCheck, Camera, Video as VideoIcon,
   Handshake, ChevronRight, ChevronDown, ExternalLink, Warehouse, ShoppingCart,
   UtensilsCrossed, Car, Snowflake, ArrowLeftRight, HardHat, Truck, Pill, Plane,
-  Wrench, Home, Landmark, type LucideIcon,
+  Wrench, Home, Landmark, AlertTriangle, type LucideIcon,
 } from 'lucide-react';
 import CategoryChipPicker from '@/components/vendor/CategoryChipPicker';
 import LanguageToggle, { useLang } from '@/components/LanguageToggle';
@@ -179,6 +179,12 @@ const TR: Record<string, { en: string; es: string }> = {
   h_categories: { en: 'What do you sell?', es: '¿Qué vendes?' },
   sub_categories: { en: 'Search, or tap a popular category below.', es: 'Busca, o toca una categoría popular abajo.' },
   h_service_areas: { en: 'Where do you provide service?', es: '¿Dónde das servicio?' },
+  // Fix #4 (2026-07-30, "service areas too hidden — they might skip it"):
+  // a why-line makes the stakes explicit, and a live warning fires the
+  // instant this card would otherwise be left at zero — a vendor with no
+  // service area gets no auto-matched leads (dispatch filters on overlap).
+  sub_service_areas: { en: 'This controls which buyer requests reach you — pick every area you can serve.', es: 'Esto controla qué solicitudes de compradores te llegan — elige cada zona en la que puedes atender.' },
+  service_areas_warning: { en: 'Without a service area, buyer requests can’t be matched to you.', es: 'Sin una zona de servicio, las solicitudes de compradores no podrán conectarse contigo.' },
 
   // Trust & Proof cards
   h_proof: { en: 'Show buyers you’re the real deal', es: 'Demuestra que eres de confianza' },
@@ -325,6 +331,8 @@ export default function VendorOnboardingPage() {
     clientSizeCount: (vendor.client_types || []).filter((c) => CLIENT_SIZES.includes(c)).length,
     proofCount,
     agreementAccepted: !!agreement?.accepted,
+    serviceAreas: vendor.service_areas || [],
+    softwareOnly,
   });
   const doneCount = countSectionsDone(status);
   const inReview = vendor.status !== 'approved';
@@ -1114,12 +1122,29 @@ function LocationAreasCard({ headingId, t, lang, city, onCityChange, showAreas, 
       )}
 
       {showAreas && (
-        <>
-          <h3 id={`${headingId}-2`} className="vo-h2">{t('h_service_areas')}</h3>
+        // Fix #4 (2026-07-30): "service areas too hidden — they might skip
+        // it." Was previously an <h3 class="vo-h2"> sub-heading (15px, no
+        // why-line) easy to skim past under the location question above —
+        // now its own callout box (icon + bigger heading + why-line) so it
+        // reads as its own unmissable moment without the bigger structural
+        // change of splitting it into a separate card (which would ripple
+        // through STOREFRONT_STEPS, every step-index test, and the hub nav).
+        <div className="vo-areasbox">
+          <h3 id={`${headingId}-2`} className="vo-h2 vo-areas-h">
+            <MapPin size={18} strokeWidth={1.75} aria-hidden="true" />
+            {t('h_service_areas')}
+          </h3>
+          <p className="vo-areaswhy">{t('sub_service_areas')}</p>
           <div role="group" aria-labelledby={`${headingId}-2`}>
             <ChipGroup options={AREAS} selected={serviceAreas} onToggle={onToggleArea} />
           </div>
-        </>
+          {serviceAreas.length === 0 && (
+            <p className="vo-areawarn" role="status">
+              <AlertTriangle size={14} strokeWidth={1.75} aria-hidden="true" />
+              {t('service_areas_warning')}
+            </p>
+          )}
+        </div>
       )}
     </>
   );
@@ -1220,6 +1245,15 @@ const CSS = `
 @keyframes voInBack{from{opacity:0;transform:translateX(-24px);}to{opacity:1;transform:translateX(0);}}
 .vo-h{font-family:var(--serif);font-size:28px;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin:0 0 8px;}
 .vo-h2{font-family:var(--sans);font-size:15px;font-weight:700;color:var(--ink);margin:28px 0 8px;}
+/* Fix #4 (2026-07-30): service areas gets its own unmissable callout instead
+   of blending in as a small sub-heading — icon + bigger heading + why-line,
+   reusing the file's existing violet accent tokens (no new hexes). */
+.vo-areasbox{margin-top:26px;padding:18px 20px;border-radius:14px;border:1.5px solid var(--p);background:var(--pbg);}
+.vo-areasbox .vo-h2.vo-areas-h{margin:0 0 6px;font-size:17px;color:var(--pd);display:flex;align-items:center;gap:8px;}
+.vo-areasbox .vo-areas-h svg{color:var(--pd);flex-shrink:0;}
+.vo-areaswhy{margin:0 0 14px;font-size:13px;line-height:1.5;color:var(--muted);}
+.vo-areawarn{display:flex;align-items:flex-start;gap:7px;margin:14px 0 0;padding:10px 12px;border-radius:10px;background:#FBF2E1;color:#8C5A15;font-size:12.5px;line-height:1.5;font-weight:600;}
+.vo-areawarn svg{flex-shrink:0;margin-top:1px;}
 .vo-sub{font-size:15px;font-weight:400;color:var(--muted);line-height:1.5;margin:0 0 24px;max-width:440px;}
 .vo-fields{display:flex;flex-direction:column;gap:16px;width:100%;margin-top:8px;}
 .vo-field{display:flex;flex-direction:column;gap:8px;font-size:13px;font-weight:600;color:var(--muted);width:100%;}
@@ -1270,6 +1304,8 @@ const CSS = `
 .vo-catsugbtn{width:100%;display:flex;align-items:center;gap:8px;font-family:var(--sans);font-size:14px;color:var(--ink);background:none;border:none;text-align:left;padding:12px 14px;min-height:44px;cursor:pointer;}
 .vo-catsugbtn:hover,.vo-catsugbtn:focus-visible{background:var(--bg);}
 .vo-catsugbtn svg{color:var(--p);flex-shrink:0;}
+.vo-catsugbtn.vo-catcustom{color:var(--pd);font-weight:600;border-top:1px solid var(--line);}
+.vo-catsugbtn.vo-catcustom-standalone{border:1px dashed var(--line);border-radius:12px;margin-top:6px;background:var(--surf);}
 .vo-catnoresults{font-size:13.5px;color:var(--muted);padding:10px 2px;margin:0;}
 .vo-catpopular{margin-top:20px;}
 .vo-catpopular-h{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted2);margin:0 0 8px;}

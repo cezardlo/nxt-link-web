@@ -100,6 +100,9 @@ interface Storefront {
   team: Array<{ id: string; name: string; position: string | null; expertise: string | null; languages: string[] | null; service_region: string | null }>;
 }
 
+// Certifications/case studies collapse past this many cards (2026-07-30,
+// caps raised to 50 — see "Show all N" toggle below each section).
+const PREVIEW_COUNT = 6;
 const stars = (n: number) => '★★★★★'.slice(0, Math.round(n)) + '☆☆☆☆☆'.slice(0, 5 - Math.round(n));
 const initials = (s: string) => s.split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 const langLabel = (l: string) => (l === 'es' ? 'Español' : l === 'en' ? 'English' : l);
@@ -183,6 +186,9 @@ const T: Record<Lang, Record<string, string>> = {
     certifications: 'Certifications',
     certIssued: 'Issued',
     certExpires: 'Expires',
+    showAllCerts: 'Show all {n} certifications',
+    showAllCases: 'Show all {n} case studies',
+    showLess: 'Show less',
     team: 'Team',
     teamNote: 'Direct contact is shared after a protected NXT//LINK introduction.',
     media: 'Photos & videos',
@@ -270,6 +276,9 @@ const T: Record<Lang, Record<string, string>> = {
     certifications: 'Certificaciones',
     certIssued: 'Emitido',
     certExpires: 'Vence',
+    showAllCerts: 'Mostrar las {n} certificaciones',
+    showAllCases: 'Mostrar los {n} casos de éxito',
+    showLess: 'Mostrar menos',
     team: 'Equipo',
     teamNote: 'El contacto directo se comparte después de una presentación protegida por NXT//LINK.',
     media: 'Fotos y videos',
@@ -295,6 +304,11 @@ export default function VendorStorefrontPage() {
   const [sort, setSort] = useState<'name' | 'price_asc' | 'price_desc'>('name');
   const [pfilter, setPfilter] = useState<'all' | 'product' | 'service'>('all');
   const [mediaTab, setMediaTab] = useState<'photos' | 'videos'>('photos');
+  // Certification/case-study caps were raised 12/3 -> 50 (2026-07-30) so a
+  // vendor's storefront can now legitimately show many of either — collapse
+  // past PREVIEW_COUNT with a "Show all N" toggle instead of a wall of cards.
+  const [showAllCerts, setShowAllCerts] = useState(false);
+  const [showAllCases, setShowAllCases] = useState(false);
   // Session expired (or never signed in) mid-browse — the storefront API
   // returns 401 + code:'auth_required' when the session cookie is gone (same
   // shape /marketplace's grid already handles). Distinct from "not found":
@@ -607,7 +621,7 @@ export default function VendorStorefrontPage() {
                   <section id="certifications" className="vs-card">
                     <h2>{t.certifications}</h2>
                     <div className="vs-certgrid">
-                      {d.certifications.map((c) => (
+                      {(showAllCerts ? d.certifications : d.certifications.slice(0, PREVIEW_COUNT)).map((c) => (
                         <div key={c.id} className="vs-certcard">
                           {c.image_url ? <img className="vs-certimg" src={c.image_url} alt={c.name} loading="lazy" /> : <span className="vs-certi"><ShieldCheck size={16} strokeWidth={1.75} aria-hidden="true" /></span>}
                           <div>
@@ -619,6 +633,11 @@ export default function VendorStorefrontPage() {
                         </div>
                       ))}
                     </div>
+                    {d.certifications.length > PREVIEW_COUNT && (
+                      <button type="button" className="vs-btn vs-showmore" onClick={() => setShowAllCerts((v) => !v)}>
+                        {showAllCerts ? t.showLess : t.showAllCerts.replace('{n}', String(d.certifications.length))}
+                      </button>
+                    )}
                   </section>
                 )}
 
@@ -640,7 +659,7 @@ export default function VendorStorefrontPage() {
                 {d.case_studies.length > 0 && (
                   <section id="cases" className="vs-card">
                     <h2>{t.caseStudies}</h2>
-                    {d.case_studies.map((c) => (
+                    {(showAllCases ? d.case_studies : d.case_studies.slice(0, PREVIEW_COUNT)).map((c) => (
                       <div key={c.id} className="vs-cs">
                         <h4>{c.title}</h4>
                         {c.challenge && <p className="vs-cprob"><b>{t.challenge}</b> {c.challenge}</p>}
@@ -648,6 +667,11 @@ export default function VendorStorefrontPage() {
                         {c.result && <p className="vs-cres">{c.result}</p>}
                       </div>
                     ))}
+                    {d.case_studies.length > PREVIEW_COUNT && (
+                      <button type="button" className="vs-btn vs-showmore" onClick={() => setShowAllCases((v) => !v)}>
+                        {showAllCases ? t.showLess : t.showAllCases.replace('{n}', String(d.case_studies.length))}
+                      </button>
+                    )}
                   </section>
                 )}
               </div>
@@ -789,6 +813,7 @@ const CSS = `
 .vs-btn.pri:hover{background:var(--spec-violet-deep);}
 .vs-btn.pri:active{transform:scale(.98);transition:transform .1s ease;}
 .vs-btn.vs-full{width:100%;text-align:center;}
+.vs-btn.vs-showmore{margin-top:14px;font-size:13px;padding:10px 16px;}
 .vs-invitelink{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:8px;padding:8px 0;font-size:12.5px;font-weight:600;color:var(--spec-violet-deep);text-decoration:none;border-radius:8px;transition:background var(--spec-duration-fast) var(--spec-ease);}
 .vs-invitelink:hover{background:rgba(108,92,224,.08);}
 .vs-invitelink:focus-visible{outline:2px solid var(--spec-violet);outline-offset:2px;}

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
-import { Handshake, Eye, Check, PartyPopper, Laptop, X, ChevronDown } from 'lucide-react';
+import { Handshake, Eye, Check, PartyPopper, Laptop, X, ChevronDown, AlertTriangle } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import CategoryPicker from '@/components/CategoryPicker';
 import LanguageToggle, { useLang } from '@/components/LanguageToggle';
@@ -67,6 +67,7 @@ const TR: Record<string, { en: string; es: string }> = {
   sub: { en: 'This is what buyers see and what NXT//LINK matches you to. Fill it in once; keep it current.', es: 'Esto es lo que ven los compradores y con lo que NXT//LINK te conecta. Complétalo una vez y mantenlo al día.' },
   vprop: { en: 'NXT//LINK doesn’t just list you — we put you directly in front of buyers who are ready to purchase, and we can help coordinate the deal, quotes, and cross-border logistics across the El Paso–Juárez region whenever you want a hand.', es: 'NXT//LINK no solo te publica — te ponemos frente a compradores listos para comprar, y podemos ayudarte a coordinar el trato, las cotizaciones y la logística transfronteriza en la región El Paso–Juárez cuando lo necesites.' },
   preview: { en: 'View as a buyer', es: 'Ver como comprador' },
+  preview_unavailable: { en: 'Loading your profile — one moment', es: 'Cargando tu perfil — un momento' },
   saving: { en: 'Saving…', es: 'Guardando…' },
   saved: { en: 'Saved', es: 'Guardado' },
   autosave: { en: 'Auto-saves as you type', es: 'Se guarda solo mientras escribes' },
@@ -88,9 +89,18 @@ const TR: Record<string, { en: string; es: string }> = {
   sec_products: { en: 'Products / services you sell', es: 'Productos / servicios que vendes' },
   sec_areas: { en: 'Service areas', es: 'Zonas de servicio' },
   areas_hint: { en: 'where you install / serve', es: 'dónde instalas / atiendes' },
+  // Fix #4 (2026-07-30): the same "why we ask" + zero-areas warning as
+  // onboarding's location card — a vendor can also edit service areas here
+  // after onboarding, so the same silent-death risk applies here too.
+  areas_why: { en: 'This controls which buyer requests reach you — pick every area you can serve.', es: 'Esto controla qué solicitudes de compradores te llegan — elige cada zona en la que puedes atender.' },
+  areas_warning: { en: 'Without a service area, buyer requests can’t be matched to you.', es: 'Sin una zona de servicio, las solicitudes de compradores no podrán conectarse contigo.' },
   software_note: { en: 'You sell software — no install site or service region needed, so we skip that. NXT//LINK reaches buyers across the whole Borderplex for you.', es: 'Vendes software — no se necesita sitio de instalación ni zona de servicio, así que lo omitimos. NXT//LINK llega a compradores en todo el Borderplex por ti.' },
   sec_awards: { en: 'Awards & recognitions', es: 'Premios y reconocimientos' },
   sec_cases: { en: 'Case studies', es: 'Casos de éxito' },
+  // Cap raised 3 -> 50 (2026-07-30, Cesar: "as much as they want"); copy no
+  // longer names a specific number so it never goes stale again.
+  cases_hint: { en: 'Real results build trust — the challenge, what you did, and the measurable outcome.', es: 'Los resultados reales generan confianza — el reto, lo que hiciste y el resultado medible.' },
+  cases_max: { en: 'You’ve added the maximum of {n}. Remove one to add another.', es: 'Agregaste el máximo de {n}. Quita uno para agregar otro.' },
   sec_certs: { en: 'Certifications', es: 'Certificaciones' },
   sec_gallery: { en: 'Photo gallery', es: 'Galería de fotos' },
   sec_videos: { en: 'Showcase videos', es: 'Videos de tu trabajo' },
@@ -475,7 +485,17 @@ export default function VendorPortalPage() {
                 <span className="vp-inlineicon"><Check size={12} strokeWidth={2} aria-hidden="true" /> {t('saved')} {savedAt}</span>
               ) : t('autosave')}
             </span>
-            <a className="vp-preview vp-inlineicon" href={`/marketplace/vendor/${vendor.id}`} target="_blank" rel="noreferrer"><Eye size={14} strokeWidth={1.75} aria-hidden="true" /> {t('preview')}</a>
+            {vendor.id ? (
+              <a className="vp-preview vp-inlineicon" href={`/marketplace/vendor/${vendor.id}`} target="_blank" rel="noreferrer"><Eye size={14} strokeWidth={1.75} aria-hidden="true" /> {t('preview')}</a>
+            ) : (
+              // Defense-in-depth (2026-07-30, fix #1): the profile fetch guard
+              // above (`if (!vendor) return null;`) already keeps this from
+              // rendering before vendor.id exists in the current code path,
+              // but a link to /marketplace/vendor/undefined would silently
+              // 404 if that guard were ever loosened — render disabled
+              // instead of a dead link.
+              <span className="vp-preview vp-inlineicon vp-preview-disabled" aria-disabled="true" title={t('preview_unavailable')}><Eye size={14} strokeWidth={1.75} aria-hidden="true" /> {t('preview')}</span>
+            )}
           </div>
         </div>
         <p className="vp-sub">{t('sub')}</p>
@@ -496,7 +516,7 @@ export default function VendorPortalPage() {
           </section>
         )}
 
-        {allDone && (
+        {allDone && vendor.id && (
           <div className="vp-live"><span className="vp-inlineicon"><PartyPopper size={16} strokeWidth={1.75} aria-hidden="true" />{t('live')}</span> <a href={`/marketplace/vendor/${vendor.id}`} target="_blank" rel="noreferrer">{t('live_link')}</a></div>
         )}
 
@@ -611,7 +631,14 @@ export default function VendorPortalPage() {
                   ) : (
                     <>
                       <div className="vp-lbl" style={{ marginTop: 22 }}>{t('sec_areas')} <span className="vp-lblhint">{t('areas_hint')}</span></div>
+                      <p className="vp-hint">{t('areas_why')}</p>
                       <ChipGroup options={AREAS} selected={vendor.service_areas || []} onToggle={(v) => toggle(vendor.service_areas || [], v, 'service_areas')} />
+                      {(vendor.service_areas || []).length === 0 && (
+                        <p className="vp-areawarn" role="status">
+                          <AlertTriangle size={14} strokeWidth={1.75} aria-hidden="true" />
+                          {t('areas_warning')}
+                        </p>
+                      )}
                     </>
                   )}
                   <button className="vp-btn" style={{ marginTop: 24 }} disabled={saving} onClick={save}>{saving ? t('saving_btn') : t('save_profile')}</button>
@@ -621,7 +648,7 @@ export default function VendorPortalPage() {
               {tab === 'trust' && (
                 <>
                   <section className="vp-card">
-                    <div className="vp-lbl">{t('sec_certs')} <span className="vp-cnt">{certs.length}/12</span></div>
+                    <div className="vp-lbl">{t('sec_certs')} <span className="vp-cnt">{certs.length}/50</span></div>
                     <p className="vp-hint">ISO, OSHA, licenses, insurance — with issuer, dates, and an optional photo/PDF of the certificate. Shown on your storefront; buyers filter by these.</p>
                     {certs.length > 0 && (
                       <div className="vp-certlist">
@@ -637,7 +664,7 @@ export default function VendorPortalPage() {
                         ))}
                       </div>
                     )}
-                    {certs.length < 12 && (
+                    {certs.length < 50 && (
                       <div className="vp-csform">
                         <div className="vp-fgrid">
                           <input placeholder="Certification name * — e.g. ISO 9001:2015" value={certForm.name} onChange={(e) => setCertForm({ ...certForm, name: e.target.value })} />
@@ -655,8 +682,8 @@ export default function VendorPortalPage() {
                   </section>
 
                   <section className="vp-card">
-                    <div className="vp-lbl">{t('sec_cases')} <span className="vp-cnt">{caseStudies.length}/3</span></div>
-                    <p className="vp-hint">Show up to 3 real results. Buyers trust proof — the challenge, what you did, and the measurable outcome.</p>
+                    <div className="vp-lbl">{t('sec_cases')} <span className="vp-cnt">{caseStudies.length}/50</span></div>
+                    <p className="vp-hint">{t('cases_hint')}</p>
                     {caseStudies.length > 0 && (
                       <div className="vp-cslist">
                         {caseStudies.map((c) => (
@@ -669,7 +696,7 @@ export default function VendorPortalPage() {
                         ))}
                       </div>
                     )}
-                    {caseStudies.length < 3 ? (
+                    {caseStudies.length < 50 ? (
                       <div className="vp-csform">
                         <input placeholder="Title — e.g. “Cut picking time 40% for a 3PL”" value={cs.title} onChange={(e) => setCs({ ...cs, title: e.target.value })} />
                         <textarea rows={2} placeholder="Challenge — what problem did the customer have?" value={cs.challenge} onChange={(e) => setCs({ ...cs, challenge: e.target.value })} />
@@ -677,7 +704,7 @@ export default function VendorPortalPage() {
                         <textarea rows={2} placeholder="Result — the measurable outcome" value={cs.result} onChange={(e) => setCs({ ...cs, result: e.target.value })} />
                         <button className="vp-btn sm" type="button" disabled={csBusy} onClick={addCaseStudy}>{csBusy ? 'Adding…' : 'Add case study'}</button>
                       </div>
-                    ) : <p className="vp-hint">You&apos;ve added the maximum of 3. Remove one to add another.</p>}
+                    ) : <p className="vp-hint">{t('cases_max').replace('{n}', '50')}</p>}
                   </section>
 
                   <section className="vp-card">
@@ -939,6 +966,7 @@ const CSS = `
 .vp-preview{flex-shrink:0;color:var(--p2);font-size:13px;font-weight:600;text-decoration:none;border:1px solid var(--line);border-radius:10px;padding:9px 14px;background:var(--surf);transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .vp-preview:hover{border-color:var(--p2);color:var(--p3);}
 .vp-preview:active{transform:scale(.98);transition:transform .1s ease;}
+.vp-preview-disabled{color:var(--muted2);cursor:default;opacity:.6;}
 .vp-inlineicon{display:inline-flex;align-items:center;gap:6px;}
 .vp-live{background:linear-gradient(120deg,rgba(47,158,106,.12),rgba(108,92,224,.06));border:1px solid rgba(47,158,106,.3);color:#1F7A54;border-radius:15px;padding:15px 18px;margin-bottom:22px;font-size:14.5px;font-weight:600;}
 .vp-live a{color:var(--green);font-weight:700;text-decoration:none;}
@@ -954,6 +982,8 @@ const CSS = `
 .vp-card{background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:26px;margin-bottom:20px;backdrop-filter:blur(10px);box-shadow:0 4px 12px rgba(124,58,237,.08);}
 .vp-lbl{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--p2);margin-bottom:14px;}
 .vp-hint{color:var(--muted);font-size:13.5px;margin:0 0 16px;font-weight:300;}
+.vp-areawarn{display:flex;align-items:flex-start;gap:7px;margin:14px 0 0;padding:10px 12px;border-radius:10px;background:#FBF2E1;color:#8C5A15;font-size:12.5px;line-height:1.5;font-weight:600;}
+.vp-areawarn svg{flex-shrink:0;margin-top:1px;}
 .vp-fgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 @media(max-width:520px){.vp-fgrid{grid-template-columns:1fr;}}
 .vp-field{display:flex;flex-direction:column;gap:7px;font-size:13px;font-weight:500;color:var(--ink2);}

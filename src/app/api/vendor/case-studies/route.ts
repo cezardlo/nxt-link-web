@@ -1,14 +1,18 @@
 // GET    /api/vendor/case-studies        — signed-in vendor: MY case studies
-// POST   /api/vendor/case-studies         — signed-in vendor: add one (max 3)
+// POST   /api/vendor/case-studies         — signed-in vendor: add one (max 50)
 // DELETE /api/vendor/case-studies?id=...   — signed-in vendor: remove mine
-// Profile-level case studies (up to 3), scoped to the caller's own vendor row.
+// Profile-level case studies (up to 50), scoped to the caller's own vendor row.
+//
+// Cap raised 3 -> 50 (2026-07-30, Cesar: "allow them to add ... case studies
+// as much as they want"). A generous safety ceiling, not literally uncapped —
+// this is a service-role write path — but 50 feels unlimited in practice.
 
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getVendorSession, getOrCreateVendorProfile } from '@/lib/vendor/auth';
 
-const MAX = 3;
+const MAX = 50;
 const COLS = 'id, title, challenge, solution, result, sort_order, created_at';
 
 export async function GET() {
