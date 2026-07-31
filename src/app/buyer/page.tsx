@@ -9,7 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import LanguageToggle, { useLang, type Lang } from '@/components/LanguageToggle';
-import { PackageSearch, Inbox, Lightbulb, MessageCircle, Paperclip, Download, X, Store, Eye, Bell } from 'lucide-react';
+import { PackageSearch, Inbox, Lightbulb, MessageCircle, Paperclip, Download, X, Store, Eye, Bell, Send, Reply, CheckCircle2, XCircle, FileText, CalendarClock, type LucideIcon } from 'lucide-react';
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
 import { useChatPolling, resolvePendingMessage, dropPendingMessage, type ChatMessage } from '@/components/marketplace/useChatPolling';
 import { useNotificationPolling } from '@/components/marketplace/useNotificationPolling';
@@ -309,6 +309,21 @@ export default function BuyerDashboardPage() {
     sent: t.pipelineSent, viewed: t.pipelineViewed, quotes_received: t.pipelineQuotesReceived,
     accepted: t.pipelineAccepted, closed: t.pipelineClosed,
   };
+  // Icons+colors sweep (2026-07-30) — small icon inside the existing .by-status
+  // pill (visual only, no new states/classes). Mirrors the request's real
+  // stage / quote's real status; never color as the only differentiator.
+  const STAGE_ICON: Record<RequestStage, LucideIcon> = { sent: Send, viewed: Eye, quotes_received: Inbox, accepted: CheckCircle2, closed: XCircle };
+  const QUOTE_ICON: Record<string, LucideIcon> = { new: Send, viewed: Eye, responded: Reply, won: CheckCircle2, lost: XCircle, spam: XCircle };
+  // Notification dropdown — per-type icon in a small tinted circle. Real
+  // recipient='buyer' notification types only (src/lib/notify.ts callers):
+  // quote, message, purchase, pilot.
+  const NOTIF_TYPE: Record<string, { icon: LucideIcon; tone: string }> = {
+    quote: { icon: FileText, tone: 'violet' },
+    message: { icon: MessageCircle, tone: 'info' },
+    purchase: { icon: CheckCircle2, tone: 'success' },
+    pilot: { icon: CalendarClock, tone: 'warning' },
+  };
+  const DEFAULT_NOTIF_TYPE = { icon: Bell, tone: 'violet' } as const;
   const PILOT_KIND_LABEL: Record<string, string> = { demo: t.pkDemo, pilot: t.pkPilot, site_visit: t.pkSiteVisit };
   const PILOT_STATUS_LABEL: Record<string, string> = { proposed: t.psProposed, scheduled: t.psScheduled, in_progress: t.psInProgress, completed: t.psCompleted, cancelled: t.psCancelled };
   const PILOT_OUTCOME_LABEL: Record<string, string> = { passed: t.poPassed, failed: t.poFailed, inconclusive: t.poInconclusive };
@@ -700,12 +715,17 @@ export default function BuyerDashboardPage() {
             <div className="by-notifhead"><b>{t.notifications}</b><button onClick={() => setNotifOpen(false)}>{t.close}</button></div>
             {notifs.length === 0 ? <p className="by-notifempty">{t.notifEmpty}</p> : (
               <ul>
-                {notifs.map((n) => (
-                  <li key={n.id} className={n.read_at ? '' : 'unread'}>
-                    <span>{n.title}</span>
-                    <small>{fmtDate(n.created_at)}</small>
-                  </li>
-                ))}
+                {notifs.map((n) => {
+                  const nt = (n.type && NOTIF_TYPE[n.type]) || DEFAULT_NOTIF_TYPE;
+                  const NIcon = nt.icon;
+                  return (
+                    <li key={n.id} className={n.read_at ? '' : 'unread'}>
+                      <span className={'by-notifdot t-' + nt.tone} aria-hidden="true"><NIcon size={12} strokeWidth={2.25} /></span>
+                      <span className="by-notiftext">{n.title}</span>
+                      <small>{fmtDate(n.created_at)}</small>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
@@ -811,7 +831,9 @@ export default function BuyerDashboardPage() {
                     return (
                     <div className="by-card nxm-in nxm-lift" style={staggerStyle(ri)} key={r.id}>
                       <div className="by-top">
-                        <span className={'by-status ' + (stage === 'quotes_received' || stage === 'accepted' ? 'resp' : '')}>{STAGE_LABEL[stage]}</span>
+                        {(() => { const SIcon = STAGE_ICON[stage]; return (
+                          <span className={'by-status ' + (stage === 'quotes_received' || stage === 'accepted' ? 'resp' : '')}>{SIcon && <SIcon size={11} strokeWidth={2.25} aria-hidden="true" />}{STAGE_LABEL[stage]}</span>
+                        ); })()}
                         <b>{r.category || t.request}</b>
                         <small>{fmtDate(r.created_at)}</small>
                         <span className="by-ref">{r.public_ref}</span>
@@ -893,7 +915,9 @@ export default function BuyerDashboardPage() {
                   {quotes.map((q, qi) => (
                     <div className="by-card nxm-in nxm-lift" style={staggerStyle(qi)} key={q.id}>
                       <div className="by-top">
-                        <span className={'by-status ' + (q.status === 'responded' ? 'resp' : '')}>{QUOTE_LABEL[q.status] || q.status}</span>
+                        {(() => { const QIcon = QUOTE_ICON[q.status]; return (
+                          <span className={'by-status ' + (q.status === 'responded' ? 'resp' : '')}>{QIcon && <QIcon size={11} strokeWidth={2.25} aria-hidden="true" />}{QUOTE_LABEL[q.status] || q.status}</span>
+                        ); })()}
                         {(q.product_id || q.service_id) ? (
                           <a className="by-listinglink" href={`/marketplace/${q.kind}/${q.product_id || q.service_id}`}><b>{q.listing_name || (q.kind === 'service' ? t.serviceRequest : t.productRequest)}</b></a>
                         ) : (
@@ -1295,9 +1319,15 @@ const CSS = `
 .by-notifhead button{background:none;border:none;color:var(--spec-text-2nd,#615F72);font:inherit;font-size:12.5px;cursor:pointer;}
 .by-notifempty{color:var(--spec-text-2nd,#615F72);font-size:13.5px;margin:4px 0;}
 .by-notifs ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;max-height:280px;overflow-y:auto;}
-.by-notifs li{display:flex;justify-content:space-between;gap:12px;padding:9px 10px;border-radius:9px;font-size:13.5px;color:var(--spec-ink,#141320);}
+.by-notifs li{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;font-size:13.5px;color:var(--spec-ink,#141320);}
 .by-notifs li.unread{background:rgba(108,92,224,.06);font-weight:600;}
 .by-notifs li small{color:var(--spec-text-2nd,#615F72);white-space:nowrap;}
+.by-notiftext{flex:1;min-width:0;}
+.by-notifdot{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;flex-shrink:0;}
+.by-notifdot.t-violet{background:var(--spec-violet-bg,#EDEAFB);color:var(--spec-violet-deep,#4A3DB0);}
+.by-notifdot.t-info{background:var(--spec-info-bg,#E9EFFB);color:#2F5AA8;}
+.by-notifdot.t-success{background:var(--spec-success-bg,#E7F5EE);color:#1F7A54;}
+.by-notifdot.t-warning{background:var(--spec-warning-bg,#FBF2E1);color:#8C5A15;}
 .by-listinglink{text-decoration:none;color:inherit;}
 .by-listinglink:hover b{color:var(--spec-violet-deep,#4A3DB0);}
 .by-list{display:flex;flex-direction:column;gap:14px;}
@@ -1306,7 +1336,7 @@ const CSS = `
 .by-top b{font-size:15px;}
 .by-top small{color:var(--spec-text-2nd,#615F72);font-size:12.5px;}
 .by-ref{margin-left:auto;color:#706D88;font-size:12px;}
-.by-status{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:4px 9px;border-radius:99px;background:rgba(108,92,224,.1);color:var(--spec-violet-deep,#4A3DB0);}
+.by-status{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:4px 9px;border-radius:99px;background:rgba(108,92,224,.1);color:var(--spec-violet-deep,#4A3DB0);transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .by-status.resp{background:#E9F7F0;color:#1F7A54;}
 .by-msg{margin:12px 0 0;font-size:14px;color:var(--spec-ink,#141320);line-height:1.6;background:var(--spec-surface,#EFEDF5);border-radius:10px;padding:11px 13px;white-space:pre-wrap;}
 .by-bundle{margin-top:12px;background:rgba(108,92,224,.05);border:1px solid rgba(108,92,224,.22);border-radius:12px;padding:12px 14px;}
