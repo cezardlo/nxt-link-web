@@ -11,6 +11,7 @@ import { getVendorSession, getOrCreateVendorProfile } from '@/lib/vendor/auth';
 import { ListingKind, tableFor, colsFor, normalizeListingInput } from '@/lib/marketplace/types';
 import { VENDOR_TERMS_VERSION } from '@/lib/vendor/terms';
 import { sendMail } from '@/lib/mail';
+import { notifyAdminsListingNeedsReview } from '@/lib/admin/notify';
 
 function kindOf(v: unknown): ListingKind | null {
   return v === 'product' || v === 'service' ? v : null;
@@ -67,13 +68,27 @@ export async function POST(req: Request) {
       .eq('id', docId).eq('vendor_id', vendor.id);
   }
 
+  const listingName = (data as unknown as { name?: string })?.name || 'Your listing';
+
   if (vendor.email) {
-    const name = (data as unknown as { name?: string })?.name || 'Your listing';
     sendMail({
       to: vendor.email,
-      subject: `NXT//LINK: "${name}" was saved as a ${aiExtracted ? 'draft that needs your review' : 'draft'}`,
-      body: `${name} was created in your NXT//LINK listings dashboard. It is NOT public — nothing appears in the marketplace until you review it and confirm its accuracy on the publish screen.`,
+      subject: `NXT//LINK: "${listingName}" was saved as a ${aiExtracted ? 'draft that needs your review' : 'draft'}`,
+      body: `${listingName} was created in your NXT//LINK listings dashboard. It is NOT public — nothing appears in the marketplace until you review it and confirm its accuracy on the publish screen.`,
     }).catch(() => {});
+  }
+
+  // AI-drafted listings land directly in the admin needs_review queue — the
+  // one discrete "entered review" event for listings (see admin dashboard,
+  // src/lib/admin/overview.ts). Best-effort admin notification, fire-and-
+  // forget on purpose — MUST NOT slow or fail this save (src/lib/admin/
+  // notify.ts header).
+  if (aiExtracted) {
+    notifyAdminsListingNeedsReview({
+      listingName,
+      vendorName: vendor.company_name || null,
+      kind,
+    });
   }
   return NextResponse.json({ ok: true, listing: data, kind });
 }

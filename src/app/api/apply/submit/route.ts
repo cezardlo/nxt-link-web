@@ -11,6 +11,7 @@ import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getApplicantSession } from '@/lib/apply/auth';
 import { recordLegalAcceptance, LEGAL_MSG, bilingual } from '@/lib/legal/acceptance';
+import { notifyAdminsNewVendorApplication } from '@/lib/admin/notify';
 
 const CATEGORIES = ['TMS', 'WMS', 'Telematics/ELD', 'Forklifts', 'Customs/Cross-Border', 'Cold Chain', 'Robotics', 'Other'];
 const OFFERING_TYPES = ['Product', 'Software / platform', 'Service', 'Innovation / frontier tool'];
@@ -114,6 +115,16 @@ export async function POST(req: Request) {
     if (error) throw error;
 
     const appId = data.id as string;
+
+    // Best-effort admin notification (fire-and-forget — MUST NOT slow or
+    // fail this submission; see src/lib/admin/notify.ts header). Not
+    // awaited on purpose.
+    notifyAdminsNewVendorApplication({
+      companyName: company_name,
+      contactName: row.contact_name || null,
+      contactEmail: email,
+      category: category || null,
+    });
 
     // Logo (optional, one file)
     const logo = form.get('logo');
