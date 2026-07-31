@@ -46,16 +46,17 @@ export async function GET() {
   if (toAutoView.length) {
     try {
       const viewedAt = new Date().toISOString();
-      const { data: viewedRows } = await db.from('quote_requests')
+      await db.from('quote_requests')
         .update({ status: 'viewed', updated_at: viewedAt })
         .eq('vendor_id', vendor.id)
         .in('id', toAutoView)
-        .in('status', AUTO_VIEWABLE_STATUSES as unknown as string[])
-        .select('id');
-      const viewedIds = new Set((viewedRows || []).map((r) => r.id as string));
-      for (const l of rows) {
-        if (viewedIds.has(l.id as string)) l.status = 'viewed';
-      }
+        .in('status', AUTO_VIEWABLE_STATUSES as unknown as string[]);
+      // DELIBERATE: the response keeps each lead's PRE-write status. Mirroring
+      // the write into this payload (as this code originally did) meant the
+      // vendor never saw 'new' even once — the badge and the dashboard's
+      // "respond to new leads" action were dead on arrival (found during the
+      // 2026-07-30 dashboard warm pass). This way a fresh lead reads as new
+      // exactly once; the next fetch naturally reports 'viewed'.
     } catch {
       // Non-critical — the lead list still renders with its pre-fetch status.
     }
