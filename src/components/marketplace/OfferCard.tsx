@@ -17,6 +17,10 @@
 import { useState } from 'react';
 import { FileText, ChevronDown, ChevronUp, Clock, ShieldCheck, CreditCard, CalendarClock } from 'lucide-react';
 import type { OfferCardView, OfferStatus } from '@/lib/messages/offerTimeline';
+import {
+  DEFAULT_COMPARE_EXTRAS_LABELS, installationValueLabel, trainingValueLabel, licenseModelValueLabel,
+  type CompareExtrasLabels,
+} from './QuoteCompareTable';
 
 export interface OfferCardLabels {
   offer: string;
@@ -32,6 +36,9 @@ export interface OfferCardLabels {
   priceChangedTo: string;
   was: string;
   status: Record<OfferStatus, string>;
+  /** Slice R6 (flow-readiness fix) — same field-name set + wording as the
+   * compare table/deck (REUSE, not a third copy of these strings). */
+  extras: CompareExtrasLabels;
 }
 
 export const DEFAULT_OFFER_CARD_LABELS: OfferCardLabels = {
@@ -51,6 +58,7 @@ export const DEFAULT_OFFER_CARD_LABELS: OfferCardLabels = {
     sent: 'Sent', seen: 'Seen', revised: 'Revised',
     accepted: 'Accepted', declined: 'Declined', expired: 'Expired',
   },
+  extras: DEFAULT_COMPARE_EXTRAS_LABELS,
 };
 
 export const OFFER_CARD_LABELS_ES: OfferCardLabels = {
@@ -69,6 +77,16 @@ export const OFFER_CARD_LABELS_ES: OfferCardLabels = {
   status: {
     sent: 'Enviada', seen: 'Vista', revised: 'Revisada',
     accepted: 'Aceptada', declined: 'Rechazada', expired: 'Vencida',
+  },
+  extras: {
+    unitPrice: 'Precio unitario', shippingCost: 'Costo de envío',
+    installation: 'Instalación', installationIncluded: 'Incluida', installationExtra: 'Costo adicional', installationNone: 'No disponible',
+    training: 'Capacitación', trainingIncluded: 'Incluida', trainingExtra: 'Costo adicional',
+    scopeSummary: 'Resumen del alcance (incluido / excluido)', duration: 'Duración', teamSize: 'Tamaño del equipo',
+    emergencyResponse: 'Tiempo de respuesta de emergencia (si aplica)',
+    licenseModel: 'Modelo de licencia', licenseSubscription: 'Suscripción', licensePerpetual: 'Perpetua', licenseTiered: 'Por niveles',
+    implementationCost: 'Costo de implementación', annualSupport: 'Cuota anual de soporte / mantenimiento',
+    slaSummary: 'Resumen del SLA', pricingDetails: 'Detalles de precios',
   },
 };
 
@@ -96,7 +114,16 @@ export function OfferCard({
   cardRef?: React.Ref<HTMLDivElement>;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const hasDetails = !!(card.validUntil || card.paymentTerms || card.warranty || card.notes);
+  // Slice R6 (flow-readiness fix) — a quote "has extras" when at least one
+  // per-kind field is actually set (never rendered as an empty/placeholder row).
+  const e = card.extras;
+  const hasExtras = !!e && (
+    e.unit_price != null || e.shipping_cost != null || !!e.installation || !!e.training
+    || !!e.scope_summary || !!e.duration || e.team_size != null || !!e.emergency_response
+    || !!e.license_model || e.implementation_cost != null || e.annual_support != null
+    || !!e.sla_summary || !!e.pricing_details
+  );
+  const hasDetails = !!(card.validUntil || card.paymentTerms || card.warranty || card.notes || hasExtras);
 
   return (
     <div ref={cardRef} className={'ofc-card nxm-in' + (card.faded ? ' ofc-faded' : '') + ` ofc-${card.status}`}>
@@ -140,6 +167,27 @@ export function OfferCard({
           {card.warranty && (
             <div className="ofc-detailrow"><ShieldCheck size={12} strokeWidth={2} aria-hidden="true" /><b>{labels.warranty}:</b> {card.warranty}</div>
           )}
+          {/* Slice R6 (flow-readiness fix) — the vendor's per-kind quote
+              extras, compact list, data-gated field-by-field. No icon per
+              row (13 possible fields — one repeated icon would be noise,
+              not signal); the existing 3 rows above keep their icons. */}
+          {hasExtras && (
+            <div className="ofc-extras">
+              {e!.unit_price != null && <div className="ofc-detailrow"><b>{labels.extras.unitPrice}:</b> {money(e!.unit_price, card.currency, locale)}</div>}
+              {e!.shipping_cost != null && <div className="ofc-detailrow"><b>{labels.extras.shippingCost}:</b> {money(e!.shipping_cost, card.currency, locale)}</div>}
+              {!!e!.installation && <div className="ofc-detailrow"><b>{labels.extras.installation}:</b> {installationValueLabel(e!.installation, labels.extras)}</div>}
+              {!!e!.training && <div className="ofc-detailrow"><b>{labels.extras.training}:</b> {trainingValueLabel(e!.training, labels.extras)}</div>}
+              {!!e!.scope_summary && <div className="ofc-detailrow"><b>{labels.extras.scopeSummary}:</b> {e!.scope_summary}</div>}
+              {!!e!.duration && <div className="ofc-detailrow"><b>{labels.extras.duration}:</b> {e!.duration}</div>}
+              {e!.team_size != null && <div className="ofc-detailrow"><b>{labels.extras.teamSize}:</b> {e!.team_size}</div>}
+              {!!e!.emergency_response && <div className="ofc-detailrow"><b>{labels.extras.emergencyResponse}:</b> {e!.emergency_response}</div>}
+              {!!e!.license_model && <div className="ofc-detailrow"><b>{labels.extras.licenseModel}:</b> {licenseModelValueLabel(e!.license_model, labels.extras)}</div>}
+              {e!.implementation_cost != null && <div className="ofc-detailrow"><b>{labels.extras.implementationCost}:</b> {money(e!.implementation_cost, card.currency, locale)}</div>}
+              {e!.annual_support != null && <div className="ofc-detailrow"><b>{labels.extras.annualSupport}:</b> {money(e!.annual_support, card.currency, locale)}</div>}
+              {!!e!.sla_summary && <div className="ofc-detailrow"><b>{labels.extras.slaSummary}:</b> {e!.sla_summary}</div>}
+              {!!e!.pricing_details && <div className="ofc-detailrow"><b>{labels.extras.pricingDetails}:</b> {e!.pricing_details}</div>}
+            </div>
+          )}
           {card.notes && <p className="ofc-notes">{card.notes}</p>}
         </div>
       )}
@@ -176,6 +224,7 @@ export const OFFER_CARD_CSS = `
 .ofc-delta-up{background:#F1F0F4;color:#4A4760;}
 .ofc-toggle{margin-top:8px;display:inline-flex;align-items:center;gap:4px;font-family:inherit;font-size:11.5px;font-weight:600;color:var(--spec-violet-deep,#4A3DB0);background:none;border:none;padding:0;cursor:pointer;}
 .ofc-details{margin-top:8px;padding-top:8px;border-top:1px solid var(--spec-border,#E2DFEC);display:flex;flex-direction:column;gap:5px;}
+.ofc-extras{display:flex;flex-direction:column;gap:5px;}
 .ofc-detailrow{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--spec-ink,#141320);}
 .ofc-detailrow b{font-weight:600;color:var(--spec-text-2nd,#615F72);}
 .ofc-notes{font-size:12px;color:var(--spec-text-2nd,#615F72);margin:2px 0 0;line-height:1.4;white-space:pre-wrap;}

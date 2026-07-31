@@ -162,6 +162,33 @@ test('offerRevisionsForThread with no proposals AND no legacy quote is an honest
   assert.deepEqual(offerRevisionsForThread([], { id: 'qr-5', quote_amount: null, created_at: '2026-07-01T00:00:00.000Z' }), []);
 });
 
+// Slice R6 (flow-readiness fix, 2026-07-30) — the offer-in-chat card must
+// carry the vendor's per-kind quote extras through the SAME timeline the
+// price/timeline/payment-terms/warranty fields already ride on (audit gap
+// #2, workplace/audit/flow-readiness-2026-07-30.md: OfferCard.tsx had zero
+// references to quote_extras before this fix).
+
+test('buildOfferTimeline: quote_extras rides through onto the card, untouched', () => {
+  const timeline = buildOfferTimeline([
+    rev({ id: 'a', revision: 1, quote_extras: { unit_price: 40, shipping_cost: 15, installation: 'included' } }),
+  ]);
+  assert.deepEqual(timeline[0].extras, { unit_price: 40, shipping_cost: 15, installation: 'included' });
+});
+
+test('buildOfferTimeline: a revision with no quote_extras set (older quote, or a request_kind with none) gets extras: null — never an empty {} placeholder', () => {
+  const timeline = buildOfferTimeline([rev({ id: 'a', revision: 1 })]);
+  assert.equal(timeline[0].extras, null);
+});
+
+test('synthesizeLegacyOffer: quote_extras carries through from the quote_requests mirror into the synthesized card', () => {
+  const card = synthesizeLegacyOffer({
+    id: 'qr-6', quote_amount: 1200, created_at: '2026-07-01T00:00:00.000Z',
+    quote_extras: { scope_summary: 'Full site survey', team_size: 3 },
+  });
+  assert.ok(card);
+  assert.deepEqual(card!.quote_extras, { scope_summary: 'Full site survey', team_size: 3 });
+});
+
 test('offerRevisionsForThread ignores draft-only proposals (falls back to legacy if present)', () => {
   const result = offerRevisionsForThread(
     [rev({ id: 'p1', revision: 1, status: 'draft' })],

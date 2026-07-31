@@ -87,3 +87,63 @@ test('shouldShowMetric: toggle on hides only metrics in the identical set', () =
   assert.equal(shouldShowMetric('price', identical, true), false);
   assert.equal(shouldShowMetric('warranty', identical, true), true);
 });
+
+// Slice R6 (flow-readiness fix, 2026-07-30) — the per-kind quote extras
+// (unit price, shipping cost, installation, training, scope summary,
+// duration, team size, emergency response, license model, implementation
+// cost, annual support, SLA summary, pricing details) now flow through the
+// SAME bestValueByMetric/identicalMetrics machinery proven above, instead of
+// being invisible to the buyer entirely (audit gap #2,
+// workplace/audit/flow-readiness-2026-07-30.md).
+
+test('bestValueByMetric: lowest unit_price/shipping_cost/implementation_cost/annual_support each win their own metric independently', () => {
+  const best = bestValueByMetric([
+    { id: 'a', amount: 1, extras: { unit_price: 50, shipping_cost: 20, implementation_cost: 900, annual_support: 300 } },
+    { id: 'b', amount: 1, extras: { unit_price: 40, shipping_cost: 25, implementation_cost: 800, annual_support: 250 } },
+    { id: 'c', amount: 1, extras: { unit_price: 60, shipping_cost: 10, implementation_cost: 950, annual_support: 400 } },
+  ]);
+  assert.equal(best.unitPriceId, 'b');
+  assert.equal(best.shippingCostId, 'c');
+  assert.equal(best.implementationCostId, 'b');
+  assert.equal(best.annualSupportId, 'b');
+});
+
+test('bestValueByMetric: a numeric extra nobody set never wins (no crash, no false best-tag)', () => {
+  const best = bestValueByMetric([
+    { id: 'a', amount: 1, extras: { scope_summary: 'full teardown' } },
+    { id: 'b', amount: 1, extras: null },
+  ]);
+  assert.equal(best.unitPriceId, null);
+  assert.equal(best.implementationCostId, null);
+});
+
+test('bestValueByMetric: rows with no extras at all (product/service request with no technology fields) never crash', () => {
+  const best = bestValueByMetric([{ id: 'a', amount: 100 }, { id: 'b', amount: 90 }]);
+  assert.equal(best.unitPriceId, null);
+  assert.equal(best.shippingCostId, null);
+});
+
+test('identicalMetrics: a categorical extra (installation) participates like any other metric — identical when every row agrees', () => {
+  const rows = [
+    row({ id: 'a', extras: { installation: 'included' } }),
+    row({ id: 'b', extras: { installation: 'included' } }),
+  ];
+  assert.ok(identicalMetrics(rows).has('installation'));
+});
+
+test('identicalMetrics: extras differ across rows -> NOT collapsed by "show differences only"', () => {
+  const rows = [
+    row({ id: 'a', extras: { license_model: 'subscription' } }),
+    row({ id: 'b', extras: { license_model: 'perpetual' } }),
+  ];
+  const identical = identicalMetrics(rows);
+  assert.equal(identical.has('licenseModel'), false);
+  assert.equal(shouldShowMetric('licenseModel', identical, true), true);
+});
+
+test('identicalMetrics: a request kind whose extras never apply (e.g. teamSize on a product request) is "identical" (null===null) and collapses under the toggle, same as any universally-blank field', () => {
+  const rows = [row({ id: 'a', extras: { unit_price: 10 } }), row({ id: 'b', extras: { unit_price: 20 } })];
+  const identical = identicalMetrics(rows);
+  assert.ok(identical.has('teamSize'));
+  assert.equal(shouldShowMetric('teamSize', identical, true), false);
+});

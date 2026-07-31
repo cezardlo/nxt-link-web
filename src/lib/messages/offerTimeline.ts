@@ -20,6 +20,8 @@
 // "revision 1" card straight from the quote_requests mirror fields so old
 // quotes still render as a real offer card, never a blank thread.
 
+import type { QuoteExtras } from '@/lib/requests/structured';
+
 export type OfferStatus = 'sent' | 'seen' | 'revised' | 'accepted' | 'declined' | 'expired';
 
 export interface OfferRevisionInput {
@@ -36,6 +38,10 @@ export interface OfferRevisionInput {
   notes?: string | null;
   submitted_at?: string | null;
   created_at: string;
+  /** Slice R6 (flow-readiness fix) — the vendor's per-kind structured quote
+   * extras (quote_proposals.quote_extras / quote_requests.quote_extras for
+   * the legacy fallback). Optional — older rows predate this column. */
+  quote_extras?: QuoteExtras | null;
 }
 
 export interface OfferThreadContext {
@@ -62,6 +68,8 @@ export interface OfferCardView {
   paymentTerms: string | null;
   warranty: string | null;
   notes: string | null;
+  /** Slice R6 (flow-readiness fix) — see OfferRevisionInput.quote_extras. */
+  extras: QuoteExtras | null;
   /** Timestamp used to place this card in the merged message+offer timeline. */
   at: string;
   status: OfferStatus;
@@ -137,6 +145,7 @@ export function buildOfferTimeline(
       paymentTerms: r.payment_terms ?? null,
       warranty: r.warranty ?? null,
       notes: r.notes ?? null,
+      extras: r.quote_extras ?? null,
       at: r.submitted_at || r.created_at,
       status,
       faded: !isLatest,
@@ -158,6 +167,8 @@ export interface LegacyOfferSource {
   quote_message?: string | null;
   quoted_at?: string | null;
   created_at: string;
+  /** Slice R6 (flow-readiness fix) — see OfferRevisionInput.quote_extras. */
+  quote_extras?: QuoteExtras | null;
 }
 
 /**
@@ -178,6 +189,7 @@ export function synthesizeLegacyOffer(source: LegacyOfferSource): OfferRevisionI
     payment_terms: source.quote_payment_terms ?? null,
     warranty: source.quote_warranty ?? null,
     notes: source.quote_message ?? null,
+    quote_extras: source.quote_extras ?? null,
     submitted_at: source.quoted_at ?? null,
     created_at: source.quoted_at || source.created_at,
   };

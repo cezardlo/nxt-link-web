@@ -22,6 +22,7 @@ import { AcceptCelebration, ACCEPT_CELEBRATION_CSS } from '@/components/buyer/Ac
 import { MOTION_CSS, staggerStyle } from '@/components/motion/Motion';
 import { MAX_REQUEST_ATTACHMENTS_PER_REQUEST, type RequestAttachment } from '@/lib/requests/attachments';
 import { type CompareTableRow } from '@/components/marketplace/QuoteCompareTable';
+import type { QuoteExtras, RequestKind } from '@/lib/requests/structured';
 import { QuoteCompareDeck, QUOTE_COMPARE_DECK_CSS, type DeckLabels } from '@/components/marketplace/QuoteCompareDeck';
 import { OfferCard, OFFER_CARD_CSS, type OfferCardLabels, OFFER_CARD_LABELS_ES, DEFAULT_OFFER_CARD_LABELS } from '@/components/marketplace/OfferCard';
 import { DealTracker, DEAL_TRACKER_CSS, type DealTrackerLabels, DEAL_TRACKER_LABELS_ES, DEFAULT_DEAL_TRACKER_LABELS } from '@/components/marketplace/DealTracker';
@@ -59,6 +60,10 @@ interface QuoteRequest {
   quote_amount?: number | null; quote_currency?: string | null; quote_message?: string | null;
   quote_timeline?: string | null; quote_valid_until?: string | null; quoted_at?: string | null;
   quote_payment_terms?: string | null; quote_warranty?: string | null;
+  // Slice R6 (flow-readiness fix) — the vendor's per-kind structured quote
+  // extras + the opportunity's own request_kind, now selected by GET
+  // /api/buyer/dashboard (src/app/api/buyer/dashboard/route.ts).
+  quote_extras?: QuoteExtras | null; request_kind?: RequestKind | null;
   buyer_decision?: string | null; reviewed?: boolean;
   updated_at?: string | null;
   answers?: { request_type?: string; bundle?: boolean; source_request?: string | null; items?: Array<{ listing_id: string; kind: string; name: string; qty: number; note?: string }> } | null;
@@ -183,6 +188,17 @@ const T: Record<Lang, Record<string, string>> = {
     cmpNote: 'Lowest price isn’t always the best value — weigh timeline and fit. Contact details stay hidden until you accept.',
     cmpFor: 'Comparing quotes for the same request',
     cmpPaymentTerms: 'Payment terms', cmpWarranty: 'Warranty',
+    // Per-kind quote extras (Slice R6, flow-readiness fix) — mirrors the
+    // EXACT wording of the vendor's own quote form (src/app/vendor/leads/
+    // page.tsx T dict) so both sides of a quote speak the same language.
+    cmpUnitPrice: 'Unit price', cmpShippingCost: 'Shipping cost',
+    cmpInstallation: 'Installation', cmpInstallationIncluded: 'Included', cmpInstallationExtra: 'Extra cost', cmpInstallationNone: 'Not available',
+    cmpTraining: 'Training', cmpTrainingIncluded: 'Included', cmpTrainingExtra: 'Extra cost',
+    cmpScopeSummary: 'Scope summary (included / excluded)', cmpDuration: 'Duration', cmpTeamSize: 'Team size',
+    cmpEmergencyResponse: 'Emergency response time (if applicable)',
+    cmpLicenseModel: 'License model', cmpLicenseSubscription: 'Subscription', cmpLicensePerpetual: 'Perpetual', cmpLicenseTiered: 'Tiered',
+    cmpImplementationCost: 'Implementation cost', cmpAnnualSupport: 'Annual support / maintenance fee',
+    cmpSlaSummary: 'SLA summary', cmpPricingDetails: 'Pricing details',
     // R4 comparison card deck (design addendum #1)
     cmpDiffOnly: 'Show differences only', cmpCardsView: 'Cards', cmpTableView: 'Table', cmpBestValue: 'Best value',
     // Post-accept "what happens next" (FIX 2)
@@ -292,6 +308,14 @@ const T: Record<Lang, Record<string, string>> = {
     cmpNote: 'El precio más bajo no siempre es la mejor opción — considera el tiempo y la compatibilidad. Los datos de contacto quedan ocultos hasta que aceptas.',
     cmpFor: 'Comparando cotizaciones de la misma solicitud',
     cmpPaymentTerms: 'Términos de pago', cmpWarranty: 'Garantía',
+    cmpUnitPrice: 'Precio unitario', cmpShippingCost: 'Costo de envío',
+    cmpInstallation: 'Instalación', cmpInstallationIncluded: 'Incluida', cmpInstallationExtra: 'Costo adicional', cmpInstallationNone: 'No disponible',
+    cmpTraining: 'Capacitación', cmpTrainingIncluded: 'Incluida', cmpTrainingExtra: 'Costo adicional',
+    cmpScopeSummary: 'Resumen del alcance (incluido / excluido)', cmpDuration: 'Duración', cmpTeamSize: 'Tamaño del equipo',
+    cmpEmergencyResponse: 'Tiempo de respuesta de emergencia (si aplica)',
+    cmpLicenseModel: 'Modelo de licencia', cmpLicenseSubscription: 'Suscripción', cmpLicensePerpetual: 'Perpetua', cmpLicenseTiered: 'Por niveles',
+    cmpImplementationCost: 'Costo de implementación', cmpAnnualSupport: 'Cuota anual de soporte / mantenimiento',
+    cmpSlaSummary: 'Resumen del SLA', cmpPricingDetails: 'Detalles de precios',
     cmpDiffOnly: 'Mostrar solo diferencias', cmpCardsView: 'Tarjetas', cmpTableView: 'Tabla', cmpBestValue: 'Mejor valor',
     // Qué sigue después de aceptar (FIX 2)
     dealInProgress: 'Trato en progreso', connectedWith: 'Estás conectado con',
@@ -716,6 +740,14 @@ export default function BuyerDashboardPage() {
     awaiting: t.cmpAwaiting, received: t.cmpReceived, accepted: t.cmpAccepted, sort: t.cmpSort,
     priceAsc: t.cmpPriceAsc, priceDesc: t.cmpPriceDesc, az: t.cmpAz, note: t.cmpNote,
     showDifferencesOnly: t.cmpDiffOnly, cardsView: t.cmpCardsView, tableView: t.cmpTableView, bestValue: t.cmpBestValue,
+    extras: {
+      unitPrice: t.cmpUnitPrice, shippingCost: t.cmpShippingCost,
+      installation: t.cmpInstallation, installationIncluded: t.cmpInstallationIncluded, installationExtra: t.cmpInstallationExtra, installationNone: t.cmpInstallationNone,
+      training: t.cmpTraining, trainingIncluded: t.cmpTrainingIncluded, trainingExtra: t.cmpTrainingExtra,
+      scopeSummary: t.cmpScopeSummary, duration: t.cmpDuration, teamSize: t.cmpTeamSize, emergencyResponse: t.cmpEmergencyResponse,
+      licenseModel: t.cmpLicenseModel, licenseSubscription: t.cmpLicenseSubscription, licensePerpetual: t.cmpLicensePerpetual, licenseTiered: t.cmpLicenseTiered,
+      implementationCost: t.cmpImplementationCost, annualSupport: t.cmpAnnualSupport, slaSummary: t.cmpSlaSummary, pricingDetails: t.cmpPricingDetails,
+    },
   };
   const offerLabels: OfferCardLabels = lang === 'es' ? OFFER_CARD_LABELS_ES : DEFAULT_OFFER_CARD_LABELS;
   const trackerLabels: DealTrackerLabels = lang === 'es' ? DEAL_TRACKER_LABELS_ES : DEFAULT_DEAL_TRACKER_LABELS;
@@ -967,6 +999,7 @@ export default function BuyerDashboardPage() {
                         validUntil: q.quote_valid_until,
                         paymentTerms: q.quote_payment_terms,
                         warranty: q.quote_warranty,
+                        extras: q.quote_extras,
                         status: q.buyer_decision === 'accepted' ? 'accepted' : q.quote_amount != null ? 'received' : 'awaiting',
                         ref: q.public_ref,
                       }))}
@@ -1048,6 +1081,7 @@ export default function BuyerDashboardPage() {
                             quote_timeline: q.quote_timeline ?? null, quote_valid_until: q.quote_valid_until ?? null,
                             quote_payment_terms: q.quote_payment_terms ?? null, quote_warranty: q.quote_warranty ?? null,
                             quote_message: q.quote_message ?? null, quoted_at: q.quoted_at ?? null, created_at: q.created_at,
+                            quote_extras: q.quote_extras ?? null,
                           };
                           const buyerDecision = offerCtx?.buyerDecision ?? q.buyer_decision ?? null;
                           const offerCards = buildOfferTimeline(
