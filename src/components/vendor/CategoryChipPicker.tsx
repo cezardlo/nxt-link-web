@@ -14,6 +14,12 @@
 // shared CategoryPicker (src/components/CategoryPicker.tsx, untouched by
 // this pass -- buyer-side call sites and the vendor portal's own usage keep
 // the browse-tree UI). Same field, same values, same shape.
+//
+// Extracted 2026-07-30 (listing-creation wizard v1) from
+// src/app/vendor/onboarding/CategoryChipPicker.tsx to this shared location so
+// the vendor listing wizard's category step can reuse it too -- byte-
+// identical move, no behavior change; the onboarding "What do you sell?"
+// card imports from here now.
 
 import { useEffect, useMemo, useState } from 'react';
 import { Search, Plus, X } from 'lucide-react';
