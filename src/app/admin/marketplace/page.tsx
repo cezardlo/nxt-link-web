@@ -71,6 +71,11 @@ export default function AdminMarketplacePage() {
               </table></div>
             </section>
 
+            {/* id target for the admin home dashboard's "Listings awaiting
+                review" card (src/app/admin/page.tsx) — plain wrapping div,
+                no new styling, so the existing block-level .am-card spacing
+                is unaffected. */}
+            <div id="listings-review">
             {([['product', 'Products', data.products], ['service', 'Services', data.services]] as Array<['product' | 'service', string, AdminListing[]]>).map(([kind, label, rows]) => (
               <section className="am-card" key={kind}>
                 <div className="am-lbl">{label} ({rows.length})</div>
@@ -95,6 +100,7 @@ export default function AdminMarketplacePage() {
                 </table></div>
               </section>
             ))}
+            </div>
 
             <section className="am-card">
               <div className="am-lbl">Reported issues ({data.reports.length})</div>
@@ -126,7 +132,7 @@ export default function AdminMarketplacePage() {
               )}
             </section>
 
-            <section className="am-card">
+            <section className="am-card" id="leads">
               <div className="am-lbl">Recent leads ({data.leads.length})</div>
               <div className="am-scroll"><table>
                 <thead><tr><th>Ref</th><th>Buyer</th><th>Vendor</th><th>Type</th><th>Status</th><th>Date</th></tr></thead>
