@@ -252,6 +252,6 @@ const CSS = `
 .vl-sent{background:var(--pbg);border:1px solid rgba(108,92,224,.25);color:var(--p2);padding:14px 16px;border-radius:12px;font-size:14px;line-height:1.5;}
 .vl-switch{text-align:center;margin-top:22px;font-size:13.5px;color:var(--muted);}
 .vl-switch button{background:none;border:none;color:var(--p2);font:700 13.5px var(--sans);cursor:pointer;}
-.vl-alt{display:block;text-align:center;margin-top:16px;color:#706D88;font-size:12.5px;text-decoration:none;}
+.vl-alt{display:block;text-align:center;margin-top:16px;color:var(--muted,#615F72);font-size:12.5px;text-decoration:none;}
 .vl-alt:hover{color:var(--p2);}
 `;

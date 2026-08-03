@@ -299,10 +299,10 @@ const CSS = MOTION_CSS + `
 .li-pwrow input{flex:1;padding-left:38px !important;padding-right:62px !important;}
 .li-pwtoggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:#706D88;font:600 12px inherit;cursor:pointer;padding:6px;transition:color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .li-pwtoggle:hover{color:var(--spec-violet-deep,#4A3DB0);}
-.li-forgot{color:#706D88;font-size:12.5px;text-decoration:none;text-align:right;margin-top:-3px;transition:color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.li-forgot{color:var(--spec-text-2nd,#615F72);font-size:12.5px;text-decoration:none;text-align:right;margin-top:-3px;transition:color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .li-forgot:hover{color:var(--spec-violet-deep,#4A3DB0);}
 .li-demo{margin-top:16px;border-top:1px solid var(--spec-border,#E2DFEC);padding-top:14px;}
-.li-demolabel{color:#706D88;font-size:12.5px;margin-bottom:10px;text-align:center;}
+.li-demolabel{color:var(--spec-text-2nd,#615F72);font-size:12.5px;margin-bottom:10px;text-align:center;}
 .li-demorow{display:flex;gap:9px;}
 .li-demobtn{flex:1;font-family:inherit;font-size:13.5px;font-weight:600;padding:11px;min-height:44px;border-radius:10px;border:1px solid rgba(47,158,106,.35);background:rgba(47,158,106,.08);color:#1F7A54;cursor:pointer;transition:background var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .li-demobtn:hover{background:rgba(47,158,106,.15);}
