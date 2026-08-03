@@ -15,6 +15,7 @@ import { useLang, type Lang } from '@/components/LanguageToggle';
 import PublicHeader from '@/components/PublicHeader';
 import { pilotEntriesOf, customFieldsOf } from '@/lib/marketplace/types';
 import { parseVideoUrl } from '@/lib/vendor/video';
+import { REQUEST_KINDS, type RequestKind } from '@/lib/requests/structured';
 
 const ibmPlexSans = IBM_Plex_Sans({
   subsets: ['latin'],
@@ -98,6 +99,7 @@ const T: Record<Lang, Record<string, string>> = {
     share: 'Share',
     kindProduct: 'product',
     kindService: 'service',
+    kindTechnology: 'technology',
     ratingReview: 'review',
     ratingReviews: 'reviews',
     pilotAvailable: 'Pilot available',
@@ -160,6 +162,7 @@ const T: Record<Lang, Record<string, string>> = {
     sending: 'Sending…',
     safety: 'Free to send · no commitment until you accept a quote',
     requestTypeAria: 'Request type',
+    requestKindLabel: 'This request is for',
     disclosure: 'Managed through NXT//LINK. NXT//LINK may receive a commission from the vendor. You compare offers and communicate through the platform; your contact info is never shown publicly.',
     terms: 'Terms',
     privacy: 'Privacy',
@@ -217,6 +220,7 @@ const T: Record<Lang, Record<string, string>> = {
     share: 'Compartir',
     kindProduct: 'producto',
     kindService: 'servicio',
+    kindTechnology: 'tecnología',
     ratingReview: 'reseña',
     ratingReviews: 'reseñas',
     pilotAvailable: 'Piloto disponible',
@@ -279,6 +283,7 @@ const T: Record<Lang, Record<string, string>> = {
     sending: 'Enviando…',
     safety: 'Gratis enviar · sin compromiso hasta que aceptes una cotización',
     requestTypeAria: 'Tipo de solicitud',
+    requestKindLabel: 'Esta solicitud es para',
     disclosure: 'Gestionado a través de NXT//LINK. NXT//LINK puede recibir una comisión del proveedor. Comparas ofertas y te comunicas por la plataforma; tu información de contacto nunca se muestra públicamente.',
     terms: 'Términos',
     privacy: 'Privacidad',
@@ -347,6 +352,7 @@ export default function ListingDetailPage() {
   const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
   const [requestType, setRequestType] = useState<RequestKey>('quote');
+  const [requestKind, setRequestKind] = useState<RequestKind>(kind);
   const [websiteUrl, setWebsiteUrl] = useState('');
   const startedAtRef = useRef(Date.now());
   const [sending, setSending] = useState(false);
@@ -397,7 +403,7 @@ export default function ListingDetailPage() {
     try {
       const res = await fetch('/api/marketplace/request', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind, request_type: requestType, listing_id: params.id, company, contact_name: contact, email, phone, message, website_url: websiteUrl, started_at: startedAtRef.current }),
+        body: JSON.stringify({ kind, request_type: requestType, request_kind: requestKind, listing_id: params.id, company, contact_name: contact, email, phone, message, website_url: websiteUrl, started_at: startedAtRef.current }),
       });
       const data = await res.json();
       if (data.ok) setSentRef(data.public_ref || 'received');
@@ -785,6 +791,14 @@ export default function ListingDetailPage() {
             ) : (
               <form onSubmit={submitQuote}>
                 <input type="text" name="website_url" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }} />
+                <label className="dt-rklabel">
+                  <span>{t.requestKindLabel}</span>
+                  <select value={requestKind} onChange={(e) => setRequestKind(e.target.value as RequestKind)}>
+                    {REQUEST_KINDS.map((k) => (
+                      <option key={k} value={k}>{t[k === 'service' ? 'kindService' : k === 'technology' ? 'kindTechnology' : 'kindProduct']}</option>
+                    ))}
+                  </select>
+                </label>
                 <input placeholder={t.fCompany} value={company} onChange={(e) => setCompany(e.target.value)} required />
                 <input placeholder={t.fName} value={contact} onChange={(e) => setContact(e.target.value)} />
                 <input placeholder={t.fEmail} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
@@ -1004,8 +1018,9 @@ a.dt-signin:active{transform:scale(.98);transition:transform .1s ease;}
 .dt-disclosure{margin:12px 0 0;font-size:11.5px;line-height:1.5;color:var(--spec-text-2nd);}
 .dt-disclosure a{color:var(--spec-text-2nd);text-decoration:underline;}
 .dt-quote form{display:flex;flex-direction:column;gap:10px;margin-top:14px;}
-.dt-quote input,.dt-quote textarea{font-family:inherit;font-size:14px;padding:11px 13px;border-radius:10px;border:1px solid var(--spec-border);background:var(--spec-warm-white);color:var(--spec-ink);outline:none;resize:vertical;}
-.dt-quote input:focus,.dt-quote textarea:focus{border-color:var(--spec-violet);}
+.dt-quote input,.dt-quote textarea,.dt-quote select{font-family:inherit;font-size:14px;padding:11px 13px;border-radius:10px;border:1px solid var(--spec-border);background:var(--spec-warm-white);color:var(--spec-ink);outline:none;resize:vertical;}
+.dt-quote input:focus,.dt-quote textarea:focus,.dt-quote select:focus{border-color:var(--spec-violet);}
+.dt-rklabel{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;color:var(--spec-text-2nd);}
 .dt-quote button{font-family:inherit;font-size:14.5px;font-weight:700;padding:13px;border-radius:11px;border:none;background:var(--spec-violet);color:#fff;cursor:pointer;transition:background var(--spec-duration-fast) var(--spec-ease);}
 .dt-quote button:hover{background:var(--spec-violet-deep);}
 .dt-quote button:disabled{opacity:.6;}

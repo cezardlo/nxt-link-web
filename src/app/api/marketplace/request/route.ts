@@ -10,7 +10,7 @@ import { notifyVendor } from '@/lib/notify';
 import { sendMail } from '@/lib/mail';
 import { isRestricted } from '@/lib/vendor/moderation';
 import { getSessionUser } from '@/lib/auth/require-user';
-import { validateStructuredRequest, type StructuredRequestFields } from '@/lib/requests/structured';
+import { validateStructuredRequest, type StructuredRequestFields, isRequestKind } from '@/lib/requests/structured';
 
 export async function POST(req: Request) {
   // Login wall (owner decision, 2026-07-23): sending a quote/service request now
@@ -30,7 +30,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, code: 'too_fast', message: 'Form submitted too quickly — please try again' }, { status: 400 });
   }
 
-  const kind = body.kind === 'service' ? 'service' : 'product';
+  const listingKind = body.kind === 'service' ? 'service' : 'product';
+  // Buyer-visible request kind: the listing itself is product/service, but the
+  // buyer may label the opportunity as technology (or keep it matching the
+  // listing). The database foreign keys still key off the listing's real kind.
+  const requestKind = isRequestKind(body.request_kind) ? body.request_kind : listingKind;
   // Which NXT//LINK deal action started this request. Stored in answers (jsonb)
   // so no schema change is needed yet; formalized into a column in Phase 3.
   const REQUEST_TYPES = ['quote', 'contact_sales', 'demo', 'pilot', 'question'];
@@ -52,14 +56,14 @@ export async function POST(req: Request) {
   const message = String(body.message || '').trim().slice(0, 3000);
 
   // Structured RFQ fields (Slice R1). Optional — an old-shape caller (nothing
-  // new in the body) validates cleanly to all-null/empty. request_kind here
-  // is NOT taken from the client: this route is always tied to a real
-  // listing, so its own `kind` (product/service) is the server-known truth.
+  // new in the body) validates cleanly to all-null/empty. request_kind comes
+  // from the buyer's choice on the listing form when it is a valid value,
+  // otherwise it falls back to the listing's own kind.
   const structured = validateStructuredRequest(body);
   if (!structured.ok) {
     return NextResponse.json({ ok: false, code: 'invalid_structured_fields', message: structured.errors[0], errors: structured.errors }, { status: 400 });
   }
-  const structuredFields: StructuredRequestFields = { ...structured.value, request_kind: kind };
+  const structuredFields: StructuredRequestFields = { ...structured.value, request_kind: requestKind };
 
   // ---- Bundle mode (quote cart): several listings, ONE request per vendor ----
   // The cart may span vendors; each vendor gets exactly one quote_requests row,
@@ -89,7 +93,7 @@ export async function POST(req: Request) {
 
   const db = getSupabaseClient({ admin: true });
   // The listing must actually be published; vendor_id comes from the row, never the client.
-  const { data: listing } = await db.from(tableFor(kind)).select('id, name, vendor_id').eq('id', listingId).eq('status', 'published').maybeSingle();
+  const { data: listing } = await db.from(tableFor(listingKind)).select('id, name, vendor_id').eq('id', listingId).eq('status', 'published').maybeSingle();
   if (!listing) return NextResponse.json({ ok: false, code: 'listing_not_found', message: 'Listing not found' }, { status: 404 });
 
   // A restricted (suspended/banned) or not-yet-approved (pending) vendor's
@@ -107,9 +111,9 @@ export async function POST(req: Request) {
   }
 
   const { data, error } = await db.from('quote_requests').insert({
-    kind,
-    product_id: kind === 'product' ? listingId : null,
-    service_id: kind === 'service' ? listingId : null,
+    kind: listingKind,
+    product_id: listingKind === 'product' ? listingId : null,
+    service_id: listingKind === 'service' ? listingId : null,
     vendor_id: listing.vendor_id,
     company, contact_name: contact, email, phone, message,
     answers: { request_type: requestType, requested_by: user.id },
