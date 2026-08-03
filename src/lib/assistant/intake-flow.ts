@@ -3,6 +3,8 @@
 // with OR without an LLM. The LLM (when available) only rephrases; this engine
 // guarantees the right follow-ups, one at a time, and a final summary.
 
+import { type RequestKind, isRequestKind } from '@/lib/requests/structured';
+
 export type Category =
   | 'forklift' | 'staffing' | 'warehouse_tech' | 'transportation' | 'facility' | 'unsure';
 
@@ -186,6 +188,15 @@ export interface RequestSummary {
   missing_info: string[];
   recommended_categories: string[];
   answers: IntakeAnswer[];
+  // Structured RFQ fields (Slice R1) — populated from the same conversation so
+  // intake requests carry the same per-kind quote structure as marketplace RFQs.
+  request_kind: RequestKind | null;
+  quantity_int: number | null;
+  delivery_location: string | null;
+  preferred_timeline: string | null;
+  budget_min: number | null;
+  budget_max: number | null;
+  structured_specs: Record<string, unknown>;
 }
 
 const CATEGORY_LABELS: Record<Category, string> = {
@@ -205,6 +216,52 @@ const RECOMMENDED: Record<Category, string[]> = {
   facility: ['Facility Maintenance', 'MEP & Compliance'],
   unsure: ['NXT//LINK Discovery'],
 };
+
+// Map the assistant's category vocabulary to the structured RequestKind used by
+// R1/R3 quote flows. `unsure` intentionally stays null — the human team can
+// classify it later; defaulting to 'service' would silently mislabel the ask.
+const CATEGORY_TO_REQUEST_KIND: Record<Category, RequestKind | null> = {
+  forklift: 'product',
+  staffing: 'service',
+  warehouse_tech: 'technology',
+  transportation: 'service',
+  facility: 'service',
+  unsure: null,
+};
+
+export function categoryToRequestKind(category: Category): RequestKind | null {
+  return CATEGORY_TO_REQUEST_KIND[category] ?? null;
+}
+
+// Extract the first positive integer from a free-text answer ("6 forklifts" -> 6).
+// Falls back to null so the structured quantity_int column stays clean.
+function parseFirstInteger(raw: string): number | null {
+  const m = String(raw).trim().match(/^(\d+)/);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  return Number.isFinite(n) && n > 0 ? Math.min(n, 999999) : null;
+}
+
+// Pull all $-prefixed or bare numbers out of a budget-range answer and use the
+// smallest/largest as min/max. Mirrors parsePriceUSD's k/m handling.
+function parseBudgetRange(raw: string): { min: number | null; max: number | null } {
+  const clean = String(raw).replace(/,/g, '').replace(/(\d)\s+(?=\d)/g, '$1');
+  const nums: number[] = [];
+  const re = /\$?\s*(\d+(?:\.\d+)?)\s*(k|m)?/gi;
+  let match;
+  while ((match = re.exec(clean)) !== null) {
+    let n = parseFloat(match[1]);
+    if (!Number.isFinite(n) || n < 0) continue;
+    const s = (match[2] || '').toLowerCase();
+    if (s === 'k') n *= 1_000;
+    if (s === 'm') n *= 1_000_000;
+    nums.push(n);
+  }
+  if (!nums.length) return { min: null, max: null };
+  const min = Math.min(...nums);
+  const max = Math.max(...nums);
+  return { min, max: max > min ? max : null };
+}
 
 function findAnswer(answers: IntakeAnswer[], id: string): string {
   return answers.find((a) => a.id === id)?.a || '';
@@ -263,6 +320,8 @@ export function nextStep(initialText: string, state: IntakeState): IntakeStep {
   return { category, question: plan[index], index, total: plan.length, done: false, corrected };
 }
 
+const PROMOTED_IDS = new Set(['qty', 'count', 'users', 'location', 'deadline', 'budget', 'nda', 'share']);
+
 export function buildSummary(category: Category, problemText: string, answers: IntakeAnswer[]): RequestSummary {
   const nda = /yes|si|sí|require|necesito|nda|mnda/i.test(findAnswer(answers, 'nda'));
   const shareOk = /yes|si|sí|ok|sure|allow|permito/i.test(findAnswer(answers, 'share'));
@@ -279,6 +338,15 @@ export function buildSummary(category: Category, problemText: string, answers: I
   ];
   const missing = fields.filter(([, v]) => !v.trim()).map(([k]) => k);
 
+  const budget = parseBudgetRange(findAnswer(answers, 'budget'));
+  const structuredSpecs: Record<string, unknown> = {};
+  for (const a of answers) {
+    if (!a.id || PROMOTED_IDS.has(a.id)) continue;
+    const v = a.a.trim();
+    if (!v) continue;
+    structuredSpecs[a.id] = v.slice(0, 500);
+  }
+
   return {
     problem: problemText || findAnswer(answers, 'problem') || answers[0]?.a || '',
     category: CATEGORY_LABELS[category],
@@ -292,6 +360,13 @@ export function buildSummary(category: Category, problemText: string, answers: I
     missing_info: missing,
     recommended_categories: RECOMMENDED[category],
     answers,
+    request_kind: categoryToRequestKind(category),
+    quantity_int: parseFirstInteger(quantity),
+    delivery_location: findAnswer(answers, 'location') || null,
+    preferred_timeline: findAnswer(answers, 'deadline') || null,
+    budget_min: budget.min,
+    budget_max: budget.max,
+    structured_specs: structuredSpecs,
   };
 }
 

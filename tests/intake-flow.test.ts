@@ -3,7 +3,9 @@ import test from 'node:test';
 
 import {
   buildQuestionPlan,
+  buildSummary,
   categoryIsNegated,
+  categoryToRequestKind,
   detectCategory,
   nextStep,
   type IntakeAnswer,
@@ -14,7 +16,7 @@ import {
 // assistant locked onto 'forklift' (pallet jack is one of its keywords) and
 // asked "how many forklifts are involved?"; the buyer replied "1 pallet
 // jack, not a forklift"; the OLD engine kept asking forklift-specific
-// questions (brand/power/etc) because the category, once set, was never
+// questions (brand/power/type/down/...) because the category, once set, was never
 // re-evaluated against later answers — a mismatched intake could then reach
 // /api/platform/requests -> dispatchRequestToVendors unchanged.
 
@@ -115,4 +117,65 @@ test('nextStep: an ordinary "no" answer elsewhere does not spuriously flip an al
   const step3 = nextStep(initialText, state3);
   assert.equal(step3.category, 'facility');
   assert.equal(step3.question?.id, 'urgent');
+});
+
+// ---- Structured RFQ mapping (flow-readiness gap #1/#3) ---------------------
+
+test('categoryToRequestKind maps assistant categories to R1 request kinds', () => {
+  assert.equal(categoryToRequestKind('forklift'), 'product');
+  assert.equal(categoryToRequestKind('warehouse_tech'), 'technology');
+  assert.equal(categoryToRequestKind('staffing'), 'service');
+  assert.equal(categoryToRequestKind('transportation'), 'service');
+  assert.equal(categoryToRequestKind('facility'), 'service');
+  assert.equal(categoryToRequestKind('unsure'), null);
+});
+
+test('buildSummary derives structured fields from a technology intake conversation', () => {
+  const answers: IntakeAnswer[] = [
+    { id: 'process', q: 'What process are you trying to improve?', a: 'Inventory accuracy' },
+    { id: 'current', q: 'What system are you using now?', a: 'Excel + paper' },
+    { id: 'users', q: 'How many users?', a: '12' },
+    { id: 'locations', q: 'How many locations?', a: '3' },
+    { id: 'location', q: 'Where is this located (city/site)?', a: 'El Paso, TX' },
+    { id: 'deadline', q: 'What is your deadline?', a: 'Q1 2027' },
+    { id: 'budget', q: 'What is your budget range, if any?', a: '$15k - $30k' },
+    { id: 'nda', q: 'Do you require an NDA?', a: 'No' },
+    { id: 'share', q: 'May we share an anonymous summary?', a: 'Yes' },
+  ];
+  const summary = buildSummary('warehouse_tech', 'Need a WMS', answers);
+  assert.equal(summary.request_kind, 'technology');
+  assert.equal(summary.quantity_int, 12);
+  assert.equal(summary.delivery_location, 'El Paso, TX');
+  assert.equal(summary.preferred_timeline, 'Q1 2027');
+  assert.equal(summary.budget_min, 15000);
+  assert.equal(summary.budget_max, 30000);
+  assert.equal(summary.structured_specs.process, 'Inventory accuracy');
+  assert.equal(summary.structured_specs.current, 'Excel + paper');
+  assert.equal(summary.structured_specs.locations, '3');
+  // Promoted fields must NOT leak into structured_specs.
+  assert.equal('users' in summary.structured_specs, false);
+  assert.equal('location' in summary.structured_specs, false);
+  assert.equal('deadline' in summary.structured_specs, false);
+  assert.equal('budget' in summary.structured_specs, false);
+});
+
+test('buildSummary handles missing budget/quantity gracefully', () => {
+  const answers: IntakeAnswer[] = [
+    { id: 'qty', q: 'How many?', a: 'not sure' },
+    { id: 'location', q: 'Where?', a: '' },
+    { id: 'budget', q: 'Budget?', a: 'call for quote' },
+  ];
+  const summary = buildSummary('forklift', 'Forklift help', answers);
+  assert.equal(summary.request_kind, 'product');
+  assert.equal(summary.quantity_int, null);
+  assert.equal(summary.delivery_location, null);
+  assert.equal(summary.budget_min, null);
+  assert.equal(summary.budget_max, null);
+});
+
+test('buildSummary leaves unsure request_kind null', () => {
+  const summary = buildSummary('unsure', 'Something is slow', [
+    { id: 'problem', q: 'What is the main problem?', a: 'Delays' },
+  ]);
+  assert.equal(summary.request_kind, null);
 });

@@ -51,6 +51,13 @@ interface RequestSummary {
   permissions?: string[];
   missing_info?: string[];
   recommended_categories?: string[];
+  request_kind?: 'product' | 'service' | 'technology' | null;
+  quantity_int?: number | null;
+  delivery_location?: string | null;
+  preferred_timeline?: string | null;
+  budget_min?: number | null;
+  budget_max?: number | null;
+  structured_specs?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
@@ -311,6 +318,7 @@ function IntakeInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           summary,
+          request_kind: summary?.request_kind,
           contact: { name: contactName.trim(), email: contactEmail.trim() },
           locale,
           vendor_scope: 'both',
