@@ -133,7 +133,7 @@ ${operatorEs} · NXT//LINK`;
 Before you decide, here’s exactly how the money works — in writing:
 
 • No monthly fee. No fee to quote. Free to send · no commitment.
-• Commission only when a deal closes: 5% on the first $50k, 3% above that, capped at $20,000.
+• Commission only when a deal closes: 4% on the first $50k, 2% above that, capped at $20,000.
 • Deal refunded in full? You owe nothing.
 
 That’s the whole model. We make money only when ${company} does.
@@ -147,7 +147,7 @@ ${operator} · NXT//LINK`;
 Antes de decidir, así funciona el dinero — por escrito:
 
 • Sin mensualidad. Cotizar no cuesta. Gratis · sin compromiso.
-• Comisión solo cuando un trato se cierra: 5% sobre los primeros $50,000 USD, 3% sobre el resto, con tope de $20,000.
+• Comisión solo cuando un trato se cierra: 4% sobre los primeros $50,000 USD, 2% sobre el resto, con tope de $20,000.
 • ¿Trato reembolsado por completo? Usted no debe nada.
 
 Ese es todo el modelo. Nosotros ganamos solo cuando ${companyEs} gana.

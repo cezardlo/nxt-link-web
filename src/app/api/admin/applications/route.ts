@@ -22,7 +22,7 @@ function welcomeEmail(name: string, company: string): { subject: string; body: s
 
 Good news: ${company || 'your company'} is approved for NXT//LINK early access.
 
-How it works: we bring you buyers who are ready to purchase. NXT//LINK only earns when you get paid — 5% on the first $50,000, 3% above, capped at $20,000. Your first deal gets up to $250 in commission credit, and every buyer we introduce is protected for 12 months.
+How it works: we bring you buyers who are ready to purchase. NXT//LINK only earns when you get paid — 4% on the first $50,000, 2% above that, capped at $20,000. New vendors get 50% off that commission on their first closed deal (within 90 days of joining, one per company), and every buyer we introduce is protected for 12 months.
 
 Sign in here (no password — use Google or "email me a link"):
 ${LOGIN_URL}
@@ -37,7 +37,7 @@ Hola ${hi},
 
 Buenas noticias: ${company || 'tu empresa'} fue aprobada para el acceso anticipado a NXT//LINK.
 
-Cómo funciona: te traemos compradores listos para comprar. NXT//LINK solo gana cuando tú cobras — 5% sobre los primeros $50,000, 3% de ahí en adelante, con tope de $20,000. Tu primer trato recibe hasta $250 de crédito de comisión, y cada comprador queda protegido por 12 meses.
+Cómo funciona: te traemos compradores listos para comprar. NXT//LINK solo gana cuando tú cobras — 4% sobre los primeros $50,000, 2% de ahí en adelante, con tope de $20,000. Los proveedores nuevos reciben 50% de descuento en esa comisión en su primer trato cerrado (dentro de los primeros 90 días después de unirse, uno por empresa), y cada comprador queda protegido por 12 meses.
 
 Inicia sesión aquí (sin contraseña — usa Google o "envíame un enlace"):
 ${LOGIN_URL}
