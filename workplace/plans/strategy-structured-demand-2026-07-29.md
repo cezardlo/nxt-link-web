@@ -87,3 +87,27 @@ Verbatim substance: Positioning "Get 3 forklift maintenance quotes in 48 hours �
 - Vendor-side pitch bullets: **"Organized RFQs · Templates · Quote tracking · Faster close rates."**
 - Both = COPY CANDIDATES ONLY — filed; nothing goes on the site/emails without Cesar's formal wording OK ([[approval-and-marketing-emails]]).
 - The validation test (advisor): before anything else, prove that 5 structured RFQs sent to 5 El Paso forklift vendors get ≥3 responses within 48h — "you can't fix vendor disorganization with a website unless they adopt your workflow." And the pre-question: has Cesar actually asked 3–5 local vendors "would you prefer structured quote requests over random calls and messy emails?" → CESAR-ONLY homework, pure phone work, zero code. Coordinator note: this is the cheapest possible de-risk of the whole wedge and should precede any category-specific build.
+
+## P8 — 2026-07-30 night: "Closed RFQs, not activity" (advisor paste via Cesar)
+Verbatim core: 30-day mission = "Process 5 real forklift RFQs end-to-end", NOT "onboard 5 companies /
+list 15 services / introduce broadly". Activity ≠ validation; marketplaces win by concentrating demand;
+one category, repeated behavior, closed loop → vendor discipline, comparison patterns, close-rate data,
+case studies, confidence.
+
+COORDINATOR TRIAGE: fully aligned with the working-over-features north star + the locked concierge plan.
+Implications: (1) the wedge category question from today's 3 research docs is implicitly answered =
+FORKLIFTS — the category_attributes/spec-template build stays PARKED until real forklift RFQs demand it
+(5 manual RFQs need zero schema; concierge handles specs); (2) the platform side of the loop is DONE and
+live-verified as of tonight — the mission's bottleneck is not code, it is: recruit El Paso/Juárez forklift
+vendors + source 5 real forklift needs + walk each through quote→compare→accept→close; (3) Cesar's own
+pending real test request = RFQ #0 of the 5; (4) build requests should now be judged against "does this
+help close a forklift RFQ this month?" — default NO otherwise (freeze logic, sharpened).
+
+P8 continuation (same night): Month-1 traction scoreboard = 5-10 real forklift RFQs · 70% vendor response
+<48h · 3+ completed jobs · one REPEAT warehouse. "Not: 15 service pages." Mental shift: structured service
+procurement ENGINE, not industrial directory — engines need fuel (transactions), not polish.
+COORDINATOR NOTE: every metric is honestly computable from EXISTING data once RFQs flow (lead created_at →
+first quote quoted_at = response time; deals table = completed jobs; repeat = same buyer email, 2nd+
+request). No dashboard build needed pre-volume (locked deferral stands) — coordinator computes the
+scoreboard by SQL on request. This is ALSO the natural unlock trigger for the deferred response-rate
+ranking signal: once real response times exist, the +5 becomes honest.

@@ -27,6 +27,18 @@ these three are under-planned — scope them after Wave 2:
   needs; the seed of the future CRM-lite tier (see finance plan §4).
 
 ## Ready when user says go
+- ~~**Admin console: pending-tasks dashboard + nav badges + new-application/listing-review
+  emails**~~ — **SHIPPED 2026-07-31** (worktree `wt/admin-console`, commit `a13401d`, not yet
+  merged to master): `/admin` gets a "Needs your attention" hero with 4 real-data count cards
+  (pending vendor applications, listings awaiting review, new client requests last 7 days, quotes
+  awaiting buyer decision — informational) each linking into the existing queue screen; new
+  `GET /api/admin/overview` computes the counts server-side, admin-gated, degrades to quiet zeros
+  on failure. Small nav badges on the Vendor applications / Listings cards share the same fetch.
+  Open disputes card omitted — no disputes table exists. Best-effort ADMIN_EMAILS notification
+  emails (fire-and-forget, mirrors `dispatchRequestToVendors`) on a new vendor application
+  (`POST /api/apply/submit`) and a new AI-drafted listing entering `needs_review`
+  (`POST /api/vendor/listings`) — `src/lib/admin/notify.ts`. Needs Cesar to set the `ADMIN_EMAILS`
+  Vercel env var (comma-separated) for the emails to actually send; the dashboard works either way.
 - ~~**RFQ Slice R2b — buyer "Post a Need" wizard (product/service/technology + Not sure)**~~ —
   **SHIPPED 2026-07-30**: new route `/buyer/post-need`, 4-step wizard (type → describe → kind-
   adaptive key details → review & send), posts to the existing `POST /api/platform/requests`
