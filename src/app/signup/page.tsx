@@ -81,6 +81,7 @@ const ibmPlexSans = IBM_Plex_Sans({
 
 const T: Record<Lang, Record<string, string>> = {
   en: {
+    docTitle: 'Create account — NXT//LINK',
     eyebrow: 'Your industrial buying workspace',
     detailsTitle: 'Create your account',
     detailsSub: 'This takes about a minute. You can finish your profile after you enter.',
@@ -105,6 +106,7 @@ const T: Record<Lang, Record<string, string>> = {
     errCreate: 'Could not create the account. Try again.',
   },
   es: {
+    docTitle: 'Crear cuenta — NXT//LINK',
     eyebrow: 'Tu espacio de compras industriales',
     detailsTitle: 'Crea tu cuenta',
     detailsSub: 'Toma cerca de un minuto. Puedes completar tu perfil después de entrar.',
@@ -133,6 +135,7 @@ const T: Record<Lang, Record<string, string>> = {
 export default function SignupPage() {
   const [lang, setLang] = useLang();
   const t = T[lang];
+  useEffect(() => { document.title = t.docTitle; }, [t.docTitle]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [agree, setAgree] = useState(false);

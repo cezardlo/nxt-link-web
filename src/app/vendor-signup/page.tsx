@@ -48,6 +48,7 @@ const ibmPlexSans = IBM_Plex_Sans({
 
 const T = {
   en: {
+    docTitle: 'Vendor sign up — NXT//LINK',
     tagline: 'El Paso–Juárez industrial marketplace',
     headline: 'Borderplex buyers post what they need. Quote it — free.',
     bullets: [
@@ -79,6 +80,7 @@ const T = {
     orEmail: 'or continue with email',
   },
   es: {
+    docTitle: 'Registro de proveedor — NXT//LINK',
     tagline: 'Marketplace industrial El Paso–Juárez',
     headline: 'Los compradores de la frontera publican lo que necesitan. Cotícelo — gratis.',
     bullets: [
@@ -124,6 +126,7 @@ export default function VendorQuickSignupPage() {
   const [sentTo, setSentTo] = useState('');
   const [err, setErr] = useState('');
   const t = T[lang];
+  useEffect(() => { document.title = t.docTitle; }, [t.docTitle]);
 
   // /auth/callback bounces back here with ?err=google_terms when the
   // fail-closed terms recording on the Google path couldn't be written

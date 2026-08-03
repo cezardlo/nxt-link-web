@@ -108,6 +108,7 @@ function IntakeInner() {
   // anonymous-buyer page) — a buyer who switched to ES on the homepage lands
   // here already in ES, instead of this page's language resetting to EN.
   const [locale, setLocale] = useLang();
+  useEffect(() => { document.title = locale === 'es' ? 'Solicitar una cotización — NXT//LINK' : 'Request a quote — NXT//LINK'; }, [locale]);
   const [initialText, setInitialText] = useState('');
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);

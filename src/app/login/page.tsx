@@ -14,7 +14,7 @@
 // a buyer by Supabase itself, same as it was before this change, hence the
 // "by continuing" disclaimer under the button stack.
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { IBM_Plex_Sans } from 'next/font/google';
 import { Mail, Lock } from 'lucide-react';
@@ -43,6 +43,7 @@ const ibmPlexSans = IBM_Plex_Sans({
 
 const T: Record<Lang, Record<string, string>> = {
   en: {
+    docTitle: 'Sign in — NXT//LINK',
     signIn: 'Sign in', emailConfirmed: 'Email confirmed — sign in below.',
     checkEmail: '✓ Check your email — we sent a secure sign-in link to', clickToSignIn: 'Click it to sign in (no password needed). It expires in a few minutes.',
     sendingLink: 'Sending link…', emailMeLink: 'Email me a sign-in link',
@@ -61,6 +62,7 @@ const T: Record<Lang, Record<string, string>> = {
     errDemo: 'Demo sign-in failed. Try again.',
   },
   es: {
+    docTitle: 'Iniciar sesión — NXT//LINK',
     signIn: 'Iniciar sesión', emailConfirmed: 'Correo confirmado — inicia sesión abajo.',
     checkEmail: '✓ Revisa tu correo — enviamos un enlace seguro de inicio de sesión a', clickToSignIn: 'Haz clic para iniciar sesión (sin contraseña). Expira en unos minutos.',
     sendingLink: 'Enviando enlace…', emailMeLink: 'Enviarme un enlace de inicio de sesión',
@@ -91,6 +93,7 @@ function LoginInner() {
   const sp = useSearchParams();
   const [lang, setLang] = useLang();
   const t = T[lang];
+  useEffect(() => { document.title = t.docTitle; }, [t.docTitle]);
   const confirmed = sp.get('confirmed') === '1';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

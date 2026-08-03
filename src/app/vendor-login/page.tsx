@@ -35,6 +35,7 @@ const ibmPlexSans = IBM_Plex_Sans({
 
 const T: Record<Lang, Record<string, string>> = {
   en: {
+    docTitle: 'Vendor sign in — NXT//LINK',
     forVendors: 'For vendors',
     signInTitle: 'Sign in to your portal', signUpTitle: 'Create your vendor account',
     signInSub: 'Manage your profile, brochures, and videos.',
@@ -51,6 +52,7 @@ const T: Record<Lang, Record<string, string>> = {
     errGeneric: 'Something went wrong',
   },
   es: {
+    docTitle: 'Inicio de proveedor — NXT//LINK',
     forVendors: 'Para proveedores',
     signInTitle: 'Inicia sesión en tu portal', signUpTitle: 'Crea tu cuenta de proveedor',
     signInSub: 'Administra tu perfil, folletos y videos.',
@@ -71,6 +73,7 @@ const T: Record<Lang, Record<string, string>> = {
 export default function VendorLoginPage() {
   const [lang, setLang] = useLang();
   const t = T[lang];
+  useEffect(() => { document.title = t.docTitle; }, [t.docTitle]);
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
