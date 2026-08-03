@@ -60,7 +60,7 @@ function fromPrice(raw?: string | null): string | null {
   return `From ${m[1].trim()}${tail ? ` ${tail}` : ''} · final in quote`;
 }
 
-type Tab = 'all' | 'product' | 'service' | 'solution';
+type Tab = 'all' | 'product' | 'service' | 'technology' | 'solution';
 type Sort = 'best' | 'recent' | 'lead' | 'pilot' | 'verified';
 
 const SORTS: Array<[Sort, string]> = [
@@ -79,8 +79,9 @@ const SORT_LABEL_ES: Record<Sort, string> = {
   best: 'Mejor coincidencia', recent: 'Agregado recientemente', lead: 'Respuesta más rápida',
   pilot: 'Piloto disponible primero', verified: 'Proveedores verificados primero',
 };
-const TAB_LABEL_EN: Record<Tab, string> = { all: 'Everything', product: 'Products', service: 'Services', solution: 'Solutions' };
-const TAB_LABEL_ES: Record<Tab, string> = { all: 'Todo', product: 'Productos', service: 'Servicios', solution: 'Soluciones' };
+const TAB_LABEL_EN: Record<Tab, string> = { all: 'Everything', product: 'Products', service: 'Services', technology: 'Technology', solution: 'Solutions' };
+// New ES string flagged for Cesar's wording sign-off per project rules.
+const TAB_LABEL_ES: Record<Tab, string> = { all: 'Todo', product: 'Productos', service: 'Servicios', technology: 'Tecnología', solution: 'Soluciones' };
 // Matches the exact ES wording already used for these same concepts on
 // /marketplace/[kind]/[id] (kindProduct/kindService/pilotAvailable/warranty/
 // leadTime/response/emergency) — kept lowercase like the EN source ("product"/
@@ -336,7 +337,7 @@ export default function MarketplacePage() {
     const sp = new URLSearchParams(window.location.search);
     const q0 = sp.get('q'); const t0 = sp.get('tab'); const d0 = sp.get('department');
     if (q0) setQ(capStr(q0, 200));
-    if (t0 === 'product' || t0 === 'service' || t0 === 'solution') setTab(t0);
+    if (t0 === 'product' || t0 === 'service' || t0 === 'technology' || t0 === 'solution') setTab(t0);
     // Category tiles (landing page + "Shop by department") link here with
     // ?department=<functional_group> — pick it up so the tile isn't a dead link.
     if (d0) setFDept(capStr(d0));
@@ -449,6 +450,11 @@ export default function MarketplacePage() {
   // listings for the active tab (before facet/search filtering) — drives facets
   const tabCards = useMemo(() => {
     if (tab === 'product' || tab === 'service') return cards.filter((c) => c.kind === tab);
+    // Technology is a *request* kind, not a listing kind: vendors list tech as
+    // a service tagged with the svc_technology functional group. Surface those
+    // under their own tab so buyers can discover them without already knowing
+    // to browse Services → filter by category.
+    if (tab === 'technology') return cards.filter((c) => c.kind === 'service' && c.functional_group === 'svc_technology');
     return cards; // 'all' and 'solution' consider everything
   }, [cards, tab]);
 
@@ -769,8 +775,8 @@ export default function MarketplacePage() {
             <div className="mk-resultshead">
               <div className="mk-count">
                 {loading ? (lang === 'es' ? 'Cargando…' : 'Loading…') : lang === 'es'
-                  ? `${results.length} ${tab === 'product' ? (results.length === 1 ? 'producto' : 'productos') : tab === 'service' ? (results.length === 1 ? 'servicio' : 'servicios') : (results.length === 1 ? 'resultado' : 'resultados')}`
-                  : `${results.length} ${tab === 'product' ? (results.length === 1 ? 'product' : 'products') : tab === 'service' ? (results.length === 1 ? 'service' : 'services') : (results.length === 1 ? 'result' : 'results')}`}
+                  ? `${results.length} ${tab === 'product' ? (results.length === 1 ? 'producto' : 'productos') : tab === 'service' ? (results.length === 1 ? 'servicio' : 'servicios') : tab === 'technology' ? (results.length === 1 ? 'tecnología' : 'tecnologías') : (results.length === 1 ? 'resultado' : 'resultados')}`
+                  : `${results.length} ${tab === 'product' ? (results.length === 1 ? 'product' : 'products') : tab === 'service' ? (results.length === 1 ? 'service' : 'services') : tab === 'technology' ? (results.length === 1 ? 'technology' : 'technologies') : (results.length === 1 ? 'result' : 'results')}`}
                 {q && !loading ? <> {lang === 'es' ? 'para' : 'for'} <b>“{q}”</b></> : null}
               </div>
               {/* Slim inline RFQ affordance — replaces the old "Can't find what
