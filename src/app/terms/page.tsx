@@ -94,9 +94,9 @@ const SECTIONS: Section[] = [
     'Reviews may only be left after a verified engagement (an accepted quote).',
   ]},
   { t: '5. Vendor terms', icon: Percent, feebar: true,
-    plain: 'To sell here you accept a commission on deals that start on NXT//LINK — 4% of the first $50,000, 2% after that, capped at $20,000. Keep those deals on-platform during a protected period (currently 90 days), keep your listings accurate, respond to leads here, and report closed deals.',
+    plain: 'To sell here you accept a commission on deals that start on NXT//LINK — 4% of the first $50,000, 2% after that, capped at $20,000. Keep those deals on-platform during a protected period (currently 12 months), keep your listings accurate, respond to leads here, and report closed deals.',
     p: [
-    'Before publishing listings or receiving leads, vendors must accept the NXT//LINK vendor terms, which include: a disclosed commission on NXT//LINK-originated deals (4% on the first $50,000 of the eligible subtotal, 2% above that, capped at $20,000 — subject to final review); a protected period (currently 90 days) during which commission remains owed even if the same opportunity closes off-platform; responding to platform leads inside the platform; not redirecting platform buyers off-platform; keeping listings accurate; and reporting closed deals. NXT//LINK may suspend vendors who violate these rules.',
+    'Before publishing listings or receiving leads, vendors must accept the NXT//LINK vendor terms, which include: a disclosed commission on NXT//LINK-originated deals (4% on the first $50,000 of the eligible subtotal, 2% above that, capped at $20,000 — subject to final review); a protected period (currently 12 months) during which commission remains owed even if the same opportunity closes off-platform; responding to platform leads inside the platform; not redirecting platform buyers off-platform; keeping listings accurate; and reporting closed deals. NXT//LINK may suspend vendors who violate these rules.',
   ]},
   { t: '6. Content and conduct', icon: ShieldAlert,
     plain: 'Don’t post anything false, illegal, or that isn’t yours, and don’t try to scrape or break the site. We can remove content and limit accounts that do.',
