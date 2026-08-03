@@ -92,15 +92,24 @@ const SUGGEST_TYPE_LABEL_ES: Record<string, string> = { product: 'Producto', ser
 // set the search box; results still come only from real vendor data.
 const PROBLEM_STARTERS = ['reduce labor', 'prevent cargo theft', 'improve safety', 'speed up picking', 'reduce downtime', 'warehouse automation'];
 
-function useLocalSet(key: string): [Set<string>, (id: string) => void, (ids: string[]) => void] {
+function useLocalSet(key: string, max?: number): [Set<string>, (id: string) => void, (ids: string[]) => void] {
   const [set, setSet] = useState<Set<string>>(new Set());
   useEffect(() => {
-    try { setSet(new Set(JSON.parse(localStorage.getItem(key) || '[]'))); } catch { /* ignore */ }
-  }, [key]);
+    try {
+      let loaded = JSON.parse(localStorage.getItem(key) || '[]');
+      if (!Array.isArray(loaded)) loaded = [];
+      if (max != null && loaded.length > max) loaded = loaded.slice(0, max);
+      setSet(new Set(loaded));
+    } catch { /* ignore */ }
+  }, [key, max]);
   const toggle = (id: string) => {
     setSet((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else if (max == null || next.size < max) {
+        next.add(id);
+      }
       try { localStorage.setItem(key, JSON.stringify([...next])); } catch { /* ignore */ }
       return next;
     });
@@ -109,7 +118,7 @@ function useLocalSet(key: string): [Set<string>, (id: string) => void, (ids: str
     if (!ids.length) return;
     setSet((prev) => {
       const next = new Set(prev);
-      ids.forEach((i) => next.add(i));
+      ids.forEach((i) => { if (max == null || next.size < max) next.add(i); });
       try { localStorage.setItem(key, JSON.stringify([...next])); } catch { /* ignore */ }
       return next;
     });
@@ -164,12 +173,12 @@ function priceBucket(c: Card): PriceBucket | null {
   return '100kplus';
 }
 
-// ---- "How you can get it" facet — buy/rent/lease (products only; most
+// ---- "How you can get it" facet — buy/rent/lease/quote (products only; most
 // services simply won't have this array, and the facet auto-hides then) ----
-type AvailKey = 'buy' | 'rent' | 'lease';
-const AVAIL_KEYS: AvailKey[] = ['buy', 'rent', 'lease'];
-const AVAIL_LABEL_EN: Record<AvailKey, string> = { buy: 'Buy', rent: 'Rent', lease: 'Lease' };
-const AVAIL_LABEL_ES: Record<AvailKey, string> = { buy: 'Comprar', rent: 'Rentar', lease: 'Arrendar' };
+type AvailKey = 'buy' | 'rent' | 'lease' | 'quote';
+const AVAIL_KEYS: AvailKey[] = ['buy', 'rent', 'lease', 'quote'];
+const AVAIL_LABEL_EN: Record<AvailKey, string> = { buy: 'Buy', rent: 'Rent', lease: 'Lease', quote: 'Quote only' };
+const AVAIL_LABEL_ES: Record<AvailKey, string> = { buy: 'Comprar', rent: 'Rentar', lease: 'Arrendar', quote: 'Solo cotización' };
 
 // ---- Location facet — vendor_city is the primary source; service_areas
 // values fold in too (a listing can match on either). "Ciudad Juárez" /
@@ -277,7 +286,7 @@ export default function MarketplacePage() {
   const toggleLocation = (v: string) => setFLocation((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]));
 
   const [saved, toggleSaved, addAllSaved] = useLocalSet('nxt_saved');
-  const [compare, toggleCompare] = useLocalSet('nxt_compare');
+  const [compare, toggleCompare] = useLocalSet('nxt_compare', 5);
   const [savedSynced, setSavedSynced] = useState(false);
 
   // Signed-in buyers: saves follow the account across devices. Merge server
@@ -558,6 +567,7 @@ export default function MarketplacePage() {
   const liveDepartments = useMemo(() => departments.filter((d) => deptCounts.has(d.fg)), [departments, deptCounts]);
 
   const compareCards = useMemo(() => cards.filter((c) => compare.has(c.id)).slice(0, 5), [cards, compare]);
+  const compareFull = compare.size >= 5;
   const activeFilterCount = (fDept ? 1 : 0) + fCategory.length + fIndustry.length + fPrice.length + fAvail.length + fLocation.length +
     [fPilot, fEmergency, fVerified, fLocal, fFast].filter(Boolean).length;
   const marketplaceEmpty = !loading && !authError && cards.length === 0;
@@ -808,6 +818,7 @@ export default function MarketplacePage() {
                     lang={lang}
                     saved={saved.has(c.id)}
                     inCompare={compare.has(c.id)}
+                    compareFull={compareFull}
                     onSave={() => handleSaveToggle(c)}
                     onCompare={() => toggleCompare(c.id)}
                   />
@@ -841,7 +852,7 @@ export default function MarketplacePage() {
 // concepts on /marketplace/[kind]/[id] (kindProduct/kindService/warranty/
 // pilotAvailable/leadTime/response/emergency) so a listing reads consistently
 // across the grid and its detail page.
-function ListingCard({ c, lang, saved, inCompare, onSave, onCompare }: { c: Card; lang: Lang; saved: boolean; inCompare: boolean; onSave: () => void; onCompare: () => void }) {
+function ListingCard({ c, lang, saved, inCompare, compareFull, onSave, onCompare }: { c: Card; lang: Lang; saved: boolean; inCompare: boolean; compareFull: boolean; onSave: () => void; onCompare: () => void }) {
   const es = lang === 'es';
   return (
     <div className="mk-card">
@@ -894,7 +905,14 @@ function ListingCard({ c, lang, saved, inCompare, onSave, onCompare }: { c: Card
         </div>
         <div className="mk-actions">
           <button className={'mk-mini' + (saved ? ' on' : '')} onClick={onSave}>{saved ? (es ? 'Guardado' : 'Saved') : (es ? 'Guardar' : 'Save')}</button>
-          <button className={'mk-mini' + (inCompare ? ' on' : '')} onClick={onCompare}>{inCompare ? (es ? 'En comparación' : 'In compare') : (es ? 'Comparar' : 'Compare')}</button>
+          <button
+            className={'mk-mini' + (inCompare ? ' on' : '')}
+            onClick={onCompare}
+            disabled={!inCompare && compareFull}
+            title={!inCompare && compareFull ? (es ? 'Compara hasta 5 artículos' : 'Compare up to 5 items') : undefined}
+          >
+            {inCompare ? (es ? 'En comparación' : 'In compare') : (es ? 'Comparar' : 'Compare')}
+          </button>
           <AddToCartButton
             listing={{ id: c.id, kind: c.kind, name: c.name, vendor_id: c.vendor_id || null, vendor_name: c.vendor_name || null }}
             className="mk-mini"
