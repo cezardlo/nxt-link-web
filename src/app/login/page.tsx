@@ -224,7 +224,7 @@ function LoginInner() {
             </button>
             <div className="li-field" style={{ marginTop: 2 }}>
               <span className="li-fieldicon" aria-hidden="true"><Mail size={15} strokeWidth={1.75} /></span>
-              <input type="email" placeholder={t.emailPh} value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+              <input type="email" placeholder={t.emailPh} aria-label={t.emailPh} value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
             </div>
             {err && !usePassword && <div className="li-err">{err}</div>}
             <button type="button" className="li-usepw" onClick={() => setUsePassword((v) => !v)}>{usePassword ? t.hidePwSignIn : t.preferPassword}</button>
@@ -234,7 +234,7 @@ function LoginInner() {
         {usePassword && !magicSent && <form onSubmit={submit}>
           <div className="li-pwrow">
             <span className="li-fieldicon" aria-hidden="true"><Lock size={15} strokeWidth={1.75} /></span>
-            <input type={showPw ? 'text' : 'password'} placeholder={t.passwordPh} value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+            <input type={showPw ? 'text' : 'password'} placeholder={t.passwordPh} aria-label={t.passwordPh} value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
             <button type="button" className="li-pwtoggle" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? t.hide : t.show}>{showPw ? t.hide : t.show}</button>
           </div>
           {err && <div className="li-err" role="alert" aria-live="polite">{err}</div>}
@@ -275,7 +275,7 @@ const CSS = MOTION_CSS + `
 .li-card{width:100%;max-width:400px;background:#fff;border:1px solid var(--spec-border,#E2DFEC);border-radius:16px;padding:30px;box-shadow:0 8px 30px rgba(74,61,176,.08);}
 .li-card h1{font-family:var(--font-space-grotesk),'Space Grotesk',system-ui,sans-serif;font-size:23px;font-weight:700;letter-spacing:-.01em;margin-bottom:16px;color:var(--spec-ink,#141320);}
 .li-card form{display:flex;flex-direction:column;gap:11px;}
-.li-card input{font-family:inherit;font-size:14.5px;padding:12px 14px;border-radius:12px;border:1px solid var(--spec-border,#E2DFEC);background:var(--spec-warm-white,#F8F7FB);color:var(--spec-ink,#141320);outline:none;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),box-shadow var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
+.li-card input{font-family:inherit;font-size:14.5px;padding:12px 14px;border-radius:12px;border:1px solid var(--spec-border,#E2DFEC);background:var(--spec-warm-white,#F8F7FB);color:var(--spec-ink,#141320);outline:none;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),box-shadow var(--spec-duration-fast,150ms) var(--spec-ease,ease);width:100%;}
 .li-card input::placeholder{color:#8A87A0;}
 .li-card input:hover{border-color:#C7C2DE;}
 .li-card input:focus{border-color:var(--spec-violet,#6C5CE0);background:#fff;box-shadow:0 0 0 3px rgba(108,92,224,.12);}
