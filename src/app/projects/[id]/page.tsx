@@ -19,6 +19,7 @@ import { StageTracker, STAGE_TRACKER_CSS } from '@/components/marketplace/StageT
 import { EmptyAction, EMPTY_ACTION_CSS } from '@/components/marketplace/EmptyAction';
 import { QuoteCompareTable, QUOTE_COMPARE_TABLE_CSS, type CompareTableRow, DEFAULT_COMPARE_LABELS } from '@/components/marketplace/QuoteCompareTable';
 import { MOTION_CSS, staggerStyle } from '@/components/motion/Motion';
+import type { QuoteExtras } from '@/lib/requests/structured';
 
 // Design System v1.0 reskin (Premium Polish Phase 2, 2026-07-23): visual/CSS
 // only — every handler and state above is unchanged. The soft-blue best-value
@@ -42,7 +43,13 @@ interface Task { id: string; title: string; detail: string | null; due_date: str
 interface Decision { id: string; decision: string; reason: string | null; decided_at: string }
 interface Ev { id: string; actor_name: string | null; event: string; detail: Record<string, unknown>; created_at: string }
 interface Commission { commission_amount: number | null; effective_rate: number | null; status: string | null }
-interface Quote { id: string; public_ref: string; opportunity_ref: string | null; kind: string; company: string | null; quote_amount: number | null; quote_currency: string | null; quote_timeline: string | null; quote_valid_until: string | null; quoted_at: string | null; status: string; buyer_decision: string | null; commission: Commission | null; quote_payment_terms?: string | null; quote_warranty?: string | null }
+interface Quote {
+  id: string; public_ref: string; opportunity_ref: string | null; kind: string; company: string | null;
+  quote_amount: number | null; quote_currency: string | null; quote_timeline: string | null;
+  quote_valid_until: string | null; quoted_at: string | null; status: string; buyer_decision: string | null;
+  commission: Commission | null; quote_payment_terms?: string | null; quote_warranty?: string | null;
+  quote_extras?: QuoteExtras | null;
+}
 interface Approval { id: string; kind: string; status: string; approver_name: string | null; note: string | null; due_date: string | null; decided_at: string | null }
 interface Milestone { id: string; kind: string; title: string | null; status: string; due_date: string | null; note: string | null }
 
@@ -619,6 +626,7 @@ export default function ProjectWorkspacePage() {
                     feeAmount: q.commission?.commission_amount ?? null,
                     status: q.buyer_decision === 'accepted' ? 'accepted' : q.quote_amount != null ? 'received' : 'awaiting',
                     ref: q.opportunity_ref || q.public_ref,
+                    extras: q.quote_extras,
                   }))}
                   labels={lang === 'es' ? COMPARE_LABELS_ES : DEFAULT_COMPARE_LABELS}
                   locale={lang === 'es' ? 'es-MX' : 'en-US'}

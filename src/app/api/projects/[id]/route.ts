@@ -56,7 +56,9 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     db.from('project_milestones').select('*').eq('project_id', id).order('sort_order', { ascending: true }),
     // Quotes for THIS project + their commission status (the Deal Room ties
     // the marketplace opportunity into the workspace).
-    db.from('quote_requests').select('id, public_ref, opportunity_ref, kind, company, quote_amount, quote_currency, quote_timeline, quote_valid_until, quoted_at, status, buyer_decision, created_at, quote_payment_terms, quote_warranty').eq('project_id', id).order('created_at', { ascending: false }),
+    // quote_extras + request_kind selected so the compare table can render the
+    // vendor's per-kind structured fields (R3/R6 flow-readiness fix).
+    db.from('quote_requests').select('id, public_ref, opportunity_ref, kind, request_kind, company, quote_amount, quote_currency, quote_timeline, quote_valid_until, quoted_at, status, buyer_decision, created_at, quote_payment_terms, quote_warranty, quote_extras').eq('project_id', id).order('created_at', { ascending: false }),
   ]);
 
   // Attach commission status to each quote (buyer sees where NXT Link stands too).
