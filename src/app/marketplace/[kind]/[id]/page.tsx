@@ -163,6 +163,7 @@ const T: Record<Lang, Record<string, string>> = {
     safety: 'Free to send · no commitment until you accept a quote',
     requestTypeAria: 'Request type',
     requestKindLabel: 'This request is for',
+    requestKindHint: 'Technology vendors list as services. Labeling this as technology tells the vendor you need software or systems.',
     disclosure: 'Managed through NXT//LINK. NXT//LINK may receive a commission from the vendor. You compare offers and communicate through the platform; your contact info is never shown publicly.',
     terms: 'Terms',
     privacy: 'Privacy',
@@ -284,6 +285,8 @@ const T: Record<Lang, Record<string, string>> = {
     safety: 'Gratis enviar · sin compromiso hasta que aceptes una cotización',
     requestTypeAria: 'Tipo de solicitud',
     requestKindLabel: 'Esta solicitud es para',
+    // New ES string flagged for Cesar's wording sign-off per project rules.
+    requestKindHint: 'Los proveedores de tecnología se publican como servicios. Etiquetar esto como tecnología le dice al proveedor que necesitas software o sistemas.',
     disclosure: 'Gestionado a través de NXT//LINK. NXT//LINK puede recibir una comisión del proveedor. Comparas ofertas y te comunicas por la plataforma; tu información de contacto nunca se muestra públicamente.',
     terms: 'Términos',
     privacy: 'Privacidad',
@@ -799,6 +802,7 @@ export default function ListingDetailPage() {
                     ))}
                   </select>
                 </label>
+                {requestKind === 'technology' && kind === 'service' && <p className="dt-rkhint">{t.requestKindHint}</p>}
                 <input placeholder={t.fCompany} value={company} onChange={(e) => setCompany(e.target.value)} required />
                 <input placeholder={t.fName} value={contact} onChange={(e) => setContact(e.target.value)} />
                 <input placeholder={t.fEmail} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
@@ -1021,6 +1025,7 @@ a.dt-signin:active{transform:scale(.98);transition:transform .1s ease;}
 .dt-quote input,.dt-quote textarea,.dt-quote select{font-family:inherit;font-size:14px;padding:11px 13px;border-radius:10px;border:1px solid var(--spec-border);background:var(--spec-warm-white);color:var(--spec-ink);outline:none;resize:vertical;}
 .dt-quote input:focus,.dt-quote textarea:focus,.dt-quote select:focus{border-color:var(--spec-violet);}
 .dt-rklabel{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;color:var(--spec-text-2nd);}
+.dt-rkhint{margin:0;font-size:12px;line-height:1.5;color:var(--spec-text-2nd);}
 .dt-quote button{font-family:inherit;font-size:14.5px;font-weight:700;padding:13px;border-radius:11px;border:none;background:var(--spec-violet);color:#fff;cursor:pointer;transition:background var(--spec-duration-fast) var(--spec-ease);}
 .dt-quote button:hover{background:var(--spec-violet-deep);}
 .dt-quote button:disabled{opacity:.6;}
