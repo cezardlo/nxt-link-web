@@ -1195,7 +1195,7 @@ const CSS = `
 .mk-activechips button{font-family:inherit;font-size:12px;font-weight:600;padding:6px 11px;border-radius:99px;border:1px solid rgba(108,92,224,.35);background:rgba(108,92,224,.1);color:var(--spec-violet-deep);cursor:pointer;transition:background var(--spec-duration-fast) var(--spec-ease);}
 .mk-activechips button:hover{background:rgba(108,92,224,.2);}
 .mk-activechips button.all{border-color:var(--spec-border);background:none;color:var(--spec-text-2nd);}
-.mk-cnames{max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.mk-cnames{max-width:min(420px, calc(100vw - 220px));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto;min-width:0;}
 .mk-cnames b{color:var(--spec-violet-deep);}
 .mk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px;}
 .mk-card{background:#fff;border:1px solid var(--spec-border);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;transition:border-color var(--spec-duration-fast) var(--spec-ease),transform var(--spec-duration-fast) var(--spec-ease),box-shadow var(--spec-duration-fast) var(--spec-ease);}
@@ -1265,7 +1265,7 @@ a.mk-quote:active{transform:scale(.98);transition:transform .1s ease;}
 .mk-asknxt:hover{background:var(--spec-violet-deep);}
 a.mk-asknxt:active{transform:scale(.98);transition:transform .1s ease;}
 .mk-scrim{display:none;}
-.mk-cbar{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--spec-border);border-radius:14px;padding:12px 18px;font-size:13.5px;color:var(--spec-ink);z-index:35;box-shadow:0 10px 40px rgba(20,19,32,.2);}
+.mk-cbar{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--spec-border);border-radius:14px;padding:12px 18px;font-size:13.5px;color:var(--spec-ink);z-index:35;box-shadow:0 10px 40px rgba(20,19,32,.2);max-width:calc(100vw - 24px);box-sizing:border-box;flex-wrap:wrap;justify-content:center;}
 .mk-modal{position:fixed;inset:0;background:rgba(20,19,32,.5);display:grid;place-items:center;z-index:40;padding:20px;}
 .mk-modal-in{background:#fff;border:1px solid var(--spec-border);border-radius:18px;max-width:960px;width:100%;max-height:82vh;overflow:auto;padding:22px;}
 .mk-modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
