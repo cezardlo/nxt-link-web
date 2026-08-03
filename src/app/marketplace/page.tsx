@@ -14,6 +14,7 @@ import { BadgeCheck, Zap, MapPin, PlayCircle, Timer, type LucideIcon } from 'luc
 import { levelAtLeast } from '@/components/marketplace/TrustBadges';
 import AddToCartButton from '@/components/cart/AddToCartButton';
 import { useLang, type Lang } from '@/components/LanguageToggle';
+import { parsePriceUSD } from '@/lib/marketplace/price';
 import PublicHeader from '@/components/PublicHeader';
 // CompareModal-only addition (polish pass 2026-07-30): the shared motion
 // vocabulary for its open-transition (nxm-backdrop/nxm-panel) — reused, not
@@ -147,18 +148,6 @@ const PRICE_LABEL_ES: Record<PriceBucket, string> = {
 // per-unit/pallet pricing, and explicit quote-only wording all land in the
 // "Quote / subscription" bucket instead of being forced into a $ bracket.
 const QUOTE_SIGNAL_RE = /\/\s*mo\b|\bper\s*(unit|pallet|item|month|year|hour|day)\b|\bsubscription\b|\bquote\b|\bcall\s+for\b|\bcontact\b/i;
-// Takes the FIRST dollar number found in a free-text price string; a trailing
-// "k"/"m" is treated as a thousand/million multiplier ("$45k" → 45000).
-function parsePriceUSD(raw: string): number | null {
-  const m = raw.replace(/,/g, '').match(/\$?\s*(\d+(?:\.\d+)?)\s*(k|m)?/i);
-  if (!m) return null;
-  let n = parseFloat(m[1]);
-  if (!Number.isFinite(n)) return null;
-  const suffix = (m[2] || '').toLowerCase();
-  if (suffix === 'k') n *= 1_000;
-  if (suffix === 'm') n *= 1_000_000;
-  return n;
-}
 // Buckets a listing by its best-effort-parsed price. Returns null only when
 // the listing has no pricing info at all — those don't belong in this facet.
 function priceBucket(c: Card): PriceBucket | null {
