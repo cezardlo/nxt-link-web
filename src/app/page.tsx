@@ -223,7 +223,7 @@ const T: Record<Lang, Record<string, string>> = {
     faq4q: 'What areas do you serve?',
     faq4a: 'We focus on the Borderplex: El Paso, Horizon City, Juárez, southern New Mexico, and West Texas — including cross-border and customs-ready vendors.',
     faq5q: 'I’m a vendor — how do I join?',
-    faq5a: 'Create a vendor account, upload a brochure, and our AI drafts your listing for you. Once your profile is complete and verified, you start receiving qualified leads from local buyers.',
+    faq5a: 'Create a vendor account, upload a brochure, and publish your storefront. Once your profile is complete and verified, you start receiving qualified leads from local buyers.',
     footerTagline: 'The industrial supply chain marketplace for the El Paso–Juárez Borderplex.',
     forBuyers: 'For buyers', browseMarketplace: 'Browse marketplace', createAccount: 'Create account', myProjects: 'My projects', signIn: 'Sign in',
     forVendors: 'For vendors', listYourCompany: 'List your company', vendorSignIn: 'Vendor sign in', sellerCentral: 'Seller Central',
@@ -300,7 +300,7 @@ const T: Record<Lang, Record<string, string>> = {
     faq4q: '¿Qué zonas cubren?',
     faq4a: 'Nos enfocamos en el Borderplex: El Paso, Horizon City, Juárez, el sur de Nuevo México y el oeste de Texas — incluyendo proveedores listos para cruzar la frontera y con trámites aduanales.',
     faq5q: 'Soy proveedor — ¿cómo me uno?',
-    faq5a: 'Crea una cuenta de proveedor, sube un folleto y nuestra IA redacta tu publicación por ti. Cuando tu perfil esté completo y verificado, empiezas a recibir prospectos calificados de compradores locales.',
+    faq5a: 'Crea una cuenta de proveedor, sube un folleto y publica tu escaparate. Cuando tu perfil esté completo y verificado, empiezas a recibir prospectos calificados de compradores locales.',
     footerTagline: 'El marketplace de la cadena de suministro industrial para el Borderplex El Paso–Juárez.',
     forBuyers: 'Para compradores', browseMarketplace: 'Explorar marketplace', createAccount: 'Crear cuenta', myProjects: 'Mis proyectos', signIn: 'Iniciar sesión',
     forVendors: 'Para proveedores', listYourCompany: 'Publica tu empresa', vendorSignIn: 'Acceso de proveedores', sellerCentral: 'Centro de vendedores',
@@ -637,7 +637,7 @@ export default function Home() {
               ))}
             </div>
           </div>
-          <Link className="hp-btn" href="/vendor-signup">{t.vendorApply}<ArrowRight size={16} aria-hidden="true" /></Link>
+          <Link className="hp-btn" href="/apply">{t.vendorApply}<ArrowRight size={16} aria-hidden="true" /></Link>
         </div>
       </section>
 
@@ -675,7 +675,7 @@ export default function Home() {
           </div>
           <div>
             <h4>{t.forVendors}</h4>
-            <a href="/vendor-signup">{t.listYourCompany}</a>
+            <a href="/apply">{t.listYourCompany}</a>
             <a href="/vendor-login">{t.vendorSignIn}</a>
             <a href="/vendor/leads">{t.sellerCentral}</a>
           </div>

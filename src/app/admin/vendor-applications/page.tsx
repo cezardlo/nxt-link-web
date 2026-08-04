@@ -12,12 +12,16 @@ interface App {
   id: string; public_ref: string | null; company_name: string | null; contact_name: string | null;
   email: string; phone: string | null; category: string | null;
   offering_types: string[] | null; supply_chain_stages: string[] | null;
-  company_size: string | null; region: string | null; problem_solved: string | null;
-  target_customer: string | null; price_range: string | null;
+  company_size: string | null; region: string | null; regions: string[] | null; problem_solved: string | null;
+  target_customer: string | null; target_customers: string[] | null; price_range: string | null;
   status: string; approved: boolean; live_vendor_id: string | null; created_at: string;
 }
 const fmtDate = (s: string) => { try { return new Date(s).toLocaleDateString(); } catch { return ''; } };
 const arr = (v: string[] | null) => (Array.isArray(v) ? v.filter(Boolean) : []);
+// Multi-value fields with legacy fallback (2026-08-04): the array columns win,
+// older rows only have the single-value text column.
+const regionsOf = (a: App) => (arr(a.regions).length ? arr(a.regions) : a.region ? [a.region] : []);
+const customersOf = (a: App) => (arr(a.target_customers).length ? arr(a.target_customers) : a.target_customer ? [a.target_customer] : []);
 
 export default function AdminVendorApplicationsPage() {
   const [apps, setApps] = useState<App[]>([]);
@@ -89,12 +93,12 @@ export default function AdminVendorApplicationsPage() {
                     {a.contact_name && <span>{a.contact_name}</span>}
                     <a href={`mailto:${a.email}`}>{a.email}</a>
                     {a.phone && <a href={`tel:${a.phone}`}>{a.phone}</a>}
-                    {a.region && <span>📍 {a.region}</span>}
+                    {regionsOf(a).length > 0 && <span>📍 {regionsOf(a).join(', ')}</span>}
                     {a.company_size && <span>{a.company_size}</span>}
                     <span className="ap-date">{fmtDate(a.created_at)}</span>
                   </div>
                   {a.problem_solved && <div className="ap-note"><b>Solves:</b> {a.problem_solved}</div>}
-                  {a.target_customer && <div className="ap-line"><b>Target customer:</b> {a.target_customer}</div>}
+                  {customersOf(a).length > 0 && <div className="ap-line"><b>Target customers:</b> {customersOf(a).join(', ')}</div>}
                   {a.price_range && <div className="ap-line"><b>Price range:</b> {a.price_range}</div>}
                   {(arr(a.offering_types).length > 0 || arr(a.supply_chain_stages).length > 0) && (
                     <div className="ap-tags">

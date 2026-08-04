@@ -25,7 +25,7 @@ import { sendMail } from '@/lib/mail';
 
 const LOGIN_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://nxt-link-web.vercel.app').replace(/\/$/, '') + '/login';
 
-const APP_COLS = 'id, public_ref, company_name, contact_name, email, phone, category, offering_types, supply_chain_stages, company_size, region, problem_solved, target_customer, price_range, logo_path, product_image_paths, status, admin_notes, approved_at, auth_id, created_at';
+const APP_COLS = 'id, public_ref, company_name, contact_name, email, phone, category, offering_types, supply_chain_stages, company_size, region, regions, problem_solved, target_customer, target_customers, price_range, logo_path, product_image_paths, status, admin_notes, approved_at, auth_id, created_at';
 
 function welcomeEmail(name: string, company: string): { subject: string; body: string } {
   const hi = name ? name : (company || 'there');
@@ -129,6 +129,10 @@ export async function POST(req: Request) {
   // or mint a fresh approved profile from the application data.
   const email = String(app.email || '');
   const authId = (app.auth_id as string) || null;
+  // Multi-value fields (2026-08-04): prefer the arrays, fall back to the
+  // legacy single-value column for rows that predate them.
+  const regions = Array.isArray(app.regions) && app.regions.length ? app.regions : app.region ? [app.region] : [];
+  const customers = Array.isArray(app.target_customers) && app.target_customers.length ? app.target_customers : app.target_customer ? [app.target_customer] : [];
 
   const ensured = await ensureVendorProfile(db, {
     lane: 'admin_approval',
@@ -140,9 +144,9 @@ export async function POST(req: Request) {
       email: email || null,
       phone: app.phone || null,
       categories: app.category ? [app.category] : [],
-      service_areas: app.region ? [app.region] : [],
+      service_areas: regions,
       industries: Array.isArray(app.supply_chain_stages) ? app.supply_chain_stages : [],
-      client_types: app.target_customer ? [app.target_customer] : [],
+      client_types: customers,
       description: app.problem_solved || null,
       logo_path: app.logo_path || null,
       source: 'application',

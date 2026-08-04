@@ -3,32 +3,23 @@
 // Status/admin_notes/approved_at can NEVER be set here (admin-only, and the
 // DB trigger guard_vendor_application_update() enforces this even if this
 // route were bypassed).
+//
+// Both verbs also mirror the application onto the vendor's live profile
+// (fill-empty only, syncApplicationToVendorProfile) — the GET covers the
+// moment an anonymous submission is claimed onto the account by email match.
 
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getApplicantSession, getOwnApplication } from '@/lib/apply/auth';
+import { cleanStringArray, MAX_REGIONS, REGION_MAXLEN, MAX_TARGET_CUSTOMERS, TARGET_CUSTOMER_MAXLEN } from '@/lib/apply/fields';
+import { syncApplicationToVendorProfile } from '@/lib/apply/profile-sync';
 
 const CATEGORIES = ['TMS', 'WMS', 'Telematics/ELD', 'Forklifts', 'Customs/Cross-Border', 'Cold Chain', 'Robotics', 'Other'];
 const OFFERING_TYPES = ['Product', 'Software / platform', 'Service', 'Innovation / frontier tool'];
 const LOGO_BUCKET = 'vendor-logos';
 const IMG_BUCKET = 'vendor-product-images';
 const MAX_STAGES = 12;
-
-function cleanStringArray(values: unknown, max: number, maxLen: number): string[] | undefined {
-  if (!Array.isArray(values)) return undefined;
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const raw of values) {
-    if (typeof raw !== 'string') continue;
-    const v = raw.trim().slice(0, maxLen);
-    if (!v || seen.has(v)) continue;
-    seen.add(v);
-    out.push(v);
-    if (out.length >= max) break;
-  }
-  return out;
-}
 
 export async function GET() {
   const session = await getApplicantSession();
@@ -50,6 +41,10 @@ export async function GET() {
     if (data?.signedUrl) image_urls.push(data.signedUrl);
   }
 
+  // The application may have just been claimed onto this account by email
+  // match — mirror its facts onto the vendor profile either way (fill-empty).
+  await syncApplicationToVendorProfile(db, session, app);
+
   return NextResponse.json({ ok: true, stored: true, application: { ...app, logo_url, image_urls } });
 }
 
@@ -66,8 +61,8 @@ export async function PATCH(req: Request) {
 
   const patch: Record<string, unknown> = {};
   const str = (k: string, max = 300) => { if (typeof body[k] === 'string') patch[k] = (body[k] as string).slice(0, max); };
-  str('company_name'); str('contact_name'); str('phone'); str('target_customer'); str('price_range', 100);
-  str('company_size', 100); str('region', 100);
+  str('company_name'); str('contact_name'); str('phone'); str('price_range', 100);
+  str('company_size', 100);
   str('problem_solved', 2000);
   if (typeof body.category === 'string' && CATEGORIES.includes(body.category)) patch.category = body.category;
 
@@ -76,12 +71,46 @@ export async function PATCH(req: Request) {
   const stages = cleanStringArray(body.supply_chain_stages, MAX_STAGES, 80);
   if (stages) patch.supply_chain_stages = stages;
 
+  // Multi-select locations + customer types (2026-08-04): prefer the array
+  // fields; the legacy single strings still work and are expanded into the
+  // arrays. Legacy single columns stay in sync (first value) so every
+  // pre-existing reader keeps working.
+  const regions = cleanStringArray(body.regions, MAX_REGIONS, REGION_MAXLEN);
+  if (regions) {
+    patch.regions = regions;
+    patch.region = regions[0] || '';
+  } else if (typeof body.region === 'string') {
+    const r = body.region.slice(0, 100).trim();
+    patch.region = r;
+    patch.regions = r ? [r] : [];
+  }
+  const customers = cleanStringArray(body.target_customers, MAX_TARGET_CUSTOMERS, TARGET_CUSTOMER_MAXLEN);
+  if (customers) {
+    patch.target_customers = customers;
+    patch.target_customer = customers[0] || '';
+  } else if (typeof body.target_customer === 'string') {
+    const c = body.target_customer.slice(0, 500).trim();
+    patch.target_customer = c;
+    patch.target_customers = c ? [c] : [];
+  }
+
   if (!Object.keys(patch).length) return NextResponse.json({ ok: false, message: 'Nothing to update' }, { status: 400 });
 
   const db = getSupabaseClient({ admin: true });
   const { data, error } = await db.from('vendor_applications').update(patch).eq('id', app.id).eq('auth_id', session.authId)
-    .select('id, public_ref, company_name, contact_name, email, phone, category, offering_types, supply_chain_stages, company_size, region, problem_solved, target_customer, price_range, status')
+    .select('id, public_ref, company_name, contact_name, email, phone, category, offering_types, supply_chain_stages, company_size, region, regions, problem_solved, target_customer, target_customers, price_range, status')
     .single();
   if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+
+  await syncApplicationToVendorProfile(db, session, {
+    company_name: (patch.company_name as string) ?? app.company_name,
+    contact_name: (patch.contact_name as string) ?? app.contact_name,
+    phone: (patch.phone as string) ?? app.phone,
+    problem_solved: (patch.problem_solved as string) ?? app.problem_solved,
+    region: (patch.region as string) ?? app.region,
+    regions: (patch.regions as string[]) ?? app.regions,
+    email: app.email,
+  });
+
   return NextResponse.json({ ok: true, stored: true, application: data });
 }

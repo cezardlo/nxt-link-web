@@ -107,11 +107,16 @@ export default function ApplyPage() {
   const [customStage, setCustomStage] = useState('');
   const [companySize, setCompanySize] = useState('');
   const [companySizeOther, setCompanySizeOther] = useState('');
-  const [region, setRegion] = useState('');
-  const [regionOther, setRegionOther] = useState('');
+  // Multi-select locations (2026-08-04, Cesar: a vendor serving El Paso AND
+  // Las Cruces picks both) — chips + a free-text "add your own", same pattern
+  // as supply-chain stages below. Was a single-choice <select>.
+  const [regions, setRegions] = useState<string[]>([]);
+  const [customRegion, setCustomRegion] = useState('');
   const [problemSolved, setProblemSolved] = useState('');
-  const [targetCustomer, setTargetCustomer] = useState('');
-  const [targetCustomerOther, setTargetCustomerOther] = useState('');
+  // Multi-select "who do you serve best" — same judgement as locations: a
+  // vendor serving manufacturers AND 3PLs shouldn't be forced to pick one.
+  const [targetCustomers, setTargetCustomers] = useState<string[]>([]);
+  const [customCustomer, setCustomCustomer] = useState('');
   const [priceRange, setPriceRange] = useState('');
   const [priceOther, setPriceOther] = useState('');
 
@@ -132,13 +137,45 @@ export default function ApplyPage() {
   const [websiteUrl, setWebsiteUrl] = useState('');
   const startedAtRef = useRef(Date.now());
 
-  // Signed-in vendors get the form pre-filled from their profile — the quick
-  // signup already asked for company / email / supply, so we never ask twice.
+  // Signed-in vendors get the form pre-filled — the quick signup already asked
+  // for company / email / supply, so we never ask twice. A vendor who ALREADY
+  // has an application gets the form pre-filled FROM THAT APPLICATION (item 2:
+  // re-entering the flow resumes the existing one — never an empty form,
+  // never a silent second application).
   const [prefilled, setPrefilled] = useState(false);
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
+        const mine = await fetch('/api/apply/my').then((r) => (r.ok ? r.json() : null)).catch(() => null);
+        const app = mine?.ok ? mine.application : null;
+        if (alive && app) {
+          setCompanyName(app.company_name || '');
+          setContactName(app.contact_name || '');
+          setEmail(app.email || '');
+          setPhone(app.phone || '');
+          if (app.category) setCategory(app.category);
+          if (Array.isArray(app.offering_types)) setOfferingTypes(app.offering_types);
+          if (Array.isArray(app.supply_chain_stages)) setStages(app.supply_chain_stages);
+          const sz = String(app.company_size || '');
+          if (sz) {
+            if (COMPANY_SIZES.includes(sz)) setCompanySize(sz);
+            else { setCompanySize('Other'); setCompanySizeOther(sz); }
+          }
+          const regs: string[] = Array.isArray(app.regions) && app.regions.length ? app.regions : app.region ? [app.region] : [];
+          if (regs.length) setRegions(regs.slice(0, 8));
+          setProblemSolved(app.problem_solved || '');
+          const custs: string[] = Array.isArray(app.target_customers) && app.target_customers.length ? app.target_customers : app.target_customer ? [app.target_customer] : [];
+          if (custs.length) setTargetCustomers(custs);
+          const pr = String(app.price_range || '');
+          if (pr) {
+            if (PRICE_OPTIONS.includes(pr)) setPriceRange(pr);
+            else { setPriceRange('Other'); setPriceOther(pr); }
+          }
+          setPrefilled(true);
+          return;
+        }
+
         const r = await fetch('/api/vendor/profile');
         if (r.status !== 200) return;
         const j = await r.json();
@@ -157,6 +194,10 @@ export default function ApplyPage() {
         const cats: string[] = Array.isArray(v.categories) ? v.categories : [];
         const catHit = CATEGORIES.find((c) => cats.some((x) => String(x).toLowerCase() === c.toLowerCase()));
         if (catHit) setCategory((p) => p || catHit);
+        // Service areas already on the profile pre-fill the locations chips —
+        // the vendor confirms or extends them, never re-types them.
+        const areas: string[] = Array.isArray(v.service_areas) ? v.service_areas.map((x: unknown) => String(x)).filter(Boolean) : [];
+        if (areas.length) setRegions((p) => (p.length ? p : areas.slice(0, 8)));
         if (hasCompany || v.email) setPrefilled(true);
       } catch { /* not signed in — the blank form is the normal path */ }
     })();
@@ -206,14 +247,6 @@ export default function ApplyPage() {
     if (companySize === 'Other') return companySizeOther.trim();
     return companySize;
   }
-  function resolvedRegion(): string {
-    if (region === 'Other') return regionOther.trim();
-    return region;
-  }
-  function resolvedTargetCustomer(): string {
-    if (targetCustomer === 'Other') return targetCustomerOther.trim();
-    return targetCustomer;
-  }
 
   function toggle(list: string[], value: string, setter: (next: string[]) => void) {
     setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
@@ -228,6 +261,20 @@ export default function ApplyPage() {
 
   function removeStage(value: string) {
     setStages((prev) => prev.filter((v) => v !== value));
+  }
+
+  function addCustomRegion() {
+    const v = customRegion.trim();
+    if (!v || regions.includes(v)) { setCustomRegion(''); return; }
+    setRegions((prev) => [...prev, v].slice(0, 8));
+    setCustomRegion('');
+  }
+
+  function addCustomCustomer() {
+    const v = customCustomer.trim();
+    if (!v || targetCustomers.includes(v)) { setCustomCustomer(''); return; }
+    setTargetCustomers((prev) => [...prev, v]);
+    setCustomCustomer('');
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -252,9 +299,9 @@ export default function ApplyPage() {
       for (const t of offeringTypes) fd.append('offering_types', t);
       for (const s of stages) fd.append('supply_chain_stages', s);
       fd.append('company_size', resolvedCompanySize());
-      fd.append('region', resolvedRegion());
+      for (const r of regions) fd.append('regions', r);
       fd.append('problem_solved', problemSolved.trim());
-      fd.append('target_customer', resolvedTargetCustomer());
+      for (const c of targetCustomers) fd.append('target_customers', c);
       fd.append('price_range', resolvedPriceRange());
       fd.append('website_url', websiteUrl);
       fd.append('started_at', String(startedAtRef.current));
@@ -287,7 +334,7 @@ export default function ApplyPage() {
 
       <main className="ap-main">
         {result ? (
-          <ConfirmationCard publicRef={result.publicRef} />
+          <ConfirmationCard publicRef={result.publicRef} email={email.trim()} signedIn={prefilled} />
         ) : (
           <>
             <header className="ap-hero nxm-in">
@@ -411,26 +458,48 @@ export default function ApplyPage() {
                   )}
                 </Field>
 
-                <Field label="Region">
-                  <select value={region} onChange={(e) => setRegion(e.target.value)}>
-                    <option value="">Select a region</option>
-                    {REGIONS.map((r) => (
-                      <option key={r} value={r}>
-                        {r}
-                      </option>
-                    ))}
-                  </select>
-                  {region === 'Other' && (
-                    <input
-                      type="text"
-                      className="ap-mt"
-                      value={regionOther}
-                      onChange={(e) => setRegionOther(e.target.value)}
-                      placeholder="Describe your region"
-                    />
-                  )}
-                </Field>
               </div>
+
+              <Field label="Which locations do you serve?" hint="Select all that apply · Elige todas las que apliquen" full>
+                <div className="ap-chips">
+                  {REGIONS.filter((r) => r !== 'Other').map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      className={`ap-chip ${regions.includes(r) ? 'ap-chip-on' : ''}`}
+                      aria-pressed={regions.includes(r)}
+                      onClick={() => toggle(regions, r, setRegions)}
+                    >
+                      {regions.includes(r) && <Check size={13} strokeWidth={3} aria-hidden="true" />}
+                      {r}
+                    </button>
+                  ))}
+                  {regions.filter((r) => !REGIONS.includes(r)).map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      className="ap-chip ap-chip-on ap-chip-custom"
+                      onClick={() => toggle(regions, r, setRegions)}
+                    >
+                      {r} ×
+                    </button>
+                  ))}
+                </div>
+                <div className="ap-addstage">
+                  <input
+                    type="text"
+                    value={customRegion}
+                    onChange={(e) => setCustomRegion(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); addCustomRegion(); }
+                    }}
+                    placeholder="Other location — add your own / Otra ubicación"
+                  />
+                  <button type="button" className="ap-addbtn" onClick={addCustomRegion}>
+                    Add
+                  </button>
+                </div>
+              </Field>
 
               <Field label="What kind of offering is this?" hint="Select all that apply" full>
                 <div className="ap-chips">
@@ -500,24 +569,45 @@ export default function ApplyPage() {
                 />
               </Field>
 
-              <Field label="Who do you serve best?" full>
-                <select value={targetCustomer} onChange={(e) => setTargetCustomer(e.target.value)}>
-                  <option value="">Select a customer type</option>
-                  {TARGET_CUSTOMER_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
+              <Field label="Who do you serve best?" hint="Select all that apply · Elige todas las que apliquen" full>
+                <div className="ap-chips">
+                  {TARGET_CUSTOMER_TYPES.filter((c) => c !== 'Other').map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      className={`ap-chip ${targetCustomers.includes(c) ? 'ap-chip-on' : ''}`}
+                      aria-pressed={targetCustomers.includes(c)}
+                      onClick={() => toggle(targetCustomers, c, setTargetCustomers)}
+                    >
+                      {targetCustomers.includes(c) && <Check size={13} strokeWidth={3} aria-hidden="true" />}
+                      {c}
+                    </button>
                   ))}
-                </select>
-                {targetCustomer === 'Other' && (
+                  {targetCustomers.filter((c) => !TARGET_CUSTOMER_TYPES.includes(c)).map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      className="ap-chip ap-chip-on ap-chip-custom"
+                      onClick={() => toggle(targetCustomers, c, setTargetCustomers)}
+                    >
+                      {c} ×
+                    </button>
+                  ))}
+                </div>
+                <div className="ap-addstage">
                   <input
                     type="text"
-                    className="ap-mt"
-                    value={targetCustomerOther}
-                    onChange={(e) => setTargetCustomerOther(e.target.value)}
-                    placeholder="Describe your ideal customer"
+                    value={customCustomer}
+                    onChange={(e) => setCustomCustomer(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); addCustomCustomer(); }
+                    }}
+                    placeholder="Other customer type — add your own / Otro tipo de cliente"
                   />
-                )}
+                  <button type="button" className="ap-addbtn" onClick={addCustomCustomer}>
+                    Add
+                  </button>
+                </div>
               </Field>
 
               <div className="ap-grid">
@@ -656,7 +746,13 @@ function TopNav() {
   );
 }
 
-function ConfirmationCard({ publicRef }: { publicRef: string }) {
+function ConfirmationCard({ publicRef, email, signedIn }: { publicRef: string; email: string; signedIn: boolean }) {
+  // Item 4 (2026-08-04): submit → create an account / sign in, WITHOUT losing
+  // the work. The application is already stored server-side, so nothing can
+  // be lost — the card's job is to make the account step obvious and carry
+  // the same email across so the submission auto-links to the account they
+  // land in (getOwnApplication claims it by email match on first sign-in).
+  const loginHref = `/apply/login?email=${encodeURIComponent(email)}`;
   return (
     <div className="ap-card ap-confirm nxm-in">
       <div className="ap-check"><Check size={26} strokeWidth={2.5} aria-hidden="true" /></div>
@@ -665,16 +761,40 @@ function ConfirmationCard({ publicRef }: { publicRef: string }) {
         Your reference: <b>{publicRef}</b>
       </p>
       <p className="ap-confirmsub">
-        A human on the NXT//LINK team will review your application and follow up shortly.
+        A human on the NXT//LINK team will review your application and follow up shortly.{' '}
+        <i>Una persona del equipo de NXT//LINK revisará su solicitud y le contactará pronto.</i>
       </p>
 
-      <div className="ap-upsell">
-        <p className="ap-upsell-title">Want to check status or update your application later?</p>
-        <p className="ap-upsell-sub">Create an account to sign back in anytime — completely optional.</p>
-        <a className="ap-upsell-btn nxm-press" href="/apply/login">
-          Create account / sign in
-        </a>
-      </div>
+      {signedIn ? (
+        <div className="ap-upsell">
+          <p className="ap-upsell-title">
+            Saved to your account. <i>Guardada en su cuenta.</i>
+          </p>
+          <p className="ap-upsell-sub">
+            You can check its status or update it anytime. <i>Puede ver su estado o actualizarla cuando quiera.</i>
+          </p>
+          <a className="ap-upsell-btn ap-upsell-primary nxm-press" href="/apply/status">
+            View your application →
+          </a>
+        </div>
+      ) : (
+        <div className="ap-upsell">
+          <p className="ap-upsell-title">
+            One last step — create your account or sign in. <i>Un último paso — cree su cuenta o inicie sesión.</i>
+          </p>
+          <p className="ap-upsell-sub">
+            Your application is already saved. Use the same email (<b>{email}</b>) and it links to your account
+            automatically — nothing you entered is lost.{' '}
+            <i>
+              Su solicitud ya está guardada. Use el mismo correo y se vinculará a su cuenta automáticamente — no
+              perderá nada de lo que escribió.
+            </i>
+          </p>
+          <a className="ap-upsell-btn ap-upsell-primary nxm-press" href={loginHref}>
+            Create account / sign in →
+          </a>
+        </div>
+      )}
 
       <a className="ap-back" href="/">
         <ArrowLeft size={14} strokeWidth={1.75} aria-hidden="true" /> Back to NXT//LINK
@@ -767,6 +887,9 @@ const CSS = MOTION_CSS + `
 .ap-upsell-sub{font-size:13.5px;color:#8A87A0;margin:0 0 16px;}
 .ap-upsell-btn{display:inline-block;background:#fff;border:1px solid var(--spec-border,#E2DFEC);color:var(--spec-ink,#141320);padding:10px 20px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .ap-upsell-btn:hover{border-color:var(--spec-violet,#6C5CE0);color:var(--spec-violet-deep,#4A3DB0);}
+.ap-upsell-primary{background:var(--spec-violet,#6C5CE0);border-color:var(--spec-violet,#6C5CE0);color:#fff;padding:13px 26px;font-size:15px;}
+.ap-upsell-primary:hover{background:var(--spec-violet-deep,#4A3DB0);border-color:var(--spec-violet-deep,#4A3DB0);color:#fff;}
+.ap-upsell-sub b{color:var(--spec-violet-deep,#4A3DB0);}
 .ap-back{display:inline-flex;align-items:center;gap:6px;color:#8A87A0;font-size:13.5px;text-decoration:none;}
 .ap-back:hover{color:var(--spec-text-2nd,#615F72);}
 @media(max-width:640px){

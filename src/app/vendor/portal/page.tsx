@@ -133,6 +133,18 @@ const TR: Record<string, { en: string; es: string }> = {
   check_proof: { en: 'Proof — a certification, photo, or case study', es: 'Prueba — una certificación, foto o caso de éxito' },
   check_agreement: { en: 'Vendor agreement', es: 'Acuerdo de proveedor' },
   guided_flow: { en: 'Prefer step-by-step? Set up with the guided flow →', es: '¿Prefieres paso a paso? Configura con la guía →' },
+
+  // Application status read-back (2026-08-04 batch, items 3 + 7): when the
+  // vendor has a vendor_applications row, the review card shows where it
+  // actually is — in plain language, EN + ES — and links to the full
+  // read-back at /apply/status instead of asking them to apply again.
+  app_submitted: { en: 'Your review application is submitted', es: 'Tu solicitud de revisión está enviada' },
+  app_status_pending: { en: 'Status: submitted — in review by our team.', es: 'Estado: enviada — en revisión por nuestro equipo.' },
+  app_status_approved: { en: 'Status: approved.', es: 'Estado: aprobada.' },
+  app_status_rejected: { en: 'Status: not approved this time — you can update it and we’ll take another look.', es: 'Estado: no aprobada esta vez — puedes actualizarla y la revisaremos de nuevo.' },
+  app_view: { en: 'View your application →', es: 'Ver tu solicitud →' },
+  status_pending: { en: 'in review', es: 'en revisión' },
+  status_approved: { en: 'approved', es: 'aprobado' },
 };
 
 interface Vendor {
@@ -176,6 +188,9 @@ export default function VendorPortalPage() {
   const [photoBusy, setPhotoBusy] = useState(false);
   const [listingCount, setListingCount] = useState(0);
   const [catFam, setCatFam] = useState<Record<string, string>>({});
+  // The vendor's review application (vendor_applications), if they have one —
+  // drives the status read-back in the review card below.
+  const [application, setApplication] = useState<{ status: string; public_ref: string } | null>(null);
   const [savedAt, setSavedAt] = useState('');
   const [autosaving, setAutosaving] = useState(false);
   const firstEdit = useRef(true);
@@ -217,15 +232,17 @@ export default function VendorPortalPage() {
     setBannerUrl(data.banner_url || null);
     const ag = await fetch('/api/vendor/agreement').then((r) => r.json()).catch(() => null);
     if (ag?.ok) setAgreement(ag);
-    const [ce, ga, li, cats] = await Promise.all([
+    const [ce, ga, li, cats, myApp] = await Promise.all([
       fetch('/api/vendor/certifications').then((r) => r.json()).catch(() => null),
       fetch('/api/vendor/gallery').then((r) => r.json()).catch(() => null),
       fetch('/api/vendor/listings').then((r) => r.json()).catch(() => null),
       fetch('/api/marketplace/categories').then((r) => r.json()).catch(() => null),
+      fetch('/api/apply/my').then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]);
     if (ce?.ok) setCerts(ce.certifications || []);
     if (ga?.ok) setPhotos(ga.photos || []);
     if (li?.ok) setListingCount((li.products?.length || 0) + (li.services?.length || 0));
+    if (myApp?.ok && myApp.application) setApplication({ status: myApp.application.status, public_ref: myApp.application.public_ref });
     // Map each category label → family so we can tell software/tech (delivered
     // digitally, no install site or service region) from physical offerings.
     if (cats?.ok) {
@@ -471,7 +488,7 @@ export default function VendorPortalPage() {
         extra={
           <>
             <LanguageToggle lang={lang} onChange={switchLang} variant="light" />
-            <span className={'vp-badge ' + vendor.status}>{vendor.status}</span>
+            <span className={'vp-badge ' + vendor.status}>{vendor.status === 'approved' ? t('status_approved') : t('status_pending')}</span>
           </>
         }
       />
@@ -511,8 +528,20 @@ export default function VendorPortalPage() {
               <li>{t('rv_now_2')}</li>
               <li>{t('rv_now_3')}</li>
             </ul>
-            <a className="vp-reviewcta" href="/apply?from=portal">{t('rv_cta')}</a>
-            <span className="vp-reviewhint">{t('rv_cta_hint')}</span>
+            {application ? (
+              <>
+                <p className="vp-appstatus">
+                  <b>{t('app_submitted')}</b>
+                  {TR[`app_status_${application.status}`] ? t(`app_status_${application.status}`) : t('app_status_pending')}
+                </p>
+                <a className="vp-reviewcta" href="/apply/status">{t('app_view')}</a>
+              </>
+            ) : (
+              <>
+                <a className="vp-reviewcta" href="/apply?from=portal">{t('rv_cta')}</a>
+                <span className="vp-reviewhint">{t('rv_cta_hint')}</span>
+              </>
+            )}
           </section>
         )}
 
@@ -962,6 +991,8 @@ const CSS = `
 .vp-reviewcta:active{transform:scale(.98);transition:transform .1s ease;}
 .vp-reviewcta:focus-visible{outline:2px solid var(--p3);outline-offset:2px;}
 .vp-reviewhint{display:block;font-size:12px;color:var(--muted);margin-top:8px;}
+.vp-appstatus{display:flex;flex-direction:column;gap:2px;background:rgba(255,255,255,.65);border:1px solid #EFD9AE;border-radius:12px;padding:12px 14px;margin:0 0 14px;font-size:13px;color:var(--ink2);}
+.vp-appstatus b{font-size:13.5px;font-weight:700;color:var(--ink);display:inline;}
 .vp-titlerow{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;}
 .vp-preview{flex-shrink:0;color:var(--p2);font-size:13px;font-weight:600;text-decoration:none;border:1px solid var(--line);border-radius:10px;padding:9px 14px;background:var(--surf);transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),color var(--spec-duration-fast,150ms) var(--spec-ease,ease);}
 .vp-preview:hover{border-color:var(--p2);color:var(--p3);}
