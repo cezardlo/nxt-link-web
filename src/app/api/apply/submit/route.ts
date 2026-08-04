@@ -25,7 +25,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getApplicantSession, findOwnApplication, findAnonymousApplication } from '@/lib/apply/auth';
-import { cleanStringArray, resolveMultiValue, MAX_REGIONS, REGION_MAXLEN, MAX_TARGET_CUSTOMERS, TARGET_CUSTOMER_MAXLEN } from '@/lib/apply/fields';
+import { cleanStringArray, resolveMultiValue, resubmitStatusPatch, MAX_REGIONS, REGION_MAXLEN, MAX_TARGET_CUSTOMERS, TARGET_CUSTOMER_MAXLEN } from '@/lib/apply/fields';
 import { syncApplicationToVendorProfile } from '@/lib/apply/profile-sync';
 import { recordLegalAcceptance, LEGAL_MSG, bilingual } from '@/lib/legal/acceptance';
 import { notifyAdminsNewVendorApplication } from '@/lib/admin/notify';
@@ -135,12 +135,14 @@ export async function POST(req: Request) {
 
     if (existing) {
       // Resume — update the one existing row, never insert a second. Status
-      // and public_ref are untouched (status is admin-only anyway).
+      // and public_ref are untouched (status is admin-only anyway) — EXCEPT
+      // a needs_info application being resubmitted, which returns to review
+      // ('pending') on the same row (2026-08-04 Batch B).
       resumed = true;
       appId = existing.id;
       publicRef = existing.public_ref;
       priorImagePaths = Array.isArray(existing.product_image_paths) ? existing.product_image_paths : [];
-      const { error } = await db.from('vendor_applications').update(row).eq('id', appId);
+      const { error } = await db.from('vendor_applications').update({ ...row, ...resubmitStatusPatch(existing.status) }).eq('id', appId);
       if (error) throw error;
     } else {
       const { data, error } = await db
@@ -160,7 +162,7 @@ export async function POST(req: Request) {
         appId = won.id;
         publicRef = won.public_ref;
         priorImagePaths = Array.isArray(won.product_image_paths) ? won.product_image_paths : [];
-        const { error: upErr } = await db.from('vendor_applications').update(row).eq('id', appId);
+        const { error: upErr } = await db.from('vendor_applications').update({ ...row, ...resubmitStatusPatch(won.status) }).eq('id', appId);
         if (upErr) throw upErr;
       } else {
         if (error) throw error;

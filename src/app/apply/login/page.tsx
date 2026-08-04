@@ -118,8 +118,8 @@ export default function ApplyLoginPage() {
               Your application is saved. {mode === 'signup' ? 'Create your account' : 'Sign in'} with this same email
               and it links automatically — nothing you entered is lost.{' '}
               <i>
-                Su solicitud está guardada. {mode === 'signup' ? 'Cree su cuenta' : 'Inicie sesión'} con este mismo
-                correo y se vinculará automáticamente — no perderá nada de lo que escribió.
+                Tu solicitud está guardada. {mode === 'signup' ? 'Crea tu cuenta' : 'Inicia sesión'} con este mismo
+                correo y se vinculará automáticamente — no perderás nada de lo que escribiste.
               </i>
             </div>
           )}

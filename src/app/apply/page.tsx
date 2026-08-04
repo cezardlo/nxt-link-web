@@ -762,16 +762,16 @@ function ConfirmationCard({ publicRef, email, signedIn }: { publicRef: string; e
       </p>
       <p className="ap-confirmsub">
         A human on the NXT//LINK team will review your application and follow up shortly.{' '}
-        <i>Una persona del equipo de NXT//LINK revisará su solicitud y le contactará pronto.</i>
+        <i>Una persona del equipo de NXT//LINK revisará tu solicitud y te contactará pronto.</i>
       </p>
 
       {signedIn ? (
         <div className="ap-upsell">
           <p className="ap-upsell-title">
-            Saved to your account. <i>Guardada en su cuenta.</i>
+            Saved to your account. <i>Guardada en tu cuenta.</i>
           </p>
           <p className="ap-upsell-sub">
-            You can check its status or update it anytime. <i>Puede ver su estado o actualizarla cuando quiera.</i>
+            You can check its status or update it anytime. <i>Puedes ver su estado o actualizarla cuando quieras.</i>
           </p>
           <a className="ap-upsell-btn ap-upsell-primary nxm-press" href="/apply/status">
             View your application →
@@ -780,14 +780,14 @@ function ConfirmationCard({ publicRef, email, signedIn }: { publicRef: string; e
       ) : (
         <div className="ap-upsell">
           <p className="ap-upsell-title">
-            One last step — create your account or sign in. <i>Un último paso — cree su cuenta o inicie sesión.</i>
+            One last step — create your account or sign in. <i>Un último paso — crea tu cuenta o inicia sesión.</i>
           </p>
           <p className="ap-upsell-sub">
             Your application is already saved. Use the same email (<b>{email}</b>) and it links to your account
             automatically — nothing you entered is lost.{' '}
             <i>
-              Su solicitud ya está guardada. Use el mismo correo y se vinculará a su cuenta automáticamente — no
-              perderá nada de lo que escribió.
+              Tu solicitud ya está guardada. Usa el mismo correo y se vinculará a tu cuenta automáticamente — no
+              perderás nada de lo que escribiste.
             </i>
           </p>
           <a className="ap-upsell-btn ap-upsell-primary nxm-press" href={loginHref}>

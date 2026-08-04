@@ -14,7 +14,7 @@ interface App {
   offering_types: string[] | null; supply_chain_stages: string[] | null;
   company_size: string | null; region: string | null; regions: string[] | null; problem_solved: string | null;
   target_customer: string | null; target_customers: string[] | null; price_range: string | null;
-  status: string; approved: boolean; live_vendor_id: string | null; created_at: string;
+  status: string; vendor_message: string | null; approved: boolean; live_vendor_id: string | null; created_at: string;
 }
 const fmtDate = (s: string) => { try { return new Date(s).toLocaleDateString(); } catch { return ''; } };
 const arr = (v: string[] | null) => (Array.isArray(v) ? v.filter(Boolean) : []);
@@ -29,6 +29,11 @@ export default function AdminVendorApplicationsPage() {
   const [filter, setFilter] = useState('pending');
   const [busy, setBusy] = useState('');
   const [flash, setFlash] = useState('');
+  // needs_info send-back (2026-08-04 Batch B): which card has the note box
+  // open, and the note being typed. The note is vendor-visible — it lands in
+  // the dedicated vendor_message column, never admin_notes.
+  const [infoFor, setInfoFor] = useState('');
+  const [infoMsg, setInfoMsg] = useState('');
 
   const load = useCallback(async () => {
     try { const r = await fetch('/api/admin/vendor-applications'); const j = await r.json(); if (j.ok) setApps(j.applications); } catch { /* */ }
@@ -36,16 +41,19 @@ export default function AdminVendorApplicationsPage() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  async function act(id: string, action: 'approve' | 'reject') {
+  async function act(id: string, action: 'approve' | 'reject' | 'needs_info', message?: string) {
     if (action === 'reject' && !confirm('Reject this application?')) return;
     setBusy(id);
     try {
-      const r = await fetch('/api/admin/vendor-applications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, action }) });
+      const r = await fetch('/api/admin/vendor-applications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, action, message }) });
       const j = await r.json().catch(() => ({}));
       if (!j.ok) { setFlash(j.message || 'Something went wrong'); }
       else if (action === 'approve') {
         setFlash(j.already_approved ? '✓ Already a live vendor' : j.welcomed ? '✓ Approved — live vendor created, welcome email sent' : '✓ Approved — live vendor created');
         if (!j.status_advanced) setFlash((f) => f + ' (application row status held by DB guard; vendor is live)');
+      } else if (action === 'needs_info') {
+        setFlash(j.status_advanced ? (j.emailed ? '✓ Sent back for more info — vendor emailed' : '✓ Sent back for more info (email not sent)') : 'Send-back recorded — application status held by DB guard');
+        if (j.status_advanced) { setInfoFor(''); setInfoMsg(''); }
       } else {
         setFlash(j.status_advanced ? '✓ Rejected' : 'Reject recorded — application status held by DB guard');
       }
@@ -69,7 +77,7 @@ export default function AdminVendorApplicationsPage() {
           <h1>Vendor applications</h1>
           <a className="ap-alt" href="/admin/applications">Early-access waitlist →</a>
         </div>
-        <p className="ap-sub">Full applications submitted on <b>/apply</b>. Approving creates a live vendor profile from their details and emails them a bilingual welcome with a sign-in link.</p>
+        <p className="ap-sub">Full applications submitted on <b>/apply</b>. Approving creates a live vendor profile from their details and emails them a bilingual welcome with a sign-in link. <b>Ask for info</b> sends the application back with a short note (the vendor sees it and can update + resubmit — it never creates a second application).</p>
         {flash && <div className="ap-flash">{flash}</div>}
 
         <div className="ap-filters">
@@ -86,7 +94,9 @@ export default function AdminVendorApplicationsPage() {
                   <div className="ap-top">
                     <b>{a.company_name || a.contact_name || a.email}</b>
                     {a.category && <span className="ap-cat">{a.category}</span>}
-                    <span className={`ap-badge ${a.approved ? 's-approved' : 's-pending'}`}>{a.approved ? 'Live vendor' : 'Pending'}</span>
+                    <span className={`ap-badge ${a.approved ? 's-approved' : a.status === 'needs_info' ? 's-needsinfo' : 's-pending'}`}>
+                      {a.approved ? 'Live vendor' : a.status === 'needs_info' ? 'Needs info' : 'Pending'}
+                    </span>
                     {a.public_ref && <span className="ap-ref">{a.public_ref}</span>}
                   </div>
                   <div className="ap-contact">
@@ -106,15 +116,41 @@ export default function AdminVendorApplicationsPage() {
                       {arr(a.supply_chain_stages).map((t) => <span key={'s' + t} className="ap-tag alt">{t}</span>)}
                     </div>
                   )}
+                  {a.status === 'needs_info' && a.vendor_message && (
+                    <div className="ap-note"><b>Your note to the vendor (sent):</b> {a.vendor_message}</div>
+                  )}
                 </div>
                 <div className="ap-actions">
                   {!a.approved
                     ? <>
                         <button className="ap-adv" disabled={busy === a.id} onClick={() => act(a.id, 'approve')}>{busy === a.id ? '…' : '✓ Approve'}</button>
+                        <button className="ap-info" disabled={busy === a.id} onClick={() => { setInfoFor(infoFor === a.id ? '' : a.id); setInfoMsg(''); }}>
+                          {infoFor === a.id ? 'Cancel' : '✉ Ask for info'}
+                        </button>
                         <button className="ap-decline" disabled={busy === a.id} onClick={() => act(a.id, 'reject')}>Reject</button>
                       </>
                     : <a className="ap-view" href={`/marketplace/vendor/${a.live_vendor_id}`}>View storefront →</a>}
                 </div>
+                {infoFor === a.id && !a.approved && (
+                  <div className="ap-infobox">
+                    <label htmlFor={`info-${a.id}`}>What should the vendor add or fix? (They see this exact note — keep it warm; they are not being rejected.)</label>
+                    <textarea
+                      id={`info-${a.id}`}
+                      value={infoMsg}
+                      maxLength={500}
+                      rows={3}
+                      placeholder="e.g. Could you add a short description of what you sell and a phone number?"
+                      onChange={(e) => setInfoMsg(e.target.value)}
+                    />
+                    <button
+                      className="ap-adv"
+                      disabled={busy === a.id || !infoMsg.trim()}
+                      onClick={() => act(a.id, 'needs_info', infoMsg.trim())}
+                    >
+                      {busy === a.id ? '…' : 'Send back & email vendor'}
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -140,13 +176,14 @@ const CSS = `
 .ap-f.on{background:rgba(108,92,224,.16);border-color:#6C5CE0;color:#4A3DB0;}
 .ap-empty{color:#615F72;font-size:14px;padding:34px 0;text-align:center;}
 .ap-list{display:flex;flex-direction:column;gap:11px;}
-.ap-card{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;background:#FFFFFF;border:1px solid rgba(20,19,32,.08);border-radius:14px;padding:16px 18px;}
+.ap-card{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;background:#FFFFFF;border:1px solid rgba(20,19,32,.08);border-radius:14px;padding:16px 18px;flex-wrap:wrap;}
 .ap-main{min-width:0;flex:1;}
 .ap-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .ap-top b{font-size:15.5px;font-weight:700;}
 .ap-cat{font-size:11px;font-weight:600;color:#4A3DB0;background:rgba(108,92,224,.14);border:1px solid rgba(108,92,224,.25);border-radius:99px;padding:3px 10px;}
 .ap-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:rgba(20,19,32,.06);color:#3B3A4A;}
 .ap-badge.s-pending{background:rgba(198,138,40,.14);color:#C68A28;}
+.ap-badge.s-needsinfo{background:rgba(108,92,224,.14);color:#4A3DB0;border:1px solid rgba(108,92,224,.3);}
 .ap-badge.s-approved{background:rgba(47,158,106,.14);color:#2F9E6A;}
 .ap-ref{font-size:11px;color:#615F72;margin-left:auto;}
 .ap-contact{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:13px;color:#615F72;}
@@ -166,6 +203,14 @@ const CSS = `
 .ap-decline{font-family:inherit;font-size:12px;font-weight:600;padding:7px 14px;border-radius:9px;border:1px solid rgba(20,19,32,.12);background:none;color:#615F72;cursor:pointer;}
 .ap-decline:hover{color:#CE4B43;border-color:rgba(206,75,67,.3);}
 .ap-decline:disabled{opacity:.5;cursor:default;}
+.ap-info{font-family:inherit;font-size:12px;font-weight:600;padding:7px 14px;border-radius:9px;border:1px solid rgba(108,92,224,.35);background:none;color:#4A3DB0;cursor:pointer;white-space:nowrap;}
+.ap-info:hover{background:rgba(108,92,224,.08);}
+.ap-info:disabled{opacity:.5;cursor:default;}
+.ap-infobox{flex-basis:100%;display:flex;flex-direction:column;gap:8px;border-top:1px dashed rgba(20,19,32,.12);padding-top:12px;}
+.ap-infobox label{font-size:12px;font-weight:600;color:#615F72;}
+.ap-infobox textarea{font-family:inherit;font-size:13px;line-height:1.5;color:#141320;background:#F8F7FB;border:1px solid rgba(20,19,32,.12);border-radius:9px;padding:10px 12px;resize:vertical;outline:none;}
+.ap-infobox textarea:focus{border-color:#6C5CE0;background:#fff;box-shadow:0 0 0 3px rgba(108,92,224,.12);}
+.ap-infobox .ap-adv{align-self:flex-start;}
 .ap-view{font-family:inherit;font-size:12.5px;font-weight:600;color:#2F9E6A;text-decoration:none;white-space:nowrap;padding:9px 4px;}
 .ap-view:hover{text-decoration:underline;}
 .ap button,.ap a{transition:background .15s ease,border-color .15s ease,color .15s ease;}

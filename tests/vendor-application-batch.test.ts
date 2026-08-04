@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { cleanStringArray, resolveMultiValue, MAX_REGIONS } from '@/lib/apply/fields';
+import { cleanStringArray, resolveMultiValue, cleanVendorMessage, resubmitStatusPatch, MAX_REGIONS, VENDOR_MESSAGE_MAXLEN } from '@/lib/apply/fields';
 import { findOwnApplication, findAnonymousApplication, type ApplicantSession } from '@/lib/apply/auth';
 import { syncApplicationToVendorProfile } from '@/lib/apply/profile-sync';
 import { makeFakeDb } from './helpers/fake-supabase';
@@ -145,4 +145,28 @@ test('profile sync: mints a pending profile from application facts when none exi
   assert.equal(vp.company_name, 'Fresh Applicant LLC');
   assert.equal(vp.status, 'pending'); // portal lane — never self-approves
   assert.equal(vp.auth_id, 'auth-1');
+});
+
+// ---- "needs more info" send-back (2026-08-04 Batch B) -----------------------
+
+test('cleanVendorMessage: trims and caps the admin note', () => {
+  assert.equal(cleanVendorMessage('  add a phone number please  '), 'add a phone number please');
+  assert.equal(cleanVendorMessage('x'.repeat(VENDOR_MESSAGE_MAXLEN + 50))!.length, VENDOR_MESSAGE_MAXLEN);
+});
+
+test('cleanVendorMessage: empty or non-string input is rejected (send-back requires a note)', () => {
+  assert.equal(cleanVendorMessage(''), null);
+  assert.equal(cleanVendorMessage('   '), null);
+  assert.equal(cleanVendorMessage(undefined), null);
+  assert.equal(cleanVendorMessage(42), null);
+});
+
+test('resubmitStatusPatch: only needs_info returns to review — the SAME row, never a second application', () => {
+  assert.deepEqual(resubmitStatusPatch('needs_info'), { status: 'pending' });
+});
+
+test('resubmitStatusPatch: a vendor can never change any other status (no self-approve, no un-reject)', () => {
+  assert.deepEqual(resubmitStatusPatch('pending'), {});
+  assert.deepEqual(resubmitStatusPatch('approved'), {});
+  assert.deepEqual(resubmitStatusPatch('rejected'), {});
 });

@@ -33,3 +33,23 @@ export const MAX_REGIONS = 8;
 export const REGION_MAXLEN = 60;
 export const MAX_TARGET_CUSTOMERS = 12;
 export const TARGET_CUSTOMER_MAXLEN = 80;
+
+// ---- "needs more info" (2026-08-04 Batch B) ---------------------------------
+
+/** Admin's send-back note: trim + cap. Returns null when empty — a needs_info
+ *  send-back without a message is rejected by the caller. */
+export const VENDOR_MESSAGE_MAXLEN = 500;
+export function cleanVendorMessage(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const v = raw.trim().slice(0, VENDOR_MESSAGE_MAXLEN).trim();
+  return v || null;
+}
+
+/** Resubmit rule: when a vendor saves their application after an admin sent
+ *  it back for more info (needs_info), it returns to review — the SAME row
+ *  flips back to 'pending' (the one-application-per-company rule is
+ *  untouched; no second application is ever created). Any other status is
+ *  left alone — vendors can never approve/reject themselves. */
+export function resubmitStatusPatch(currentStatus: string): { status?: 'pending' } {
+  return currentStatus === 'needs_info' ? { status: 'pending' } : {};
+}

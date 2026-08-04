@@ -142,6 +142,7 @@ const TR: Record<string, { en: string; es: string }> = {
   app_status_pending: { en: 'Status: submitted — in review by our team.', es: 'Estado: enviada — en revisión por nuestro equipo.' },
   app_status_approved: { en: 'Status: approved.', es: 'Estado: aprobada.' },
   app_status_rejected: { en: 'Status: not approved this time — you can update it and we’ll take another look.', es: 'Estado: no aprobada esta vez — puedes actualizarla y la revisaremos de nuevo.' },
+  app_status_needs_info: { en: 'Status: we need a bit more information — open your application to see our note and update it.', es: 'Estado: necesitamos un poco más de información — abre tu solicitud para ver nuestro mensaje y actualizarla.' },
   app_view: { en: 'View your application →', es: 'Ver tu solicitud →' },
   status_pending: { en: 'in review', es: 'en revisión' },
   status_approved: { en: 'approved', es: 'aprobado' },

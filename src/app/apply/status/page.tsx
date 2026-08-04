@@ -23,7 +23,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
-import { Building2, User, Phone, Clock, CheckCircle2, XCircle, ImageUp, ImagePlus, LogOut, MapPin, type LucideIcon } from 'lucide-react';
+import { Building2, User, Phone, Clock, CheckCircle2, XCircle, MessageCircle, ImageUp, ImagePlus, LogOut, MapPin, type LucideIcon } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
 import { clearLocalCart } from '@/components/cart/useCart';
 import LanguageToggle, { useLang } from '@/components/LanguageToggle';
@@ -82,7 +82,7 @@ const TARGET_CUSTOMER_TYPES = [
 
 const MAX_PRODUCT_IMAGES = 3;
 
-type Status = 'pending' | 'approved' | 'rejected';
+type Status = 'pending' | 'approved' | 'rejected' | 'needs_info';
 
 interface Application {
   id: string;
@@ -102,6 +102,9 @@ interface Application {
   target_customers: string[] | null;
   price_range: string;
   status: Status;
+  // Admin's send-back note (needs_info only). This is the dedicated
+  // vendor-visible column — deliberately NOT admin_notes, which is internal.
+  vendor_message: string | null;
   logo_url: string | null;
   image_urls: string[];
   product_image_paths: string[];
@@ -129,26 +132,29 @@ type Lang = 'en' | 'es';
 const TR: Record<string, { en: string; es: string }> = {
   doc_title: { en: 'My application — NXT//LINK', es: 'Mi solicitud — NXT//LINK' },
   loading: { en: 'Loading…', es: 'Cargando…' },
-  loading_app: { en: 'Loading your application…', es: 'Cargando su solicitud…' },
-  load_error: { en: 'Could not load your application.', es: 'No se pudo cargar su solicitud.' },
-  gate_h: { en: 'Sign in to view your status', es: 'Inicie sesión para ver su estado' },
-  gate_sub: { en: 'Sign in to check your application status and make changes.', es: 'Inicie sesión para revisar el estado de su solicitud y hacer cambios.' },
+  loading_app: { en: 'Loading your application…', es: 'Cargando tu solicitud…' },
+  load_error: { en: 'Could not load your application.', es: 'No se pudo cargar tu solicitud.' },
+  gate_h: { en: 'Sign in to view your status', es: 'Inicia sesión para ver tu estado' },
+  gate_sub: { en: 'Sign in to check your application status and make changes.', es: 'Inicia sesión para revisar el estado de tu solicitud y hacer cambios.' },
   gate_cta: { en: 'Sign in', es: 'Iniciar sesión' },
-  empty_h: { en: 'You haven’t applied yet', es: 'Aún no ha aplicado' },
-  empty_sub: { en: 'Submit a quick application to get started — it only takes a couple of minutes.', es: 'Envíe una solicitud rápida para empezar — solo toma un par de minutos.' },
+  empty_h: { en: 'You haven’t applied yet', es: 'Aún no has aplicado' },
+  empty_sub: { en: 'Submit a quick application to get started — it only takes a couple of minutes.', es: 'Envía una solicitud rápida para empezar — solo toma un par de minutos.' },
   empty_cta: { en: 'Apply now', es: 'Aplicar ahora' },
   sign_out: { en: 'Sign out', es: 'Cerrar sesión' },
   reference: { en: 'Reference:', es: 'Referencia:' },
-  fallback_title: { en: 'Your application', es: 'Su solicitud' },
+  fallback_title: { en: 'Your application', es: 'Tu solicitud' },
 
   // Plain-language status (item 7) — the real vendor_applications.status
   // values, explained so a non-technical vendor knows exactly where they are.
   status_pending: { en: 'Submitted — in review', es: 'Enviada — en revisión' },
   status_approved: { en: 'Approved', es: 'Aprobada' },
   status_rejected: { en: 'Not approved this time', es: 'No aprobada esta vez' },
-  status_pending_next: { en: 'A person on our team is reviewing your application — you can still update anything below.', es: 'Una persona de nuestro equipo está revisando su solicitud — aún puede actualizar cualquier dato abajo.' },
-  status_approved_next: { en: 'You’re approved — your storefront can go live. Our team will reach out with next steps.', es: 'Está aprobado — su tienda puede salir en vivo. Nuestro equipo le contactará con los siguientes pasos.' },
-  status_rejected_next: { en: 'Your application wasn’t approved this time. You can update it below and our team will take another look.', es: 'Su solicitud no fue aprobada esta vez. Puede actualizarla abajo y nuestro equipo la revisará de nuevo.' },
+  status_needs_info: { en: 'Needs a bit more info', es: 'Necesita un poco más de información' },
+  status_pending_next: { en: 'A person on our team is reviewing your application — you can still update anything below.', es: 'Una persona de nuestro equipo está revisando tu solicitud — aún puedes actualizar cualquier dato abajo.' },
+  status_approved_next: { en: 'You’re approved — your storefront can go live. Our team will reach out with next steps.', es: 'Estás aprobado — tu tienda puede salir en vivo. Nuestro equipo te contactará con los siguientes pasos.' },
+  status_rejected_next: { en: 'Your application wasn’t approved this time. You can update it below and our team will take another look.', es: 'Tu solicitud no fue aprobada esta vez. Puedes actualizarla abajo y nuestro equipo la revisará de nuevo.' },
+  status_needs_info_next: { en: 'We need a bit more information before we can approve you — this is not a rejection. Update anything below and save; your application goes straight back to review.', es: 'Necesitamos un poco más de información antes de poder aprobarte — no es un rechazo. Actualiza lo que haga falta abajo y guarda; tu solicitud vuelve directo a revisión.' },
+  msg_from_team: { en: 'Message from our team:', es: 'Mensaje de nuestro equipo:' },
 
   sec_details: { en: 'Company details', es: 'Datos de la empresa' },
   f_company: { en: 'Company name', es: 'Nombre de la empresa' },
@@ -159,18 +165,18 @@ const TR: Record<string, { en: string; es: string }> = {
   f_price: { en: 'Price range', es: 'Rango de precio' },
   f_price_ph: { en: 'e.g. $5-25k', es: 'p. ej. $5-25k' },
   f_size: { en: 'Company size', es: 'Tamaño de la empresa' },
-  select_category: { en: 'Select a category', es: 'Seleccione una categoría' },
-  select_size: { en: 'Select a size', es: 'Seleccione un tamaño' },
-  size_other_ph: { en: 'Describe your company size', es: 'Describa el tamaño de su empresa' },
-  f_locations: { en: 'Which locations do you serve?', es: '¿Qué ubicaciones atiende?' },
-  select_all: { en: 'Select all that apply', es: 'Seleccione todas las que apliquen' },
-  custom_region_ph: { en: 'Other location — add your own', es: 'Otra ubicación — agréguela' },
+  select_category: { en: 'Select a category', es: 'Selecciona una categoría' },
+  select_size: { en: 'Select a size', es: 'Selecciona un tamaño' },
+  size_other_ph: { en: 'Describe your company size', es: 'Describe el tamaño de tu empresa' },
+  f_locations: { en: 'Which locations do you serve?', es: '¿Qué ubicaciones atiendes?' },
+  select_all: { en: 'Select all that apply', es: 'Selecciona todas las que apliquen' },
+  custom_region_ph: { en: 'Other location — add your own', es: 'Otra ubicación — agrégala' },
   f_offering: { en: 'What kind of offering is this?', es: '¿Qué tipo de oferta es?' },
   f_stages: { en: 'Where in the supply chain does this apply?', es: '¿En qué parte de la cadena de suministro aplica?' },
-  custom_stage_ph: { en: 'Other — add your own stage', es: 'Otra — agregue su propia etapa' },
-  f_problem: { en: 'What problem do you solve?', es: '¿Qué problema resuelve?' },
-  f_customers: { en: 'Who do you serve best?', es: '¿A quién atiende mejor?' },
-  custom_customer_ph: { en: 'Other customer type — add your own', es: 'Otro tipo de cliente — agréguelo' },
+  custom_stage_ph: { en: 'Other — add your own stage', es: 'Otra — agrega tu propia etapa' },
+  f_problem: { en: 'What problem do you solve?', es: '¿Qué problema resuelves?' },
+  f_customers: { en: 'Who do you serve best?', es: '¿A quién atiendes mejor?' },
+  custom_customer_ph: { en: 'Other customer type — add your own', es: 'Otro tipo de cliente — agrégalo' },
   add: { en: 'Add', es: 'Agregar' },
 
   save: { en: 'Save changes', es: 'Guardar cambios' },
@@ -310,8 +316,16 @@ function EmptyState({ t }: { t: (k: string) => string }) {
 
 function StatusBadge({ status, t }: { status: Status; t: (k: string) => string }) {
   const label = t(`status_${status}`);
-  const cls = status === 'pending' ? 'ays-badge-pending' : status === 'approved' ? 'ays-badge-approved' : 'ays-badge-rejected';
-  const Icon = status === 'pending' ? Clock : status === 'approved' ? CheckCircle2 : XCircle;
+  const cls =
+    status === 'pending' ? 'ays-badge-pending'
+    : status === 'approved' ? 'ays-badge-approved'
+    : status === 'needs_info' ? 'ays-badge-needsinfo'
+    : 'ays-badge-rejected';
+  const Icon =
+    status === 'pending' ? Clock
+    : status === 'approved' ? CheckCircle2
+    : status === 'needs_info' ? MessageCircle
+    : XCircle;
   return (
     <span className={`ays-badge ${cls}`}>
       <Icon size={13} strokeWidth={2.25} aria-hidden="true" />
@@ -451,6 +465,11 @@ function ApplicationPanel({
         ...resolved,
         region: resolved.regions[0] || '',
         target_customer: resolved.target_customers[0] || '',
+        // Saving from needs_info resubmits to review — the PATCH route flips
+        // status back to 'pending' and returns the fresh row; adopt it so the
+        // badge updates without a reload. Never a second application.
+        status: (json.application?.status as Status | undefined) ?? application.status,
+        vendor_message: json.application ? ((json.application.vendor_message as string | null) ?? null) : application.vendor_message,
       });
     } catch {
       setSaveError(true);
@@ -542,6 +561,12 @@ function ApplicationPanel({
           <StatusBadge status={application.status} t={t} />
           <p className="ays-statusnext">{t(`status_${application.status}_next`)}</p>
         </div>
+        {application.status === 'needs_info' && application.vendor_message && (
+          <div className="ays-teammsg" role="note">
+            <b>{t('msg_from_team')}</b>
+            <p>{application.vendor_message}</p>
+          </div>
+        )}
       </header>
 
       <div className="ays-card nxm-in" style={staggerStyle(1)}>
@@ -870,6 +895,10 @@ const CSS = MOTION_CSS + `
 .ays-badge-pending{background:var(--spec-warning-bg,#FBF3E7);border:1px solid #EFD9AE;color:#8A5D14;}
 .ays-badge-approved{background:var(--spec-success-bg,#E9F7F0);border:1px solid rgba(47,158,106,.3);color:#1F7A54;}
 .ays-badge-rejected{background:var(--spec-error-bg,#FDF2F2);border:1px solid #F3C9C9;color:#B04A4A;}
+.ays-badge-needsinfo{background:var(--spec-violet-bg,#F3F1FD);border:1px solid #CDC4F4;color:var(--spec-violet-deep,#4A3DB0);}
+.ays-teammsg{margin:18px auto 0;max-width:520px;text-align:left;background:var(--spec-violet-bg,#F3F1FD);border:1px solid #CDC4F4;border-radius:14px;padding:14px 18px;}
+.ays-teammsg b{display:block;font-size:12px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--spec-violet-deep,#4A3DB0);margin-bottom:6px;}
+.ays-teammsg p{margin:0;font-size:14px;line-height:1.55;color:var(--spec-ink,#141320);white-space:pre-wrap;}
 .ays-main{max-width:720px;margin:0 auto;padding:24px 20px 80px;}
 .ays-loading{text-align:center;color:#8A87A0;padding:80px 20px;font-size:15px;}
 .ays-hero{text-align:center;padding:20px 8px 30px;}

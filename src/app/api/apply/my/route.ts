@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getApplicantSession, getOwnApplication } from '@/lib/apply/auth';
-import { cleanStringArray, MAX_REGIONS, REGION_MAXLEN, MAX_TARGET_CUSTOMERS, TARGET_CUSTOMER_MAXLEN } from '@/lib/apply/fields';
+import { cleanStringArray, resubmitStatusPatch, MAX_REGIONS, REGION_MAXLEN, MAX_TARGET_CUSTOMERS, TARGET_CUSTOMER_MAXLEN } from '@/lib/apply/fields';
 import { syncApplicationToVendorProfile } from '@/lib/apply/profile-sync';
 
 const CATEGORIES = ['TMS', 'WMS', 'Telematics/ELD', 'Forklifts', 'Customs/Cross-Border', 'Cold Chain', 'Robotics', 'Other'];
@@ -96,9 +96,16 @@ export async function PATCH(req: Request) {
 
   if (!Object.keys(patch).length) return NextResponse.json({ ok: false, message: 'Nothing to update' }, { status: 400 });
 
+  // Resubmit (2026-08-04 Batch B): saving after a needs_info send-back
+  // returns the SAME application to review — status flips back to 'pending',
+  // no second row is created. Any other status is never touched here
+  // (vendors cannot approve/reject themselves; the DB guard trigger also
+  // enforces this for non-admin sessions).
+  const statusPatch = resubmitStatusPatch(app.status);
+
   const db = getSupabaseClient({ admin: true });
-  const { data, error } = await db.from('vendor_applications').update(patch).eq('id', app.id).eq('auth_id', session.authId)
-    .select('id, public_ref, company_name, contact_name, email, phone, category, offering_types, supply_chain_stages, company_size, region, regions, problem_solved, target_customer, target_customers, price_range, status')
+  const { data, error } = await db.from('vendor_applications').update({ ...patch, ...statusPatch }).eq('id', app.id).eq('auth_id', session.authId)
+    .select('id, public_ref, company_name, contact_name, email, phone, category, offering_types, supply_chain_stages, company_size, region, regions, problem_solved, target_customer, target_customers, price_range, status, vendor_message')
     .single();
   if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
 

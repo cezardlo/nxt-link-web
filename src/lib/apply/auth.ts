@@ -43,12 +43,15 @@ export interface ApplicationRow {
   logo_path: string | null;
   product_image_paths: string[];
   status: string;
+  // Vendor-visible send-back note (needs_info). Dedicated column — NEVER
+  // admin_notes, which may hold internal comments and is not exposed here.
+  vendor_message: string | null;
   auth_id: string | null;
   created_at: string;
 }
 
 const COLS =
-  'id, public_ref, company_name, contact_name, email, phone, category, offering_types, supply_chain_stages, company_size, region, regions, problem_solved, target_customer, target_customers, price_range, logo_path, product_image_paths, status, auth_id, created_at';
+  'id, public_ref, company_name, contact_name, email, phone, category, offering_types, supply_chain_stages, company_size, region, regions, problem_solved, target_customer, target_customers, price_range, logo_path, product_image_paths, status, vendor_message, auth_id, created_at';
 
 function escLike(v: string): string {
   return v.replace(/[\\%_]/g, (c) => `\\${c}`);
