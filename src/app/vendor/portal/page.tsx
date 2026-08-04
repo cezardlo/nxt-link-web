@@ -445,7 +445,7 @@ export default function VendorPortalPage() {
             {vendor.suspended_until && !banned && <><br /><br />Access is expected to be restored on <b>{new Date(vendor.suspended_until).toLocaleDateString()}</b>.</>}
           </p>
           {vendor.moderation_reason && <p style={{ marginTop: 4 }}><b>Reason:</b> {vendor.moderation_reason}</p>}
-          <p style={{ marginTop: 4 }}>If you think this is a mistake, reply to your NXT//LINK contact or email <a className="vp-link" href="mailto:support@nxtlink.io">support@nxtlink.io</a> to dispute it.</p>
+          <p style={{ marginTop: 4 }}>If you think this is a mistake, reply to your NXT//LINK contact or email <a className="vp-link" href="mailto:contact@nxtlinktech.com">contact@nxtlinktech.com</a> to dispute it.</p>
         </div>
       </div>
     );
