@@ -12,7 +12,7 @@
 // /login and /signup's CSS-in-JS pattern. Visual/CSS only — every handler,
 // state, and the mode/agree/signup logic below are byte-identical.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { IBM_Plex_Sans } from 'next/font/google';
 import { Mail, Lock } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser-auth';
@@ -35,6 +35,21 @@ export default function ApplyLoginPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
+  // Arriving from the post-submit confirmation carries the application email
+  // (?email=) — pre-fill it and say WHY, so the account they create uses the
+  // same email and the saved application auto-links to it (2026-08-04).
+  const [fromApplication, setFromApplication] = useState(false);
+
+  useEffect(() => {
+    try {
+      const e = new URLSearchParams(window.location.search).get('email');
+      if (e && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) {
+        setEmail(e);
+        setFromApplication(true);
+        setMode('signup');
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -97,6 +112,17 @@ export default function ApplyLoginPage() {
               ? 'Manage your application and check its status.'
               : 'Create an account so you can check and update your application later.'}
           </p>
+
+          {fromApplication && (
+            <div className="axl-notice" role="status">
+              Your application is saved. {mode === 'signup' ? 'Create your account' : 'Sign in'} with this same email
+              and it links automatically — nothing you entered is lost.{' '}
+              <i>
+                Tu solicitud está guardada. {mode === 'signup' ? 'Crea tu cuenta' : 'Inicia sesión'} con este mismo
+                correo y se vinculará automáticamente — no perderás nada de lo que escribiste.
+              </i>
+            </div>
+          )}
 
           {notice && <div className="axl-notice" role="status">{notice}</div>}
           {error && <div className="axl-error" role="alert" aria-live="polite">{error}</div>}
@@ -190,6 +216,7 @@ const CSS = MOTION_CSS + `
 .axl-card h1{font-family:var(--font-space-grotesk),'Space Grotesk',system-ui,sans-serif;font-size:24px;font-weight:700;letter-spacing:-.01em;margin:0 0 8px;color:var(--spec-ink,#141320);}
 .axl-sub{color:var(--spec-text-2nd,#615F72);font-size:14px;line-height:1.5;margin:0 0 22px;}
 .axl-notice{background:#E9F7F0;border:1px solid rgba(47,158,106,.3);color:#1F7A54;font-size:13px;line-height:1.5;padding:12px 14px;border-radius:12px;margin-bottom:16px;}
+.axl-notice i{display:block;color:#3E7A5F;font-style:normal;margin-top:4px;}
 .axl-error{background:#FDF2F2;border:1px solid #F3C9C9;color:#B04A4A;font-size:13px;line-height:1.5;padding:12px 14px;border-radius:12px;margin-bottom:16px;}
 .axl-label{display:block;font-size:12px;font-weight:700;color:var(--spec-text-2nd,#615F72);letter-spacing:.02em;margin:0 0 6px;}
 .axl-field{position:relative;margin-bottom:16px;}

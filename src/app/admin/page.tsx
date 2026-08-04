@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
   Building2, ClipboardCheck, Inbox, Wand2, Store, Receipt,
-  Coins, Users, ArrowRight, Send, AlertCircle, Reply, RefreshCw,
+  Coins, Users, ArrowRight, Send, AlertCircle, Reply, RefreshCw, LayoutDashboard,
 } from 'lucide-react';
 import { AccessGate } from '@/components/AccessGate';
 import { EMPTY_ADMIN_OVERVIEW_COUNTS, type AdminOverviewCounts } from '@/lib/admin/overview';
@@ -21,6 +21,12 @@ type AdminLink = {
 type AdminGroup = { heading: string; links: AdminLink[] };
 
 const GROUPS: AdminGroup[] = [
+  {
+    heading: 'Insights',
+    links: [
+      { href: '/admin/dashboard', title: 'Operator dashboard', description: 'Live accounts, the vendor funnel, marketplace activity, and traffic — straight from the database.', icon: LayoutDashboard, badgeKey: 'pendingVendorApplications' },
+    ],
+  },
   {
     heading: 'Vendors',
     links: [

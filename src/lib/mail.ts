@@ -1,6 +1,15 @@
 // Unified transactional email sender. Resend first (RESEND_API_KEY), falling
 // back to the legacy Zoho outbox when Resend is unavailable. Best-effort by
 // design: callers fire-and-forget; a failed email never breaks the action.
+//
+// BRAND + SENDER (2026-08-04 Batch B): every email we send is NXT//LINK-branded
+// (htmlWrap below, on BOTH providers) and the from-address comes from config,
+// never hardcoded:
+//   - Resend: MAIL_FROM (e.g. "NXT//LINK <contact@nxtlinktech.com>" — the env
+//     var + domain verification with the provider is the coordinator's job).
+//     Until the domain is verified we degrade to Resend's sandbox sender
+//     (onboarding@resend.dev) so owner-inbox delivery still works.
+//   - Zoho fallback: ZOHO_FROM_ADDRESS (the connected mailbox's own address).
 
 import { sendZohoMail } from '@/lib/zoho/mail';
 
@@ -67,8 +76,10 @@ export async function sendMail(opts: { to: string; subject: string; body: string
   // failure (a bare .catch(() => {}) here would never fire). Read the result
   // instead, and treat "not actually sent" (real Zoho error OR Zoho simply
   // not configured) as the both-providers-failed case the no-silent-errors
-  // policy requires we log.
-  const result = await sendZohoMail({ to: opts.to, subject: opts.subject, body: opts.body }).catch((e) => ({
+  // policy requires we log. The Zoho path gets the SAME branded htmlWrap the
+  // Resend path used — Zoho sends mailFormat 'html', so an unwrapped plain
+  // body would arrive unbranded (and with collapsed line breaks).
+  const result = await sendZohoMail({ to: opts.to, subject: opts.subject, body: htmlWrap(opts.subject, opts.body) }).catch((e) => ({
     ok: false, sent: false, provider: 'zoho' as const, error: e instanceof Error ? e.message : 'send failed',
   }));
   if (!result.sent) {

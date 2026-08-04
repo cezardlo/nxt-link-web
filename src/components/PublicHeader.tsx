@@ -201,7 +201,7 @@ const PublicHeader = forwardRef<PublicHeaderHandle, { lang: Lang; onLangChange: 
               <a className="ph-joinbtn" href={dashHref}>{t.myDashboard}</a>
             ) : (
               <>
-                {!condensed && <Link className="ph-vendorlink" href="/vendor-signup">{t.becomeVendor}</Link>}
+                {!condensed && <Link className="ph-vendorlink" href="/apply">{t.becomeVendor}</Link>}
                 <a className="ph-signin" href="/login">{t.signIn}</a>
                 {!condensed && <a className="ph-joinbtn" href="/signup">{t.join}</a>}
               </>
@@ -237,7 +237,7 @@ const PublicHeader = forwardRef<PublicHeaderHandle, { lang: Lang; onLangChange: 
             <a className="ph-joinbtn" href={dashHref}>{t.myDashboard}</a>
           ) : (
             <>
-              {!condensed && <Link className="ph-vendorlink" href="/vendor-signup" onClick={() => setMenuOpen(false)}>{t.becomeVendor}</Link>}
+              {!condensed && <Link className="ph-vendorlink" href="/apply" onClick={() => setMenuOpen(false)}>{t.becomeVendor}</Link>}
               <a className="ph-signin" href="/login">{t.signIn}</a>
               {!condensed && <a className="ph-joinbtn" href="/signup">{t.join}</a>}
             </>

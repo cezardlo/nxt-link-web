@@ -5,6 +5,10 @@
 //   - approve → idempotently create/link a live vendor_profiles row from the
 //     application data and send the bilingual welcome email.
 //   - reject  → mark the application declined.
+//   - needs_info → send the application back: status 'needs_info' + a short
+//     note in the dedicated vendor_message column (NEVER admin_notes — that
+//     one is internal). The vendor sees the note on /apply/status and gets a
+//     bilingual email; saving their application returns it to review.
 // Admin-only (same access gate as the rest of /admin).
 //
 // NOTE on status: vendor_applications has a DB guard trigger
@@ -21,11 +25,13 @@ import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { isAdminRequest } from '@/lib/assistant/auth';
 import { ensureVendorProfile } from '@/lib/vendor/profile';
+import { cleanVendorMessage } from '@/lib/apply/fields';
 import { sendMail } from '@/lib/mail';
 
 const LOGIN_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://nxt-link-web.vercel.app').replace(/\/$/, '') + '/login';
+const APPLY_LOGIN_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://nxt-link-web.vercel.app').replace(/\/$/, '') + '/apply/login';
 
-const APP_COLS = 'id, public_ref, company_name, contact_name, email, phone, category, offering_types, supply_chain_stages, company_size, region, problem_solved, target_customer, price_range, logo_path, product_image_paths, status, admin_notes, approved_at, auth_id, created_at';
+const APP_COLS = 'id, public_ref, company_name, contact_name, email, phone, category, offering_types, supply_chain_stages, company_size, region, regions, problem_solved, target_customer, target_customers, price_range, logo_path, product_image_paths, status, vendor_message, admin_notes, approved_at, auth_id, created_at';
 
 function welcomeEmail(name: string, company: string): { subject: string; body: string } {
   const hi = name ? name : (company || 'there');
@@ -57,6 +63,48 @@ Inicia sesión aquí (sin contraseña — usa Google o "envíame un enlace"):
 ${LOGIN_URL}
 
 Responde a este correo y te ayudamos a completar tu perfil y tus anuncios.
+
+— NXT//LINK`,
+  };
+}
+
+// ⚠️ NEEDS CESAR APPROVAL (2026-08-04 Batch B): vendor-facing email copy for
+// the needs_info send-back. Cesar approves all vendor-facing email copy
+// before it ships — do not deploy this without his sign-off. Spanish is
+// informal "tú" per his site-wide register ruling.
+function needsInfoEmail(name: string, company: string, message: string, email: string): { subject: string; body: string } {
+  const hi = name ? name : (company || 'there');
+  const link = `${APPLY_LOGIN_URL}?email=${encodeURIComponent(email)}`;
+  return {
+    subject: 'A quick question about your NXT//LINK application / Una pregunta sobre tu solicitud',
+    body:
+`Hi ${hi},
+
+Thanks for applying to join NXT//LINK${company ? ` with ${company}` : ''}. We need a bit more information before we can approve you — this is not a rejection.
+
+Our team's note:
+${message}
+
+You can update your application here (sign in or create your account with this same email — everything you already entered is saved):
+${link}
+
+Reply to this email anytime if you'd rather just answer here.
+
+— NXT//LINK
+
+——————————————————————————
+
+Hola ${hi},
+
+Gracias por aplicar a NXT//LINK${company ? ` con ${company}` : ''}. Necesitamos un poco más de información antes de poder aprobarte — no es un rechazo.
+
+Nota de nuestro equipo:
+${message}
+
+Puedes actualizar tu solicitud aquí (inicia sesión o crea tu cuenta con este mismo correo — todo lo que ya escribiste está guardado):
+${link}
+
+Si prefieres, responde a este correo directamente.
 
 — NXT//LINK`,
   };
@@ -104,15 +152,34 @@ export async function POST(req: Request) {
   if (!(await isAdminRequest(req))) return NextResponse.json({ ok: false, message: 'Admin only' }, { status: 401 });
   if (!isSupabaseConfigured()) return NextResponse.json({ ok: false, message: 'Not configured' }, { status: 503 });
 
-  let body: { id?: string; action?: string };
+  let body: { id?: string; action?: string; message?: string };
   try { body = await req.json(); } catch { return NextResponse.json({ ok: false, message: 'Invalid JSON' }, { status: 400 }); }
   const id = String(body.id || '');
-  const action = body.action === 'approve' ? 'approve' : body.action === 'reject' ? 'reject' : null;
-  if (!id || !action) return NextResponse.json({ ok: false, message: "id and action ('approve'|'reject') required" }, { status: 400 });
+  const action = body.action === 'approve' ? 'approve' : body.action === 'reject' ? 'reject' : body.action === 'needs_info' ? 'needs_info' : null;
+  if (!id || !action) return NextResponse.json({ ok: false, message: "id and action ('approve'|'reject'|'needs_info') required" }, { status: 400 });
 
   const db = getSupabaseClient({ admin: true });
   const { data: app } = await db.from('vendor_applications').select(APP_COLS).eq('id', id).maybeSingle();
   if (!app) return NextResponse.json({ ok: false, message: 'Application not found' }, { status: 404 });
+
+  if (action === 'needs_info') {
+    // Send back for more info (2026-08-04 Batch B): same admin gate as
+    // approve/reject above, no new privilege path. The message goes into the
+    // DEDICATED vendor_message column — never admin_notes (internal). The
+    // vendor sees it on /apply/status and in this email; saving their
+    // application returns the same row to 'pending' review.
+    const note = cleanVendorMessage(body.message);
+    if (!note) return NextResponse.json({ ok: false, message: 'A short message for the vendor is required' }, { status: 400 });
+    await db.from('vendor_applications').update({ status: 'needs_info', vendor_message: note }).eq('id', id);
+    const { data: after } = await db.from('vendor_applications').select('status, vendor_message').eq('id', id).maybeSingle();
+    let emailed = false;
+    const to = String(app.email || '');
+    if (to) {
+      const mail = needsInfoEmail(String(app.contact_name || ''), String(app.company_name || ''), note, to);
+      await sendMail({ to, subject: mail.subject, body: mail.body }).then(() => { emailed = true; }).catch(() => {});
+    }
+    return NextResponse.json({ ok: true, action, emailed, status_advanced: after?.status === 'needs_info', status: after?.status });
+  }
 
   if (action === 'reject') {
     // Best-effort; the guard trigger keeps status unchanged unless the DB
@@ -129,6 +196,10 @@ export async function POST(req: Request) {
   // or mint a fresh approved profile from the application data.
   const email = String(app.email || '');
   const authId = (app.auth_id as string) || null;
+  // Multi-value fields (2026-08-04): prefer the arrays, fall back to the
+  // legacy single-value column for rows that predate them.
+  const regions = Array.isArray(app.regions) && app.regions.length ? app.regions : app.region ? [app.region] : [];
+  const customers = Array.isArray(app.target_customers) && app.target_customers.length ? app.target_customers : app.target_customer ? [app.target_customer] : [];
 
   const ensured = await ensureVendorProfile(db, {
     lane: 'admin_approval',
@@ -140,9 +211,9 @@ export async function POST(req: Request) {
       email: email || null,
       phone: app.phone || null,
       categories: app.category ? [app.category] : [],
-      service_areas: app.region ? [app.region] : [],
+      service_areas: regions,
       industries: Array.isArray(app.supply_chain_stages) ? app.supply_chain_stages : [],
-      client_types: app.target_customer ? [app.target_customer] : [],
+      client_types: customers,
       description: app.problem_solved || null,
       logo_path: app.logo_path || null,
       source: 'application',
