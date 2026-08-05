@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getApplicantSession, getOwnApplication } from '@/lib/apply/auth';
-import { cleanStringArray, resubmitStatusPatch, MAX_REGIONS, REGION_MAXLEN, MAX_TARGET_CUSTOMERS, TARGET_CUSTOMER_MAXLEN } from '@/lib/apply/fields';
+import { cleanStringArray, resubmitStatusPatch, MAX_REGIONS, REGION_MAXLEN, MAX_TARGET_CUSTOMERS, TARGET_CUSTOMER_MAXLEN, cleanLaborRate, cleanMobileFee, cleanWedgeCurrency, cleanResponseTime, cleanContractTypes } from '@/lib/apply/fields';
 import { syncApplicationToVendorProfile } from '@/lib/apply/profile-sync';
 
 const CATEGORIES = ['TMS', 'WMS', 'Telematics/ELD', 'Forklifts', 'Customs/Cross-Border', 'Cold Chain', 'Robotics', 'Other'];
@@ -94,6 +94,32 @@ export async function PATCH(req: Request) {
     patch.target_customers = c ? [c] : [];
   }
 
+  // Wedge fields (2026-08-04) — same rules as /api/apply/submit: when a wedge
+  // key IS sent it must be valid (an invalid one is a 400, never silently
+  // stored); an absent key leaves the stored value alone. The /apply/status
+  // form always sends all four, so the required-field rule holds there too.
+  if ('labor_rate' in body) {
+    const v = cleanLaborRate(body.labor_rate);
+    if (v == null) return NextResponse.json({ ok: false, message: 'Your hourly labor rate is required — a number, e.g. 95. / Tu tarifa por hora es obligatoria — un número, p. ej. 95.' }, { status: 400 });
+    patch.labor_rate = v;
+  }
+  if ('labor_rate_currency' in body) patch.labor_rate_currency = cleanWedgeCurrency(body.labor_rate_currency);
+  if ('mobile_fee' in body) {
+    const v = cleanMobileFee(body.mobile_fee);
+    if (v == null) return NextResponse.json({ ok: false, message: 'Your trip / mobilization fee is required — enter 0 if you don’t charge one. / Tu cargo por traslado es obligatorio — escribe 0 si no cobras.' }, { status: 400 });
+    patch.mobile_fee = v;
+  }
+  if ('response_time' in body) {
+    const v = cleanResponseTime(body.response_time);
+    if (!v) return NextResponse.json({ ok: false, message: 'Choose how fast you can be on site. / Elige qué tan rápido puedes estar en sitio.' }, { status: 400 });
+    patch.response_time = v;
+  }
+  if ('contract_types' in body) {
+    const v = cleanContractTypes(body.contract_types);
+    if (!v.length) return NextResponse.json({ ok: false, message: 'Choose at least one contract option. / Elige al menos una opción de contrato.' }, { status: 400 });
+    patch.contract_types = v;
+  }
+
   if (!Object.keys(patch).length) return NextResponse.json({ ok: false, message: 'Nothing to update' }, { status: 400 });
 
   // Resubmit (2026-08-04 Batch B): saving after a needs_info send-back
@@ -105,7 +131,7 @@ export async function PATCH(req: Request) {
 
   const db = getSupabaseClient({ admin: true });
   const { data, error } = await db.from('vendor_applications').update({ ...patch, ...statusPatch }).eq('id', app.id).eq('auth_id', session.authId)
-    .select('id, public_ref, company_name, contact_name, email, phone, category, offering_types, supply_chain_stages, company_size, region, regions, problem_solved, target_customer, target_customers, price_range, status, vendor_message')
+    .select('id, public_ref, company_name, contact_name, email, phone, category, offering_types, supply_chain_stages, company_size, region, regions, problem_solved, target_customer, target_customers, price_range, labor_rate, labor_rate_currency, mobile_fee, response_time, contract_types, status, vendor_message')
     .single();
   if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
 

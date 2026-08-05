@@ -14,10 +14,22 @@ interface App {
   offering_types: string[] | null; supply_chain_stages: string[] | null;
   company_size: string | null; region: string | null; regions: string[] | null; problem_solved: string | null;
   target_customer: string | null; target_customers: string[] | null; price_range: string | null;
+  // Wedge fields (2026-08-04) — the comparison data Cesar approves vendors on.
+  labor_rate: number | null; labor_rate_currency: string | null; mobile_fee: number | null;
+  response_time: string | null; contract_types: string[] | null;
+  // Conference-era legacy columns (2026-08-04): REMOVED from the form, but the
+  // columns and any stored values are KEPT — shown below only when a row
+  // actually has data (never an empty block).
+  conference_interests: string[] | null; participation_preference: string | null;
+  demo_capabilities: string | null; worker_support_value: string | null;
+  budget_range: string | null; technology_category: string | null;
   status: string; vendor_message: string | null; approved: boolean; live_vendor_id: string | null; created_at: string;
 }
 const fmtDate = (s: string) => { try { return new Date(s).toLocaleDateString(); } catch { return ''; } };
 const arr = (v: string[] | null) => (Array.isArray(v) ? v.filter(Boolean) : []);
+// Wedge display labels — the stored enum values, in plain operator language.
+const RESPONSE_TIME_LABELS: Record<string, string> = { same_day: 'Same day', within_24h: 'Within 24 hours', within_48h: 'Within 48 hours', days_3_plus: '3+ days' };
+const CONTRACT_TYPE_LABELS: Record<string, string> = { none: 'No contract (per-visit)', membership: 'Membership', annual: 'Annual contract' };
 // Multi-value fields with legacy fallback (2026-08-04): the array columns win,
 // older rows only have the single-value text column.
 const regionsOf = (a: App) => (arr(a.regions).length ? arr(a.regions) : a.region ? [a.region] : []);
@@ -108,6 +120,15 @@ export default function AdminVendorApplicationsPage() {
                     <span className="ap-date">{fmtDate(a.created_at)}</span>
                   </div>
                   {a.problem_solved && <div className="ap-note"><b>Solves:</b> {a.problem_solved}</div>}
+                  {(a.labor_rate != null || a.mobile_fee != null || a.response_time || arr(a.contract_types).length > 0) && (
+                    <div className="ap-wedge">
+                      {a.labor_rate != null && <span className="ap-wedgeitem"><b>Labor rate:</b> {a.labor_rate} {a.labor_rate_currency || 'USD'}/hr</span>}
+                      {/* mobile_fee === 0 is a REAL answer ("no trip charge") — shown as such, never as a missing value */}
+                      {a.mobile_fee != null && <span className="ap-wedgeitem"><b>Trip fee:</b> {a.mobile_fee === 0 ? `None (0 ${a.labor_rate_currency || 'USD'})` : `${a.mobile_fee} ${a.labor_rate_currency || 'USD'}`}</span>}
+                      {a.response_time && <span className="ap-wedgeitem"><b>On site:</b> {RESPONSE_TIME_LABELS[a.response_time] || a.response_time}</span>}
+                      {arr(a.contract_types).length > 0 && <span className="ap-wedgeitem"><b>Contract:</b> {arr(a.contract_types).map((c) => CONTRACT_TYPE_LABELS[c] || c).join(', ')}</span>}
+                    </div>
+                  )}
                   {customersOf(a).length > 0 && <div className="ap-line"><b>Target customers:</b> {customersOf(a).join(', ')}</div>}
                   {a.price_range && <div className="ap-line"><b>Price range:</b> {a.price_range}</div>}
                   {(arr(a.offering_types).length > 0 || arr(a.supply_chain_stages).length > 0) && (
@@ -118,6 +139,22 @@ export default function AdminVendorApplicationsPage() {
                   )}
                   {a.status === 'needs_info' && a.vendor_message && (
                     <div className="ap-note"><b>Your note to the vendor (sent):</b> {a.vendor_message}</div>
+                  )}
+                  {/* Legacy conference-era answers (removed from the form
+                      2026-08-04). Columns + values are KEPT — this block only
+                      renders when a row actually has legacy data, so existing
+                      answers stay visible to the reviewer and an empty block
+                      never appears. */}
+                  {(arr(a.conference_interests).length > 0 || a.participation_preference || a.demo_capabilities || a.worker_support_value || a.budget_range || a.technology_category) && (
+                    <div className="ap-legacy">
+                      <b>Earlier application answers (no longer asked):</b>
+                      {a.technology_category && <div className="ap-line"><b>Technology category:</b> {a.technology_category}</div>}
+                      {a.demo_capabilities && <div className="ap-line"><b>Demo capabilities:</b> {a.demo_capabilities}</div>}
+                      {arr(a.conference_interests).length > 0 && <div className="ap-line"><b>Conference interests:</b> {arr(a.conference_interests).join(', ')}</div>}
+                      {a.participation_preference && <div className="ap-line"><b>Participation preference:</b> {a.participation_preference}</div>}
+                      {a.budget_range && <div className="ap-line"><b>Budget range:</b> {a.budget_range}</div>}
+                      {a.worker_support_value && <div className="ap-line"><b>Worker-support value:</b> {a.worker_support_value}</div>}
+                    </div>
                   )}
                 </div>
                 <div className="ap-actions">
@@ -192,6 +229,10 @@ const CSS = `
 .ap-date{margin-left:auto;color:#615F72;}
 .ap-note{font-size:13px;color:#3B3A4A;margin-top:9px;line-height:1.5;}
 .ap-note b,.ap-line b{color:#615F72;font-weight:600;}
+.ap-wedge{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:9px;background:rgba(108,92,224,.06);border:1px solid rgba(108,92,224,.18);border-radius:10px;padding:9px 12px;font-size:12.5px;color:#3B3A4A;}
+.ap-wedgeitem b{color:#4A3DB0;font-weight:600;}
+.ap-legacy{margin-top:9px;border-top:1px dashed rgba(20,19,32,.14);padding-top:8px;font-size:12.5px;color:#615F72;}
+.ap-legacy>b{font-size:11.5px;}
 .ap-line{font-size:12.5px;color:#3B3A4A;margin-top:5px;}
 .ap-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
 .ap-tag{font-size:11px;font-weight:600;color:#3B3A4A;background:rgba(20,19,32,.06);border:1px solid rgba(20,19,32,.1);border-radius:99px;padding:3px 9px;}

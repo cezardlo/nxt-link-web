@@ -163,6 +163,14 @@ export interface ServiceQuoteExtras {
   duration: string | null;
   team_size: number | null;
   emergency_response: string | null;
+  // Wedge fields (2026-08-04) — the service comparison. quote_extras is
+  // jsonb, so these need NO migration; every cell that renders them is
+  // data-gated (an empty answer never renders as an answer).
+  labor_rate: number | null;
+  additional_fees: string | null;
+  parts_policy: 'oem_only' | 'oem_or_aftermarket' | 'customer_supplied' | 'included_in_rate' | null;
+  response_sla: 'same_day' | 'within_24h' | 'within_48h' | 'days_3_plus' | null;
+  contract_terms: string | null;
 }
 export interface TechnologyQuoteExtras {
   license_model: 'subscription' | 'perpetual' | 'tiered' | null;
@@ -201,6 +209,11 @@ export function autoCalcProductTotal(
 const INSTALLATION_VALUES = ['included', 'extra', 'not_available'];
 const TRAINING_VALUES = ['included', 'extra'];
 const LICENSE_MODEL_VALUES = ['subscription', 'perpetual', 'tiered'];
+// Wedge fields (2026-08-04): fixed choice lists so service quotes SORT —
+// response_sla deliberately reuses the vendor application's response_time
+// values so a vendor's application answer and their quote answer line up.
+const PARTS_POLICY_VALUES = ['oem_only', 'oem_or_aftermarket', 'customer_supplied', 'included_in_rate'];
+const RESPONSE_SLA_VALUES = ['same_day', 'within_24h', 'within_48h', 'days_3_plus'];
 
 /** Validate the vendor's per-kind quote extras against the SERVER-KNOWN kind
  * of the opportunity being quoted (the caller must pass the opportunity's own
@@ -226,6 +239,12 @@ export function validateQuoteExtras(kind: RequestKind | null | undefined, input:
   if (kind === 'service') {
     const teamSize = cleanPositiveInt(body.team_size, 'team_size');
     if (teamSize.error) errors.push(teamSize.error);
+    const laborRate = cleanNonNegativeNumber(body.labor_rate, 'labor_rate');
+    if (laborRate.error) errors.push(laborRate.error);
+    const partsPolicy = PARTS_POLICY_VALUES.includes(String(body.parts_policy))
+      ? (body.parts_policy as ServiceQuoteExtras['parts_policy']) : null;
+    const responseSla = RESPONSE_SLA_VALUES.includes(String(body.response_sla))
+      ? (body.response_sla as ServiceQuoteExtras['response_sla']) : null;
     return {
       ok: errors.length === 0,
       errors,
@@ -234,6 +253,11 @@ export function validateQuoteExtras(kind: RequestKind | null | undefined, input:
         duration: cleanStr(body.duration, 200),
         team_size: teamSize.value,
         emergency_response: cleanStr(body.emergency_response, 200),
+        labor_rate: laborRate.value,
+        additional_fees: cleanStr(body.additional_fees, 300),
+        parts_policy: partsPolicy,
+        response_sla: responseSla,
+        contract_terms: cleanStr(body.contract_terms, 500),
       },
     };
   }

@@ -74,6 +74,24 @@ const TARGET_CUSTOMER_TYPES = [
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Wedge fields (2026-08-04) — REQUIRED. Cesar: without labor rate / mobile
+// fee / response time / contract type, two forklift companies come back as
+// two names and NXT//LINK is a directory again — these four ARE the
+// comparison. Fixed choice lists so the answers sort; numeric money fields so
+// "call us" can never be the answer.
+const RESPONSE_TIME_OPTIONS: { value: string; en: string; es: string }[] = [
+  { value: 'same_day', en: 'Same day', es: 'El mismo día' },
+  { value: 'within_24h', en: 'Within 24 hours', es: 'En menos de 24 horas' },
+  { value: 'within_48h', en: 'Within 48 hours', es: 'En menos de 48 horas' },
+  { value: 'days_3_plus', en: '3+ days', es: '3 días o más' },
+];
+const CONTRACT_TYPE_OPTIONS: { value: string; en: string; es: string }[] = [
+  { value: 'none', en: 'No contract (per-visit)', es: 'Sin contrato (por visita)' },
+  { value: 'membership', en: 'Membership', es: 'Membresía' },
+  { value: 'annual', en: 'Annual contract', es: 'Contrato anual' },
+];
+const WEDGE_CURRENCIES = ['USD', 'MXN', 'CAD', 'EUR'];
+
 const MAX_PRODUCT_IMAGES = 3;
 
 const ibmPlexSans = IBM_Plex_Sans({
@@ -119,6 +137,15 @@ export default function ApplyPage() {
   const [customCustomer, setCustomCustomer] = useState('');
   const [priceRange, setPriceRange] = useState('');
   const [priceOther, setPriceOther] = useState('');
+
+  // Wedge fields (2026-08-04) — required. Mobile fee is a STRING in state so
+  // "blank" and "0" stay different all the way to the server (0 is a real
+  // answer; blank is rejected).
+  const [laborRate, setLaborRate] = useState('');
+  const [laborRateCurrency, setLaborRateCurrency] = useState('USD');
+  const [mobileFee, setMobileFee] = useState('');
+  const [responseTime, setResponseTime] = useState('');
+  const [contractTypes, setContractTypes] = useState<string[]>([]);
 
   const [logo, setLogo] = useState<ImageItem | null>(null);
   const [images, setImages] = useState<ImageItem[]>([]);
@@ -172,6 +199,13 @@ export default function ApplyPage() {
             if (PRICE_OPTIONS.includes(pr)) setPriceRange(pr);
             else { setPriceRange('Other'); setPriceOther(pr); }
           }
+          // Wedge fields (2026-08-04) — prefill exactly as answered, incl. an
+          // explicit 0 mobile fee (0 is a real answer, never shown as blank).
+          if (app.labor_rate != null) setLaborRate(String(app.labor_rate));
+          if (app.labor_rate_currency) setLaborRateCurrency(String(app.labor_rate_currency));
+          if (app.mobile_fee != null) setMobileFee(String(app.mobile_fee));
+          if (app.response_time) setResponseTime(String(app.response_time));
+          if (Array.isArray(app.contract_types)) setContractTypes(app.contract_types.filter((v: unknown): v is string => typeof v === 'string'));
           setPrefilled(true);
           return;
         }
@@ -252,6 +286,17 @@ export default function ApplyPage() {
     setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
   }
 
+  // Contract types are multi-select EXCEPT 'none' ("no contract — per-visit
+  // only"), which is exclusive: picking it clears the others, picking another
+  // clears it. The server normalizes the same way (cleanContractTypes).
+  function toggleContractType(value: string) {
+    setContractTypes((prev) => {
+      if (value === 'none') return prev.includes('none') ? [] : ['none'];
+      const rest = prev.filter((v) => v !== 'none');
+      return rest.includes(value) ? rest.filter((v) => v !== value) : [...rest, value];
+    });
+  }
+
   function addCustomStage() {
     const v = customStage.trim();
     if (!v || stages.includes(v)) { setCustomStage(''); return; }
@@ -286,6 +331,11 @@ export default function ApplyPage() {
     if (!email.trim() || !EMAIL_RE.test(email.trim())) { setError('A valid email is required.'); return; }
     if (!category) { setError('Please choose a category.'); return; }
     if (!problemSolved.trim()) { setError('Please tell us what problem you solve.'); return; }
+    // Wedge fields (2026-08-04) — required; the server re-validates all four.
+    if (!(Number(laborRate) > 0)) { setError('Your hourly labor rate is required — a number, e.g. 95. / Tu tarifa por hora es obligatoria — un número, p. ej. 95.'); return; }
+    if (mobileFee.trim() === '' || !Number.isFinite(Number(mobileFee)) || Number(mobileFee) < 0) { setError('Your trip / mobilization fee is required — enter 0 if you don’t charge one. / Tu cargo por traslado es obligatorio — escribe 0 si no cobras.'); return; }
+    if (!responseTime) { setError('Choose how fast you can be on site. / Elige qué tan rápido puedes estar en sitio.'); return; }
+    if (!contractTypes.length) { setError('Choose at least one contract option. / Elige al menos una opción de contrato.'); return; }
     if (!agree) { setError('Please accept the Terms of Service and Privacy Policy. / Por favor acepta los Términos de Servicio y el Aviso de Privacidad.'); return; }
 
     setSubmitting(true);
@@ -303,6 +353,11 @@ export default function ApplyPage() {
       fd.append('problem_solved', problemSolved.trim());
       for (const c of targetCustomers) fd.append('target_customers', c);
       fd.append('price_range', resolvedPriceRange());
+      fd.append('labor_rate', laborRate.trim());
+      fd.append('labor_rate_currency', laborRateCurrency);
+      fd.append('mobile_fee', mobileFee.trim());
+      fd.append('response_time', responseTime);
+      for (const c of contractTypes) fd.append('contract_types', c);
       fd.append('website_url', websiteUrl);
       fd.append('started_at', String(startedAtRef.current));
       fd.append('terms_accepted', agree ? 'true' : 'false');
@@ -459,6 +514,78 @@ export default function ApplyPage() {
                 </Field>
 
               </div>
+
+              {/* Wedge fields (2026-08-04) — REQUIRED. The four answers that
+                  make two vendors comparable: rate, trip fee, response time,
+                  contract options. Numeric money fields, fixed choice lists. */}
+              <div className="ap-grid">
+                <Field label="Your hourly labor rate" required hint="A number — buyers compare vendors on this · Un número">
+                  <div className="ap-money">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={laborRate}
+                      onChange={(e) => setLaborRate(e.target.value)}
+                      placeholder="95"
+                      required
+                    />
+                    <select
+                      aria-label="Currency / Moneda"
+                      value={laborRateCurrency}
+                      onChange={(e) => setLaborRateCurrency(e.target.value)}
+                    >
+                      {WEDGE_CURRENCIES.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                </Field>
+
+                <Field label="Trip / mobilization fee (per visit)" required hint="Enter 0 if you don’t charge one · Escribe 0 si no cobras">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={mobileFee}
+                    onChange={(e) => setMobileFee(e.target.value)}
+                    placeholder="0"
+                    required
+                  />
+                </Field>
+              </div>
+
+              <div className="ap-grid">
+                <Field label="How fast can you be on site?" required hint="¿Qué tan rápido puedes estar en sitio?">
+                  <select value={responseTime} onChange={(e) => setResponseTime(e.target.value)} required>
+                    <option value="" disabled>
+                      Select one / Elige una
+                    </option>
+                    {RESPONSE_TIME_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.en} / {o.es}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+
+              <Field label="Contract options you offer" required hint="Select all that apply · Elige todas las que apliquen" full>
+                <div className="ap-chips">
+                  {CONTRACT_TYPE_OPTIONS.map((o) => (
+                    <button
+                      key={o.value}
+                      type="button"
+                      className={`ap-chip ${contractTypes.includes(o.value) ? 'ap-chip-on' : ''}`}
+                      aria-pressed={contractTypes.includes(o.value)}
+                      onClick={() => toggleContractType(o.value)}
+                    >
+                      {contractTypes.includes(o.value) && <Check size={13} strokeWidth={3} aria-hidden="true" />}
+                      {o.en} / {o.es}
+                    </button>
+                  ))}
+                </div>
+              </Field>
 
               <Field label="Which locations do you serve?" hint="Select all that apply · Elige todas las que apliquen" full>
                 <div className="ap-chips">
@@ -827,9 +954,12 @@ const CSS = MOTION_CSS + `
 .ap-field label{font-size:13px;font-weight:600;color:var(--spec-text-2nd,#615F72);display:flex;align-items:center;gap:6px;}
 .ap-req{color:var(--spec-violet,#6C5CE0);}
 .ap-hint{color:#8A87A0;font-weight:400;font-size:12px;}
-.ap-field input[type="text"],.ap-field input[type="email"],.ap-field input[type="tel"],.ap-field select,.ap-field textarea{
+.ap-field input[type="text"],.ap-field input[type="email"],.ap-field input[type="tel"],.ap-field input[type="number"],.ap-field select,.ap-field textarea{
   width:100%;background:var(--spec-warm-white,#F8F7FB);border:1px solid var(--spec-border,#E2DFEC);border-radius:11px;padding:12px 14px;color:var(--spec-ink,#141320);font-size:14.5px;font-family:inherit;outline:none;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),box-shadow var(--spec-duration-fast,150ms) var(--spec-ease,ease),background var(--spec-duration-fast,150ms) var(--spec-ease,ease);
 }
+.ap-money{display:flex;gap:8px;}
+.ap-money input{flex:1;}
+.ap-money select{width:92px;flex-shrink:0;}
 .ap-field input::placeholder,.ap-field textarea::placeholder{color:#8A87A0;}
 .ap-field textarea{resize:vertical;line-height:1.5;}
 .ap-field input:hover,.ap-field select:hover,.ap-field textarea:hover{border-color:#C7C2DE;}

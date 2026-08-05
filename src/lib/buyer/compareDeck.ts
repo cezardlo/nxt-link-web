@@ -20,6 +20,9 @@ export const COMPARE_METRIC_KEYS = [
   // regardless of the toggle (see the show*/showX gates in the components).
   'unitPrice', 'shippingCost', 'installation', 'training',
   'scopeSummary', 'duration', 'teamSize', 'emergencyResponse',
+  // Service wedge fields (2026-08-04) — the service comparison set joins the
+  // same metric mechanism (show/diff-toggle/best-value rules below).
+  'laborRate', 'additionalFees', 'partsPolicy', 'responseSla', 'contractTerms',
   'licenseModel', 'implementationCost', 'annualSupport', 'slaSummary', 'pricingDetails',
 ] as const;
 export type CompareMetricKey = (typeof COMPARE_METRIC_KEYS)[number];
@@ -39,6 +42,7 @@ export interface DeckBestValue {
   shippingCostId: string | null;
   implementationCostId: string | null;
   annualSupportId: string | null;
+  laborRateId: string | null;
 }
 
 export function bestValueByMetric(
@@ -58,7 +62,8 @@ export function bestValueByMetric(
   const shippingCostId = lowestNumericFieldId(rows.map((r) => ({ id: r.id, value: r.extras?.shipping_cost })));
   const implementationCostId = lowestNumericFieldId(rows.map((r) => ({ id: r.id, value: r.extras?.implementation_cost })));
   const annualSupportId = lowestNumericFieldId(rows.map((r) => ({ id: r.id, value: r.extras?.annual_support })));
-  return { priceId, leadTimeId, unitPriceId, shippingCostId, implementationCostId, annualSupportId };
+  const laborRateId = lowestNumericFieldId(rows.map((r) => ({ id: r.id, value: r.extras?.labor_rate })));
+  return { priceId, leadTimeId, unitPriceId, shippingCostId, implementationCostId, annualSupportId, laborRateId };
 }
 
 function metricValue(row: CompareTableRow, key: CompareMetricKey): string | number | null {
@@ -76,6 +81,11 @@ function metricValue(row: CompareTableRow, key: CompareMetricKey): string | numb
     case 'duration': return row.extras?.duration ?? null;
     case 'teamSize': return row.extras?.team_size ?? null;
     case 'emergencyResponse': return row.extras?.emergency_response ?? null;
+    case 'laborRate': return row.extras?.labor_rate ?? null;
+    case 'additionalFees': return row.extras?.additional_fees ?? null;
+    case 'partsPolicy': return row.extras?.parts_policy ?? null;
+    case 'responseSla': return row.extras?.response_sla ?? null;
+    case 'contractTerms': return row.extras?.contract_terms ?? null;
     case 'licenseModel': return row.extras?.license_model ?? null;
     case 'implementationCost': return row.extras?.implementation_cost ?? null;
     case 'annualSupport': return row.extras?.annual_support ?? null;

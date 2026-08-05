@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { cleanStringArray, resolveMultiValue, cleanVendorMessage, resubmitStatusPatch, MAX_REGIONS, VENDOR_MESSAGE_MAXLEN } from '@/lib/apply/fields';
+import { cleanStringArray, resolveMultiValue, cleanVendorMessage, resubmitStatusPatch, MAX_REGIONS, VENDOR_MESSAGE_MAXLEN, cleanLaborRate, cleanMobileFee, cleanWedgeCurrency, cleanResponseTime, cleanContractTypes } from '@/lib/apply/fields';
 import { findOwnApplication, findAnonymousApplication, type ApplicantSession } from '@/lib/apply/auth';
 import { syncApplicationToVendorProfile } from '@/lib/apply/profile-sync';
 import { makeFakeDb } from './helpers/fake-supabase';
@@ -169,4 +169,68 @@ test('resubmitStatusPatch: a vendor can never change any other status (no self-a
   assert.deepEqual(resubmitStatusPatch('pending'), {});
   assert.deepEqual(resubmitStatusPatch('approved'), {});
   assert.deepEqual(resubmitStatusPatch('rejected'), {});
+});
+
+// ---- Wedge fields (2026-08-04) — the four REQUIRED comparison fields --------
+// Cesar: without labor rate / mobile fee / response time / contract type the
+// marketplace is a directory again. These pin the exact validation rules the
+// submit + PATCH routes enforce.
+
+test('cleanLaborRate: a plain number passes, cents-rounded', () => {
+  assert.equal(cleanLaborRate('95'), 95);
+  assert.equal(cleanLaborRate(' 87.505 '), 87.51); // rounds to cents
+  assert.equal(cleanLaborRate(120), 120);
+});
+
+test('cleanLaborRate: free text ("call us"), zero, negatives and blanks are all rejected — required means required', () => {
+  assert.equal(cleanLaborRate('call us'), null);
+  assert.equal(cleanLaborRate('0'), null); // labor rate must be POSITIVE
+  assert.equal(cleanLaborRate('-50'), null);
+  assert.equal(cleanLaborRate(''), null);
+  assert.equal(cleanLaborRate(undefined), null);
+  assert.equal(cleanLaborRate('999999999'), null); // sanity cap
+});
+
+test('cleanMobileFee: explicit 0 is a REAL answer — zero and blank are never the same thing', () => {
+  assert.equal(cleanMobileFee('0'), 0); // "we don't charge a trip fee"
+  assert.equal(cleanMobileFee('75'), 75);
+  assert.equal(cleanMobileFee(''), null); // unanswered — rejected, never stored as 0
+  assert.equal(cleanMobileFee(undefined), null);
+  assert.equal(cleanMobileFee('-10'), null);
+  assert.equal(cleanMobileFee('free!'), null);
+});
+
+test('cleanWedgeCurrency: fixed list, anything else falls back to USD', () => {
+  assert.equal(cleanWedgeCurrency('MXN'), 'MXN');
+  assert.equal(cleanWedgeCurrency('mxn'), 'MXN');
+  assert.equal(cleanWedgeCurrency('BTC'), 'USD');
+  assert.equal(cleanWedgeCurrency(''), 'USD');
+  assert.equal(cleanWedgeCurrency(undefined), 'USD');
+});
+
+test('cleanResponseTime: only the four fixed choices pass — never free text', () => {
+  assert.equal(cleanResponseTime('same_day'), 'same_day');
+  assert.equal(cleanResponseTime('within_24h'), 'within_24h');
+  assert.equal(cleanResponseTime('within_48h'), 'within_48h');
+  assert.equal(cleanResponseTime('days_3_plus'), 'days_3_plus');
+  assert.equal(cleanResponseTime('pretty fast'), null);
+  assert.equal(cleanResponseTime(''), null);
+  assert.equal(cleanResponseTime(undefined), null);
+});
+
+test('cleanContractTypes: multi-select from the fixed list, deduped', () => {
+  assert.deepEqual(cleanContractTypes(['membership', 'annual']), ['membership', 'annual']);
+  assert.deepEqual(cleanContractTypes(['annual', 'annual', 'bogus']), ['annual']);
+});
+
+test("cleanContractTypes: 'none' is exclusive — it collapses any combination to just ['none']", () => {
+  assert.deepEqual(cleanContractTypes(['none', 'annual']), ['none']);
+  assert.deepEqual(cleanContractTypes(['membership', 'none']), ['none']);
+  assert.deepEqual(cleanContractTypes(['none']), ['none']);
+});
+
+test('cleanContractTypes: not-an-array and empty both mean "unanswered" (required field missing)', () => {
+  assert.deepEqual(cleanContractTypes('annual'), []);
+  assert.deepEqual(cleanContractTypes([]), []);
+  assert.deepEqual(cleanContractTypes(undefined), []);
 });

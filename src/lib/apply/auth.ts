@@ -40,6 +40,12 @@ export interface ApplicationRow {
   target_customer: string | null;
   target_customers: string[] | null;
   price_range: string | null;
+  // Wedge fields (2026-08-04) — the four required comparison fields.
+  labor_rate: number | null;
+  labor_rate_currency: string | null;
+  mobile_fee: number | null;
+  response_time: string | null;
+  contract_types: string[] | null;
   logo_path: string | null;
   product_image_paths: string[];
   status: string;
@@ -51,7 +57,7 @@ export interface ApplicationRow {
 }
 
 const COLS =
-  'id, public_ref, company_name, contact_name, email, phone, category, offering_types, supply_chain_stages, company_size, region, regions, problem_solved, target_customer, target_customers, price_range, logo_path, product_image_paths, status, vendor_message, auth_id, created_at';
+  'id, public_ref, company_name, contact_name, email, phone, category, offering_types, supply_chain_stages, company_size, region, regions, problem_solved, target_customer, target_customers, price_range, labor_rate, labor_rate_currency, mobile_fee, response_time, contract_types, logo_path, product_image_paths, status, vendor_message, auth_id, created_at';
 
 function escLike(v: string): string {
   return v.replace(/[\\%_]/g, (c) => `\\${c}`);

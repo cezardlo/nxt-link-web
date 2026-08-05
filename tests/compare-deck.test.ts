@@ -123,6 +123,24 @@ test('bestValueByMetric: rows with no extras at all (product/service request wit
   assert.equal(best.shippingCostId, null);
 });
 
+// Service wedge fields (2026-08-04): labor rate is the one numeric,
+// objectively-lower-is-better wedge field, so it gets its own best-value
+// metric like the other money extras; the enum/text wedge fields never do.
+test('bestValueByMetric: lowest labor_rate wins; nobody set -> no winner', () => {
+  const best = bestValueByMetric([
+    { id: 'a', amount: 1, extras: { labor_rate: 95 } },
+    { id: 'b', amount: 1, extras: { labor_rate: 80 } },
+    { id: 'c', amount: 1, extras: { response_sla: 'same_day' } },
+  ]);
+  assert.equal(best.laborRateId, 'b');
+
+  const none = bestValueByMetric([
+    { id: 'a', amount: 1, extras: { contract_terms: 'per visit' } },
+    { id: 'b', amount: 1, extras: null },
+  ]);
+  assert.equal(none.laborRateId, null);
+});
+
 test('identicalMetrics: a categorical extra (installation) participates like any other metric — identical when every row agrees', () => {
   const rows = [
     row({ id: 'a', extras: { installation: 'included' } }),

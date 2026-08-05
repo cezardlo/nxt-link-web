@@ -15,6 +15,7 @@ import { LayoutGrid, Rows3 } from 'lucide-react';
 import {
   QuoteCompareTable, QUOTE_COMPARE_TABLE_CSS, DEFAULT_COMPARE_EXTRAS_LABELS,
   installationValueLabel, trainingValueLabel, licenseModelValueLabel,
+  partsPolicyValueLabel, responseSlaValueLabel,
   type CompareLabels, type CompareTableRow, type CompareStatus,
 } from './QuoteCompareTable';
 import { bestValueByMetric, identicalMetrics, shouldShowMetric, type CompareMetricKey } from '@/lib/buyer/compareDeck';
@@ -195,6 +196,24 @@ export function QuoteCompareDeck({
                   )}
                   {show('emergencyResponse') && r.extras?.emergency_response && (
                     <div className="qcd-row"><span>{labels.extras.emergencyResponse}</span><b>{r.extras.emergency_response}</b></div>
+                  )}
+                  {/* Service wedge fields (2026-08-04) — the comparison set for
+                      a service request. Data-gated per field; only labor rate
+                      is numeric/rankable, so only it can carry a badge. */}
+                  {show('laborRate') && r.extras?.labor_rate != null && (
+                    <div className="qcd-row"><span>{labels.extras.laborRate}</span><b>{money(r.extras.labor_rate, r.currency, locale)}{r.id === best.laborRateId && <span className="qcd-badge qcd-badge-sm">{labels.bestValue}</span>}</b></div>
+                  )}
+                  {show('additionalFees') && r.extras?.additional_fees && (
+                    <div className="qcd-row"><span>{labels.extras.additionalFees}</span><b>{r.extras.additional_fees}</b></div>
+                  )}
+                  {show('partsPolicy') && r.extras?.parts_policy && (
+                    <div className="qcd-row"><span>{labels.extras.partsPolicy}</span><b>{partsPolicyValueLabel(r.extras.parts_policy, labels.extras)}</b></div>
+                  )}
+                  {show('responseSla') && r.extras?.response_sla && (
+                    <div className="qcd-row"><span>{labels.extras.responseSla}</span><b>{responseSlaValueLabel(r.extras.response_sla, labels.extras)}</b></div>
+                  )}
+                  {show('contractTerms') && r.extras?.contract_terms && (
+                    <div className="qcd-row"><span>{labels.extras.contractTerms}</span><b>{r.extras.contract_terms}</b></div>
                   )}
                   {show('licenseModel') && r.extras?.license_model && (
                     <div className="qcd-row"><span>{labels.extras.licenseModel}</span><b>{licenseModelValueLabel(r.extras.license_model, labels.extras)}</b></div>

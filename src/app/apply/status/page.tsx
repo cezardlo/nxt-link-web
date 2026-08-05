@@ -101,6 +101,12 @@ interface Application {
   target_customer: string;
   target_customers: string[] | null;
   price_range: string;
+  // Wedge fields (2026-08-04) — the four required comparison answers.
+  labor_rate: number | null;
+  labor_rate_currency: string | null;
+  mobile_fee: number | null;
+  response_time: string | null;
+  contract_types: string[] | null;
   status: Status;
   // Admin's send-back note (needs_info only). This is the dedicated
   // vendor-visible column — deliberately NOT admin_notes, which is internal.
@@ -178,6 +184,24 @@ const TR: Record<string, { en: string; es: string }> = {
   f_customers: { en: 'Who do you serve best?', es: '¿A quién atiendes mejor?' },
   custom_customer_ph: { en: 'Other customer type — add your own', es: 'Otro tipo de cliente — agrégalo' },
   add: { en: 'Add', es: 'Agregar' },
+
+  // Wedge fields (2026-08-04) — the four answers buyers compare vendors on.
+  f_labor_rate: { en: 'Your hourly labor rate', es: 'Tu tarifa por hora' },
+  f_labor_rate_hint: { en: 'A number — buyers compare vendors on this', es: 'Un número — los compradores comparan con esto' },
+  f_currency: { en: 'Currency', es: 'Moneda' },
+  f_mobile_fee: { en: 'Trip / mobilization fee (per visit)', es: 'Cargo por traslado (por visita)' },
+  f_mobile_fee_hint: { en: 'Enter 0 if you don’t charge one', es: 'Escribe 0 si no cobras' },
+  f_response_time: { en: 'How fast can you be on site?', es: '¿Qué tan rápido puedes estar en sitio?' },
+  select_one: { en: 'Select one', es: 'Elige una' },
+  rt_same_day: { en: 'Same day', es: 'El mismo día' },
+  rt_within_24h: { en: 'Within 24 hours', es: 'En menos de 24 horas' },
+  rt_within_48h: { en: 'Within 48 hours', es: 'En menos de 48 horas' },
+  rt_days_3_plus: { en: '3+ days', es: '3 días o más' },
+  f_contract: { en: 'Contract options you offer', es: 'Opciones de contrato que ofreces' },
+  ct_none: { en: 'No contract (per-visit)', es: 'Sin contrato (por visita)' },
+  ct_membership: { en: 'Membership', es: 'Membresía' },
+  ct_annual: { en: 'Annual contract', es: 'Contrato anual' },
+  wedge_error: { en: 'Labor rate, trip fee, response time and contract options are all required (enter 0 for the trip fee if you don’t charge one).', es: 'La tarifa por hora, el cargo por traslado, el tiempo de respuesta y las opciones de contrato son obligatorios (escribe 0 en el cargo por traslado si no cobras).' },
 
   save: { en: 'Save changes', es: 'Guardar cambios' },
   saving: { en: 'Saving…', es: 'Guardando…' },
@@ -372,7 +396,18 @@ interface EditableFields {
   price_range: string;
   regions: string[];
   target_customers: string[];
+  // Wedge fields (2026-08-04). Money fields are strings here so a blank stays
+  // blank and an explicit 0 stays "0" — zero and unanswered are different.
+  labor_rate: string;
+  labor_rate_currency: string;
+  mobile_fee: string;
+  response_time: string;
+  contract_types: string[];
 }
+
+const WEDGE_CURRENCIES = ['USD', 'MXN', 'CAD', 'EUR'];
+const RESPONSE_TIME_VALUES = ['same_day', 'within_24h', 'within_48h', 'days_3_plus'];
+const CONTRACT_TYPE_VALUES = ['none', 'membership', 'annual'];
 
 function ApplicationPanel({
   application,
@@ -396,6 +431,12 @@ function ApplicationPanel({
     // `region` / `target_customer` text value.
     regions: (application.regions && application.regions.length ? application.regions : application.region ? [application.region] : []),
     target_customers: (application.target_customers && application.target_customers.length ? application.target_customers : application.target_customer ? [application.target_customer] : []),
+    // Wedge fields — an explicit 0 mobile fee prefills as "0", never blank.
+    labor_rate: application.labor_rate != null ? String(application.labor_rate) : '',
+    labor_rate_currency: application.labor_rate_currency || 'USD',
+    mobile_fee: application.mobile_fee != null ? String(application.mobile_fee) : '',
+    response_time: application.response_time || '',
+    contract_types: Array.isArray(application.contract_types) ? application.contract_types.filter((v) => CONTRACT_TYPE_VALUES.includes(v)) : [],
   });
 
   const initSize = resolveOptionValue(application.company_size || '', COMPANY_SIZES);
@@ -407,6 +448,7 @@ function ApplicationPanel({
   const [customCustomer, setCustomCustomer] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
+  const [wedgeError, setWedgeError] = useState(false);
   const [saveNotice, setSaveNotice] = useState(false);
 
   const [logoUrl, setLogoUrl] = useState<string | null>(application.logo_url);
@@ -439,13 +481,36 @@ function ApplicationPanel({
     clear();
   }
 
+  // Contract types are multi-select EXCEPT 'none' ("no contract — per-visit
+  // only"), which is exclusive — same rule as the /apply form and the server.
+  function toggleContractType(value: string) {
+    setFields((prev) => {
+      if (value === 'none') return { ...prev, contract_types: prev.contract_types.includes('none') ? [] : ['none'] };
+      const rest = prev.contract_types.filter((v) => v !== 'none');
+      return { ...prev, contract_types: rest.includes(value) ? rest.filter((v) => v !== value) : [...rest, value] };
+    });
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+    // Wedge fields are required — same client-side gate as /apply (the PATCH
+    // route re-validates each one server-side too).
+    const laborOk = Number(fields.labor_rate) > 0;
+    const feeOk = fields.mobile_fee.trim() !== '' && Number.isFinite(Number(fields.mobile_fee)) && Number(fields.mobile_fee) >= 0;
+    if (!laborOk || !feeOk || !fields.response_time || !fields.contract_types.length) {
+      setWedgeError(true);
+      setSaveError(false);
+      setSaveNotice(false);
+      return;
+    }
     setSaving(true);
     setSaveError(false);
+    setWedgeError(false);
     setSaveNotice(false);
     const resolved = {
       ...fields,
+      labor_rate: Number(fields.labor_rate),
+      mobile_fee: Number(fields.mobile_fee),
       company_size: companySize === 'Other' ? companySizeOther.trim() : companySize,
     };
     try {
@@ -640,6 +705,72 @@ function ApplicationPanel({
             </Field>
           </div>
 
+          {/* Wedge fields (2026-08-04) — required; the answers buyers compare
+              vendors on. Explicit 0 mobile fee stays 0, never blank. */}
+          <div className="ays-grid">
+            <Field label={t('f_labor_rate')} hint={t('f_labor_rate_hint')}>
+              <div className="ays-money">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={fields.labor_rate}
+                  onChange={(e) => setField('labor_rate', e.target.value)}
+                />
+                <select
+                  aria-label={t('f_currency')}
+                  value={fields.labor_rate_currency}
+                  onChange={(e) => setField('labor_rate_currency', e.target.value)}
+                >
+                  {WEDGE_CURRENCIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            </Field>
+
+            <Field label={t('f_mobile_fee')} hint={t('f_mobile_fee_hint')}>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={fields.mobile_fee}
+                onChange={(e) => setField('mobile_fee', e.target.value)}
+              />
+            </Field>
+          </div>
+
+          <div className="ays-grid">
+            <Field label={t('f_response_time')}>
+              <select value={fields.response_time} onChange={(e) => setField('response_time', e.target.value)}>
+                <option value="" disabled>
+                  {t('select_one')}
+                </option>
+                {RESPONSE_TIME_VALUES.map((v) => (
+                  <option key={v} value={v}>
+                    {t(`rt_${v}`)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+
+          <Field label={t('f_contract')} hint={t('select_all')} full>
+            <div className="ays-chips">
+              {CONTRACT_TYPE_VALUES.map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  className={`ays-chip ${fields.contract_types.includes(v) ? 'ays-chip-on' : ''}`}
+                  aria-pressed={fields.contract_types.includes(v)}
+                  onClick={() => toggleContractType(v)}
+                >
+                  {t(`ct_${v}`)}
+                </button>
+              ))}
+            </div>
+          </Field>
+
           <Field label={t('f_locations')} hint={t('select_all')} full>
             <div className="ays-chips">
               {REGIONS.map((r) => (
@@ -786,6 +917,7 @@ function ApplicationPanel({
           </Field>
 
           {saveError && <p className="ays-error" role="alert" aria-live="polite">{t('save_error')}</p>}
+          {wedgeError && <p className="ays-error" role="alert" aria-live="polite">{t('wedge_error')}</p>}
           {saveNotice && <p className="ays-notice" role="status">{t('saved')}</p>}
 
           <button type="submit" className="ays-btn ays-savebtn nxm-press" disabled={saving}>
@@ -921,6 +1053,9 @@ const CSS = MOTION_CSS + `
   width:100%;background:var(--spec-warm-white,#F8F7FB);border:1px solid var(--spec-border,#E2DFEC);border-radius:11px;padding:12px 14px;color:var(--spec-ink,#141320);font-size:14.5px;font-family:inherit;outline:none;transition:border-color var(--spec-duration-fast,150ms) var(--spec-ease,ease),background var(--spec-duration-fast,150ms) var(--spec-ease,ease),box-shadow var(--spec-duration-fast,150ms) var(--spec-ease,ease);
 }
 .ays-field input:disabled{opacity:.55;cursor:not-allowed;}
+.ays-money{display:flex;gap:8px;}
+.ays-money input{flex:1;}
+.ays-money select{width:92px;flex-shrink:0;}
 .ays-mt{margin-top:8px;}
 .ays-field textarea{resize:vertical;line-height:1.5;}
 .ays-field input:hover,.ays-field select:hover,.ays-field textarea:hover{border-color:#C7C2DE;}
