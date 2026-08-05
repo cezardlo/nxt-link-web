@@ -90,6 +90,7 @@ interface QuoteFormState {
   lead_time: string; valid_until: string; payment_terms: string; warranty: string; notes: string;
   unit_price: string; installation: string; training: string; shipping_cost: string;
   scope_summary: string; duration: string; team_size: string; emergency_response: string;
+  labor_rate: string; additional_fees: string; parts_policy: string; response_sla: string; contract_terms: string;
   license_model: string; pricing_details: string; implementation_cost: string; annual_support: string; sla_summary: string;
 }
 function emptyQform(): QuoteFormState {
@@ -98,6 +99,7 @@ function emptyQform(): QuoteFormState {
     lead_time: '', valid_until: '', payment_terms: '', warranty: '', notes: '',
     unit_price: '', installation: '', training: '', shipping_cost: '',
     scope_summary: '', duration: '', team_size: '', emergency_response: '',
+    labor_rate: '', additional_fees: '', parts_policy: '', response_sla: '', contract_terms: '',
     license_model: '', pricing_details: '', implementation_cost: '', annual_support: '', sla_summary: '',
   };
 }
@@ -120,6 +122,12 @@ function buildQuoteExtras(kind: RequestKind | null | undefined, f: QuoteFormStat
       duration: f.duration.trim() || null,
       team_size: numOrNull(f.team_size),
       emergency_response: f.emergency_response.trim() || null,
+      // Wedge fields (2026-08-04) — the service comparison set.
+      labor_rate: numOrNull(f.labor_rate),
+      additional_fees: f.additional_fees.trim() || null,
+      parts_policy: (f.parts_policy || null) as QuoteExtras['parts_policy'],
+      response_sla: (f.response_sla || null) as QuoteExtras['response_sla'],
+      contract_terms: f.contract_terms.trim() || null,
     };
   }
   if (kind === 'technology') {
@@ -216,6 +224,11 @@ const T: Record<Lang, Record<string, string>> = {
     scopeSummary: 'Scope summary (included / excluded)', scopeSummaryPh: 'What’s included… what’s not included…',
     durationLabel: 'Duration', durationPh: 'e.g. 3 days', teamSize: 'Team size',
     emergencyResponse: 'Emergency response time (if applicable)', emergencyResponsePh: 'e.g. 2 hours',
+    // Service wedge fields (2026-08-04) — what makes two service quotes comparable.
+    laborRate: 'Hourly labor rate', additionalFees: 'Additional fees', additionalFeesPh: 'e.g. $75 trip charge per visit',
+    partsPolicy: 'Parts policy', partsOemOnly: 'OEM parts only', partsOemAftermarket: 'OEM or aftermarket', partsCustomerSupplied: 'Customer supplies parts', partsIncludedInRate: 'Parts included in rate',
+    responseSla: 'Response time on site', rtSameDay: 'Same day', rtWithin24h: 'Within 24 hours', rtWithin48h: 'Within 48 hours', rtDays3Plus: '3+ days',
+    contractTerms: 'Contract terms', contractTermsPh: 'e.g. no contract — per visit, or annual PM plan available',
     licenseModel: 'License model', licenseSubscription: 'Subscription', licensePerpetual: 'Perpetual', licenseTiered: 'Tiered',
     pricingDetails: 'Pricing details', pricingDetailsPh: 'e.g. $500/mo per seat',
     implementationCost: 'Implementation cost', annualSupport: 'Annual support / maintenance fee',
@@ -303,6 +316,11 @@ const T: Record<Lang, Record<string, string>> = {
     scopeSummary: 'Resumen del alcance (incluido / excluido)', scopeSummaryPh: 'Qué está incluido… qué no está incluido…',
     durationLabel: 'Duración', durationPh: 'ej. 3 días', teamSize: 'Tamaño del equipo',
     emergencyResponse: 'Tiempo de respuesta de emergencia (si aplica)', emergencyResponsePh: 'ej. 2 horas',
+    // Campos clave de servicio (2026-08-04) — lo que hace comparables dos cotizaciones.
+    laborRate: 'Tarifa por hora', additionalFees: 'Cargos adicionales', additionalFeesPh: 'ej. $75 de cargo por traslado por visita',
+    partsPolicy: 'Política de refacciones', partsOemOnly: 'Solo refacciones OEM', partsOemAftermarket: 'OEM o aftermarket', partsCustomerSupplied: 'El cliente surte las refacciones', partsIncludedInRate: 'Refacciones incluidas en la tarifa',
+    responseSla: 'Tiempo de respuesta en sitio', rtSameDay: 'El mismo día', rtWithin24h: 'En menos de 24 horas', rtWithin48h: 'En menos de 48 horas', rtDays3Plus: '3 días o más',
+    contractTerms: 'Términos de contrato', contractTermsPh: 'ej. sin contrato — por visita, o plan anual de mantenimiento disponible',
     licenseModel: 'Modelo de licencia', licenseSubscription: 'Suscripción', licensePerpetual: 'Perpetua', licenseTiered: 'Por niveles',
     pricingDetails: 'Detalles de precios', pricingDetailsPh: 'ej. $500/mes por usuario',
     implementationCost: 'Costo de implementación', annualSupport: 'Cuota anual de soporte / mantenimiento',
@@ -586,6 +604,8 @@ export default function VendorLeadsPage() {
           shipping_cost: str(extras.shipping_cost),
           scope_summary: str(extras.scope_summary), duration: str(extras.duration), team_size: str(extras.team_size),
           emergency_response: str(extras.emergency_response),
+          labor_rate: str(extras.labor_rate), additional_fees: str(extras.additional_fees),
+          parts_policy: str(extras.parts_policy), response_sla: str(extras.response_sla), contract_terms: str(extras.contract_terms),
           license_model: str(extras.license_model), pricing_details: str(extras.pricing_details),
           implementation_cost: str(extras.implementation_cost), annual_support: str(extras.annual_support),
           sla_summary: str(extras.sla_summary),
@@ -1048,6 +1068,31 @@ export default function VendorLeadsPage() {
                                   <label>{t.teamSize}<input type="number" min="1" step="1" value={qform.team_size} onChange={(e) => setQform((f) => ({ ...f, team_size: e.target.value }))} /></label>
                                   <label>{t.emergencyResponse}<input value={qform.emergency_response} onChange={(e) => setQform((f) => ({ ...f, emergency_response: e.target.value }))} placeholder={t.emergencyResponsePh} maxLength={200} /></label>
                                 </div>
+                                {/* Service wedge fields (2026-08-04) — the comparison set a buyer
+                                    weighs two service quotes on. Fixed choice lists so they sort. */}
+                                <div className="ld-qrow">
+                                  <label>{t.laborRate}<input type="number" min="0" step="0.01" value={qform.labor_rate} onChange={(e) => setQform((f) => ({ ...f, labor_rate: e.target.value }))} /></label>
+                                  <label>{t.responseSla}
+                                    <select value={qform.response_sla} onChange={(e) => setQform((f) => ({ ...f, response_sla: e.target.value }))}>
+                                      <option value="">{t.selectPh}</option>
+                                      <option value="same_day">{t.rtSameDay}</option>
+                                      <option value="within_24h">{t.rtWithin24h}</option>
+                                      <option value="within_48h">{t.rtWithin48h}</option>
+                                      <option value="days_3_plus">{t.rtDays3Plus}</option>
+                                    </select>
+                                  </label>
+                                  <label>{t.partsPolicy}
+                                    <select value={qform.parts_policy} onChange={(e) => setQform((f) => ({ ...f, parts_policy: e.target.value }))}>
+                                      <option value="">{t.selectPh}</option>
+                                      <option value="oem_only">{t.partsOemOnly}</option>
+                                      <option value="oem_or_aftermarket">{t.partsOemAftermarket}</option>
+                                      <option value="customer_supplied">{t.partsCustomerSupplied}</option>
+                                      <option value="included_in_rate">{t.partsIncludedInRate}</option>
+                                    </select>
+                                  </label>
+                                </div>
+                                <input value={qform.additional_fees} onChange={(e) => setQform((f) => ({ ...f, additional_fees: e.target.value }))} placeholder={t.additionalFeesPh} maxLength={300} aria-label={t.additionalFees} />
+                                <input value={qform.contract_terms} onChange={(e) => setQform((f) => ({ ...f, contract_terms: e.target.value }))} placeholder={t.contractTermsPh} maxLength={500} aria-label={t.contractTerms} />
                               </div>
                             )}
                             {l.request_kind === 'technology' && (

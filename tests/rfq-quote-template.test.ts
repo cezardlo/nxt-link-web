@@ -62,7 +62,12 @@ test('template reuse: product extras built from form state validate cleanly', ()
 test('template reuse: an empty per-kind section (vendor left it blank) validates to null fields, not an error', () => {
   const result = validateQuoteExtras('service', { scope_summary: '', duration: '', team_size: '', emergency_response: '' });
   assert.equal(result.ok, true);
-  assert.deepEqual(result.value, { scope_summary: null, duration: null, team_size: null, emergency_response: null });
+  // The five wedge fields (2026-08-04) join the service shape. A blank section
+  // still means "no answer" for every field, old and new — null, never an error.
+  assert.deepEqual(result.value, {
+    scope_summary: null, duration: null, team_size: null, emergency_response: null,
+    labor_rate: null, additional_fees: null, parts_policy: null, response_sla: null, contract_terms: null,
+  });
 });
 
 test('template reuse: a negative field the template lets a vendor type is rejected the same way server-side would', () => {

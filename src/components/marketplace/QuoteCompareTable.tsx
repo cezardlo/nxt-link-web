@@ -14,7 +14,7 @@
 
 import { useMemo, useState } from 'react';
 import { bestValueQuoteId, parseTimelineDays, lowestNumericFieldId } from '@/lib/buyer/compare';
-import type { QuoteExtras, ProductQuoteExtras, TechnologyQuoteExtras } from '@/lib/requests/structured';
+import type { QuoteExtras, ProductQuoteExtras, ServiceQuoteExtras, TechnologyQuoteExtras } from '@/lib/requests/structured';
 
 export type CompareStatus = 'accepted' | 'received' | 'awaiting';
 export type CompareSort = 'price_asc' | 'price_desc' | 'name';
@@ -51,6 +51,11 @@ export interface CompareExtrasLabels {
   installation: string; installationIncluded: string; installationExtra: string; installationNone: string;
   training: string; trainingIncluded: string; trainingExtra: string;
   scopeSummary: string; duration: string; teamSize: string; emergencyResponse: string;
+  // Service wedge fields (2026-08-04) — the service comparison set.
+  laborRate: string; additionalFees: string;
+  partsPolicy: string; partsOemOnly: string; partsOemAftermarket: string; partsCustomerSupplied: string; partsIncludedInRate: string;
+  responseSla: string; rtSameDay: string; rtWithin24h: string; rtWithin48h: string; rtDays3Plus: string;
+  contractTerms: string;
   licenseModel: string; licenseSubscription: string; licensePerpetual: string; licenseTiered: string;
   implementationCost: string; annualSupport: string; slaSummary: string; pricingDetails: string;
 }
@@ -63,6 +68,12 @@ export const DEFAULT_COMPARE_EXTRAS_LABELS: CompareExtrasLabels = {
   training: 'Training', trainingIncluded: 'Included', trainingExtra: 'Extra cost',
   scopeSummary: 'Scope summary (included / excluded)', duration: 'Duration', teamSize: 'Team size',
   emergencyResponse: 'Emergency response time (if applicable)',
+  laborRate: 'Hourly labor rate', additionalFees: 'Additional fees',
+  partsPolicy: 'Parts policy', partsOemOnly: 'OEM parts only', partsOemAftermarket: 'OEM or aftermarket',
+  partsCustomerSupplied: 'Customer supplies parts', partsIncludedInRate: 'Parts included in rate',
+  responseSla: 'Response time on site', rtSameDay: 'Same day', rtWithin24h: 'Within 24 hours',
+  rtWithin48h: 'Within 48 hours', rtDays3Plus: '3+ days',
+  contractTerms: 'Contract terms',
   licenseModel: 'License model', licenseSubscription: 'Subscription', licensePerpetual: 'Perpetual', licenseTiered: 'Tiered',
   implementationCost: 'Implementation cost', annualSupport: 'Annual support / maintenance fee',
   slaSummary: 'SLA summary', pricingDetails: 'Pricing details',
@@ -89,6 +100,25 @@ export function licenseModelValueLabel(v: TechnologyQuoteExtras['license_model']
   if (v === 'subscription') return l.licenseSubscription;
   if (v === 'perpetual') return l.licensePerpetual;
   if (v === 'tiered') return l.licenseTiered;
+  return null;
+}
+
+/** Service wedge enums (2026-08-04) — same contract as the mappers above:
+ * every real stored value maps to its label, null/unknown maps to null so the
+ * caller renders "—" or omits the cell, never a guessed word. */
+export function partsPolicyValueLabel(v: ServiceQuoteExtras['parts_policy'] | null | undefined, l: CompareExtrasLabels): string | null {
+  if (v === 'oem_only') return l.partsOemOnly;
+  if (v === 'oem_or_aftermarket') return l.partsOemAftermarket;
+  if (v === 'customer_supplied') return l.partsCustomerSupplied;
+  if (v === 'included_in_rate') return l.partsIncludedInRate;
+  return null;
+}
+
+export function responseSlaValueLabel(v: ServiceQuoteExtras['response_sla'] | null | undefined, l: CompareExtrasLabels): string | null {
+  if (v === 'same_day') return l.rtSameDay;
+  if (v === 'within_24h') return l.rtWithin24h;
+  if (v === 'within_48h') return l.rtWithin48h;
+  if (v === 'days_3_plus') return l.rtDays3Plus;
   return null;
 }
 
@@ -197,6 +227,14 @@ export function QuoteCompareTable({
   const showDuration = rows.some((q) => q.extras?.duration);
   const showTeamSize = rows.some((q) => q.extras?.team_size != null);
   const showEmergencyResponse = rows.some((q) => q.extras?.emergency_response);
+  // Service wedge fields (2026-08-04) — same data-gating rule: a column only
+  // takes up width when at least one competing quote actually answered it; an
+  // empty answer never renders as an answer.
+  const showLaborRate = rows.some((q) => q.extras?.labor_rate != null);
+  const showAdditionalFees = rows.some((q) => q.extras?.additional_fees);
+  const showPartsPolicy = rows.some((q) => q.extras?.parts_policy);
+  const showResponseSla = rows.some((q) => q.extras?.response_sla);
+  const showContractTerms = rows.some((q) => q.extras?.contract_terms);
   const showLicenseModel = rows.some((q) => q.extras?.license_model);
   const showImplementationCost = rows.some((q) => q.extras?.implementation_cost != null);
   const showAnnualSupport = rows.some((q) => q.extras?.annual_support != null);
@@ -211,6 +249,9 @@ export function QuoteCompareTable({
   const bestShippingCostId = lowestNumericFieldId(rows.map((r) => ({ id: r.id, value: r.extras?.shipping_cost })));
   const bestImplementationCostId = lowestNumericFieldId(rows.map((r) => ({ id: r.id, value: r.extras?.implementation_cost })));
   const bestAnnualSupportId = lowestNumericFieldId(rows.map((r) => ({ id: r.id, value: r.extras?.annual_support })));
+  // Labor rate is numeric and lower-is-objectively-better (mirrors the price
+  // column); the enums/text wedge fields never get a "lowest" tag.
+  const bestLaborRateId = lowestNumericFieldId(rows.map((r) => ({ id: r.id, value: r.extras?.labor_rate })));
 
   const statusLabel = (s: CompareStatus) => (s === 'accepted' ? labels.accepted : s === 'received' ? labels.received : labels.awaiting);
 
@@ -241,6 +282,11 @@ export function QuoteCompareTable({
               {showDuration && <th>{labels.extras.duration}</th>}
               {showTeamSize && <th>{labels.extras.teamSize}</th>}
               {showEmergencyResponse && <th>{labels.extras.emergencyResponse}</th>}
+              {showLaborRate && <th>{labels.extras.laborRate}</th>}
+              {showAdditionalFees && <th>{labels.extras.additionalFees}</th>}
+              {showPartsPolicy && <th>{labels.extras.partsPolicy}</th>}
+              {showResponseSla && <th>{labels.extras.responseSla}</th>}
+              {showContractTerms && <th>{labels.extras.contractTerms}</th>}
               {showLicenseModel && <th>{labels.extras.licenseModel}</th>}
               {showImplementationCost && <th>{labels.extras.implementationCost}</th>}
               {showAnnualSupport && <th>{labels.extras.annualSupport}</th>}
@@ -298,6 +344,17 @@ export function QuoteCompareTable({
                   {showDuration && <td className="qct-terms">{q.extras?.duration || '—'}</td>}
                   {showTeamSize && <td className="qct-terms">{q.extras?.team_size != null ? q.extras.team_size : '—'}</td>}
                   {showEmergencyResponse && <td className="qct-terms">{q.extras?.emergency_response || '—'}</td>}
+                  {showLaborRate && (
+                    <td className="qct-terms">
+                      {q.extras?.labor_rate != null ? (
+                        <>{money(q.extras.labor_rate, q.currency)}{q.id === bestLaborRateId && <span className="qct-lowest">{labels.lowest}</span>}</>
+                      ) : '—'}
+                    </td>
+                  )}
+                  {showAdditionalFees && <td className="qct-terms">{q.extras?.additional_fees || '—'}</td>}
+                  {showPartsPolicy && <td className="qct-terms">{partsPolicyValueLabel(q.extras?.parts_policy, labels.extras) || '—'}</td>}
+                  {showResponseSla && <td className="qct-terms">{responseSlaValueLabel(q.extras?.response_sla, labels.extras) || '—'}</td>}
+                  {showContractTerms && <td className="qct-terms">{q.extras?.contract_terms || '—'}</td>}
                   {showLicenseModel && <td className="qct-terms">{licenseModelValueLabel(q.extras?.license_model, labels.extras) || '—'}</td>}
                   {showImplementationCost && (
                     <td className="qct-terms">

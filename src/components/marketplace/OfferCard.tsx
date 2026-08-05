@@ -19,6 +19,7 @@ import { FileText, ChevronDown, ChevronUp, Clock, ShieldCheck, CreditCard, Calen
 import type { OfferCardView, OfferStatus } from '@/lib/messages/offerTimeline';
 import {
   DEFAULT_COMPARE_EXTRAS_LABELS, installationValueLabel, trainingValueLabel, licenseModelValueLabel,
+  partsPolicyValueLabel, responseSlaValueLabel,
   type CompareExtrasLabels,
 } from './QuoteCompareTable';
 
@@ -84,6 +85,12 @@ export const OFFER_CARD_LABELS_ES: OfferCardLabels = {
     training: 'Capacitación', trainingIncluded: 'Incluida', trainingExtra: 'Costo adicional',
     scopeSummary: 'Resumen del alcance (incluido / excluido)', duration: 'Duración', teamSize: 'Tamaño del equipo',
     emergencyResponse: 'Tiempo de respuesta de emergencia (si aplica)',
+    laborRate: 'Tarifa por hora', additionalFees: 'Cargos adicionales',
+    partsPolicy: 'Política de refacciones', partsOemOnly: 'Solo refacciones OEM', partsOemAftermarket: 'OEM o aftermarket',
+    partsCustomerSupplied: 'El cliente surte las refacciones', partsIncludedInRate: 'Refacciones incluidas en la tarifa',
+    responseSla: 'Tiempo de respuesta en sitio', rtSameDay: 'El mismo día', rtWithin24h: 'En menos de 24 horas',
+    rtWithin48h: 'En menos de 48 horas', rtDays3Plus: '3 días o más',
+    contractTerms: 'Términos de contrato',
     licenseModel: 'Modelo de licencia', licenseSubscription: 'Suscripción', licensePerpetual: 'Perpetua', licenseTiered: 'Por niveles',
     implementationCost: 'Costo de implementación', annualSupport: 'Cuota anual de soporte / mantenimiento',
     slaSummary: 'Resumen del SLA', pricingDetails: 'Detalles de precios',
@@ -120,6 +127,7 @@ export function OfferCard({
   const hasExtras = !!e && (
     e.unit_price != null || e.shipping_cost != null || !!e.installation || !!e.training
     || !!e.scope_summary || !!e.duration || e.team_size != null || !!e.emergency_response
+    || e.labor_rate != null || !!e.additional_fees || !!e.parts_policy || !!e.response_sla || !!e.contract_terms
     || !!e.license_model || e.implementation_cost != null || e.annual_support != null
     || !!e.sla_summary || !!e.pricing_details
   );
@@ -181,6 +189,11 @@ export function OfferCard({
               {!!e!.duration && <div className="ofc-detailrow"><b>{labels.extras.duration}:</b> {e!.duration}</div>}
               {e!.team_size != null && <div className="ofc-detailrow"><b>{labels.extras.teamSize}:</b> {e!.team_size}</div>}
               {!!e!.emergency_response && <div className="ofc-detailrow"><b>{labels.extras.emergencyResponse}:</b> {e!.emergency_response}</div>}
+              {e!.labor_rate != null && <div className="ofc-detailrow"><b>{labels.extras.laborRate}:</b> {money(e!.labor_rate, card.currency, locale)}</div>}
+              {!!e!.additional_fees && <div className="ofc-detailrow"><b>{labels.extras.additionalFees}:</b> {e!.additional_fees}</div>}
+              {!!e!.parts_policy && <div className="ofc-detailrow"><b>{labels.extras.partsPolicy}:</b> {partsPolicyValueLabel(e!.parts_policy, labels.extras)}</div>}
+              {!!e!.response_sla && <div className="ofc-detailrow"><b>{labels.extras.responseSla}:</b> {responseSlaValueLabel(e!.response_sla, labels.extras)}</div>}
+              {!!e!.contract_terms && <div className="ofc-detailrow"><b>{labels.extras.contractTerms}:</b> {e!.contract_terms}</div>}
               {!!e!.license_model && <div className="ofc-detailrow"><b>{labels.extras.licenseModel}:</b> {licenseModelValueLabel(e!.license_model, labels.extras)}</div>}
               {e!.implementation_cost != null && <div className="ofc-detailrow"><b>{labels.extras.implementationCost}:</b> {money(e!.implementation_cost, card.currency, locale)}</div>}
               {e!.annual_support != null && <div className="ofc-detailrow"><b>{labels.extras.annualSupport}:</b> {money(e!.annual_support, card.currency, locale)}</div>}

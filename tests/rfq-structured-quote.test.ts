@@ -54,6 +54,52 @@ test('service: valid extras round-trip, team_size must be a positive integer', (
   assert.equal(bad.ok, false);
 });
 
+// Service wedge fields (2026-08-04) — labor rate, additional fees, parts
+// policy, response SLA, contract terms. quote_extras is jsonb: no migration,
+// and every field stays optional (old quotes validate cleanly).
+
+test('service: wedge fields round-trip (labor rate numeric, fixed enums, capped text)', () => {
+  const ok = validateQuoteExtras('service', {
+    labor_rate: 95, additional_fees: '$75 trip charge per visit',
+    parts_policy: 'oem_or_aftermarket', response_sla: 'same_day',
+    contract_terms: 'No contract — per visit',
+  });
+  assert.equal(ok.ok, true);
+  assert.equal(ok.value.labor_rate, 95);
+  assert.equal(ok.value.additional_fees, '$75 trip charge per visit');
+  assert.equal(ok.value.parts_policy, 'oem_or_aftermarket');
+  assert.equal(ok.value.response_sla, 'same_day');
+  assert.equal(ok.value.contract_terms, 'No contract — per visit');
+});
+
+test('service: wedge enums null on unknown values (never a hard error), negative labor rate rejected', () => {
+  const badEnum = validateQuoteExtras('service', { parts_policy: 'whatever', response_sla: 'fast' });
+  assert.equal(badEnum.ok, true);
+  assert.equal(badEnum.value.parts_policy, null);
+  assert.equal(badEnum.value.response_sla, null);
+
+  const badRate = validateQuoteExtras('service', { labor_rate: -1 });
+  assert.equal(badRate.ok, false);
+});
+
+test('service: omitted wedge fields validate to null — an empty answer is never an error', () => {
+  const result = validateQuoteExtras('service', {});
+  assert.equal(result.ok, true);
+  assert.equal(result.value.labor_rate, null);
+  assert.equal(result.value.additional_fees, null);
+  assert.equal(result.value.parts_policy, null);
+  assert.equal(result.value.response_sla, null);
+  assert.equal(result.value.contract_terms, null);
+});
+
+test('service: wedge fields stay isolated to service quotes (a product quote never carries them)', () => {
+  const result = validateQuoteExtras('product', { labor_rate: 95, parts_policy: 'oem_only', response_sla: 'same_day' });
+  assert.equal(result.ok, true);
+  assert.equal('labor_rate' in result.value, false);
+  assert.equal('parts_policy' in result.value, false);
+  assert.equal('response_sla' in result.value, false);
+});
+
 test('technology: license_model enum + numeric cost fields', () => {
   const ok = validateQuoteExtras('technology', {
     license_model: 'subscription', pricing_details: '$500/mo per seat',

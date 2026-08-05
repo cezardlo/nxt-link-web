@@ -6,6 +6,8 @@ import {
   installationValueLabel,
   trainingValueLabel,
   licenseModelValueLabel,
+  partsPolicyValueLabel,
+  responseSlaValueLabel,
 } from '@/components/marketplace/QuoteCompareTable';
 
 // Slice R6 (flow-readiness fix, 2026-07-30) — audit gap #2
@@ -39,6 +41,29 @@ test('licenseModelValueLabel maps subscription/perpetual/tiered, null/unknown to
   assert.equal(licenseModelValueLabel('perpetual', l), l.licensePerpetual);
   assert.equal(licenseModelValueLabel('tiered', l), l.licenseTiered);
   assert.equal(licenseModelValueLabel(undefined, l), null);
+});
+
+// Service wedge mappers (2026-08-04) — the buyer must read the exact same
+// word the vendor picked, in every surface (table, deck, offer card).
+
+test('partsPolicyValueLabel maps every real stored value to its label, null/unknown to null', () => {
+  const l = DEFAULT_COMPARE_EXTRAS_LABELS;
+  assert.equal(partsPolicyValueLabel('oem_only', l), l.partsOemOnly);
+  assert.equal(partsPolicyValueLabel('oem_or_aftermarket', l), l.partsOemAftermarket);
+  assert.equal(partsPolicyValueLabel('customer_supplied', l), l.partsCustomerSupplied);
+  assert.equal(partsPolicyValueLabel('included_in_rate', l), l.partsIncludedInRate);
+  assert.equal(partsPolicyValueLabel(null, l), null);
+  assert.equal(partsPolicyValueLabel(undefined, l), null);
+});
+
+test('responseSlaValueLabel maps every real stored value to its label, null/unknown to null', () => {
+  const l = DEFAULT_COMPARE_EXTRAS_LABELS;
+  assert.equal(responseSlaValueLabel('same_day', l), l.rtSameDay);
+  assert.equal(responseSlaValueLabel('within_24h', l), l.rtWithin24h);
+  assert.equal(responseSlaValueLabel('within_48h', l), l.rtWithin48h);
+  assert.equal(responseSlaValueLabel('days_3_plus', l), l.rtDays3Plus);
+  assert.equal(responseSlaValueLabel(null, l), null);
+  assert.equal(responseSlaValueLabel(undefined, l), null);
 });
 
 // Honesty rule (workplace/design/ui-standards-addendum-2026-07-30.md §6): a

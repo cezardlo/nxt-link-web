@@ -25,7 +25,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getApplicantSession, findOwnApplication, findAnonymousApplication } from '@/lib/apply/auth';
-import { cleanStringArray, resolveMultiValue, resubmitStatusPatch, MAX_REGIONS, REGION_MAXLEN, MAX_TARGET_CUSTOMERS, TARGET_CUSTOMER_MAXLEN } from '@/lib/apply/fields';
+import { cleanStringArray, resolveMultiValue, resubmitStatusPatch, MAX_REGIONS, REGION_MAXLEN, MAX_TARGET_CUSTOMERS, TARGET_CUSTOMER_MAXLEN, cleanLaborRate, cleanMobileFee, cleanWedgeCurrency, cleanResponseTime, cleanContractTypes } from '@/lib/apply/fields';
 import { syncApplicationToVendorProfile } from '@/lib/apply/profile-sync';
 import { recordLegalAcceptance, LEGAL_MSG, bilingual } from '@/lib/legal/acceptance';
 import { notifyAdminsNewVendorApplication } from '@/lib/admin/notify';
@@ -85,6 +85,31 @@ export async function POST(req: Request) {
   const regions = resolveMultiValue(cleanStringArray(form.getAll('regions').map((v) => String(v)), MAX_REGIONS, REGION_MAXLEN), get('region').slice(0, 100));
   const target_customers = resolveMultiValue(cleanStringArray(form.getAll('target_customers').map((v) => String(v)), MAX_TARGET_CUSTOMERS, TARGET_CUSTOMER_MAXLEN), get('target_customer').slice(0, 500));
 
+  // Wedge fields (2026-08-04) — REQUIRED, validated as structured data, never
+  // free text. Without labor rate / mobile fee / response time / contract
+  // type two forklift companies come back as two names and the marketplace is
+  // a directory again (Cesar's ruling — these four ARE the comparison).
+  //   - labor_rate: positive number only ("call us" is rejected on purpose)
+  //   - mobile_fee: non-negative number; 0 is a REAL answer, blank is NOT —
+  //     zero and unanswered are never stored as the same thing
+  //   - response_time / contract_types: fixed choice lists so they sort
+  const labor_rate = cleanLaborRate(get('labor_rate'));
+  if (labor_rate == null) {
+    return NextResponse.json({ ok: false, message: bilingual({ en: 'Your hourly labor rate is required — a number, e.g. 95.', es: 'Tu tarifa por hora es obligatoria — un número, p. ej. 95.' }) }, { status: 400 });
+  }
+  const mobile_fee = cleanMobileFee(get('mobile_fee'));
+  if (mobile_fee == null) {
+    return NextResponse.json({ ok: false, message: bilingual({ en: 'Your trip / mobilization fee is required — enter 0 if you don’t charge one.', es: 'Tu cargo por traslado es obligatorio — escribe 0 si no cobras.' }) }, { status: 400 });
+  }
+  const response_time = cleanResponseTime(get('response_time'));
+  if (!response_time) {
+    return NextResponse.json({ ok: false, message: bilingual({ en: 'Choose how fast you can be on site.', es: 'Elige qué tan rápido puedes estar en sitio.' }) }, { status: 400 });
+  }
+  const contract_types = cleanContractTypes(form.getAll('contract_types').map((v) => String(v)));
+  if (!contract_types.length) {
+    return NextResponse.json({ ok: false, message: bilingual({ en: 'Choose at least one contract option (choose “No contract” if you work per-visit).', es: 'Elige al menos una opción de contrato (elige “Sin contrato” si trabajas por visita).' }) }, { status: 400 });
+  }
+
   const row = {
     company_name,
     contact_name: get('contact_name'),
@@ -100,6 +125,11 @@ export async function POST(req: Request) {
     target_customer: target_customers[0] || '',
     target_customers,
     price_range: get('price_range').slice(0, 100),
+    labor_rate,
+    labor_rate_currency: cleanWedgeCurrency(get('labor_rate_currency')),
+    mobile_fee,
+    response_time,
+    contract_types,
   };
 
   if (!isSupabaseConfigured()) {

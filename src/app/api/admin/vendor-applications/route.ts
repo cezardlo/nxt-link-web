@@ -31,7 +31,7 @@ import { sendMail } from '@/lib/mail';
 const LOGIN_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://nxt-link-web.vercel.app').replace(/\/$/, '') + '/login';
 const APPLY_LOGIN_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://nxt-link-web.vercel.app').replace(/\/$/, '') + '/apply/login';
 
-const APP_COLS = 'id, public_ref, company_name, contact_name, email, phone, category, offering_types, supply_chain_stages, company_size, region, regions, problem_solved, target_customer, target_customers, price_range, logo_path, product_image_paths, status, vendor_message, admin_notes, approved_at, auth_id, created_at';
+const APP_COLS = 'id, public_ref, company_name, contact_name, email, phone, category, offering_types, supply_chain_stages, company_size, region, regions, problem_solved, target_customer, target_customers, price_range, labor_rate, labor_rate_currency, mobile_fee, response_time, contract_types, conference_interests, participation_preference, demo_capabilities, worker_support_value, budget_range, technology_category, logo_path, product_image_paths, status, vendor_message, admin_notes, approved_at, auth_id, created_at';
 
 function welcomeEmail(name: string, company: string): { subject: string; body: string } {
   const hi = name ? name : (company || 'there');
